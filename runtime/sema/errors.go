@@ -1282,6 +1282,7 @@ type ConformanceError struct {
 	CompositeDeclaration           ast.CompositeLikeDeclaration
 	CompositeType                  *CompositeType
 	InterfaceType                  *InterfaceType
+	NestedInterfaceType            *InterfaceType
 	InitializerMismatch            *InitializerMismatch
 	MissingMembers                 []*Member
 	MemberMismatches               []MemberMismatch
@@ -1377,6 +1378,14 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 		})
 	}
 
+	if e.NestedInterfaceType != e.InterfaceType {
+		compositeIdentifierRange := ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.DeclarationIdentifier())
+		notes = append(notes, &NestedConformanceMismatchNote{
+			nestedInterfaceType: e.NestedInterfaceType,
+			Range:               compositeIdentifierRange,
+		})
+	}
+
 	return
 }
 
@@ -1390,12 +1399,26 @@ func (n MemberMismatchNote) Message() string {
 	return "mismatch here"
 }
 
+// NestedConformanceMismatchNote
+
+type NestedConformanceMismatchNote struct {
+	nestedInterfaceType *InterfaceType
+	ast.Range
+}
+
+func (n NestedConformanceMismatchNote) Message() string {
+	return fmt.Sprintf(
+		"does not conform to nested interface requirement `%s`",
+		n.nestedInterfaceType,
+	)
+}
+
 // DuplicateConformanceError
 //
 // TODO: just make this a warning?
 type DuplicateConformanceError struct {
-	CompositeType *CompositeType
-	InterfaceType *InterfaceType
+	CompositeKindedType CompositeKindedType
+	InterfaceType       *InterfaceType
 	ast.Range
 }
 
@@ -1409,17 +1432,37 @@ func (*DuplicateConformanceError) IsUserError() {}
 func (e *DuplicateConformanceError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` repeats conformance to %s `%s`",
-		e.CompositeType.Kind.Name(),
-		e.CompositeType.QualifiedString(),
+		e.CompositeKindedType.GetCompositeKind().Name(),
+		e.CompositeKindedType.QualifiedString(),
 		e.InterfaceType.CompositeKind.DeclarationKind(true).Name(),
+		e.InterfaceType.QualifiedString(),
+	)
+}
+
+// CyclicConformanceError
+type CyclicConformanceError struct {
+	InterfaceType *InterfaceType
+	ast.Range
+}
+
+var _ SemanticError = CyclicConformanceError{}
+var _ errors.UserError = CyclicConformanceError{}
+
+func (CyclicConformanceError) isSemanticError() {}
+
+func (CyclicConformanceError) IsUserError() {}
+
+func (e CyclicConformanceError) Error() string {
+	return fmt.Sprintf(
+		"`%s` has a cyclic conformance to itself",
 		e.InterfaceType.QualifiedString(),
 	)
 }
 
 // MultipleInterfaceDefaultImplementationsError
 type MultipleInterfaceDefaultImplementationsError struct {
-	CompositeType *CompositeType
-	Member        *Member
+	CompositeKindedType CompositeKindedType
+	Member              *Member
 }
 
 var _ SemanticError = &MultipleInterfaceDefaultImplementationsError{}
@@ -1432,8 +1475,8 @@ func (*MultipleInterfaceDefaultImplementationsError) IsUserError() {}
 func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` has multiple interface default implementations for function `%s`",
-		e.CompositeType.Kind.Name(),
-		e.CompositeType.QualifiedString(),
+		e.CompositeKindedType.GetCompositeKind().Name(),
+		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
 }
@@ -1479,8 +1522,8 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 
 // DefaultFunctionConflictError
 type DefaultFunctionConflictError struct {
-	CompositeType *CompositeType
-	Member        *Member
+	CompositeKindedType CompositeKindedType
+	Member              *Member
 }
 
 var _ SemanticError = &DefaultFunctionConflictError{}
@@ -1493,8 +1536,8 @@ func (*DefaultFunctionConflictError) IsUserError() {}
 func (e *DefaultFunctionConflictError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` has conflicting requirements for function `%s`",
-		e.CompositeType.Kind.Name(),
-		e.CompositeType.QualifiedString(),
+		e.CompositeKindedType.GetCompositeKind().Name(),
+		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
 }
@@ -1505,6 +1548,34 @@ func (e *DefaultFunctionConflictError) StartPosition() ast.Position {
 
 func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
 	return e.Member.Identifier.EndPosition(memoryGauge)
+}
+
+// InterfaceMemberConflictError
+type InterfaceMemberConflictError struct {
+	InterfaceType            *InterfaceType
+	ConflictingInterfaceType *InterfaceType
+	MemberName               string
+	MemberKind               common.DeclarationKind
+	ConflictingMemberKind    common.DeclarationKind
+	ast.Range
+}
+
+var _ SemanticError = &InterfaceMemberConflictError{}
+var _ errors.UserError = &InterfaceMemberConflictError{}
+
+func (*InterfaceMemberConflictError) isSemanticError() {}
+
+func (*InterfaceMemberConflictError) IsUserError() {}
+
+func (e *InterfaceMemberConflictError) Error() string {
+	return fmt.Sprintf(
+		"`%s` %s of `%s` conflicts with a %s with the same name in `%s`",
+		e.MemberName,
+		e.MemberKind.Name(),
+		e.InterfaceType.QualifiedIdentifier(),
+		e.ConflictingMemberKind.Name(),
+		e.ConflictingInterfaceType.QualifiedString(),
+	)
 }
 
 // MissingConformanceError

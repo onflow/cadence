@@ -836,6 +836,7 @@ func TestCommonSuperType(t *testing.T) {
 					UInt256Type,
 					IntegerType,
 					Word64Type,
+					Word128Type,
 				},
 				expectedSuperType: IntegerType,
 			},
@@ -960,6 +961,33 @@ func TestCommonSuperType(t *testing.T) {
 			Members:       &StringMemberOrderedMap{},
 		}
 
+		superInterfaceType := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "SI",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
+		}
+
+		inheritedInterfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "II1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
+			ExplicitInterfaceConformances: []*InterfaceType{
+				superInterfaceType,
+			},
+		}
+
+		inheritedInterfaceType2 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "II2",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
+			ExplicitInterfaceConformances: []*InterfaceType{
+				superInterfaceType,
+			},
+		}
+
 		newCompositeWithInterfaces := func(name string, interfaces ...*InterfaceType) *CompositeType {
 			return &CompositeType{
 				Location:                      testLocation,
@@ -1032,7 +1060,7 @@ func TestCommonSuperType(t *testing.T) {
 						Restrictions: []*InterfaceType{interfaceType2},
 					}
 					// just initialize for equality
-					typ.initializeRestrictionSet()
+					typ.initializeEffectiveRestrictionSet()
 					return typ
 				}(),
 			},
@@ -1048,7 +1076,7 @@ func TestCommonSuperType(t *testing.T) {
 						Restrictions: []*InterfaceType{interfaceType1, interfaceType2},
 					}
 					// just initialize for equality
-					typ.initializeRestrictionSet()
+					typ.initializeEffectiveRestrictionSet()
 					return typ
 				}(),
 			},
@@ -1060,6 +1088,23 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Baz", interfaceType3),
 				},
 				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "inherited common interface",
+				types: []Type{
+					newCompositeWithInterfaces("Foo", inheritedInterfaceType1),
+					newCompositeWithInterfaces("Bar", inheritedInterfaceType2),
+				},
+				expectedSuperType: func() Type {
+					typ := &RestrictedType{
+						Type:         AnyStructType,
+						Restrictions: []*InterfaceType{superInterfaceType},
+					}
+
+					// just initialize for equality
+					typ.initializeEffectiveRestrictionSet()
+					return typ
+				}(),
 			},
 			{
 				name: "structs with never",
@@ -1964,7 +2009,7 @@ func TestMapType(t *testing.T) {
 		original := NewOptionalType(nil, StringType)
 		mapped := NewOptionalType(nil, BoolType)
 
-		require.Equal(t, mapped, original.Map(nil, mapFn))
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
 
 	t.Run("map variable array", func(t *testing.T) {
@@ -1972,7 +2017,7 @@ func TestMapType(t *testing.T) {
 		original := NewVariableSizedType(nil, StringType)
 		mapped := NewVariableSizedType(nil, BoolType)
 
-		require.Equal(t, mapped, original.Map(nil, mapFn))
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
 
 	t.Run("map constant sized array", func(t *testing.T) {
@@ -1980,7 +2025,7 @@ func TestMapType(t *testing.T) {
 		original := NewConstantSizedType(nil, StringType, 7)
 		mapped := NewConstantSizedType(nil, BoolType, 7)
 
-		require.Equal(t, mapped, original.Map(nil, mapFn))
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
 
 	t.Run("map reference type", func(t *testing.T) {
@@ -1989,7 +2034,7 @@ func TestMapType(t *testing.T) {
 		original := NewReferenceType(nil, StringType, mapType)
 		mapped := NewReferenceType(nil, BoolType, mapType)
 
-		require.Equal(t, mapped, original.Map(nil, mapFn))
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
 
 	t.Run("map dictionary type", func(t *testing.T) {
@@ -1997,7 +2042,7 @@ func TestMapType(t *testing.T) {
 		original := NewDictionaryType(nil, StringType, Int128Type)
 		mapped := NewDictionaryType(nil, BoolType, StringType)
 
-		require.Equal(t, mapped, original.Map(nil, mapFn))
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
 
 	t.Run("map capability type", func(t *testing.T) {
@@ -2005,7 +2050,7 @@ func TestMapType(t *testing.T) {
 		original := NewCapabilityType(nil, StringType)
 		mapped := NewCapabilityType(nil, BoolType)
 
-		require.Equal(t, mapped, original.Map(nil, mapFn))
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
 
 	t.Run("map restricted type", func(t *testing.T) {
@@ -2028,18 +2073,27 @@ func TestMapType(t *testing.T) {
 			},
 		)
 
-		require.Equal(t, mapped, original.Map(nil, mapFn))
+		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
 
 	t.Run("map function type", func(t *testing.T) {
 		t.Parallel()
+		originalTypeParam := &TypeParameter{
+			TypeBound: Int64Type,
+			Name:      "X",
+			Optional:  true,
+		}
 		original := NewSimpleFunctionType(
 			FunctionPurityView,
 			[]Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(StringType),
-					Label:          "X",
-					Identifier:     "Y",
+					TypeAnnotation: NewTypeAnnotation(
+						&GenericType{
+							TypeParameter: originalTypeParam,
+						},
+					),
+					Label:      "X",
+					Identifier: "Y",
 				},
 				{
 					TypeAnnotation: NewTypeAnnotation(&CompositeType{Identifier: "foo"}),
@@ -2049,20 +2103,24 @@ func TestMapType(t *testing.T) {
 			},
 			NewTypeAnnotation(Int128Type),
 		)
-		original.TypeParameters = []*TypeParameter{
-			{
-				TypeBound: Int64Type,
-				Name:      "X",
-				Optional:  true,
-			},
+		original.TypeParameters = []*TypeParameter{originalTypeParam}
+
+		mappedTypeParam := &TypeParameter{
+			TypeBound: StringType,
+			Name:      "X",
+			Optional:  true,
 		}
 		mapped := NewSimpleFunctionType(
 			FunctionPurityView,
 			[]Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(BoolType),
-					Label:          "X",
-					Identifier:     "Y",
+					TypeAnnotation: NewTypeAnnotation(
+						&GenericType{
+							TypeParameter: mappedTypeParam,
+						},
+					),
+					Label:      "X",
+					Identifier: "Y",
 				},
 				{
 					TypeAnnotation: NewTypeAnnotation(&InterfaceType{Identifier: "foo"}),
@@ -2072,14 +2130,16 @@ func TestMapType(t *testing.T) {
 			},
 			NewTypeAnnotation(StringType),
 		)
-		mapped.TypeParameters = []*TypeParameter{
-			{
-				TypeBound: StringType,
-				Name:      "X",
-				Optional:  true,
-			},
-		}
+		mapped.TypeParameters = []*TypeParameter{mappedTypeParam}
 
-		require.Equal(t, mapped, original.Map(nil, mapFn))
+		output := original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn)
+
+		require.IsType(t, &FunctionType{}, output)
+
+		outputFunction := output.(*FunctionType)
+
+		require.Equal(t, mapped, outputFunction)
+		require.IsType(t, &GenericType{}, outputFunction.Parameters[0].TypeAnnotation.Type)
+		require.True(t, outputFunction.Parameters[0].TypeAnnotation.Type.(*GenericType).TypeParameter == outputFunction.TypeParameters[0])
 	})
 }

@@ -279,8 +279,25 @@ var enumeratedAccessModifierKeywords = common.EnumerateWords(
 	"or",
 )
 
+func rejectAccessKeywords(p *parser, produceNominalType func() (*ast.NominalType, error)) (*ast.NominalType, error) {
+	nominalType, err := produceNominalType()
+
+	if err != nil {
+		return nil, err
+	}
+
+	switch nominalType.Identifier.Identifier {
+	case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
+		return nil, p.syntaxError("unexpected non-nominal type: %s", nominalType)
+	}
+	return nominalType, nil
+}
+
 func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
-	firstTy, err := parseNominalType(p, lowestBindingPower, true)
+	firstTy, err := rejectAccessKeywords(p, func() (*ast.NominalType, error) {
+		return parseNominalType(p, lowestBindingPower)
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -304,31 +321,32 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 		)
 	}
 
-	if separator != lexer.TokenError {
-		remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, true, separator)
-		if err != nil {
-			return nil, err
+	remainingEntitlements, _, err := parseNominalTypes(p, lexer.TokenParenClose, separator)
+	if err != nil {
+		return nil, err
+	}
+	for _, entitlement := range remainingEntitlements {
+		switch entitlement.Identifier.Identifier {
+		case KeywordAll, KeywordAccess, KeywordAccount, KeywordSelf:
+			return nil, p.syntaxError("unexpected non-nominal type: %s", entitlement)
 		}
-
-		entitlements = append(entitlements, remainingEntitlements...)
-
-		var entitlementSet ast.EntitlementSet
-		if separator == lexer.TokenComma {
-			entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
-		} else {
-			entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
-		}
-		return entitlementSet, nil
+		entitlements = append(entitlements, entitlement)
 	}
 
-	return nil, errors.NewUnreachableError()
+	var entitlementSet ast.EntitlementSet
+	if separator == lexer.TokenComma {
+		entitlementSet = ast.NewConjunctiveEntitlementSet(entitlements)
+	} else {
+		entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlements)
+	}
+	return entitlementSet, nil
 }
 
 // parseAccess parses an access modifier
 //
 //	access
-//	    : 'priv'
-//	    | 'pub' ( '(' 'set' ')' )?
+//	    : 'access(self)'
+//	    | 'access(all)' ( '(' 'set' ')' )?
 //	    | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' | entitlementList ) ')'
 func parseAccess(p *parser) (ast.Access, error) {
 
@@ -1148,7 +1166,7 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		// Skip the colon
 		p.next()
 
-		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen, false, lexer.TokenComma)
+		conformances, _, err = parseNominalTypes(p, lexer.TokenBraceOpen, lexer.TokenComma)
 		if err != nil {
 			return nil, err
 		}
@@ -1262,17 +1280,12 @@ func parseCompositeOrInterfaceDeclaration(
 	)
 
 	if isInterface {
-		// TODO: remove once interface conformances are supported
-		if len(conformances) > 0 {
-			// TODO: improve
-			return nil, p.syntaxError("unexpected conformances")
-		}
-
 		return ast.NewInterfaceDeclaration(
 			p.memoryGauge,
 			access,
 			compositeKind,
 			identifier,
+			conformances,
 			members,
 			docString,
 			declarationRange,
@@ -1312,7 +1325,9 @@ func parseRequiredEntitlement(p *parser) (*ast.NominalType, error) {
 	// skip the `entitlement` keyword
 	p.nextSemanticToken()
 
-	return parseNominalType(p, lowestBindingPower, true)
+	return rejectAccessKeywords(p, func() (*ast.NominalType, error) {
+		return parseNominalType(p, lowestBindingPower)
+	})
 }
 
 func parseRequiredEntitlements(p *parser) ([]*ast.NominalType, error) {

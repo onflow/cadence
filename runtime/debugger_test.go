@@ -52,10 +52,8 @@ func TestRuntimeDebugger(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		runtime := NewInterpreterRuntime(Config{
-			AtreeValidationEnabled: true,
-			Debugger:               debugger,
-		})
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.Debugger = debugger
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
@@ -146,10 +144,8 @@ func TestRuntimeDebuggerBreakpoints(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		runtime := NewInterpreterRuntime(Config{
-			AtreeValidationEnabled: true,
-			Debugger:               debugger,
-		})
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.Debugger = debugger
 
 		address := common.MustBytesToAddress([]byte{0x1})
 

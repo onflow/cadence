@@ -33,27 +33,81 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	decl := &InterfaceDeclaration{
-		Access:        AccessAll,
-		CompositeKind: common.CompositeKindResource,
-		Identifier: Identifier{
-			Identifier: "AB",
-			Pos:        Position{Offset: 1, Line: 2, Column: 3},
-		},
-		Members:   NewUnmeteredMembers([]Declaration{}),
-		DocString: "test",
-		Range: Range{
-			StartPos: Position{Offset: 7, Line: 8, Column: 9},
-			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
-		},
-	}
+	t.Run("no conformances", func(t *testing.T) {
 
-	actual, err := json.Marshal(decl)
-	require.NoError(t, err)
+		decl := &InterfaceDeclaration{
+			Access:        AccessAll,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+			Members:   NewUnmeteredMembers([]Declaration{}),
+			DocString: "test",
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		}
 
-	assert.JSONEq(t,
-		// language=json
-		`
+		actual, err := json.Marshal(decl)
+		require.NoError(t, err)
+
+		assert.JSONEq(t,
+			// language=json
+			`
+        {
+            "Type": "InterfaceDeclaration",
+            "Access": "AccessAll",
+            "CompositeKind": "CompositeKindResource",
+            "Identifier": {
+                "Identifier": "AB",
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+				"EndPos": {"Offset": 2, "Line": 2, "Column": 4}
+            },
+            "Conformances": null,
+            "Members": {
+                "Declarations": []
+            },
+            "DocString": "test",
+            "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+            "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+        }
+        `,
+			string(actual),
+		)
+	})
+
+	t.Run("with conformances", func(t *testing.T) {
+
+		decl := &InterfaceDeclaration{
+			Access:        AccessAll,
+			CompositeKind: common.CompositeKindResource,
+			Identifier: Identifier{
+				Identifier: "AB",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+			Conformances: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "CD",
+						Pos:        Position{Offset: 4, Line: 5, Column: 6},
+					},
+				},
+			},
+			Members:   NewUnmeteredMembers([]Declaration{}),
+			DocString: "test",
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		}
+
+		actual, err := json.Marshal(decl)
+		require.NoError(t, err)
+
+		assert.JSONEq(t,
+			`
         {
             "Type": "InterfaceDeclaration",
             "Access": "AccessAll", 
@@ -63,6 +117,18 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 2, "Line": 2, "Column": 4}
             },
+            "Conformances": [
+                {
+                    "Type": "NominalType",
+                    "Identifier": {
+                        "Identifier": "CD",
+                        "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                        "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                    },
+                    "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                    "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                }
+            ],
             "Members": {
                 "Declarations": []
             },
@@ -71,8 +137,9 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
             "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
         }
         `,
-		string(actual),
-	)
+			string(actual),
+		)
+	})
 }
 
 func TestInterfaceDeclaration_Doc(t *testing.T) {

@@ -222,6 +222,37 @@ func TestCoverageReportInspectProgramForExcludedLocation(t *testing.T) {
 	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 }
 
+func TestCoverageReportInspectProgramWithLocationFilter(t *testing.T) {
+
+	t.Parallel()
+
+	transaction := []byte(`
+	  transaction(amount: UFix64) {
+	    prepare(account: AuthAccount) {
+	      assert(account.balance >= amount)
+	    }
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, transaction, parser.Config{})
+	require.NoError(t, err)
+
+	coverageReport := NewCoverageReport()
+	coverageReport.WithLocationFilter(func(location common.Location) bool {
+		_, addressLoc := location.(common.AddressLocation)
+		_, stringLoc := location.(common.StringLocation)
+		// We only allow inspection of AddressLocation or StringLocation
+		return addressLoc || stringLoc
+	})
+
+	location := common.TransactionLocation{0x1a, 0x2b}
+	coverageReport.InspectProgram(location, program)
+
+	assert.Equal(t, 0, len(coverageReport.Coverage))
+	assert.Equal(t, 0, len(coverageReport.Locations))
+	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
+}
+
 func TestCoverageReportAddLineHit(t *testing.T) {
 
 	t.Parallel()
@@ -642,6 +673,27 @@ func TestCoverageReportAddLineHitForExcludedLocation(t *testing.T) {
 	location := common.StringLocation("AnswerScript")
 	coverageReport.ExcludeLocation(location)
 
+	coverageReport.AddLineHit(location, 3)
+	coverageReport.AddLineHit(location, 5)
+
+	assert.Equal(t, 0, len(coverageReport.Coverage))
+	assert.Equal(t, 0, len(coverageReport.Locations))
+	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
+}
+
+func TestCoverageReportAddLineHitWithLocationFilter(t *testing.T) {
+
+	t.Parallel()
+
+	coverageReport := NewCoverageReport()
+	coverageReport.WithLocationFilter(func(location common.Location) bool {
+		_, addressLoc := location.(common.AddressLocation)
+		_, stringLoc := location.(common.StringLocation)
+		// We only allow inspection of AddressLocation or StringLocation
+		return addressLoc || stringLoc
+	})
+
+	location := common.TransactionLocation{0x1a, 0x2b}
 	coverageReport.AddLineHit(location, 3)
 	coverageReport.AddLineHit(location, 5)
 
@@ -1241,9 +1293,9 @@ func TestRuntimeCoverage(t *testing.T) {
 			}
 		},
 	}
-	runtime := NewInterpreterRuntime(Config{
-		CoverageReport: coverageReport,
-	})
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.CoverageReport = coverageReport
 
 	value, err := runtime.ExecuteScript(
 		Script{
@@ -1398,6 +1450,147 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 			}
 		},
 	}
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.CoverageReport = coverageReport
+
+	value, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface:      runtimeInterface,
+			Location:       scriptlocation,
+			CoverageReport: coverageReport,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, cadence.NewInt(42), value)
+
+	actual, err := json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": {
+	      "S.imported": {
+	        "line_hits": {
+	          "13": 10,
+	          "14": 1,
+	          "15": 9,
+	          "16": 1,
+	          "17": 8,
+	          "18": 1,
+	          "19": 7,
+	          "20": 1,
+	          "21": 6,
+	          "22": 1,
+	          "25": 5,
+	          "26": 4,
+	          "29": 1,
+	          "9": 1
+	        },
+	        "missed_lines": [],
+	        "statements": 14,
+	        "percentage": "100.0%"
+	      }
+	    },
+	    "excluded_locations": ["s.0000000000000000000000000000000000000000000000000000000000000000"]
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+
+	assert.Equal(
+		t,
+		"Coverage: 100.0% of statements",
+		coverageReport.String(),
+	)
+}
+
+func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
+
+	t.Parallel()
+
+	importedScript := []byte(`
+	  access(all) let specialNumbers: {Int: String} = {
+	    1729: "Harshad",
+	    8128: "Harmonic",
+	    41041: "Carmichael"
+	  }
+
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
+	    specialNumbers[n] = trait
+	  }
+
+	  access(all) fun getIntegerTrait(_ n: Int): String {
+	    if n < 0 {
+	      return "Negative"
+	    } else if n == 0 {
+	      return "Zero"
+	    } else if n < 10 {
+	      return "Small"
+	    } else if n < 100 {
+	      return "Big"
+	    } else if n < 1000 {
+	      return "Huge"
+	    }
+
+	    if specialNumbers.containsKey(n) {
+	      return specialNumbers[n]!
+	    }
+
+	    return "Enormous"
+	  }
+	`)
+
+	script := []byte(`
+	  import "imported"
+
+	  access(all) fun main(): Int {
+	    let testInputs: {Int: String} = {
+	      -1: "Negative",
+	      0: "Zero",
+	      9: "Small",
+	      99: "Big",
+	      999: "Huge",
+	      1001: "Enormous",
+	      1729: "Harshad",
+	      8128: "Harmonic",
+	      41041: "Carmichael"
+	    }
+
+	    for input in testInputs.keys {
+	      let result = getIntegerTrait(input)
+	      assert(result == testInputs[input])
+	    }
+
+	    addSpecialNumber(78557, "Sierpinski")
+	    assert("Sierpinski" == getIntegerTrait(78557))
+
+	    return 42
+	  }
+	`)
+
+	coverageReport := NewCoverageReport()
+	coverageReport.WithLocationFilter(func(location common.Location) bool {
+		_, addressLoc := location.(common.AddressLocation)
+		_, stringLoc := location.(common.StringLocation)
+		// We only allow inspection of AddressLocation or StringLocation
+		return addressLoc || stringLoc
+	})
+	scriptlocation := common.ScriptLocation{0x1b, 0x2c}
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return importedScript, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
 	runtime := NewInterpreterRuntime(Config{
 		CoverageReport: coverageReport,
 	})
@@ -1444,7 +1637,7 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	        "percentage": "100.0%"
 	      }
 	    },
-	    "excluded_locations": ["s.0000000000000000000000000000000000000000000000000000000000000000"]
+	    "excluded_locations": []
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))

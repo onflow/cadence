@@ -297,11 +297,10 @@ func TestCheckBaseType(t *testing.T) {
 			attachment B for A {}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
-		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[2])
 	})
 
 	t.Run("invalid type", func(t *testing.T) {
@@ -313,10 +312,9 @@ func TestCheckBaseType(t *testing.T) {
 			attachment A for B {}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
 	})
 }
 
@@ -477,10 +475,8 @@ func TestCheckNestedBaseType(t *testing.T) {
 			`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		// 2 errors, for undeclared type, one for invalid type in base type
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 }
@@ -2695,7 +2691,25 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// TODO: once interfaces can conform to interfaces, add more tests here for interface hierarchy
+	t.Run("attach to super interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource interface I2: I {}
+			resource R: I2 {}
+			attachment A for I {}
+			access(all) fun foo() {
+				let r: @{I2} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckAttachWithArguments(t *testing.T) {
@@ -2840,11 +2854,10 @@ func TestCheckAttachInvalidType(t *testing.T) {
 		}`,
 	)
 
-	errs := RequireCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-	assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[1])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckAnyAttachmentTypes(t *testing.T) {
@@ -4706,8 +4719,8 @@ func TestCheckForEachAttachment(t *testing.T) {
 			entitlement mapping M {
 				E -> F
 			}
-			fun bar (attachment: &AnyResourceAttachment) {
-				if let a = attachment as? auth(F) &A {
+			fun bar (attachmentRef: &AnyResourceAttachment) {
+				if let a = attachmentRef as? auth(F) &A {
 					a.foo()
 				}
 			}

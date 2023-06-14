@@ -177,7 +177,7 @@ type Type interface {
 	// applies `f` to all the types syntactically comprising this type.
 	// i.e. `[T]` would map to `f([f(T)])`, but the internals of composite types are not
 	// inspected, as they appear simply as nominal types in annotations
-	Map(memoryGauge common.MemoryGauge, f func(Type) Type) Type
+	Map(memoryGauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
@@ -194,7 +194,7 @@ type TypeIndexableType interface {
 	Type
 	isTypeIndexableType() bool
 	IsValidIndexingType(indexingType Type) bool
-	TypeIndexingElementType(indexingType Type, astRange ast.Range) (Type, error)
+	TypeIndexingElementType(indexingType Type, astRange func() ast.Range) (Type, error)
 }
 
 type MemberResolver struct {
@@ -342,8 +342,8 @@ func NewTypeAnnotation(ty Type) TypeAnnotation {
 	}
 }
 
-func (a TypeAnnotation) Map(gauge common.MemoryGauge, f func(Type) Type) TypeAnnotation {
-	return NewTypeAnnotation(a.Type.Map(gauge, f))
+func (a TypeAnnotation) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) TypeAnnotation {
+	return NewTypeAnnotation(a.Type.Map(gauge, typeParamMap, f))
 }
 
 // isInstance
@@ -436,6 +436,34 @@ func FromStringFunctionType(ty Type) *FunctionType {
 			},
 		),
 	)
+}
+
+// fromBigEndianBytes
+
+const FromBigEndianBytesFunctionName = "fromBigEndianBytes"
+
+func FromBigEndianBytesFunctionDocstring(ty Type) string {
+	return fmt.Sprintf(
+		"Attempts to parse %s from a big-endian byte representation. Returns `nil` on invalid input.",
+		ty.String(),
+	)
+}
+
+func FromBigEndianBytesFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "bytes",
+				TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: ty,
+			},
+		),
+	}
 }
 
 // toBigEndianBytes
@@ -656,7 +684,7 @@ func (t *OptionalType) SupportedEntitlements() *EntitlementOrderedSet {
 	if entitlementSupportingType, ok := t.Type.(EntitlementSupportingType); ok {
 		return entitlementSupportingType.SupportedEntitlements()
 	}
-	return orderedmap.New[EntitlementOrderedSet](0)
+	return nil
 }
 
 const optionalTypeMapFunctionDocString = `
@@ -668,8 +696,8 @@ Returns nil if this optional is nil
 
 const OptionalTypeMapFunctionName = "map"
 
-func (t *OptionalType) Map(memoryGauge common.MemoryGauge, f func(Type) Type) Type {
-	return f(NewOptionalType(memoryGauge, t.Type.Map(memoryGauge, f)))
+func (t *OptionalType) Map(memoryGauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	return f(NewOptionalType(memoryGauge, t.Type.Map(memoryGauge, typeParamMap, f)))
 }
 
 func (t *OptionalType) GetMembers() map[string]MemberResolver {
@@ -872,16 +900,13 @@ func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 	return ty
 }
 
-func (t *GenericType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	typeParameter := &TypeParameter{
-		Name:      t.TypeParameter.Name,
-		Optional:  t.TypeParameter.Optional,
-		TypeBound: t.TypeParameter.TypeBound.Map(gauge, f),
+func (t *GenericType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	if param, ok := typeParamMap[t.TypeParameter]; ok {
+		return f(&GenericType{
+			TypeParameter: param,
+		})
 	}
-
-	return f(&GenericType{
-		TypeParameter: typeParameter,
-	})
+	panic(errors.NewUnreachableError())
 }
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
@@ -1141,7 +1166,7 @@ func (t *NumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *NumericType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+func (t *NumericType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	return f(t)
 }
 
@@ -1353,7 +1378,7 @@ func (t *FixedPointNumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *FixedPointNumericType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+func (t *FixedPointNumericType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	return f(t)
 }
 
@@ -1591,6 +1616,14 @@ var (
 
 	Word64TypeAnnotation = NewTypeAnnotation(Word64Type)
 
+	// Word128Type represents the 128-bit unsigned integer type `Word128`
+	// which does NOT check for overflow and underflow
+	Word128Type = NewNumericType(Word128TypeName).
+			WithTag(Word128TypeTag).
+			WithIntRange(Word128TypeMinIntBig, Word128TypeMaxIntBig)
+
+	Word128TypeAnnotation = NewTypeAnnotation(Word128Type)
+
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName).
 			WithTag(FixedPointTypeTag).
@@ -1717,6 +1750,19 @@ var (
 
 	Word64TypeMinInt = new(big.Int)
 	Word64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
+
+	// 1 << 128
+	Word128TypeMaxIntPlusOneBig = func() *big.Int {
+		word128TypeMaxPlusOne := big.NewInt(1)
+		word128TypeMaxPlusOne.Lsh(word128TypeMaxPlusOne, 128)
+		return word128TypeMaxPlusOne
+	}()
+	Word128TypeMinIntBig = new(big.Int)
+	Word128TypeMaxIntBig = func() *big.Int {
+		word128TypeMax := new(big.Int)
+		word128TypeMax.Sub(Word128TypeMaxIntPlusOneBig, big.NewInt(1))
+		return word128TypeMax
+	}()
 
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
@@ -2292,8 +2338,8 @@ func (t *VariableSizedType) Equal(other Type) bool {
 	return t.Type.Equal(otherArray.Type)
 }
 
-func (t *VariableSizedType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	return f(NewVariableSizedType(gauge, t.Type.Map(gauge, f)))
+func (t *VariableSizedType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	return f(NewVariableSizedType(gauge, t.Type.Map(gauge, typeParamMap, f)))
 }
 
 func (t *VariableSizedType) GetMembers() map[string]MemberResolver {
@@ -2327,8 +2373,8 @@ func (t *VariableSizedType) IsImportable(results map[*Member]bool) bool {
 	return t.Type.IsImportable(results)
 }
 
-func (v *VariableSizedType) IsEquatable() bool {
-	return v.Type.IsEquatable()
+func (t *VariableSizedType) IsEquatable() bool {
+	return t.Type.IsEquatable()
 }
 
 func (t *VariableSizedType) IsComparable() bool {
@@ -2442,8 +2488,8 @@ func (t *ConstantSizedType) Equal(other Type) bool {
 		t.Size == otherArray.Size
 }
 
-func (t *ConstantSizedType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	return f(NewConstantSizedType(gauge, t.Type.Map(gauge, f), t.Size))
+func (t *ConstantSizedType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	return f(NewConstantSizedType(gauge, t.Type.Map(gauge, typeParamMap, f), t.Size))
 }
 
 func (t *ConstantSizedType) GetMembers() map[string]MemberResolver {
@@ -3189,20 +3235,24 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 	var newParameters []Parameter
 
-	for _, parameter := range t.Parameters {
-		newParameterType := parameter.TypeAnnotation.Type.Resolve(typeArguments)
-		if newParameterType == nil {
-			return nil
-		}
+	if len(t.Parameters) > 0 {
+		newParameters = make([]Parameter, 0, len(t.Parameters))
 
-		newParameters = append(
-			newParameters,
-			Parameter{
-				Label:          parameter.Label,
-				Identifier:     parameter.Identifier,
-				TypeAnnotation: NewTypeAnnotation(newParameterType),
-			},
-		)
+		for _, parameter := range t.Parameters {
+			newParameterType := parameter.TypeAnnotation.Type.Resolve(typeArguments)
+			if newParameterType == nil {
+				return nil
+			}
+
+			newParameters = append(
+				newParameters,
+				Parameter{
+					Label:          parameter.Label,
+					Identifier:     parameter.Identifier,
+					TypeAnnotation: NewTypeAnnotation(newParameterType),
+				},
+			)
+		}
 	}
 
 	// return type
@@ -3221,36 +3271,53 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 }
 
-func (t *FunctionType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	returnType := t.ReturnTypeAnnotation.Map(gauge, f)
+func (t *FunctionType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 
-	var newParameters []Parameter = make([]Parameter, 0, len(t.Parameters))
-	for _, parameter := range t.Parameters {
-		newParameterTypeAnnot := parameter.TypeAnnotation.Map(gauge, f)
+	var newTypeParameters []*TypeParameter
 
-		newParameters = append(
-			newParameters,
-			Parameter{
-				Label:          parameter.Label,
-				Identifier:     parameter.Identifier,
-				TypeAnnotation: newParameterTypeAnnot,
-			},
-		)
-	}
+	if len(t.TypeParameters) > 0 {
+		newTypeParameters = make([]*TypeParameter, 0, len(t.TypeParameters))
+		for _, parameter := range t.TypeParameters {
 
-	var newTypeParameters []*TypeParameter = make([]*TypeParameter, 0, len(t.TypeParameters))
-	for _, parameter := range t.TypeParameters {
-		newTypeParameterTypeBound := parameter.TypeBound.Map(gauge, f)
+			if param, ok := typeParamMap[parameter]; ok {
+				newTypeParameters = append(newTypeParameters, param)
+				continue
+			}
 
-		newTypeParameters = append(
-			newTypeParameters,
-			&TypeParameter{
+			newTypeParameterTypeBound := parameter.TypeBound.Map(gauge, typeParamMap, f)
+			newParam := &TypeParameter{
 				Name:      parameter.Name,
 				Optional:  parameter.Optional,
 				TypeBound: newTypeParameterTypeBound,
-			},
-		)
+			}
+			typeParamMap[parameter] = newParam
+
+			newTypeParameters = append(
+				newTypeParameters,
+				newParam,
+			)
+		}
 	}
+
+	var newParameters []Parameter
+
+	if len(t.Parameters) > 0 {
+		newParameters = make([]Parameter, 0, len(t.Parameters))
+		for _, parameter := range t.Parameters {
+			newParameterTypeAnnot := parameter.TypeAnnotation.Map(gauge, typeParamMap, f)
+
+			newParameters = append(
+				newParameters,
+				Parameter{
+					Label:          parameter.Label,
+					Identifier:     parameter.Identifier,
+					TypeAnnotation: newParameterTypeAnnot,
+				},
+			)
+		}
+	}
+
+	returnType := t.ReturnTypeAnnotation.Map(gauge, typeParamMap, f)
 
 	functionType := NewSimpleFunctionType(t.Purity, newParameters, returnType)
 	functionType.TypeParameters = newTypeParameters
@@ -3313,6 +3380,8 @@ func init() {
 		PublicKeyType,
 		SignatureAlgorithmType,
 		HashAlgorithmType,
+		StorageCapabilityControllerType,
+		AccountCapabilityControllerType,
 	)
 
 	for _, ty := range types {
@@ -3393,6 +3462,7 @@ var AllUnsignedIntegerTypes = []Type{
 	Word16Type,
 	Word32Type,
 	Word64Type,
+	Word128Type,
 }
 
 var AllIntegerTypes = append(
@@ -3520,6 +3590,16 @@ func init() {
 				fromStringDocstring,
 			))
 
+			// add .fromBigEndianBytes() method
+			fromBigEndianBytesFnType := FromBigEndianBytesFunctionType(numberType)
+			fromBigEndianBytesDocstring := FromBigEndianBytesFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromBigEndianBytesFunctionName,
+				fromBigEndianBytesFnType,
+				fromBigEndianBytesDocstring,
+			))
+
 			BaseValueActivation.Set(
 				typeName,
 				baseFunctionVariable(
@@ -3610,6 +3690,13 @@ var AddressTypeFromBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
 }
 
+const AddressTypeFromStringFunctionName = "fromString"
+const AddressTypeFromStringFunctionDocString = `
+Attempts to parse an Address from the input string. Returns nil on invalid input.
+`
+
+var AddressTypeFromStringFunctionType = FromStringFunctionType(TheAddressType)
+
 func init() {
 	// Declare a conversion function for the address type
 
@@ -3639,6 +3726,12 @@ func init() {
 		AddressTypeFromBytesFunctionName,
 		AddressTypeFromBytesFunctionType,
 		AddressTypeFromBytesFunctionDocString,
+	))
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		AddressTypeFromStringFunctionName,
+		AddressTypeFromStringFunctionType,
+		AddressTypeFromStringFunctionDocString,
 	))
 
 	BaseValueActivation.Set(
@@ -3780,6 +3873,11 @@ type EnumInfo struct {
 	Cases   []string
 }
 
+type Conformance struct {
+	InterfaceType        *InterfaceType
+	ConformanceChainRoot *InterfaceType
+}
+
 type CompositeType struct {
 	Location      common.Location
 	EnumRawType   Type
@@ -3804,15 +3902,17 @@ type CompositeType struct {
 	Fields                              []string
 	ConstructorParameters               []Parameter
 	ImplicitTypeRequirementConformances []*CompositeType
-	// an internal set of field `ExplicitInterfaceConformances`
-	explicitInterfaceConformanceSet     *InterfaceSet
-	ExplicitInterfaceConformances       []*InterfaceType
-	Kind                                common.CompositeKind
-	cachedIdentifiersLock               sync.RWMutex
-	explicitInterfaceConformanceSetOnce sync.Once
-	memberResolversOnce                 sync.Once
-	ConstructorPurity                   FunctionPurity
-	hasComputedMembers                  bool
+	// an internal set of field `effectiveInterfaceConformances`
+	effectiveInterfaceConformanceSet     *InterfaceSet
+	effectiveInterfaceConformances       []Conformance
+	ExplicitInterfaceConformances        []*InterfaceType
+	Kind                                 common.CompositeKind
+	cachedIdentifiersLock                sync.RWMutex
+	effectiveInterfaceConformanceSetOnce sync.Once
+	effectiveInterfaceConformancesOnce   sync.Once
+	memberResolversOnce                  sync.Once
+	ConstructorPurity                    FunctionPurity
+	hasComputedMembers                   bool
 	// Only applicable for native composite types
 	importable            bool
 	supportedEntitlements *EntitlementOrderedSet
@@ -3829,21 +3929,31 @@ func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
 }
 
-func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
-	t.initializeExplicitInterfaceConformanceSet()
-	return t.explicitInterfaceConformanceSet
+func (t *CompositeType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	t.initializeEffectiveInterfaceConformanceSet()
+	return t.effectiveInterfaceConformanceSet
 }
 
-func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
-	t.explicitInterfaceConformanceSetOnce.Do(func() {
-		// TODO: also include conformances' conformances recursively
-		//   once interface can have conformances
+func (t *CompositeType) initializeEffectiveInterfaceConformanceSet() {
+	t.effectiveInterfaceConformanceSetOnce.Do(func() {
+		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
 
-		t.explicitInterfaceConformanceSet = NewInterfaceSet()
-		for _, conformance := range t.ExplicitInterfaceConformances {
-			t.explicitInterfaceConformanceSet.Add(conformance)
+		for _, conformance := range t.EffectiveInterfaceConformances() {
+			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
 		}
 	})
+}
+
+func (t *CompositeType) EffectiveInterfaceConformances() []Conformance {
+	t.effectiveInterfaceConformancesOnce.Do(func() {
+		t.effectiveInterfaceConformances = distinctConformances(
+			t.ExplicitInterfaceConformances,
+			nil,
+			map[*InterfaceType]struct{}{},
+		)
+	})
+
+	return t.effectiveInterfaceConformances
 }
 
 func (t *CompositeType) addImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
@@ -3977,8 +4087,9 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 }
 
 func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	if t.supportedEntitlements != nil {
-		return t.supportedEntitlements
+	supportedEntitlements := t.supportedEntitlements
+	if supportedEntitlements != nil {
+		return supportedEntitlements
 	}
 
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
@@ -3990,7 +4101,7 @@ func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 			set.SetAll(access.Entitlements)
 		}
 	})
-	t.ExplicitInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
+	t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
 		set.SetAll(it.SupportedEntitlements())
 	})
 
@@ -4141,8 +4252,8 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	var typeRequirements []*CompositeType
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
-		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
-			ty, ok := conformance.NestedTypes.Get(t.Identifier)
+		for _, conformance := range containerComposite.EffectiveInterfaceConformances() {
+			ty, ok := conformance.InterfaceType.NestedTypes.Get(t.Identifier)
 			if !ok {
 				continue
 			}
@@ -4181,12 +4292,13 @@ func (t *CompositeType) isTypeIndexableType() bool {
 	return t.Kind.SupportsAttachments()
 }
 
-func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ ast.Range) (Type, error) {
+func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
-		if attachment.AttachmentEntitlementAccess != nil {
-			access = (*attachment.AttachmentEntitlementAccess).Codomain()
+		attachmentEntitlementAccess := attachment.AttachmentEntitlementAccess
+		if attachmentEntitlementAccess != nil {
+			access = attachmentEntitlementAccess.Codomain()
 		}
 	}
 
@@ -4235,16 +4347,16 @@ func CompositeForEachAttachmentFunctionType(t common.CompositeKind) *FunctionTyp
 								),
 							},
 						},
-						ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+						ReturnTypeAnnotation: VoidTypeAnnotation,
 					},
 				),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+		ReturnTypeAnnotation: VoidTypeAnnotation,
 	}
 }
 
-func (t *CompositeType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+func (t *CompositeType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	return f(t)
 }
 
@@ -4263,7 +4375,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 		// However, if this composite type is a type requirement,
 		// it acts like an interface and does not have to declare members.
 
-		t.ExplicitInterfaceConformanceSet().
+		t.EffectiveInterfaceConformanceSet().
 			ForEach(func(conformance *InterfaceType) {
 				for name, resolver := range conformance.GetMembers() { //nolint:maprange
 					if _, ok := memberResolvers[name]; !ok {
@@ -4356,10 +4468,45 @@ func NewPublicFunctionMember(
 	functionType *FunctionType,
 	docString string,
 ) *Member {
+	return NewFunctionMember(
+		memoryGauge,
+		containerType,
+		UnauthorizedAccess,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewUnmeteredFunctionMember(
+	containerType Type,
+	access ast.PrimitiveAccess,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+	return NewFunctionMember(
+		nil,
+		containerType,
+		PrimitiveAccess(access),
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewFunctionMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
 
 	return &Member{
 		ContainerType: containerType,
-		Access:        PrimitiveAccess(ast.AccessAll),
+		Access:        access,
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
@@ -4395,16 +4542,55 @@ func NewPublicConstantFieldMember(
 	fieldType Type,
 	docString string,
 ) *Member {
+	return NewFieldMember(
+		memoryGauge,
+		containerType,
+		UnauthorizedAccess,
+		ast.VariableKindConstant,
+		identifier,
+		fieldType,
+		docString,
+	)
+}
+
+func NewUnmeteredFieldMember(
+	containerType Type,
+	access ast.PrimitiveAccess,
+	variableKind ast.VariableKind,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
+	return NewFieldMember(
+		nil,
+		containerType,
+		PrimitiveAccess(access),
+		variableKind,
+		identifier,
+		fieldType,
+		docString,
+	)
+}
+
+func NewFieldMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access Access,
+	variableKind ast.VariableKind,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
 	return &Member{
 		ContainerType: containerType,
-		Access:        PrimitiveAccess(ast.AccessAll),
+		Access:        access,
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
 			ast.EmptyPosition,
 		),
 		DeclarationKind: common.DeclarationKindField,
-		VariableKind:    ast.VariableKindConstant,
+		VariableKind:    variableKind,
 		TypeAnnotation:  NewTypeAnnotation(fieldType),
 		DocString:       docString,
 	}
@@ -4495,14 +4681,21 @@ type InterfaceType struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
-	Identifier            string
-	Fields                []string
-	InitializerParameters []Parameter
-	CompositeKind         common.CompositeKind
-	cachedIdentifiersLock sync.RWMutex
-	memberResolversOnce   sync.Once
-	InitializerPurity     FunctionPurity
-	supportedEntitlements *EntitlementOrderedSet
+
+	Identifier                           string
+	Fields                               []string
+	InitializerParameters                []Parameter
+	CompositeKind                        common.CompositeKind
+	cachedIdentifiersLock                sync.RWMutex
+	memberResolversOnce                  sync.Once
+	effectiveInterfaceConformancesOnce   sync.Once
+	effectiveInterfaceConformanceSetOnce sync.Once
+	InitializerPurity                    FunctionPurity
+
+	ExplicitInterfaceConformances    []*InterfaceType
+	effectiveInterfaceConformances   []Conformance
+	effectiveInterfaceConformanceSet *InterfaceSet
+	supportedEntitlements            *EntitlementOrderedSet
 }
 
 var _ Type = &InterfaceType{}
@@ -4606,8 +4799,9 @@ func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 }
 
 func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	if t.supportedEntitlements != nil {
-		return t.supportedEntitlements
+	supportedEntitlements := t.supportedEntitlements
+	if supportedEntitlements != nil {
+		return supportedEntitlements
 	}
 
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
@@ -4629,7 +4823,7 @@ func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	return set
 }
 
-func (t *InterfaceType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+func (t *InterfaceType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	return f(t)
 }
 
@@ -4754,6 +4948,82 @@ func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 
 func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
 	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
+}
+
+func (t *InterfaceType) EffectiveInterfaceConformances() []Conformance {
+	t.effectiveInterfaceConformancesOnce.Do(func() {
+		t.effectiveInterfaceConformances = distinctConformances(
+			t.ExplicitInterfaceConformances,
+			nil,
+			map[*InterfaceType]struct{}{},
+		)
+	})
+
+	return t.effectiveInterfaceConformances
+}
+
+func (t *InterfaceType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	t.initializeEffectiveInterfaceConformanceSet()
+	return t.effectiveInterfaceConformanceSet
+}
+
+func (t *InterfaceType) initializeEffectiveInterfaceConformanceSet() {
+	t.effectiveInterfaceConformanceSetOnce.Do(func() {
+		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
+
+		for _, conformance := range t.EffectiveInterfaceConformances() {
+			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
+		}
+	})
+}
+
+// distinctConformances recursively visit conformances and their conformances,
+// and return all the distinct conformances as an array.
+func distinctConformances(
+	conformances []*InterfaceType,
+	parent *InterfaceType,
+	seenConformances map[*InterfaceType]struct{},
+) []Conformance {
+
+	if len(conformances) == 0 {
+		return nil
+	}
+
+	collectedConformances := make([]Conformance, 0)
+
+	var conformanceChainRoot *InterfaceType
+
+	for _, conformance := range conformances {
+		if _, ok := seenConformances[conformance]; ok {
+			continue
+		}
+		seenConformances[conformance] = struct{}{}
+
+		if parent == nil {
+			conformanceChainRoot = conformance
+		} else {
+			conformanceChainRoot = parent
+		}
+
+		collectedConformances = append(
+			collectedConformances,
+			Conformance{
+				InterfaceType:        conformance,
+				ConformanceChainRoot: conformanceChainRoot,
+			},
+		)
+
+		// Recursively collect conformances
+		nestedConformances := distinctConformances(
+			conformance.ExplicitInterfaceConformances,
+			conformanceChainRoot,
+			seenConformances,
+		)
+
+		collectedConformances = append(collectedConformances, nestedConformances...)
+	}
+
+	return collectedConformances
 }
 
 // DictionaryType consists of the key and value type
@@ -4917,11 +5187,11 @@ Removes the value for the given key from the dictionary.
 Returns the value as an optional if the dictionary contained the key, or nil if the dictionary did not contain the key
 `
 
-func (t *DictionaryType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+func (t *DictionaryType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	return f(NewDictionaryType(
 		gauge,
-		t.KeyType.Map(gauge, f),
-		t.ValueType.Map(gauge, f),
+		t.KeyType.Map(gauge, typeParamMap, f),
+		t.ValueType.Map(gauge, typeParamMap, f),
 	))
 }
 
@@ -5337,8 +5607,13 @@ func (t *ReferenceType) RewriteWithRestrictedTypes() (Type, bool) {
 	}
 }
 
-func (t *ReferenceType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	return f(NewReferenceType(gauge, t.Type.Map(gauge, f), t.Authorization))
+func (t *ReferenceType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	mappedType := t.Type.Map(gauge, typeParamMap, f)
+	return f(NewReferenceType(
+		gauge,
+		mappedType,
+		t.Authorization,
+	))
 }
 
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
@@ -5358,7 +5633,7 @@ func (t *ReferenceType) isTypeIndexableType() bool {
 	return ok && referencedType.isTypeIndexableType()
 }
 
-func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange ast.Range) (Type, error) {
+func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange func() ast.Range) (Type, error) {
 	_, ok := t.Type.(TypeIndexableType)
 	if !ok {
 		return nil, nil
@@ -5369,7 +5644,7 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange ast.
 	case *CompositeType:
 		if attachment.AttachmentEntitlementAccess != nil {
 			var err error
-			access, err = (*attachment.AttachmentEntitlementAccess).Image(t.Authorization, astRange)
+			access, err = attachment.AttachmentEntitlementAccess.Image(t.Authorization, astRange)
 			if err != nil {
 				return nil, err
 			}
@@ -5555,7 +5830,7 @@ const addressTypeToBytesFunctionDocString = `
 Returns an array containing the byte representation of the address
 `
 
-func (t *AddressType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+func (t *AddressType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	return f(t)
 }
 
@@ -5697,7 +5972,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		case IntegerType, SignedIntegerType,
 			UIntType,
 			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
-			Word8Type, Word16Type, Word32Type, Word64Type:
+			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type:
 
 			return true
 
@@ -5900,8 +6175,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// and `Vs` is a subset of `Us`.
 
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
-						typedSuperType.RestrictionSet().
-							IsSubsetOf(typedSubType.RestrictionSet())
+						typedSuperType.EffectiveRestrictionSet().
+							IsSubsetOf(typedSubType.EffectiveRestrictionSet())
 				}
 
 				if restrictedSubtype, ok := restrictedSubtype.(*CompositeType); ok {
@@ -5911,10 +6186,9 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// and `T` conforms to `Vs`.
 					// `Us` and `Vs` do *not* have to be subsets.
 
-					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
-						typedSuperType.RestrictionSet().
-							IsSubsetOf(restrictedSubtype.ExplicitInterfaceConformanceSet())
+						typedSuperType.EffectiveRestrictionSet().
+							IsSubsetOf(restrictedSubtype.EffectiveInterfaceConformanceSet())
 				}
 
 			case *CompositeType:
@@ -5924,8 +6198,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				// and `T` conforms to `Us`.
 
 				return IsSubType(typedSubType, typedSuperType.Type) &&
-					typedSuperType.RestrictionSet().
-						IsSubsetOf(typedSubType.ExplicitInterfaceConformanceSet())
+					typedSuperType.EffectiveRestrictionSet().
+						IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 			}
 
 		default:
@@ -6019,13 +6293,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				return false
 			}
 
-			// TODO: once interfaces can conform to interfaces, include
-			return typedSubType.ExplicitInterfaceConformanceSet().
+			return typedSubType.EffectiveInterfaceConformanceSet().
 				Contains(typedSuperType)
 
-		// An interface type is a supertype of a restricted type if the restricted set contains
-		// that explicit interface type. Once interfaces can conform to interfaces, this should instead
-		// check that at least one value in the restriction set is a subtype of the interface supertype
+		// An interface type is a supertype of a restricted type if at least one value
+		// in the restriction set is a subtype of the interface supertype.
 
 		// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
 		// resource interface I { /* ... */ }
@@ -6034,11 +6306,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// let i : {I} = ... // some operation constructing `i`
 		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
 		case *RestrictedType:
-			return typedSubType.RestrictionSet().Contains(typedSuperType)
+			return typedSubType.EffectiveRestrictionSet().Contains(typedSuperType)
 
 		case *InterfaceType:
-			// TODO: Once interfaces can conform to interfaces, check conformances here
-			return false
+			return typedSubType.EffectiveInterfaceConformanceSet().
+				Contains(typedSuperType)
 		}
 
 	case ParameterizedType:
@@ -6240,7 +6512,7 @@ func (t *TransactionType) RewriteWithRestrictedTypes() (Type, bool) {
 	return t, false
 }
 
-func (t *TransactionType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+func (t *TransactionType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	return f(t)
 }
 
@@ -6274,12 +6546,12 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 type RestrictedType struct {
 	Type Type
 	// an internal set of field `Restrictions`
-	restrictionSet        *InterfaceSet
-	Restrictions          []*InterfaceType
-	restrictionSetOnce    sync.Once
-	memberResolvers       map[string]MemberResolver
-	memberResolversOnce   sync.Once
-	supportedEntitlements *EntitlementOrderedSet
+	effectiveRestrictionSet     *InterfaceSet
+	Restrictions                []*InterfaceType
+	effectiveRestrictionSetOnce sync.Once
+	memberResolvers             map[string]MemberResolver
+	memberResolversOnce         sync.Once
+	supportedEntitlements       *EntitlementOrderedSet
 }
 
 var _ Type = &RestrictedType{}
@@ -6287,7 +6559,7 @@ var _ Type = &RestrictedType{}
 func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
 	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
 
-	// Also meter the cost for the `restrictionSet` here, since ordered maps are not separately metered.
+	// Also meter the cost for the `effectiveRestrictionSet` here, since ordered maps are not separately metered.
 	wrapperUsage, entryListUsage, entriesUsage := common.NewOrderedMapMemoryUsages(uint64(len(restrictions)))
 	common.UseMemory(memoryGauge, wrapperUsage)
 	common.UseMemory(memoryGauge, entryListUsage)
@@ -6299,16 +6571,21 @@ func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []
 	}
 }
 
-func (t *RestrictedType) RestrictionSet() *InterfaceSet {
-	t.initializeRestrictionSet()
-	return t.restrictionSet
+func (t *RestrictedType) EffectiveRestrictionSet() *InterfaceSet {
+	t.initializeEffectiveRestrictionSet()
+	return t.effectiveRestrictionSet
 }
 
-func (t *RestrictedType) initializeRestrictionSet() {
-	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = NewInterfaceSet()
+func (t *RestrictedType) initializeEffectiveRestrictionSet() {
+	t.effectiveRestrictionSetOnce.Do(func() {
+		t.effectiveRestrictionSet = NewInterfaceSet()
 		for _, restriction := range t.Restrictions {
-			t.restrictionSet.Add(restriction)
+			t.effectiveRestrictionSet.Add(restriction)
+
+			// Also add the interfaces to which this restricting interface conforms.
+			for _, conformance := range restriction.EffectiveInterfaceConformances() {
+				t.effectiveRestrictionSet.Add(conformance.InterfaceType)
+			}
 		}
 	})
 }
@@ -6382,8 +6659,8 @@ func (t *RestrictedType) Equal(other Type) bool {
 
 	// Check that the set of restrictions are equal; order does not matter
 
-	restrictionSet := t.RestrictionSet()
-	otherRestrictionSet := otherRestrictedType.RestrictionSet()
+	restrictionSet := t.EffectiveRestrictionSet()
+	otherRestrictionSet := otherRestrictedType.EffectiveRestrictionSet()
 
 	if restrictionSet.Len() != otherRestrictionSet.Len() {
 		return false
@@ -6474,15 +6751,27 @@ func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 	return t, false
 }
 
-func (t *RestrictedType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
-	restrictions := make([]*InterfaceType, 0, len(t.Restrictions))
-	for _, restriction := range t.Restrictions {
-		if mappedRestriction, isRestriction := restriction.Map(gauge, f).(*InterfaceType); isRestriction {
-			restrictions = append(restrictions, mappedRestriction)
+func (t *RestrictedType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	var restrictions []*InterfaceType
+	if len(t.Restrictions) > 0 {
+		restrictions = make([]*InterfaceType, 0, len(t.Restrictions))
+		for _, restriction := range t.Restrictions {
+			mapped := restriction.Map(gauge, typeParamMap, f)
+			if mappedRestriction, isRestriction := mapped.(*InterfaceType); isRestriction {
+				restrictions = append(restrictions, mappedRestriction)
+			} else {
+				panic(errors.NewUnexpectedError(fmt.Sprintf("restriction mapped to non-interface type %T", mapped)))
+			}
 		}
 	}
 
-	return f(NewRestrictedType(gauge, t.Type.Map(gauge, f), restrictions))
+	mappedType := t.Type.Map(gauge, typeParamMap, f)
+
+	return f(NewRestrictedType(
+		gauge,
+		mappedType,
+		restrictions,
+	))
 }
 
 func (t *RestrictedType) GetMembers() map[string]MemberResolver {
@@ -6554,8 +6843,8 @@ func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	}
 
 	// a restricted type supports all the entitlements of its interfaces and its restricted type
-	set = orderedmap.New[EntitlementOrderedSet](t.RestrictionSet().Len())
-	t.RestrictionSet().ForEach(func(it *InterfaceType) {
+	set = orderedmap.New[EntitlementOrderedSet](t.EffectiveRestrictionSet().Len())
+	t.EffectiveRestrictionSet().ForEach(func(it *InterfaceType) {
 		set.SetAll(it.SupportedEntitlements())
 	})
 	if supportingType, ok := t.Type.(EntitlementSupportingType); ok {
@@ -6587,12 +6876,12 @@ func (t *RestrictedType) isTypeIndexableType() bool {
 	return true
 }
 
-func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ ast.Range) (Type, error) {
+func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
 		if attachment.AttachmentEntitlementAccess != nil {
-			access = (*attachment.AttachmentEntitlementAccess).Codomain()
+			access = attachment.AttachmentEntitlementAccess.Codomain()
 		}
 	}
 
@@ -6855,6 +7144,8 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 	}
 }
 
+const CapabilityTypeBorrowFunctionName = "borrow"
+
 const capabilityTypeBorrowFunctionDocString = `
 Returns a reference to the object targeted by the capability.
 
@@ -6864,31 +7155,41 @@ If there is an object stored, a reference is returned as an optional, provided i
 If the stored object cannot be borrowed using the given type, the function panics.
 `
 
+const CapabilityTypeCheckFunctionName = "check"
+
 const capabilityTypeCheckFunctionDocString = `
 Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
 `
+
+var CapabilityTypeAddressFieldType = TheAddressType
+
+const CapabilityTypeAddressFieldName = "address"
 
 const capabilityTypeAddressFieldDocString = `
 The address of the capability
 `
 
-func (t *CapabilityType) Map(gauge common.MemoryGauge, f func(Type) Type) Type {
+func (t *CapabilityType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	var borrowType Type
 	if t.BorrowType != nil {
-		borrowType = t.BorrowType.Map(gauge, f)
+		borrowType = t.BorrowType.Map(gauge, typeParamMap, f)
 	}
 
 	return f(NewCapabilityType(gauge, borrowType))
 }
 
+var CapabilityTypeIDFieldType = UInt64Type
+
+const CapabilityTypeIDFieldName = "id"
+
+const capabilityTypeIDFieldDocString = `
+The ID of the capability
+`
+
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
 }
-
-const CapabilityTypeBorrowFunctionName = "borrow"
-const CapabilityTypeCheckFunctionName = "check"
-const CapabilityTypeAddressFieldName = "address"
 
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
@@ -6908,33 +7209,18 @@ func (t *CapabilityType) initializeMemberResolvers() {
 			NewUnmeteredPublicConstantFieldMember(
 				t,
 				CapabilityTypeAddressFieldName,
-				TheAddressType,
+				CapabilityTypeAddressFieldType,
 				capabilityTypeAddressFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				CapabilityTypeIDFieldName,
+				CapabilityTypeIDFieldType,
+				capabilityTypeIDFieldDocString,
 			),
 		})
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
-}
-
-var NativeCompositeTypes = map[string]*CompositeType{}
-
-func init() {
-	types := []*CompositeType{
-		AccountKeyType,
-		PublicKeyType,
-		HashAlgorithmType,
-		SignatureAlgorithmType,
-		AuthAccountType,
-		AuthAccountKeysType,
-		AuthAccountContractsType,
-		PublicAccountType,
-		PublicAccountKeysType,
-		PublicAccountContractsType,
-	}
-
-	for _, semaType := range types {
-		NativeCompositeTypes[semaType.QualifiedIdentifier()] = semaType
-	}
 }
 
 const AccountKeyTypeName = "AccountKey"
@@ -7247,7 +7533,7 @@ func (t *EntitlementType) Equal(other Type) bool {
 	return otherEntitlement.ID() == t.ID()
 }
 
-func (t *EntitlementType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+func (t *EntitlementType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	return f(t)
 }
 
@@ -7377,7 +7663,7 @@ func (t *EntitlementMapType) Equal(other Type) bool {
 	return otherEntitlement.ID() == t.ID()
 }
 
-func (t *EntitlementMapType) Map(_ common.MemoryGauge, f func(Type) Type) Type {
+func (t *EntitlementMapType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	return f(t)
 }
 
@@ -7427,4 +7713,40 @@ func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(
 
 func (t *EntitlementMapType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+var NativeCompositeTypes = map[string]*CompositeType{}
+
+func init() {
+	compositeTypes := []*CompositeType{
+		AccountKeyType,
+		PublicKeyType,
+		HashAlgorithmType,
+		SignatureAlgorithmType,
+		AuthAccountType,
+		PublicAccountType,
+	}
+
+	for len(compositeTypes) > 0 {
+		lastIndex := len(compositeTypes) - 1
+		compositeType := compositeTypes[lastIndex]
+		compositeTypes[lastIndex] = nil
+		compositeTypes = compositeTypes[:lastIndex]
+
+		NativeCompositeTypes[compositeType.QualifiedIdentifier()] = compositeType
+
+		nestedTypes := compositeType.NestedTypes
+		if nestedTypes == nil {
+			continue
+		}
+
+		nestedTypes.Foreach(func(_ string, nestedType Type) {
+			nestedCompositeType, ok := nestedType.(*CompositeType)
+			if !ok {
+				return
+			}
+
+			compositeTypes = append(compositeTypes, nestedCompositeType)
+		})
+	}
 }

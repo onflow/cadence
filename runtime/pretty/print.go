@@ -337,10 +337,15 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			columns := 1
 			if excerpt.endPos != nil {
 				endColumn := excerpt.endPos.Column
+				startColumn := excerpt.startPos.Column
+				if excerpt.endPos.Column < startColumn {
+					startColumn = excerpt.endPos.Column
+					endColumn = len(lines[excerpt.startPos.Line-1])
+				}
 				if endColumn >= maxLineLength {
 					endColumn = maxLineLength - 1
 				}
-				columns = endColumn - excerpt.startPos.Column + 1
+				columns = endColumn - startColumn + 1
 			}
 
 			indicator := "-"

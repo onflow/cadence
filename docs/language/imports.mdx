@@ -1,28 +1,3 @@
----
-title: Imports
----
+# This document has been moved to a new location:
 
-Programs can import declarations (types, functions, variables, etc.) from other programs.
-
-Imports are declared using the `import` keyword.
-
-It can either be followed by a location, which imports all declarations;
-or it can be followed by the names of the declarations that should be imported,
-followed by the `from` keyword, and then followed by the location.
-
-If importing a local file, the location is a string literal, and the path to the file.
-Deployment of code with file imports requires the usage for the [Flow CLI](https://developers.flow.com/flow-cli).
-
-If importing an external type in a different account,
-the location is an address literal, and the address
-of the account where the declarations are deployed to and published.
-
-```cadence
-// Import the type `Counter` from a local file.
-//
-import Counter from "./examples/counter.cdc"
-
-// Import the type `Counter` from an external account.
-//
-import Counter from 0x299F20A29311B9248F12
-```
+https://github.com/onflow/docs/tree/main/docs/cadence/language/imports.mdx

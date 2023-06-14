@@ -71,6 +71,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 		{sema.Word16Type, "42", interpreter.NewUnmeteredWord16Value(42)},
 		{sema.Word32Type, "42", interpreter.NewUnmeteredWord32Value(42)},
 		{sema.Word64Type, "42", interpreter.NewUnmeteredWord64Value(42)},
+		{sema.Word128Type, "42", interpreter.NewUnmeteredWord128ValueFromUint64(42)},
 		{sema.Fix64Type, "1.23", interpreter.NewUnmeteredFix64Value(123000000)},
 		{sema.UFix64Type, "1.23", interpreter.NewUnmeteredUFix64Value(123000000)},
 	}
@@ -3583,121 +3584,126 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 	t.Parallel()
 
-	structType := &sema.CompositeType{
-		Location:   TestLocation,
-		Identifier: "S",
-		Kind:       common.CompositeKindStructure,
-	}
+	test := func(
+		name string,
+		newCapabilityValue func(borrowType interpreter.StaticType) interpreter.CapabilityValue,
+	) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	types := []sema.Type{
-		&sema.CapabilityType{
-			BorrowType: &sema.ReferenceType{
-				Type:          structType,
-				Authorization: sema.UnauthorizedAccess,
-			},
-		},
-		&sema.CapabilityType{
-			BorrowType: &sema.ReferenceType{
-				Type:          sema.AnyStructType,
-				Authorization: sema.UnauthorizedAccess,
-			},
-		},
-		&sema.CapabilityType{},
-		sema.AnyStructType,
-	}
+			structType := &sema.CompositeType{
+				Location:   TestLocation,
+				Identifier: "S",
+				Kind:       common.CompositeKindStructure,
+			}
 
-	capabilityValue := &interpreter.StorageCapabilityValue{
-		Address: interpreter.AddressValue{},
-		Path:    interpreter.EmptyPathValue,
-		BorrowType: interpreter.ConvertSemaToStaticType(
-			nil,
-			&sema.ReferenceType{
-				Type:          structType,
-				Authorization: sema.UnauthorizedAccess,
-			},
-		),
-	}
+			capabilityValue := newCapabilityValue(
+				interpreter.ConvertSemaToStaticType(
+					nil,
+					&sema.ReferenceType{
+						Type:          structType,
+						Authorization: sema.UnauthorizedAccess,
+					},
+				),
+			)
 
-	capabilityValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "cap",
-		Type: &sema.CapabilityType{
-			BorrowType: &sema.ReferenceType{
-				Type:          structType,
-				Authorization: sema.UnauthorizedAccess,
-			},
-		},
-		Value: capabilityValue,
-		Kind:  common.DeclarationKindConstant,
-	}
+			types := []sema.Type{
+				&sema.CapabilityType{
+					BorrowType: &sema.ReferenceType{
+						Type:          structType,
+						Authorization: sema.UnauthorizedAccess,
+					},
+				},
+				&sema.CapabilityType{
+					BorrowType: &sema.ReferenceType{
+						Type:          sema.AnyStructType,
+						Authorization: sema.UnauthorizedAccess,
+					},
+				},
+				&sema.CapabilityType{},
+				sema.AnyStructType,
+			}
 
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(capabilityValueDeclaration)
+			capabilityValueDeclaration := stdlib.StandardLibraryValue{
+				Name: "cap",
+				Type: &sema.CapabilityType{
+					BorrowType: &sema.ReferenceType{
+						Type:          structType,
+						Authorization: sema.UnauthorizedAccess,
+					},
+				},
+				Value: capabilityValue,
+				Kind:  common.DeclarationKindConstant,
+			}
 
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, capabilityValueDeclaration)
+			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+			baseValueActivation.DeclareValue(capabilityValueDeclaration)
 
-	options := ParseCheckAndInterpretOptions{
-		CheckerConfig: &sema.Config{
-			BaseValueActivation: baseValueActivation,
-		},
-		Config: &interpreter.Config{
-			BaseActivation: baseActivation,
-		},
-	}
+			baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+			interpreter.Declare(baseActivation, capabilityValueDeclaration)
 
-	for operation, returnsOptional := range dynamicCastingOperations {
+			options := ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			}
 
-		t.Run(operation.Symbol(), func(t *testing.T) {
+			for operation, returnsOptional := range dynamicCastingOperations {
 
-			for _, fromType := range types {
-				for _, targetType := range types {
+				t.Run(operation.Symbol(), func(t *testing.T) {
 
-					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
+					for _, fromType := range types {
+						for _, targetType := range types {
 
-						inter, err := parseCheckAndInterpretWithOptions(t,
-							fmt.Sprintf(
-								`
+							t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
+
+								inter, err := parseCheckAndInterpretWithOptions(t,
+									fmt.Sprintf(
+										`
                                   struct S {}
                                   let x: %[1]s = cap
                                   let y: %[2]s? = x %[3]s %[2]s
                                 `,
-								fromType,
-								targetType,
-								operation.Symbol(),
-							),
-							options,
-						)
-						require.NoError(t, err)
+										fromType,
+										targetType,
+										operation.Symbol(),
+									),
+									options,
+								)
+								require.NoError(t, err)
 
-						AssertValuesEqual(
-							t,
-							inter,
-							capabilityValue,
-							inter.Globals.Get("x").GetValue(),
-						)
+								AssertValuesEqual(
+									t,
+									inter,
+									capabilityValue,
+									inter.Globals.Get("x").GetValue(),
+								)
 
-						AssertValuesEqual(
-							t,
-							inter,
-							interpreter.NewUnmeteredSomeValueNonCopying(
-								capabilityValue,
-							),
-							inter.Globals.Get("y").GetValue(),
-						)
-					})
-				}
+								AssertValuesEqual(
+									t,
+									inter,
+									interpreter.NewUnmeteredSomeValueNonCopying(
+										capabilityValue,
+									),
+									inter.Globals.Get("y").GetValue(),
+								)
+							})
+						}
 
-				for _, otherType := range []sema.Type{
-					sema.StringType,
-					sema.VoidType,
-					sema.BoolType,
-				} {
+						for _, otherType := range []sema.Type{
+							sema.StringType,
+							sema.VoidType,
+							sema.BoolType,
+						} {
 
-					t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
+							t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
 
-						inter, err := parseCheckAndInterpretWithOptions(t,
-							fmt.Sprintf(
-								`
+								inter, err := parseCheckAndInterpretWithOptions(t,
+									fmt.Sprintf(
+										`
                                   struct S {}
 
 		                          fun test(): Capability<&%[2]s>? {
@@ -3705,34 +3711,56 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		                              return x %[3]s Capability<&%[2]s>
 		                          }
 		                        `,
-								fromType,
-								otherType,
-								operation.Symbol(),
-							),
-							options,
-						)
-						require.NoError(t, err)
+										fromType,
+										otherType,
+										operation.Symbol(),
+									),
+									options,
+								)
+								require.NoError(t, err)
 
-						result, err := inter.Invoke("test")
+								result, err := inter.Invoke("test")
 
-						if returnsOptional {
-							require.NoError(t, err)
-							AssertValuesEqual(
-								t,
-								inter,
-								interpreter.Nil,
-								result,
-							)
-						} else {
-							RequireError(t, err)
+								if returnsOptional {
+									require.NoError(t, err)
+									AssertValuesEqual(
+										t,
+										inter,
+										interpreter.Nil,
+										result,
+									)
+								} else {
+									RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+									require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+								}
+							})
 						}
-					})
-				}
+					}
+				})
 			}
 		})
 	}
+
+	test(
+		"path capability",
+		func(borrowType interpreter.StaticType) interpreter.CapabilityValue {
+			return interpreter.NewUnmeteredPathCapabilityValue(
+				interpreter.AddressValue{},
+				interpreter.EmptyPathValue,
+				borrowType,
+			)
+		},
+	)
+	test("path capability",
+		func(borrowType interpreter.StaticType) interpreter.CapabilityValue {
+			return interpreter.NewUnmeteredIDCapabilityValue(
+				4,
+				interpreter.AddressValue{},
+				borrowType,
+			)
+		},
+	)
 }
 
 func TestInterpretResourceConstructorCast(t *testing.T) {

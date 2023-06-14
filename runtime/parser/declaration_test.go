@@ -1939,7 +1939,7 @@ func TestParseAccess(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "unexpected non-nominal type: self",
-					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
 				},
 			},
 			errs,
@@ -1960,7 +1960,7 @@ func TestParseAccess(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "unexpected non-nominal type: self",
-					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
 				},
 			},
 			errs,
@@ -9376,4 +9376,59 @@ func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
 		},
 		errs,
 	)
+}
+
+func TestSoftKeywordsInFunctionDeclaration(t *testing.T) {
+	t.Parallel()
+
+	posFromName := func(name string, offset int) ast.Position {
+		offsetPos := len(name) + offset
+		return ast.Position{
+			Line:   1,
+			Offset: offsetPos,
+			Column: offsetPos,
+		}
+	}
+
+	testSoftKeyword := func(name string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(`fun %s() {}`, name)
+
+			result, errs := testParseDeclarations(code)
+			require.Empty(t, errs)
+
+			expected := []ast.Declaration{
+				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
+					Identifier: ast.Identifier{
+						Identifier: name,
+						Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
+					},
+					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: posFromName(name, 7),
+								EndPos:   posFromName(name, 8),
+							},
+						},
+					},
+					ParameterList: &ast.ParameterList{
+						Range: ast.Range{
+							StartPos: posFromName(name, 4),
+							EndPos:   posFromName(name, 5),
+						},
+					},
+				},
+			}
+			utils.AssertEqualWithDiff(t, expected, result)
+
+		})
+	}
+
+	for _, keyword := range softKeywords {
+		testSoftKeyword(keyword)
+	}
 }

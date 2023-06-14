@@ -23,15 +23,16 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
-	"golang.org/x/exp/maps"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 type Access interface {
 	isAccess()
-	// returns whether receiver access is less permissive than argument access
+	// IsLessPermissiveThan returns whether receiver access is less permissive than argument access
 	IsLessPermissiveThan(Access) bool
-	// returns whether receiver access permits argument access
+	// PermitsAccess returns whether receiver access permits argument access
 	PermitsAccess(Access) bool
 	Equal(other Access) bool
 	string(func(ty Type) string) string
@@ -140,9 +141,11 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 				// Concretely: `auth (U1 | U2 | ... ) &X <: auth (T1, T2,  ... ) &X` whenever `∀U ∈ {U1, U2, ...}, ∀T ∈ {T1, T2, ...}, T = U`.
 				innerPredicate = func(eKey *EntitlementType) bool {
 					return e.Entitlements.ForAllKeys(func(otherKey *EntitlementType) bool {
-						return eKey.Equal(otherKey)
+						return eKey == otherKey
 					})
 				}
+			default:
+				panic(errors.NewUnreachableError())
 			}
 			return otherAccess.Entitlements.ForAllKeys(innerPredicate)
 		case Conjunction:
@@ -168,10 +171,13 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 				// Concretely: `auth (U1, U2, ... ) &X <: auth (T1 | T2 | ... ) &X` whenever `{U1, U2, ...}` is not disjoint from `{T1, T2, ...}`,
 				// or equivalently `∃U ∈ {U1, U2, ...}, ∃T ∈ {T1, T2, ...}, T = U`
 				outerPredicate = e.Entitlements.ForAnyKey
+			default:
+				panic(errors.NewUnreachableError())
 			}
 			return outerPredicate(otherAccess.Entitlements.Contains)
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		return false
 	default:
 		return false
 	}
@@ -285,11 +291,13 @@ func (e EntitlementMapAccess) Domain() EntitlementSetAccess {
 		return e.domain
 	}
 
-	var domain map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
-	for _, relation := range e.Type.Relations {
-		domain[relation.Input] = struct{}{}
-	}
-	e.domain = NewEntitlementSetAccess(maps.Keys(domain), Conjunction)
+	domain := common.MappedSliceWithNoDuplicates(
+		e.Type.Relations,
+		func(r EntitlementRelation) *EntitlementType {
+			return r.Input
+		},
+	)
+	e.domain = NewEntitlementSetAccess(domain, Conjunction)
 	return e.domain
 }
 
@@ -298,19 +306,22 @@ func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
 		return e.codomain
 	}
 
-	var codomain map[*EntitlementType]struct{} = make(map[*EntitlementType]struct{})
-	for _, relation := range e.Type.Relations {
-		codomain[relation.Output] = struct{}{}
-	}
-	e.codomain = NewEntitlementSetAccess(maps.Keys(codomain), Conjunction)
+	codomain := common.MappedSliceWithNoDuplicates(
+		e.Type.Relations,
+		func(r EntitlementRelation) *EntitlementType {
+			return r.Output
+		},
+	)
+	e.codomain = NewEntitlementSetAccess(codomain, Conjunction)
 	return e.codomain
 }
 
 // produces the image set of a single entitlement through a map
 // the image set of one element is always a conjunction
 func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (output *EntitlementOrderedSet) {
-	if e.images[entitlement] != nil {
-		return e.images[entitlement]
+	image := e.images[entitlement]
+	if image != nil {
+		return image
 	}
 
 	output = orderedmap.New[EntitlementOrderedSet](0)
@@ -327,13 +338,13 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 // Image applies all the entitlements in the `argumentAccess` to the function
 // defined by the map in `e`, producing a new entitlement set of the image of the
 // arguments.
-func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, error) {
+func (e EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map
 	case PrimitiveAccess:
 		return inputs, nil
 	case EntitlementSetAccess:
-		var output *EntitlementOrderedSet = orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
+		output := orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
 		var err error = nil
 		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 			entitlementImage := e.entitlementImage(entitlement)
@@ -346,7 +357,7 @@ func (e EntitlementMapAccess) Image(inputs Access, astRange ast.Range) (Access, 
 				err = &UnrepresentableEntitlementMapOutputError{
 					Input: inputs,
 					Map:   e.Type,
-					Range: astRange,
+					Range: astRange(),
 				}
 			}
 			output.SetAll(entitlementImage)
@@ -406,6 +417,6 @@ func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
 		return ast.PrimitiveAccess(a) >= ast.PrimitiveAccess(otherPrimitive)
 	}
-	// only priv access is guaranteed to be less permissive than entitlement-based access, but cannot appear in interfaces
+	// only access(self) access is guaranteed to be less permissive than entitlement-based access, but cannot appear in interfaces
 	return ast.PrimitiveAccess(a) != ast.AccessSelf
 }

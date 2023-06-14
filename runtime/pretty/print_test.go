@@ -40,7 +40,7 @@ func TestPrintBrokenCode(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `pub resource R {}`
+	const code = `access(all) resource R {}`
 	lineCount := len(strings.Split(code, "\n"))
 
 	location := common.StringLocation("test")

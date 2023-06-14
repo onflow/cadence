@@ -201,6 +201,7 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		cadence.Word16Type,
 		cadence.Word32Type,
 		cadence.Word64Type,
+		cadence.Word128Type,
 		cadence.Fix64Type,
 		cadence.UFix64Type,
 		cadence.PathType,

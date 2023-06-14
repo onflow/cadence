@@ -461,10 +461,10 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 		NewUnmeteredStringValue("first"),
 	)
 
-	const identifier = "test"
+	const storageMapKey = StringStorageMapKey("test")
 
 	storageMap := storage.GetStorageMap(address, "storage", true)
-	storageMap.WriteValue(inter, identifier, array1)
+	storageMap.WriteValue(inter, storageMapKey, array1)
 
 	// Overwriting delete any existing child slabs
 
@@ -478,7 +478,7 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 		NewUnmeteredStringValue("second"),
 	)
 
-	storageMap.WriteValue(inter, identifier, array2)
+	storageMap.WriteValue(inter, storageMapKey, array2)
 
 	// 2:
 	// - storage map (atree ordered map)
@@ -487,7 +487,7 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 
 	// Writing nil is deletion and should delete any child slabs
 
-	storageMap.WriteValue(inter, identifier, nil)
+	storageMap.WriteValue(inter, storageMapKey, nil)
 
 	// 1:
 	// - storage map (atree ordered map)
