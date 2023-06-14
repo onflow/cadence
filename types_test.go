@@ -2054,7 +2054,7 @@ func TestDecodeFields(t *testing.T) {
 
 	assert.EqualValues(t, map[String]Int{"k": NewInt(3)}, evt.Dict)
 
-	assert.EqualValues(t, map[String]*Int{"k": &int4}, evt.DictOptional)
+	assert.EqualValues(t, map[String]*Int{"k": &int4, "nilK": nil}, evt.DictOptional)
 
 	assert.EqualValues(t, map[String]interface{}{
 		"k":  NewInt(3),
@@ -2105,19 +2105,19 @@ func TestDecodeFields(t *testing.T) {
 		{Struct: &struct {
 			O *String `cadence:"optionalIntField"`
 		}{},
-			ExpectedErr: "cannot decode optional field O: cannot set field: expected cadence.String, got cadence.Int",
+			ExpectedErr: "cannot decode ptr field O: cannot set field: expected cadence.String, got cadence.Int",
 			Description: "should err when mapping to optional field with wrong type",
 		},
 		{Struct: &struct {
 			DOptional map[*String]*Int `cadence:"dictOptionalField"`
 		}{},
-			ExpectedErr: "cannot decode dictionary field DOptional: map key cannot be a pointer (optional) type",
+			ExpectedErr: "cannot decode map field DOptional: map key cannot be a pointer (optional) type",
 			Description: "should err when mapping to dictionary field with ptr key type",
 		},
 		{Struct: &struct {
 			D map[String]String `cadence:"dictField"`
 		}{},
-			ExpectedErr: "cannot decode dictionary field D: map value type mismatch: expected cadence.String, got cadence.Int",
+			ExpectedErr: "cannot decode map field D: map value type mismatch: expected cadence.String, got cadence.Int",
 			Description: "should err when mapping to dictionary field with wrong value type",
 		},
 		{Struct: &struct {
@@ -2141,31 +2141,30 @@ func TestDecodeFields(t *testing.T) {
 		{Struct: &struct {
 			A map[Int]Int `cadence:"dictField"`
 		}{},
-			ExpectedErr: "cannot decode dictionary field A: map key type mismatch: expected cadence.Int, got cadence.String",
+			ExpectedErr: "cannot decode map field A: map key type mismatch: expected cadence.Int, got cadence.String",
 			Description: "should err when mapping to map field with mismatching key type",
 		},
 		{Struct: &struct {
 			A map[String]*String `cadence:"dictOptionalField"`
 		}{},
-			ExpectedErr: "cannot decode dictionary field A: cannot decode optional map value for key \"k\": cannot set field: expected cadence.String, got cadence.Int",
+			ExpectedErr: "cannot decode map field A: cannot decode optional map value for key \"k\": cannot set field: expected cadence.String, got cadence.Int",
 			Description: "should err when mapping to map field with mismatching value type",
 		},
 		{Struct: &struct {
 			A map[String]Int `cadence:"intField"`
 		}{},
-			ExpectedErr: "cannot decode dictionary field A: field is not a dictionary",
+			ExpectedErr: "cannot decode map field A: field is not a dictionary",
 			Description: "should err when mapping to map with mismatching field type",
 		},
 		{Struct: &struct {
 			A *Int `cadence:"intField"`
 		}{},
-			ExpectedErr: "cannot decode optional field A: field is not an optional",
+			ExpectedErr: "cannot decode ptr field A: field is not an optional",
 			Description: "should err when mapping to optional field with mismatching type",
 		},
 	}
 	for _, errCase := range errCases {
 		t.Run(errCase.Description, func(t *testing.T) {
-			t.Parallel()
 			err := DecodeFields(simpleEvent, errCase.Struct)
 			assert.Equal(t, errCase.ExpectedErr, err.Error())
 		})

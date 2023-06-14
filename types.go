@@ -1144,33 +1144,21 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 
 		cadenceFieldValue := reflect.ValueOf(cadenceField)
 
-		// ptr value is expected to be unwrapped from optional
-		if fieldValue.Kind() == reflect.Ptr {
-			cadenceFieldValuePtr, err := decodeOptional(fieldValue.Type(), cadenceField)
-			if err != nil {
-				return fmt.Errorf("cannot decode optional field %s: %w", structField.Name, err)
-			}
+		var decodeSpecialFieldFunc func(p reflect.Type, value Value) (*reflect.Value, error)
 
-			// if optional is nil, skip and default the field to nil
-			if cadenceFieldValuePtr == nil {
-				continue
-			}
-			cadenceFieldValue = *cadenceFieldValuePtr
+		switch fieldValue.Kind() {
+		case reflect.Ptr:
+			decodeSpecialFieldFunc = decodeOptional
+		case reflect.Map:
+			decodeSpecialFieldFunc = decodeDict
+		case reflect.Slice:
+			decodeSpecialFieldFunc = decodeSlice
 		}
 
-		// map value is expected to be unwrapped from dictionary
-		if fieldValue.Kind() == reflect.Map {
-			cadenceFieldValuePtr, err := decodeDict(fieldValue.Type(), cadenceField)
+		if decodeSpecialFieldFunc != nil {
+			cadenceFieldValuePtr, err := decodeSpecialFieldFunc(fieldValue.Type(), cadenceField)
 			if err != nil {
-				return fmt.Errorf("cannot decode dictionary field %s: %w", structField.Name, err)
-			}
-			cadenceFieldValue = *cadenceFieldValuePtr
-		}
-
-		if fieldValue.Kind() == reflect.Slice {
-			cadenceFieldValuePtr, err := decodeSlice(fieldValue.Type(), cadenceField)
-			if err != nil {
-				return fmt.Errorf("cannot decode slice field %s: %w", structField.Name, err)
+				return fmt.Errorf("cannot decode %s field %s: %w", fieldValue.Kind(), structField.Name, err)
 			}
 			cadenceFieldValue = *cadenceFieldValuePtr
 		}
@@ -1199,7 +1187,8 @@ func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value,
 
 	// if optional is nil, skip and default the field to nil
 	if optional.ToGoValue() == nil {
-		return nil, nil
+		zeroValue := reflect.Zero(valueType)
+		return &zeroValue, nil
 	}
 
 	optionalValue := reflect.ValueOf(optional.Value)
