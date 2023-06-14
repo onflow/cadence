@@ -45,9 +45,9 @@ type StorageCapabilityControllerValue struct {
 	CapabilityID UInt64Value
 	TargetPath   PathValue
 
-	// tag is locally cached result of GetTag, and not stored.
-	// It is populated when the field `tag` is read.
-	tag *StringValue
+	// Tag is locally cached result of GetTag, and not stored.
+	// It is populated when the field `Tag` is read.
+	Tag *StringValue
 
 	// Injected functions.
 	// Tags are not stored directly inside the controller
@@ -58,6 +58,7 @@ type StorageCapabilityControllerValue struct {
 	TargetFunction   FunctionValue
 	RetargetFunction FunctionValue
 	DeleteFunction   FunctionValue
+	SetTagFunction   FunctionValue
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
@@ -219,13 +220,16 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	switch name {
 	case sema.StorageCapabilityControllerTypeTagFieldName:
-		if v.tag == nil {
-			v.tag = v.GetTag()
-			if v.tag == nil {
-				v.tag = EmptyString
+		if v.Tag == nil {
+			v.Tag = v.GetTag()
+			if v.Tag == nil {
+				v.Tag = EmptyString
 			}
 		}
-		return v.tag
+		return v.Tag
+
+	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
+		return v.SetTagFunction
 
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -252,17 +256,7 @@ func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 }
 
 func (v *StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
-	switch identifier {
-	case sema.StorageCapabilityControllerTypeTagFieldName:
-		stringValue, ok := value.(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		v.tag = stringValue
-		v.SetTag(stringValue)
-		return true
-	}
-
+	// Storage capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 

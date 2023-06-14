@@ -2528,7 +2528,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controller2.tag == "")
 
                           // Act
-                          controller1.tag = "something"
+                          controller1.setTag("something")
 
                           // Assert
                           let controller3: &StorageCapabilityController =
@@ -3005,7 +3005,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controller2.tag == "")
 
                           // Act
-                          controller1.tag = "something"
+                          controller1.setTag("something")
 
                           // Assert
                           let controller3: &AccountCapabilityController =

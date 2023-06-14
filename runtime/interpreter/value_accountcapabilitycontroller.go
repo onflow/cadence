@@ -33,9 +33,9 @@ type AccountCapabilityControllerValue struct {
 	BorrowType   ReferenceStaticType
 	CapabilityID UInt64Value
 
-	// tag is locally cached result of GetTag, and not stored.
-	// It is populated when the field `tag` is read.
-	tag *StringValue
+	// Tag is locally cached result of GetTag, and not stored.
+	// It is populated when the field `Tag` is read.
+	Tag *StringValue
 
 	// Injected functions
 	// Tags are not stored directly inside the controller
@@ -44,6 +44,7 @@ type AccountCapabilityControllerValue struct {
 	GetTag         func() *StringValue
 	SetTag         func(*StringValue)
 	DeleteFunction FunctionValue
+	SetTagFunction FunctionValue
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
@@ -195,13 +196,15 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	switch name {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
-		if v.tag == nil {
-			v.tag = v.GetTag()
-			if v.tag == nil {
-				v.tag = EmptyString
+		if v.Tag == nil {
+			v.Tag = v.GetTag()
+			if v.Tag == nil {
+				v.Tag = EmptyString
 			}
 		}
-		return v.tag
+		return v.Tag
+	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
+		return v.SetTagFunction
 
 	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -217,22 +220,12 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 }
 
 func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
-	// Storage capability controllers have no removable members (fields / functions)
+	// Account capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
-	switch identifier {
-	case sema.AccountCapabilityControllerTypeTagFieldName:
-		stringValue, ok := value.(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		v.tag = stringValue
-		v.SetTag(stringValue)
-		return true
-	}
-
+	// Account capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 

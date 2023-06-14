@@ -31,6 +31,25 @@ For example, it could be used to describe the purpose of the capability.
 Empty by default.
 `
 
+const StorageCapabilityControllerTypeSetTagFunctionName = "setTag"
+
+var StorageCapabilityControllerTypeSetTagFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "tag",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const StorageCapabilityControllerTypeSetTagFunctionDocString = `
+Updates this controller's tag to the provided string
+`
+
 const StorageCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var StorageCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -126,6 +145,13 @@ func init() {
 				StorageCapabilityControllerTypeTagFieldName,
 				StorageCapabilityControllerTypeTagFieldType,
 				StorageCapabilityControllerTypeTagFieldDocString,
+			),
+			NewUnmeteredFunctionMember(
+				t,
+				ast.AccessAll,
+				StorageCapabilityControllerTypeSetTagFunctionName,
+				StorageCapabilityControllerTypeSetTagFunctionType,
+				StorageCapabilityControllerTypeSetTagFunctionDocString,
 			),
 			NewUnmeteredFieldMember(
 				t,

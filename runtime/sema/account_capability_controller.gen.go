@@ -31,6 +31,25 @@ For example, it could be used to describe the purpose of the capability.
 Empty by default.
 `
 
+const AccountCapabilityControllerTypeSetTagFunctionName = "setTag"
+
+var AccountCapabilityControllerTypeSetTagFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "tag",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const AccountCapabilityControllerTypeSetTagFunctionDocString = `
+Updates this controller's tag to the provided string
+`
+
 const AccountCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var AccountCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -94,6 +113,13 @@ func init() {
 				AccountCapabilityControllerTypeTagFieldName,
 				AccountCapabilityControllerTypeTagFieldType,
 				AccountCapabilityControllerTypeTagFieldDocString,
+			),
+			NewUnmeteredFunctionMember(
+				t,
+				ast.AccessAll,
+				AccountCapabilityControllerTypeSetTagFunctionName,
+				AccountCapabilityControllerTypeSetTagFunctionType,
+				AccountCapabilityControllerTypeSetTagFunctionDocString,
 			),
 			NewUnmeteredFieldMember(
 				t,

@@ -5,6 +5,9 @@ access(all) struct StorageCapabilityController {
     /// Empty by default.
     access(all) var tag: String
 
+    /// Updates this controller's tag to the provided string
+    access(all) fun setTag(_ tag: String)
+
     /// The type of the controlled capability, i.e. the T in `Capability<T>`.
     access(all) let borrowType: Type
 
