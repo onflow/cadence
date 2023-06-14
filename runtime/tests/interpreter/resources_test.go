@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2861,6 +2860,8 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
 
 	t.Parallel()
 
+	var logs []string
+
 	logFunction := stdlib.NewStandardLibraryFunction(
 		"log",
 		&sema.FunctionType{
@@ -2877,8 +2878,8 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].String()
-			fmt.Println(message)
+			message := invocation.Arguments[0].(*interpreter.StringValue).Str
+			logs = append(logs, message)
 			return interpreter.Void
 		},
 	)
@@ -2894,28 +2895,28 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
             pub var name: String
             pub(set) var parent: &OuterResource?
 
-			init(_ name: String) {
-				self.name = name
-				self.parent = nil
-			}
+            init(_ name: String) {
+                self.name = name
+                self.parent = nil
+            }
 
             destroy() {
                 log(self.name)
                 self.parent!.shenanigans()
             }
-		}
+        }
 
         pub resource OuterResource {
             pub var inner1: @InnerResource
             pub var inner2: @InnerResource
 
-			init() {
+            init() {
                 self.inner1 <- create InnerResource("inner1")
                 self.inner2 <- create InnerResource("inner2")
 
                 self.inner1.parent = &self as &OuterResource
                 self.inner2.parent = &self as &OuterResource
-			}
+            }
 
             pub fun shenanigans() {
                 self.inner1 <-> self.inner2
@@ -2925,7 +2926,7 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
                 destroy self.inner1
                 destroy self.inner2
             }
-		}
+        }
 
         pub fun main() {
             let a <- create OuterResource()
@@ -2945,4 +2946,8 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	require.NoError(t, err)
+
+	require.Len(t, logs, 2)
+	assert.Equal(t, "inner1", logs[0])
+	assert.Equal(t, "inner2", logs[1])
 }
