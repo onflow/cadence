@@ -4733,14 +4733,6 @@ func (interpreter *Interpreter) withResourceDestruction(
 	locationRange LocationRange,
 	f func(),
 ) {
-	// If this is the top-most destruction, track all nested destructions
-	if interpreter.SharedState.destroyedResources == nil {
-		interpreter.SharedState.destroyedResources = map[atree.StorageID]struct{}{}
-		defer func() {
-			interpreter.SharedState.destroyedResources = nil
-		}()
-	}
-
 	_, exists := interpreter.SharedState.destroyedResources[storageID]
 	if exists {
 		panic(DestroyedResourceError{

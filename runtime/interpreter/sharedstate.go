@@ -54,7 +54,6 @@ func NewSharedState(config *Config) *SharedState {
 		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
 		containerValueIteration:        map[atree.StorageID]struct{}{},
-		// NOTE: *not* initializing destroyedResources, it's initialized on a per-destruction basis, not globally.
-		// See Interpreter.withResourceDestruction
+		destroyedResources:             map[atree.StorageID]struct{}{},
 	}
 }
