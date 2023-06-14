@@ -1287,9 +1287,10 @@ func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, er
 				return nil, err
 			}
 			if valueOptional == nil {
-				continue
+				elementValue = reflect.Zero(valueType.Elem())
+			} else {
+				elementValue = *valueOptional
 			}
-			elementValue = *valueOptional
 		} else {
 			elementValue = reflect.ValueOf(value)
 		}

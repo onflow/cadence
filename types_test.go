@@ -1954,6 +1954,7 @@ func TestDecodeFields(t *testing.T) {
 			}),
 			NewDictionary([]KeyValuePair{
 				{Key: String("k"), Value: NewOptional(NewInt(4))},
+				{Key: String("nilK"), Value: NewOptional(nil)},
 			}),
 			NewDictionary([]KeyValuePair{
 				{Key: String("k"), Value: NewInt(3)},
@@ -1965,6 +1966,7 @@ func TestDecodeFields(t *testing.T) {
 			Array{ArrayType: NewVariableSizedArrayType(&OptionalType{Type: IntType{}}), Values: []Value{
 				NewOptional(NewInt(1)),
 				NewOptional(NewInt(2)),
+				NewOptional(nil),
 			}},
 		},
 	).WithType(&EventType{
@@ -2065,42 +2067,81 @@ func TestDecodeFields(t *testing.T) {
 
 	assert.EqualValues(t, []Int{int1, int2}, evt.ArrayInt)
 
-	assert.EqualValues(t, []*Int{&int1, &int2}, evt.VariableArrayOptional)
+	assert.EqualValues(t, []*Int{&int1, &int2, nil}, evt.VariableArrayOptional)
+
+	err = DecodeFields(simpleEvent, eventStruct{})
+	assert.Errorf(t, err, "should err when mapping to non-pointer")
 
 	type eventStructInvalidMapping struct {
-		A String `cadence:"a"`
+		A String `cadence:"intField"`
 	}
 
 	err = DecodeFields(simpleEvent, &eventStructInvalidMapping{})
 	assert.Errorf(t, err, "should err when mapping to invalid type")
 
 	type eventStructPrivateField struct {
-		a Int `cadence:"a"` // nolint: unused
+		a Int `cadence:"intField"` // nolint: unused
 	}
 	err = DecodeFields(simpleEvent, &eventStructPrivateField{})
 	assert.Errorf(t, err, "should err when mapping to private field")
 
 	type eventStructNotFoundField struct {
-		A Int `cadence:"c"`
+		A Int `cadence:"notFoundField"`
 	}
 	err = DecodeFields(simpleEvent, &eventStructNotFoundField{})
 	assert.Errorf(t, err, "should err when mapping to non-existing field")
 
 	type eventStructBadOptional struct {
-		O *String `cadence:"o"`
+		O *String `cadence:"optionalIntField"`
 	}
 	err = DecodeFields(simpleEvent, &eventStructBadOptional{})
 	assert.Errorf(t, err, "should err when mapping to optional field with wrong type")
 
 	type eventStructBadDictionaryKey struct {
-		DOptional map[*String]*Int `cadence:"dOptional"`
+		DOptional map[*String]*Int `cadence:"dictOptionalField"`
 	}
 	err = DecodeFields(simpleEvent, &eventStructBadDictionaryKey{})
 	assert.Errorf(t, err, "should err when mapping to dictionary field with ptr key type")
 
 	type eventStructBadDictionaryType struct {
-		D map[String]String `cadence:"d"`
+		D map[String]String `cadence:"dictField"`
 	}
 	err = DecodeFields(simpleEvent, &eventStructBadDictionaryType{})
 	assert.Errorf(t, err, "should err when mapping to dictionary field with wrong value type")
+
+	type eventStructInvalidArray struct {
+		A []String `cadence:"intField"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructInvalidArray{})
+	assert.Errorf(t, err, "should err when mapping to array field with wrong type")
+
+	type eventStructInvalidArrayOptional struct {
+		A []*String `cadence:"variableArrayOptionalIntField"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructInvalidArrayOptional{})
+	assert.Errorf(t, err, "should err when mapping to array field with wrong type")
+
+	type eventStructMismatchingMapKeyType struct {
+		A map[Int]Int `cadence:"dictField"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructMismatchingMapKeyType{})
+	assert.Errorf(t, err, "should err when mapping to map field with mismatching key type")
+
+	type eventStructMismatchDictOptionalValueType struct {
+		A map[String]*String `cadence:"dictOptionalField"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructMismatchDictOptionalValueType{})
+	assert.Errorf(t, err, "should err when mapping to map field with mismatching value type")
+
+	type eventStructMismatchDictionaryType struct {
+		A map[String]Int `cadence:"intField"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructMismatchDictionaryType{})
+	assert.Errorf(t, err, "should err when mapping to map with mismatching field type")
+
+	type eventStructMistmatchOptionalType struct {
+		A *Int `cadence:"intField"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructMistmatchOptionalType{})
+	assert.Errorf(t, err, "should err when mapping to optional field with mismatching type")
 }
