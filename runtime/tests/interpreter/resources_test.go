@@ -2811,7 +2811,7 @@ func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestInterpretResourceFunctionResourceFunctionValidity(t *testing.T) {
+func TestInterpretResourceFunctionValidity(t *testing.T) {
 
 	t.Parallel()
 
