@@ -1949,6 +1949,23 @@ func TestDecodeFields(t *testing.T) {
 			String("foo"),
 			NewOptional(nil),
 			NewOptional(NewInt(2)),
+			NewDictionary([]KeyValuePair{
+				{Key: String("k"), Value: NewInt(3)},
+			}),
+			NewDictionary([]KeyValuePair{
+				{Key: String("k"), Value: NewOptional(NewInt(4))},
+			}),
+			NewDictionary([]KeyValuePair{
+				{Key: String("k"), Value: NewInt(3)},
+				{Key: String("k2"), Value: String("foo")},
+			}),
+			NewOptional(NewInt(2)),
+			String("bar"),
+			Array{ArrayType: NewVariableSizedArrayType(IntType{}), Values: []Value{NewInt(1), NewInt(2)}},
+			Array{ArrayType: NewVariableSizedArrayType(&OptionalType{Type: IntType{}}), Values: []Value{
+				NewOptional(NewInt(1)),
+				NewOptional(NewInt(2)),
+			}},
 		},
 	).WithType(&EventType{
 		Location:            utils.TestLocation,
@@ -1970,28 +1987,88 @@ func TestDecodeFields(t *testing.T) {
 				Identifier: "o",
 				Type:       &OptionalType{Type: IntType{}},
 			},
+			{
+				Identifier: "d",
+				Type:       &DictionaryType{KeyType: StringType{}, ElementType: IntType{}},
+			},
+			{
+				Identifier: "dOptional",
+				Type:       &OptionalType{Type: &DictionaryType{KeyType: StringType{}, ElementType: &OptionalType{Type: IntType{}}}},
+			},
+			{
+				Identifier: "s",
+				Type:       &DictionaryType{KeyType: StringType{}, ElementType: AnyStructType{}},
+			},
+			{
+				Identifier: "optionalAnyStruct",
+				Type:       &OptionalType{Type: AnyStructType{}},
+			},
+			{
+				Identifier: "anyStruct",
+				Type:       AnyStructType{},
+			},
+			{
+				Identifier: "variableArrayInt",
+				Type:       NewVariableSizedArrayType(IntType{}),
+			},
+			{
+				Identifier: "variableArrayOptionalInt",
+				Type:       NewVariableSizedArrayType(&OptionalType{Type: IntType{}}),
+			},
 		},
 	})
 
 	type eventStruct struct {
-		A               Int    `cadence:"a"`
-		B               String `cadence:"b"`
-		NilO            *Int   `cadence:"nilO"`
-		O               *Int   `cadence:"o"`
-		NonCadenceField Int
+		A                     Int                    `cadence:"a"`
+		B                     String                 `cadence:"b"`
+		NilO                  *Int                   `cadence:"nilO"`
+		O                     *Int                   `cadence:"o"`
+		S                     map[String]interface{} `cadence:"s"`
+		D                     map[String]Int         `cadence:"d"`
+		DOptional             map[String]*Int        `cadence:"dOptional"`
+		OptionalAnyStruct     *interface{}           `cadence:"optionalAnyStruct"`
+		AnyStruct             interface{}            `cadence:"anyStruct"`
+		Array                 []Int                  `cadence:"variableArrayInt"`
+		VariableArrayOptional []*Int                 `cadence:"variableArrayOptionalInt"`
+		NonCadenceField       Int
 	}
 
 	evt := eventStruct{}
 	err := DecodeFields(simpleEvent, &evt)
 	require.NoError(t, err)
+
+	evtOptionalAnyStruct := evt.OptionalAnyStruct
+	require.NotNil(t, evtOptionalAnyStruct)
+
+	evt.OptionalAnyStruct = nil
+
+	int1 := NewInt(1)
 	int2 := NewInt(2)
-	assert.EqualValues(t, eventStruct{
-		A:               NewInt(1),
-		B:               "foo",
-		NilO:            nil,
-		O:               &int2,
-		NonCadenceField: Int{},
-	}, evt)
+	//int4 := NewInt(4)
+	assert.EqualValues(t, int2, *evtOptionalAnyStruct)
+
+	assert.Equal(t, []Int{int1, int2}, evt.Array)
+	assert.EqualValues(t, []*Int{&int1, &int2}, evt.VariableArrayOptional)
+	//assert.EqualValues(t, eventStruct{
+	//	A:               NewInt(1),
+	//	B:               "foo",
+	//	NilO:            nil,
+	//	O:               &int2,
+	//	NonCadenceField: Int{},
+	//	D: map[String]Int{
+	//		"k": NewInt(3),
+	//	},
+	//	DOptional: map[String]*Int{
+	//		"k": &int4,
+	//	},
+	//	S: map[String]interface{}{
+	//		"k":  NewInt(3),
+	//		"k2": String("foo"),
+	//	},
+	//	OptionalAnyStruct: nil,
+	//	AnyStruct:         String("bar"),
+	//	Array:             []Int{NewInt(1), NewInt(2)},
+	//}, evt)
 
 	err = DecodeFields(simpleEvent, evt)
 	assert.Errorf(t, err, "should err when passing non-pointer")
@@ -2020,4 +2097,16 @@ func TestDecodeFields(t *testing.T) {
 	}
 	err = DecodeFields(simpleEvent, &eventStructBadOptional{})
 	assert.Errorf(t, err, "should err when mapping to optional field with wrong type")
+
+	type eventStructBadDictionaryKey struct {
+		DOptional map[*String]*Int `cadence:"dOptional"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructBadDictionaryKey{})
+	assert.Errorf(t, err, "should err when mapping to dictionary field with ptr key type")
+
+	type eventStructBadDictionaryType struct {
+		D map[String]String `cadence:"d"`
+	}
+	err = DecodeFields(simpleEvent, &eventStructBadDictionaryType{})
+	assert.Errorf(t, err, "should err when mapping to dictionary field with wrong value type")
 }

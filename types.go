@@ -1146,29 +1146,33 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 
 		// ptr value is expected to be unwrapped from optional
 		if fieldValue.Kind() == reflect.Ptr {
-			optional, ok := cadenceField.(Optional)
-			if !ok {
-				return fmt.Errorf("field %s is not an optional", cadenceFieldNameTag)
+			cadenceFieldValuePtr, err := decodeOptional(fieldValue.Type(), cadenceField)
+			if err != nil {
+				return err
 			}
 
 			// if optional is nil, skip and default the field to nil
-			if optional.ToGoValue() == nil {
+			if cadenceFieldValuePtr == nil {
 				continue
 			}
+			cadenceFieldValue = *cadenceFieldValuePtr
+		}
 
-			optionalValue := reflect.ValueOf(optional.Value)
-
-			// Check the type
-			if fieldValue.Type().Elem() != optionalValue.Type() {
-				return fmt.Errorf("cannot set field %s: expected %v, got %v",
-					structField.Name, fieldValue.Type().Elem(), optionalValue.Type())
+		// map value is expected to be unwrapped from dictionary
+		if fieldValue.Kind() == reflect.Map {
+			cadenceFieldValuePtr, err := decodeDict(fieldValue.Type(), cadenceField)
+			if err != nil {
+				return err
 			}
+			cadenceFieldValue = *cadenceFieldValuePtr
+		}
 
-			// Create a new pointer for optionalValue
-			newPtr := reflect.New(optionalValue.Type())
-			newPtr.Elem().Set(optionalValue)
-
-			cadenceFieldValue = newPtr
+		if fieldValue.Kind() == reflect.Slice {
+			cadenceFieldValuePtr, err := decodeSlice(fieldValue.Type(), cadenceField)
+			if err != nil {
+				return err
+			}
+			cadenceFieldValue = *cadenceFieldValuePtr
 		}
 
 		if !cadenceFieldValue.CanConvert(fieldValue.Type()) {
@@ -1177,7 +1181,7 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 				cadenceFieldNameTag,
 				cadenceField.Type().ID(),
 				structField.Name,
-				structField.Type.Name(),
+				fieldValue.Type(),
 			)
 		}
 
@@ -1185,6 +1189,114 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 	}
 
 	return nil
+}
+
+func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
+	optional, ok := cadenceField.(Optional)
+	if !ok {
+		return nil, fmt.Errorf("field %s is not an optional", valueType.Name())
+	}
+
+	// if optional is nil, skip and default the field to nil
+	if optional.ToGoValue() == nil {
+		return nil, nil
+	}
+
+	optionalValue := reflect.ValueOf(optional.Value)
+
+	// Check the type
+	if valueType.Elem() != optionalValue.Type() && valueType.Elem().Kind() != reflect.Interface {
+		return nil, fmt.Errorf("cannot set field %s: expected %v, got %v",
+			valueType.Name(), valueType.Elem(), optionalValue.Type())
+	}
+
+	if valueType.Elem().Kind() == reflect.Interface {
+		newInterfaceVal := reflect.New(reflect.TypeOf((*interface{})(nil)).Elem())
+		newInterfaceVal.Elem().Set(optionalValue)
+
+		return &newInterfaceVal, nil
+	}
+
+	// Create a new pointer for optionalValue
+	newPtr := reflect.New(optionalValue.Type())
+	newPtr.Elem().Set(optionalValue)
+
+	return &newPtr, nil
+}
+
+func decodeDict(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
+	dict, ok := cadenceField.(Dictionary)
+	if !ok {
+		return nil, fmt.Errorf("field %s is not a dictionary", valueType.Name())
+	}
+
+	mapKeyType := valueType.Key()
+	mapValueType := valueType.Elem()
+
+	mapValue := reflect.MakeMap(valueType)
+	for _, pair := range dict.Pairs {
+
+		// Convert key and value to their Go counterparts
+		var key, value reflect.Value
+		if mapKeyType.Kind() == reflect.Ptr {
+			return nil, fmt.Errorf("map key cannot be a pointer (optional) type")
+		}
+		key = reflect.ValueOf(pair.Key)
+
+		if mapValueType.Kind() == reflect.Ptr {
+			// If the map value is a pointer type, unwrap it from optional
+			valueOptional, err := decodeOptional(mapValueType, pair.Value)
+			if err != nil {
+				return nil, err
+			}
+			if valueOptional == nil {
+				continue
+			}
+			value = *valueOptional
+		} else {
+			value = reflect.ValueOf(pair.Value)
+		}
+
+		if mapKeyType != key.Type() {
+			return nil, fmt.Errorf("map key type mismatch")
+		}
+		if mapValueType != value.Type() && mapValueType.Kind() != reflect.Interface {
+			return nil, fmt.Errorf("map value type mismatch: expected %v, got %v", mapValueType, value.Type())
+		}
+
+		// Add key-value pair to the map
+		mapValue.SetMapIndex(key, value)
+	}
+
+	return &mapValue, nil
+}
+
+func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
+	array, ok := cadenceField.(Array)
+	if !ok {
+		return nil, fmt.Errorf("field %s is not an array", valueType.Name())
+	}
+
+	arrayValue := reflect.MakeSlice(valueType, 0, len(array.Values))
+	for _, value := range array.Values {
+		var elementValue reflect.Value
+		if valueType.Elem().Kind() == reflect.Ptr {
+			// If the array value is a pointer type, unwrap it from optional
+			valueOptional, err := decodeOptional(valueType.Elem(), value)
+			if err != nil {
+				return nil, err
+			}
+			if valueOptional == nil {
+				continue
+			}
+			elementValue = *valueOptional
+		} else {
+			elementValue = reflect.ValueOf(value)
+		}
+		arrayValue = reflect.Append(arrayValue, elementValue)
+	}
+
+	return &arrayValue, nil
 }
 
 // Parameter
