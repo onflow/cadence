@@ -225,6 +225,18 @@ func newValueTestCases() map[string]valueTestCase {
 			goValue:      "✌️",
 			expectedType: CharacterType{},
 		},
+		"Array": {
+			value: NewArray([]Value{
+				NewInt(10),
+				String("TEST"),
+			}),
+			exampleType: NewConstantSizedArrayType(2, AnyType{}),
+			withType: func(value Value, ty Type) Value {
+				return value.(Array).WithType(ty.(ArrayType))
+			},
+			string:  "[10, \"TEST\"]",
+			goValue: []interface{}{10, "TEST"},
+		},
 		"StringArray": {
 			value: NewArray([]Value{
 				String(""),
