@@ -2606,6 +2606,92 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
+
+	t.Run("default function entitlemnts", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {
+				E -> F
+			}
+			entitlement G
+			struct interface I {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(M) &Int
+				}
+			}
+			struct S: I {}
+			fun test() {
+				let s = S()
+				let ref = &s as auth(E) &S
+				let i: auth(F) &Int = s.foo()
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("attachment default function entitlemnts", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			entitlement mapping M {
+				E -> F
+			}
+			entitlement mapping N {
+				G -> E
+			}
+			struct interface I {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(M) &Int
+				}
+			}
+			struct S {}
+			access(N) attachment A for S: I {}
+			fun test() {
+				let s = attach A() to S()
+				let ref = &s as auth(G) &S
+				let i: auth(F) &Int = s[A]!.foo()
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("attachment default function entitlemnts no attachment mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			entitlement mapping M {
+				E -> F
+			}
+			entitlement mapping N {
+				G -> E
+			}
+			struct interface I {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(M) &Int
+				}
+			}
+			struct S {}
+			attachment A for S: I {}
+			fun test() {
+				let s = attach A() to S()
+				let ref = &s as auth(G) &S
+				let i: auth(F) &Int = s[A]!.foo() // mismatch
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// because A is declared with no mapping, all its references are unentitled
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }
 
 func TestCheckEntitlementTypeAnnotation(t *testing.T) {
