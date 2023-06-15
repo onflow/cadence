@@ -122,7 +122,7 @@ func (checker *Checker) getReferenceType(typ Type) Type {
 		}
 	}
 
-	return NewReferenceType(checker.memoryGauge, typ, false)
+	return NewReferenceType(checker.memoryGauge, typ, UnauthorizedAccess)
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {

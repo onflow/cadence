@@ -292,7 +292,7 @@ func (interpreter *Interpreter) getReferenceValue(value Value, semaType sema.Typ
 	}
 
 	interpreter.maybeTrackReferencedResourceKindedValue(value)
-	return NewEphemeralReferenceValue(interpreter, false, value, semaType)
+	return NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, semaType)
 }
 
 func (interpreter *Interpreter) checkMemberAccess(
