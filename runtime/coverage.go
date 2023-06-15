@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -482,4 +483,46 @@ func (r *CoverageReport) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+// MarshalLCOV serializes each common.Location/*LocationCoverage
+// key/value pair on the *CoverageReport.Coverage map, to the
+// LCOV format. Currently supports only line coverage, function
+// and branch coverage are not yet available.
+func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	for location, coverage := range r.Coverage { // nolint:maprange
+		_, err := buf.WriteString(
+			fmt.Sprintf("TN:\nSF:%s\n", location.ID()),
+		)
+		if err != nil {
+			return nil, err
+		}
+		lines := make([]int, 0)
+		for line := range coverage.LineHits { // nolint:maprange
+			lines = append(lines, line)
+		}
+		sort.Ints(lines)
+		for _, line := range lines {
+			hits := coverage.LineHits[line]
+			_, err = buf.WriteString(
+				fmt.Sprintf("DA:%v,%v\n", line, hits),
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+		_, err = buf.WriteString(
+			fmt.Sprintf(
+				"LF:%v\nLH:%v\nend_of_record\n",
+				coverage.Statements,
+				coverage.CoveredLines(),
+			),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return buf.Bytes(), nil
 }
