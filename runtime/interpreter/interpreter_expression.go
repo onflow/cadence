@@ -939,7 +939,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
 			storageID := resource.StorageID()
 			interpreter.trackReferencedResourceKindedValue(storageID, resource)
-			defer interpreter.untrackReferencedResourceKindedValue(storageID, resource)
 		}
 	}
 
