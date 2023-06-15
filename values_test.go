@@ -262,7 +262,7 @@ func newValueTestCases() map[string]valueTestCase {
 				return value.(Dictionary).WithType(ty.(*DictionaryType))
 			},
 			string:  "{\"key\": \"value\"}",
-			goValue: map[string]interface{}{"key": "value"},
+			goValue: map[interface{}]interface{}{"key": "value"},
 		},
 
 		"DictionaryEmptyKey": {
@@ -281,7 +281,7 @@ func newValueTestCases() map[string]valueTestCase {
 				return value.(Dictionary).WithType(ty.(*DictionaryType))
 			},
 			string:  "{\"key\": \"value\", \"key2\" : \"\"}",
-			goValue: map[string]interface{}{"key": "value", "key2": ""},
+			goValue: map[interface{}]interface{}{"key": "value", "key2": ""},
 		},
 		"Bytes": {
 			value:        NewBytes([]byte{0x1, 0x2}),

@@ -1632,7 +1632,7 @@ func (v Dictionary) WithType(dictionaryType *DictionaryType) Dictionary {
 }
 
 func (v Dictionary) ToGoValue() any {
-	ret := map[string]any{}
+	ret := map[any]any{}
 
 	for _, p := range v.Pairs {
 		value := p.Value.ToGoValue()
