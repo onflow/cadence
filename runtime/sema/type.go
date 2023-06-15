@@ -3384,6 +3384,12 @@ func init() {
 		AccountCapabilityControllerType,
 	)
 
+	// built-in entitlements
+	for _, entitlement := range BuiltinEntitlementsList {
+		types = append(types, entitlement)
+		BuiltinEntitlements[entitlement.Identifier] = entitlement
+	}
+
 	for _, ty := range types {
 		typeName := ty.String()
 
@@ -3482,6 +3488,14 @@ var AllNumberTypes = append(
 	NumberType,
 	SignedNumberType,
 )
+
+var BuiltinEntitlementsList = []*EntitlementType{
+	MutableEntitlement,
+	InsertableEntitlement,
+	RemovableEntitlement,
+}
+
+var BuiltinEntitlements = map[string]*EntitlementType{}
 
 const NumberTypeMinFieldName = "min"
 const NumberTypeMaxFieldName = "max"

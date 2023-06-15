@@ -563,9 +563,19 @@ func (*generator) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) str
 	panic("transaction declarations are not supported")
 }
 
-func (*generator) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) struct{} {
-	// TODO
-	panic("entitlement declarations are not supported")
+func (g *generator) VisitEntitlementDeclaration(decl *ast.EntitlementDeclaration) (_ struct{}) {
+	entitlementName := decl.Identifier.Identifier
+	typeVarName := entitlementVarName(entitlementName)
+	typeVarDecl := entitlementTypeLiteral(entitlementName)
+
+	g.addDecls(
+		goVarDecl(
+			typeVarName,
+			typeVarDecl,
+		),
+	)
+
+	return
 }
 
 func (*generator) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) struct{} {
@@ -1077,6 +1087,10 @@ func typeVarName(typeName string) string {
 	return fmt.Sprintf("%sType", typeName)
 }
 
+func entitlementVarName(typeName string) string {
+	return fmt.Sprintf("%sEntitlement", typeName)
+}
+
 func typeVarIdent(typeName string) *dst.Ident {
 	return dst.NewIdent(typeVarName(typeName))
 }
@@ -1483,6 +1497,24 @@ func typeParameterExpr(name string, typeBound dst.Expr) dst.Expr {
 		Op: token.AND,
 		X: &dst.CompositeLit{
 			Type: dst.NewIdent("TypeParameter"),
+			Elts: elements,
+		},
+	}
+}
+
+func entitlementTypeLiteral(name string) dst.Expr {
+	// &sema.EntitlementType{
+	//	Identifier: "Foo",
+	//}
+
+	elements := []dst.Expr{
+		goKeyValue("Identifier", goStringLit(name)),
+	}
+
+	return &dst.UnaryExpr{
+		Op: token.AND,
+		X: &dst.CompositeLit{
+			Type: dst.NewIdent("EntitlementType"),
 			Elts: elements,
 		},
 	}

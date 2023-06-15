@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -2484,4 +2485,27 @@ func TestInterpretEntitlementSetEquality(t *testing.T) {
 		require.False(t, one.Equal(two))
 		require.False(t, two.Equal(one))
 	})
+}
+
+func TestInterpretBuiltinEntitlements(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        struct S {
+            access(Mutable) fun foo() {}
+            access(Insertable) fun bar() {}
+            access(Removable) fun baz() {}
+        }
+
+        fun main() {
+            let s = S()
+            let mutableRef = &s as auth(Mutable) &S
+            let insertableRef = &s as auth(Insertable) &S
+            let removableRef = &s as auth(Removable) &S
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	assert.NoError(t, err)
 }
