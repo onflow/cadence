@@ -40,7 +40,7 @@ type Variable struct {
 	ArgumentLabels  []string
 	DeclarationKind common.DeclarationKind
 	// Access is the access modifier
-	Access ast.Access
+	Access Access
 	// ActivationDepth is the depth of scopes in which the variable was declared
 	ActivationDepth int
 	// IsConstant indicates if the variable is read-only

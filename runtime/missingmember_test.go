@@ -846,7 +846,7 @@ pub contract GarmentNFT: NonFungibleToken {
        // Returns: A reference to the NFT
        pub fun borrowGarment(id: UInt64): &GarmentNFT.NFT? {
            if self.ownedNFTs[id] != nil {
-               let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT?
+               let ref = &self.ownedNFTs[id] as &NonFungibleToken.NFT?
                return ref as! &GarmentNFT.NFT?
            } else {
                return nil
@@ -1308,7 +1308,7 @@ pub contract MaterialNFT: NonFungibleToken {
        // Returns: A reference to the NFT
        pub fun borrowMaterial(id: UInt64): &MaterialNFT.NFT? {
            if self.ownedNFTs[id] != nil {
-               let ref = (&self.ownedNFTs[id] as auth &NonFungibleToken.NFT?)!
+               let ref = (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
                return ref as! &MaterialNFT.NFT
            } else {
                return nil
@@ -1818,7 +1818,7 @@ pub contract ItemNFT: NonFungibleToken {
        // Returns: A reference to the NFT
        pub fun borrowItem(id: UInt64): &ItemNFT.NFT? {
            if self.ownedNFTs[id] != nil {
-               let ref = (&self.ownedNFTs[id] as auth &NonFungibleToken.NFT?)!
+               let ref = (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
                return ref as! &ItemNFT.NFT
            } else {
                return nil

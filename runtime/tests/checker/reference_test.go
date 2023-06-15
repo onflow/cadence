@@ -56,7 +56,8 @@ func TestCheckReference(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-              let x: auth &Int = &1
+            entitlement X
+              let x: auth(X) &Int = &1
             `)
 
 			require.NoError(t, err)
@@ -89,12 +90,13 @@ func TestCheckReference(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("non-auth", func(t *testing.T) {
+		t.Run("auth", func(t *testing.T) {
 
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-              let x = &1 as auth &Int
+              entitlement X
+              let x = &1 as auth(X) &Int
             `)
 
 			require.NoError(t, err)
@@ -119,7 +121,8 @@ func TestCheckReference(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-          let x = &1 as &Int as auth &Int
+          entitlement X
+          let x = &1 as &Int as auth(X) &Int
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -299,7 +302,8 @@ func TestCheckReferenceExpressionWithNonCompositeResultType(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.ReferenceType{
-			Type: sema.IntType,
+			Type:          sema.IntType,
+			Authorization: sema.UnauthorizedAccess,
 		},
 		refValueType,
 	)
@@ -328,7 +332,8 @@ func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.ReferenceType{
-				Type: rType,
+				Type:          rType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 			refValueType,
 		)
@@ -353,7 +358,8 @@ func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.ReferenceType{
-				Type: sType,
+				Type:          sType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 			refValueType,
 		)
@@ -1025,12 +1031,9 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(t *testing.T, auth bool, kind common.CompositeKind) {
+	test := func(t *testing.T, auth sema.Access, kind common.CompositeKind) {
 
-		authKeyword := ""
-		if auth {
-			authKeyword = "auth"
-		}
+		authKeyword := auth.AuthKeyword()
 
 		testName := fmt.Sprintf("%s, auth: %v", kind.Name(), auth)
 
@@ -1042,6 +1045,7 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 				fmt.Sprintf(
 					`
                       %[1]s T {}
+                      entitlement X
 
                       let t %[2]s %[3]s T()
                       let ref = &t as %[4]s &T
@@ -1058,11 +1062,16 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 			tType := RequireGlobalType(t, checker.Elaboration, "T")
 
 			refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+			xType := RequireGlobalType(t, checker.Elaboration, "X").(*sema.EntitlementType)
+			var access sema.Access = sema.UnauthorizedAccess
+			if !auth.Equal(sema.UnauthorizedAccess) {
+				access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xType}, sema.Conjunction)
+			}
 
 			require.Equal(t,
 				&sema.ReferenceType{
-					Authorized: auth,
-					Type:       tType,
+					Authorization: access,
+					Type:          tType,
 				},
 				refValueType,
 			)
@@ -1073,7 +1082,13 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 		common.CompositeKindResource,
 		common.CompositeKindStructure,
 	} {
-		for _, auth := range []bool{true, false} {
+		for _, auth := range []sema.Access{
+			sema.UnauthorizedAccess,
+			sema.NewEntitlementSetAccess([]*sema.EntitlementType{{
+				Location:   utils.TestLocation,
+				Identifier: "X",
+			}}, sema.Conjunction),
+		} {
 			test(t, auth, kind)
 		}
 	}
@@ -1144,7 +1159,8 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 		assert.Equal(t,
 			&sema.OptionalType{
 				Type: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 			refValueType,
@@ -1192,7 +1208,8 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 		assert.Equal(t,
 			&sema.OptionalType{
 				Type: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 			refValueType,
@@ -1214,7 +1231,8 @@ func TestCheckNilCoalesceReference(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.ReferenceType{
-			Type: sema.IntType,
+			Type:          sema.IntType,
+			Authorization: sema.UnauthorizedAccess,
 		},
 		refValueType,
 	)

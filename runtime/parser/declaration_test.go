@@ -46,6 +46,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: false,
 					Identifier: ast.Identifier{
 						Identifier: "x",
@@ -117,6 +118,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: true,
 					Identifier: ast.Identifier{
 						Identifier: "x",
@@ -152,6 +154,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: true,
 					Identifier: ast.Identifier{
 						Identifier: "x",
@@ -187,6 +190,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: true,
 					Identifier: ast.Identifier{
 						Identifier: "r2",
@@ -229,6 +233,7 @@ func TestParseVariableDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: false,
 					Identifier: ast.Identifier{
 						Identifier: "x",
@@ -565,6 +570,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -639,6 +645,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -697,6 +704,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 2, Column: 14, Offset: 15},
@@ -810,6 +818,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 2, Column: 4, Offset: 13},
@@ -847,6 +856,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 7, Column: 4, Offset: 43},
@@ -884,6 +894,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 7, Column: 4, Offset: 43},
@@ -926,6 +937,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "main",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -988,6 +1000,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -1040,7 +1053,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
-					Flags: ast.FunctionDeclarationFlagsIsNative,
+					Access: ast.AccessNotSpecified,
+					Flags:  ast.FunctionDeclarationFlagsIsNative,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
@@ -1112,7 +1126,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
-					Flags: ast.FunctionDeclarationFlagsIsStatic,
+					Access: ast.AccessNotSpecified,
+					Flags:  ast.FunctionDeclarationFlagsIsStatic,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 11, Offset: 11},
@@ -1173,7 +1188,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
-					Flags: ast.FunctionDeclarationFlagsIsStatic | ast.FunctionDeclarationFlagsIsNative,
+					Access: ast.AccessNotSpecified,
+					Flags:  ast.FunctionDeclarationFlagsIsStatic | ast.FunctionDeclarationFlagsIsNative,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
@@ -1335,6 +1351,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -1384,6 +1401,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -1440,6 +1458,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: "foo",
 						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -1768,16 +1787,100 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
-	t.Run("access, invalid inner keyword", func(t *testing.T) {
+	t.Run("access, single entitlement", func(t *testing.T) {
 
 		t.Parallel()
 
 		result, errs := parse("access ( foo )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.EntitlementAccess{
+				EntitlementSet: &ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("access, multiple conjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo , bar )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.EntitlementAccess{
+				EntitlementSet: &ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("access, multiple disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo | bar )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.EntitlementAccess{
+				EntitlementSet: &ast.DisjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 9, Line: 1, Column: 9},
+							},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "bar",
+								Pos:        ast.Position{Offset: 15, Line: 1, Column: 15},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("access, mixed disjunctive and conjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo | bar , baz )")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected keyword \"all\", \"account\", \"contract\", or \"self\", got \"foo\"",
-					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+					Message: "unexpected token: got ',', expected '|' or ')'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
 				},
 			},
 			errs,
@@ -1788,6 +1891,154 @@ func TestParseAccess(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("access, mixed conjunctive and disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo , bar | baz )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: got '|', expected ',' or ')'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, conjunctive entitlements list starting with keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( self , bar )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, disjunctive entitlements list starting with keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( self | bar )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, conjunctive entitlements list ending with keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo , self )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected non-nominal type: self",
+					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, disjunctive entitlements list ending with keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo | self )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected non-nominal type: self",
+					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, multiple entitlements no separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo bar )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected entitlement separator identifier",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
+	t.Run("access, invalid separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo & bar )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected entitlement separator '&'",
+					Pos:     ast.Position{Offset: 13, Line: 1, Column: 13},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
 }
 
 func TestParseImportDeclaration(t *testing.T) {
@@ -2168,6 +2419,7 @@ func TestParseEvent(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindEvent,
 					Identifier: ast.Identifier{
 						Identifier: "E",
@@ -2178,6 +2430,7 @@ func TestParseEvent(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									ParameterList: &ast.ParameterList{
 										Range: ast.Range{
 											StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
@@ -2221,6 +2474,7 @@ func TestParseEvent(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									ParameterList: &ast.ParameterList{
 										Parameters: []*ast.Parameter{
 											{
@@ -2415,6 +2669,7 @@ func TestParseField(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
+				Access:       ast.AccessNotSpecified,
 				Flags:        ast.FieldDeclarationFlagsIsNative,
 				VariableKind: ast.VariableKindConstant,
 				Identifier: ast.Identifier{
@@ -2470,6 +2725,7 @@ func TestParseField(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
+				Access:       ast.AccessNotSpecified,
 				Flags:        ast.FieldDeclarationFlagsIsStatic,
 				VariableKind: ast.VariableKindConstant,
 				Identifier: ast.Identifier{
@@ -2529,6 +2785,7 @@ func TestParseField(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.FieldDeclaration{
+				Access:       ast.AccessNotSpecified,
 				Flags:        ast.FieldDeclarationFlagsIsStatic | ast.FieldDeclarationFlagsIsNative,
 				VariableKind: ast.VariableKindConstant,
 				Identifier: ast.Identifier{
@@ -2741,6 +2998,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindStructure,
 					Identifier: ast.Identifier{
 						Identifier: "Test",
@@ -2773,6 +3031,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "init",
 										Pos:        ast.Position{Offset: 76, Line: 5, Column: 14},
@@ -2981,6 +3240,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 						[]ast.Declaration{&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								Purity: ast.FunctionPurityView,
 								Identifier: ast.Identifier{
 									Identifier: "init",
@@ -3362,6 +3622,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "init",
 										Pos:        ast.Position{Offset: 53, Line: 3, Column: 3},
@@ -3386,6 +3647,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindDestructor,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "destroy",
 										Pos:        ast.Position{Offset: 66, Line: 4, Column: 3},
@@ -3444,6 +3706,206 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 6, Column: 2, Offset: 109},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("required entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`pub attachment E for S {
+			require entitlement X
+			require entitlement Y
+			destroy() {}
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindDestructor,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
+									Identifier: ast.Identifier{
+										Identifier: "destroy",
+										Pos:        ast.Position{Offset: 78, Line: 4, Column: 3},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 85, Line: 4, Column: 10},
+											EndPos:   ast.Position{Offset: 86, Line: 4, Column: 11},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 88, Line: 4, Column: 13},
+												EndPos:   ast.Position{Offset: 89, Line: 4, Column: 14},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 78, Line: 4, Column: 3},
+								},
+							},
+						},
+					),
+					RequiredEntitlements: []*ast.NominalType{
+						ast.NewNominalType(
+							nil,
+							ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 2, Column: 23, Offset: 48},
+							},
+							nil,
+						),
+						ast.NewNominalType(
+							nil,
+							ast.Identifier{
+								Identifier: "Y",
+								Pos:        ast.Position{Line: 3, Column: 23, Offset: 73},
+							},
+							nil,
+						),
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 5, Column: 2, Offset: 93},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("required entitlements error no identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`pub attachment E for S {
+			require entitlement 
+			destroy() {}
+		}`)
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 3, Column: 10, Offset: 59},
+				Message: "unexpected '('",
+			},
+		}, errs)
+	})
+
+	t.Run("required entitlements error no entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`pub attachment E for S {
+			require X 
+			destroy() {}
+		}`)
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 2, Column: 11, Offset: 36},
+				Message: "expected 'entitlement', got identifier",
+			},
+		}, errs)
+	})
+
+	t.Run("required entitlements error non-nominal type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`pub attachment E for S {
+			require entitlement [X]
+			destroy() {}
+		}`)
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 2, Column: 26, Offset: 51},
+				Message: "unexpected non-nominal type: [X]",
+			},
+		}, errs)
+	})
+
+	t.Run("entitlement access", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`pub attachment E for S {
+			access(X) var foo: Int
+		}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+						},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.FieldDeclaration{
+								Access: ast.EntitlementAccess{
+									EntitlementSet: &ast.ConjunctiveEntitlementSet{
+										Elements: []*ast.NominalType{
+											{
+												Identifier: ast.Identifier{
+													Identifier: "X",
+													Pos:        ast.Position{Offset: 35, Line: 2, Column: 10},
+												},
+											},
+										},
+									},
+								},
+								VariableKind: ast.VariableKindVariable,
+								Identifier: ast.Identifier{
+									Identifier: "foo",
+									Pos:        ast.Position{Offset: 42, Line: 2, Column: 17},
+								},
+								TypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 47, Line: 2, Column: 22},
+										},
+									},
+									StartPos: ast.Position{Offset: 47, Line: 2, Column: 22},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 28, Line: 2, Column: 3},
+									EndPos:   ast.Position{Offset: 49, Line: 2, Column: 24},
+								},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 53},
 					},
 				},
 			},
@@ -3529,6 +3991,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.InterfaceDeclaration{
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindStructure,
 					Identifier: ast.Identifier{
 						Identifier: "Test",
@@ -3561,6 +4024,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "init",
 										Pos:        ast.Position{Offset: 86, Line: 5, Column: 14},
@@ -3653,6 +4117,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindDestructor,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
 									Identifier: ast.Identifier{
 										Identifier: "destroy",
 										Pos:        ast.Position{Offset: 193, Line: 11, Column: 14},
@@ -4835,6 +5300,7 @@ func TestParseStructure(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindStructure,
 				Identifier: ast.Identifier{
 					Identifier: "Test",
@@ -4867,6 +5333,7 @@ func TestParseStructure(t *testing.T) {
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								Identifier: ast.Identifier{
 									Identifier: "init",
 									Pos:        ast.Position{Offset: 70, Line: 5, Column: 12},
@@ -5013,6 +5480,7 @@ func TestParseStructureWithConformances(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindStructure,
 				Identifier: ast.Identifier{
 					Identifier: "Test",
@@ -5368,6 +5836,7 @@ func TestParseInterface(t *testing.T) {
 		}
 
 		test := &ast.InterfaceDeclaration{
+			Access:        ast.AccessNotSpecified,
 			CompositeKind: common.CompositeKindStructure,
 			Identifier: ast.Identifier{
 				Identifier: "Test",
@@ -5400,6 +5869,7 @@ func TestParseInterface(t *testing.T) {
 					&ast.SpecialFunctionDeclaration{
 						Kind: common.DeclarationKindInitializer,
 						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
 							Identifier: ast.Identifier{
 								Identifier: "init",
 								Pos:        ast.Position{Offset: 79, Line: 5, Column: 16},
@@ -5936,6 +6406,7 @@ func TestParseResource(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindResource,
 				Identifier: ast.Identifier{
 					Identifier: "Test",
@@ -5965,6 +6436,7 @@ func TestParseEventDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindEvent,
 				Identifier: ast.Identifier{
 					Identifier: "Transfer",
@@ -5975,6 +6447,7 @@ func TestParseEventDeclaration(t *testing.T) {
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								ParameterList: &ast.ParameterList{
 									Parameters: []*ast.Parameter{
 										{
@@ -6135,6 +6608,7 @@ func TestParseResourceReturnType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
@@ -6183,6 +6657,7 @@ func TestParseMovingVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -6218,6 +6693,7 @@ func TestParseResourceParameterType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
@@ -6276,6 +6752,7 @@ func TestParseMovingVariableDeclarationWithTypeAnnotation(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -6321,6 +6798,7 @@ func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindStructure,
 				Identifier: ast.Identifier{
 					Identifier: "X",
@@ -6377,6 +6855,7 @@ func TestParseDestructor(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindResource,
 				Identifier: ast.Identifier{
 					Identifier: "Test",
@@ -6387,6 +6866,7 @@ func TestParseDestructor(t *testing.T) {
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindDestructor,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								Identifier: ast.Identifier{
 									Identifier: "destroy",
 									Pos:        ast.Position{Offset: 37, Line: 3, Column: 12},
@@ -6433,6 +6913,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
 				CompositeKind: common.CompositeKindStructure,
 				Identifier: ast.Identifier{
 					Identifier: "Kitty",
@@ -6441,6 +6922,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.FieldDeclaration{
+							Access:       ast.AccessNotSpecified,
 							VariableKind: ast.VariableKindConstant,
 							Identifier: ast.Identifier{
 								Identifier: "id",
@@ -6463,6 +6945,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
+								Access: ast.AccessNotSpecified,
 								Identifier: ast.Identifier{
 									Identifier: "init",
 									Pos:        ast.Position{Offset: 38, Line: 2, Column: 37},
@@ -7417,6 +7900,115 @@ func TestParseNestedPragma(t *testing.T) {
 
 }
 
+func TestParseEntitlementDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(" pub entitlement E ")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("nested entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		// at static checking time, all entitlements nested inside non-contract-kinded composites
+		// will be rejected
+		result, errs := testParseDeclarations(`
+            pub contract C { 
+                pub entitlement E
+            }
+        `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessPublic,
+					CompositeKind: common.CompositeKindContract,
+					Identifier: ast.Identifier{
+						Identifier: "C",
+						Pos:        ast.Position{Line: 2, Column: 25, Offset: 26},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 12, Offset: 13},
+						EndPos:   ast.Position{Line: 4, Column: 12, Offset: 77},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.EntitlementDeclaration{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "E",
+									Pos:        ast.Position{Line: 3, Column: 32, Offset: 63},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 3, Column: 16, Offset: 47},
+									EndPos:   ast.Position{Line: 3, Column: 32, Offset: 63},
+								},
+							},
+						},
+					),
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier, got EOF",
+					Pos:     ast.Position{Offset: 16, Line: 1, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("view modifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub view entitlement E")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid view modifier for entitlement",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+}
+
 func TestParseMemberDocStrings(t *testing.T) {
 
 	t.Parallel()
@@ -7444,6 +8036,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindStructure,
 					Identifier: ast.Identifier{
 						Identifier: "Test",
@@ -7452,6 +8045,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FunctionDeclaration{
+								Access:    ast.AccessNotSpecified,
 								DocString: " noReturnNoBlock",
 								Identifier: ast.Identifier{
 									Identifier: "noReturnNoBlock",
@@ -7466,6 +8060,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 								StartPos: ast.Position{Offset: 74, Line: 5, Column: 14},
 							},
 							&ast.FunctionDeclaration{
+								Access:    ast.AccessNotSpecified,
 								DocString: " returnNoBlock",
 								Identifier: ast.Identifier{
 									Identifier: "returnNoBlock",
@@ -7490,6 +8085,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 								StartPos: ast.Position{Offset: 143, Line: 8, Column: 14},
 							},
 							&ast.FunctionDeclaration{
+								Access:    ast.AccessNotSpecified,
 								DocString: " returnAndBlock",
 								Identifier: ast.Identifier{
 									Identifier: "returnAndBlock",
@@ -7556,6 +8152,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindStructure,
 					Identifier: ast.Identifier{
 						Identifier: "Test",
@@ -7566,6 +8163,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindUnknown,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access:    ast.AccessNotSpecified,
 									DocString: " unknown",
 									Identifier: ast.Identifier{
 										Identifier: "unknown",
@@ -7583,6 +8181,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access:    ast.AccessNotSpecified,
 									DocString: " initNoBlock",
 									Identifier: ast.Identifier{
 										Identifier: "init",
@@ -7600,6 +8199,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindDestructor,
 								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access:    ast.AccessNotSpecified,
 									DocString: " destroyWithBlock",
 									Identifier: ast.Identifier{
 										Identifier: "destroy",
@@ -7634,6 +8234,323 @@ func TestParseMemberDocStrings(t *testing.T) {
 		)
 	})
 
+}
+
+func TestParseEntitlementMappingDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(" pub entitlement mapping M { } ")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("mappings", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A -> B
+			C -> D
+		} `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 4, Column: 2, Offset: 52},
+					},
+					Associations: []*ast.EntitlementMapElement{
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Line: 2, Column: 3, Offset: 33},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos:        ast.Position{Line: 2, Column: 8, Offset: 38},
+								},
+							},
+						},
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "C",
+									Pos:        ast.Position{Line: 3, Column: 3, Offset: 43},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "D",
+									Pos:        ast.Position{Line: 3, Column: 8, Offset: 48},
+								},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("same line mappings", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A -> B C -> D
+		} `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 3, Column: 2, Offset: 49},
+					},
+					Associations: []*ast.EntitlementMapElement{
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos:        ast.Position{Line: 2, Column: 3, Offset: 33},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos:        ast.Position{Line: 2, Column: 8, Offset: 38},
+								},
+							},
+						},
+						{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "C",
+									Pos:        ast.Position{Line: 2, Column: 10, Offset: 40},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "D",
+									Pos:        ast.Position{Line: 2, Column: 15, Offset: 45},
+								},
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("missing entitlement keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub mapping M {} ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing mapping keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement M {} ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: '{'",
+					Pos:     ast.Position{Offset: 19, Line: 1, Column: 19},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing body", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping M ")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '{'",
+					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing close brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping M {")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '}'",
+					Pos:     ast.Position{Offset: 28, Line: 1, Column: 28},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing open brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping M }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '{'",
+					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub entitlement mapping {}")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier following entitlement mapping declaration, got '{'",
+					Pos:     ast.Position{Offset: 25, Line: 1, Column: 25},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("non-nominal mapping first", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			&A -> B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected nominal type, got &A",
+					Pos:     ast.Position{Offset: 35, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("non-nominal mapping second", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A -> [B]
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected nominal type, got [B]",
+					Pos:     ast.Position{Offset: 41, Line: 2, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("missing arrow", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '->'",
+					Pos:     ast.Position{Offset: 35, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("wrong mapping separator", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` pub entitlement mapping M { 
+			A - B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '->'",
+					Pos:     ast.Position{Offset: 35, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseInvalidSpecialFunctionReturnTypeAnnotation(t *testing.T) {
@@ -7680,6 +8597,7 @@ func TestSoftKeywordsInFunctionDeclaration(t *testing.T) {
 
 			expected := []ast.Declaration{
 				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
 					Identifier: ast.Identifier{
 						Identifier: name,
 						Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},

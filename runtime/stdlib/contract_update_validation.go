@@ -147,6 +147,12 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 			validator.checkConformances(oldDecl, newDecl)
 		}
 	}
+
+	if newDecl, ok := newDeclaration.(*ast.AttachmentDeclaration); ok {
+		if oldDecl, ok := oldDeclaration.(*ast.AttachmentDeclaration); ok {
+			validator.checkRequiredEntitlements(oldDecl, newDecl)
+		}
+	}
 }
 
 func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
@@ -192,12 +198,12 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	newDeclaration ast.Declaration,
 ) {
 
-	oldCompositeAndInterfaceDecls := getNestedCompositeAndInterfaceDecls(oldDeclaration)
+	oldNominalTypeDecls := getNestedNominalTypeDecls(oldDeclaration)
 
 	// Check nested structs, enums, etc.
 	newNestedCompositeDecls := newDeclaration.DeclarationMembers().Composites()
 	for _, newNestedDecl := range newNestedCompositeDecls {
-		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
+		oldNestedDecl, found := oldNominalTypeDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then it's a new declaration
 			continue
@@ -206,13 +212,28 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 
 		// If there's a matching new decl, then remove the old one from the map.
-		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
+	}
+
+	// Check nested attachments, etc.
+	newNestedAttachmentDecls := newDeclaration.DeclarationMembers().Attachments()
+	for _, newNestedDecl := range newNestedAttachmentDecls {
+		oldNestedDecl, found := oldNominalTypeDecls[newNestedDecl.Identifier.Identifier]
+		if !found {
+			// Then it's a new declaration
+			continue
+		}
+
+		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+
+		// If there's a matching new decl, then remove the old one from the map.
+		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
 	}
 
 	// Check nested interfaces.
 	newNestedInterfaces := newDeclaration.DeclarationMembers().Interfaces()
 	for _, newNestedDecl := range newNestedInterfaces {
-		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
+		oldNestedDecl, found := oldNominalTypeDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then this is a new declaration.
 			continue
@@ -221,16 +242,16 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 
 		// If there's a matching new decl, then remove the old one from the map.
-		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
 	}
 
 	// The remaining old declarations don't have a corresponding new declaration,
 	// i.e., an existing declaration was removed.
 	// Hence, report an error.
 
-	missingDeclarations := make([]ast.Declaration, 0, len(oldCompositeAndInterfaceDecls))
+	missingDeclarations := make([]ast.Declaration, 0, len(oldNominalTypeDecls))
 
-	for _, declaration := range oldCompositeAndInterfaceDecls { //nolint:maprange
+	for _, declaration := range oldNominalTypeDecls { //nolint:maprange
 		missingDeclarations = append(missingDeclarations, declaration)
 	}
 
@@ -253,11 +274,16 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	validator.checkEnumCases(oldDeclaration, newDeclaration)
 }
 
-func getNestedCompositeAndInterfaceDecls(declaration ast.Declaration) map[string]ast.Declaration {
+func getNestedNominalTypeDecls(declaration ast.Declaration) map[string]ast.Declaration {
 	compositeAndInterfaceDecls := map[string]ast.Declaration{}
 
 	nestedCompositeDecls := declaration.DeclarationMembers().CompositesByIdentifier()
 	for identifier, nestedDecl := range nestedCompositeDecls { //nolint:maprange
+		compositeAndInterfaceDecls[identifier] = nestedDecl
+	}
+
+	nestedAttachmentDecls := declaration.DeclarationMembers().AttachmentsByIdentifier()
+	for identifier, nestedDecl := range nestedAttachmentDecls { //nolint:maprange
 		compositeAndInterfaceDecls[identifier] = nestedDecl
 	}
 
@@ -308,6 +334,47 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 				FoundName:    newEnumCase.Identifier.Identifier,
 				Range:        ast.NewUnmeteredRangeFromPositioned(newEnumCase),
 			})
+		}
+	}
+}
+
+func (validator *ContractUpdateValidator) checkRequiredEntitlements(
+	oldDecl *ast.AttachmentDeclaration,
+	newDecl *ast.AttachmentDeclaration,
+) {
+	oldEntitlements := oldDecl.RequiredEntitlements
+	newEntitlements := newDecl.RequiredEntitlements
+
+	// updates cannot add new entitlement requirements, or equivalently,
+	// the new entitlements must all be present in the old entitlements list
+	// Adding new entitlement requirements has to be prohibited because it would
+	// be a security vulnerability. If your attachment previously only requires X access to the base,
+	// people who might be okay giving an attachment X access to their resource would be willing to attach it.
+	// If the author could later add a requirement to the attachment declaration asking for Y access as well,
+	// then they would be able to access Y-entitled values on existing attached bases without ever having
+	// received explicit permission from the resource owners to access that entitlement.
+
+	for _, newEntitlement := range newEntitlements {
+		found := false
+		for index, oldEntitlement := range oldEntitlements {
+			err := oldEntitlement.CheckEqual(newEntitlement, validator)
+			if err == nil {
+				found = true
+
+				// Remove the matched entitlement, so we don't have to check it again.
+				// i.e: optimization
+				oldEntitlements = append(oldEntitlements[:index], oldEntitlements[index+1:]...)
+				break
+			}
+		}
+
+		if !found {
+			validator.report(&RequiredEntitlementMismatchError{
+				DeclName: newDecl.Identifier.Identifier,
+				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+			})
+
+			return
 		}
 	}
 }
@@ -526,6 +593,21 @@ func (*ConformanceMismatchError) IsUserError() {}
 
 func (e *ConformanceMismatchError) Error() string {
 	return fmt.Sprintf("conformances does not match in `%s`", e.DeclName)
+}
+
+// RequiredEntitlementMismatchError is reported during a contract update, when the required entitlements of the new attachment
+// does not match the existing one.
+type RequiredEntitlementMismatchError struct {
+	DeclName string
+	ast.Range
+}
+
+var _ errors.UserError = &RequiredEntitlementMismatchError{}
+
+func (*RequiredEntitlementMismatchError) IsUserError() {}
+
+func (e *RequiredEntitlementMismatchError) Error() string {
+	return fmt.Sprintf("required entitlements do not match in `%s`", e.DeclName)
 }
 
 // EnumCaseMismatchError is reported during an enum update, when an updated enum case

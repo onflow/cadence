@@ -53,6 +53,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			[]byte(`
                   pub contract Test {
 
+                      pub entitlement X
+
                       pub resource R {
 
                           pub let id: Int
@@ -518,13 +520,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Arrange
                                       Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                      let issuedCap: Capability<&Test.R{}> =
-                                          signer.capabilities.storage.issue<&Test.R{}>(storagePath)
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&Test.R>? =
-                                          %s.capabilities.get<&Test.R>(publicPath)
+                                      let gotCap: Capability<auth(Test.X) &Test.R>? =
+                                          %s.capabilities.get<auth(Test.X) &Test.R>(publicPath)
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -842,13 +844,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Arrange
                                       Test.createAndSaveR(id: resourceID, storagePath: storagePath)
-                                      let issuedCap: Capability<&Test.R{}> =
-                                          signer.capabilities.storage.issue<&Test.R{}>(storagePath)
+                                      let issuedCap: Capability<&Test.R> =
+                                          signer.capabilities.storage.issue<&Test.R>(storagePath)
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let ref: &Test.R? =
-                                          %s.capabilities.borrow<&Test.R>(publicPath)
+                                      let ref: auth(Test.X) &Test.R? =
+                                          %s.capabilities.borrow<auth(Test.X) &Test.R>(publicPath)
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -868,19 +870,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
+                              import Test from 0x1 
+
                               transaction {
                                   prepare(signer: AuthAccount) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount{}> =
-                                          signer.capabilities.account.issue<&AuthAccount{}>()
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let ref: &AuthAccount? =
-                                          %s.capabilities.borrow<&AuthAccount>(publicPath)
+                                      let ref: auth(Test.X) &AuthAccount? =
+                                          %s.capabilities.borrow<auth(Test.X) &AuthAccount>(publicPath)
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)

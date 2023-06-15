@@ -1978,6 +1978,7 @@ func TestParseMemberExpression(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
 					IsConstant: true,
 					Identifier: ast.Identifier{
 						Identifier: "a",
@@ -2378,7 +2379,6 @@ func TestParseNilCoelesceReference(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					Type: &ast.OptionalType{
 						Type: &ast.ReferenceType{
-							Authorized: false,
 							Type: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "Int",
@@ -2839,16 +2839,97 @@ func TestParseAttach(t *testing.T) {
 		)
 	})
 
-	t.Run("non-invocation", func(t *testing.T) {
+	t.Run("with provided entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression("attach A to E")
+		result, errs := testParseExpression("attach E() to r with (X, Y)")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.AttachExpression{
+				Base: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "r",
+						Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+					},
+				},
+				Attachment: &ast.InvocationExpression{
+					InvokedExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "E",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					ArgumentsStartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					EndPos:            ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
+				Entitlements: []*ast.NominalType{
+					ast.NewNominalType(
+						nil,
+						ast.Identifier{
+							Identifier: "X",
+							Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
+						},
+						nil,
+					),
+					ast.NewNominalType(
+						nil,
+						ast.Identifier{
+							Identifier: "Y",
+							Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
+						nil,
+					),
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("with provided entitlements not closed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach E() to r with (X, Y")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid end of input, expected ')'",
+					Pos:     ast.Position{Offset: 26, Line: 1, Column: 26},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("with provided entitlements extra comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach E() to r with (X, Y,)")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "missing type after separator",
+					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("with provided entitlements unopened", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("attach E() to r with X, Y)")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+					Pos:     ast.Position{Offset: 21, Line: 1, Column: 21},
 				},
 			},
 			errs,
@@ -4489,6 +4570,7 @@ func TestParseBoolExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -4525,6 +4607,7 @@ func TestParseIdentifierExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "b",
@@ -4560,6 +4643,7 @@ func TestParseArrayExpressionInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{Identifier: "a",
 					Pos: ast.Position{Offset: 10, Line: 2, Column: 9},
@@ -4614,6 +4698,7 @@ func TestParseDictionaryExpressionInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{Identifier: "x",
 					Pos: ast.Position{Offset: 10, Line: 2, Column: 9},
@@ -4686,6 +4771,7 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -4753,6 +4839,7 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -4824,6 +4911,7 @@ func TestParseOptionalMemberExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -4867,6 +4955,7 @@ func TestParseIndexExpressionInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -4917,6 +5006,7 @@ func TestParseUnaryExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "foo",
@@ -4956,6 +5046,7 @@ func TestParseOrExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5002,6 +5093,7 @@ func TestParseAndExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5048,6 +5140,7 @@ func TestParseEqualityExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5094,6 +5187,7 @@ func TestParseRelationalExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5144,6 +5238,7 @@ func TestParseAdditiveExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5194,6 +5289,7 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5244,6 +5340,7 @@ func TestParseFunctionExpressionAndReturn(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "test",
@@ -5317,6 +5414,7 @@ func TestParseLeftAssociativity(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5379,6 +5477,7 @@ func TestParseNegativeInteger(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5417,6 +5516,7 @@ func TestParseNegativeFixedPoint(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5459,6 +5559,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -5561,6 +5662,7 @@ func TestParseVoidLiteral(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "void",
@@ -5606,6 +5708,7 @@ func TestParseMissingReturnType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "noop",
 					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -5816,6 +5919,7 @@ func TestParseNilCoalescing(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -5861,6 +5965,7 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -5944,6 +6049,7 @@ func TestParseFailableCasting(t *testing.T) {
 	}
 
 	variableDeclaration := &ast.VariableDeclaration{
+		Access:     ast.AccessNotSpecified,
 		IsConstant: true,
 		Identifier: ast.Identifier{
 			Identifier: "x",
@@ -5980,6 +6086,7 @@ func TestParseMoveOperator(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -6038,6 +6145,7 @@ func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
 		[]ast.Declaration{
 
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "f",
@@ -6126,6 +6234,7 @@ func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
 	}
 
 	variableDeclaration := &ast.VariableDeclaration{
+		Access:     ast.AccessNotSpecified,
 		IsConstant: true,
 		Identifier: ast.Identifier{
 			Identifier: "y",
@@ -6179,6 +6288,7 @@ func TestParseCasting(t *testing.T) {
 	}
 
 	variableDeclaration := &ast.VariableDeclaration{
+		Access:     ast.AccessNotSpecified,
 		IsConstant: true,
 		Identifier: ast.Identifier{
 			Identifier: "y",
@@ -6269,6 +6379,7 @@ func TestParseReferenceInVariableDeclaration(t *testing.T) {
 	require.Empty(t, errs)
 
 	expected := &ast.VariableDeclaration{
+		Access:     ast.AccessNotSpecified,
 		IsConstant: true,
 		Identifier: ast.Identifier{
 			Identifier: "x",
@@ -6347,6 +6458,7 @@ func TestParseFixedPointExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{Identifier: "a",
 					Pos: ast.Position{Offset: 10, Line: 2, Column: 9},
@@ -6386,6 +6498,7 @@ func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{Identifier: "a",
 					Pos: ast.Position{Offset: 10, Line: 2, Column: 9},
@@ -6425,6 +6538,7 @@ func TestParsePathLiteral(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{Identifier: "a",
 					Pos: ast.Position{Offset: 10, Line: 2, Column: 9},
@@ -6464,6 +6578,7 @@ func TestParseBitwiseExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",

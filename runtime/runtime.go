@@ -658,7 +658,8 @@ func (r *interpreterRuntime) ReadLinked(
 		pathValue,
 		// Use top-most type to follow link all the way to final target
 		&sema.ReferenceType{
-			Type: sema.AnyType,
+			Type:          sema.AnyType,
+			Authorization: sema.UnauthorizedAccess,
 		},
 		true,
 		interpreter.EmptyLocationRange,

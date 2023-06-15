@@ -2892,13 +2892,17 @@ func TestCheckInterfaceInheritance(t *testing.T) {
             struct interface Bar: Foo {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 
 		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
 		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
+
+		// forEachAttachment params conflict between foo and bar
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[1], &interfaceMemberConflictError)
 	})
 
 	t.Run("mismatching inner conformance", func(t *testing.T) {
@@ -2913,13 +2917,17 @@ func TestCheckInterfaceInheritance(t *testing.T) {
             struct Baz: Bar {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 
 		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
 		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
+
+		// forEachAttachment params conflict between foo and bar
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[1], &interfaceMemberConflictError)
 	})
 
 	t.Run("nested mismatching conformance", func(t *testing.T) {
@@ -2934,14 +2942,18 @@ func TestCheckInterfaceInheritance(t *testing.T) {
             struct Baz: Bar {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 		assert.Equal(t, common.CompositeKindResource, conformanceError.ExpectedKind)
 		assert.Equal(t, common.CompositeKindStructure, conformanceError.ActualKind)
 
-		require.ErrorAs(t, errs[1], &conformanceError)
+		// forEachAttachment params conflict between foo and bar
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[1], &interfaceMemberConflictError)
+
+		require.ErrorAs(t, errs[2], &conformanceError)
 		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
 		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
 	})

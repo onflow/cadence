@@ -464,6 +464,37 @@ func exportFunctionType(
 	)
 }
 
+func exportAuthorization(
+	gauge common.MemoryGauge,
+	access sema.Access,
+) cadence.Authorization {
+	switch access := access.(type) {
+	case sema.PrimitiveAccess:
+		if access.Equal(sema.UnauthorizedAccess) {
+			return cadence.UnauthorizedAccess
+		}
+	case sema.EntitlementMapAccess:
+		common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindCadenceEntitlementMapAccess))
+		return cadence.EntitlementMapAuthorization{
+			TypeID: access.Type.ID(),
+		}
+	case sema.EntitlementSetAccess:
+		common.UseMemory(gauge, common.MemoryUsage{
+			Kind:   common.MemoryKindCadenceEntitlementSetAccess,
+			Amount: uint64(access.Entitlements.Len()),
+		})
+		var entitlements []common.TypeID
+		access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
+			entitlements = append(entitlements, key.ID())
+		})
+		return cadence.EntitlementSetAuthorization{
+			Entitlements: entitlements,
+			Kind:         cadence.EntitlementSetKind(access.SetKind),
+		}
+	}
+	panic(fmt.Sprintf("cannot export authorization with access %T", access))
+}
+
 func exportReferenceType(
 	gauge common.MemoryGauge,
 	t *sema.ReferenceType,
@@ -473,7 +504,7 @@ func exportReferenceType(
 
 	return cadence.NewMeteredReferenceType(
 		gauge,
-		t.Authorized,
+		exportAuthorization(gauge, t.Authorization),
 		convertedType,
 	)
 }
@@ -531,6 +562,18 @@ func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType
 		t.CompositeTypeQualifiedIdentifier(),
 		"", // intentionally empty
 	)
+}
+
+func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorization) interpreter.Authorization {
+	switch auth := auth.(type) {
+	case cadence.Unauthorized:
+		return interpreter.UnauthorizedAccess
+	case cadence.EntitlementMapAuthorization:
+		return interpreter.NewEntitlementMapAuthorization(memoryGauge, auth.TypeID)
+	case cadence.EntitlementSetAuthorization:
+		return interpreter.NewEntitlementSetAuthorization(memoryGauge, auth.Entitlements, sema.EntitlementSetKind(auth.Kind))
+	}
+	panic(fmt.Sprintf("cannot import authorization of type %T", auth))
 }
 
 func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.StaticType {
@@ -638,9 +681,8 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case *cadence.ReferenceType:
 		return interpreter.NewReferenceStaticType(
 			memoryGauge,
-			t.Authorized,
+			importAuthorization(memoryGauge, t.Authorization),
 			ImportType(memoryGauge, t.Type),
-			nil,
 		)
 	case *cadence.RestrictedType:
 		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))

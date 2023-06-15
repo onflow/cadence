@@ -1962,3 +1962,397 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.InvalidAttachmentOperationTargetError{})
 	})
 }
+
+func TestInterpretForEachAttachment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("count resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+            attachment A for R {}
+            attachment B for R {}
+            attachment C for R {}
+            fun test(): Int {
+                var r <- attach C() to <- attach B() to <- attach A() to <- create R()
+                var i = 0
+                r.forEachAttachment(fun(attachmentRef: &AnyResourceAttachment) {
+                    i = i + 1
+                }) 
+                destroy r
+                return i 
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("count struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {}
+            attachment B for S {}
+            attachment C for S {}
+            fun test(): Int {
+                var s = attach C() to attach B() to attach A() to S()
+                var i = 0
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    i = i + 1
+                }) 
+                return i 
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("invoke foos", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {
+                fun foo(_ x: Int): Int { return 7 + x }
+            }
+            attachment B for S {
+                fun foo(): Int { return 10 }
+            }
+            attachment C for S {
+                fun foo(_ x: Int): Int { return 8 + x }
+            }
+            fun test(): Int {
+                var s = attach C() to attach B() to attach A() to S()
+                var i = 0
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    if let a = attachmentRef as? &A {
+                        i = i + a.foo(1)
+                    } else if let b = attachmentRef as? &B {
+                        i = i + b.foo()
+                    } else if let c = attachmentRef as? &C {
+                        i = i + c.foo(1)
+                    }
+                }) 
+                return i 
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(27), value)
+	})
+
+	t.Run("invoke foos with auth", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement E 
+            entitlement F
+            entitlement X
+            entitlement Y
+            entitlement mapping M {
+                E -> F
+            }
+            entitlement mapping N {
+                X -> Y
+            }
+            entitlement mapping O {
+                E -> Y
+            }
+            struct S {}
+            access(M) attachment A for S {
+                access(F) fun foo(_ x: Int): Int { return 7 + x }
+            }
+            access(N) attachment B for S {
+                access(Y) fun foo(): Int { return 10 }
+            }
+            access(O) attachment C for S {
+                access(Y) fun foo(_ x: Int): Int { return 8 + x }
+            }
+            fun test(): Int {
+                var s = attach C() to attach B() to attach A() to S()
+                let ref = &s as auth(E) &S
+                var i = 0
+                ref.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    if let a = attachmentRef as? auth(F) &A {
+                        i = i + a.foo(1)
+                    } else if let b = attachmentRef as? auth(Y) &B {
+                        i = i + b.foo()
+                    } else if let c = attachmentRef as? auth(Y) &C {
+                        i = i + c.foo(1)
+                    }
+                }) 
+                return i 
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// the attachment reference is never entitled
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(0), value)
+	})
+
+	t.Run("access fields", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Sub {
+                let name: String
+                init(_ name: String) {
+                    self.name = name
+                }
+            }
+            resource R {}
+            attachment A for R {
+                let r: @Sub
+                init(_ name: String) {
+                    self.r <- create Sub(name)
+                }
+                destroy() {
+                    destroy self.r
+                }
+            }
+            attachment B for R {}
+            attachment C for R {
+                let r: @Sub
+                init(_ name: String) {
+                    self.r <- create Sub(name)
+                }
+                destroy() {
+                    destroy self.r
+                }
+            }
+            fun test(): String {
+                var r <- attach C("World") to <- attach B() to <- attach A("Hello") to <- create R()
+                var text = ""
+                r.forEachAttachment(fun(attachmentRef: &AnyResourceAttachment) {
+                    if let a = attachmentRef as? &A {
+                        text = text.concat(a.r.name)
+                    } else if let a = attachmentRef as? &C {
+                        text = text.concat(a.r.name)
+                    } else {
+                        text = text.concat(" ")
+                    }
+                }) 
+                destroy r
+                return text
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// order of interation over the attachment is not defined, but must be deterministic nonetheless
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredStringValue(" WorldHello"), value)
+	})
+}
+
+func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {}
+            attachment B for S {}
+            fun test() {
+                var s = attach A() to S()
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    s = attach B() to s
+                }) 
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+	})
+
+	t.Run("basic remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {}
+            attachment B for S {}
+            fun test() {
+                var s = attach B() to attach A() to S()
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    remove A from s
+                }) 
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+	})
+
+	t.Run("attach to other", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {}
+            attachment B for S {}
+            fun test() {
+                var s = attach A() to S()
+                var s2 = attach A() to S()
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    s = attach B() to s2
+                }) 
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("remove from other", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {}
+            attachment B for S {}
+            fun test() {
+                var s = attach B() to attach A() to S()
+                var s2 = attach B() to attach A() to S()
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    remove A from s2
+                }) 
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("nested iteration", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {}
+            attachment B for S {}
+            fun test() {
+                var s = attach B() to attach A() to S()
+                var s2 = attach B() to attach A() to S()
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    s2.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                        remove A from s2
+                    })
+                }) 
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+	})
+
+	t.Run("nested iteration of same", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {}
+            attachment B for S {}
+            fun test() {
+                var s = attach B() to attach A() to S()
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {})
+                    remove A from s
+                }) 
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+	})
+
+	t.Run("nested iteration ok", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {}
+            attachment B for S {}
+            fun test(): Int {
+                var s = attach B() to attach A() to S()
+                var s2 = attach B() to attach A() to S()
+                var i = 0
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    remove A from s2
+                    s2.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                        i = i + 1
+                    })
+                }) 
+                return i
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(2), value)
+	})
+
+	t.Run("nested iteration ok after", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {}
+            attachment A for S {}
+            attachment B for S {}
+            fun test(): Int {
+                var s = attach B() to attach A() to S()
+                var s2 = attach B() to attach A() to S()
+                var i = 0
+                s.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                    s2.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
+                        i = i + 1
+                    })
+                    remove A from s2
+                }) 
+                return i
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+}

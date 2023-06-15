@@ -129,7 +129,7 @@ func (a *VariableActivation) DeclareValue(declaration ValueDeclaration) {
 		DeclarationKind: declaration.ValueDeclarationKind(),
 		Type:            declaration.ValueDeclarationType(),
 		// TODO: add access to ValueDeclaration and use declaration's access instead here
-		Access:          ast.AccessPublic,
+		Access:          PrimitiveAccess(ast.AccessPublic),
 		IsConstant:      declaration.ValueDeclarationIsConstant(),
 		ArgumentLabels:  declaration.ValueDeclarationArgumentLabels(),
 		Pos:             declaration.ValueDeclarationPosition(),
@@ -146,7 +146,7 @@ func (a *VariableActivation) DeclareType(declaration TypeDeclaration) {
 		DeclarationKind: declaration.TypeDeclarationKind(),
 		Type:            declaration.TypeDeclarationType(),
 		// TODO: add access to TypeDeclaration and use declaration's access instead here
-		Access:         ast.AccessPublic,
+		Access:         PrimitiveAccess(ast.AccessPublic),
 		IsConstant:     true,
 		ArgumentLabels: nil,
 		Pos:            declaration.TypeDeclarationPosition(),
@@ -262,7 +262,7 @@ type variableDeclaration struct {
 	docString                string
 	argumentLabels           []string
 	pos                      ast.Position
-	access                   ast.Access
+	access                   Access
 	kind                     common.DeclarationKind
 	isConstant               bool
 	allowOuterScopeShadowing bool
@@ -321,7 +321,7 @@ func (a *VariableActivations) DeclareValue(declaration ValueDeclaration) (*Varia
 		kind:       declaration.ValueDeclarationKind(),
 		ty:         declaration.ValueDeclarationType(),
 		// TODO: add access to ValueDeclaration and use declaration's access instead here
-		access:         ast.AccessPublic,
+		access:         PrimitiveAccess(ast.AccessPublic),
 		isConstant:     declaration.ValueDeclarationIsConstant(),
 		argumentLabels: declaration.ValueDeclarationArgumentLabels(),
 		pos:            variablePos,
@@ -334,7 +334,7 @@ type typeDeclaration struct {
 	docString                string
 	identifier               ast.Identifier
 	declarationKind          common.DeclarationKind
-	access                   ast.Access
+	access                   Access
 	allowOuterScopeShadowing bool
 }
 
@@ -363,7 +363,7 @@ func (a *VariableActivations) declareImplicitConstant(
 		variableDeclaration{
 			identifier:               identifier,
 			ty:                       ty,
-			access:                   ast.AccessPublic,
+			access:                   PrimitiveAccess(ast.AccessPublic),
 			kind:                     kind,
 			isConstant:               true,
 			allowOuterScopeShadowing: false,
