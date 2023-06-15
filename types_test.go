@@ -1962,14 +1962,43 @@ func TestDecodeFields(t *testing.T) {
 				{Key: String("k"), Value: NewInt(3)},
 				{Key: String("k2"), Value: String("foo")},
 			}),
+			NewDictionary([]KeyValuePair{
+				{Key: String("k"), Value: NewOptional(NewInt(4))},
+				{Key: String("k2"), Value: NewOptional(String("foo"))},
+				{Key: String("nilK"), Value: NewOptional(nil)},
+			}),
 			NewOptional(NewInt(2)),
 			String("bar"),
-			Array{ArrayType: NewVariableSizedArrayType(IntType{}), Values: []Value{NewInt(1), NewInt(2)}},
-			Array{ArrayType: NewVariableSizedArrayType(&OptionalType{Type: IntType{}}), Values: []Value{
-				NewOptional(NewInt(1)),
-				NewOptional(NewInt(2)),
-				NewOptional(nil),
-			}},
+			Array{
+				ArrayType: NewVariableSizedArrayType(IntType{}),
+				Values:    []Value{NewInt(1), NewInt(2)},
+			},
+			Array{
+				ArrayType: NewVariableSizedArrayType(&OptionalType{Type: IntType{}}),
+				Values: []Value{
+					NewOptional(NewInt(1)),
+					NewOptional(NewInt(2)),
+					NewOptional(nil),
+				},
+			},
+			Array{
+				ArrayType: NewConstantSizedArrayType(2, IntType{}),
+				Values:    []Value{NewInt(1), NewInt(2)},
+			},
+			Array{
+				ArrayType: NewVariableSizedArrayType(AnyStructType{}),
+				Values: []Value{
+					NewInt(3),
+					String("foo"),
+				},
+			},
+			Array{
+				ArrayType: NewVariableSizedArrayType(&OptionalType{Type: AnyStructType{}}),
+				Values: []Value{
+					NewOptional(NewInt(1)),
+					NewOptional(nil),
+				},
+			},
 		},
 	).WithType(&EventType{
 		Location:            utils.TestLocation,
@@ -2004,6 +2033,10 @@ func TestDecodeFields(t *testing.T) {
 				Type:       &DictionaryType{KeyType: StringType{}, ElementType: AnyStructType{}},
 			},
 			{
+				Identifier: "dictOptionalAnyStructField",
+				Type:       &DictionaryType{KeyType: StringType{}, ElementType: &OptionalType{Type: AnyStructType{}}},
+			},
+			{
 				Identifier: "optionalAnyStructField",
 				Type:       &OptionalType{Type: AnyStructType{}},
 			},
@@ -2019,22 +2052,38 @@ func TestDecodeFields(t *testing.T) {
 				Identifier: "variableArrayOptionalIntField",
 				Type:       NewVariableSizedArrayType(&OptionalType{Type: IntType{}}),
 			},
+			{
+				Identifier: "fixedArrayIntField",
+				Type:       NewConstantSizedArrayType(2, IntType{}),
+			},
+			{
+				Identifier: "variableArrayAnyStructField",
+				Type:       NewVariableSizedArrayType(AnyStructType{}),
+			},
+			{
+				Identifier: "variableArrayOptionalAnyStructField",
+				Type:       NewVariableSizedArrayType(&OptionalType{Type: AnyStructType{}}),
+			},
 		},
 	})
 
 	type eventStruct struct {
-		Int                   Int                    `cadence:"intField"`
-		String                String                 `cadence:"stringField"`
-		NilOptionalInt        *Int                   `cadence:"nilOptionalIntField"`
-		OptionalInt           *Int                   `cadence:"optionalIntField"`
-		DictAnyStruct         map[String]interface{} `cadence:"dictAnyStructField"`
-		Dict                  map[String]Int         `cadence:"dictField"`
-		DictOptional          map[String]*Int        `cadence:"dictOptionalField"`
-		OptionalAnyStruct     *interface{}           `cadence:"optionalAnyStructField"`
-		AnyStructString       interface{}            `cadence:"anyStructField"`
-		ArrayInt              []Int                  `cadence:"variableArrayIntField"`
-		VariableArrayOptional []*Int                 `cadence:"variableArrayOptionalIntField"`
-		NonCadenceField       Int
+		Int                            Int                     `cadence:"intField"`
+		String                         String                  `cadence:"stringField"`
+		NilOptionalInt                 *Int                    `cadence:"nilOptionalIntField"`
+		OptionalInt                    *Int                    `cadence:"optionalIntField"`
+		DictAnyStruct                  map[String]interface{}  `cadence:"dictAnyStructField"`
+		DictOptionalAnyStruct          map[String]*interface{} `cadence:"dictOptionalAnyStructField"`
+		Dict                           map[String]Int          `cadence:"dictField"`
+		DictOptional                   map[String]*Int         `cadence:"dictOptionalField"`
+		OptionalAnyStruct              *interface{}            `cadence:"optionalAnyStructField"`
+		AnyStructString                interface{}             `cadence:"anyStructField"`
+		ArrayInt                       []Int                   `cadence:"variableArrayIntField"`
+		VariableArrayOptional          []*Int                  `cadence:"variableArrayOptionalIntField"`
+		FixedArrayInt                  [2]Int                  `cadence:"fixedArrayIntField"`
+		VariableArrayAnyStruct         []interface{}           `cadence:"variableArrayAnyStructField"`
+		VariableArrayOptionalAnyStruct []*interface{}          `cadence:"variableArrayOptionalAnyStructField"`
+		NonCadenceField                Int
 	}
 
 	evt := eventStruct{}
@@ -2043,6 +2092,7 @@ func TestDecodeFields(t *testing.T) {
 
 	int1 := NewInt(1)
 	int2 := NewInt(2)
+	int3 := NewInt(3)
 	int4 := NewInt(4)
 
 	assert.Nil(t, evt.NilOptionalInt)
@@ -2052,12 +2102,12 @@ func TestDecodeFields(t *testing.T) {
 
 	assert.Equal(t, Int{}, evt.NonCadenceField)
 
-	assert.EqualValues(t, map[String]Int{"k": NewInt(3)}, evt.Dict)
+	assert.EqualValues(t, map[String]Int{"k": int3}, evt.Dict)
 
 	assert.EqualValues(t, map[String]*Int{"k": &int4, "nilK": nil}, evt.DictOptional)
 
 	assert.EqualValues(t, map[String]interface{}{
-		"k":  NewInt(3),
+		"k":  int3,
 		"k2": String("foo"),
 	}, evt.DictAnyStruct)
 
@@ -2070,6 +2120,20 @@ func TestDecodeFields(t *testing.T) {
 	assert.EqualValues(t, []Int{int1, int2}, evt.ArrayInt)
 
 	assert.EqualValues(t, []*Int{&int1, &int2, nil}, evt.VariableArrayOptional)
+
+	assert.Equal(t, [2]Int{int1, int2}, evt.FixedArrayInt)
+
+	assert.Equal(t, []interface{}{int3, String("foo")}, evt.VariableArrayAnyStruct)
+
+	require.NotNil(t, evt.VariableArrayOptionalAnyStruct[0])
+	assert.Equal(t, int1, *evt.VariableArrayOptionalAnyStruct[0])
+	assert.Nil(t, evt.VariableArrayOptionalAnyStruct[1])
+
+	require.NotNil(t, evt.DictOptionalAnyStruct["k"])
+	assert.Equal(t, int4, *evt.DictOptionalAnyStruct["k"])
+	assert.Equal(t, String("foo"), *evt.DictOptionalAnyStruct["k2"])
+	require.NotNil(t, evt.DictOptionalAnyStruct["k2"])
+	assert.Nil(t, evt.DictOptionalAnyStruct["nilK"])
 
 	type ErrCases struct {
 		Struct      interface{}

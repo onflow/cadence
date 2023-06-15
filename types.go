@@ -1151,7 +1151,7 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 			decodeSpecialFieldFunc = decodeOptional
 		case reflect.Map:
 			decodeSpecialFieldFunc = decodeDict
-		case reflect.Slice:
+		case reflect.Array, reflect.Slice:
 			decodeSpecialFieldFunc = decodeSlice
 		}
 
@@ -1238,9 +1238,6 @@ func decodeDict(valueType reflect.Type, cadenceField Value) (*reflect.Value, err
 			if err != nil {
 				return nil, fmt.Errorf("cannot decode optional map value for key %s: %w", pair.Key.String(), err)
 			}
-			if valueOptional == nil {
-				continue
-			}
 			value = *valueOptional
 		} else {
 			value = reflect.ValueOf(pair.Value)
@@ -1266,7 +1263,16 @@ func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, er
 		return nil, fmt.Errorf("field is not an array")
 	}
 
-	arrayValue := reflect.MakeSlice(valueType, 0, len(array.Values))
+	var arrayValue reflect.Value
+
+	constantSizeArray, ok := array.ArrayType.(*ConstantSizedArrayType)
+	if ok {
+		arrayValue = reflect.New(reflect.ArrayOf(int(constantSizeArray.Size), valueType.Elem())).Elem()
+	} else {
+		// If the array is not constant sized, create a slice
+		arrayValue = reflect.MakeSlice(valueType, len(array.Values), len(array.Values))
+	}
+
 	for i, value := range array.Values {
 		var elementValue reflect.Value
 		if valueType.Elem().Kind() == reflect.Ptr {
@@ -1275,15 +1281,11 @@ func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, er
 			if err != nil {
 				return nil, fmt.Errorf("error decoding array element optional: %w", err)
 			}
-			if valueOptional == nil {
-				elementValue = reflect.Zero(valueType.Elem())
-			} else {
-				elementValue = *valueOptional
-			}
+			elementValue = *valueOptional
 		} else {
 			elementValue = reflect.ValueOf(value)
 		}
-		if elementValue.Type() != valueType.Elem() && elementValue.Kind() != reflect.Interface {
+		if elementValue.Type() != valueType.Elem() && valueType.Elem().Kind() != reflect.Interface {
 			return nil, fmt.Errorf(
 				"array element type mismatch at index %d: expected %v, got %v",
 				i,
@@ -1292,7 +1294,7 @@ func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, er
 			)
 		}
 
-		arrayValue = reflect.Append(arrayValue, elementValue)
+		arrayValue.Index(i).Set(elementValue)
 	}
 
 	return &arrayValue, nil
