@@ -215,11 +215,7 @@ func (v String) MeteredType(common.MemoryGauge) Type {
 }
 
 func (v String) ToGoValue() any {
-	value := string(v)
-	if value == "" {
-		return nil
-	}
-	return value
+	return string(v)
 }
 
 func (v String) String() string {
