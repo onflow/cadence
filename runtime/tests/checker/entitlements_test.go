@@ -2607,7 +2607,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
-	t.Run("default function entitlemnts", func(t *testing.T) {
+	t.Run("default function entitlements", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
@@ -2632,7 +2632,7 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("attachment default function entitlemnts", func(t *testing.T) {
+	t.Run("attachment default function entitlements", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
@@ -2661,7 +2661,37 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("attachment default function entitlemnts no attachment mapping", func(t *testing.T) {
+	t.Run("attachment inherited default function entitlements", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			entitlement mapping M {
+				E -> F
+			}
+			entitlement mapping N {
+				G -> E
+			}
+			struct interface I {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(M) &Int
+				}
+			}
+			struct interface I2: I {}
+			struct S {}
+			access(N) attachment A for S: I2 {}
+			fun test() {
+				let s = attach A() to S()
+				let ref = &s as auth(G) &S
+				let i: auth(F) &Int = s[A]!.foo()
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("attachment default function entitlements no attachment mapping", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 			entitlement E
