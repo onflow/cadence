@@ -39,7 +39,7 @@ jobs:
         run: sh crypto_setup.sh
 
       - name: Update Cadence
-        run: go get github.com/onflow/cadence@${{ github.event.pull_request.head.sha }}
+        run: go mod edit -replace github.com/onflow/cadence=github.com/${{ github.event.pull_request.head.repo.full_name }}@${{ github.event.pull_request.head.sha }}
 
       - name: Tidy up
         run: go mod tidy
@@ -63,7 +63,7 @@ jobs:
           cache: true
 
       - name: Update Cadence
-        run: go get github.com/onflow/cadence@${{ github.event.pull_request.head.sha }}
+        run: go mod edit -replace github.com/onflow/cadence=github.com/${{ github.event.pull_request.head.repo.full_name }}@${{ github.event.pull_request.head.sha }}
 
       - name: Tidy up
         run: go mod tidy
