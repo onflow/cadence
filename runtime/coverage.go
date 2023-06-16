@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -482,4 +483,59 @@ func (r *CoverageReport) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+// MarshalLCOV serializes each common.Location/*LocationCoverage
+// key/value pair on the *CoverageReport.Coverage map, to the
+// LCOV format. Currently supports only line coverage, function
+// and branch coverage are not yet available.
+// Description for the LCOV file format, can be found here
+// https://github.com/linux-test-project/lcov/blob/master/man/geninfo.1#L948.
+func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
+	i := 0
+	locations := make([]common.Location, len(r.Coverage))
+	for location := range r.Coverage { // nolint:maprange
+		locations[i] = location
+		i++
+	}
+	sort.Slice(locations, func(i, j int) bool {
+		return locations[i].ID() < locations[j].ID()
+	})
+
+	buf := new(bytes.Buffer)
+	for _, location := range locations {
+		coverage := r.Coverage[location]
+		_, err := fmt.Fprintf(buf, "TN:\nSF:%s\n", location.ID())
+		if err != nil {
+			return nil, err
+		}
+
+		i := 0
+		lines := make([]int, len(coverage.LineHits))
+		for line := range coverage.LineHits { // nolint:maprange
+			lines[i] = line
+			i++
+		}
+		sort.Ints(lines)
+
+		for _, line := range lines {
+			hits := coverage.LineHits[line]
+			_, err = fmt.Fprintf(buf, "DA:%v,%v\n", line, hits)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		_, err = fmt.Fprintf(
+			buf,
+			"LF:%v\nLH:%v\nend_of_record\n",
+			coverage.Statements,
+			coverage.CoveredLines(),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return buf.Bytes(), nil
 }
