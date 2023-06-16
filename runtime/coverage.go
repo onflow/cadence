@@ -498,9 +498,11 @@ func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		lines := make([]int, 0)
+		i := 0
+		lines := make([]int, len(coverage.LineHits))
 		for line := range coverage.LineHits { // nolint:maprange
-			lines = append(lines, line)
+			lines[i] = line
+			i++
 		}
 		sort.Ints(lines)
 		for _, line := range lines {
