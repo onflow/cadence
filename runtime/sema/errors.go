@@ -3514,24 +3514,6 @@ func (e *InvalidNonConformanceIntersectionError) Error() string {
 	)
 }
 
-// InvalidIntersectionTypeMemberAccessError
-
-type InvalidIntersectionTypeMemberAccessError struct {
-	Name string
-	ast.Range
-}
-
-var _ SemanticError = &InvalidIntersectionTypeMemberAccessError{}
-var _ errors.UserError = &InvalidIntersectionTypeMemberAccessError{}
-
-func (*InvalidIntersectionTypeMemberAccessError) isSemanticError() {}
-
-func (*InvalidIntersectionTypeMemberAccessError) IsUserError() {}
-
-func (e *InvalidIntersectionTypeMemberAccessError) Error() string {
-	return fmt.Sprintf("member of intersection type is not accessible: %s", e.Name)
-}
-
 // IntersectionMemberClashError
 
 type IntersectionMemberClashError struct {

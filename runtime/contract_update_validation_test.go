@@ -835,7 +835,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const oldCode = `
             access(all) contract Test {
 
-                access(all) var x: AnyStruct{TestStruct}?
+                access(all) var x: {TestStruct}?
 
                 init() {
                     self.x = nil
@@ -851,7 +851,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const newCode = `
             access(all) contract Test {
 
-                access(all) var x: AnyStruct{TestStruct}?
+                access(all) var x: {TestStruct}?
 
                 init() {
                     self.x = nil
@@ -1396,8 +1396,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                 // intersection type
                 access(all) var a: {TestInterface}
                 access(all) var b: {TestInterface}
-                access(all) var c: AnyStruct{TestInterface}
-                access(all) var d: AnyStruct{TestInterface}
+                access(all) var c: {TestInterface}
+                access(all) var d: {TestInterface}
 
                 init() {
                     var count: Int = 567
@@ -1423,9 +1423,9 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const newCode = `
             access(all) contract Test {
                 access(all) var a: {TestInterface}
-                access(all) var b: AnyStruct{TestInterface}
+                access(all) var b: {TestInterface}
                 access(all) var c: {TestInterface}
-                access(all) var d: AnyStruct{TestInterface}
+                access(all) var d: {TestInterface}
 
                 init() {
                     var count: Int = 567

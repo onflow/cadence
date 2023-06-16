@@ -931,7 +931,6 @@ func commonSuperTypeOfComposites(types []Type) Type {
 
 	if hasCommonInterface {
 		return &IntersectionType{
-			Type:  superType,
 			Types: commonInterfacesList,
 		}
 	}

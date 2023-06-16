@@ -8041,7 +8041,7 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
             struct interface I {}
 
             access(all) fun main() {
-                let type = Type<AnyStruct{I}>()
+                let type = Type<{I}>()
 
                 IntersectionType(
                     identifier: type.identifier,
@@ -8483,7 +8483,7 @@ func TestInterpretASTMetering(t *testing.T) {
                 }
 
                 var g = &a as &Int                                 // reference type
-                var h: AnyStruct{foo} = bar()                      // intersection type
+                var h: {foo} = bar()                      // intersection type
                 var i: Capability<&bar>? = nil                     // instantiation type
             }
 
@@ -8671,7 +8671,7 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 
 		script := `
             access(all) fun main() {
-                let a: {Int: AnyStruct{Foo}} = {}           // dictionary + intersection
+                let a: {Int: {Foo}} = {}           // dictionary + intersection
                 let b: [&Int] = []                          // variable-sized + reference
                 let c: [Int?; 2] = [1, 2]                   // constant-sized + optional
                 let d: [Capability<&Bar>] = []             //  capability + variable-sized + reference
@@ -9263,7 +9263,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 		script := `
             access(all) fun main() {
-                log(Type<AnyStruct{Foo}>())
+                log(Type<{Foo}>())
             }
 
             struct interface Foo {}

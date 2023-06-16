@@ -6530,7 +6530,6 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 		)
 
 		countSumIntersectionType := cadence.NewIntersectionType(
-			nil,
 			[]cadence.Type{
 				hasCountInterfaceType,
 				hasSumInterfaceType,
@@ -6557,7 +6556,6 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 		)
 
 		expectedCountSumIntersectionType := cadence.NewIntersectionType(
-			nil,
 			[]cadence.Type{
 				hasSumInterfaceType,
 				hasCountInterfaceType,
@@ -14145,7 +14143,7 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 		}
 
 		struct MiddleStruct {
-		    var field: AnyStruct{Interface}
+		    var field: {Interface}
 		}
 
 		struct interface Interface {}

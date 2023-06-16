@@ -962,7 +962,7 @@ func TestInterpretDynamicCastingStructInterface(t *testing.T) {
 	types := []string{
 		"AnyStruct",
 		"S",
-		"AnyStruct{I}",
+		"{I}",
 	}
 
 	for operation := range dynamicCastingOperations {
@@ -1014,7 +1014,7 @@ func TestInterpretDynamicCastingResourceInterface(t *testing.T) {
 	types := []string{
 		"AnyResource",
 		"R",
-		"AnyResource{I}",
+		"{I}",
 	}
 
 	for operation := range dynamicCastingOperations {
@@ -1530,7 +1530,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: RI {}
 	                `,
-					"AnyResource{RI}",
+					"{RI}",
 					"R{RI}",
 					operation,
 				)
@@ -1547,7 +1547,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource T {}
 	                `,
-					"AnyResource{RI}",
+					"{RI}",
 					"T{}",
 					operation,
 				)
@@ -1607,7 +1607,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: RI {}
 	                `,
-					"AnyResource{RI}",
+					"{RI}",
 					"R",
 					operation,
 				)
@@ -1623,7 +1623,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource T: RI {}
 	                `,
-					"AnyResource{RI}",
+					"{RI}",
 					"T",
 					operation,
 				)
@@ -1672,7 +1672,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource R: RI {}
 	                `,
 					"R",
-					"AnyResource{RI}",
+					"{RI}",
 					operation,
 				)
 			})
@@ -1686,7 +1686,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource R: I {}
 	                `,
 					"R{I}",
-					"AnyResource{I}",
+					"{I}",
 					operation,
 				)
 			})
@@ -1702,7 +1702,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource R: I1, I2 {}
 	                `,
 					"R{I1}",
-					"AnyResource{I2}",
+					"{I2}",
 					operation,
 				)
 			})
@@ -1717,8 +1717,8 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
 	                `,
-					"AnyResource{I1, I2}",
-					"AnyResource{I2}",
+					"{I1, I2}",
+					"{I2}",
 					operation,
 				)
 			})
@@ -1733,8 +1733,8 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
 	                `,
-					"AnyResource{I1}",
-					"AnyResource{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
@@ -1749,8 +1749,8 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
 	                `,
-					"AnyResource{I1}",
-					"AnyResource{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
@@ -1766,8 +1766,8 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource R: I1 {}
 
 	                `,
-					"AnyResource{I1}",
-					"AnyResource{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
@@ -1782,8 +1782,8 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1 {}
 	                `,
-					"AnyResource{I1}",
-					"AnyResource{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
@@ -1797,7 +1797,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource R: I {}
 	                `,
 					"AnyResource",
-					"AnyResource{I}",
+					"{I}",
 					operation,
 				)
 			})
@@ -1830,7 +1830,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
 	                `,
-					"AnyResource{I1}",
+					"{I1}",
 					"AnyResource",
 					operation,
 				)
@@ -1919,7 +1919,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: SI {}
 	                `,
-					"AnyStruct{SI}",
+					"{SI}",
 					"S{SI}",
 					operation,
 				)
@@ -1936,7 +1936,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct T {}
 	                `,
-					"AnyStruct{SI}",
+					"{SI}",
 					"T{}",
 					operation,
 				)
@@ -1996,7 +1996,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: SI {}
 	                `,
-					"AnyStruct{SI}",
+					"{SI}",
 					"S",
 					operation,
 				)
@@ -2012,7 +2012,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct T: SI {}
 	                `,
-					"AnyStruct{SI}",
+					"{SI}",
 					"T",
 					operation,
 				)
@@ -2061,7 +2061,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: SI {}
 	                `,
 					"S",
-					"AnyStruct{SI}",
+					"{SI}",
 					operation,
 				)
 			})
@@ -2075,7 +2075,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: I {}
 	                `,
 					"S{I}",
-					"AnyStruct{I}",
+					"{I}",
 					operation,
 				)
 			})
@@ -2091,7 +2091,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: I1, I2 {}
 	                `,
 					"S{I1}",
-					"AnyStruct{I2}",
+					"{I2}",
 					operation,
 				)
 			})
@@ -2106,8 +2106,8 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"AnyStruct{I1, I2}",
-					"AnyStruct{I2}",
+					"{I1, I2}",
+					"{I2}",
 					operation,
 				)
 			})
@@ -2122,8 +2122,8 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"AnyStruct{I1}",
-					"AnyStruct{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
@@ -2138,8 +2138,8 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"AnyStruct{I1}",
-					"AnyStruct{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
@@ -2155,8 +2155,8 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: I1 {}
 
 	                `,
-					"AnyStruct{I1}",
-					"AnyStruct{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
@@ -2171,8 +2171,8 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1 {}
 	                `,
-					"AnyStruct{I1}",
-					"AnyStruct{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
@@ -2186,7 +2186,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: I {}
 	                `,
 					"AnyStruct",
-					"AnyStruct{I}",
+					"{I}",
 					operation,
 				)
 			})
@@ -2219,7 +2219,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"AnyStruct{I1}",
+					"{I1}",
 					"AnyStruct",
 					operation,
 				)
@@ -2478,7 +2478,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 					  entitlement E
 	                `,
-					"auth(E) &AnyResource{RI}",
+					"auth(E) &{RI}",
 					"&R{RI}",
 					operation,
 					true,
@@ -2498,7 +2498,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 					  entitlement E
 	                `,
-					"auth(E) &AnyResource{RI}",
+					"auth(E) &{RI}",
 					"&T{}",
 					operation,
 					true,
@@ -2570,7 +2570,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 					  entitlement E
 	                `,
-					"auth(E) &AnyResource{RI}",
+					"auth(E) &{RI}",
 					"&R",
 					operation,
 					true,
@@ -2589,7 +2589,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 					  entitlement E
 	                `,
-					"auth(E) &AnyResource{RI}",
+					"auth(E) &{RI}",
 					"&T",
 					operation,
 					true,
@@ -2644,7 +2644,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 					  entitlement E
 	                `,
 					"auth(E) &R",
-					"&AnyResource{RI}",
+					"&{RI}",
 					operation,
 					true,
 				)
@@ -2661,7 +2661,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 					   entitlement E
 	                `,
 					"auth(E) &R{I}",
-					"&AnyResource{I}",
+					"&{I}",
 					operation,
 					true,
 				)
@@ -2680,7 +2680,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 					  entitlement E
                     `,
 					"auth(E) &R{I1}",
-					"&AnyResource{I2}",
+					"&{I2}",
 					operation,
 					true,
 				)
@@ -2698,8 +2698,8 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 					  entitlement E
 	                `,
-					"auth(E) &AnyResource{I1, I2}",
-					"&AnyResource{I2}",
+					"auth(E) &{I1, I2}",
+					"&{I2}",
 					operation,
 					true,
 				)
@@ -2717,8 +2717,8 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 					  entitlement E
 	                `,
-					"auth(E) &AnyResource{I1}",
-					"&AnyResource{I1, I2}",
+					"auth(E) &{I1}",
+					"&{I1, I2}",
 					operation,
 					true,
 				)
@@ -2736,8 +2736,8 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 					  entitlement E
 	                `,
-					"auth(E) &AnyResource{I1}",
-					"&AnyResource{I2}",
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					true,
 				)
@@ -2755,8 +2755,8 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 					  entitlement E
 	                `,
-					"auth(E) &AnyResource{I1}",
-					"&AnyResource{I2}",
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					true,
 				)
@@ -2773,8 +2773,8 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource R: I1 {}
 	                entitlement E
 `,
-					"auth(E) &AnyResource{I1}",
-					"&AnyResource{I1, I2}",
+					"auth(E) &{I1}",
+					"&{I1, I2}",
 					operation,
 					true,
 				)
@@ -2790,7 +2790,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                entitlement E
 `,
 					"auth(E) &AnyResource",
-					"&AnyResource{I}",
+					"&{I}",
 					operation,
 					true,
 				)
@@ -2827,7 +2827,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource R: I1, I2 {}
 	                entitlement E
 `,
-					"auth(E) &AnyResource{I1}",
+					"auth(E) &{I1}",
 					"&AnyResource",
 					operation,
 					true,
@@ -2926,7 +2926,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: SI {}
 	                  entitlement E
 `,
-					"auth(E) &AnyStruct{SI}",
+					"auth(E) &{SI}",
 					"&S{SI}",
 					operation,
 					false,
@@ -2945,7 +2945,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct T {}
 	                entitlement E
 `,
-					"auth(E) &AnyStruct{SI}",
+					"auth(E) &{SI}",
 					"&T{}",
 					operation,
 					false,
@@ -3013,7 +3013,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: SI {}
 	                entitlement E
 `,
-					"auth(E) &AnyStruct{SI}",
+					"auth(E) &{SI}",
 					"&S",
 					operation,
 					false,
@@ -3031,7 +3031,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct T: SI {}
 	                entitlement E
 `,
-					"auth(E) &AnyStruct{SI}",
+					"auth(E) &{SI}",
 					"&T",
 					operation,
 					false,
@@ -3083,7 +3083,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                entitlement E
 `,
 					"auth(E) &S",
-					"&AnyStruct{SI}",
+					"&{SI}",
 					operation,
 					false,
 				)
@@ -3099,7 +3099,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                entitlement E
 `,
 					"auth(E) &S{I}",
-					"&AnyStruct{I}",
+					"&{I}",
 					operation,
 					false,
 				)
@@ -3117,7 +3117,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
                     entitlement E
 `,
 					"auth(E) &S{I1}",
-					"&AnyStruct{I2}",
+					"&{I2}",
 					operation,
 					false,
 				)
@@ -3134,8 +3134,8 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: I1, I2 {}
 	                entitlement E
 `,
-					"auth(E) &AnyStruct{I1, I2}",
-					"&AnyStruct{I2}",
+					"auth(E) &{I1, I2}",
+					"&{I2}",
 					operation,
 					false,
 				)
@@ -3152,8 +3152,8 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: I1, I2 {}
 	                entitlement E
 `,
-					"auth(E) &AnyStruct{I1}",
-					"&AnyStruct{I1, I2}",
+					"auth(E) &{I1}",
+					"&{I1, I2}",
 					operation,
 					false,
 				)
@@ -3170,8 +3170,8 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: I1, I2 {}
 	                entitlement E
 `,
-					"auth(E) &AnyStruct{I1}",
-					"&AnyStruct{I2}",
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					false,
 				)
@@ -3188,8 +3188,8 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: I1 {}
 	                entitlement E
 `,
-					"auth(E) &AnyStruct{I1}",
-					"&AnyStruct{I2}",
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					false,
 				)
@@ -3206,8 +3206,8 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: I1 {}
 	                entitlement E
 `,
-					"auth(E) &AnyStruct{I1}",
-					"&AnyStruct{I1, I2}",
+					"auth(E) &{I1}",
+					"&{I1, I2}",
 					operation,
 					false,
 				)
@@ -3223,7 +3223,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                entitlement E
 `,
 					"auth(E) &AnyStruct",
-					"&AnyStruct{I}",
+					"&{I}",
 					operation,
 					false,
 				)
@@ -3260,7 +3260,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: I1, I2 {}
 	                entitlement E
 `,
-					"auth(E) &AnyStruct{I1}",
+					"auth(E) &{I1}",
 					"&AnyStruct",
 					operation,
 					false,
@@ -3340,7 +3340,7 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
                       resource R: RI {}
                     `,
 					"&R",
-					"&AnyResource{RI}",
+					"&{RI}",
 					operation,
 					true,
 				)
@@ -3355,7 +3355,7 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
                       resource R: I {}
                     `,
 					"&R{I}",
-					"&AnyResource{I}",
+					"&{I}",
 					operation,
 					true,
 				)
@@ -3371,8 +3371,8 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
 
                       resource R: I1, I2 {}
                     `,
-					"&AnyResource{I1, I2}",
-					"&AnyResource{I2}",
+					"&{I1, I2}",
+					"&{I2}",
 					operation,
 					true,
 				)
@@ -3407,7 +3407,7 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
 
                       resource R: I1, I2 {}
                     `,
-					"&AnyResource{I1}",
+					"&{I1}",
 					"&AnyResource",
 					operation,
 					true,
@@ -3486,7 +3486,7 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
                       struct S: RI {}
                     `,
 					"&S",
-					"&AnyStruct{RI}",
+					"&{RI}",
 					operation,
 					false,
 				)
@@ -3501,7 +3501,7 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
                       struct S: I {}
                     `,
 					"&S{I}",
-					"&AnyStruct{I}",
+					"&{I}",
 					operation,
 					false,
 				)
@@ -3517,8 +3517,8 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I1, I2 {}
                     `,
-					"&AnyStruct{I1, I2}",
-					"&AnyStruct{I2}",
+					"&{I1, I2}",
+					"&{I2}",
 					operation,
 					false,
 				)
@@ -3553,7 +3553,7 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I1, I2 {}
                     `,
-					"&AnyStruct{I1}",
+					"&{I1}",
 					"&AnyStruct",
 					operation,
 					false,

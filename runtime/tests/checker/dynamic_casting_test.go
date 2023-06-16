@@ -731,7 +731,7 @@ func TestCheckDynamicCastingStructInterface(t *testing.T) {
 	types := []string{
 		"AnyStruct",
 		"S",
-		"AnyStruct{I}",
+		"{I}",
 	}
 
 	for _, operation := range dynamicCastingOperations {
@@ -797,7 +797,7 @@ func TestCheckDynamicCastingStructInterface(t *testing.T) {
                               struct interface I2 {}
 
                               let i: %[1]s = S()
-                              let s: AnyStruct{I2}? = i %[2]s AnyStruct{I2}
+                              let s: {I2}? = i %[2]s {I2}
                             `,
 							fromType,
 							operation.Symbol(),
@@ -824,7 +824,7 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 	types := []string{
 		"AnyResource",
 		"R",
-		"AnyResource{I}",
+		"{I}",
 	}
 
 	for _, fromType := range types {
@@ -952,9 +952,9 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 
                           resource interface I2 {}
 
-                          fun test(): @AnyResource{I2}? {
+                          fun test(): @{I2}? {
                               let i: @%s <- create R()
-                              if let r <- i as? @AnyResource{I2} {
+                              if let r <- i as? @{I2} {
                                   return <-r
                               } else {
                                   destroy i
@@ -986,9 +986,9 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 
                           resource interface I2 {}
 
-                          fun test(): @AnyResource{I2}? {
+                          fun test(): @{I2}? {
                               let i: @%s <- create R()
-                              let r <- i as! @AnyResource{I2}
+                              let r <- i as! @{I2}
                               return <-r
                           }
                         `,

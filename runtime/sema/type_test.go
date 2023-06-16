@@ -200,7 +200,7 @@ func TestIntersectionType_StringAndID(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("base type and intersected types", func(t *testing.T) {
+	t.Run("intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -211,26 +211,21 @@ func TestIntersectionType_StringAndID(t *testing.T) {
 		}
 
 		ty := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R",
-				Location:   common.StringLocation("a"),
-			},
 			Types: []*InterfaceType{interfaceType},
 		}
 
 		assert.Equal(t,
-			"R{I}",
+			"{I}",
 			ty.String(),
 		)
 
 		assert.Equal(t,
-			TypeID("S.a.R{S.b.I}"),
+			TypeID("{S.b.I}"),
 			ty.ID(),
 		)
 	})
 
-	t.Run("base type and intersected types", func(t *testing.T) {
+	t.Run("intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -247,44 +242,16 @@ func TestIntersectionType_StringAndID(t *testing.T) {
 		}
 
 		ty := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R",
-				Location:   common.StringLocation("a"),
-			},
 			Types: []*InterfaceType{i1, i2},
 		}
 
 		assert.Equal(t,
 			ty.String(),
-			"R{I1, I2}",
+			"{I1, I2}",
 		)
 
 		assert.Equal(t,
-			TypeID("S.a.R{S.b.I1,S.c.I2}"),
-			ty.ID(),
-		)
-	})
-
-	t.Run("no intersected types", func(t *testing.T) {
-
-		t.Parallel()
-
-		ty := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R",
-				Location:   common.StringLocation("a"),
-			},
-		}
-
-		assert.Equal(t,
-			"R{}",
-			ty.String(),
-		)
-
-		assert.Equal(t,
-			TypeID("S.a.R{}"),
+			TypeID("{S.b.I1,S.c.I2}"),
 			ty.ID(),
 		)
 	})
@@ -294,7 +261,7 @@ func TestIntersectionType_Equals(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("same base type and more intersected types", func(t *testing.T) {
+	t.Run("more intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -311,27 +278,17 @@ func TestIntersectionType_Equals(t *testing.T) {
 		}
 
 		a := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R",
-				Location:   common.StringLocation("a"),
-			},
 			Types: []*InterfaceType{i1},
 		}
 
 		b := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R",
-				Location:   common.StringLocation("a"),
-			},
 			Types: []*InterfaceType{i1, i2},
 		}
 
 		assert.False(t, a.Equal(b))
 	})
 
-	t.Run("same base type and fewer intersected types", func(t *testing.T) {
+	t.Run("fewer intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -348,27 +305,17 @@ func TestIntersectionType_Equals(t *testing.T) {
 		}
 
 		a := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R",
-				Location:   common.StringLocation("a"),
-			},
 			Types: []*InterfaceType{i1, i2},
 		}
 
 		b := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R",
-				Location:   common.StringLocation("a"),
-			},
 			Types: []*InterfaceType{i1},
 		}
 
 		assert.False(t, a.Equal(b))
 	})
 
-	t.Run("same base type and same intersected types", func(t *testing.T) {
+	t.Run("same intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -385,109 +332,20 @@ func TestIntersectionType_Equals(t *testing.T) {
 		}
 
 		a := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R",
-				Location:   common.StringLocation("a"),
-			},
 			Types: []*InterfaceType{i1, i2},
 		}
 
 		b := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R",
-				Location:   common.StringLocation("a"),
-			},
 			Types: []*InterfaceType{i1, i2},
 		}
 
 		assert.True(t, a.Equal(b))
-	})
-
-	t.Run("different base type and same intersected types", func(t *testing.T) {
-
-		t.Parallel()
-
-		i1 := &InterfaceType{
-			CompositeKind: common.CompositeKindResource,
-			Identifier:    "I1",
-			Location:      common.StringLocation("b"),
-		}
-
-		i2 := &InterfaceType{
-			CompositeKind: common.CompositeKindResource,
-			Identifier:    "I2",
-			Location:      common.StringLocation("b"),
-		}
-
-		a := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R1",
-				Location:   common.StringLocation("a"),
-			},
-			Types: []*InterfaceType{i1, i2},
-		}
-
-		b := &IntersectionType{
-			Type: &CompositeType{
-				Kind:       common.CompositeKindResource,
-				Identifier: "R2",
-				Location:   common.StringLocation("a"),
-			},
-			Types: []*InterfaceType{i1, i2},
-		}
-
-		assert.False(t, a.Equal(b))
 	})
 }
 
 func TestIntersectionType_GetMember(t *testing.T) {
 
 	t.Parallel()
-
-	t.Run("forbid undeclared members", func(t *testing.T) {
-
-		t.Parallel()
-
-		resourceType := &CompositeType{
-			Kind:       common.CompositeKindResource,
-			Identifier: "R",
-			Location:   common.StringLocation("a"),
-			Fields:     []string{},
-			Members:    &StringMemberOrderedMap{},
-		}
-		ty := &IntersectionType{
-			Type:  resourceType,
-			Types: []*InterfaceType{},
-		}
-
-		fieldName := "s"
-		resourceType.Members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(
-			ty.Type,
-			fieldName,
-			IntType,
-			"",
-		))
-
-		actualMembers := ty.GetMembers()
-
-		require.Contains(t, actualMembers, fieldName)
-
-		var reportedError error
-		actualMember := actualMembers[fieldName].Resolve(
-			nil,
-			fieldName,
-			ast.Range{},
-			func(err error) {
-				reportedError = err
-			},
-		)
-
-		assert.IsType(t, &InvalidIntersectionTypeMemberAccessError{}, reportedError)
-		assert.NotNil(t, actualMember)
-	})
 
 	t.Run("allow declared members", func(t *testing.T) {
 
@@ -507,7 +365,6 @@ func TestIntersectionType_GetMember(t *testing.T) {
 			Members:    &StringMemberOrderedMap{},
 		}
 		intersectionType := &IntersectionType{
-			Type: resourceType,
 			Types: []*InterfaceType{
 				interfaceType,
 			},
@@ -515,15 +372,8 @@ func TestIntersectionType_GetMember(t *testing.T) {
 
 		fieldName := "s"
 
-		resourceType.Members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(
-			intersectionType.Type,
-			fieldName,
-			IntType,
-			"",
-		))
-
 		interfaceMember := NewUnmeteredPublicConstantFieldMember(
-			intersectionType.Type,
+			resourceType,
 			fieldName,
 			IntType,
 			"",
@@ -1056,7 +906,6 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: func() Type {
 					typ := &IntersectionType{
-						Type:  AnyStructType,
 						Types: []*InterfaceType{interfaceType2},
 					}
 					// just initialize for equality
@@ -1072,7 +921,6 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: func() Type {
 					typ := &IntersectionType{
-						Type:  AnyStructType,
 						Types: []*InterfaceType{interfaceType1, interfaceType2},
 					}
 					// just initialize for equality
@@ -1097,7 +945,6 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: func() Type {
 					typ := &IntersectionType{
-						Type:  AnyStructType,
 						Types: []*InterfaceType{superInterfaceType},
 					}
 
@@ -1493,12 +1340,10 @@ func TestCommonSuperType(t *testing.T) {
 		}
 
 		intersectionType1 := &IntersectionType{
-			Type:  AnyStructType,
 			Types: []*InterfaceType{interfaceType1},
 		}
 
 		intersectionType2 := &IntersectionType{
-			Type:  AnyResourceType,
 			Types: []*InterfaceType{interfaceType1},
 		}
 
@@ -1537,12 +1382,10 @@ func TestCommonSuperType(t *testing.T) {
 		}
 
 		intersectionType1 := &IntersectionType{
-			Type:  AnyStructType,
 			Types: []*InterfaceType{interfaceType1},
 		}
 
 		intersectionType2 := &IntersectionType{
-			Type:  AnyResourceType,
 			Types: []*InterfaceType{interfaceType1},
 		}
 
@@ -1671,7 +1514,6 @@ func TestCommonSuperType(t *testing.T) {
 				BorrowType: AnyStructType,
 			},
 			&IntersectionType{
-				Type: AnyStructType,
 				Types: []*InterfaceType{
 					{
 						Location:   common.StringLocation("test"),
@@ -1999,7 +1841,7 @@ func TestMapType(t *testing.T) {
 			for _, i := range typ.Types {
 				interfaces = append(interfaces, &InterfaceType{Identifier: i.Identifier + "f"})
 			}
-			return NewIntersectionType(nil, typ.Type, interfaces)
+			return NewIntersectionType(nil, interfaces)
 		}
 		return ty
 	}
@@ -2058,7 +1900,6 @@ func TestMapType(t *testing.T) {
 
 		original := NewIntersectionType(
 			nil,
-			StringType,
 			[]*InterfaceType{
 				{Identifier: "foo"},
 				{Identifier: "bar"},
@@ -2066,7 +1907,6 @@ func TestMapType(t *testing.T) {
 		)
 		mapped := NewIntersectionType(
 			nil,
-			BoolType,
 			[]*InterfaceType{
 				{Identifier: "foof"},
 				{Identifier: "barf"},

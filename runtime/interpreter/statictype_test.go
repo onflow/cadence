@@ -1373,7 +1373,6 @@ func TestStaticTypeConversion(t *testing.T) {
 		{
 			name: "Intersection",
 			semaType: &sema.IntersectionType{
-				Type: sema.IntType,
 				Types: []*sema.InterfaceType{
 					testInterfaceSemaType,
 				},

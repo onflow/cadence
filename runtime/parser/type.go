@@ -358,7 +358,6 @@ func defineIntersectionOrDictionaryType() {
 						}
 						intersectionType = ast.NewIntersectionType(
 							p.memoryGauge,
-							nil,
 							[]*ast.NominalType{
 								firstNominalType,
 							},
@@ -462,7 +461,6 @@ func defineIntersectionOrDictionaryType() {
 				intersectionType = ast.NewIntersectionType(
 					p.memoryGauge,
 					nil,
-					nil,
 					ast.NewRange(
 						p.memoryGauge,
 						startToken.StartPos,
@@ -478,69 +476,6 @@ func defineIntersectionOrDictionaryType() {
 				}
 				return intersectionType, nil
 			}
-		},
-	)
-
-	// For the left denotation we need a meta left denotation:
-	// We need to look ahead and check if the brace is followed by whitespace or not.
-	// In case there is a space, the type is *not* considered a intersection type.
-	// This handles the ambiguous case where a function return type's open brace
-	// may either be a intersection type (if there is no whitespace)
-	// or the start of the function body (if there is whitespace).
-
-	setTypeMetaLeftDenotation(
-		lexer.TokenBraceOpen,
-		func(p *parser, rightBindingPower int, left ast.Type) (result ast.Type, err error, done bool) {
-
-			// Perform a lookahead
-
-			current := p.current
-			cursor := p.tokens.Cursor()
-
-			// Skip the `{` token.
-			p.next()
-
-			// In case there is a space, the type is *not* considered a intersection type.
-			// The buffered tokens are replayed to allow them to be re-parsed.
-
-			if p.current.Is(lexer.TokenSpace) {
-				p.current = current
-				p.tokens.Revert(cursor)
-
-				return left, nil, true
-			}
-
-			// It was determined that a intersection type is parsed.
-			// Still, it should have maybe not been parsed if the right binding power
-			// was higher. In that case, replay the buffered tokens and stop.
-
-			if rightBindingPower >= typeLeftBindingPowerIntersection {
-				p.current = current
-				p.tokens.Revert(cursor)
-				return left, nil, true
-			}
-
-			nominalTypes, endPos, err := parseNominalTypes(p, lexer.TokenBraceClose, lexer.TokenComma)
-
-			if err != nil {
-				return nil, err, true
-			}
-
-			// Skip the closing brace
-			p.next()
-
-			result = ast.NewIntersectionType(
-				p.memoryGauge,
-				left,
-				nominalTypes,
-				ast.NewRange(
-					p.memoryGauge,
-					left.StartPosition(),
-					endPos,
-				),
-			)
-
-			return result, err, false
 		},
 	)
 }

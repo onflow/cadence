@@ -403,6 +403,6 @@ access(all) struct AuthAccount {
         access(all) fun forEachController(_ function: fun(&AccountCapabilityController): Bool)
 
         /// Issue/create a new account capability.
-        access(all) fun issue<T: &AuthAccount{}>(): Capability<T>
+        access(all) fun issue<T: &AuthAccount>(): Capability<T>
     }
 }

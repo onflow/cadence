@@ -1969,7 +1969,6 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(
 						&sema.IntersectionType{
-							Type: sema.AnyStructType,
 							Types: []*sema.InterfaceType{
 								iType,
 							},
@@ -1981,7 +1980,6 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 				&sema.DictionaryType{
 					KeyType: sema.IntType,
 					ValueType: &sema.IntersectionType{
-						Type: sema.AnyStructType,
 						Types: []*sema.InterfaceType{
 							iType,
 						},

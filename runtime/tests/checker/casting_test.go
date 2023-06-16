@@ -427,7 +427,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let r: @AnyResource{RI} <- create R()
+                  let r: @{RI} <- create R()
                   let r2 <- r as @R{RI}
                 `,
 			)
@@ -444,7 +444,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   fun test(): @R{RI}? {
-                      let r: @AnyResource{RI} <- create R()
+                      let r: @{RI} <- create R()
                       if let r2 <- r as? @R{RI} {
                           return <-r2
                       } else {
@@ -471,7 +471,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let r: @AnyResource{RI} <- create R()
+                  let r: @{RI} <- create R()
                   let r2 <- r as @R{RI}
                 `,
 			)
@@ -488,7 +488,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   fun test(): @R{RI}? {
-                      let r: @AnyResource{RI} <- create R()
+                      let r: @{RI} <- create R()
                       if let r2 <- r as? @R{RI} {
                           return <-r2
                       } else {
@@ -615,7 +615,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let r: @AnyResource{RI} <- create R()
+                  let r: @{RI} <- create R()
                   let r2 <- r as @R
                 `,
 			)
@@ -632,7 +632,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   fun test(): @R? {
-                      let r: @AnyResource{RI} <- create R()
+                      let r: @{RI} <- create R()
                       if let r2 <- r as? @R {
                           return <-r2
                       } else {
@@ -659,7 +659,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let r: @AnyResource{RI} <- create R()
+                  let r: @{RI} <- create R()
                   let r2 <- r as @R
                 `,
 			)
@@ -675,7 +675,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   fun test(): @R? {
-                      let r: @AnyResource{RI} <- create R()
+                      let r: @{RI} <- create R()
                       if let r2 <- r as? @R {
                           return <-r2
                       } else {
@@ -750,7 +750,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let r: @R <- create R()
-                  let r2 <- r as @AnyResource{RI}
+                  let r2 <- r as @{RI}
                 `,
 			)
 
@@ -763,9 +763,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  fun test(): @AnyResource{RI}? {
+                  fun test(): @{RI}? {
                       let r: @R <- create R()
-                      if let r2 <- r as? @AnyResource{RI} {
+                      if let r2 <- r as? @{RI} {
                           return <-r2
                       } else {
                           destroy r
@@ -795,7 +795,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let r: @R <- create R()
-                  let r2 <- r as @AnyResource{RI}
+                  let r2 <- r as @{RI}
                 `,
 			)
 
@@ -806,9 +806,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  fun test(): @AnyResource{RI}? {
+                  fun test(): @{RI}? {
                       let r: @R <- create R()
-                      if let r2 <- r as? @AnyResource{RI} {
+                      if let r2 <- r as? @{RI} {
                           return <-r2
                       } else {
                           destroy r
@@ -835,7 +835,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				types+`
                   let r: @R{I} <- create R()
-                  let r2 <- r as @AnyResource{I}
+                  let r2 <- r as @{I}
                 `,
 			)
 
@@ -849,7 +849,6 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.IsType(t,
 				&sema.IntersectionType{
-					Type: sema.AnyResourceType,
 					Types: []*sema.InterfaceType{
 						iType.(*sema.InterfaceType),
 					},
@@ -862,9 +861,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  fun test(): @AnyResource{I}? {
+                  fun test(): @{I}? {
                       let r: @R{I} <- create R()
-                      if let r2 <- r as? @AnyResource{I} {
+                      if let r2 <- r as? @{I} {
                           return <-r2
                       } else {
                           destroy r
@@ -893,7 +892,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				types+`
                   let r: @R{I1} <- create R()
-                  let r2 <- r as @AnyResource{I2}
+                  let r2 <- r as @{I2}
                 `,
 			)
 
@@ -907,7 +906,6 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.IsType(t,
 				&sema.IntersectionType{
-					Type: sema.AnyResourceType,
 					Types: []*sema.InterfaceType{
 						i2Type.(*sema.InterfaceType),
 					},
@@ -920,9 +918,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  fun test(): @AnyResource{I2}? {
+                  fun test(): @{I2}? {
                       let r: @R{I1} <- create R()
-                      if let r2 <- r as? @AnyResource{I2} {
+                      if let r2 <- r as? @{I2} {
                           return <-r2
                       } else {
                           destroy r
@@ -951,7 +949,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let r: @R{I1} <- create R()
-                  let r2 <- r as @AnyResource{I2}
+                  let r2 <- r as @{I2}
                 `,
 			)
 
@@ -964,9 +962,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  fun test(): @AnyResource{I2}? {
+                  fun test(): @{I2}? {
                       let r: @R{I1} <- create R()
-                      if let r2 <- r as? @AnyResource{I2} {
+                      if let r2 <- r as? @{I2} {
                           return <-r2
                       } else {
                           destroy r
@@ -996,8 +994,8 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let r: @AnyResource{I1, I2} <- create R()
-                  let r2 <- r as @AnyResource{I2}
+                  let r: @{I1, I2} <- create R()
+                  let r2 <- r as @{I2}
                 `,
 			)
 
@@ -1008,9 +1006,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  fun test(): @AnyResource{I2}? {
-                      let r: @AnyResource{I1, I2} <- create R()
-                      if let r2 <- r as? @AnyResource{I2} {
+                  fun test(): @{I2}? {
+                      let r: @{I1, I2} <- create R()
+                      if let r2 <- r as? @{I2} {
                           return <-r2
                       } else {
                           destroy r
@@ -1038,8 +1036,8 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let r: @AnyResource{I1} <- create R()
-                  let r2 <- r as @AnyResource{I1, I2}
+                  let r: @{I1} <- create R()
+                  let r2 <- r as @{I1, I2}
                 `,
 			)
 
@@ -1052,9 +1050,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  fun test(): @AnyResource{I1, I2}? {
-                      let r: @AnyResource{I1} <- create R()
-                      if let r2 <- r as? @AnyResource{I1, I2} {
+                  fun test(): @{I1, I2}? {
+                      let r: @{I1} <- create R()
+                      if let r2 <- r as? @{I1, I2} {
                           return <-r2
                       } else {
                           destroy r
@@ -1082,8 +1080,8 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let r: @AnyResource{I1} <- create R()
-                  let r2 <- r as @AnyResource{I1, I2}
+                  let r: @{I1} <- create R()
+                  let r2 <- r as @{I1, I2}
                 `,
 			)
 
@@ -1096,9 +1094,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  fun test(): @AnyResource{I1, I2}? {
-                      let r: @AnyResource{I1} <- create R()
-                      if let r2 <- r as? @AnyResource{I1, I2} {
+                  fun test(): @{I1, I2}? {
+                      let r: @{I1} <- create R()
+                      if let r2 <- r as? @{I1, I2} {
                           return <-r2
                       } else {
                           destroy r
@@ -1125,7 +1123,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let r: @AnyResource <- create R()
-                  let r2 <- r as @AnyResource{I}
+                  let r2 <- r as @{I}
                 `,
 			)
 
@@ -1138,9 +1136,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  fun test(): @AnyResource{I}? {
+                  fun test(): @{I}? {
                       let r: @AnyResource <- create R()
-                      if let r2 <- r as? @AnyResource{I} {
+                      if let r2 <- r as? @{I} {
                           return <-r2
                       } else {
                           destroy r
@@ -1212,7 +1210,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let r: @AnyResource{I1} <- create R()
+                  let r: @{I1} <- create R()
                   let r2 <- r as @AnyResource
                 `,
 			)
@@ -1225,7 +1223,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   fun test(): @AnyResource? {
-                      let r: @AnyResource{I1} <- create R()
+                      let r: @{I1} <- create R()
                       if let r2 <- r as? @AnyResource {
                           return <-r2
                       } else {
@@ -1544,7 +1542,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{SI} = S()
+                  let s: {SI} = S()
                   let s2 = s as S{SI}
                 `,
 			)
@@ -1560,7 +1558,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{SI} = S()
+                  let s: {SI} = S()
                   let s2 = s as? S{SI}
                 `,
 			)
@@ -1581,7 +1579,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{SI} = S()
+                  let s: {SI} = S()
                   let s2 = s as S{SI}
                 `,
 			)
@@ -1597,7 +1595,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{SI} = S()
+                  let s: {SI} = S()
                   let s2 = s as? S{SI}
                 `,
 			)
@@ -1702,7 +1700,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{SI} = S()
+                  let s: {SI} = S()
                   let s2 = s as S
                 `,
 			)
@@ -1718,7 +1716,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{SI} = S()
+                  let s: {SI} = S()
                   let s2 = s as? S
                 `,
 			)
@@ -1739,7 +1737,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{SI} = S()
+                  let s: {SI} = S()
                   let s2 = s as S
                 `,
 			)
@@ -1754,7 +1752,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{SI} = S()
+                  let s: {SI} = S()
                   let s2 = s as? S
                 `,
 			)
@@ -1816,7 +1814,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: S = S()
-                  let s2 = s as AnyStruct{SI}
+                  let s2 = s as {SI}
                 `,
 			)
 
@@ -1830,7 +1828,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: S = S()
-                  let s2 = s as? AnyStruct{SI}
+                  let s2 = s as? {SI}
                 `,
 			)
 
@@ -1854,7 +1852,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: S = S()
-                  let s2 = s as AnyStruct{SI}
+                  let s2 = s as {SI}
                 `,
 			)
 
@@ -1866,7 +1864,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: S = S()
-                  let s2 = s as? AnyStruct{SI}
+                  let s2 = s as? {SI}
                 `,
 			)
 
@@ -1887,7 +1885,7 @@ func TestCheckCastStructType(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				types+`
                   let s: S{I} = S()
-                  let s2 = s as AnyStruct{I}
+                  let s2 = s as {I}
                 `,
 			)
 
@@ -1901,7 +1899,6 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.IsType(t,
 				&sema.IntersectionType{
-					Type: sema.AnyStructType,
 					Types: []*sema.InterfaceType{
 						iType.(*sema.InterfaceType),
 					},
@@ -1915,7 +1912,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: S{I} = S()
-                  let s2 = s as? AnyStruct{I}
+                  let s2 = s as? {I}
                 `,
 			)
 
@@ -1938,7 +1935,7 @@ func TestCheckCastStructType(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				types+`
                   let s: S{I1} = S()
-                  let s2 = s as AnyStruct{I2}
+                  let s2 = s as {I2}
                 `,
 			)
 
@@ -1952,7 +1949,6 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.IsType(t,
 				&sema.IntersectionType{
-					Type: sema.AnyStructType,
 					Types: []*sema.InterfaceType{
 						i2Type.(*sema.InterfaceType),
 					},
@@ -1966,7 +1962,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: S{I1} = S()
-                  let s2 = s as? AnyStruct{I2}
+                  let s2 = s as? {I2}
                 `,
 			)
 
@@ -1989,7 +1985,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: S{I1} = S()
-                  let s2 = s as AnyStruct{I2}
+                  let s2 = s as {I2}
                 `,
 			)
 
@@ -2003,7 +1999,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: S{I1} = S()
-                  let s2 = s as? AnyStruct{I2}
+                  let s2 = s as? {I2}
                 `,
 			)
 
@@ -2027,8 +2023,8 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{I1, I2} = S()
-                  let s2 = s as AnyStruct{I2}
+                  let s: {I1, I2} = S()
+                  let s2 = s as {I2}
                 `,
 			)
 
@@ -2039,8 +2035,8 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{I1, I2} = S()
-                  let s2 = s as? AnyStruct{I2}
+                  let s: {I1, I2} = S()
+                  let s2 = s as? {I2}
                 `,
 			)
 
@@ -2062,8 +2058,8 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{I1} = S()
-                  let s2 = s as AnyStruct{I1, I2}
+                  let s: {I1} = S()
+                  let s2 = s as {I1, I2}
                 `,
 			)
 
@@ -2076,8 +2072,8 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{I1} = S()
-                  let s2 = s as? AnyStruct{I1, I2}
+                  let s: {I1} = S()
+                  let s2 = s as? {I1, I2}
                 `,
 			)
 
@@ -2099,8 +2095,8 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{I1} = S()
-                  let s2 = s as AnyStruct{I1, I2}
+                  let s: {I1} = S()
+                  let s2 = s as {I1, I2}
                 `,
 			)
 
@@ -2113,8 +2109,8 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{I1} = S()
-                  let s2 = s as? AnyStruct{I1, I2}
+                  let s: {I1} = S()
+                  let s2 = s as? {I1, I2}
                 `,
 			)
 
@@ -2135,7 +2131,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: AnyStruct = S()
-                  let s2 = s as AnyStruct{I}
+                  let s2 = s as {I}
                 `,
 			)
 
@@ -2149,7 +2145,7 @@ func TestCheckCastStructType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				types+`
                   let s: AnyStruct = S()
-                  let s2 = s as? AnyStruct{I}
+                  let s2 = s as? {I}
                 `,
 			)
 
@@ -2208,7 +2204,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{I1} = S()
+                  let s: {I1} = S()
                   let s2 = s as AnyStruct
                 `,
 			)
@@ -2220,7 +2216,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				types+`
-                  let s: AnyStruct{I1} = S()
+                  let s: {I1} = S()
                   let s2 = s as? AnyStruct
                 `,
 			)
@@ -2319,7 +2315,7 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 			"R",
 			"R{I}",
 			"AnyResource",
-			"AnyResource{I}",
+			"{I}",
 			"Any",
 			"Any{I}",
 		} {
@@ -2383,7 +2379,7 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 			"S",
 			"S{I}",
 			"AnyStruct",
-			"AnyStruct{I}",
+			"{I}",
 			"Any",
 			"Any{I}",
 		} {

@@ -829,7 +829,6 @@ func TestCheckArraySupertypeInference(t *testing.T) {
                     access(all) struct Baz: I1, I2, I3 {}
                 `,
 				expectedElementType: &sema.IntersectionType{
-					Type: sema.AnyStructType,
 					Types: []*sema.InterfaceType{
 						{
 							Location:      common.StringLocation("test"),
@@ -852,7 +851,6 @@ func TestCheckArraySupertypeInference(t *testing.T) {
                 `,
 				expectedElementType: &sema.VariableSizedType{
 					Type: &sema.IntersectionType{
-						Type: sema.AnyStructType,
 						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
@@ -877,7 +875,6 @@ func TestCheckArraySupertypeInference(t *testing.T) {
                 `,
 				expectedElementType: &sema.VariableSizedType{
 					Type: &sema.IntersectionType{
-						Type: sema.AnyStructType,
 						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
@@ -1030,7 +1027,6 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
                 `,
 				expectedKeyType: sema.IntType,
 				expectedValueType: &sema.IntersectionType{
-					Type: sema.AnyStructType,
 					Types: []*sema.InterfaceType{
 						{
 							Location:      common.StringLocation("test"),
@@ -1055,7 +1051,6 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				expectedValueType: &sema.DictionaryType{
 					KeyType: sema.IntType,
 					ValueType: &sema.IntersectionType{
-						Type: sema.AnyStructType,
 						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
@@ -1082,7 +1077,6 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				expectedValueType: &sema.DictionaryType{
 					KeyType: sema.IntType,
 					ValueType: &sema.IntersectionType{
-						Type: sema.AnyStructType,
 						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
@@ -1191,7 +1185,7 @@ func TestCheckTypeInferenceForTypesWithDifferentTypeMaskRanges(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            let x: @AnyResource{Foo} <- create Bar()
+            let x: @{Foo} <- create Bar()
             let y = [<-x, 6]
 
             resource interface Foo {}
@@ -1207,7 +1201,7 @@ func TestCheckTypeInferenceForTypesWithDifferentTypeMaskRanges(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            let x: AnyStruct{Foo} = Bar()
+            let x: {Foo} = Bar()
             let y = true ? x : nil
 
             struct interface Foo {}
@@ -1244,7 +1238,6 @@ func TestCheckCompositeSupertypeInference(t *testing.T) {
             `
 
 		expectedType := &sema.IntersectionType{
-			Type: sema.AnyStructType,
 			Types: []*sema.InterfaceType{
 				{
 					Location:      common.StringLocation("test"),

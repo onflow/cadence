@@ -324,54 +324,9 @@ func TestCheckIntersectionType(t *testing.T) {
 	})
 }
 
-func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
+func TestCheckIntersectionTypeMemberAccess(t *testing.T) {
 
 	t.Parallel()
-
-	t.Run("no types: resource", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-            resource R {
-                let n: Int
-
-                init(n: Int) {
-                    self.n = n
-                }
-            }
-
-            fun test() {
-                let r: @R{} <- create R(n: 1)
-                r.n
-                destroy r
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidIntersectionTypeMemberAccessError{}, errs[0])
-	})
-
-	t.Run("no types: struct", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-            struct S {
-                let n: Int
-
-                init(n: Int) {
-                    self.n = n
-                }
-            }
-
-            fun test() {
-                let s: S{} = S(n: 1)
-                s.n
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidIntersectionTypeMemberAccessError{}, errs[0])
-	})
 
 	t.Run("type with member: resource", func(t *testing.T) {
 
@@ -390,7 +345,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
 
             fun test() {
-                let r: @R{I} <- create R(n: 1)
+                let r: @{I} <- create R(n: 1)
                 r.n
                 destroy r
             }
@@ -441,7 +396,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
 
             fun test() {
-                let r: @R{I} <- create R(n: 1)
+                let r: @{I} <- create R(n: 1)
                 r.n
                 destroy r
             }
@@ -449,7 +404,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidIntersectionTypeMemberAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
 	t.Run("type without member: struct", func(t *testing.T) {
@@ -469,14 +424,14 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
 
             fun test() {
-                let s: S{I} = S(n: 1)
+                let s: {I} = S(n: 1)
                 s.n
             }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidIntersectionTypeMemberAccessError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
 	t.Run("types with clashing members: resource", func(t *testing.T) {
@@ -924,8 +879,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.IntersectionType)
 
-		assert.IsType(t, sema.AnyResourceType, ty.Type)
-
 		require.Len(t, ty.Types, 1)
 		assert.Same(t,
 			RequireGlobalType(t, checker.Elaboration, "I1"),
@@ -949,8 +902,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.IntersectionType)
 
-		assert.IsType(t, sema.AnyStructType, ty.Type)
-
 		require.Len(t, ty.Types, 1)
 		assert.Same(t,
 			RequireGlobalType(t, checker.Elaboration, "I1"),
@@ -973,8 +924,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 		require.IsType(t, &sema.IntersectionType{}, rType)
 
 		ty := rType.(*sema.IntersectionType)
-
-		assert.IsType(t, sema.AnyResourceType, ty.Type)
 
 		require.Len(t, ty.Types, 2)
 		assert.Same(t,
@@ -1002,8 +951,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 		require.IsType(t, &sema.IntersectionType{}, rType)
 
 		ty := rType.(*sema.IntersectionType)
-
-		assert.IsType(t, sema.AnyStructType, ty.Type)
 
 		require.Len(t, ty.Types, 2)
 		assert.Same(t,
@@ -1049,8 +996,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.IntersectionType)
 
-		assert.IsType(t, sema.AnyResourceType, ty.Type)
-
 		require.Len(t, ty.Types, 1)
 		assert.Same(t,
 			RequireGlobalType(t, checker.Elaboration, "I1"),
@@ -1077,8 +1022,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.IntersectionType)
 
-		assert.IsType(t, sema.AnyStructType, ty.Type)
-
 		require.Len(t, ty.Types, 1)
 		assert.Same(t,
 			RequireGlobalType(t, checker.Elaboration, "I1"),
@@ -1104,8 +1047,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 		require.IsType(t, &sema.IntersectionType{}, rType)
 
 		ty := rType.(*sema.IntersectionType)
-
-		assert.IsType(t, sema.AnyResourceType, ty.Type)
 
 		require.Len(t, ty.Types, 2)
 		assert.Same(t,
@@ -1136,8 +1077,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 		require.IsType(t, &sema.IntersectionType{}, rType)
 
 		ty := rType.(*sema.IntersectionType)
-
-		assert.IsType(t, sema.AnyStructType, ty.Type)
 
 		require.Len(t, ty.Types, 2)
 		assert.Same(t,

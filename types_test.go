@@ -171,10 +171,6 @@ func TestType_ID(t *testing.T) {
 		},
 		{
 			&IntersectionType{
-				Type: &ResourceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Foo",
-				},
 				Types: []Type{
 					&ResourceInterfaceType{
 						Location:            utils.TestLocation,
@@ -182,7 +178,7 @@ func TestType_ID(t *testing.T) {
 					},
 				},
 			},
-			"S.test.Foo{S.test.FooI}",
+			"{S.test.FooI}",
 		},
 		{
 			&FunctionType{
@@ -1700,14 +1696,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					AnyType{},
 					IntType{},
 				},
 			}
 			target := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					AnyType{},
 					IntType{},
@@ -1720,14 +1714,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					AnyType{},
 					IntType{},
 				},
 			}
 			target := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					IntType{},
 					AnyType{},
@@ -1740,7 +1732,6 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					IntType{},
 					AnyType{},
@@ -1748,7 +1739,6 @@ func TestTypeEquality(t *testing.T) {
 				},
 			}
 			target := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					IntType{},
 					AnyType{},
@@ -1757,38 +1747,16 @@ func TestTypeEquality(t *testing.T) {
 			assert.True(t, source.Equal(target))
 		})
 
-		t.Run("different inner type", func(t *testing.T) {
-			t.Parallel()
-
-			source := &IntersectionType{
-				Type: IntType{},
-				Types: []Type{
-					AnyType{},
-					IntType{},
-				},
-			}
-			target := &IntersectionType{
-				Type: StringType{},
-				Types: []Type{
-					AnyType{},
-					IntType{},
-				},
-			}
-			assert.False(t, source.Equal(target))
-		})
-
 		t.Run("different intersections", func(t *testing.T) {
 			t.Parallel()
 
 			source := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					AnyType{},
 					IntType{},
 				},
 			}
 			target := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					AnyType{},
 					StringType{},
@@ -1801,13 +1769,11 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					AnyType{},
 				},
 			}
 			target := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					AnyType{},
 					StringType{},
@@ -1820,7 +1786,6 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &IntersectionType{
-				Type: IntType{},
 				Types: []Type{
 					AnyType{},
 				},

@@ -164,9 +164,9 @@ func TestCheckCompositeDeclarationNestedStructInterfaceUse(t *testing.T) {
 
           struct X: XI {}
 
-          var xi: AnyStruct{XI}
+          var xi: {XI}
 
-          init(xi: AnyStruct{XI}) {
+          init(xi: {XI}) {
               self.xi = xi
           }
 

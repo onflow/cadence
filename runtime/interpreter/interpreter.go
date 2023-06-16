@@ -3507,7 +3507,7 @@ func functionTypeFunction(invocation Invocation) Value {
 }
 
 func intersectionTypeFunction(invocation Invocation) Value {
-	intersectionIDs, ok := invocation.Arguments[1].(*ArrayValue)
+	intersectionIDs, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -3550,26 +3550,9 @@ func intersectionTypeFunction(invocation Invocation) Value {
 		}
 	}
 
-	var semaType sema.Type
-	var err error
-
-	switch typeID := invocation.Arguments[0].(type) {
-	case NilValue:
-		semaType = nil
-	case *SomeValue:
-		innerValue := typeID.InnerValue(invocation.Interpreter, invocation.LocationRange)
-		semaType, err = lookupComposite(invocation.Interpreter, innerValue.(*StringValue).Str)
-		if err != nil {
-			return Nil
-		}
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
 	var invalidIntersectionType bool
-	ty := sema.CheckIntersectionType(
+	sema.CheckIntersectionType(
 		invocation.Interpreter,
-		semaType,
 		semaIntersections,
 		func(_ func(*ast.IntersectionType) error) {
 			invalidIntersectionType = true
@@ -3588,7 +3571,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 			invocation.Interpreter,
 			NewIntersectionStaticType(
 				invocation.Interpreter,
-				ConvertSemaToStaticType(invocation.Interpreter, ty),
+				nil,
 				staticIntersections,
 			),
 		),

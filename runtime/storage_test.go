@@ -2245,7 +2245,7 @@ access(all) contract Test {
         return <- create Holder()
     }
 
-    access(all) fun attach(asRole: Role, receiver: &AnyResource{Receiver}) {
+    access(all) fun attach(asRole: Role, receiver: &{Receiver}) {
         // TODO: Now verify that the owner is valid.
 
         let capability = self.capabilities[asRole]!
@@ -2271,7 +2271,7 @@ transaction {
     prepare(acct: AuthAccount) {}
     execute {
         let holder <- Test.createHolder()
-        Test.attach(asRole: Test.Role.aaa, receiver: &holder as &AnyResource{Test.Receiver})
+        Test.attach(asRole: Test.Role.aaa, receiver: &holder as &{Test.Receiver})
         destroy holder
     }
 }

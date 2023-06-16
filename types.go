@@ -2027,29 +2027,25 @@ type IntersectionSet = map[Type]struct{}
 
 type IntersectionType struct {
 	typeID              string
-	Type                Type
 	Types               []Type
 	intersectionSet     IntersectionSet
 	intersectionSetOnce sync.Once
 }
 
 func NewIntersectionType(
-	typ Type,
 	types []Type,
 ) *IntersectionType {
 	return &IntersectionType{
-		Type:  typ,
 		Types: types,
 	}
 }
 
 func NewMeteredIntersectionType(
 	gauge common.MemoryGauge,
-	typ Type,
 	types []Type,
 ) *IntersectionType {
 	common.UseMemory(gauge, common.CadenceIntersectionTypeMemoryUsage)
-	return NewIntersectionType(typ, types)
+	return NewIntersectionType(types)
 }
 
 func (*IntersectionType) isType() {}
@@ -2064,11 +2060,7 @@ func (t *IntersectionType) ID() string {
 				typeStrings = append(typeStrings, typ.ID())
 			}
 		}
-		var typeString string
-		if t.Type != nil {
-			typeString = t.Type.ID()
-		}
-		t.typeID = sema.FormatIntersectionTypeID(typeString, typeStrings)
+		t.typeID = sema.FormatIntersectionTypeID(typeStrings)
 	}
 	return t.typeID
 }
@@ -2076,16 +2068,6 @@ func (t *IntersectionType) ID() string {
 func (t *IntersectionType) Equal(other Type) bool {
 	otherType, ok := other.(*IntersectionType)
 	if !ok {
-		return false
-	}
-
-	if t.Type == nil && otherType.Type != nil {
-		return false
-	}
-	if t.Type != nil && otherType.Type == nil {
-		return false
-	}
-	if t.Type != nil && !t.Type.Equal(otherType.Type) {
 		return false
 	}
 

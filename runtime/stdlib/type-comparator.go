@@ -98,24 +98,6 @@ func (c *TypeComparator) CheckIntersectionTypeEquality(expected *ast.Intersectio
 		return newTypeMismatchError(expected, found)
 	}
 
-	if expected.Type == nil {
-		if !isAnyStructOrAnyResourceType(foundIntersectionType.Type) {
-			return newTypeMismatchError(expected, found)
-		}
-		// else go on to check intersected types
-	} else if foundIntersectionType.Type == nil {
-		if !isAnyStructOrAnyResourceType(expected.Type) {
-			return newTypeMismatchError(expected, found)
-		}
-		// else go on to check intersected types
-	} else {
-		// both are not nil
-		err := expected.Type.CheckEqual(foundIntersectionType.Type, c)
-		if err != nil {
-			return newTypeMismatchError(expected, found)
-		}
-	}
-
 	if len(expected.Types) != len(foundIntersectionType.Types) {
 		return newTypeMismatchError(expected, found)
 	}

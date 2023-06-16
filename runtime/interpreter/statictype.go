@@ -765,7 +765,7 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 		return NewIntersectionStaticType(
 			memoryGauge,
-			ConvertSemaToStaticType(memoryGauge, t.Type),
+			nil,
 			intersectedTypess,
 		)
 
@@ -1004,7 +1004,7 @@ func ConvertStaticToSemaType(
 			}
 		}
 
-		ty, err := ConvertStaticToSemaType(
+		_, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,
 			getInterface,
@@ -1018,7 +1018,6 @@ func ConvertStaticToSemaType(
 
 		return sema.NewIntersectionType(
 			memoryGauge,
-			ty,
 			intersectedTypes,
 		), nil
 

@@ -4314,7 +4314,7 @@ access(all) contract ExampleToken {
 
 		// Function that mints new tokens and deposits into an account's vault
 		// using their Receiver reference.
-        access(all) fun mintTokens(amount: UFix64, recipient: Capability<&AnyResource{Receiver}>) {
+        access(all) fun mintTokens(amount: UFix64, recipient: Capability<&{Receiver}>) {
             let recipientRef = recipient.borrow()
                 ?? panic("Could not borrow a receiver reference to the vault")
 
@@ -4536,7 +4536,7 @@ access(all) contract ExampleMarketplace {
     // that only exposes the methods that are supposed to be public
     //
     access(all) resource interface SalePublic {
-        access(all) fun purchase(tokenID: UInt64, recipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault)
+        access(all) fun purchase(tokenID: UInt64, recipient: Capability<&{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault)
         access(all) fun idPrice(tokenID: UInt64): UFix64?
         access(all) fun getIDs(): [UInt64]
     }
@@ -4557,10 +4557,10 @@ access(all) contract ExampleMarketplace {
         // The fungible token vault of the owner of this sale.
         // When someone buys a token, this resource can deposit
         // tokens into their account.
-        access(account) let ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>
+        access(account) let ownerVault: Capability<&{ExampleToken.Receiver}>
 
         init (ownerCollection: Capability<&ExampleNFT.Collection>, 
-              ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>) {
+              ownerVault: Capability<&{ExampleToken.Receiver}>) {
 
             pre {
                 // Check that the owner's collection capability is correct
@@ -4605,7 +4605,7 @@ access(all) contract ExampleMarketplace {
         }
 
         // purchase lets a user send tokens to purchase an NFT that is for sale
-        access(all) fun purchase(tokenID: UInt64, recipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault) {
+        access(all) fun purchase(tokenID: UInt64, recipient: Capability<&{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault) {
             pre {
                 self.prices[tokenID] != nil:
                     "No token matching this ID for sale!"
@@ -4653,7 +4653,7 @@ access(all) contract ExampleMarketplace {
 
     // createCollection returns a new collection resource to the caller
     access(all) fun createSaleCollection(ownerCollection: Capability<&ExampleNFT.Collection>, 
-                                 ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>): @SaleCollection {
+                                 ownerVault: Capability<&{ExampleToken.Receiver}>): @SaleCollection {
         return <- create SaleCollection(ownerCollection: ownerCollection, ownerVault: ownerVault)
     }
 }
@@ -4815,8 +4815,8 @@ import ExampleNFT from 0x02
 transaction {
 
   // Public Vault Receiver References for both accounts
-  let acct1Capability: Capability<&AnyResource{ExampleToken.Receiver}>
-  let acct2Capability: Capability<&AnyResource{ExampleToken.Receiver}>
+  let acct1Capability: Capability<&{ExampleToken.Receiver}>
+  let acct2Capability: Capability<&{ExampleToken.Receiver}>
 
   // Private minter references for this account to mint tokens
   let minterRef: &ExampleToken.VaultMinter
@@ -4826,9 +4826,9 @@ transaction {
     let account2 = getAccount(0x02)
 
     // Retrieve public Vault Receiver references for both accounts
-    self.acct1Capability = acct.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
+    self.acct1Capability = acct.getCapability<&{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
 
-    self.acct2Capability = account2.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
+    self.acct2Capability = account2.getCapability<&{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
 
     // Get the stored Minter reference for account 0x01
     self.minterRef = acct.borrow<&ExampleToken.VaultMinter>(from: /storage/CadenceFungibleTokenTutorialMinter)
@@ -4898,7 +4898,7 @@ transaction {
 
     // Capability to the buyer's NFT collection where they
     // will store the bought NFT
-    let collectionCapability: Capability<&AnyResource{ExampleNFT.NFTReceiver}>
+    let collectionCapability: Capability<&{ExampleNFT.NFTReceiver}>
 
     // Vault that will hold the tokens that will be used to
     // but the NFT
@@ -4907,7 +4907,7 @@ transaction {
     prepare(acct: AuthAccount) {
 
         // get the references to the buyer's fungible token Vault and NFT Collection Receiver
-        self.collectionCapability = acct.getCapability<&AnyResource{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath)
+        self.collectionCapability = acct.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath)
 
         let vaultRef = acct.borrow<&ExampleToken.Vault>(from: /storage/CadenceFungibleTokenTutorialVault)
             ?? panic("Could not borrow owner's vault reference")
@@ -4922,7 +4922,7 @@ transaction {
 
         // get the reference to the seller's sale
         let saleRef = seller.getCapability(/public/NFTSale)
-                            .borrow<&AnyResource{ExampleMarketplace.SalePublic}>()
+                            .borrow<&{ExampleMarketplace.SalePublic}>()
                             ?? panic("Could not borrow seller's sale reference")
 
         // purchase the NFT the the seller is selling, giving them the capability

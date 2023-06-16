@@ -4889,7 +4889,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
           fun testValidUnauthorized(): Bool {
               let r  <- create R()
-              let ref: AnyStruct = &r as &R{RI}
+              let ref: AnyStruct = &r as &{RI}
               let ref2 = ref as? &R
               let isNil = ref2 == nil
               destroy r
@@ -4898,7 +4898,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
           fun testValidAuthorized(): Bool {
               let r  <- create R()
-              let ref: AnyStruct = &r as auth(E) &R{RI}
+              let ref: AnyStruct = &r as auth(E) &{RI}
               let ref2 = ref as? &R
               let isNil = ref2 == nil
               destroy r
@@ -4907,8 +4907,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
           fun testValidIntersection(): Bool {
               let r  <- create R()
-              let ref: AnyStruct = &r as &R{RI}
-              let ref2 = ref as? &R{RI}
+              let ref: AnyStruct = &r as &{RI}
+              let ref2 = ref as? &{RI}
               let isNil = ref2 == nil
               destroy r
               return isNil
@@ -4995,14 +4995,12 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 				}
 
 				riType := getType("RI").(*sema.InterfaceType)
-				rType := getType("R")
 
 				return &interpreter.StorageReferenceValue{
 					Authorization:        auth,
 					TargetStorageAddress: storageAddress,
 					TargetPath:           storagePath,
 					BorrowedType: &sema.IntersectionType{
-						Type: rType,
 						Types: []*sema.InterfaceType{
 							riType,
 						},
