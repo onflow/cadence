@@ -930,6 +930,10 @@ func commonSuperTypeOfComposites(types []Type) Type {
 	}
 
 	if hasCommonInterface {
+		if len(commonInterfacesList) == 0 {
+			panic(errors.NewUnreachableError())
+		}
+
 		return &IntersectionType{
 			Types: commonInterfacesList,
 		}

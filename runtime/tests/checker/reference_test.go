@@ -1267,7 +1267,7 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+	assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 

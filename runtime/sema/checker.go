@@ -899,7 +899,7 @@ func CheckIntersectionType(
 	memoryGauge common.MemoryGauge,
 	types []*InterfaceType,
 	report func(func(*ast.IntersectionType) error),
-) {
+) Type {
 	intersectionRanges := make(map[*InterfaceType]func(*ast.IntersectionType) ast.Range, len(types))
 	intersectionsCompositeKind := common.CompositeKindUnknown
 	memberSet := map[string]*InterfaceType{}
@@ -986,6 +986,7 @@ func CheckIntersectionType(
 		report(func(t *ast.IntersectionType) error {
 			return &AmbiguousIntersectionTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
 		})
+		return InvalidType
 
 	case common.CompositeKindResource, common.CompositeKindStructure:
 		break
@@ -1019,6 +1020,8 @@ func CheckIntersectionType(
 			}
 		}
 	}
+
+	return &IntersectionType{Types: types}
 }
 
 func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
@@ -1054,7 +1057,7 @@ func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
 		intersectedTypes = append(intersectedTypes, intersectedInterfaceType)
 	}
 
-	CheckIntersectionType(
+	intersectionType := CheckIntersectionType(
 		checker.memoryGauge,
 		intersectedTypes,
 		func(getError func(*ast.IntersectionType) error) {
@@ -1062,9 +1065,7 @@ func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
 		},
 	)
 
-	return &IntersectionType{
-		Types: intersectedTypes,
-	}
+	return intersectionType
 }
 
 func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
