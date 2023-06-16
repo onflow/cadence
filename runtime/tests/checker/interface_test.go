@@ -2998,6 +2998,30 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 	})
 
+	t.Run("duplicate methods mismatching entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+
+            struct interface Foo {
+                access(X) fun hello(): String
+            }
+
+            struct interface Bar: Foo {
+                pub fun hello(): String
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
 	t.Run("duplicate fields matching", func(t *testing.T) {
 
 		t.Parallel()
@@ -3026,6 +3050,30 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
             struct interface Bar: Foo {
                 pub var x: Int
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "x", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate fields, mismatching entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+
+            struct interface Foo {
+                pub var x: String
+            }
+
+            struct interface Bar: Foo {
+                access(X) var x: String
             }
         `)
 
@@ -3183,6 +3231,72 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
             struct interface P {
                 pub fun hello(): String
+            }
+
+            struct interface Q: P {}
+
+            struct X: B, Q {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, "B", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Equal(t, "Q", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "P", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods same type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                pub fun hello(): Int
+            }
+
+            struct interface B: A {}
+
+            struct interface P {
+                pub fun hello(): Int
+            }
+
+            struct interface Q: P {}
+
+            struct X: B, Q {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, "B", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Equal(t, "Q", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "P", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods same type different entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+            struct interface A {
+                access(E) fun hello(): Int
+            }
+
+            struct interface B: A {}
+
+            struct interface P {
+                pub fun hello(): Int
             }
 
             struct interface Q: P {}
@@ -3665,6 +3779,38 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
             contract interface C: B {}
 
             contract X: C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("type requirement wrong entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+            contract interface A {
+                struct Nested {
+                    pub fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {}
+
+            contract interface C: B {}
+
+            contract X: C {
+				struct Nested {
+                    access(E) fun test(): Int {
+                        return 3
+                    }
+                }
+			}
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)

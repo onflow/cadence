@@ -1975,6 +1975,21 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("valid interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			struct interface I {
+				access(E) fun foo() 
+			}
+			struct interface S: I {
+				access(E) fun foo() 
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("valid mapped", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -1991,6 +2006,25 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 				init() {
 					self.x = &"foo" as auth(Y) &String
 				}
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("valid mapped interface", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		 	entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Y
+			}
+			struct interface I {
+				access(M) let x: auth(M) &String
+			}
+			struct interface S: I {
+				access(M) let x: auth(M) &String
 			}
 		`)
 
@@ -2020,6 +2054,28 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("mismatched mapped interfaces", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {}
+			entitlement mapping N {
+				X -> Y
+			}
+			struct interface I {
+				access(M) let x: auth(M) &String
+			}
+			struct interface S: I {
+				access(N) let x: auth(N) &String
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InterfaceMemberConflictError{}, errs[0])
 	})
 
 	t.Run("pub subtyping invalid", func(t *testing.T) {
@@ -2549,6 +2605,122 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("default function entitlements", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement mapping M {
+				E -> F
+			}
+			entitlement G
+			struct interface I {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(M) &Int
+				}
+			}
+			struct S: I {}
+			fun test() {
+				let s = S()
+				let ref = &s as auth(E) &S
+				let i: auth(F) &Int = s.foo()
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("attachment default function entitlements", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			entitlement mapping M {
+				E -> F
+			}
+			entitlement mapping N {
+				G -> E
+			}
+			struct interface I {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(M) &Int
+				}
+			}
+			struct S {}
+			access(N) attachment A for S: I {}
+			fun test() {
+				let s = attach A() to S()
+				let ref = &s as auth(G) &S
+				let i: auth(F) &Int = s[A]!.foo()
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("attachment inherited default function entitlements", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			entitlement mapping M {
+				E -> F
+			}
+			entitlement mapping N {
+				G -> E
+			}
+			struct interface I {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(M) &Int
+				}
+			}
+			struct interface I2: I {}
+			struct S {}
+			access(N) attachment A for S: I2 {}
+			fun test() {
+				let s = attach A() to S()
+				let ref = &s as auth(G) &S
+				let i: auth(F) &Int = s[A]!.foo()
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("attachment default function entitlements no attachment mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement E
+			entitlement F 
+			entitlement G
+			entitlement mapping M {
+				E -> F
+			}
+			entitlement mapping N {
+				G -> E
+			}
+			struct interface I {
+				access(M) fun foo(): auth(M) &Int {
+					return &1 as auth(M) &Int
+				}
+			}
+			struct S {}
+			attachment A for S: I {}
+			fun test() {
+				let s = attach A() to S()
+				let ref = &s as auth(G) &S
+				let i: auth(F) &Int = s[A]!.foo() // mismatch
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		// because A is declared with no mapping, all its references are unentitled
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
 
