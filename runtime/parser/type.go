@@ -27,7 +27,7 @@ import (
 const (
 	typeLeftBindingPowerOptional = 10 * (iota + 1)
 	typeLeftBindingPowerReference
-	typeLeftBindingPowerRestriction
+	typeLeftBindingPowerIntersection
 	typeLeftBindingPowerInstantiation
 )
 
@@ -147,7 +147,7 @@ func init() {
 	defineArrayType()
 	defineOptionalType()
 	defineReferenceType()
-	defineRestrictedOrDictionaryType()
+	defineIntersectionOrDictionaryType()
 	defineInstantiationType()
 	defineIdentifierTypes()
 	defineParenthesizedTypes()
@@ -317,13 +317,13 @@ func defineReferenceType() {
 	})
 }
 
-func defineRestrictedOrDictionaryType() {
+func defineIntersectionOrDictionaryType() {
 
 	// For the null denotation it is not clear after the start
-	// if it is a restricted type or a dictionary type.
+	// if it is a intersection type or a dictionary type.
 	//
 	// If a colon is seen it is a dictionary type.
-	// If no colon is seen it is a restricted type.
+	// If no colon is seen it is a intersection type.
 
 	setTypeNullDenotation(
 		lexer.TokenBraceOpen,
@@ -332,7 +332,7 @@ func defineRestrictedOrDictionaryType() {
 			var endPos ast.Position
 
 			var dictionaryType *ast.DictionaryType
-			var restrictedType *ast.RestrictedType
+			var intersectionType *ast.IntersectionType
 
 			var firstType ast.Type
 
@@ -349,14 +349,14 @@ func defineRestrictedOrDictionaryType() {
 						return nil, p.syntaxError("unexpected comma in dictionary type")
 					}
 					if expectType {
-						return nil, p.syntaxError("unexpected comma in restricted type")
+						return nil, p.syntaxError("unexpected comma in intersection type")
 					}
-					if restrictedType == nil {
+					if intersectionType == nil {
 						firstNominalType, ok := firstType.(*ast.NominalType)
 						if !ok {
-							return nil, p.syntaxError("non-nominal type in restriction list: %s", firstType)
+							return nil, p.syntaxError("non-nominal type in intersection list: %s", firstType)
 						}
-						restrictedType = ast.NewRestrictedType(
+						intersectionType = ast.NewIntersectionType(
 							p.memoryGauge,
 							nil,
 							[]*ast.NominalType{
@@ -374,8 +374,8 @@ func defineRestrictedOrDictionaryType() {
 					expectType = true
 
 				case lexer.TokenColon:
-					if restrictedType != nil {
-						return nil, p.syntaxError("unexpected colon in restricted type")
+					if intersectionType != nil {
+						return nil, p.syntaxError("unexpected colon in intersection type")
 					}
 					if expectType {
 						return nil, p.syntaxError("unexpected colon in dictionary type")
@@ -406,7 +406,7 @@ func defineRestrictedOrDictionaryType() {
 						switch {
 						case dictionaryType != nil:
 							p.reportSyntaxError("missing dictionary value type")
-						case restrictedType != nil:
+						case intersectionType != nil:
 							p.reportSyntaxError("missing type after comma")
 						}
 					}
@@ -438,12 +438,12 @@ func defineRestrictedOrDictionaryType() {
 					case dictionaryType != nil:
 						dictionaryType.ValueType = ty
 
-					case restrictedType != nil:
+					case intersectionType != nil:
 						nominalType, ok := ty.(*ast.NominalType)
 						if !ok {
-							return nil, p.syntaxError("non-nominal type in restriction list: %s", ty)
+							return nil, p.syntaxError("non-nominal type in intersection list: %s", ty)
 						}
-						restrictedType.Restrictions = append(restrictedType.Restrictions, nominalType)
+						intersectionType.Types = append(intersectionType.Types, nominalType)
 
 					default:
 						firstType = ty
@@ -452,14 +452,14 @@ func defineRestrictedOrDictionaryType() {
 			}
 
 			switch {
-			case restrictedType != nil:
-				restrictedType.EndPos = endPos
-				return restrictedType, nil
+			case intersectionType != nil:
+				intersectionType.EndPos = endPos
+				return intersectionType, nil
 			case dictionaryType != nil:
 				dictionaryType.EndPos = endPos
 				return dictionaryType, nil
 			default:
-				restrictedType = ast.NewRestrictedType(
+				intersectionType = ast.NewIntersectionType(
 					p.memoryGauge,
 					nil,
 					nil,
@@ -472,20 +472,20 @@ func defineRestrictedOrDictionaryType() {
 				if firstType != nil {
 					firstNominalType, ok := firstType.(*ast.NominalType)
 					if !ok {
-						return nil, p.syntaxError("non-nominal type in restriction list: %s", firstType)
+						return nil, p.syntaxError("non-nominal type in intersection list: %s", firstType)
 					}
-					restrictedType.Restrictions = append(restrictedType.Restrictions, firstNominalType)
+					intersectionType.Types = append(intersectionType.Types, firstNominalType)
 				}
-				return restrictedType, nil
+				return intersectionType, nil
 			}
 		},
 	)
 
 	// For the left denotation we need a meta left denotation:
 	// We need to look ahead and check if the brace is followed by whitespace or not.
-	// In case there is a space, the type is *not* considered a restricted type.
+	// In case there is a space, the type is *not* considered a intersection type.
 	// This handles the ambiguous case where a function return type's open brace
-	// may either be a restricted type (if there is no whitespace)
+	// may either be a intersection type (if there is no whitespace)
 	// or the start of the function body (if there is whitespace).
 
 	setTypeMetaLeftDenotation(
@@ -500,7 +500,7 @@ func defineRestrictedOrDictionaryType() {
 			// Skip the `{` token.
 			p.next()
 
-			// In case there is a space, the type is *not* considered a restricted type.
+			// In case there is a space, the type is *not* considered a intersection type.
 			// The buffered tokens are replayed to allow them to be re-parsed.
 
 			if p.current.Is(lexer.TokenSpace) {
@@ -510,11 +510,11 @@ func defineRestrictedOrDictionaryType() {
 				return left, nil, true
 			}
 
-			// It was determined that a restricted type is parsed.
+			// It was determined that a intersection type is parsed.
 			// Still, it should have maybe not been parsed if the right binding power
 			// was higher. In that case, replay the buffered tokens and stop.
 
-			if rightBindingPower >= typeLeftBindingPowerRestriction {
+			if rightBindingPower >= typeLeftBindingPowerIntersection {
 				p.current = current
 				p.tokens.Revert(cursor)
 				return left, nil, true
@@ -529,7 +529,7 @@ func defineRestrictedOrDictionaryType() {
 			// Skip the closing brace
 			p.next()
 
-			result = ast.NewRestrictedType(
+			result = ast.NewIntersectionType(
 				p.memoryGauge,
 				left,
 				nominalTypes,

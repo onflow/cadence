@@ -110,7 +110,7 @@ func (*SimpleType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *SimpleType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *SimpleType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 

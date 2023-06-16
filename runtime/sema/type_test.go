@@ -196,11 +196,11 @@ func TestIsResourceType_StructNestedInDictionary(t *testing.T) {
 	assert.False(t, ty.IsResourceType())
 }
 
-func TestRestrictedType_StringAndID(t *testing.T) {
+func TestIntersectionType_StringAndID(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("base type and restriction", func(t *testing.T) {
+	t.Run("base type and intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -210,13 +210,13 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 			Location:      common.StringLocation("b"),
 		}
 
-		ty := &RestrictedType{
+		ty := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{interfaceType},
+			Types: []*InterfaceType{interfaceType},
 		}
 
 		assert.Equal(t,
@@ -230,7 +230,7 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 		)
 	})
 
-	t.Run("base type and restrictions", func(t *testing.T) {
+	t.Run("base type and intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -246,13 +246,13 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 			Location:      common.StringLocation("c"),
 		}
 
-		ty := &RestrictedType{
+		ty := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{i1, i2},
+			Types: []*InterfaceType{i1, i2},
 		}
 
 		assert.Equal(t,
@@ -266,11 +266,11 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 		)
 	})
 
-	t.Run("no restrictions", func(t *testing.T) {
+	t.Run("no intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
-		ty := &RestrictedType{
+		ty := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -290,11 +290,11 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 	})
 }
 
-func TestRestrictedType_Equals(t *testing.T) {
+func TestIntersectionType_Equals(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("same base type and more restrictions", func(t *testing.T) {
+	t.Run("same base type and more intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -310,28 +310,28 @@ func TestRestrictedType_Equals(t *testing.T) {
 			Location:      common.StringLocation("b"),
 		}
 
-		a := &RestrictedType{
+		a := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{i1},
+			Types: []*InterfaceType{i1},
 		}
 
-		b := &RestrictedType{
+		b := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{i1, i2},
+			Types: []*InterfaceType{i1, i2},
 		}
 
 		assert.False(t, a.Equal(b))
 	})
 
-	t.Run("same base type and fewer restrictions", func(t *testing.T) {
+	t.Run("same base type and fewer intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -347,28 +347,28 @@ func TestRestrictedType_Equals(t *testing.T) {
 			Location:      common.StringLocation("b"),
 		}
 
-		a := &RestrictedType{
+		a := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{i1, i2},
+			Types: []*InterfaceType{i1, i2},
 		}
 
-		b := &RestrictedType{
+		b := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{i1},
+			Types: []*InterfaceType{i1},
 		}
 
 		assert.False(t, a.Equal(b))
 	})
 
-	t.Run("same base type and same restrictions", func(t *testing.T) {
+	t.Run("same base type and same intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -384,28 +384,28 @@ func TestRestrictedType_Equals(t *testing.T) {
 			Location:      common.StringLocation("b"),
 		}
 
-		a := &RestrictedType{
+		a := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{i1, i2},
+			Types: []*InterfaceType{i1, i2},
 		}
 
-		b := &RestrictedType{
+		b := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{i1, i2},
+			Types: []*InterfaceType{i1, i2},
 		}
 
 		assert.True(t, a.Equal(b))
 	})
 
-	t.Run("different base type and same restrictions", func(t *testing.T) {
+	t.Run("different base type and same intersected types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -421,29 +421,29 @@ func TestRestrictedType_Equals(t *testing.T) {
 			Location:      common.StringLocation("b"),
 		}
 
-		a := &RestrictedType{
+		a := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R1",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{i1, i2},
+			Types: []*InterfaceType{i1, i2},
 		}
 
-		b := &RestrictedType{
+		b := &IntersectionType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R2",
 				Location:   common.StringLocation("a"),
 			},
-			Restrictions: []*InterfaceType{i1, i2},
+			Types: []*InterfaceType{i1, i2},
 		}
 
 		assert.False(t, a.Equal(b))
 	})
 }
 
-func TestRestrictedType_GetMember(t *testing.T) {
+func TestIntersectionType_GetMember(t *testing.T) {
 
 	t.Parallel()
 
@@ -458,9 +458,9 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Fields:     []string{},
 			Members:    &StringMemberOrderedMap{},
 		}
-		ty := &RestrictedType{
-			Type:         resourceType,
-			Restrictions: []*InterfaceType{},
+		ty := &IntersectionType{
+			Type:  resourceType,
+			Types: []*InterfaceType{},
 		}
 
 		fieldName := "s"
@@ -485,7 +485,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			},
 		)
 
-		assert.IsType(t, &InvalidRestrictedTypeMemberAccessError{}, reportedError)
+		assert.IsType(t, &InvalidIntersectionTypeMemberAccessError{}, reportedError)
 		assert.NotNil(t, actualMember)
 	})
 
@@ -506,9 +506,9 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Fields:     []string{},
 			Members:    &StringMemberOrderedMap{},
 		}
-		restrictedType := &RestrictedType{
+		intersectionType := &IntersectionType{
 			Type: resourceType,
-			Restrictions: []*InterfaceType{
+			Types: []*InterfaceType{
 				interfaceType,
 			},
 		}
@@ -516,21 +516,21 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		fieldName := "s"
 
 		resourceType.Members.Set(fieldName, NewUnmeteredPublicConstantFieldMember(
-			restrictedType.Type,
+			intersectionType.Type,
 			fieldName,
 			IntType,
 			"",
 		))
 
 		interfaceMember := NewUnmeteredPublicConstantFieldMember(
-			restrictedType.Type,
+			intersectionType.Type,
 			fieldName,
 			IntType,
 			"",
 		)
 		interfaceType.Members.Set(fieldName, interfaceMember)
 
-		actualMembers := restrictedType.GetMembers()
+		actualMembers := intersectionType.GetMembers()
 
 		require.Contains(t, actualMembers, fieldName)
 
@@ -1055,12 +1055,12 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
 				expectedSuperType: func() Type {
-					typ := &RestrictedType{
-						Type:         AnyStructType,
-						Restrictions: []*InterfaceType{interfaceType2},
+					typ := &IntersectionType{
+						Type:  AnyStructType,
+						Types: []*InterfaceType{interfaceType2},
 					}
 					// just initialize for equality
-					typ.initializeEffectiveRestrictionSet()
+					typ.initializeEffectiveIntersectionSet()
 					return typ
 				}(),
 			},
@@ -1071,12 +1071,12 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
 				},
 				expectedSuperType: func() Type {
-					typ := &RestrictedType{
-						Type:         AnyStructType,
-						Restrictions: []*InterfaceType{interfaceType1, interfaceType2},
+					typ := &IntersectionType{
+						Type:  AnyStructType,
+						Types: []*InterfaceType{interfaceType1, interfaceType2},
 					}
 					// just initialize for equality
-					typ.initializeEffectiveRestrictionSet()
+					typ.initializeEffectiveIntersectionSet()
 					return typ
 				}(),
 			},
@@ -1096,13 +1096,13 @@ func TestCommonSuperType(t *testing.T) {
 					newCompositeWithInterfaces("Bar", inheritedInterfaceType2),
 				},
 				expectedSuperType: func() Type {
-					typ := &RestrictedType{
-						Type:         AnyStructType,
-						Restrictions: []*InterfaceType{superInterfaceType},
+					typ := &IntersectionType{
+						Type:  AnyStructType,
+						Types: []*InterfaceType{superInterfaceType},
 					}
 
 					// just initialize for equality
-					typ.initializeEffectiveRestrictionSet()
+					typ.initializeEffectiveIntersectionSet()
 					return typ
 				}(),
 			},
@@ -1480,7 +1480,7 @@ func TestCommonSuperType(t *testing.T) {
 		testLeastCommonSuperType(t, tests)
 	})
 
-	t.Run("Restricted types", func(t *testing.T) {
+	t.Run("Intersection types", func(t *testing.T) {
 		t.Parallel()
 
 		testLocation := common.StringLocation("test")
@@ -1492,30 +1492,30 @@ func TestCommonSuperType(t *testing.T) {
 			Members:       &StringMemberOrderedMap{},
 		}
 
-		restrictedType1 := &RestrictedType{
-			Type:         AnyStructType,
-			Restrictions: []*InterfaceType{interfaceType1},
+		intersectionType1 := &IntersectionType{
+			Type:  AnyStructType,
+			Types: []*InterfaceType{interfaceType1},
 		}
 
-		restrictedType2 := &RestrictedType{
-			Type:         AnyResourceType,
-			Restrictions: []*InterfaceType{interfaceType1},
+		intersectionType2 := &IntersectionType{
+			Type:  AnyResourceType,
+			Types: []*InterfaceType{interfaceType1},
 		}
 
 		tests := []testCase{
 			{
 				name: "homogenous",
 				types: []Type{
-					restrictedType1,
-					restrictedType1,
+					intersectionType1,
+					intersectionType1,
 				},
-				expectedSuperType: restrictedType1,
+				expectedSuperType: intersectionType1,
 			},
 			{
 				name: "heterogeneous",
 				types: []Type{
-					restrictedType1,
-					restrictedType2,
+					intersectionType1,
+					intersectionType2,
 				},
 				expectedSuperType: InvalidType,
 			},
@@ -1536,30 +1536,30 @@ func TestCommonSuperType(t *testing.T) {
 			Members:       &StringMemberOrderedMap{},
 		}
 
-		restrictedType1 := &RestrictedType{
-			Type:         AnyStructType,
-			Restrictions: []*InterfaceType{interfaceType1},
+		intersectionType1 := &IntersectionType{
+			Type:  AnyStructType,
+			Types: []*InterfaceType{interfaceType1},
 		}
 
-		restrictedType2 := &RestrictedType{
-			Type:         AnyResourceType,
-			Restrictions: []*InterfaceType{interfaceType1},
+		intersectionType2 := &IntersectionType{
+			Type:  AnyResourceType,
+			Types: []*InterfaceType{interfaceType1},
 		}
 
 		tests := []testCase{
 			{
 				name: "homogenous",
 				types: []Type{
-					restrictedType1,
-					restrictedType1,
+					intersectionType1,
+					intersectionType1,
 				},
-				expectedSuperType: restrictedType1,
+				expectedSuperType: intersectionType1,
 			},
 			{
 				name: "heterogeneous",
 				types: []Type{
-					restrictedType1,
-					restrictedType2,
+					intersectionType1,
+					intersectionType2,
 				},
 				expectedSuperType: InvalidType,
 			},
@@ -1670,9 +1670,9 @@ func TestCommonSuperType(t *testing.T) {
 			&CapabilityType{
 				BorrowType: AnyStructType,
 			},
-			&RestrictedType{
+			&IntersectionType{
 				Type: AnyStructType,
-				Restrictions: []*InterfaceType{
+				Types: []*InterfaceType{
 					{
 						Location:   common.StringLocation("test"),
 						Identifier: "Foo",
@@ -1994,12 +1994,12 @@ func TestMapType(t *testing.T) {
 			return StringType
 		case *CompositeType:
 			return &InterfaceType{Identifier: typ.Identifier}
-		case *RestrictedType:
+		case *IntersectionType:
 			var interfaces []*InterfaceType
-			for _, i := range typ.Restrictions {
+			for _, i := range typ.Types {
 				interfaces = append(interfaces, &InterfaceType{Identifier: i.Identifier + "f"})
 			}
-			return NewRestrictedType(nil, typ.Type, interfaces)
+			return NewIntersectionType(nil, typ.Type, interfaces)
 		}
 		return ty
 	}
@@ -2053,10 +2053,10 @@ func TestMapType(t *testing.T) {
 		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
 
-	t.Run("map restricted type", func(t *testing.T) {
+	t.Run("map intersection type", func(t *testing.T) {
 		t.Parallel()
 
-		original := NewRestrictedType(
+		original := NewIntersectionType(
 			nil,
 			StringType,
 			[]*InterfaceType{
@@ -2064,7 +2064,7 @@ func TestMapType(t *testing.T) {
 				{Identifier: "bar"},
 			},
 		)
-		mapped := NewRestrictedType(
+		mapped := NewIntersectionType(
 			nil,
 			BoolType,
 			[]*InterfaceType{

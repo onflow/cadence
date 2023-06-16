@@ -92,7 +92,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
 
-	t.Run("contract and restricted type", func(t *testing.T) {
+	t.Run("contract and intersection type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -133,7 +133,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("contract and restricted type, reference", func(t *testing.T) {
+	t.Run("contract and intersection type, reference", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -158,7 +158,7 @@ func TestInterpretTransferCheck(t *testing.T) {
               fun test() {
                   let r <- C.createR()
                   let ref: &CI.R = &r as &CI.R
-                  let restrictedRef: &CI.R{CI.RI} = ref
+                  let intersectionRef: &CI.R{CI.RI} = ref
                   destroy r
               }
             `,

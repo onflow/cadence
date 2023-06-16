@@ -723,33 +723,33 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 			Args: argumentExprs,
 		}
 
-	case *ast.RestrictedType:
+	case *ast.IntersectionType:
 		var elements []dst.Expr
 		if t.Type != nil {
-			restrictedType := typeExpr(t.Type, typeParams)
+			intersectionType := typeExpr(t.Type, typeParams)
 			elements = append(elements,
-				goKeyValue("Type", restrictedType),
+				goKeyValue("Type", intersectionType),
 			)
 		}
 
-		if len(t.Restrictions) > 0 {
-			restrictions := make([]dst.Expr, 0, len(t.Restrictions))
-			for _, restriction := range t.Restrictions {
-				restrictions = append(
-					restrictions,
-					typeExpr(restriction, typeParams),
+		if len(t.Types) > 0 {
+			intersectedTypes := make([]dst.Expr, 0, len(t.Types))
+			for _, intersectedType := range t.Types {
+				intersectedTypes = append(
+					intersectedTypes,
+					typeExpr(intersectedType, typeParams),
 				)
 			}
 			elements = append(
 				elements,
-				goKeyValue("Restrictions",
+				goKeyValue("Types",
 					&dst.CompositeLit{
 						Type: &dst.ArrayType{
 							Elt: &dst.StarExpr{
 								X: dst.NewIdent("InterfaceType"),
 							},
 						},
-						Elts: restrictions,
+						Elts: intersectedTypes,
 					},
 				),
 			)
@@ -758,7 +758,7 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 		return &dst.UnaryExpr{
 			Op: token.AND,
 			X: &dst.CompositeLit{
-				Type: dst.NewIdent("RestrictedType"),
+				Type: dst.NewIdent("IntersectionType"),
 				Elts: elements,
 			},
 		}

@@ -2409,11 +2409,11 @@ func TestCheckAttach(t *testing.T) {
 	})
 }
 
-func TestCheckAttachToRestrictedType(t *testing.T) {
+func TestCheckAttachToIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("struct restricted", func(t *testing.T) {
+	t.Run("struct intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2432,7 +2432,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("any struct restricted", func(t *testing.T) {
+	t.Run("any struct intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2451,7 +2451,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resource restricted", func(t *testing.T) {
+	t.Run("resource intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2470,7 +2470,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anyresource restricted", func(t *testing.T) {
+	t.Run("anyresource intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2525,7 +2525,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		)
 
 		// there is no reason to error here; the owner of this
-		// restricted type is always able to unrestrict
+		// intersection type is always able to unrestrict
 
 		require.NoError(t, err)
 	})
@@ -2632,7 +2632,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach multiply restricted to struct interface", func(t *testing.T) {
+	t.Run("attach multiply intersection to struct interface", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2671,7 +2671,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach multiply restricted to resource interface", func(t *testing.T) {
+	t.Run("attach multiply intersection to resource interface", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3434,7 +3434,7 @@ func TestCheckRemove(t *testing.T) {
 
 }
 
-func TestCheckRemoveFromRestricted(t *testing.T) {
+func TestCheckRemoveFromIntersection(t *testing.T) {
 
 	t.Parallel()
 
@@ -3514,7 +3514,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("struct base anystruct restricted", func(t *testing.T) {
+	t.Run("struct base anystruct intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3533,7 +3533,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("resource base anyresource restricted", func(t *testing.T) {
+	t.Run("resource base anyresource intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3553,7 +3553,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("interface base anystruct restricted", func(t *testing.T) {
+	t.Run("interface base anystruct intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3570,7 +3570,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("interface base anyresource restricted", func(t *testing.T) {
+	t.Run("interface base anyresource intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3588,7 +3588,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("multiple restriction", func(t *testing.T) {
+	t.Run("multiple intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3607,7 +3607,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anystruct multiple restriction", func(t *testing.T) {
+	t.Run("anystruct multiple intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3950,11 +3950,11 @@ func TestCheckAccessAttachment(t *testing.T) {
 	})
 }
 
-func TestCheckAccessAttachmentRestricted(t *testing.T) {
+func TestCheckAccessAttachmentIntersection(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("restricted", func(t *testing.T) {
+	t.Run("intersection", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -3970,7 +3970,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted concrete base", func(t *testing.T) {
+	t.Run("intersection concrete base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -3987,7 +3987,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted concrete base reference", func(t *testing.T) {
+	t.Run("intersection concrete base reference", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4003,7 +4003,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted concrete base reference to interface", func(t *testing.T) {
+	t.Run("intersection concrete base reference to interface", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4020,7 +4020,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted anystruct base", func(t *testing.T) {
+	t.Run("intersection anystruct base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4035,7 +4035,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted anystruct base interface", func(t *testing.T) {
+	t.Run("intersection anystruct base interface", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4050,7 +4050,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted invalid base", func(t *testing.T) {
+	t.Run("intersection invalid base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4068,7 +4068,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted multiply extended base", func(t *testing.T) {
+	t.Run("intersection multiply extended base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4087,7 +4087,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted multiply extended base reference", func(t *testing.T) {
+	t.Run("intersection multiply extended base reference", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4106,7 +4106,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted multiply restricted base", func(t *testing.T) {
+	t.Run("intersection multiply intersection base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4123,7 +4123,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted multiply restricted base interface", func(t *testing.T) {
+	t.Run("intersection multiply intersection base interface", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,

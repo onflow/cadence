@@ -4011,19 +4011,19 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		)
 	})
 
-	t.Run("restricted", func(t *testing.T) {
+	t.Run("intersection", func(t *testing.T) {
 
 		t.Parallel()
 
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
-			Type: &RestrictedStaticType{
+			Type: &IntersectionStaticType{
 				Type: NewCompositeStaticTypeComputeTypeID(
 					nil,
 					utils.TestLocation,
 					"S",
 				),
-				Restrictions: []InterfaceStaticType{
+				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
 						QualifiedIdentifier: "I1",
@@ -4038,7 +4038,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 
 		encoded := assemble(
 			// tag
-			0xd8, CBORTagRestrictedStaticType,
+			0xd8, CBORTagIntersectionStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
@@ -4718,20 +4718,20 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		)
 	})
 
-	t.Run("unauthorized reference, restricted", func(t *testing.T) {
+	t.Run("unauthorized reference, intersection", func(t *testing.T) {
 
 		t.Parallel()
 
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				ReferencedType: &RestrictedStaticType{
+				ReferencedType: &IntersectionStaticType{
 					Type: NewCompositeStaticTypeComputeTypeID(
 						nil,
 						utils.TestLocation,
 						"S",
 					),
-					Restrictions: []InterfaceStaticType{
+					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "I1",
@@ -4758,7 +4758,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagRestrictedStaticType,
+			0xd8, CBORTagIntersectionStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
@@ -4927,13 +4927,13 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		)
 	})
 
-	t.Run("unauthorized reference, restricted AuthAccount", func(t *testing.T) {
+	t.Run("unauthorized reference, intersection AuthAccount", func(t *testing.T) {
 
 		t.Parallel()
 
 		value := &AccountCapabilityControllerValue{
 			BorrowType: ReferenceStaticType{
-				ReferencedType: &RestrictedStaticType{
+				ReferencedType: &IntersectionStaticType{
 					Type: PrimitiveStaticTypeAuthAccount,
 				},
 				Authorization: UnauthorizedAccess,
@@ -4952,7 +4952,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			// null
 			0xf6,
 			// tag
-			0xd8, CBORTagRestrictedStaticType,
+			0xd8, CBORTagIntersectionStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag

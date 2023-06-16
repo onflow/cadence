@@ -131,7 +131,7 @@ var FunctionTypeFunctionType = NewSimpleFunctionType(
 	MetaTypeAnnotation,
 )
 
-var RestrictedTypeFunctionType = NewSimpleFunctionType(
+var IntersectionTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
@@ -143,7 +143,7 @@ var RestrictedTypeFunctionType = NewSimpleFunctionType(
 			),
 		},
 		{
-			Identifier: "restrictions",
+			Identifier: "types",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{
 					Type: StringType,
@@ -245,10 +245,10 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	},
 
 	{
-		Name:  "RestrictedType",
-		Value: RestrictedTypeFunctionType,
-		DocString: `Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument.
-		Returns nil if the restriction is not valid.`,
+		Name:  "IntersectionType",
+		Value: IntersectionTypeFunctionType,
+		DocString: `Creates a run-time type representing an intersection of the interface identifiers in the argument.
+		Returns nil if the intersection is not valid.`,
 	},
 
 	{

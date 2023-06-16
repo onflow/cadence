@@ -4905,7 +4905,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
               return isNil
           }
 
-          fun testValidRestricted(): Bool {
+          fun testValidIntersection(): Bool {
               let r  <- create R()
               let ref: AnyStruct = &r as &R{RI}
               let ref2 = ref as? &R{RI}
@@ -4933,7 +4933,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			result,
 		)
 
-		result, err = inter.Invoke("testValidRestricted")
+		result, err = inter.Invoke("testValidIntersection")
 		require.NoError(t, err)
 
 		assert.IsType(t,
@@ -5001,9 +5001,9 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 					Authorization:        auth,
 					TargetStorageAddress: storageAddress,
 					TargetPath:           storagePath,
-					BorrowedType: &sema.RestrictedType{
+					BorrowedType: &sema.IntersectionType{
 						Type: rType,
-						Restrictions: []*sema.InterfaceType{
+						Types: []*sema.InterfaceType{
 							riType,
 						},
 					},
@@ -5042,7 +5042,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 	                  return ref as? &R
 	              }
 
-	              fun testValidRestricted(): &R{RI}? {
+	              fun testValidIntersection(): &R{RI}? {
 	                  let ref: AnyStruct = getStorageReference(authorized: false)
 	                  return ref as? &R{RI}
 	              }
@@ -5091,7 +5091,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			result,
 		)
 
-		result, err = inter.Invoke("testValidRestricted")
+		result, err = inter.Invoke("testValidIntersection")
 		require.NoError(t, err)
 
 		assert.IsType(t,

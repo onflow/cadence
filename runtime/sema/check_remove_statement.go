@@ -64,7 +64,7 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 				},
 			)
 		}
-	case *RestrictedType:
+	case *IntersectionType:
 		if !IsSubType(baseType, attachmentType.baseType) {
 			checker.report(
 				&InvalidAttachmentRemoveError{

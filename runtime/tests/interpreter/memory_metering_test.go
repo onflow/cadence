@@ -8034,7 +8034,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 func TestInterpretInterfaceStaticType(t *testing.T) {
 	t.Parallel()
 
-	t.Run("RestrictedType", func(t *testing.T) {
+	t.Run("IntersectionType", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -8043,9 +8043,9 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
             access(all) fun main() {
                 let type = Type<AnyStruct{I}>()
 
-                RestrictedType(
+                IntersectionType(
                     identifier: type.identifier,
-                    restrictions: [type.identifier]
+                    types: [type.identifier]
                 )
             }
         `
@@ -8057,7 +8057,7 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInterfaceStaticType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindRestrictedStaticType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIntersectionStaticType))
 	})
 }
 
@@ -8483,7 +8483,7 @@ func TestInterpretASTMetering(t *testing.T) {
                 }
 
                 var g = &a as &Int                                 // reference type
-                var h: AnyStruct{foo} = bar()                      // restricted type
+                var h: AnyStruct{foo} = bar()                      // intersection type
                 var i: Capability<&bar>? = nil                     // instantiation type
             }
 
@@ -8505,7 +8505,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindNominalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindRestrictedType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIntersectionType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindVariableSizedType))
 
 		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindTypeAnnotation))
@@ -8671,7 +8671,7 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 
 		script := `
             access(all) fun main() {
-                let a: {Int: AnyStruct{Foo}} = {}           // dictionary + restricted
+                let a: {Int: AnyStruct{Foo}} = {}           // dictionary + intersection
                 let b: [&Int] = []                          // variable-sized + reference
                 let c: [Int?; 2] = [1, 2]                   // constant-sized + optional
                 let d: [Capability<&Bar>] = []             //  capability + variable-sized + reference
@@ -8692,7 +8692,7 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariableSizedSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindConstantSizedSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalSemaType))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindRestrictedSemaType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindIntersectionSemaType))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindReferenceSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCapabilitySemaType))
 	})
@@ -9258,7 +9258,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		testStaticTypeStringConversion(t, script)
 	})
 
-	t.Run("Restricted type", func(t *testing.T) {
+	t.Run("Intersection type", func(t *testing.T) {
 		t.Parallel()
 
 		script := `

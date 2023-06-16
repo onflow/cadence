@@ -214,7 +214,7 @@ const (
 // Upper mask types
 const (
 	capabilityTypeMask uint64 = 1 << iota
-	restrictedTypeMask
+	intersectionTypeMask
 	transactionTypeMask
 	anyResourceAttachmentMask
 	anyStructAttachmentMask
@@ -333,7 +333,7 @@ var (
 	FunctionTypeTag      = newTypeTagFromLowerMask(functionTypeMask)
 	InterfaceTypeTag     = newTypeTagFromUpperMask(interfaceTypeMask)
 
-	RestrictedTypeTag                  = newTypeTagFromUpperMask(restrictedTypeMask)
+	IntersectionTypeTag                = newTypeTagFromUpperMask(intersectionTypeMask)
 	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
 	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
 	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
@@ -379,7 +379,7 @@ var (
 			Or(GenericTypeTag).
 			Or(InterfaceTypeTag).
 			Or(TransactionTypeTag).
-			Or(RestrictedTypeTag)
+			Or(IntersectionTypeTag)
 )
 
 // Methods
@@ -663,7 +663,7 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	// All derived types goes here.
 	case capabilityTypeMask,
-		restrictedTypeMask,
+		intersectionTypeMask,
 		transactionTypeMask,
 		interfaceTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
@@ -930,9 +930,9 @@ func commonSuperTypeOfComposites(types []Type) Type {
 	}
 
 	if hasCommonInterface {
-		return &RestrictedType{
-			Type:         superType,
-			Restrictions: commonInterfacesList,
+		return &IntersectionType{
+			Type:  superType,
+			Types: commonInterfacesList,
 		}
 	}
 

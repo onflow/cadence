@@ -1403,8 +1403,8 @@ func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	case CBORTagDictionaryStaticType:
 		return d.decodeDictionaryStaticType()
 
-	case CBORTagRestrictedStaticType:
-		return d.decodeRestrictedStaticType()
+	case CBORTagIntersectionStaticType:
+		return d.decodeIntersectionStaticType()
 
 	case CBORTagCapabilityStaticType:
 		return d.decodeCapabilityStaticType()
@@ -1807,15 +1807,15 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	return NewDictionaryStaticType(d.memoryGauge, keyType, valueType), nil
 }
 
-func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
-	const expectedLength = encodedRestrictedStaticTypeLength
+func (d TypeDecoder) decodeIntersectionStaticType() (StaticType, error) {
+	const expectedLength = encodedIntersectionStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, errors.NewUnexpectedError(
-				"invalid restricted static type encoding: expected [%d]any, got %s",
+				"invalid intersection static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1825,76 +1825,76 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 
 	if arraySize != expectedLength {
 		return nil, errors.NewUnexpectedError(
-			"invalid restricted static type encoding: expected [%d]any, got [%d]any",
+			"invalid intersection static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
 		)
 	}
 
-	// Decode restricted type at array index encodedRestrictedStaticTypeTypeFieldKey
-	restrictedType, err := d.DecodeStaticType()
+	// Decode intersection type at array index encodedIntersectionStaticTypeTypeFieldKey
+	intersectionType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, errors.NewUnexpectedError(
-			"invalid restricted static type key type encoding: %w",
+			"invalid intersection static type key type encoding: %w",
 			err,
 		)
 	}
 
-	// Decode restrictions at array index encodedRestrictedStaticTypeRestrictionsFieldKey
-	restrictionSize, err := d.decoder.DecodeArrayHead()
+	// Decode intersected types at array index encodedIntersectionStaticTypeTypesFieldKey
+	intersectionSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, errors.NewUnexpectedError(
-				"invalid restricted static type restrictions encoding: %s",
+				"invalid intersection static type intersections encoding: %s",
 				e.ActualType.String(),
 			)
 		}
 		return nil, err
 	}
 
-	var restrictions []InterfaceStaticType
-	if restrictionSize > 0 {
-		restrictions = make([]InterfaceStaticType, restrictionSize)
-		for i := 0; i < int(restrictionSize); i++ {
+	var intersections []InterfaceStaticType
+	if intersectionSize > 0 {
+		intersections = make([]InterfaceStaticType, intersectionSize)
+		for i := 0; i < int(intersectionSize); i++ {
 
 			number, err := d.decoder.DecodeTagNumber()
 			if err != nil {
 				if e, ok := err.(*cbor.WrongTypeError); ok {
 					return nil, errors.NewUnexpectedError(
-						"invalid restricted static type restriction encoding: expected CBOR tag, got %s",
+						"invalid intersection static type intersection encoding: expected CBOR tag, got %s",
 						e.ActualType.String(),
 					)
 				}
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: %w",
+					"invalid intersection static type intersection encoding: %w",
 					err,
 				)
 			}
 
 			if number != CBORTagInterfaceStaticType {
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: expected CBOR tag %d, got %d",
+					"invalid intersection static type intersection encoding: expected CBOR tag %d, got %d",
 					CBORTagInterfaceStaticType,
 					number,
 				)
 			}
 
-			restriction, err := d.decodeInterfaceStaticType()
+			intersectedType, err := d.decodeInterfaceStaticType()
 			if err != nil {
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: %w",
+					"invalid intersection static type intersection encoding: %w",
 					err,
 				)
 			}
 
-			restrictions[i] = restriction
+			intersections[i] = intersectedType
 		}
 	}
 
-	return NewRestrictedStaticType(
+	return NewIntersectionStaticType(
 		d.memoryGauge,
-		restrictedType,
-		restrictions,
+		intersectionType,
+		intersections,
 	), nil
 }
 

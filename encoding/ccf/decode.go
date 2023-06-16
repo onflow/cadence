@@ -1289,7 +1289,7 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 //	/ contract-interface-type-value
 //	/ function-type-value
 //	/ reference-type-value
-//	/ restricted-type-value
+//	/ intersection-type-value
 //	/ capability-type-value
 //	/ type-value-ref
 func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
@@ -1325,8 +1325,8 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 	case CBORTagReferenceTypeValue:
 		return d.decodeReferenceType(visited, d.decodeTypeValue)
 
-	case CBORTagRestrictedTypeValue:
-		return d.decodeRestrictedType(visited, d.decodeNullableTypeValue, d.decodeTypeValue)
+	case CBORTagIntersectionTypeValue:
+		return d.decodeIntersectionType(visited, d.decodeNullableTypeValue, d.decodeTypeValue)
 
 	case CBORTagFunctionTypeValue:
 		return d.decodeFunctionTypeValue(visited)

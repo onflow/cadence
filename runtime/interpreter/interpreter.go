@@ -3327,10 +3327,10 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"RestrictedType",
+		"IntersectionType",
 		NewUnmeteredHostFunctionValue(
-			sema.RestrictedTypeFunctionType,
-			restrictedTypeFunction,
+			sema.IntersectionTypeFunctionType,
+			intersectionTypeFunction,
 		),
 	)
 }
@@ -3506,46 +3506,46 @@ func functionTypeFunction(invocation Invocation) Value {
 	return NewUnmeteredTypeValue(functionStaticType)
 }
 
-func restrictedTypeFunction(invocation Invocation) Value {
-	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
+func intersectionTypeFunction(invocation Invocation) Value {
+	intersectionIDs, ok := invocation.Arguments[1].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	var staticRestrictions []InterfaceStaticType
-	var semaRestrictions []*sema.InterfaceType
+	var staticIntersections []InterfaceStaticType
+	var semaIntersections []*sema.InterfaceType
 
-	count := restrictionIDs.Count()
+	count := intersectionIDs.Count()
 	if count > 0 {
-		staticRestrictions = make([]InterfaceStaticType, 0, count)
-		semaRestrictions = make([]*sema.InterfaceType, 0, count)
+		staticIntersections = make([]InterfaceStaticType, 0, count)
+		semaIntersections = make([]*sema.InterfaceType, 0, count)
 
-		var invalidRestrictionID bool
-		restrictionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
+		var invalidIntersectionID bool
+		intersectionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
 			typeIDValue, ok := typeID.(*StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+			intersectedInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
 			if err != nil {
-				invalidRestrictionID = true
+				invalidIntersectionID = true
 				return true
 			}
 
-			staticRestrictions = append(
-				staticRestrictions,
-				ConvertSemaToStaticType(invocation.Interpreter, restrictionInterface).(InterfaceStaticType),
+			staticIntersections = append(
+				staticIntersections,
+				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(InterfaceStaticType),
 			)
-			semaRestrictions = append(semaRestrictions, restrictionInterface)
+			semaIntersections = append(semaIntersections, intersectedInterface)
 
 			// Continue iteration
 			return true
 		})
 
-		// If there are any invalid restrictions,
+		// If there are any invalid interfaces,
 		// then return nil
-		if invalidRestrictionID {
+		if invalidIntersectionID {
 			return Nil
 		}
 	}
@@ -3566,19 +3566,19 @@ func restrictedTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	var invalidRestrictedType bool
-	ty := sema.CheckRestrictedType(
+	var invalidIntersectionType bool
+	ty := sema.CheckIntersectionType(
 		invocation.Interpreter,
 		semaType,
-		semaRestrictions,
-		func(_ func(*ast.RestrictedType) error) {
-			invalidRestrictedType = true
+		semaIntersections,
+		func(_ func(*ast.IntersectionType) error) {
+			invalidIntersectionType = true
 		},
 	)
 
-	// If the restricted type would have failed to type-check statically,
+	// If the intersection type would have failed to type-check statically,
 	// then return nil
-	if invalidRestrictedType {
+	if invalidIntersectionType {
 		return Nil
 	}
 
@@ -3586,10 +3586,10 @@ func restrictedTypeFunction(invocation Invocation) Value {
 		invocation.Interpreter,
 		NewTypeValue(
 			invocation.Interpreter,
-			NewRestrictedStaticType(
+			NewIntersectionStaticType(
 				invocation.Interpreter,
 				ConvertSemaToStaticType(invocation.Interpreter, ty),
-				staticRestrictions,
+				staticIntersections,
 			),
 		),
 	)

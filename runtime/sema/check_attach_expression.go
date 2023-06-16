@@ -98,7 +98,7 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 				return reportInvalidBase(baseType)
 			}
 		// these are always resource/structure types
-		case *RestrictedType:
+		case *IntersectionType:
 			break
 		default:
 			return reportInvalidBase(baseType)

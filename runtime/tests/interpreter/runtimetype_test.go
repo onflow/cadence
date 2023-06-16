@@ -561,7 +561,7 @@ func TestInterpretReferenceType(t *testing.T) {
 	)
 }
 
-func TestInterpretRestrictedType(t *testing.T) {
+func TestInterpretIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
@@ -575,32 +575,32 @@ func TestInterpretRestrictedType(t *testing.T) {
         access(all) let foo : Int
       }
 
-      let a = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.R"])!
-      let b = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S"])!
+      let a = IntersectionType(identifier: "S.test.A", types: ["S.test.R"])!
+      let b = IntersectionType(identifier: "S.test.B", types: ["S.test.S"])!
 
-      let c = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.R"])
-      let d = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.S"])
-      let e = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S2"])
+      let c = IntersectionType(identifier: "S.test.B", types: ["S.test.R"])
+      let d = IntersectionType(identifier: "S.test.A", types: ["S.test.S"])
+      let e = IntersectionType(identifier: "S.test.B", types: ["S.test.S2"])
 
-      let f = RestrictedType(identifier: "S.test.B", restrictions: ["X"])
-      let g = RestrictedType(identifier: "S.test.N", restrictions: ["S.test.S2"])
+      let f = IntersectionType(identifier: "S.test.B", types: ["X"])
+      let g = IntersectionType(identifier: "S.test.N", types: ["S.test.S2"])
 
       let h = Type<@A{R}>()
       let i = Type<B{S}>()
 
-      let j = RestrictedType(identifier: nil, restrictions: ["S.test.R"])!
-      let k = RestrictedType(identifier: nil, restrictions: ["S.test.S"])!
+      let j = IntersectionType(identifier: nil, types: ["S.test.R"])!
+      let k = IntersectionType(identifier: nil, types: ["S.test.S"])!
     `)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
+			Type: &interpreter.IntersectionStaticType{
 				Type: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "A",
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.A",
 				},
-				Restrictions: []interpreter.InterfaceStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "R",
 						Location:            utils.TestLocation,
@@ -613,13 +613,13 @@ func TestInterpretRestrictedType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
+			Type: &interpreter.IntersectionStaticType{
 				Type: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "B",
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.B",
 				},
-				Restrictions: []interpreter.InterfaceStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "S",
 						Location:            utils.TestLocation,
@@ -632,9 +632,9 @@ func TestInterpretRestrictedType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
+			Type: &interpreter.IntersectionStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyResource,
-				Restrictions: []interpreter.InterfaceStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "R",
 						Location:            utils.TestLocation,
@@ -647,9 +647,9 @@ func TestInterpretRestrictedType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
+			Type: &interpreter.IntersectionStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
-				Restrictions: []interpreter.InterfaceStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "S",
 						Location:            utils.TestLocation,

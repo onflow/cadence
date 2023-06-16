@@ -140,11 +140,11 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 	case *cadence.ReferenceType:
 		return ct.traverseType(typ.Type)
 
-	case *cadence.RestrictedType:
+	case *cadence.IntersectionType:
 		check := ct.traverseType(typ.Type)
-		for _, restriction := range typ.Restrictions {
-			checkRestriction := ct.traverseType(restriction)
-			check = check || checkRestriction
+		for _, typ := range typ.Types {
+			checkTyp := ct.traverseType(typ)
+			check = check || checkTyp
 		}
 		return check
 

@@ -1105,7 +1105,7 @@ func (e *Encoder) encodeFunction(typ *cadence.FunctionType, visited ccfTypeIDByC
 //	/ contract-interface-type-value
 //	/ function-type-value
 //	/ reference-type-value
-//	/ restricted-type-value
+//	/ intersection-type-value
 //	/ capability-type-value
 //	/ type-value-ref
 //
@@ -1172,8 +1172,8 @@ func (e *Encoder) encodeTypeValue(typ cadence.Type, visited ccfTypeIDByCadenceTy
 	case *cadence.ReferenceType:
 		return e.encodeReferenceTypeValue(typ, visited)
 
-	case *cadence.RestrictedType:
-		return e.encodeRestrictedTypeValue(typ, visited)
+	case *cadence.IntersectionType:
+		return e.encodeIntersectionTypeValue(typ, visited)
 
 	case *cadence.CapabilityType:
 		return e.encodeCapabilityTypeValue(typ, visited)
@@ -1305,18 +1305,18 @@ func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited c
 	)
 }
 
-// encodeRestrictedTypeValue encodes cadence.RestrictedType as
+// encodeIntersectionTypeValue encodes cadence.IntersectionType as
 // language=CDDL
-// restricted-type-value =
+// intersection-type-value =
 //
-//	; cbor-tag-restricted-type-value
+//	; cbor-tag-intersection-type-value
 //	#6.191([
 //	  type: type-value / nil,
-//	  restrictions: [* type-value]
+//	  types: [* type-value]
 //	])
-func (e *Encoder) encodeRestrictedTypeValue(typ *cadence.RestrictedType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagRestrictedTypeValue}
-	return e.encodeRestrictedTypeWithRawTag(
+func (e *Encoder) encodeIntersectionTypeValue(typ *cadence.IntersectionType, visited ccfTypeIDByCadenceType) error {
+	rawTagNum := []byte{0xd8, CBORTagIntersectionTypeValue}
+	return e.encodeIntersectionTypeWithRawTag(
 		typ,
 		visited,
 		e.encodeNullableTypeValue,

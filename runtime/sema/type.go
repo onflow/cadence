@@ -136,7 +136,7 @@ type Type interface {
 	IsComparable() bool
 
 	TypeAnnotationState() TypeAnnotationState
-	RewriteWithRestrictedTypes() (result Type, rewritten bool)
+	RewriteWithIntersectionTypes() (result Type, rewritten bool)
 
 	// Unify attempts to unify the given type with this type, i.e., resolve type parameters
 	// in generic types (see `GenericType`) using the given type parameters.
@@ -642,8 +642,8 @@ func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
 
-func (t *OptionalType) RewriteWithRestrictedTypes() (Type, bool) {
-	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
+func (t *OptionalType) RewriteWithIntersectionTypes() (Type, bool) {
+	rewrittenType, rewritten := t.Type.RewriteWithIntersectionTypes()
 	if rewritten {
 		return &OptionalType{
 			Type: rewrittenType,
@@ -847,7 +847,7 @@ func (*GenericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *GenericType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+func (t *GenericType) RewriteWithIntersectionTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
@@ -1146,7 +1146,7 @@ func (*NumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *NumericType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+func (t *NumericType) RewriteWithIntersectionTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
@@ -1346,7 +1346,7 @@ func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *FixedPointNumericType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+func (t *FixedPointNumericType) RewriteWithIntersectionTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
@@ -2385,8 +2385,8 @@ func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
 
-func (t *VariableSizedType) RewriteWithRestrictedTypes() (Type, bool) {
-	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
+func (t *VariableSizedType) RewriteWithIntersectionTypes() (Type, bool) {
+	rewrittenType, rewritten := t.Type.RewriteWithIntersectionTypes()
 	if rewritten {
 		return &VariableSizedType{
 			Type: rewrittenType,
@@ -2535,8 +2535,8 @@ func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
 
-func (t *ConstantSizedType) RewriteWithRestrictedTypes() (Type, bool) {
-	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
+func (t *ConstantSizedType) RewriteWithIntersectionTypes() (Type, bool) {
+	rewrittenType, rewritten := t.Type.RewriteWithIntersectionTypes()
 	if rewritten {
 		return &ConstantSizedType{
 			Type: rewrittenType,
@@ -3076,7 +3076,7 @@ func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
 	anyRewritten := false
 
 	rewrittenTypeParameterTypeBounds := map[*TypeParameter]Type{}
@@ -3086,7 +3086,7 @@ func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
 			continue
 		}
 
-		rewrittenType, rewritten := typeParameter.TypeBound.RewriteWithRestrictedTypes()
+		rewrittenType, rewritten := typeParameter.TypeBound.RewriteWithIntersectionTypes()
 		if rewritten {
 			anyRewritten = true
 			rewrittenTypeParameterTypeBounds[typeParameter] = rewrittenType
@@ -3097,14 +3097,14 @@ func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
 
 	for i := range t.Parameters {
 		parameter := &t.Parameters[i]
-		rewrittenType, rewritten := parameter.TypeAnnotation.Type.RewriteWithRestrictedTypes()
+		rewrittenType, rewritten := parameter.TypeAnnotation.Type.RewriteWithIntersectionTypes()
 		if rewritten {
 			anyRewritten = true
 			rewrittenParameterTypes[parameter] = rewrittenType
 		}
 	}
 
-	rewrittenReturnType, rewritten := t.ReturnTypeAnnotation.Type.RewriteWithRestrictedTypes()
+	rewrittenReturnType, rewritten := t.ReturnTypeAnnotation.Type.RewriteWithIntersectionTypes()
 	if rewritten {
 		anyRewritten = true
 	}
@@ -4229,7 +4229,7 @@ func (c *CompositeType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *CompositeType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+func (t *CompositeType) RewriteWithIntersectionTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
@@ -4910,18 +4910,18 @@ func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *InterfaceType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *InterfaceType) RewriteWithIntersectionTypes() (Type, bool) {
 	switch t.CompositeKind {
 	case common.CompositeKindResource:
-		return &RestrictedType{
-			Type:         AnyResourceType,
-			Restrictions: []*InterfaceType{t},
+		return &IntersectionType{
+			Type:  AnyResourceType,
+			Types: []*InterfaceType{t},
 		}, true
 
 	case common.CompositeKindStructure:
-		return &RestrictedType{
-			Type:         AnyStructType,
-			Restrictions: []*InterfaceType{t},
+		return &IntersectionType{
+			Type:  AnyStructType,
+			Types: []*InterfaceType{t},
 		}, true
 
 	default:
@@ -5137,9 +5137,9 @@ func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *DictionaryType) RewriteWithRestrictedTypes() (Type, bool) {
-	rewrittenKeyType, keyTypeRewritten := t.KeyType.RewriteWithRestrictedTypes()
-	rewrittenValueType, valueTypeRewritten := t.ValueType.RewriteWithRestrictedTypes()
+func (t *DictionaryType) RewriteWithIntersectionTypes() (Type, bool) {
+	rewrittenKeyType, keyTypeRewritten := t.KeyType.RewriteWithIntersectionTypes()
+	rewrittenValueType, valueTypeRewritten := t.ValueType.RewriteWithIntersectionTypes()
 	rewritten := keyTypeRewritten || valueTypeRewritten
 	if rewritten {
 		return &DictionaryType{
@@ -5595,8 +5595,8 @@ func (r *ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *ReferenceType) RewriteWithRestrictedTypes() (Type, bool) {
-	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
+func (t *ReferenceType) RewriteWithIntersectionTypes() (Type, bool) {
+	rewrittenType, rewritten := t.Type.RewriteWithIntersectionTypes()
 	if rewritten {
 		return &ReferenceType{
 			Authorization: t.Authorization,
@@ -5791,7 +5791,7 @@ func (*AddressType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *AddressType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *AddressType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
@@ -6128,15 +6128,15 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		return true
 
-	case *RestrictedType:
+	case *IntersectionType:
 
-		restrictedSuperType := typedSuperType.Type
-		switch restrictedSuperType {
+		intersectionSuperType := typedSuperType.Type
+		switch intersectionSuperType {
 		case AnyResourceType, AnyStructType, AnyType:
 
 			switch subType {
 			case AnyResourceType:
-				// `AnyResource` is a subtype of a restricted type
+				// `AnyResource` is a subtype of a intersection type
 				// - `AnyResource{Us}`: not statically;
 				// - `AnyStruct{Us}`: never.
 				// - `Any{Us}`: not statically;
@@ -6144,7 +6144,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				return false
 
 			case AnyStructType:
-				// `AnyStruct` is a subtype of a restricted type
+				// `AnyStruct` is a subtype of a intersection type
 				// - `AnyStruct{Us}`: not statically.
 				// - `AnyResource{Us}`: never;
 				// - `Any{Us}`: not statically.
@@ -6152,7 +6152,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				return false
 
 			case AnyType:
-				// `Any` is a subtype of a restricted type
+				// `Any` is a subtype of a intersection type
 				// - `Any{Us}: not statically.`
 				// - `AnyStruct{Us}`: never;
 				// - `AnyResource{Us}`: never;
@@ -6161,54 +6161,54 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			}
 
 			switch typedSubType := subType.(type) {
-			case *RestrictedType:
+			case *IntersectionType:
 
-				// A restricted type `T{Us}`
-				// is a subtype of a restricted type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+				// A intersection type `T{Us}`
+				// is a subtype of a intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
 
-				restrictedSubtype := typedSubType.Type
-				switch restrictedSubtype {
+				intersectionSubtype := typedSubType.Type
+				switch intersectionSubtype {
 				case AnyResourceType, AnyStructType, AnyType:
 					// When `T == AnyResource || T == AnyStruct || T == Any`:
-					// if the restricted type of the subtype
-					// is a subtype of the restricted supertype,
+					// if the intersection type of the subtype
+					// is a subtype of the intersection supertype,
 					// and `Vs` is a subset of `Us`.
 
-					return IsSubType(restrictedSubtype, restrictedSuperType) &&
-						typedSuperType.EffectiveRestrictionSet().
-							IsSubsetOf(typedSubType.EffectiveRestrictionSet())
+					return IsSubType(intersectionSubtype, intersectionSuperType) &&
+						typedSuperType.EffectiveIntersectionSet().
+							IsSubsetOf(typedSubType.EffectiveIntersectionSet())
 				}
 
-				if restrictedSubtype, ok := restrictedSubtype.(*CompositeType); ok {
+				if intersectionSubtype, ok := intersectionSubtype.(*CompositeType); ok {
 					// When `T != AnyResource && T != AnyStruct && T != Any`:
-					// if the restricted type of the subtype
-					// is a subtype of the restricted supertype,
+					// if the intersection type of the subtype
+					// is a subtype of the intersection supertype,
 					// and `T` conforms to `Vs`.
 					// `Us` and `Vs` do *not* have to be subsets.
 
-					return IsSubType(restrictedSubtype, restrictedSuperType) &&
-						typedSuperType.EffectiveRestrictionSet().
-							IsSubsetOf(restrictedSubtype.EffectiveInterfaceConformanceSet())
+					return IsSubType(intersectionSubtype, intersectionSuperType) &&
+						typedSuperType.EffectiveIntersectionSet().
+							IsSubsetOf(intersectionSubtype.EffectiveInterfaceConformanceSet())
 				}
 
 			case *CompositeType:
-				// An unrestricted type `T`
-				// is a subtype of a restricted type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
-				// if `T` is a subtype of the restricted supertype,
+				// A type `T`
+				// is a subtype of a intersection type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
+				// if `T` is a subtype of the intersection supertype,
 				// and `T` conforms to `Us`.
 
 				return IsSubType(typedSubType, typedSuperType.Type) &&
-					typedSuperType.EffectiveRestrictionSet().
+					typedSuperType.EffectiveIntersectionSet().
 						IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 			}
 
 		default:
 
 			switch typedSubType := subType.(type) {
-			case *RestrictedType:
+			case *IntersectionType:
 
-				// A restricted type `T{Us}`
-				// is a subtype of a restricted type `V{Ws}`:
+				// A intersection type `T{Us}`
+				// is a subtype of a intersection type `V{Ws}`:
 
 				switch typedSubType.Type {
 				case AnyResourceType, AnyStructType, AnyType:
@@ -6217,18 +6217,18 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					return false
 				}
 
-				if restrictedSubType, ok := typedSubType.Type.(*CompositeType); ok {
+				if intersectionSubType, ok := typedSubType.Type.(*CompositeType); ok {
 					// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
 					//
 					// `Us` and `Ws` do *not* have to be subsets:
 					// The owner may freely restrict and unrestrict.
 
-					return restrictedSubType == typedSuperType.Type
+					return intersectionSubType == typedSuperType.Type
 				}
 
 			case *CompositeType:
-				// An unrestricted type `T`
-				// is a subtype of a restricted type `U{Vs}`: if `T <: U`.
+				// A type `T`
+				// is a subtype of a intersection type `U{Vs}`: if `T <: U`.
 				//
 				// The owner may freely restrict.
 
@@ -6237,8 +6237,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 			switch subType {
 			case AnyResourceType, AnyStructType, AnyType:
-				// An unrestricted type `T`
-				// is a subtype of a restricted type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+				// A type `T`
+				// is a subtype of a intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
 				// not statically.
 
 				return false
@@ -6251,10 +6251,10 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// is already handled at beginning of function
 
 		switch typedSubType := subType.(type) {
-		case *RestrictedType:
+		case *IntersectionType:
 
-			// A restricted type `T{Us}`
-			// is a subtype of an unrestricted type `V`:
+			// A intersection type `T{Us}`
+			// is a subtype of a type `V`:
 
 			switch typedSubType.Type {
 			case AnyResourceType, AnyStructType, AnyType:
@@ -6262,12 +6262,12 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				return false
 			}
 
-			if restrictedSubType, ok := typedSubType.Type.(*CompositeType); ok {
+			if intersectionSubType, ok := typedSubType.Type.(*CompositeType); ok {
 				// When `T != AnyResource && T != AnyStruct`: if `T == V`.
 				//
 				// The owner may freely unrestrict.
 
-				return restrictedSubType == typedSuperType
+				return intersectionSubType == typedSuperType
 			}
 
 		case *CompositeType:
@@ -6296,8 +6296,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return typedSubType.EffectiveInterfaceConformanceSet().
 				Contains(typedSuperType)
 
-		// An interface type is a supertype of a restricted type if at least one value
-		// in the restriction set is a subtype of the interface supertype.
+		// An interface type is a supertype of a intersection type if at least one value
+		// in the intersection set is a subtype of the interface supertype.
 
 		// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
 		// resource interface I { /* ... */ }
@@ -6305,8 +6305,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		// let i : {I} = ... // some operation constructing `i`
 		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
-		case *RestrictedType:
-			return typedSubType.EffectiveRestrictionSet().Contains(typedSuperType)
+		case *IntersectionType:
+			return typedSubType.EffectiveIntersectionSet().Contains(typedSuperType)
 
 		case *InterfaceType:
 			return typedSubType.EffectiveInterfaceConformanceSet().
@@ -6508,7 +6508,7 @@ func (*TransactionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *TransactionType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *TransactionType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
@@ -6539,107 +6539,105 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-// RestrictedType
-//
-// No restrictions implies the type is fully restricted,
-// i.e. no members of the underlying resource type are available.
-type RestrictedType struct {
+// IntersectionType
+
+type IntersectionType struct {
 	Type Type
-	// an internal set of field `Restrictions`
-	effectiveRestrictionSet     *InterfaceSet
-	Restrictions                []*InterfaceType
-	effectiveRestrictionSetOnce sync.Once
-	memberResolvers             map[string]MemberResolver
-	memberResolversOnce         sync.Once
-	supportedEntitlements       *EntitlementOrderedSet
+	// an internal set of field `Types`
+	effectiveIntersectionSet     *InterfaceSet
+	Types                        []*InterfaceType
+	effectiveIntersectionSetOnce sync.Once
+	memberResolvers              map[string]MemberResolver
+	memberResolversOnce          sync.Once
+	supportedEntitlements        *EntitlementOrderedSet
 }
 
-var _ Type = &RestrictedType{}
+var _ Type = &IntersectionType{}
 
-func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
-	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
+func NewIntersectionType(memoryGauge common.MemoryGauge, typ Type, types []*InterfaceType) *IntersectionType {
+	common.UseMemory(memoryGauge, common.IntersectionSemaTypeMemoryUsage)
 
-	// Also meter the cost for the `effectiveRestrictionSet` here, since ordered maps are not separately metered.
-	wrapperUsage, entryListUsage, entriesUsage := common.NewOrderedMapMemoryUsages(uint64(len(restrictions)))
+	// Also meter the cost for the `effectiveIntersectionSet` here, since ordered maps are not separately metered.
+	wrapperUsage, entryListUsage, entriesUsage := common.NewOrderedMapMemoryUsages(uint64(len(types)))
 	common.UseMemory(memoryGauge, wrapperUsage)
 	common.UseMemory(memoryGauge, entryListUsage)
 	common.UseMemory(memoryGauge, entriesUsage)
 
-	return &RestrictedType{
-		Type:         typ,
-		Restrictions: restrictions,
+	return &IntersectionType{
+		Type:  typ,
+		Types: types,
 	}
 }
 
-func (t *RestrictedType) EffectiveRestrictionSet() *InterfaceSet {
-	t.initializeEffectiveRestrictionSet()
-	return t.effectiveRestrictionSet
+func (t *IntersectionType) EffectiveIntersectionSet() *InterfaceSet {
+	t.initializeEffectiveIntersectionSet()
+	return t.effectiveIntersectionSet
 }
 
-func (t *RestrictedType) initializeEffectiveRestrictionSet() {
-	t.effectiveRestrictionSetOnce.Do(func() {
-		t.effectiveRestrictionSet = NewInterfaceSet()
-		for _, restriction := range t.Restrictions {
-			t.effectiveRestrictionSet.Add(restriction)
+func (t *IntersectionType) initializeEffectiveIntersectionSet() {
+	t.effectiveIntersectionSetOnce.Do(func() {
+		t.effectiveIntersectionSet = NewInterfaceSet()
+		for _, typ := range t.Types {
+			t.effectiveIntersectionSet.Add(typ)
 
 			// Also add the interfaces to which this restricting interface conforms.
-			for _, conformance := range restriction.EffectiveInterfaceConformances() {
-				t.effectiveRestrictionSet.Add(conformance.InterfaceType)
+			for _, conformance := range typ.EffectiveInterfaceConformances() {
+				t.effectiveIntersectionSet.Add(conformance.InterfaceType)
 			}
 		}
 	})
 }
 
-func (*RestrictedType) IsType() {}
+func (*IntersectionType) IsType() {}
 
-func (t *RestrictedType) Tag() TypeTag {
-	return RestrictedTypeTag
+func (t *IntersectionType) Tag() TypeTag {
+	return IntersectionTypeTag
 }
 
-func formatRestrictedType(separator string, typeString string, restrictionStrings []string) string {
+func formatIntersectionType(separator string, typeString string, intersectionStrings []string) string {
 	var result strings.Builder
 	result.WriteString(typeString)
 	result.WriteByte('{')
-	for i, restrictionString := range restrictionStrings {
+	for i, intersectionString := range intersectionStrings {
 		if i > 0 {
 			result.WriteByte(',')
 			result.WriteString(separator)
 		}
-		result.WriteString(restrictionString)
+		result.WriteString(intersectionString)
 	}
 	result.WriteByte('}')
 	return result.String()
 }
 
-func FormatRestrictedTypeID(typeString string, restrictionStrings []string) string {
-	return formatRestrictedType("", typeString, restrictionStrings)
+func FormatIntersectionTypeID(typeString string, intersectionStrings []string) string {
+	return formatIntersectionType("", typeString, intersectionStrings)
 }
 
-func (t *RestrictedType) string(separator string, typeFormatter func(Type) string) string {
-	var restrictionStrings []string
-	restrictionCount := len(t.Restrictions)
-	if restrictionCount > 0 {
-		restrictionStrings = make([]string, 0, restrictionCount)
-		for _, restriction := range t.Restrictions {
-			restrictionStrings = append(restrictionStrings, typeFormatter(restriction))
+func (t *IntersectionType) string(separator string, typeFormatter func(Type) string) string {
+	var intersectionStrings []string
+	typeCount := len(t.Types)
+	if typeCount > 0 {
+		intersectionStrings = make([]string, 0, typeCount)
+		for _, typ := range t.Types {
+			intersectionStrings = append(intersectionStrings, typeFormatter(typ))
 		}
 	}
-	return formatRestrictedType(separator, typeFormatter(t.Type), restrictionStrings)
+	return formatIntersectionType(separator, typeFormatter(t.Type), intersectionStrings)
 }
 
-func (t *RestrictedType) String() string {
+func (t *IntersectionType) String() string {
 	return t.string(" ", func(ty Type) string {
 		return ty.String()
 	})
 }
 
-func (t *RestrictedType) QualifiedString() string {
+func (t *IntersectionType) QualifiedString() string {
 	return t.string(" ", func(ty Type) string {
 		return ty.QualifiedString()
 	})
 }
 
-func (t *RestrictedType) ID() TypeID {
+func (t *IntersectionType) ID() TypeID {
 	return TypeID(
 		t.string("", func(ty Type) string {
 			return string(ty.ID())
@@ -6647,42 +6645,42 @@ func (t *RestrictedType) ID() TypeID {
 	)
 }
 
-func (t *RestrictedType) Equal(other Type) bool {
-	otherRestrictedType, ok := other.(*RestrictedType)
+func (t *IntersectionType) Equal(other Type) bool {
+	otherIntersectionType, ok := other.(*IntersectionType)
 	if !ok {
 		return false
 	}
 
-	if !otherRestrictedType.Type.Equal(t.Type) {
+	if !otherIntersectionType.Type.Equal(t.Type) {
 		return false
 	}
 
-	// Check that the set of restrictions are equal; order does not matter
+	// Check that the set of types are equal; order does not matter
 
-	restrictionSet := t.EffectiveRestrictionSet()
-	otherRestrictionSet := otherRestrictedType.EffectiveRestrictionSet()
+	intersectionSet := t.EffectiveIntersectionSet()
+	otherIntersectionSet := otherIntersectionType.EffectiveIntersectionSet()
 
-	if restrictionSet.Len() != otherRestrictionSet.Len() {
+	if intersectionSet.Len() != otherIntersectionSet.Len() {
 		return false
 	}
 
-	return restrictionSet.IsSubsetOf(otherRestrictionSet)
+	return intersectionSet.IsSubsetOf(otherIntersectionSet)
 }
 
-func (t *RestrictedType) IsResourceType() bool {
+func (t *IntersectionType) IsResourceType() bool {
 	if t.Type == nil {
 		return false
 	}
 	return t.Type.IsResourceType()
 }
 
-func (t *RestrictedType) IsInvalidType() bool {
+func (t *IntersectionType) IsInvalidType() bool {
 	if t.Type != nil && t.Type.IsInvalidType() {
 		return true
 	}
 
-	for _, restriction := range t.Restrictions {
-		if restriction.IsInvalidType() {
+	for _, typ := range t.Types {
+		if typ.IsInvalidType() {
 			return true
 		}
 	}
@@ -6690,13 +6688,13 @@ func (t *RestrictedType) IsInvalidType() bool {
 	return false
 }
 
-func (t *RestrictedType) IsStorable(results map[*Member]bool) bool {
+func (t *IntersectionType) IsStorable(results map[*Member]bool) bool {
 	if t.Type != nil && !t.Type.IsStorable(results) {
 		return false
 	}
 
-	for _, restriction := range t.Restrictions {
-		if !restriction.IsStorable(results) {
+	for _, typ := range t.Types {
+		if !typ.IsStorable(results) {
 			return false
 		}
 	}
@@ -6704,13 +6702,13 @@ func (t *RestrictedType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
-func (t *RestrictedType) IsExportable(results map[*Member]bool) bool {
+func (t *IntersectionType) IsExportable(results map[*Member]bool) bool {
 	if t.Type != nil && !t.Type.IsExportable(results) {
 		return false
 	}
 
-	for _, restriction := range t.Restrictions {
-		if !restriction.IsExportable(results) {
+	for _, typ := range t.Types {
+		if !typ.IsExportable(results) {
 			return false
 		}
 	}
@@ -6718,13 +6716,13 @@ func (t *RestrictedType) IsExportable(results map[*Member]bool) bool {
 	return true
 }
 
-func (t *RestrictedType) IsImportable(results map[*Member]bool) bool {
+func (t *IntersectionType) IsImportable(results map[*Member]bool) bool {
 	if t.Type != nil && !t.Type.IsImportable(results) {
 		return false
 	}
 
-	for _, restriction := range t.Restrictions {
-		if !restriction.IsImportable(results) {
+	for _, typ := range t.Types {
+		if !typ.IsImportable(results) {
 			return false
 		}
 	}
@@ -6732,75 +6730,75 @@ func (t *RestrictedType) IsImportable(results map[*Member]bool) bool {
 	return true
 }
 
-func (*RestrictedType) IsEquatable() bool {
+func (*IntersectionType) IsEquatable() bool {
 	// TODO:
 	return false
 }
 
-func (t *RestrictedType) IsComparable() bool {
+func (t *IntersectionType) IsComparable() bool {
 	return false
 }
 
-func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
+func (*IntersectionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
-	// Even though the restrictions should be resource interfaces,
-	// they are not on the "first level", i.e. not the restricted type
+func (t *IntersectionType) RewriteWithIntersectionTypes() (Type, bool) {
+	// Even though the types should be resource interfaces,
+	// they are not on the "first level", i.e. not the intersection type
 	return t, false
 }
 
-func (t *RestrictedType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
-	var restrictions []*InterfaceType
-	if len(t.Restrictions) > 0 {
-		restrictions = make([]*InterfaceType, 0, len(t.Restrictions))
-		for _, restriction := range t.Restrictions {
-			mapped := restriction.Map(gauge, typeParamMap, f)
-			if mappedRestriction, isRestriction := mapped.(*InterfaceType); isRestriction {
-				restrictions = append(restrictions, mappedRestriction)
+func (t *IntersectionType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	var intersectionTypes []*InterfaceType
+	if len(t.Types) > 0 {
+		intersectionTypes = make([]*InterfaceType, 0, len(t.Types))
+		for _, typ := range t.Types {
+			mapped := typ.Map(gauge, typeParamMap, f)
+			if mappedType, isInterface := mapped.(*InterfaceType); isInterface {
+				intersectionTypes = append(intersectionTypes, mappedType)
 			} else {
-				panic(errors.NewUnexpectedError(fmt.Sprintf("restriction mapped to non-interface type %T", mapped)))
+				panic(errors.NewUnexpectedError(fmt.Sprintf("intersection mapped to non-interface type %T", mapped)))
 			}
 		}
 	}
 
 	mappedType := t.Type.Map(gauge, typeParamMap, f)
 
-	return f(NewRestrictedType(
+	return f(NewIntersectionType(
 		gauge,
 		mappedType,
-		restrictions,
+		intersectionTypes,
 	))
 }
 
-func (t *RestrictedType) GetMembers() map[string]MemberResolver {
+func (t *IntersectionType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
 }
 
-func (t *RestrictedType) initializeMemberResolvers() {
+func (t *IntersectionType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 
 		memberResolvers := map[string]MemberResolver{}
 
-		// Return the members of all restrictions.
-		// The invariant that restrictions may not have overlapping members is not checked here,
+		// Return the members of all typs.
+		// The invariant that typs may not have overlapping members is not checked here,
 		// but implicitly when the resource declaration's conformances are checked.
 
-		for _, restriction := range t.Restrictions {
-			for name, resolver := range restriction.GetMembers() { //nolint:maprange
+		for _, typ := range t.Types {
+			for name, resolver := range typ.GetMembers() { //nolint:maprange
 				if _, ok := memberResolvers[name]; !ok {
 					memberResolvers[name] = resolver
 				}
 			}
 		}
 
-		// Also include members of the restricted type for convenience,
+		// Also include members of the intersection type for convenience,
 		// to help check the rest of the program and improve the developer experience,
 		// *but* also report an error that this access is invalid when the entry is resolved.
 		//
-		// The restricted type may be `AnyResource`, in which case there are no members.
+		// The intersection type may be `AnyResource`, in which case there are no members.
 
 		for name, loopResolver := range t.Type.GetMembers() { //nolint:maprange
 
@@ -6822,7 +6820,7 @@ func (t *RestrictedType) initializeMemberResolvers() {
 					member := resolver.Resolve(memoryGauge, identifier, targetRange, report)
 
 					report(
-						&InvalidRestrictedTypeMemberAccessError{
+						&InvalidIntersectionTypeMemberAccessError{
 							Name:  identifier,
 							Range: targetRange,
 						},
@@ -6837,14 +6835,14 @@ func (t *RestrictedType) initializeMemberResolvers() {
 	})
 }
 
-func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+func (t *IntersectionType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	if t.supportedEntitlements != nil {
 		return t.supportedEntitlements
 	}
 
-	// a restricted type supports all the entitlements of its interfaces and its restricted type
-	set = orderedmap.New[EntitlementOrderedSet](t.EffectiveRestrictionSet().Len())
-	t.EffectiveRestrictionSet().ForEach(func(it *InterfaceType) {
+	// an intersection type supports all the entitlements of its interfaces
+	set = orderedmap.New[EntitlementOrderedSet](t.EffectiveIntersectionSet().Len())
+	t.EffectiveIntersectionSet().ForEach(func(it *InterfaceType) {
 		set.SetAll(it.SupportedEntitlements())
 	})
 	if supportingType, ok := t.Type.(EntitlementSupportingType); ok {
@@ -6855,28 +6853,28 @@ func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	return set
 }
 
-func (*RestrictedType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	// TODO: how do we unify the restriction sets?
+func (*IntersectionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+	// TODO: how do we unify the intersection sets?
 	return false
 }
 
-func (t *RestrictedType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *IntersectionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	// TODO:
 	return t
 }
 
-// restricted types must be type indexable, because this is how we handle access control for attachments.
+// intersection types must be type indexable, because this is how we handle access control for attachments.
 // Specifically, because in `v[A]`, `v` must be a subtype of `A`'s declared base,
-// if `v` is a restricted type `{I}`, only attachments declared for `I` or a supertype can be accessed on `v`.
+// if `v` is a intersection type `{I}`, only attachments declared for `I` or a supertype can be accessed on `v`.
 // Attachments declared for concrete types implementing `I` cannot be accessed.
 // A good elucidating example here is that an attachment declared for `Vault` cannot be accessed on a value of type `&{Provider}`
-func (t *RestrictedType) isTypeIndexableType() bool {
-	// resources and structs only can be indexed for attachments, but all restricted types
+func (t *IntersectionType) isTypeIndexableType() bool {
+	// resources and structs only can be indexed for attachments, but all intersection types
 	// are necessarily structs and resources, we return true
 	return true
 }
 
-func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
+func (t *IntersectionType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
@@ -6893,7 +6891,7 @@ func (t *RestrictedType) TypeIndexingElementType(indexingType Type, _ func() ast
 	}, nil
 }
 
-func (t *RestrictedType) IsValidIndexingType(ty Type) bool {
+func (t *IntersectionType) IsValidIndexingType(ty Type) bool {
 	attachmentType, isComposite := ty.(*CompositeType)
 	return isComposite &&
 		IsSubType(t, attachmentType.baseType) &&
@@ -7016,11 +7014,11 @@ func (*CapabilityType) IsComparable() bool {
 	return false
 }
 
-func (t *CapabilityType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *CapabilityType) RewriteWithIntersectionTypes() (Type, bool) {
 	if t.BorrowType == nil {
 		return t, false
 	}
-	rewrittenType, rewritten := t.BorrowType.RewriteWithRestrictedTypes()
+	rewrittenType, rewritten := t.BorrowType.RewriteWithIntersectionTypes()
 	if rewritten {
 		return &CapabilityType{
 			BorrowType: rewrittenType,
@@ -7573,7 +7571,7 @@ func (*EntitlementType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateDirectEntitlementTypeAnnotation
 }
 
-func (t *EntitlementType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *EntitlementType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
@@ -7703,7 +7701,7 @@ func (*EntitlementMapType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateDirectEntitlementTypeAnnotation
 }
 
-func (t *EntitlementMapType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *EntitlementMapType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 

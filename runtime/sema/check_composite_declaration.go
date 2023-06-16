@@ -2433,13 +2433,13 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 
 func (checker *Checker) declareBaseValue(baseType Type, attachmentType *CompositeType, superDocString string) {
 	if typedBaseType, ok := baseType.(*InterfaceType); ok {
-		restrictedType := AnyStructType
+		intersectionType := AnyStructType
 		if baseType.IsResourceType() {
-			restrictedType = AnyResourceType
+			intersectionType = AnyResourceType
 		}
 		// we can't actually have a value of an interface type I, so instead we create a value of {I}
 		// to be referenced by `base`
-		baseType = NewRestrictedType(checker.memoryGauge, restrictedType, []*InterfaceType{typedBaseType})
+		baseType = NewIntersectionType(checker.memoryGauge, intersectionType, []*InterfaceType{typedBaseType})
 	}
 	// the `base` value in an attachment function has the set of entitlements defined by the required entitlements specified in the attachment's declaration
 	// -------------------------------

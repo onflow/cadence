@@ -216,7 +216,7 @@ const (
 	CBORTagDictionaryStaticType
 	CBORTagOptionalStaticType
 	CBORTagReferenceStaticType
-	CBORTagRestrictedStaticType
+	CBORTagIntersectionStaticType
 	CBORTagCapabilityStaticType
 	CBORTagUnauthorizedStaticAuthorization
 	CBORTagEntitlementMapStaticAuthorization
@@ -1544,49 +1544,49 @@ func (t DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedRestrictedStaticTypeTypeFieldKey         uint64 = 0
-	// encodedRestrictedStaticTypeRestrictionsFieldKey uint64 = 1
+	// encodedIntersectionStaticTypeTypeFieldKey         uint64 = 0
+	// encodedIntersectionStaticTypeTypesFieldKey uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
-	// encodedRestrictedStaticTypeLength MUST be updated when new element is added.
-	// It is used to verify encoded restricted static type length during decoding.
-	encodedRestrictedStaticTypeLength = 2
+	// encodedIntersectionStaticTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded intersection static type length during decoding.
+	encodedIntersectionStaticTypeLength = 2
 )
 
-// Encode encodes RestrictedStaticType as
+// Encode encodes IntersectionStaticType as
 //
 //	cbor.Tag{
-//			Number: CBORTagRestrictedStaticType,
+//			Number: CBORTagIntersectionStaticType,
 //			Content: cborArray{
-//					encodedRestrictedStaticTypeTypeFieldKey:         StaticType(v.Type),
-//					encodedRestrictedStaticTypeRestrictionsFieldKey: []any(v.Restrictions),
+//					encodedIntersectionStaticTypeTypeFieldKey:         StaticType(v.Type),
+//					encodedIntersectionStaticTypeTypesFieldKey: []any(v.Types),
 //			},
 //	}
-func (t *RestrictedStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *IntersectionStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagRestrictedStaticType,
+		0xd8, CBORTagIntersectionStaticType,
 		// array, 2 items follow
 		0x82,
 	})
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedRestrictedStaticTypeTypeFieldKey
+	// Encode type at array index encodedIntersectionStaticTypeTypeFieldKey
 	err = t.Type.Encode(e)
 	if err != nil {
 		return err
 	}
-	// Encode restrictions (as array) at array index encodedRestrictedStaticTypeRestrictionsFieldKey
-	err = e.EncodeArrayHead(uint64(len(t.Restrictions)))
+	// Encode types (as array) at array index encodedIntersectionStaticTypeTypesFieldKey
+	err = e.EncodeArrayHead(uint64(len(t.Types)))
 	if err != nil {
 		return err
 	}
-	for _, restriction := range t.Restrictions {
-		// Encode restriction as array restrictions element
-		err = restriction.Encode(e)
+	for _, typ := range t.Types {
+		// Encode typ as array types element
+		err = typ.Encode(e)
 		if err != nil {
 			return err
 		}
