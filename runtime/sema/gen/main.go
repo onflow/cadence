@@ -1006,6 +1006,70 @@ func (g *generator) currentMemberID(memberName string) string {
 	return b.String()
 }
 
+func (g *generator) generateTypeInit(program *ast.Program) {
+
+	// Currently this only generate registering of entitlements.
+	// It is possible to extend this to register other types as well.
+	// So they are not needed to be manually added to the base activation.
+
+	/* Generates the following:
+
+	   func init() {
+	       BuiltinEntitlements[Foo.Identifier] = Foo
+	       addToBaseActivation(Foo)
+	       ...
+	   }
+	*/
+
+	if len(program.EntitlementDeclarations()) == 0 {
+		return
+	}
+
+	stmts := make([]dst.Stmt, 0)
+
+	for _, declaration := range program.EntitlementDeclarations() {
+		const entitlementsName = "BuiltinEntitlements"
+		varName := entitlementVarName(declaration.Identifier.Identifier)
+
+		mapUpdateStmt := &dst.AssignStmt{
+			Lhs: []dst.Expr{
+				&dst.IndexExpr{
+					X: dst.NewIdent(entitlementsName),
+					Index: &dst.SelectorExpr{
+						X:   dst.NewIdent(varName),
+						Sel: dst.NewIdent("Identifier"),
+					},
+				},
+			},
+			Tok: token.ASSIGN,
+			Rhs: []dst.Expr{
+				dst.NewIdent(varName),
+			},
+		}
+
+		typeRegisterStmt := &dst.ExprStmt{
+			X: &dst.CallExpr{
+				Fun: dst.NewIdent("addToBaseActivation"),
+				Args: []dst.Expr{
+					dst.NewIdent(varName),
+				},
+			},
+		}
+
+		stmts = append(stmts, mapUpdateStmt, typeRegisterStmt)
+	}
+
+	initDecl := &dst.FuncDecl{
+		Name: dst.NewIdent("init"),
+		Type: &dst.FuncType{},
+		Body: &dst.BlockStmt{
+			List: stmts,
+		},
+	}
+
+	g.addDecls(initDecl)
+}
+
 func goField(name string, ty dst.Expr) *dst.Field {
 	return &dst.Field{
 		Names: []*dst.Ident{
@@ -1534,13 +1598,17 @@ func parseCadenceFile(path string) *ast.Program {
 	return program
 }
 
-func gen(inPath string, outFile *os.File) {
+func gen(inPath string, outFile *os.File, registerTypes bool) {
 	program := parseCadenceFile(inPath)
 
 	var gen generator
 
 	for _, declaration := range program.Declarations() {
 		_ = ast.AcceptDeclaration[struct{}](declaration, &gen)
+	}
+
+	if registerTypes {
+		gen.generateTypeInit(program)
 	}
 
 	writeGoFile(inPath, outFile, gen.decls)
@@ -1582,5 +1650,8 @@ func main() {
 	}
 	defer outFile.Close()
 
-	gen(inPath, outFile)
+	// Register generated test types in base activation.
+	const registerTypes = true
+
+	gen(inPath, outFile, registerTypes)
 }

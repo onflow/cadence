@@ -30,3 +30,12 @@ var InsertableEntitlement = &EntitlementType{
 var RemovableEntitlement = &EntitlementType{
 	Identifier: "Removable",
 }
+
+func init() {
+	BuiltinEntitlements[MutableEntitlement.Identifier] = MutableEntitlement
+	addToBaseActivation(MutableEntitlement)
+	BuiltinEntitlements[InsertableEntitlement.Identifier] = InsertableEntitlement
+	addToBaseActivation(InsertableEntitlement)
+	BuiltinEntitlements[RemovableEntitlement.Identifier] = RemovableEntitlement
+	addToBaseActivation(RemovableEntitlement)
+}

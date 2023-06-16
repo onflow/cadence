@@ -3384,25 +3384,8 @@ func init() {
 		AccountCapabilityControllerType,
 	)
 
-	// built-in entitlements
-	for _, entitlement := range BuiltinEntitlementsList {
-		types = append(types, entitlement)
-		BuiltinEntitlements[entitlement.Identifier] = entitlement
-	}
-
 	for _, ty := range types {
-		typeName := ty.String()
-
-		// Check that the type is not accidentally redeclared
-
-		if BaseTypeActivation.Find(typeName) != nil {
-			panic(errors.NewUnreachableError())
-		}
-
-		BaseTypeActivation.Set(
-			typeName,
-			baseTypeVariable(typeName, ty),
-		)
+		addToBaseActivation(ty)
 	}
 
 	// The AST contains empty type annotations, resolve them to Void
@@ -3410,6 +3393,21 @@ func init() {
 	BaseTypeActivation.Set(
 		"",
 		BaseTypeActivation.Find("Void"),
+	)
+}
+
+func addToBaseActivation(ty Type) {
+	typeName := ty.String()
+
+	// Check that the type is not accidentally redeclared
+
+	if BaseTypeActivation.Find(typeName) != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	BaseTypeActivation.Set(
+		typeName,
+		baseTypeVariable(typeName, ty),
 	)
 }
 
@@ -3488,12 +3486,6 @@ var AllNumberTypes = append(
 	NumberType,
 	SignedNumberType,
 )
-
-var BuiltinEntitlementsList = []*EntitlementType{
-	MutableEntitlement,
-	InsertableEntitlement,
-	RemovableEntitlement,
-}
 
 var BuiltinEntitlements = map[string]*EntitlementType{}
 
