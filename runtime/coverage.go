@@ -489,12 +489,12 @@ func (r *CoverageReport) UnmarshalJSON(data []byte) error {
 // key/value pair on the *CoverageReport.Coverage map, to the
 // LCOV format. Currently supports only line coverage, function
 // and branch coverage are not yet available.
+// Description for the LCOV file format, can be found here
+// https://github.com/linux-test-project/lcov/blob/master/man/geninfo.1#L948.
 func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	for location, coverage := range r.Coverage { // nolint:maprange
-		_, err := buf.WriteString(
-			fmt.Sprintf("TN:\nSF:%s\n", location.ID()),
-		)
+		_, err := fmt.Fprintf(buf, "TN:\nSF:%s\n", location.ID())
 		if err != nil {
 			return nil, err
 		}
@@ -505,19 +505,16 @@ func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
 		sort.Ints(lines)
 		for _, line := range lines {
 			hits := coverage.LineHits[line]
-			_, err = buf.WriteString(
-				fmt.Sprintf("DA:%v,%v\n", line, hits),
-			)
+			_, err = fmt.Fprintf(buf, "DA:%v,%v\n", line, hits)
 			if err != nil {
 				return nil, err
 			}
 		}
-		_, err = buf.WriteString(
-			fmt.Sprintf(
-				"LF:%v\nLH:%v\nend_of_record\n",
-				coverage.Statements,
-				coverage.CoveredLines(),
-			),
+		_, err = fmt.Fprintf(
+			buf,
+			"LF:%v\nLH:%v\nend_of_record\n",
+			coverage.Statements,
+			coverage.CoveredLines(),
 		)
 		if err != nil {
 			return nil, err
