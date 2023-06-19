@@ -19,8 +19,6 @@
 package stdlib
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -112,22 +110,3 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 		}
 	},
 )
-
-// InclusiveRangeConstructionError
-
-type InclusiveRangeConstructionError struct {
-	interpreter.LocationRange
-	Message string
-}
-
-var _ errors.UserError = InclusiveRangeConstructionError{}
-
-func (InclusiveRangeConstructionError) IsUserError() {}
-
-func (e InclusiveRangeConstructionError) Error() string {
-	const message = "InclusiveRange construction failed"
-	if e.Message == "" {
-		return message
-	}
-	return fmt.Sprintf("%s: %s", message, e.Message)
-}

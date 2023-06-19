@@ -62,7 +62,14 @@ func NewInclusiveRangeValueWithStep(
 ) *CompositeValue {
 
 	// TODO: Validate if the sequence is moving away from the end value.
-	// Also validate that step is non-zero.
+
+	// Validate that the step is non-zero.
+	if step.Equal(interpreter, locationRange, getValueForIntegerType(0, rangeType.ElementType)) {
+		panic(InclusiveRangeConstructionError{
+			LocationRange: locationRange,
+			Message:       "step value cannot be zero",
+		})
+	}
 
 	fields := []CompositeField{
 		{
