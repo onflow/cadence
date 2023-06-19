@@ -218,6 +218,7 @@ const (
 	CBORTagReferenceStaticType
 	CBORTagRestrictedStaticType
 	CBORTagCapabilityStaticType
+	CBORTagInclusiveRangeStaticType
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -1494,6 +1495,25 @@ func (t DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
 	}
 	// Encode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
 	return t.ValueType.Encode(e)
+}
+
+// Encode encodes InclusiveRangeStaticType as
+//
+//	cbor.Tag{
+//			Number: CBORTagInclusiveRangeStaticType,
+//			Content: StaticType(v.Type),
+//	}
+func (t InclusiveRangeStaticType) Encode(e *cbor.StreamEncoder) error {
+	// Encode tag number and array head
+	err := e.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagInclusiveRangeStaticType,
+	})
+	if err != nil {
+		return err
+	}
+
+	return t.ElementType.Encode(e)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

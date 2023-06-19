@@ -159,17 +159,18 @@ var (
 
 	// Static Types
 
-	PrimitiveStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
-	CompositeStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
-	InterfaceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
-	VariableSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
-	ConstantSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
-	DictionaryStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
-	OptionalStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
-	RestrictedStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
-	ReferenceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
-	CapabilityStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
-	FunctionStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
+	PrimitiveStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
+	CompositeStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
+	InterfaceStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
+	VariableSizedStaticTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
+	ConstantSizedStaticTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
+	DictionaryStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
+	InclusiveRangeStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindInclusiveRangeStaticType)
+	OptionalStaticTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
+	RestrictedStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
+	ReferenceStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
+	CapabilityStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
+	FunctionStaticTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
 
 	// Sema types
 
@@ -219,6 +220,7 @@ var (
 	CadenceContractInterfaceTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindCadenceContractInterfaceType)
 	CadenceContractTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceContractType)
 	CadenceDictionaryTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceDictionaryType)
+	CadenceInclusiveRangeTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceInclusiveRangeType)
 	CadenceEnumTypeMemoryUsage               = NewConstantMemoryUsage(MemoryKindCadenceEnumType)
 	CadenceEventTypeMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceEventType)
 	CadenceFunctionTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceFunctionType)
@@ -264,12 +266,13 @@ var (
 
 	// Static types string representations
 
-	VariableSizedStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(2)  // []
-	DictionaryStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(4)  // {: }
-	OptionalStaticTypeStringMemoryUsage      = NewRawStringMemoryUsage(1)  // ?
-	AuthReferenceStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(5)  // auth&
-	ReferenceStaticTypeStringMemoryUsage     = NewRawStringMemoryUsage(1)  // &
-	CapabilityStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(12) // Capability<>
+	VariableSizedStaticTypeStringMemoryUsage  = NewRawStringMemoryUsage(2)  // []
+	DictionaryStaticTypeStringMemoryUsage     = NewRawStringMemoryUsage(4)  // {: }
+	InclusiveRangeStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(16) // InclusiveRange<>
+	OptionalStaticTypeStringMemoryUsage       = NewRawStringMemoryUsage(1)  // ?
+	AuthReferenceStaticTypeStringMemoryUsage  = NewRawStringMemoryUsage(5)  // auth&
+	ReferenceStaticTypeStringMemoryUsage      = NewRawStringMemoryUsage(1)  // &
+	CapabilityStaticTypeStringMemoryUsage     = NewRawStringMemoryUsage(12) // Capability<>
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

@@ -5222,6 +5222,208 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 	}
 }
 
+// InclusiveRangeType todo.
+
+type InclusiveRangeType struct {
+	MemberType          Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
+}
+
+var _ Type = &InclusiveRangeType{}
+
+func NewInclusiveRangeType(memoryGauge common.MemoryGauge, elementType Type) *InclusiveRangeType {
+	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
+	return &InclusiveRangeType{
+		MemberType: elementType,
+	}
+}
+
+func (*InclusiveRangeType) IsType() {}
+
+func (*InclusiveRangeType) Tag() TypeTag {
+	return InclusiveRangeTypeTag
+}
+
+func (r *InclusiveRangeType) String() string {
+	return fmt.Sprintf(
+		"InclusiveRange<%s>",
+		r.MemberType,
+	)
+}
+
+func (r *InclusiveRangeType) QualifiedString() string {
+	return fmt.Sprintf(
+		"InclusiveRange<%s>",
+		r.MemberType.QualifiedString(),
+	)
+}
+
+func (r *InclusiveRangeType) ID() TypeID {
+	return TypeID(fmt.Sprintf(
+		"InclusiveRange<%s>",
+		r.MemberType.ID(),
+	))
+}
+
+func (r *InclusiveRangeType) Equal(other Type) bool {
+	otherRange, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+
+	return otherRange.MemberType.Equal(r.MemberType)
+}
+
+func (r *InclusiveRangeType) IsResourceType() bool {
+	return r.MemberType.IsResourceType()
+}
+
+func (r *InclusiveRangeType) IsInvalidType() bool {
+	return r.MemberType.IsInvalidType()
+}
+
+func (r *InclusiveRangeType) IsStorable(results map[*Member]bool) bool {
+	return r.MemberType.IsStorable(results)
+}
+
+func (r *InclusiveRangeType) IsExportable(results map[*Member]bool) bool {
+	return r.MemberType.IsExportable(results)
+}
+
+func (r *InclusiveRangeType) IsImportable(results map[*Member]bool) bool {
+	return r.MemberType.IsImportable(results)
+}
+
+func (r *InclusiveRangeType) IsEquatable() bool {
+	return r.MemberType.IsEquatable()
+}
+
+func (*InclusiveRangeType) IsComparable() bool {
+	return false
+}
+
+func (r *InclusiveRangeType) TypeAnnotationState() TypeAnnotationState {
+	elementTypeAnnotationState := r.MemberType.TypeAnnotationState()
+	if elementTypeAnnotationState != TypeAnnotationStateValid {
+		return elementTypeAnnotationState
+	}
+
+	return TypeAnnotationStateValid
+}
+
+func (r *InclusiveRangeType) RewriteWithRestrictedTypes() (Type, bool) {
+	rewrittenElementType, elementTypeRewritten := r.MemberType.RewriteWithRestrictedTypes()
+	if elementTypeRewritten {
+		return &InclusiveRangeType{
+			MemberType: rewrittenElementType,
+		}, true
+	} else {
+		return r, false
+	}
+}
+
+const InclusiveRangeTypeStartFieldName = "start"
+const InclusiveRangeTypeEndInclusiveFieldName = "endInclusive"
+const InclusiveRangeTypeStepFieldName = "step"
+const InclusiveRangeTypeCountFieldName = "count"
+
+const inclusiveRangeTypeCountFieldDocString = `
+The number of entries in the Range sequence
+`
+
+const InclusiveRangeTypeContainsFunctionName = "contains"
+
+const inclusiveRangeTypeContainsFunctionDocString = `
+Returns true if the given integer is in the InclusiveRange sequence
+`
+
+func (r *InclusiveRangeType) GetMembers() map[string]MemberResolver {
+	r.initializeMemberResolvers()
+	return r.memberResolvers
+}
+
+func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			BoolType,
+		),
+	}
+}
+
+func (r *InclusiveRangeType) initializeMemberResolvers() {
+	r.memberResolversOnce.Do(func() {
+		r.memberResolvers = withBuiltinMembers(r, map[string]MemberResolver{
+			InclusiveRangeTypeCountFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						r,
+						identifier,
+						r.ElementType(false),
+						inclusiveRangeTypeCountFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeContainsFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+					elementType := r.ElementType(false)
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						r,
+						identifier,
+						InclusiveRangeContainsFunctionType(elementType),
+						inclusiveRangeTypeContainsFunctionDocString,
+					)
+				},
+			},
+		})
+	})
+}
+
+func (r *InclusiveRangeType) ElementType(_ bool) Type {
+	return r.MemberType
+}
+
+func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
+	return false
+}
+
+func (r *InclusiveRangeType) Unify(
+	other Type,
+	typeParameters *TypeParameterTypeOrderedMap,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+	otherRange, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+
+	return r.MemberType.Unify(otherRange.MemberType, typeParameters, report, outerRange)
+}
+
+func (r *InclusiveRangeType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	memberType := r.MemberType.Resolve(typeArguments)
+	if memberType == nil {
+		return nil
+	}
+
+	return &InclusiveRangeType{
+		MemberType: memberType,
+	}
+}
+
 // ReferenceType represents the reference to a value
 type ReferenceType struct {
 	Type       Type

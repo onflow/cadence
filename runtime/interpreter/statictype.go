@@ -230,6 +230,53 @@ func (t VariableSizedStaticType) Equal(other StaticType) bool {
 	return t.Type.Equal(otherVariableSizedType.Type)
 }
 
+// InclusiveRangeStaticType
+
+type InclusiveRangeStaticType struct {
+	ElementType StaticType
+}
+
+var _ StaticType = InclusiveRangeStaticType{}
+var _ atree.TypeInfo = InclusiveRangeStaticType{}
+
+func NewInclusiveRangeStaticType(
+	memoryGauge common.MemoryGauge,
+	elementType StaticType,
+) InclusiveRangeStaticType {
+	common.UseMemory(memoryGauge, common.InclusiveRangeStaticTypeMemoryUsage)
+
+	return InclusiveRangeStaticType{
+		ElementType: elementType,
+	}
+}
+
+func (InclusiveRangeStaticType) isStaticType() {}
+
+func (InclusiveRangeStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
+func (t InclusiveRangeStaticType) String() string {
+	return fmt.Sprintf("InclusiveRange<%s>", t.ElementType)
+}
+
+func (t InclusiveRangeStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.InclusiveRangeStaticTypeStringMemoryUsage)
+
+	elementStr := t.ElementType.MeteredString(memoryGauge)
+
+	return fmt.Sprintf("InclusiveRange<%s>", elementStr)
+}
+
+func (t InclusiveRangeStaticType) Equal(other StaticType) bool {
+	otherRangeType, ok := other.(InclusiveRangeStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.ElementType.Equal(otherRangeType.ElementType)
+}
+
 // ConstantSizedStaticType
 
 type ConstantSizedStaticType struct {
@@ -767,6 +814,17 @@ func ConvertStaticToSemaType(
 			memoryGauge,
 			keyType,
 			valueType,
+		), nil
+
+	case InclusiveRangeStaticType:
+		elementType, err := ConvertStaticToSemaType(memoryGauge, t.ElementType, getInterface, getComposite)
+		if err != nil {
+			return nil, err
+		}
+
+		return sema.NewInclusiveRangeType(
+			memoryGauge,
+			elementType,
 		), nil
 
 	case OptionalStaticType:

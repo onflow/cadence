@@ -72,6 +72,7 @@ const (
 	MemoryKindVariableSizedStaticType
 	MemoryKindConstantSizedStaticType
 	MemoryKindDictionaryStaticType
+	MemoryKindInclusiveRangeStaticType
 	MemoryKindOptionalStaticType
 	MemoryKindRestrictedStaticType
 	MemoryKindReferenceStaticType
@@ -116,6 +117,7 @@ const (
 	MemoryKindCadenceVariableSizedArrayType
 	MemoryKindCadenceConstantSizedArrayType
 	MemoryKindCadenceDictionaryType
+	MemoryKindCadenceInclusiveRangeType
 	MemoryKindCadenceField
 	MemoryKindCadenceParameter
 	MemoryKindCadenceTypeParameter

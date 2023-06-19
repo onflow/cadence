@@ -224,6 +224,8 @@ const (
 	interfaceTypeMask
 	functionTypeMask
 
+	inclusiveRangeTypeMask
+
 	invalidTypeMask
 )
 
@@ -327,14 +329,15 @@ var (
 			Or(CapabilityPathTypeTag).
 			Or(StoragePathTypeTag)
 
-	ConstantSizedTypeTag = newTypeTagFromLowerMask(constantSizedTypeMask)
-	VariableSizedTypeTag = newTypeTagFromLowerMask(variableSizedTypeMask)
-	DictionaryTypeTag    = newTypeTagFromLowerMask(dictionaryTypeMask)
-	CompositeTypeTag     = newTypeTagFromLowerMask(compositeTypeMask)
-	ReferenceTypeTag     = newTypeTagFromLowerMask(referenceTypeMask)
-	GenericTypeTag       = newTypeTagFromLowerMask(genericTypeMask)
-	FunctionTypeTag      = newTypeTagFromUpperMask(functionTypeMask)
-	InterfaceTypeTag     = newTypeTagFromUpperMask(interfaceTypeMask)
+	ConstantSizedTypeTag  = newTypeTagFromLowerMask(constantSizedTypeMask)
+	VariableSizedTypeTag  = newTypeTagFromLowerMask(variableSizedTypeMask)
+	DictionaryTypeTag     = newTypeTagFromLowerMask(dictionaryTypeMask)
+	InclusiveRangeTypeTag = newTypeTagFromUpperMask(inclusiveRangeTypeMask)
+	CompositeTypeTag      = newTypeTagFromLowerMask(compositeTypeMask)
+	ReferenceTypeTag      = newTypeTagFromLowerMask(referenceTypeMask)
+	GenericTypeTag        = newTypeTagFromLowerMask(genericTypeMask)
+	FunctionTypeTag       = newTypeTagFromUpperMask(functionTypeMask)
+	InterfaceTypeTag      = newTypeTagFromUpperMask(interfaceTypeMask)
 
 	RestrictedTypeTag                  = newTypeTagFromUpperMask(restrictedTypeMask)
 	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
@@ -673,6 +676,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		functionTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 
+	case inclusiveRangeTypeMask:
+		return commonSuperTypeOfRanges(types)
+
 	case anyResourceAttachmentMask:
 		return AnyResourceAttachmentType
 
@@ -687,6 +693,34 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	default:
 		return nil
+	}
+}
+
+func commonSuperTypeOfRanges(types []Type) Type {
+	// We reach here if all types are range types.
+	// Therefore, decide the common supertype based on the member types.
+
+	var memberTypes []Type
+
+	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
+		rangeType, ok := typ.(*InclusiveRangeType)
+		if !ok {
+			panic(errors.NewUnexpectedError("expected inclusive range type, found %s", typ))
+		}
+
+		memberTypes = append(memberTypes, rangeType.MemberType)
+	}
+
+	memberSuperType := leastCommonSuperType(memberTypes...)
+
+	return &InclusiveRangeType{
+		MemberType: memberSuperType,
 	}
 }
 

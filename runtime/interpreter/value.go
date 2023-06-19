@@ -16234,8 +16234,12 @@ func (UFix64Value) Scale() int {
 // CompositeValue
 
 type CompositeValue struct {
-	Destructor      FunctionValue
-	Location        common.Location
+	Destructor FunctionValue
+	Location   common.Location
+
+	// note that the staticType is not guaranteed to be a CompositeStaticType as there can be types
+	// which are non-composite but their values are treated as CompositeValue.
+	// For e.g. InclusiveRangeValue
 	staticType      StaticType
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	InjectedFields  map[string]Value
@@ -16277,6 +16281,25 @@ func NewUnmeteredCompositeField(name string, value Value) CompositeField {
 		Name:  name,
 		Value: value,
 	}
+}
+
+// Create a CompositeValue with the provided StaticType.
+// Useful when we wish to utilize CompositeValue as the value
+// for a type which isn't CompositeType.
+// For e.g. RangeType
+func NewCompositeValueWithStaticType(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
+	fields []CompositeField,
+	address common.Address,
+	staticType StaticType,
+) *CompositeValue {
+	value := NewCompositeValue(interpreter, locationRange, location, qualifiedIdentifier, kind, fields, address)
+	value.staticType = staticType
+	return value
 }
 
 func NewCompositeValue(
