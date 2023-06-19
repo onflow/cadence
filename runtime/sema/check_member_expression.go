@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // NOTE: only called if the member expression is *not* an assignment
@@ -105,6 +106,14 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 		member.DeclarationKind == common.DeclarationKindField {
 		// Get a reference to the type
 		memberType = checker.getReferenceType(memberType)
+
+		// Store the result in elaboration, so the interpreter can re-use this.
+		memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		memberInfo.ReturnReference = true
+		checker.Elaboration.SetMemberExpressionMemberInfo(expression, memberInfo)
 	}
 
 	return memberType
@@ -148,6 +157,10 @@ func isContainerType(typ Type) bool {
 	case *OptionalType:
 		return isContainerType(typ.Type)
 	default:
+		switch typ {
+		case AnyStructType, AnyResourceType:
+			return true
+		}
 		return false
 	}
 }

@@ -726,6 +726,33 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("composite reference, anystruct typed field, with reference value", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: AnyStruct
+                init() {
+                    var s = "hello"
+                    self.x = &s as &String
+                }
+            }
+
+            fun test():&AnyStruct  {
+                let test = Test()
+                let testRef = &test as &Test
+                return testRef.x
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, result)
+		ref := result.(*interpreter.EphemeralReferenceValue)
+
+		// Must only have one level of references.
+		require.IsType(t, &interpreter.StringValue{}, ref.Value)
+	})
+
 	t.Run("array, element", func(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             fun test() {
@@ -789,6 +816,26 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("array reference, anystruct typed element, with reference value", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t, `
+            fun test(): &AnyStruct {
+                var s = "hello"
+                let array: [AnyStruct] = [&s as &String]
+                let arrayRef = &array as &[AnyStruct]
+                return arrayRef[0]
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, result)
+		ref := result.(*interpreter.EphemeralReferenceValue)
+
+		// Must only have one level of references.
+		require.IsType(t, &interpreter.StringValue{}, ref.Value)
 	})
 
 	t.Run("dictionary, value", func(t *testing.T) {
