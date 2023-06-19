@@ -184,6 +184,20 @@ func exportValueWithInterpreter(
 		return cadence.NewMeteredWord32(inter, uint32(v)), nil
 	case interpreter.Word64Value:
 		return cadence.NewMeteredWord64(inter, uint64(v)), nil
+	case interpreter.Word128Value:
+		return cadence.NewMeteredWord128FromBig(
+			inter,
+			func() *big.Int {
+				return v.ToBigInt(inter)
+			},
+		)
+	case interpreter.Word256Value:
+		return cadence.NewMeteredWord256FromBig(
+			inter,
+			func() *big.Int {
+				return v.ToBigInt(inter)
+			},
+		)
 	case interpreter.Fix64Value:
 		return cadence.Fix64(v), nil
 	case interpreter.UFix64Value:
@@ -793,6 +807,10 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		return i.importWord32(v), nil
 	case cadence.Word64:
 		return i.importWord64(v), nil
+	case cadence.Word128:
+		return i.importWord128(v), nil
+	case cadence.Word256:
+		return i.importWord256(v), nil
 	case cadence.Fix64:
 		return i.importFix64(v), nil
 	case cadence.UFix64:
@@ -1029,6 +1047,24 @@ func (i valueImporter) importWord64(v cadence.Word64) interpreter.Word64Value {
 		i.inter,
 		func() uint64 {
 			return uint64(v)
+		},
+	)
+}
+
+func (i valueImporter) importWord128(v cadence.Word128) interpreter.Word128Value {
+	return interpreter.NewWord128ValueFromBigInt(
+		i.inter,
+		func() *big.Int {
+			return v.Value
+		},
+	)
+}
+
+func (i valueImporter) importWord256(v cadence.Word256) interpreter.Word256Value {
+	return interpreter.NewWord256ValueFromBigInt(
+		i.inter,
+		func() *big.Int {
+			return v.Value
 		},
 	)
 }

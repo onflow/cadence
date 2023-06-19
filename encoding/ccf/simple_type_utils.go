@@ -81,6 +81,10 @@ const ( // Cadence simple type IDs
 	TypeBytes
 	TypeVoid
 	TypeFunction
+	TypeWord128
+	TypeWord256
+	TypeAnyStructAttachmentType
+	TypeAnyResourceAttachmentType
 )
 
 // NOTE: cadence.FunctionType isn't included in simpleTypeIDByType
@@ -194,6 +198,12 @@ func simpleTypeIDByType(typ cadence.Type) (uint64, bool) {
 	case cadence.Word64Type:
 		return TypeWord64, true
 
+	case cadence.Word128Type:
+		return TypeWord128, true
+
+	case cadence.Word256Type:
+		return TypeWord256, true
+
 	case cadence.Fix64Type:
 		return TypeFix64, true
 
@@ -241,6 +251,12 @@ func simpleTypeIDByType(typ cadence.Type) (uint64, bool) {
 
 	case cadence.DeployedContractType:
 		return TypeDeployedContract, true
+
+	case cadence.AnyStructAttachmentType:
+		return TypeAnyStructAttachmentType, true
+
+	case cadence.AnyResourceAttachmentType:
+		return TypeAnyResourceAttachmentType, true
 	}
 
 	return 0, false

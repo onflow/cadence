@@ -222,16 +222,10 @@ func NewAuthAccountValue(
 			)
 		},
 		func() interpreter.Value {
-			capabilities := newAuthAccountCapabilitiesValue(
+			return newAuthAccountCapabilitiesValue(
 				gauge,
 				handler,
 				addressValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				capabilities,
-				sema.AuthAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -493,7 +487,9 @@ func newAddPublicKeyFunction(
 
 			locationRange := invocation.LocationRange
 
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(gauge, publicKeyValue, locationRange)
+			inter := invocation.Interpreter
+
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(inter, publicKeyValue, locationRange)
 			if err != nil {
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
@@ -505,10 +501,9 @@ func newAddPublicKeyFunction(
 				panic(err)
 			}
 
-			inter := invocation.Interpreter
 			handler.EmitEvent(
 				inter,
-				AccountKeyAddedEventType,
+				AccountKeyAddedFromByteArrayEventType,
 				[]interpreter.Value{
 					addressValue,
 					publicKeyValue,
@@ -564,7 +559,7 @@ func newRemovePublicKeyFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyRemovedEventType,
+				AccountKeyRemovedFromByteArrayEventType,
 				[]interpreter.Value{
 					addressValue,
 					publicKeyValue,
@@ -630,7 +625,7 @@ func newAccountKeysAddFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyAddedEventType,
+				AccountKeyAddedFromPublicKeyEventType,
 				[]interpreter.Value{
 					addressValue,
 					publicKeyValue,
@@ -901,7 +896,7 @@ func newAccountKeysRevokeFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyRemovedEventType,
+				AccountKeyRemovedFromPublicKeyIndexEventType,
 				[]interpreter.Value{
 					addressValue,
 					indexValue,
@@ -1478,7 +1473,7 @@ func newAuthAccountContractsChangeFunction(
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue, locationRange)
+			code, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
 			if err != nil {
 				panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 			}
@@ -2137,15 +2132,9 @@ func NewPublicAccountValue(
 			)
 		},
 		func() interpreter.Value {
-			capabilities := newPublicAccountCapabilitiesValue(
+			return newPublicAccountCapabilitiesValue(
 				gauge,
 				addressValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				capabilities,
-				sema.PublicAccountTypeCapabilitiesFieldType.Type,
 			)
 		},
 	)
@@ -2206,7 +2195,7 @@ func NewHashAlgorithmFromValue(
 
 func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
 	codeHash := sha3.Sum256(code)
-	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
+	return interpreter.ByteSliceToConstantSizedByteArrayValue(inter, codeHash[:])
 }
 
 func newAuthAccountStorageCapabilitiesValue(
@@ -2253,29 +2242,17 @@ func newAuthAccountCapabilitiesValue(
 		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
 		newAuthAccountCapabilitiesMigrateLinkFunction(gauge, idGenerator, addressValue),
 		func() interpreter.Value {
-			storageCapabilities := newAuthAccountStorageCapabilitiesValue(
+			return newAuthAccountStorageCapabilitiesValue(
 				gauge,
 				idGenerator,
 				addressValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				storageCapabilities,
-				sema.AuthAccountCapabilitiesTypeStorageFieldType.Type,
 			)
 		},
 		func() interpreter.Value {
-			accountCapabilities := newAuthAccountAccountCapabilitiesValue(
+			return newAuthAccountAccountCapabilitiesValue(
 				gauge,
 				idGenerator,
 				addressValue,
-			)
-			return interpreter.NewEphemeralReferenceValue(
-				gauge,
-				false,
-				accountCapabilities,
-				sema.AuthAccountCapabilitiesTypeAccountFieldType.Type,
 			)
 		},
 	)

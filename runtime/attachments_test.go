@@ -146,6 +146,7 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 }
 
 func TestAccountAttachmentExport(t *testing.T) {
+
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -233,6 +234,7 @@ func TestAccountAttachmentExport(t *testing.T) {
 }
 
 func TestAccountAttachedExport(t *testing.T) {
+
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)

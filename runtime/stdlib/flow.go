@@ -131,6 +131,8 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 
 // built-in event types
 
+var FlowEventTypes = map[common.TypeID]*sema.CompositeType{}
+
 func newFlowEventType(identifier string, parameters ...sema.Parameter) *sema.CompositeType {
 
 	eventType := &sema.CompositeType{
@@ -164,6 +166,8 @@ func newFlowEventType(identifier string, parameters ...sema.Parameter) *sema.Com
 		)
 	}
 
+	FlowEventTypes[eventType.ID()] = eventType
+
 	return eventType
 }
 
@@ -184,10 +188,24 @@ var AccountEventCodeHashParameter = sema.Parameter{
 	TypeAnnotation: sema.NewTypeAnnotation(HashType),
 }
 
-var AccountEventPublicKeyParameter = sema.Parameter{
+var AccountEventPublicKeyParameterAsByteArrayType = sema.Parameter{
 	Identifier: "publicKey",
 	TypeAnnotation: sema.NewTypeAnnotation(
 		sema.ByteArrayType,
+	),
+}
+
+var AccountEventPublicKeyParameterAsCompositeType = sema.Parameter{
+	Identifier: "publicKey",
+	TypeAnnotation: sema.NewTypeAnnotation(
+		sema.PublicKeyType,
+	),
+}
+
+var AccountEventPublicKeyIndexParameter = sema.Parameter{
+	Identifier: "publicKey",
+	TypeAnnotation: sema.NewTypeAnnotation(
+		sema.IntType,
 	),
 }
 
@@ -201,16 +219,28 @@ var AccountCreatedEventType = newFlowEventType(
 	AccountEventAddressParameter,
 )
 
-var AccountKeyAddedEventType = newFlowEventType(
+var AccountKeyAddedFromByteArrayEventType = newFlowEventType(
 	"AccountKeyAdded",
 	AccountEventAddressParameter,
-	AccountEventPublicKeyParameter,
+	AccountEventPublicKeyParameterAsByteArrayType,
 )
 
-var AccountKeyRemovedEventType = newFlowEventType(
+var AccountKeyAddedFromPublicKeyEventType = newFlowEventType(
+	"AccountKeyAdded",
+	AccountEventAddressParameter,
+	AccountEventPublicKeyParameterAsCompositeType,
+)
+
+var AccountKeyRemovedFromByteArrayEventType = newFlowEventType(
 	"AccountKeyRemoved",
 	AccountEventAddressParameter,
-	AccountEventPublicKeyParameter,
+	AccountEventPublicKeyParameterAsByteArrayType,
+)
+
+var AccountKeyRemovedFromPublicKeyIndexEventType = newFlowEventType(
+	"AccountKeyRemoved",
+	AccountEventAddressParameter,
+	AccountEventPublicKeyIndexParameter,
 )
 
 var AccountContractAddedEventType = newFlowEventType(

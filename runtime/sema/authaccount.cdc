@@ -26,7 +26,7 @@ pub struct AuthAccount {
     pub let inbox: AuthAccount.Inbox
 
     /// The capabilities of the account.
-    pub let capabilities: &AuthAccount.Capabilities
+    pub let capabilities: AuthAccount.Capabilities
 
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]
@@ -108,6 +108,14 @@ pub struct AuthAccount {
     ///
     /// The path must be a storage path, i.e., only the domain `storage` is allowed
     pub fun borrow<T: &Any>(from: StoragePath): T?
+
+    /// Returns true if the object in account storage under the given path satisfies the given type, 
+    /// i.e. could be borrowed using the given type.
+    ///
+    /// The given type must not necessarily be exactly the same as the type of the borrowed object.
+    ///
+    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+    pub fun check<T: Any>(from: StoragePath): Bool
 
     /// **DEPRECATED**: Instead, use `capabilities.storage.issue`, and `capabilities.publish` if the path is public.
     ///
@@ -323,10 +331,10 @@ pub struct AuthAccount {
     pub struct Capabilities {
 
         /// The storage capabilities of the account.
-        pub let storage: &AuthAccount.StorageCapabilities
+        pub let storage: AuthAccount.StorageCapabilities
 
         /// The account capabilities of the account.
-        pub let account: &AuthAccount.AccountCapabilities
+        pub let account: AuthAccount.AccountCapabilities
 
         /// Returns the capability at the given public path.
         /// Returns nil if the capability does not exist,

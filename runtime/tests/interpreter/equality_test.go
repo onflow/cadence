@@ -228,6 +228,8 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 			interpreter.PrimitiveStaticTypeWord16,
 			interpreter.PrimitiveStaticTypeWord32,
 			interpreter.PrimitiveStaticTypeWord64,
+			interpreter.PrimitiveStaticTypeWord128,
+			interpreter.PrimitiveStaticTypeWord256,
 		}
 
 		for _, subtype := range intSubtypes {

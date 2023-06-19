@@ -32,11 +32,11 @@ import (
 	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
-// CBOREncMode
+// defaultCBOREncMode
 //
 // See https://github.com/fxamacker/cbor:
 // "For best performance, reuse EncMode and DecMode after creating them."
-var CBOREncMode = func() cbor.EncMode {
+var defaultCBOREncMode = func() cbor.EncMode {
 	options := cbor.CoreDetEncOptions()
 	options.BigIntConvert = cbor.BigIntConvertNone
 	encMode, err := options.EncMode()
@@ -50,17 +50,88 @@ var CBOREncMode = func() cbor.EncMode {
 type Encoder struct {
 	// CCF codec uses CBOR codec under the hood.
 	enc *cbor.StreamEncoder
+
 	// cachedSortedFieldIndex contains sorted field index of Cadence composite types.
 	cachedSortedFieldIndex map[string][]int // key: composite type ID, value: sorted field indexes
+
+	// CCF encoding mode containing CCF encoding options
+	em *encMode
+}
+
+type EncMode interface {
+	// Encode returns the CCF-encoded representation of the given value.
+	//
+	// This function returns an error if the Cadence value cannot be represented in CCF.
+	Encode(value cadence.Value) ([]byte, error)
+
+	// MustEncode returns the CCF-encoded representation of the given value, or panics
+	// if the value cannot be represented in CCF.
+	MustEncode(value cadence.Value) []byte
+
+	// NewEncoder initializes an Encoder that will write CCF-encoded bytes to the
+	// given io.Writer.
+	NewEncoder(w io.Writer) *Encoder
+}
+
+type SortMode int
+
+const (
+	// SortNone means no sorting.
+	SortNone SortMode = iota
+
+	// SortBytewiseLexical means bytewise lexicographic order.
+	SortBytewiseLexical
+
+	maxSortMode
+)
+
+func (sm SortMode) valid() bool {
+	return sm < maxSortMode
+}
+
+// EncOptions specifies CCF encoding options.
+type EncOptions struct {
+	// SortCompositeFields specifies sort order of Cadence composite fields.
+	SortCompositeFields SortMode
+
+	// SortRestrictedTypes specifies sort order of Cadence restricted types.
+	SortRestrictedTypes SortMode
+}
+
+// EventsEncMode is CCF encoding mode for events which contains
+// immutable CCF encoding options.  It is safe for concurrent use.
+var EventsEncMode = &encMode{
+	sortCompositeFields: SortNone,
+	sortRestrictedTypes: SortNone,
+}
+
+type encMode struct {
+	sortCompositeFields SortMode
+	sortRestrictedTypes SortMode
+}
+
+// EncMode returns CCF encoding mode, which contains immutable encoding options
+// and is safe for concurrent use.
+func (opts EncOptions) EncMode() (EncMode, error) {
+	if !opts.SortCompositeFields.valid() {
+		return nil, fmt.Errorf("ccf: invalid SortCompositeFields %d", opts.SortCompositeFields)
+	}
+	if !opts.SortRestrictedTypes.valid() {
+		return nil, fmt.Errorf("ccf: invalid SortRestrictedTypes %d", opts.SortRestrictedTypes)
+	}
+	return &encMode{
+		sortCompositeFields: opts.SortCompositeFields,
+		sortRestrictedTypes: opts.SortRestrictedTypes,
+	}, nil
 }
 
 // Encode returns the CCF-encoded representation of the given value.
 //
 // This function returns an error if the Cadence value cannot be represented in CCF.
-func Encode(value cadence.Value) ([]byte, error) {
+func (em *encMode) Encode(value cadence.Value) ([]byte, error) {
 	var w bytes.Buffer
 
-	enc := NewEncoder(&w)
+	enc := em.NewEncoder(&w)
 	defer enc.enc.Close()
 
 	err := enc.Encode(value)
@@ -73,8 +144,8 @@ func Encode(value cadence.Value) ([]byte, error) {
 
 // MustEncode returns the CCF-encoded representation of the given value, or panics
 // if the value cannot be represented in CCF.
-func MustEncode(value cadence.Value) []byte {
-	b, err := Encode(value)
+func (em *encMode) MustEncode(value cadence.Value) []byte {
+	b, err := em.Encode(value)
 	if err != nil {
 		panic(err)
 	}
@@ -83,12 +154,33 @@ func MustEncode(value cadence.Value) []byte {
 
 // NewEncoder initializes an Encoder that will write CCF-encoded bytes to the
 // given io.Writer.
-func NewEncoder(w io.Writer) *Encoder {
-	// CCF codec uses CBOR codec under the hood.
+func (em *encMode) NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{
-		enc:                    CBOREncMode.NewStreamEncoder(w),
+		enc:                    defaultCBOREncMode.NewStreamEncoder(w),
 		cachedSortedFieldIndex: make(map[string][]int),
+		em:                     em,
 	}
+}
+
+var defaultEncMode = &encMode{}
+
+// Encode returns the CCF-encoded representation of the given value
+// by using default CCF encoding options.  This function returns an
+// error if the Cadence value cannot be represented in CCF.
+func Encode(value cadence.Value) ([]byte, error) {
+	return defaultEncMode.Encode(value)
+}
+
+// MustEncode returns the CCF-encoded representation of the given value, or panics
+// if the value cannot be represented in CCF.  Default CCF encoding options are used.
+func MustEncode(value cadence.Value) []byte {
+	return defaultEncMode.MustEncode(value)
+}
+
+// NewEncoder initializes an Encoder that will write CCF-encoded bytes to the
+// given io.Writer. Default CCF encoding options are used.
+func NewEncoder(w io.Writer) *Encoder {
+	return defaultEncMode.NewEncoder(w)
 }
 
 // Encode writes the CCF-encoded representation of the given value to this
@@ -322,6 +414,8 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 //	/ word16-value
 //	/ word32-value
 //	/ word64-value
+//	/ word128-value
+//	/ word256-value
 //	/ fix64-value
 //	/ ufix64-value
 //
@@ -340,6 +434,10 @@ func (e *Encoder) encodeValue(
 	staticType cadence.Type,
 	tids ccfTypeIDByCadenceType,
 ) error {
+
+	if v == nil {
+		return e.enc.EncodeNil()
+	}
 
 	runtimeType := v.Type()
 
@@ -446,6 +544,12 @@ func (e *Encoder) encodeValue(
 
 	case cadence.Word64:
 		return e.encodeWord64(v)
+
+	case cadence.Word128:
+		return e.encodeWord128(v)
+
+	case cadence.Word256:
+		return e.encodeWord256(v)
 
 	case cadence.Fix64:
 		return e.encodeFix64(v)
@@ -690,6 +794,20 @@ func (e *Encoder) encodeWord64(v cadence.Word64) error {
 	return e.enc.EncodeUint64(uint64(v))
 }
 
+// encodeWord128 encodes cadence.Word128 as
+// language=CDDL
+// word128-value = uint .ge 0
+func (e *Encoder) encodeWord128(v cadence.Word128) error {
+	return e.enc.EncodeBigInt(v.Big())
+}
+
+// encodeWord256 encodes cadence.Word256 as
+// language=CDDL
+// word256-value = uint .ge 0
+func (e *Encoder) encodeWord256(v cadence.Word256) error {
+	return e.enc.EncodeBigInt(v.Big())
+}
+
 // encodeFix64 encodes cadence.Fix64 as
 // language=CDDL
 // fix64-value = (int .ge -9223372036854775808) .le 9223372036854775807
@@ -775,7 +893,7 @@ func (e *Encoder) encodeSortedDictionary(v cadence.Dictionary, tids ccfTypeIDByC
 	defer putBuffer(buf)
 
 	// Encode and sort key value pairs.
-	sortedPairs, err := encodeAndSortKeyValuePairs(buf, v, tids)
+	sortedPairs, err := encodeAndSortKeyValuePairs(buf, v, tids, e.em)
 	if err != nil {
 		return err
 	}
@@ -801,6 +919,8 @@ func encodeAndSortKeyValuePairs(
 	buf *bytes.Buffer,
 	v cadence.Dictionary,
 	tids ccfTypeIDByCadenceType,
+	em *encMode,
+
 ) (
 	[]encodedKeyValuePair,
 	error,
@@ -810,7 +930,7 @@ func encodeAndSortKeyValuePairs(
 
 	encodedPairs := make([]encodedKeyValuePair, len(v.Pairs))
 
-	e := NewEncoder(buf)
+	e := em.NewEncoder(buf)
 
 	for i, pair := range v.Pairs {
 
@@ -917,31 +1037,47 @@ func (e *Encoder) encodeComposite(
 		return err
 	}
 
-	switch len(fields) {
-	case 0:
-		// Short-circuit if there is no field.
-		return nil
-
-	case 1:
-		// Avoid overhead of sorting if there is only one field.
-		return e.encodeValue(fields[0], staticFieldTypes[0].Type, tids)
-
-	default:
-		sortedIndexes := e.getSortedFieldIndex(typ)
-
-		if len(sortedIndexes) != len(staticFieldTypes) {
-			panic(cadenceErrors.NewUnexpectedError("number of sorted indexes doesn't match number of field types"))
-		}
-
-		for _, index := range sortedIndexes {
-			// Encode sorted field as value.
-			err = e.encodeValue(fields[index], staticFieldTypes[index].Type, tids)
+	switch e.em.sortCompositeFields {
+	case SortNone:
+		// Encode fields without sorting.
+		for i, field := range fields {
+			err = e.encodeValue(field, staticFieldTypes[i].Type, tids)
 			if err != nil {
 				return err
 			}
 		}
-
 		return nil
+
+	case SortBytewiseLexical:
+		switch len(fields) {
+		case 0:
+			// Short-circuit if there is no field.
+			return nil
+
+		case 1:
+			// Avoid overhead of sorting if there is only one field.
+			return e.encodeValue(fields[0], staticFieldTypes[0].Type, tids)
+
+		default:
+			sortedIndexes := e.getSortedFieldIndex(typ)
+
+			if len(sortedIndexes) != len(staticFieldTypes) {
+				panic(cadenceErrors.NewUnexpectedError("number of sorted indexes doesn't match number of field types"))
+			}
+
+			for _, index := range sortedIndexes {
+				// Encode sorted field as value.
+				err = e.encodeValue(fields[index], staticFieldTypes[index].Type, tids)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		}
+
+	default:
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for composite fields: %d", e.em.sortCompositeFields))
 	}
 }
 
@@ -1574,36 +1710,52 @@ func (e *Encoder) encodeFieldTypeValues(fieldTypes []cadence.Field, visited ccfT
 		return err
 	}
 
-	switch len(fieldTypes) {
-	case 0:
-		// Short-circuit if there is no field type.
-		return nil
-
-	case 1:
-		// Avoid overhead of sorting if there is only one field type.
-		return e.encodeFieldTypeValue(fieldTypes[0], visited)
-
-	default:
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "composite-type-value.fields MUST be sorted by name."
-
-		// NOTE: bytewiseFieldIdentifierSorter doesn't sort fieldTypes in place.
-		// bytewiseFieldIdentifierSorter.indexes is used as sorted fieldTypes
-		// index.
-		sorter := newBytewiseFieldSorter(fieldTypes)
-
-		sort.Sort(sorter)
-
-		// Encode sorted field types.
-		for _, index := range sorter.indexes {
-			err = e.encodeFieldTypeValue(fieldTypes[index], visited)
+	switch e.em.sortCompositeFields {
+	case SortNone:
+		// Encode fields without sorting.
+		for _, fieldType := range fieldTypes {
+			err = e.encodeFieldTypeValue(fieldType, visited)
 			if err != nil {
 				return err
 			}
 		}
-
 		return nil
+
+	case SortBytewiseLexical:
+		switch len(fieldTypes) {
+		case 0:
+			// Short-circuit if there is no field type.
+			return nil
+
+		case 1:
+			// Avoid overhead of sorting if there is only one field type.
+			return e.encodeFieldTypeValue(fieldTypes[0], visited)
+
+		default:
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "composite-type-value.fields MUST be sorted by name."
+
+			// NOTE: bytewiseFieldIdentifierSorter doesn't sort fieldTypes in place.
+			// bytewiseFieldIdentifierSorter.indexes is used as sorted fieldTypes
+			// index.
+			sorter := newBytewiseFieldSorter(fieldTypes)
+
+			sort.Sort(sorter)
+
+			// Encode sorted field types.
+			for _, index := range sorter.indexes {
+				err = e.encodeFieldTypeValue(fieldTypes[index], visited)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		}
+
+	default:
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for composite field type values: %d", e.em.sortCompositeFields))
 	}
 }
 

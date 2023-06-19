@@ -367,6 +367,16 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.NewWord64(42),
 		},
 		{
+			label:    "Word128",
+			value:    interpreter.NewUnmeteredWord128ValueFromUint64(42),
+			expected: cadence.NewWord128(42),
+		},
+		{
+			label:    "Word256",
+			value:    interpreter.NewUnmeteredWord256ValueFromUint64(42),
+			expected: cadence.NewWord256(42),
+		},
+		{
 			label:    "Fix64",
 			value:    interpreter.NewUnmeteredFix64Value(-123000000),
 			expected: cadence.Fix64(-123000000),
@@ -801,6 +811,16 @@ func TestImportValue(t *testing.T) {
 			expected: interpreter.NewUnmeteredWord64Value(42),
 		},
 		{
+			label:    "Word128",
+			value:    cadence.NewWord128(42),
+			expected: interpreter.NewUnmeteredWord128ValueFromUint64(42),
+		},
+		{
+			label:    "Word256",
+			value:    cadence.NewWord256(42),
+			expected: interpreter.NewUnmeteredWord256ValueFromUint64(42),
+		},
+		{
 			label:    "Fix64",
 			value:    cadence.Fix64(-123000000),
 			expected: interpreter.NewUnmeteredFix64Value(-123000000),
@@ -1069,6 +1089,16 @@ func TestImportRuntimeType(t *testing.T) {
 			label:    "Word64",
 			actual:   cadence.Word64Type{},
 			expected: interpreter.PrimitiveStaticTypeWord64,
+		},
+		{
+			label:    "Word128",
+			actual:   cadence.Word128Type{},
+			expected: interpreter.PrimitiveStaticTypeWord128,
+		},
+		{
+			label:    "Word256",
+			actual:   cadence.Word256Type{},
+			expected: interpreter.PrimitiveStaticTypeWord256,
 		},
 		{
 			label:    "Fix64",
@@ -1436,8 +1466,11 @@ func TestExportStructValue(t *testing.T) {
 	}
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42)}).
-		WithType(fooStructType)
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewStruct([]cadence.Value{
+			cadence.NewInt(42),
+		}).WithType(fooStructType),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1461,11 +1494,12 @@ func TestExportResourceValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected :=
+	expected := cadence.ValueWithCachedTypeID(
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUInt64(0),
 			cadence.NewInt(42),
-		}).WithType(newFooResourceType())
+		}).WithType(newFooResourceType()),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1490,32 +1524,37 @@ func TestExportResourceArrayValue(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewArray([]cadence.Value{
-		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(1),
-		}).WithType(fooResourceType),
-		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(2),
-		}).WithType(fooResourceType),
-	}).WithType(&cadence.VariableSizedArrayType{
-		ElementType: &cadence.ResourceType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "uuid",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "bar",
-					Type:       cadence.IntType{},
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewArray([]cadence.Value{
+			cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(1),
+			}).WithType(fooResourceType),
+			cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(2),
+			}).WithType(fooResourceType),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: &cadence.ResourceType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "uuid",
+						Type:       cadence.UInt64Type{},
+					},
+					{
+						Identifier: "bar",
+						Type:       cadence.IntType{},
+					},
 				},
 			},
-		},
-	})
+		}),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1543,39 +1582,44 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewDictionary([]cadence.KeyValuePair{
-		{
-			Key: cadence.String("b"),
-			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(2),
-			}).WithType(fooResourceType),
-		},
-		{
-			Key: cadence.String("a"),
-			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(1),
-			}).WithType(fooResourceType),
-		},
-	}).WithType(&cadence.DictionaryType{
-		KeyType: cadence.StringType{},
-		ElementType: &cadence.ResourceType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "uuid",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "bar",
-					Type:       cadence.IntType{},
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key: cadence.String("b"),
+				Value: cadence.NewResource([]cadence.Value{
+					cadence.NewUInt64(0),
+					cadence.NewInt(2),
+				}).WithType(fooResourceType),
+			},
+			{
+				Key: cadence.String("a"),
+				Value: cadence.NewResource([]cadence.Value{
+					cadence.NewUInt64(0),
+					cadence.NewInt(1),
+				}).WithType(fooResourceType),
+			},
+		}).WithType(&cadence.DictionaryType{
+			KeyType: cadence.StringType{},
+			ElementType: &cadence.ResourceType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "uuid",
+						Type:       cadence.UInt64Type{},
+					},
+					{
+						Identifier: "bar",
+						Type:       cadence.IntType{},
+					},
 				},
 			},
-		},
-	})
+		}),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1640,14 +1684,18 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
         }
     `
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewResource([]cadence.Value{
-		cadence.NewUInt64(0),
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+	expected := cadence.ValueWithCachedTypeID(
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUInt64(0),
-			cadence.NewInt(42),
-		}).WithType(barResourceType),
-	}).WithType(fooResourceType)
+			cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(42),
+			}).WithType(barResourceType),
+		}).WithType(fooResourceType),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2414,15 +2462,20 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 		},
 	}
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{
-		cadence.NewInt(42),
-		cadence.Function{
-			FunctionType: &cadence.FunctionType{
-				ReturnType: cadence.VoidType{},
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewStruct([]cadence.Value{
+			cadence.NewInt(42),
+			cadence.Function{
+				FunctionType: &cadence.FunctionType{
+					ReturnType: cadence.VoidType{},
+				},
 			},
-		},
-	}).WithType(fooStructType)
+		}).WithType(fooStructType),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2509,24 +2562,28 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 	t.Parallel()
 
-	enumValue := cadence.Enum{
-		EnumType: &cadence.EnumType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Direction",
-			Fields: []cadence.Field{
-				{
-					Identifier: sema.EnumRawValueFieldName,
-					Type:       cadence.IntType{},
+	newEnumValue := func() cadence.Enum {
+		return cadence.Enum{
+			EnumType: &cadence.EnumType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Direction",
+				Fields: []cadence.Field{
+					{
+						Identifier: sema.EnumRawValueFieldName,
+						Type:       cadence.IntType{},
+					},
 				},
+				RawType: cadence.IntType{},
 			},
-			RawType: cadence.IntType{},
-		},
-		Fields: []cadence.Value{
-			cadence.NewInt(3),
-		},
+			Fields: []cadence.Value{
+				cadence.NewInt(3),
+			},
+		}
 	}
 
 	t.Run("test export", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(): Direction {
                 return Direction.RIGHT
@@ -2540,11 +2597,18 @@ func TestRuntimeEnumValue(t *testing.T) {
             }
         `
 
+		expected := newEnumValue()
 		actual := exportValueFromScript(t, script)
-		assert.Equal(t, enumValue, actual)
+
+		assert.Equal(t,
+			cadence.ValueWithCachedTypeID(expected),
+			cadence.ValueWithCachedTypeID(actual),
+		)
 	})
 
 	t.Run("test import", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
             pub fun main(dir: Direction): Direction {
                 if !dir.isInstance(Type<Direction>()) {
@@ -2562,9 +2626,11 @@ func TestRuntimeEnumValue(t *testing.T) {
             }
         `
 
-		actual, err := executeTestScript(t, script, enumValue)
+		expected := newEnumValue()
+		actual, err := executeTestScript(t, script, expected)
 		require.NoError(t, err)
-		assert.Equal(t, enumValue, actual)
+
+		assert.Equal(t, expected, actual)
 	})
 }
 
@@ -2763,6 +2829,16 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "Word64",
 			typeSignature: "Word64",
 			exportedValue: cadence.NewWord64(42),
+		},
+		{
+			label:         "Word128",
+			typeSignature: "Word128",
+			exportedValue: cadence.NewWord128(42),
+		},
+		{
+			label:         "Word256",
+			typeSignature: "Word256",
+			exportedValue: cadence.NewWord256(42),
 		},
 		{
 			label:         "Fix64",
@@ -3123,107 +3199,119 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 
 	// Struct with wrong field type
 
-	malformedStructType1 := &cadence.StructType{
-		Location:            common.ScriptLocation{},
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "a",
-				Type:       cadence.IntType{},
-			},
-		},
-	}
-
-	malformedStruct1 := cadence.Struct{
-		StructType: malformedStructType1,
-		Fields: []cadence.Value{
-			cadence.NewInt(3),
-		},
-	}
-
-	// Struct with wrong field name
-
-	malformedStruct2 := cadence.Struct{
-		StructType: &cadence.StructType{
+	newMalformedStructType1 := func() *cadence.StructType {
+		return &cadence.StructType{
 			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
-					Identifier: "nonExisting",
-					Type:       cadence.StringType{},
+					Identifier: "a",
+					Type:       cadence.IntType{},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.String("John"),
-		},
+		}
+	}
+
+	newMalformedStruct1 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: newMalformedStructType1(),
+			Fields: []cadence.Value{
+				cadence.NewInt(3),
+			},
+		}
+	}
+
+	// Struct with wrong field name
+
+	newMalformedStruct2 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "nonExisting",
+						Type:       cadence.StringType{},
+					},
+				},
+			},
+			Fields: []cadence.Value{
+				cadence.String("John"),
+			},
+		}
 	}
 
 	// Struct with nested malformed array value
-	malformedStruct3 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.VariableSizedArrayType{
-						ElementType: malformedStructType1,
+	newMalformedStruct3 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Bar",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type: &cadence.VariableSizedArrayType{
+							ElementType: newMalformedStructType1(),
+						},
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewArray([]cadence.Value{
-				malformedStruct1,
-			}),
-		},
+			Fields: []cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					newMalformedStruct1(),
+				}),
+			},
+		}
 	}
 
 	// Struct with nested malformed dictionary value
-	malformedStruct4 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Baz",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.DictionaryType{
-						KeyType:     cadence.StringType{},
-						ElementType: malformedStructType1,
+	newMalformedStruct4 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Baz",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type: &cadence.DictionaryType{
+							KeyType:     cadence.StringType{},
+							ElementType: newMalformedStructType1(),
+						},
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key:   cadence.String("foo"),
-					Value: malformedStruct1,
-				},
-			}),
-		},
+			Fields: []cadence.Value{
+				cadence.NewDictionary([]cadence.KeyValuePair{
+					{
+						Key:   cadence.String("foo"),
+						Value: newMalformedStruct1(),
+					},
+				}),
+			},
+		}
 	}
 
 	// Struct with nested array with mismatching element type
-	malformedStruct5 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.VariableSizedArrayType{
-						ElementType: malformedStructType1,
+	newMalformedStruct5 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Bar",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type: &cadence.VariableSizedArrayType{
+							ElementType: newMalformedStructType1(),
+						},
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewArray([]cadence.Value{
-				cadence.String("mismatching value"),
-			}),
-		},
+			Fields: []cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.String("mismatching value"),
+				}),
+			},
+		}
 	}
 
 	type argumentPassingTest struct {
@@ -3238,38 +3326,38 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:                                    "Malformed Struct field type",
 			typeSignature:                            "Foo",
-			exportedValue:                            malformedStruct1,
+			exportedValue:                            newMalformedStruct1(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Struct field name",
 			typeSignature:                            "Foo",
-			exportedValue:                            malformedStruct2,
+			exportedValue:                            newMalformedStruct2(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed AnyStruct",
 			typeSignature:                            "AnyStruct",
-			exportedValue:                            malformedStruct1,
+			exportedValue:                            newMalformedStruct1(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed nested struct array",
 			typeSignature:                            "Bar",
-			exportedValue:                            malformedStruct3,
+			exportedValue:                            newMalformedStruct3(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed nested struct dictionary",
 			typeSignature:                            "Baz",
-			exportedValue:                            malformedStruct4,
+			exportedValue:                            newMalformedStruct4(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Variable-size array with malformed element",
 			typeSignature: "[Foo]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				malformedStruct1,
+				newMalformedStruct1(),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -3277,7 +3365,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			label:         "Constant-size array with malformed element",
 			typeSignature: "[Foo; 1]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				malformedStruct1,
+				newMalformedStruct1(),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -3312,13 +3400,13 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:                                    "Inner array with mismatching element",
 			typeSignature:                            "Bar",
-			exportedValue:                            malformedStruct5,
+			exportedValue:                            newMalformedStruct5(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Optional",
 			typeSignature:                            "Foo?",
-			exportedValue:                            cadence.NewOptional(malformedStruct1),
+			exportedValue:                            cadence.NewOptional(newMalformedStruct1()),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
@@ -3327,7 +3415,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("foo"),
-					Value: malformedStruct1,
+					Value: newMalformedStruct1(),
 				},
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},

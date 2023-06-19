@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -436,7 +437,9 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 			"42":  {42},
 			"127": {127},
 			"128": {128},
-			"200": {200},
+			"170141183460469231731687303715884105727": {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"170141183460469231731687303715884105728": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"340282366920938463463374607431768211455": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"UInt256": {
 			"0":   {0},
@@ -473,6 +476,24 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 			"9223372036854775807":  {127, 255, 255, 255, 255, 255, 255, 255},
 			"9223372036854775808":  {128, 0, 0, 0, 0, 0, 0, 0},
 			"18446744073709551615": {255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"Word128": {
+			"0":   {0},
+			"42":  {42},
+			"127": {127},
+			"128": {128},
+			"170141183460469231731687303715884105727": {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"170141183460469231731687303715884105728": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"340282366920938463463374607431768211455": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"Word256": {
+			"0":   {0},
+			"42":  {42},
+			"127": {127},
+			"128": {128},
+			"57896044618658097711785492504343953926634992332820282019728792003956564819967":  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"57896044618658097711785492504343953926634992332820282019728792003956564819968":  {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"115792089237316195423570985008687907853269984665640564039457584007913129639935": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		// Fix*
 		"Fix64": {
@@ -525,6 +546,365 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					t,
 					inter,
 					interpreter.ByteSliceToByteArrayValue(inter, expected),
+					inter.Globals.Get("result").GetValue(),
+				)
+			})
+		}
+	}
+}
+
+func TestInterpretFromBigEndianBytes(t *testing.T) {
+
+	t.Parallel()
+
+	validTestsWithRoundtrip := map[string]map[string]interpreter.Value{
+		// Int*
+		"Int": {
+			"[0]":                           interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(0)),
+			"[42]":                          interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(42)),
+			"[127]":                         interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(127)),
+			"[0, 128]":                      interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(128)),
+			"[0, 200]":                      interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(200)),
+			"[255]":                         interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(-1)),
+			"[255, 56]":                     interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(-200)),
+			"[220, 121, 13, 144, 63, 0, 0]": interpreter.NewUnmeteredIntValueFromBigInt(big.NewInt(-10000000000000000)),
+		},
+		"Int8": {
+			"[0]":   interpreter.NewUnmeteredInt8Value(0),
+			"[42]":  interpreter.NewUnmeteredInt8Value(42),
+			"[127]": interpreter.NewUnmeteredInt8Value(127),
+			"[255]": interpreter.NewUnmeteredInt8Value(-1),
+			"[129]": interpreter.NewUnmeteredInt8Value(-127),
+			"[128]": interpreter.NewUnmeteredInt8Value(-128),
+		},
+		"Int16": {
+			"[0, 0]":     interpreter.NewUnmeteredInt16Value(0),
+			"[42]":       interpreter.NewUnmeteredInt16Value(42),
+			"[0, 42]":    interpreter.NewUnmeteredInt16Value(42),
+			"[127, 255]": interpreter.NewUnmeteredInt16Value(32767),
+			"[255, 255]": interpreter.NewUnmeteredInt16Value(-1),
+			"[128, 1]":   interpreter.NewUnmeteredInt16Value(-32767),
+			"[128, 0]":   interpreter.NewUnmeteredInt16Value(-32768),
+		},
+		"Int32": {
+			"[0, 0, 0, 0]":         interpreter.NewUnmeteredInt32Value(0),
+			"[42]":                 interpreter.NewUnmeteredInt32Value(42),
+			"[0, 0, 0, 42]":        interpreter.NewUnmeteredInt32Value(42),
+			"[127, 255, 255, 255]": interpreter.NewUnmeteredInt32Value(2147483647),
+			"[255, 255, 255, 255]": interpreter.NewUnmeteredInt32Value(-1),
+			"[128, 0, 0, 1]":       interpreter.NewUnmeteredInt32Value(-2147483647),
+			"[128, 0, 0, 0]":       interpreter.NewUnmeteredInt32Value(-2147483648),
+		},
+		"Int64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":  interpreter.NewUnmeteredInt64Value(0),
+			"[42]":                      interpreter.NewUnmeteredInt64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 42]": interpreter.NewUnmeteredInt64Value(42),
+			"[127, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredInt64Value(9223372036854775807),
+			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredInt64Value(-1),
+			"[128, 0, 0, 0, 0, 0, 0, 1]":               interpreter.NewUnmeteredInt64Value(-9223372036854775807),
+			"[128, 0, 0, 0, 0, 0, 0, 0]":               interpreter.NewUnmeteredInt64Value(-9223372036854775808),
+		},
+		"Int128": {
+			"[0]":                           interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(0)),
+			"[42]":                          interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(42)),
+			"[127]":                         interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(127)),
+			"[0, 128]":                      interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(128)),
+			"[0, 200]":                      interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(200)),
+			"[255]":                         interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(-1)),
+			"[255, 56]":                     interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(-200)),
+			"[220, 121, 13, 144, 63, 0, 0]": interpreter.NewUnmeteredInt128ValueFromBigInt(big.NewInt(-10000000000000000)),
+		},
+		"Int256": {
+			"[0]":                           interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(0)),
+			"[42]":                          interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(42)),
+			"[127]":                         interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(127)),
+			"[0, 128]":                      interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(128)),
+			"[0, 200]":                      interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(200)),
+			"[255]":                         interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(-1)),
+			"[255, 56]":                     interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(-200)),
+			"[220, 121, 13, 144, 63, 0, 0]": interpreter.NewUnmeteredInt256ValueFromBigInt(big.NewInt(-10000000000000000)),
+		},
+		// UInt*
+		"UInt": {
+			"[0]":   interpreter.NewUnmeteredUIntValueFromUint64(0),
+			"[42]":  interpreter.NewUnmeteredUIntValueFromUint64(42),
+			"[127]": interpreter.NewUnmeteredUIntValueFromUint64(127),
+			"[128]": interpreter.NewUnmeteredUIntValueFromUint64(128),
+			"[200]": interpreter.NewUnmeteredUIntValueFromUint64(200),
+		},
+		"UInt8": {
+			"[0]":   interpreter.NewUnmeteredUInt8Value(0),
+			"[42]":  interpreter.NewUnmeteredUInt8Value(42),
+			"[127]": interpreter.NewUnmeteredUInt8Value(127),
+			"[128]": interpreter.NewUnmeteredUInt8Value(128),
+			"[255]": interpreter.NewUnmeteredUInt8Value(255),
+		},
+		"UInt16": {
+			"[0, 0]":     interpreter.NewUnmeteredUInt16Value(0),
+			"[42]":       interpreter.NewUnmeteredUInt16Value(42),
+			"[0, 42]":    interpreter.NewUnmeteredUInt16Value(42),
+			"[127, 255]": interpreter.NewUnmeteredUInt16Value(32767),
+			"[128, 0]":   interpreter.NewUnmeteredUInt16Value(32768),
+			"[255, 255]": interpreter.NewUnmeteredUInt16Value(65535),
+		},
+		"UInt32": {
+			"[0, 0, 0, 0]":         interpreter.NewUnmeteredUInt32Value(0),
+			"[42]":                 interpreter.NewUnmeteredUInt32Value(42),
+			"[0, 0, 0, 42]":        interpreter.NewUnmeteredUInt32Value(42),
+			"[127, 255, 255, 255]": interpreter.NewUnmeteredUInt32Value(2147483647),
+			"[128, 0, 0, 0]":       interpreter.NewUnmeteredUInt32Value(2147483648),
+			"[255, 255, 255, 255]": interpreter.NewUnmeteredUInt32Value(4294967295),
+		},
+		"UInt64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":  interpreter.NewUnmeteredUInt64Value(0),
+			"[42]":                      interpreter.NewUnmeteredUInt64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 42]": interpreter.NewUnmeteredUInt64Value(42),
+			"[127, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt64Value(9223372036854775807),
+			"[128, 0, 0, 0, 0, 0, 0, 0]":               interpreter.NewUnmeteredUInt64Value(9223372036854775808),
+			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt64Value(18446744073709551615),
+		},
+		"UInt128": {
+			"[0]":   interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
+		},
+		"UInt256": {
+			"[0]":   interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
+		},
+		// Word*
+		"Word8": {
+			"[0]":   interpreter.NewUnmeteredWord8Value(0),
+			"[42]":  interpreter.NewUnmeteredWord8Value(42),
+			"[127]": interpreter.NewUnmeteredWord8Value(127),
+			"[128]": interpreter.NewUnmeteredWord8Value(128),
+			"[255]": interpreter.NewUnmeteredWord8Value(255),
+		},
+		"Word16": {
+			"[0, 0]":     interpreter.NewUnmeteredWord16Value(0),
+			"[42]":       interpreter.NewUnmeteredWord16Value(42),
+			"[0, 42]":    interpreter.NewUnmeteredWord16Value(42),
+			"[127, 255]": interpreter.NewUnmeteredWord16Value(32767),
+			"[128, 0]":   interpreter.NewUnmeteredWord16Value(32768),
+			"[255, 255]": interpreter.NewUnmeteredWord16Value(65535),
+		},
+		"Word32": {
+			"[0, 0, 0, 0]":         interpreter.NewUnmeteredWord32Value(0),
+			"[42]":                 interpreter.NewUnmeteredWord32Value(42),
+			"[0, 0, 0, 42]":        interpreter.NewUnmeteredWord32Value(42),
+			"[127, 255, 255, 255]": interpreter.NewUnmeteredWord32Value(2147483647),
+			"[128, 0, 0, 0]":       interpreter.NewUnmeteredWord32Value(2147483648),
+			"[255, 255, 255, 255]": interpreter.NewUnmeteredWord32Value(4294967295),
+		},
+		"Word64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":  interpreter.NewUnmeteredWord64Value(0),
+			"[42]":                      interpreter.NewUnmeteredWord64Value(42),
+			"[0, 0, 0, 0, 0, 0, 0, 42]": interpreter.NewUnmeteredWord64Value(42),
+			"[127, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord64Value(9223372036854775807),
+			"[128, 0, 0, 0, 0, 0, 0, 0]":               interpreter.NewUnmeteredWord64Value(9223372036854775808),
+			"[255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord64Value(18446744073709551615),
+		},
+		"Word128": {
+			"[0]":   interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
+		},
+		"Word256": {
+			"[0]":   interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
+		},
+		// Fix*
+		"Fix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":             interpreter.NewUnmeteredFix64Value(0),
+			"[250, 86, 234, 0]":                    interpreter.NewUnmeteredFix64Value(42 * sema.Fix64Factor), // 42.0 with padding
+			"[0, 0, 0, 0, 250, 86, 234, 0]":        interpreter.NewUnmeteredFix64Value(42 * sema.Fix64Factor), // 42.0
+			"[0, 0, 0, 0, 251, 197, 32, 0]":        interpreter.NewUnmeteredFix64Value(4224_000_000),          // 42.24
+			"[255, 255, 255, 255, 250, 10, 31, 0]": interpreter.NewUnmeteredFix64Value(-1 * sema.Fix64Factor), // -1.0
+		},
+		// UFix*
+		"UFix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0]":      interpreter.NewUnmeteredUFix64Value(0),
+			"[250, 86, 234, 0]":             interpreter.NewUnmeteredUFix64Value(42 * sema.Fix64Factor), // 42.0 with padding
+			"[0, 0, 0, 0, 250, 86, 234, 0]": interpreter.NewUnmeteredUFix64Value(42 * sema.Fix64Factor), // 42.0
+			"[0, 0, 0, 0, 251, 197, 32, 0]": interpreter.NewUnmeteredUFix64Value(4224_000_000),          // 42.24
+		},
+	}
+
+	invalidTests := map[string][]string{
+		// Int*
+		"Int": {}, // No overflow
+		"Int8": {
+			"[0, 0]",
+			"[0, 22]",
+		},
+		"Int16": {
+			"[0, 0, 0]",
+			"[0, 22, 0]",
+		},
+		"Int32": {
+			"[0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0]",
+		},
+		"Int64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Int128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Int256": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// UInt*
+		"UInt": {}, // No overflow
+		"UInt8": {
+			"[0, 0]",
+			"[0, 22]",
+		},
+		"UInt16": {
+			"[0, 0, 0]",
+			"[0, 22, 0]",
+		},
+		"UInt32": {
+			"[0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0]",
+		},
+		"UInt64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"UInt128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"UInt256": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// Word*
+		"Word8": {
+			"[0, 0]",
+			"[0, 22]",
+		},
+		"Word16": {
+			"[0, 0, 0]",
+			"[0, 22, 0]",
+		},
+		"Word32": {
+			"[0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0]",
+		},
+		"Word64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Word128": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Word256": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// Fix*
+		"Fix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		// UFix*
+		"UFix64": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0]",
+		},
+	}
+
+	// Ensure the test cases are complete
+
+	for _, integerType := range sema.AllNumberTypes {
+		switch integerType {
+		case sema.NumberType, sema.SignedNumberType,
+			sema.IntegerType, sema.SignedIntegerType,
+			sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+		}
+
+		if _, ok := validTestsWithRoundtrip[integerType.String()]; !ok {
+			panic(fmt.Sprintf("broken test for valid cases: missing %s", integerType))
+		}
+
+		if _, ok := invalidTests[integerType.String()]; !ok {
+			panic(fmt.Sprintf("broken test for invalid cases: missing %s", integerType))
+		}
+	}
+
+	for ty, tests := range validTestsWithRoundtrip {
+		for value, expected := range tests {
+			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
+				inter := parseCheckAndInterpret(t,
+					fmt.Sprintf(
+						`
+	                      let resultOpt: %s? = %s.fromBigEndianBytes(%s)
+						  let result: %s = resultOpt!
+						  let roundTripEqual = result == %s.fromBigEndianBytes(result.toBigEndianBytes())!
+	                    `,
+						ty,
+						ty,
+						value,
+						ty,
+						ty,
+					),
+				)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					expected,
+					inter.Globals.Get("result").GetValue(),
+				)
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.TrueValue,
+					inter.Globals.Get("roundTripEqual").GetValue(),
+				)
+			})
+		}
+	}
+
+	for ty, tests := range invalidTests {
+		for _, value := range tests {
+			t.Run(fmt.Sprintf("%s: %s", ty, value), func(t *testing.T) {
+				inter := parseCheckAndInterpret(t,
+					fmt.Sprintf(
+						`
+	                      let result: %s? = %s.fromBigEndianBytes(%s)
+	                    `,
+						ty,
+						ty,
+						value,
+					),
+				)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.NilValue{},
 					inter.Globals.Get("result").GetValue(),
 				)
 			})

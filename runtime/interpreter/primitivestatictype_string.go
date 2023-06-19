@@ -44,6 +44,8 @@ func _() {
 	_ = x[PrimitiveStaticTypeWord16-54]
 	_ = x[PrimitiveStaticTypeWord32-55]
 	_ = x[PrimitiveStaticTypeWord64-56]
+	_ = x[PrimitiveStaticTypeWord128-57]
+	_ = x[PrimitiveStaticTypeWord256-58]
 	_ = x[PrimitiveStaticTypeFix64-64]
 	_ = x[PrimitiveStaticTypeUFix64-72]
 	_ = x[PrimitiveStaticTypePath-76]
@@ -70,7 +72,7 @@ func _() {
 	_ = x[PrimitiveStaticType_Count-105]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilities_Count"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Word128Word256Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilities_Count"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:   _PrimitiveStaticType_name[0:7],
@@ -109,30 +111,32 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	54:  _PrimitiveStaticType_name[222:228],
 	55:  _PrimitiveStaticType_name[228:234],
 	56:  _PrimitiveStaticType_name[234:240],
-	64:  _PrimitiveStaticType_name[240:245],
-	72:  _PrimitiveStaticType_name[245:251],
-	76:  _PrimitiveStaticType_name[251:255],
-	77:  _PrimitiveStaticType_name[255:265],
-	78:  _PrimitiveStaticType_name[265:276],
-	79:  _PrimitiveStaticType_name[276:290],
-	80:  _PrimitiveStaticType_name[290:300],
-	81:  _PrimitiveStaticType_name[300:311],
-	90:  _PrimitiveStaticType_name[311:322],
-	91:  _PrimitiveStaticType_name[322:335],
-	92:  _PrimitiveStaticType_name[335:351],
-	93:  _PrimitiveStaticType_name[351:371],
-	94:  _PrimitiveStaticType_name[371:393],
-	95:  _PrimitiveStaticType_name[393:408],
-	96:  _PrimitiveStaticType_name[408:425],
-	97:  _PrimitiveStaticType_name[425:435],
-	98:  _PrimitiveStaticType_name[435:451],
-	99:  _PrimitiveStaticType_name[451:478],
-	100: _PrimitiveStaticType_name[478:505],
-	101: _PrimitiveStaticType_name[505:535],
-	102: _PrimitiveStaticType_name[535:565],
-	103: _PrimitiveStaticType_name[565:588],
-	104: _PrimitiveStaticType_name[588:613],
-	105: _PrimitiveStaticType_name[613:619],
+	57:  _PrimitiveStaticType_name[240:247],
+	58:  _PrimitiveStaticType_name[247:254],
+	64:  _PrimitiveStaticType_name[254:259],
+	72:  _PrimitiveStaticType_name[259:265],
+	76:  _PrimitiveStaticType_name[265:269],
+	77:  _PrimitiveStaticType_name[269:279],
+	78:  _PrimitiveStaticType_name[279:290],
+	79:  _PrimitiveStaticType_name[290:304],
+	80:  _PrimitiveStaticType_name[304:314],
+	81:  _PrimitiveStaticType_name[314:325],
+	90:  _PrimitiveStaticType_name[325:336],
+	91:  _PrimitiveStaticType_name[336:349],
+	92:  _PrimitiveStaticType_name[349:365],
+	93:  _PrimitiveStaticType_name[365:385],
+	94:  _PrimitiveStaticType_name[385:407],
+	95:  _PrimitiveStaticType_name[407:422],
+	96:  _PrimitiveStaticType_name[422:439],
+	97:  _PrimitiveStaticType_name[439:449],
+	98:  _PrimitiveStaticType_name[449:465],
+	99:  _PrimitiveStaticType_name[465:492],
+	100: _PrimitiveStaticType_name[492:519],
+	101: _PrimitiveStaticType_name[519:549],
+	102: _PrimitiveStaticType_name[549:579],
+	103: _PrimitiveStaticType_name[579:602],
+	104: _PrimitiveStaticType_name[602:627],
+	105: _PrimitiveStaticType_name[627:633],
 }
 
 func (i PrimitiveStaticType) String() string {

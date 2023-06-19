@@ -961,6 +961,14 @@ func TestStringer(t *testing.T) {
 			value:    NewUnmeteredWord64Value(64),
 			expected: "64",
 		},
+		"Word128": {
+			value:    NewUnmeteredWord128ValueFromUint64(128),
+			expected: "128",
+		},
+		"Word256": {
+			value:    NewUnmeteredWord256ValueFromUint64(256),
+			expected: "256",
+		},
 		"UFix64": {
 			value:    NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
 			expected: "64.00000000",
@@ -1454,6 +1462,30 @@ func TestGetHashInput(t *testing.T) {
 		"Word64 max": {
 			value:    NewUnmeteredWord64Value(math.MaxUint64),
 			expected: []byte{byte(HashInputTypeWord64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		},
+		"Word128": {
+			value:    NewUnmeteredWord128ValueFromUint64(128),
+			expected: []byte{byte(HashInputTypeWord128), 128},
+		},
+		"Word128 min": {
+			value:    NewUnmeteredWord128ValueFromUint64(0),
+			expected: append([]byte{byte(HashInputTypeWord128)}, 0),
+		},
+		"Word128 max": {
+			value:    NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeWord128)}, sema.Word128TypeMaxIntBig.Bytes()...),
+		},
+		"Word256": {
+			value:    NewUnmeteredWord256ValueFromUint64(256),
+			expected: []byte{byte(HashInputTypeWord256), 1, 0},
+		},
+		"Word256 min": {
+			value:    NewUnmeteredWord256ValueFromUint64(0),
+			expected: append([]byte{byte(HashInputTypeWord256)}, 0),
+		},
+		"Word256 max": {
+			value:    NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeWord256)}, sema.Word256TypeMaxIntBig.Bytes()...),
 		},
 		"UFix64": {
 			value:    NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
@@ -3379,6 +3411,8 @@ func TestNumberValue_Equal(t *testing.T) {
 		"Word16":  NewUnmeteredWord16Value(16),
 		"Word32":  NewUnmeteredWord32Value(32),
 		"Word64":  NewUnmeteredWord64Value(64),
+		"Word128": NewUnmeteredWord128ValueFromUint64(128),
+		"Word256": NewUnmeteredWord256ValueFromUint64(256),
 		"UFix64":  NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
 		"Fix64":   NewUnmeteredFix64ValueWithInteger(-32, EmptyLocationRange),
 	}
@@ -3757,6 +3791,8 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 		sema.Word16Type:  NewUnmeteredWord16Value(42),
 		sema.Word32Type:  NewUnmeteredWord32Value(42),
 		sema.Word64Type:  NewUnmeteredWord64Value(42),
+		sema.Word128Type: NewUnmeteredWord128ValueFromUint64(42),
+		sema.Word256Type: NewUnmeteredWord256ValueFromUint64(42),
 		sema.Int8Type:    NewUnmeteredInt8Value(42),
 		sema.Int16Type:   NewUnmeteredInt16Value(42),
 		sema.Int32Type:   NewUnmeteredInt32Value(42),
@@ -4059,6 +4095,8 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			sema.Word16Type:  NewUnmeteredWord16Value(42),
 			sema.Word32Type:  NewUnmeteredWord32Value(42),
 			sema.Word64Type:  NewUnmeteredWord64Value(42),
+			sema.Word128Type: NewUnmeteredWord128ValueFromUint64(42),
+			sema.Word256Type: NewUnmeteredWord256ValueFromUint64(42),
 			sema.Int8Type:    NewUnmeteredInt8Value(42),
 			sema.Int16Type:   NewUnmeteredInt16Value(42),
 			sema.Int32Type:   NewUnmeteredInt32Value(42),

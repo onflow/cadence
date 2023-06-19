@@ -74,16 +74,25 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
+		require.Equal(t,
+			ImportType(inter, codeHashValue.Type()),
+			interpreter.ConvertSemaToStaticType(inter, stdlib.AccountEventCodeHashParameter.TypeAnnotation.Type),
+		)
+
 		codeHash, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
 			nil,
 			codeHashValue,
-			sema.ByteArrayType,
+			stdlib.HashType,
 		)
 		require.NoError(t, err)
 
-		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(inter, codeHash, interpreter.EmptyLocationRange)
+		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(
+			inter,
+			codeHash,
+			interpreter.EmptyLocationRange,
+		)
 		require.NoError(t, err)
 
 		require.Equal(t, expectedCodeHash[:], actualCodeHash)

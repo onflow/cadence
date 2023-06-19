@@ -90,9 +90,7 @@ The inbox allows bootstrapping (sending and receiving) capabilities.
 
 const AuthAccountTypeCapabilitiesFieldName = "capabilities"
 
-var AuthAccountTypeCapabilitiesFieldType = &ReferenceType{
-	Type: AuthAccountCapabilitiesType,
-}
+var AuthAccountTypeCapabilitiesFieldType = AuthAccountCapabilitiesType
 
 const AuthAccountTypeCapabilitiesFieldDocString = `
 The capabilities of the account.
@@ -363,6 +361,37 @@ If the stored object cannot be borrowed using the given type, the function panic
 The given type must not necessarily be exactly the same as the type of the borrowed object.
 
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
+`
+
+const AuthAccountTypeCheckFunctionName = "check"
+
+var AuthAccountTypeCheckFunctionTypeParameterT = &TypeParameter{
+	Name:      "T",
+	TypeBound: AnyType,
+}
+
+var AuthAccountTypeCheckFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		AuthAccountTypeCheckFunctionTypeParameterT,
+	},
+	Parameters: []Parameter{
+		{
+			Identifier:     "from",
+			TypeAnnotation: NewTypeAnnotation(StoragePathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
+
+const AuthAccountTypeCheckFunctionDocString = `
+Returns true if the object in account storage under the given path satisfies the given type,
+i.e. could be borrowed using the given type.
+
+The given type must not necessarily be exactly the same as the type of the borrowed object.
+
+The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed.
 `
 
 const AuthAccountTypeLinkFunctionName = "link"
@@ -1226,9 +1255,7 @@ func init() {
 
 const AuthAccountCapabilitiesTypeStorageFieldName = "storage"
 
-var AuthAccountCapabilitiesTypeStorageFieldType = &ReferenceType{
-	Type: AuthAccountStorageCapabilitiesType,
-}
+var AuthAccountCapabilitiesTypeStorageFieldType = AuthAccountStorageCapabilitiesType
 
 const AuthAccountCapabilitiesTypeStorageFieldDocString = `
 The storage capabilities of the account.
@@ -1236,9 +1263,7 @@ The storage capabilities of the account.
 
 const AuthAccountCapabilitiesTypeAccountFieldName = "account"
 
-var AuthAccountCapabilitiesTypeAccountFieldType = &ReferenceType{
-	Type: AuthAccountAccountCapabilitiesType,
-}
+var AuthAccountCapabilitiesTypeAccountFieldType = AuthAccountAccountCapabilitiesType
 
 const AuthAccountCapabilitiesTypeAccountFieldDocString = `
 The account capabilities of the account.
@@ -1965,6 +1990,13 @@ func init() {
 			AuthAccountTypeBorrowFunctionName,
 			AuthAccountTypeBorrowFunctionType,
 			AuthAccountTypeBorrowFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			AuthAccountType,
+			ast.AccessPublic,
+			AuthAccountTypeCheckFunctionName,
+			AuthAccountTypeCheckFunctionType,
+			AuthAccountTypeCheckFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			AuthAccountType,

@@ -97,7 +97,7 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	var bytesToReadForLen uint
 	// long string mode (55+ long strings)
 	// firstByte minus the end range of short string, returns the number of bytes to read
-	// for calculating the the len of data. bytesToReadForlen is at least 1 and at most 8.
+	// for calculating the len of data. bytesToReadForlen is at least 1 and at most 8.
 	if firstByte >= LongStringRangeStart && firstByte <= LongStringRangeEnd {
 		bytesToReadForLen = uint(firstByte - ShortStringRangeEnd)
 		isString = true
@@ -105,7 +105,7 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 
 	// long list mode
 	// firstByte minus the end range of short list, returns the number of bytes to read
-	// for calculating the the len of data. bytesToReadForlen is at least 1 and at most 8.
+	// for calculating the len of data. bytesToReadForlen is at least 1 and at most 8.
 	if firstByte >= LongListRangeStart {
 		bytesToReadForLen = uint(firstByte - ShortListRangeEnd)
 		isString = false

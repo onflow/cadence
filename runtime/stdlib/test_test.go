@@ -37,6 +37,14 @@ import (
 )
 
 func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpreter, error) {
+	return newTestContractInterpreterWithTestFramework(t, code, nil)
+}
+
+func newTestContractInterpreterWithTestFramework(
+	t *testing.T,
+	code string,
+	testFramework TestFramework,
+) (*interpreter.Interpreter, error) {
 	program, err := parser.ParseProgram(
 		nil,
 		[]byte(code),
@@ -109,7 +117,7 @@ func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpr
 
 				return nil
 			},
-			ContractValueHandler: NewTestInterpreterContractValueHandler(nil),
+			ContractValueHandler: NewTestInterpreterContractValueHandler(testFramework),
 			UUIDHandler: func() (uint64, error) {
 				uuid++
 				return uuid, nil
@@ -640,6 +648,291 @@ func TestTestEqualMatcher(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+	})
+}
+
+func TestAssertEqual(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        Test.assertEqual("this string", "this string")
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        Test.assertEqual(15, 21)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"assertion failed: not equal: expected: 15, actual: 21",
+		)
+	})
+
+	t.Run("different types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        Test.assertEqual(true, 1)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"assertion failed: not equal: expected: true, actual: 1",
+		)
+	})
+
+	t.Run("address with address", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testEqual() {
+		        let expected = Address(0xf8d6e0586b0a20c7)
+		        let actual = Address(0xf8d6e0586b0a20c7)
+		        Test.assertEqual(expected, actual)
+		    }
+
+		    pub fun testNotEqual() {
+		        let expected = Address(0xf8d6e0586b0a20c7)
+		        let actual = Address(0xee82856bf20e2aa6)
+		        Test.assertEqual(expected, actual)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testEqual")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNotEqual")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"not equal: expected: 0xf8d6e0586b0a20c7, actual: 0xee82856bf20e2aa6",
+		)
+	})
+
+	t.Run("struct with struct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub struct Foo {
+		        pub let answer: Int
+
+		        init(answer: Int) {
+		            self.answer = answer
+		        }
+		    }
+
+		    pub fun testEqual() {
+		        let expected = Foo(answer: 42)
+		        let actual = Foo(answer: 42)
+		        Test.assertEqual(expected, actual)
+		    }
+
+		    pub fun testNotEqual() {
+		        let expected = Foo(answer: 42)
+		        let actual = Foo(answer: 420)
+		        Test.assertEqual(expected, actual)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testEqual")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNotEqual")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"not equal: expected: S.test.Foo(answer: 42), actual: S.test.Foo(answer: 420)",
+		)
+	})
+
+	t.Run("array with array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testEqual() {
+		        let expected = [1, 2, 3]
+		        let actual = [1, 2, 3]
+		        Test.assertEqual(expected, actual)
+		    }
+
+		    pub fun testNotEqual() {
+		        let expected = [1, 2, 3]
+		        let actual = [1, 2]
+		        Test.assertEqual(expected, actual)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testEqual")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNotEqual")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"not equal: expected: [1, 2, 3], actual: [1, 2]",
+		)
+	})
+
+	t.Run("dictionary with dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun testEqual() {
+		        let expected = {1: true, 2: false, 3: true}
+		        let actual = {1: true, 2: false, 3: true}
+		        Test.assertEqual(expected, actual)
+		    }
+
+		    pub fun testNotEqual() {
+		        let expected = {1: true, 2: false}
+		        let actual = {1: true, 2: true}
+		        Test.assertEqual(expected, actual)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testEqual")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNotEqual")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"not equal: expected: {2: false, 1: true}, actual: {2: true, 1: true}",
+		)
+	})
+
+	t.Run("resource with resource matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        let f1 <- create Foo()
+		        let f2 <- create Foo()
+		        Test.assertEqual(<-f1, <-f2)
+		    }
+
+		    pub resource Foo {}
+		`
+
+		_, err := newTestContractInterpreter(t, script)
+
+		errs := checker.RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("resource with struct matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        let foo <- create Foo()
+		        let bar = Bar()
+		        Test.assertEqual(<-foo, bar)
+		    }
+
+		    pub resource Foo {}
+		    pub struct Bar {}
+		`
+
+		_, err := newTestContractInterpreter(t, script)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("struct with resource matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test() {
+		        let foo = Foo()
+		        let bar <- create Bar()
+		        Test.expect(foo, Test.equal(<-bar))
+		    }
+
+		    pub struct Foo {}
+		    pub resource Bar {}
+		`
+
+		_, err := newTestContractInterpreter(t, script)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
 
@@ -1635,4 +1928,236 @@ func TestTestExpectFailure(t *testing.T) {
 		errs := checker.RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
+}
+
+func TestBlockchain(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("all events, empty", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test(): [AnyStruct] {
+		        var blockchain = Test.newEmulatorBlockchain()
+		        return blockchain.events()
+		    }
+		`
+
+		eventsInvoked := false
+
+		testFramework := &mockedTestFramework{
+			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+				eventsInvoked = true
+				assert.Nil(t, eventType)
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+					common.Address{},
+				)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, eventsInvoked)
+	})
+
+	t.Run("typed events, empty", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    pub fun test(): [AnyStruct] {
+		        var blockchain = Test.newEmulatorBlockchain()
+
+		        // 'Foo' is not an event-type.
+		        // But we just need to test the API, so it doesn't really matter.
+		        var typ = Type<Foo>()
+
+		        return blockchain.eventsOfType(typ)
+		    }
+
+		    pub struct Foo {}
+		`
+
+		eventsInvoked := false
+
+		testFramework := &mockedTestFramework{
+			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+				eventsInvoked = true
+				assert.NotNil(t, eventType)
+
+				require.IsType(t, interpreter.CompositeStaticType{}, eventType)
+				compositeType := eventType.(interpreter.CompositeStaticType)
+				assert.Equal(t, "Foo", compositeType.QualifiedIdentifier)
+
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+					common.Address{},
+				)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, eventsInvoked)
+	})
+
+	// TODO: Add more tests for the remaining functions.
+}
+
+type mockedTestFramework struct {
+	runScript          func(inter *interpreter.Interpreter, code string, arguments []interpreter.Value)
+	createAccount      func() (*Account, error)
+	addTransaction     func(inter *interpreter.Interpreter, code string, authorizers []common.Address, signers []*Account, arguments []interpreter.Value) error
+	executeTransaction func() *TransactionResult
+	commitBlock        func() error
+	deployContract     func(inter *interpreter.Interpreter, name string, code string, account *Account, arguments []interpreter.Value) error
+	readFile           func(s string) (string, error)
+	useConfiguration   func(configuration *Configuration)
+	stdlibHandler      func() StandardLibraryHandler
+	logs               func() []string
+	serviceAccount     func() (*Account, error)
+	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
+	reset              func()
+}
+
+var _ TestFramework = &mockedTestFramework{}
+
+func (m mockedTestFramework) RunScript(
+	inter *interpreter.Interpreter,
+	code string,
+	arguments []interpreter.Value,
+) *ScriptResult {
+	if m.runScript == nil {
+		panic("'RunScript' is not implemented")
+	}
+
+	return m.RunScript(inter, code, arguments)
+}
+
+func (m mockedTestFramework) CreateAccount() (*Account, error) {
+	if m.createAccount == nil {
+		panic("'CreateAccount' is not implemented")
+	}
+
+	return m.createAccount()
+}
+
+func (m mockedTestFramework) AddTransaction(
+	inter *interpreter.Interpreter,
+	code string,
+	authorizers []common.Address,
+	signers []*Account,
+	arguments []interpreter.Value,
+) error {
+	if m.addTransaction == nil {
+		panic("'AddTransaction' is not implemented")
+	}
+
+	return m.addTransaction(inter, code, authorizers, signers, arguments)
+}
+
+func (m mockedTestFramework) ExecuteNextTransaction() *TransactionResult {
+	if m.executeTransaction == nil {
+		panic("'ExecuteNextTransaction' is not implemented")
+	}
+
+	return m.executeTransaction()
+}
+
+func (m mockedTestFramework) CommitBlock() error {
+	if m.commitBlock == nil {
+		panic("'CommitBlock' is not implemented")
+	}
+
+	return m.commitBlock()
+}
+
+func (m mockedTestFramework) DeployContract(
+	inter *interpreter.Interpreter,
+	name string,
+	code string,
+	account *Account,
+	arguments []interpreter.Value,
+) error {
+	if m.deployContract == nil {
+		panic("'DeployContract' is not implemented")
+	}
+
+	return m.deployContract(inter, name, code, account, arguments)
+}
+
+func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
+	if m.readFile == nil {
+		panic("'ReadFile' is not implemented")
+	}
+
+	return m.readFile(fileName)
+}
+
+func (m mockedTestFramework) UseConfiguration(configuration *Configuration) {
+	if m.useConfiguration == nil {
+		panic("'UseConfiguration' is not implemented")
+	}
+
+	m.useConfiguration(configuration)
+}
+
+func (m mockedTestFramework) StandardLibraryHandler() StandardLibraryHandler {
+	if m.stdlibHandler == nil {
+		panic("'StandardLibraryHandler' is not implemented")
+	}
+
+	return m.stdlibHandler()
+}
+
+func (m mockedTestFramework) Logs() []string {
+	if m.logs == nil {
+		panic("'Logs' is not implemented")
+	}
+
+	return m.logs()
+}
+
+func (m mockedTestFramework) ServiceAccount() (*Account, error) {
+	if m.serviceAccount == nil {
+		panic("'ServiceAccount' is not implemented")
+	}
+
+	return m.serviceAccount()
+}
+
+func (m mockedTestFramework) Events(
+	inter *interpreter.Interpreter,
+	eventType interpreter.StaticType,
+) interpreter.Value {
+	if m.events == nil {
+		panic("'Events' is not implemented")
+	}
+
+	return m.events(inter, eventType)
+}
+
+func (m mockedTestFramework) Reset() {
+	if m.reset == nil {
+		panic("'Reset' is not implemented")
+	}
+
+	m.reset()
 }

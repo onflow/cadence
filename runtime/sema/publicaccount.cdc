@@ -23,7 +23,7 @@ pub struct PublicAccount {
     pub let keys: PublicAccount.Keys
 
     /// The capabilities of the account.
-    pub let capabilities: &PublicAccount.Capabilities
+    pub let capabilities: PublicAccount.Capabilities
 
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]

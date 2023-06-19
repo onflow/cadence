@@ -178,6 +178,7 @@ type jsonReferenceType struct {
 
 type jsonRestrictedType struct {
 	Kind         string      `json:"kind"`
+	TypeID       string      `json:"typeID"`
 	Type         jsonValue   `json:"type"`
 	Restrictions []jsonValue `json:"restrictions"`
 }
@@ -195,6 +196,7 @@ type jsonParameterType struct {
 
 type jsonFunctionType struct {
 	Kind           string              `json:"kind"`
+	TypeID         string              `json:"typeID"`
 	TypeParameters []jsonTypeParameter `json:"typeParameters"`
 	Parameters     []jsonParameterType `json:"parameters"`
 	Return         jsonValue           `json:"return"`
@@ -245,12 +247,15 @@ const (
 	word16TypeStr      = "Word16"
 	word32TypeStr      = "Word32"
 	word64TypeStr      = "Word64"
+	word128TypeStr     = "Word128"
+	word256TypeStr     = "Word256"
 	fix64TypeStr       = "Fix64"
 	ufix64TypeStr      = "UFix64"
 	arrayTypeStr       = "Array"
 	dictionaryTypeStr  = "Dictionary"
 	structTypeStr      = "Struct"
 	resourceTypeStr    = "Resource"
+	attachmentTypeStr  = "Attachment"
 	eventTypeStr       = "Event"
 	contractTypeStr    = "Contract"
 	linkTypeStr        = "Link"
@@ -314,6 +319,10 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareWord32(v)
 	case cadence.Word64:
 		return prepareWord64(v)
+	case cadence.Word128:
+		return prepareWord128(v)
+	case cadence.Word256:
+		return prepareWord256(v)
 	case cadence.Fix64:
 		return prepareFix64(v)
 	case cadence.UFix64:
@@ -344,8 +353,12 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareIDCapability(v)
 	case cadence.Enum:
 		return prepareEnum(v)
+	case cadence.Attachment:
+		return prepareAttachment(v)
 	case cadence.Function:
 		return prepareFunction(v)
+	case nil:
+		return nil
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -522,6 +535,20 @@ func prepareWord64(v cadence.Word64) jsonValue {
 	}
 }
 
+func prepareWord128(v cadence.Word128) jsonValue {
+	return jsonValueObject{
+		Type:  word128TypeStr,
+		Value: encodeBig(v.Big()),
+	}
+}
+
+func prepareWord256(v cadence.Word256) jsonValue {
+	return jsonValueObject{
+		Type:  word256TypeStr,
+		Value: encodeBig(v.Big()),
+	}
+}
+
 func prepareFix64(v cadence.Fix64) jsonValue {
 	return jsonValueObject{
 		Type:  fix64TypeStr,
@@ -585,8 +612,14 @@ func prepareEnum(v cadence.Enum) jsonValue {
 	return prepareComposite(enumTypeStr, v.EnumType.ID(), v.EnumType.Fields, v.Fields)
 }
 
+func prepareAttachment(v cadence.Attachment) jsonValue {
+	return prepareComposite(attachmentTypeStr, v.AttachmentType.ID(), v.AttachmentType.Fields, v.Fields)
+}
+
 func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
-	if len(fieldTypes) != len(fields) {
+	// Ensure there are _at least _ as many field values as field types.
+	// There might be more field values in the case of attachments.
+	if len(fields) < len(fieldTypes) {
 		panic(fmt.Errorf(
 			"%s field count (%d) does not match declared type (%d)",
 			kind,
@@ -598,10 +631,17 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	compositeFields := make([]jsonCompositeField, len(fields))
 
 	for i, value := range fields {
-		fieldType := fieldTypes[i]
+		var name string
+		// Provide the field name, if the field type is available.
+		// In the case of attachments, they are provided as field values,
+		// but there is no corresponding field type.
+		if i < len(fieldTypes) {
+			fieldType := fieldTypes[i]
+			name = fieldType.Identifier
+		}
 
 		compositeFields[i] = jsonCompositeField{
-			Name:  fieldType.Identifier,
+			Name:  name,
 			Value: Prepare(value),
 		}
 	}
@@ -758,6 +798,8 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		cadence.Word16Type,
 		cadence.Word32Type,
 		cadence.Word64Type,
+		cadence.Word128Type,
+		cadence.Word256Type,
 		cadence.Fix64Type,
 		cadence.UFix64Type,
 		cadence.BlockType,
@@ -858,6 +900,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 	case *cadence.FunctionType:
 		return jsonFunctionType{
 			Kind:           "Function",
+			TypeID:         typ.ID(),
 			TypeParameters: prepareTypeParameters(typ.TypeParameters, results),
 			Parameters:     prepareParameters(typ.Parameters, results),
 			Return:         prepareType(typ.ReturnType, results),
@@ -875,6 +918,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		}
 		return jsonRestrictedType{
 			Kind:         "Restriction",
+			TypeID:       typ.ID(),
 			Type:         prepareType(typ.Type, results),
 			Restrictions: restrictions,
 		}

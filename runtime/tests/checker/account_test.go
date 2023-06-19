@@ -2305,7 +2305,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
           fun test() {
-		      let capabilities: &AuthAccount.Capabilities = authAccount.capabilities
+		      let capabilities: AuthAccount.Capabilities = authAccount.capabilities
 
               let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
 
@@ -2328,7 +2328,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
           fun test() {
-		      let capabilities: &AuthAccount.StorageCapabilities = authAccount.capabilities.storage
+		      let capabilities: AuthAccount.StorageCapabilities = authAccount.capabilities.storage
 
               let controller: &StorageCapabilityController = capabilities.getController(byCapabilityID: 1)!
 
@@ -2353,7 +2353,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
           fun test() {
-		      let capabilities: &AuthAccount.AccountCapabilities = authAccount.capabilities.account
+		      let capabilities: AuthAccount.AccountCapabilities = authAccount.capabilities.account
 
               let controller: &AccountCapabilityController = capabilities.getController(byCapabilityID: 1)!
 
@@ -2375,7 +2375,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
           fun test() {
-		      let capabilities: &PublicAccount.Capabilities = publicAccount.capabilities
+		      let capabilities: PublicAccount.Capabilities = publicAccount.capabilities
 
               let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
 
@@ -2390,7 +2390,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
-		  let capabilitiesRef: &PublicAccount.StorageCapabilities = publicAccount.capabilities.storage
+		  let capabilitiesRef: PublicAccount.StorageCapabilities = publicAccount.capabilities.storage
 		`)
 		require.Error(t, err)
 		errors := RequireCheckerErrors(t, err, 2)
@@ -2403,7 +2403,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
-		  let capabilitiesRef: &PublicAccount.AccountCapabilities = publicAccount.capabilities.account
+		  let capabilitiesRef: PublicAccount.AccountCapabilities = publicAccount.capabilities.account
 		`)
 		require.Error(t, err)
 		errors := RequireCheckerErrors(t, err, 2)

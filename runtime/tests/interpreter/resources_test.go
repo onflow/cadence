@@ -2565,3 +2565,291 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
+
+func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            resource Inner {
+                let outer: &Outer
+
+                init(outer: &Outer) {
+                    self.outer = outer
+                }
+
+                destroy() {
+                    self.outer.reenter()
+                }
+            }
+
+            resource Outer {
+                var inner: @Inner?
+
+                init() {
+                    self.inner <-! create Inner(outer: &self as &Outer)
+                }
+
+                fun reenter() {
+                    let inner <- self.inner <- nil
+                    destroy inner
+                }
+
+                destroy() {
+                    destroy self.inner
+                }
+            }
+
+            fun test() {
+                let outer <- create Outer()
+
+                destroy outer
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+	})
+
+	t.Run("array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            resource Inner {
+                let outer: &Outer
+
+                init(outer: &Outer) {
+                    self.outer = outer
+                }
+
+                destroy() {
+                    self.outer.reenter()
+                }
+            }
+
+            resource Outer {
+                var inner: @[Inner]
+
+                init() {
+                    self.inner <- [<-create Inner(outer: &self as &Outer)]
+                }
+
+                fun reenter() {
+                    let inner <- self.inner <- []
+                    destroy inner
+                }
+
+                destroy() {
+                    destroy self.inner
+                }
+            }
+
+            fun test() {
+                let outer <- create Outer()
+
+                destroy outer
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            resource Inner {
+                let outer: &Outer
+
+                init(outer: &Outer) {
+                    self.outer = outer
+                }
+
+                destroy() {
+                    self.outer.reenter()
+                }
+            }
+
+            resource Outer {
+                var inner: @{Int: Inner}
+
+                init() {
+                    self.inner <- {0: <-create Inner(outer: &self as &Outer)}
+                }
+
+                fun reenter() {
+                    let inner <- self.inner <- {}
+                    destroy inner
+                }
+
+                destroy() {
+                    destroy self.inner
+                }
+            }
+
+            fun test() {
+                let outer <- create Outer()
+
+                destroy outer
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+	})
+}
+
+func TestInterpretResourceFunctionInvocationAfterDestruction(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        pub resource Vault {
+            pub fun foo(_ ignored: Bool) {}
+        }
+
+        pub resource Attacker {
+			pub var vault: @Vault
+
+			init() {
+				self.vault <- create Vault()
+			}
+
+			pub fun shenanigans(): Bool {
+				var temp <- create Vault()
+				self.vault <-> temp
+                destroy temp
+                return true
+			}
+
+			destroy() {
+				destroy self.vault
+			}
+		}
+
+        pub fun main() {
+            let a <- create Attacker()
+            a.vault.foo(a.shenanigans())
+            destroy a
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}
+
+func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        pub resource Vault {
+            pub fun foo(_ ref: &Vault): &Vault {
+                return ref
+            }
+        }
+
+        pub resource Attacker {
+            pub var vault: @Vault
+
+            init() {
+                self.vault <- create Vault()
+            }
+
+            pub fun shenanigans1(): &Vault {
+                // Create a reference in a nested call
+                return &self.vault as &Vault
+            }
+
+            pub fun shenanigans2(_ ref: &Vault): &Vault {
+                return ref
+            }
+
+            destroy() {
+                destroy self.vault
+            }
+        }
+
+        pub fun main() {
+            let a <- create Attacker()
+
+            // A reference to receiver get created inside the nested call 'shenanigans1()'.
+            // Same reference is returned eventually.
+            var vaultRef1 = a.vault.foo(a.shenanigans1())
+            // Reference must be still valid, even after the invalidation of the bound function receiver.
+            vaultRef1.foo(vaultRef1)
+
+            // A reference to receiver is explicitly created as a parameter.
+            // Same reference is returned eventually.
+            var vaultRef2 = a.vault.foo(a.shenanigans2(&a.vault as &Vault))
+            // Reference must be still valid, even after the invalidation of the bound function receiver.
+            vaultRef2.foo(vaultRef2)
+
+            destroy a
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+}
+
+func TestInterpretResourceFunctionResourceFunctionValidity(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        pub resource Vault {
+            pub fun foo(_ dummy: Bool): Bool {
+                return dummy
+            }
+        }
+
+        pub resource Attacker {
+            pub var vault: @Vault
+
+            init() {
+                self.vault <- create Vault()
+            }
+
+            pub fun shenanigans(_ n: Int): Bool {
+                if n > 0 {
+                    return self.vault.foo(self.shenanigans(n - 1))
+                }
+                return true
+            }
+
+            destroy() {
+                destroy self.vault
+            }
+        }
+
+        pub fun main() {
+            let a <- create Attacker()
+
+            a.vault.foo(a.shenanigans(10))
+
+            destroy a
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+}

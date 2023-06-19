@@ -44,6 +44,8 @@ type Visitor interface {
 	VisitWord16Value(interpreter *Interpreter, value Word16Value)
 	VisitWord32Value(interpreter *Interpreter, value Word32Value)
 	VisitWord64Value(interpreter *Interpreter, value Word64Value)
+	VisitWord128Value(interpreter *Interpreter, value Word128Value)
+	VisitWord256Value(interpreter *Interpreter, value Word256Value)
 	VisitFix64Value(interpreter *Interpreter, value Fix64Value)
 	VisitUFix64Value(interpreter *Interpreter, value UFix64Value)
 	VisitCompositeValue(interpreter *Interpreter, value *CompositeValue) bool
@@ -93,6 +95,8 @@ type EmptyVisitor struct {
 	Word16ValueVisitor                      func(interpreter *Interpreter, value Word16Value)
 	Word32ValueVisitor                      func(interpreter *Interpreter, value Word32Value)
 	Word64ValueVisitor                      func(interpreter *Interpreter, value Word64Value)
+	Word128ValueVisitor                     func(interpreter *Interpreter, value Word128Value)
+	Word256ValueVisitor                     func(interpreter *Interpreter, value Word256Value)
 	Fix64ValueVisitor                       func(interpreter *Interpreter, value Fix64Value)
 	UFix64ValueVisitor                      func(interpreter *Interpreter, value UFix64Value)
 	CompositeValueVisitor                   func(interpreter *Interpreter, value *CompositeValue) bool
@@ -291,6 +295,20 @@ func (v EmptyVisitor) VisitWord64Value(interpreter *Interpreter, value Word64Val
 		return
 	}
 	v.Word64ValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitWord128Value(interpreter *Interpreter, value Word128Value) {
+	if v.Word128ValueVisitor == nil {
+		return
+	}
+	v.Word128ValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitWord256Value(interpreter *Interpreter, value Word256Value) {
+	if v.Word256ValueVisitor == nil {
+		return
+	}
+	v.Word256ValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitFix64Value(interpreter *Interpreter, value Fix64Value) {

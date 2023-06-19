@@ -418,6 +418,34 @@ func FromStringFunctionType(ty Type) *FunctionType {
 	}
 }
 
+// fromBigEndianBytes
+
+const FromBigEndianBytesFunctionName = "fromBigEndianBytes"
+
+func FromBigEndianBytesFunctionDocstring(ty Type) string {
+	return fmt.Sprintf(
+		"Attempts to parse %s from a big-endian byte representation. Returns `nil` on invalid input.",
+		ty.String(),
+	)
+}
+
+func FromBigEndianBytesFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "bytes",
+				TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: ty,
+			},
+		),
+	}
+}
+
 // toBigEndianBytes
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
@@ -1487,6 +1515,18 @@ var (
 			WithTag(Word64TypeTag).
 			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
+	// Word128Type represents the 128-bit unsigned integer type `Word128`
+	// which does NOT check for overflow and underflow
+	Word128Type = NewNumericType(Word128TypeName).
+			WithTag(Word128TypeTag).
+			WithIntRange(Word128TypeMinIntBig, Word128TypeMaxIntBig)
+
+	// Word256Type represents the 256-bit unsigned integer type `Word256`
+	// which does NOT check for overflow and underflow
+	Word256Type = NewNumericType(Word256TypeName).
+			WithTag(Word256TypeTag).
+			WithIntRange(Word256TypeMinIntBig, Word256TypeMaxIntBig)
+
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName).
 			WithTag(FixedPointTypeTag).
@@ -1605,6 +1645,32 @@ var (
 
 	Word64TypeMinInt = new(big.Int)
 	Word64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
+
+	// 1 << 128
+	Word128TypeMaxIntPlusOneBig = func() *big.Int {
+		word128TypeMaxPlusOne := big.NewInt(1)
+		word128TypeMaxPlusOne.Lsh(word128TypeMaxPlusOne, 128)
+		return word128TypeMaxPlusOne
+	}()
+	Word128TypeMinIntBig = new(big.Int)
+	Word128TypeMaxIntBig = func() *big.Int {
+		word128TypeMax := new(big.Int)
+		word128TypeMax.Sub(Word128TypeMaxIntPlusOneBig, big.NewInt(1))
+		return word128TypeMax
+	}()
+
+	// 1 << 256
+	Word256TypeMaxIntPlusOneBig = func() *big.Int {
+		word256TypeMaxPlusOne := big.NewInt(1)
+		word256TypeMaxPlusOne.Lsh(word256TypeMaxPlusOne, 256)
+		return word256TypeMaxPlusOne
+	}()
+	Word256TypeMinIntBig = new(big.Int)
+	Word256TypeMaxIntBig = func() *big.Int {
+		word256TypeMax := new(big.Int)
+		word256TypeMax.Sub(Word256TypeMaxIntPlusOneBig, big.NewInt(1))
+		return word256TypeMax
+	}()
 
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
@@ -3169,6 +3235,8 @@ var AllUnsignedIntegerTypes = []Type{
 	Word16Type,
 	Word32Type,
 	Word64Type,
+	Word128Type,
+	Word256Type,
 }
 
 var AllIntegerTypes = append(
@@ -3294,6 +3362,16 @@ func init() {
 				FromStringFunctionName,
 				fromStringFnType,
 				fromStringDocstring,
+			))
+
+			// add .fromBigEndianBytes() method
+			fromBigEndianBytesFnType := FromBigEndianBytesFunctionType(numberType)
+			fromBigEndianBytesDocstring := FromBigEndianBytesFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromBigEndianBytesFunctionName,
+				fromBigEndianBytesFnType,
+				fromBigEndianBytesDocstring,
 			))
 
 			BaseValueActivation.Set(
@@ -5369,7 +5447,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		case IntegerType, SignedIntegerType,
 			UIntType,
 			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
-			Word8Type, Word16Type, Word32Type, Word64Type:
+			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type:
 
 			return true
 

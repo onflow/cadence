@@ -383,7 +383,15 @@ func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 }
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	invocation.Self = f.Self
+	self := f.Self
+	invocation.Self = self
+	if self != nil {
+		if resource, ok := (*self).(ResourceKindedValue); ok && resource.IsDestroyed() {
+			panic(DestroyedResourceError{
+				LocationRange: invocation.LocationRange,
+			})
+		}
+	}
 	invocation.Base = f.Base
 	return f.Function.invoke(invocation)
 }
