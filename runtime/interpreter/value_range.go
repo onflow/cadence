@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -61,13 +63,24 @@ func NewInclusiveRangeValueWithStep(
 	rangeType InclusiveRangeStaticType,
 ) *CompositeValue {
 
-	// TODO: Validate if the sequence is moving away from the end value.
-
 	// Validate that the step is non-zero.
 	if step.Equal(interpreter, locationRange, getValueForIntegerType(0, rangeType.ElementType)) {
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
 			Message:       "step value cannot be zero",
+		})
+	}
+
+	// Validate that the sequence is moving towards the end value.
+	// If start < end, step must be > 0
+	// If start > end, step must be < 0
+	// If start == end, step doesn't matter.
+	if (start.Less(interpreter, end, locationRange) && step.Less(interpreter, getValueForIntegerType(0, rangeType.ElementType), locationRange)) ||
+		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, getValueForIntegerType(0, rangeType.ElementType), locationRange)) {
+
+		panic(InclusiveRangeConstructionError{
+			LocationRange: locationRange,
+			Message:       fmt.Sprintf("sequence is moving away from end: %s due to the value of step: %s and start: %s", end, step, start),
 		})
 	}
 
