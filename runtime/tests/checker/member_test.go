@@ -424,6 +424,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	t.Parallel()
 
 	t.Run("composite, field", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct Test {
                 var x: [Int]
@@ -442,6 +444,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite, function", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct Test {
                 pub fun foo(): Int {
@@ -459,6 +463,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, field", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct Test {
                 var x: [Int]
@@ -478,6 +484,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, optional field", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct Test {
                 var x: [Int]?
@@ -497,6 +505,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, primitive field", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct Test {
                 var x: Int
@@ -516,6 +526,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, function", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             struct Test {
                 pub fun foo(): Int {
@@ -534,6 +546,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array, element", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
@@ -545,6 +559,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, element", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
@@ -557,6 +573,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, optional typed element", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let array: [[Int]?] = [[1, 2]]
@@ -569,6 +587,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, primitive typed element", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let array: [Int] = [1, 2]
@@ -581,6 +601,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary, value", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let dict: {String: {String: Int}} = {"one": {"two": 2}}
@@ -592,6 +614,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, value", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
@@ -604,6 +628,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, optional typed value", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let dict: {String: {String: Int}?} = {"one": {"two": 2}}
@@ -616,6 +642,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, optional typed value, mismatch types", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let dict: {String: {String: Int}?} = {"one": {"two": 2}}
@@ -632,6 +660,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
                 let dict: {String: Int} = {"one": 1}
@@ -644,6 +674,8 @@ func TestCheckMemberAccess(t *testing.T) {
 	})
 
 	t.Run("resource reference, attachment", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             resource R {}
 

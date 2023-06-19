@@ -563,6 +563,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Parallel()
 
 	t.Run("composite, field", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 var x: [Int]
@@ -582,6 +584,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite, function", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 pub fun foo(): Int {
@@ -600,6 +604,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, field", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 var x: [Int]
@@ -620,6 +626,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, optional field", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 var x: [Int]?
@@ -640,6 +648,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, primitive field", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 var x: Int
@@ -660,6 +670,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, function", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 pub fun foo(): Int {
@@ -679,6 +691,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("resource reference, nested", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             resource Foo {
                 var bar: @Bar
@@ -727,6 +741,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, anystruct typed field, with reference value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 var x: AnyStruct
@@ -754,6 +770,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array, element", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
@@ -766,6 +784,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, element", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
@@ -779,6 +799,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, element, in assignment", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
@@ -793,6 +815,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, optional typed element", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [[Int]?] = [[1, 2]]
@@ -806,6 +830,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, primitive typed element", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [Int] = [1, 2]
@@ -819,6 +845,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, anystruct typed element, with reference value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test(): &AnyStruct {
                 var s = "hello"
@@ -839,6 +867,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary, value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: {String: Int}} = {"one": {"two": 2}}
@@ -851,6 +881,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
@@ -864,6 +896,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, value, in assignment", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
@@ -878,6 +912,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, optional typed value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: {String: Int}?} = {"one": {"two": 2}}
@@ -891,6 +927,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: Int} = {"one": 1}
@@ -904,6 +942,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("resource reference, attachment", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             resource R {}
 
@@ -914,6 +954,46 @@ func TestInterpretMemberAccess(t *testing.T) {
                 let rRef = &r as &R
 
                 var a: &A? = rRef[A]
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment nested member", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            attachment A for R {
+                var foo: Foo
+                init() {
+                    self.foo = Foo()
+                }
+
+                access(all) fun getNestedMember(): [Int] {
+                    return self.foo.array
+                }
+            }
+
+            struct Foo {
+                var array: [Int]
+                init() {
+                    self.array = []
+                }
+            }
+
+            fun test() {
+                let r <- attach A() to <- create R()
+                let rRef = &r as &R
+
+                var a: &A? = rRef[A]
+
+                var array = a!.getNestedMember()
+
                 destroy r
             }
         `)
