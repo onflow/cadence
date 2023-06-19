@@ -148,7 +148,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
 	}
 
-	returnsReference := false
+	returnReference := false
 
 	defer func() {
 		checker.Elaboration.SetMemberExpressionMemberInfo(
@@ -158,7 +158,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 				ResultingType:   resultingType,
 				Member:          member,
 				IsOptional:      isOptional,
-				ReturnReference: returnsReference,
+				ReturnReference: returnReference,
 			},
 		)
 	}()
@@ -397,7 +397,26 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 		// Get a reference to the type
 		resultingType = checker.getReferenceType(resultingType, resultingAuthorization)
-		returnsReference = true
+		returnReference = true
+	}
+
+	// If the member,
+	//   1) is accessed via a reference, and
+	//   2) is container-typed,
+	// then the member type should also be a reference.
+
+	// Note: For attachments, `self` is always a reference.
+	// But we do not want to return a reference for `self.something`.
+	// Otherwise, things like `destroy self.something` would become invalid.
+	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
+	// i.e: `accessedSelfMember == nil`
+
+	if accessedSelfMember == nil &&
+		shouldReturnReference(accessedType, resultingType) &&
+		member.DeclarationKind == common.DeclarationKindField {
+		// Get a reference to the type
+		resultingType = checker.getReferenceType(resultingType, resultingAuthorization)
+		returnReference = true
 	}
 
 	return accessedType, resultingType, member, isOptional
