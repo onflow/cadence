@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 )
 
 // NOTE: only called if the member expression is *not* an assignment
@@ -90,32 +89,6 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 		}
 	}
 
-	// If the member,
-	//   1) is accessed via a reference, and
-	//   2) is container-typed,
-	// then the member type should also be a reference.
-
-	// Note: For attachments, `self` is always a reference.
-	// But we do not want to return a reference for `self.something`.
-	// Otherwise, things like `destroy self.something` would become invalid.
-	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
-	// i.e: `accessedSelfMember == nil`
-
-	if accessedSelfMember == nil &&
-		shouldReturnReference(accessedType, memberType) &&
-		member.DeclarationKind == common.DeclarationKindField {
-		// Get a reference to the type
-		memberType = checker.getReferenceType(memberType)
-
-		// Store the result in elaboration, so the interpreter can re-use this.
-		memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		memberInfo.ReturnReference = true
-		checker.Elaboration.SetMemberExpressionMemberInfo(expression, memberInfo)
-	}
-
 	return memberType
 }
 
@@ -171,14 +144,17 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
 	}
 
+	returnReference := false
+
 	defer func() {
 		checker.Elaboration.SetMemberExpressionMemberInfo(
 			expression,
 			MemberInfo{
-				AccessedType:  accessedType,
-				ResultingType: resultingType,
-				Member:        member,
-				IsOptional:    isOptional,
+				AccessedType:    accessedType,
+				ResultingType:   resultingType,
+				Member:          member,
+				IsOptional:      isOptional,
+				ReturnReference: returnReference,
 			},
 		)
 	}()
@@ -398,6 +374,26 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			)
 		}
 	}
+
+	// If the member,
+	//   1) is accessed via a reference, and
+	//   2) is container-typed,
+	// then the member type should also be a reference.
+
+	// Note: For attachments, `self` is always a reference.
+	// But we do not want to return a reference for `self.something`.
+	// Otherwise, things like `destroy self.something` would become invalid.
+	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
+	// i.e: `accessedSelfMember == nil`
+
+	if accessedSelfMember == nil &&
+		shouldReturnReference(accessedType, resultingType) &&
+		member.DeclarationKind == common.DeclarationKindField {
+		// Get a reference to the type
+		resultingType = checker.getReferenceType(resultingType)
+		returnReference = true
+	}
+
 	return accessedType, resultingType, member, isOptional
 }
 
