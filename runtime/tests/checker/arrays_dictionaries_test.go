@@ -1484,3 +1484,170 @@ func TestNilAssignmentToDictionary(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckArrayFunctionEntitlements(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("inserting functions", func(t *testing.T) {
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutable) &[String]
+                    arrayRef.append("baz")
+                    arrayRef.appendAll(["baz"])
+                    arrayRef.insert(at:0, "baz")
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef.append("baz")
+                    arrayRef.appendAll(["baz"])
+                    arrayRef.insert(at:0, "baz")
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 3)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+
+		t.Run("insertable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insertable) &[String]
+                    arrayRef.append("baz")
+                    arrayRef.appendAll(["baz"])
+                    arrayRef.insert(at:0, "baz")
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("removable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Removable) &[String]
+                    arrayRef.append("baz")
+                    arrayRef.appendAll(["baz"])
+                    arrayRef.insert(at:0, "baz")
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 3)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+	})
+
+	t.Run("removing functions", func(t *testing.T) {
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutable) &[String]
+                    arrayRef.remove(at: 1)
+                    arrayRef.removeFirst()
+                    arrayRef.removeLast()
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef.remove(at: 1)
+                    arrayRef.removeFirst()
+                    arrayRef.removeLast()
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 3)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+
+		t.Run("insertable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insertable) &[String]
+                    arrayRef.remove(at: 1)
+                    arrayRef.removeFirst()
+                    arrayRef.removeLast()
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 3)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+
+		t.Run("removable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Removable) &[String]
+                    arrayRef.remove(at: 1)
+                    arrayRef.removeFirst()
+                    arrayRef.removeLast()
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+	})
+}

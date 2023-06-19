@@ -2679,7 +2679,7 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 
           fun test() {
               let rs <- [<-create R()]
-              let ref = &rs as &[R]
+              let ref = &rs as auth(Mutable) &[R]
               let container <- [<-rs]
               ref.insert(at: 1, <-create R())
               destroy container
@@ -2700,7 +2700,7 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 
           fun test() {
               let rs <- [<-create R()]
-              let ref = &rs as &[R]
+              let ref = &rs as auth(Mutable) &[R]
               let container <- [<-rs]
               ref.append(<-create R())
               destroy container
@@ -2749,7 +2749,7 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 
           fun test() {
               let rs <- [<-create R()]
-              let ref = &rs as &[R]
+              let ref = &rs as auth(Mutable) &[R]
               let container <- [<-rs]
               let r <- ref.remove(at: 0)
               destroy container
