@@ -692,4 +692,31 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("entitlement map access", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                A -> B
+            }
+
+            struct S {
+                access(M) let foo: [String]
+                init() {
+                    self.foo = []
+                }
+            }
+
+            fun test() {
+                let s = S()
+                let sRef = &s as auth(A) &S
+                var foo: auth(B) &[String] = sRef.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
 }

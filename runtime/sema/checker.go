@@ -1939,39 +1939,42 @@ func (checker *Checker) checkEntitlementMapAccess(
 		return
 	}
 
-	// mapped entitlement fields must be (optional) references that are authorized to the same mapped entitlement,
-	// or functions that return an (optional) reference authorized to the same mapped entitlement
-	requireIsPotentiallyOptionalReference := func(typ Type) {
-		switch ty := typ.(type) {
-		case *ReferenceType:
-			if ty.Authorization.Equal(access) {
-				return
-			}
-		case *OptionalType:
-			switch optionalType := ty.Type.(type) {
-			case *ReferenceType:
-				if optionalType.Authorization.Equal(access) {
-					return
-				}
-			}
+	// mapped entitlement fields must be, one of:
+	// 1) An [optional] reference that is authorized to the same mapped entitlement.
+	// 2) A function that return an [optional] reference authorized to the same mapped entitlement.
+	// 3) A container - So if the parent is a reference, entitlements can be granted to the resulting field reference.
+
+	entitledType := declarationType
+
+	if functionType, isFunction := declarationType.(*FunctionType); isFunction {
+		if declarationKind == common.DeclarationKindFunction {
+			entitledType = functionType.ReturnTypeAnnotation.Type
 		}
-		checker.report(
-			&InvalidMappedEntitlementMemberError{
-				Pos: startPos,
-			},
-		)
 	}
 
-	switch ty := declarationType.(type) {
-	case *FunctionType:
-		if declarationKind == common.DeclarationKindFunction {
-			requireIsPotentiallyOptionalReference(ty.ReturnTypeAnnotation.Type)
-		} else {
-			requireIsPotentiallyOptionalReference(ty)
+	switch ty := entitledType.(type) {
+	case *ReferenceType:
+		if ty.Authorization.Equal(access) {
+			return
+		}
+	case *OptionalType:
+		switch optionalType := ty.Type.(type) {
+		case *ReferenceType:
+			if optionalType.Authorization.Equal(access) {
+				return
+			}
 		}
 	default:
-		requireIsPotentiallyOptionalReference(ty)
+		if isContainerType(entitledType) {
+			return
+		}
 	}
+
+	checker.report(
+		&InvalidMappedEntitlementMemberError{
+			Pos: startPos,
+		},
+	)
 }
 
 func (checker *Checker) checkEntitlementSetAccess(

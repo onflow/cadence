@@ -271,7 +271,7 @@ func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) Ty
 	//   2) is container-typed,
 	// then the element type should also be a reference.
 	if shouldReturnReference(parentType, elementType) {
-		elementType = checker.getReferenceType(elementType)
+		elementType = checker.getReferenceType(elementType, nil)
 
 		// Store the result in elaboration, so the interpreter can re-use this.
 		indexExprTypes.ReturnReference = true

@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 )
 
 // NOTE: only called if the member expression is *not* an assignment
@@ -90,32 +89,6 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 		}
 	}
 
-	// If the member,
-	//   1) is accessed via a reference, and
-	//   2) is container-typed,
-	// then the member type should also be a reference.
-
-	// Note: For attachments, `self` is always a reference.
-	// But we do not want to return a reference for `self.something`.
-	// Otherwise, things like `destroy self.something` would become invalid.
-	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
-	// i.e: `accessedSelfMember == nil`
-
-	if accessedSelfMember == nil &&
-		shouldReturnReference(accessedType, memberType) &&
-		member.DeclarationKind == common.DeclarationKindField {
-		// Get a reference to the type
-		memberType = checker.getReferenceType(memberType)
-
-		// Store the result in elaboration, so the interpreter can re-use this.
-		memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		memberInfo.ReturnReference = true
-		checker.Elaboration.SetMemberExpressionMemberInfo(expression, memberInfo)
-	}
-
 	return memberType
 }
 
@@ -124,14 +97,18 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getReferenceType(typ Type) Type {
+func (checker *Checker) getReferenceType(typ Type, authorization Access) Type {
 	if optionalType, ok := typ.(*OptionalType); ok {
 		return &OptionalType{
-			Type: checker.getReferenceType(optionalType.Type),
+			Type: checker.getReferenceType(optionalType.Type, authorization),
 		}
 	}
 
-	return NewReferenceType(checker.memoryGauge, typ, UnauthorizedAccess)
+	if authorization == nil {
+		authorization = UnauthorizedAccess
+	}
+
+	return NewReferenceType(checker.memoryGauge, typ, authorization)
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
@@ -171,14 +148,17 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
 	}
 
+	returnsReference := false
+
 	defer func() {
 		checker.Elaboration.SetMemberExpressionMemberInfo(
 			expression,
 			MemberInfo{
-				AccessedType:  accessedType,
-				ResultingType: resultingType,
-				Member:        member,
-				IsOptional:    isOptional,
+				AccessedType:    accessedType,
+				ResultingType:   resultingType,
+				Member:          member,
+				IsOptional:      isOptional,
+				ReturnReference: returnsReference,
 			},
 		)
 	}()
@@ -325,79 +305,101 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 				},
 			)
 		}
-	} else {
 
-		if checker.PositionInfo != nil {
-			checker.PositionInfo.recordMemberOccurrence(
-				accessedType,
-				identifier,
-				identifierStartPosition,
-				identifierEndPosition,
-			)
-		}
+		return
+	}
 
-		// Check access and report if inaccessible
-		accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
-		isReadable, resultingAuthorization := checker.isReadableMember(accessedType, member, accessRange)
-		if !isReadable {
-			checker.report(
-				&InvalidAccessError{
-					Name:              member.Identifier.Identifier,
-					RestrictingAccess: member.Access,
-					DeclarationKind:   member.DeclarationKind,
-					Range:             accessRange(),
-				},
-			)
-		}
+	if checker.PositionInfo != nil {
+		checker.PositionInfo.recordMemberOccurrence(
+			accessedType,
+			identifier,
+			identifierStartPosition,
+			identifierEndPosition,
+		)
+	}
 
-		// the resulting authorization was mapped through an entitlement map, so we need to substitute this new authorization into the resulting type
-		// i.e. if the field was declared with `access(M) let x: auth(M) &T?`, and we computed that the output of the map would give entitlement `E`,
-		// we substitute this entitlement in for the "variable" `M` to produce `auth(E) &T?`, the access with which the type is actually produced.
-		// Equivalently, this can be thought of like generic instantiation.
-		substituteConcreteAuthorization := func(resultingType Type) Type {
-			switch ty := resultingType.(type) {
+	// Check access and report if inaccessible
+	accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
+	isReadable, resultingAuthorization := checker.isReadableMember(accessedType, member, accessRange)
+	if !isReadable {
+		checker.report(
+			&InvalidAccessError{
+				Name:              member.Identifier.Identifier,
+				RestrictingAccess: member.Access,
+				DeclarationKind:   member.DeclarationKind,
+				Range:             accessRange(),
+			},
+		)
+	}
+
+	// the resulting authorization was mapped through an entitlement map, so we need to substitute this new authorization into the resulting type
+	// i.e. if the field was declared with `access(M) let x: auth(M) &T?`, and we computed that the output of the map would give entitlement `E`,
+	// we substitute this entitlement in for the "variable" `M` to produce `auth(E) &T?`, the access with which the type is actually produced.
+	// Equivalently, this can be thought of like generic instantiation.
+	substituteConcreteAuthorization := func(resultingType Type) Type {
+		switch ty := resultingType.(type) {
+		case *ReferenceType:
+			return NewReferenceType(checker.memoryGauge, ty.Type, resultingAuthorization)
+		case *OptionalType:
+			switch innerTy := ty.Type.(type) {
 			case *ReferenceType:
-				return NewReferenceType(checker.memoryGauge, ty.Type, resultingAuthorization)
-			case *OptionalType:
-				switch innerTy := ty.Type.(type) {
-				case *ReferenceType:
-					return NewOptionalType(checker.memoryGauge,
-						NewReferenceType(checker.memoryGauge, innerTy.Type, resultingAuthorization))
-				}
-			}
-			return resultingType
-		}
-		if !member.Access.Equal(resultingAuthorization) {
-			switch ty := resultingType.(type) {
-			case *FunctionType:
-				resultingType = NewSimpleFunctionType(
-					ty.Purity,
-					ty.Parameters,
-					NewTypeAnnotation(substituteConcreteAuthorization(ty.ReturnTypeAnnotation.Type)),
-				)
-			default:
-				resultingType = substituteConcreteAuthorization(resultingType)
+				return NewOptionalType(checker.memoryGauge,
+					NewReferenceType(checker.memoryGauge, innerTy.Type, resultingAuthorization))
 			}
 		}
-
-		// Check that the member access is not to a function of resource type
-		// outside of an invocation of it.
-		//
-		// This would result in a bound method for a resource, which is invalid.
-
-		if !checker.inAssignment &&
-			!checker.inInvocation &&
-			member.DeclarationKind == common.DeclarationKindFunction &&
-			!accessedType.IsInvalidType() &&
-			accessedType.IsResourceType() {
-
-			checker.report(
-				&ResourceMethodBindingError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
-				},
+		return resultingType
+	}
+	if !member.Access.Equal(resultingAuthorization) {
+		switch ty := resultingType.(type) {
+		case *FunctionType:
+			resultingType = NewSimpleFunctionType(
+				ty.Purity,
+				ty.Parameters,
+				NewTypeAnnotation(substituteConcreteAuthorization(ty.ReturnTypeAnnotation.Type)),
 			)
+		default:
+			resultingType = substituteConcreteAuthorization(resultingType)
 		}
 	}
+
+	// Check that the member access is not to a function of resource type
+	// outside of an invocation of it.
+	//
+	// This would result in a bound method for a resource, which is invalid.
+
+	if !checker.inAssignment &&
+		!checker.inInvocation &&
+		member.DeclarationKind == common.DeclarationKindFunction &&
+		!accessedType.IsInvalidType() &&
+		accessedType.IsResourceType() {
+
+		checker.report(
+			&ResourceMethodBindingError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+			},
+		)
+	}
+
+	// If the member,
+	//   1) is accessed via a reference, and
+	//   2) is container-typed,
+	// then the member type should also be a reference.
+
+	// Note: For attachments, `self` is always a reference.
+	// But we do not want to return a reference for `self.something`.
+	// Otherwise, things like `destroy self.something` would become invalid.
+	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
+	// i.e: `accessedSelfMember == nil`
+
+	if accessedSelfMember == nil &&
+		shouldReturnReference(accessedType, resultingType) &&
+		member.DeclarationKind == common.DeclarationKindField {
+
+		// Get a reference to the type
+		resultingType = checker.getReferenceType(resultingType, resultingAuthorization)
+		returnsReference = true
+	}
+
 	return accessedType, resultingType, member, isOptional
 }
 
