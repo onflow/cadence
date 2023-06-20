@@ -843,17 +843,29 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
 }
 
-func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition, kind ast.ConditionKind) {
+func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
 	for _, condition := range conditions {
 		interpreter.visitCondition(condition, kind)
 	}
 }
 
-func (interpreter *Interpreter) visitCondition(condition *ast.Condition, kind ast.ConditionKind) {
+func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast.ConditionKind) {
 
-	// Evaluate the condition as a statement, so we get position information in case of an error
+	var statement ast.Statement
+	var messageExpression ast.Expression
 
-	statement := ast.NewExpressionStatement(interpreter, condition.Test)
+	switch condition := condition.(type) {
+	case *ast.TestCondition:
+		// Evaluate the condition as a statement, so we get position information in case of an error
+		statement = ast.NewExpressionStatement(interpreter, condition.Test)
+		messageExpression = condition.Message
+
+	case *ast.EmitCondition:
+		statement = (*ast.EmitStatement)(condition)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
 	result, ok := interpreter.evalStatement(statement).(ExpressionResult)
 
@@ -864,8 +876,8 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition, kind as
 	}
 
 	var message string
-	if condition.Message != nil {
-		messageValue := interpreter.evalExpression(condition.Message)
+	if messageExpression != nil {
+		messageValue := interpreter.evalExpression(messageExpression)
 		message = messageValue.(*StringValue).Str
 	}
 
@@ -874,7 +886,7 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition, kind as
 		Message:       message,
 		LocationRange: LocationRange{
 			Location:    interpreter.Location,
-			HasPosition: condition.Test,
+			HasPosition: statement,
 		},
 	})
 }

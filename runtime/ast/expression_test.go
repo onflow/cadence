@@ -4621,7 +4621,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 			},
 			FunctionBlock: &FunctionBlock{
 				PreConditions: &Conditions{
-					{
+					&TestCondition{
 						Test: &BoolExpression{
 							Value: true,
 						},
@@ -4631,7 +4631,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					},
 				},
 				PostConditions: &Conditions{
-					{
+					&TestCondition{
 						Test: &BoolExpression{
 							Value: false,
 						},
@@ -4874,7 +4874,7 @@ func TestFunctionExpression_String(t *testing.T) {
 			},
 			FunctionBlock: &FunctionBlock{
 				PreConditions: &Conditions{
-					{
+					&TestCondition{
 						Test: &BoolExpression{
 							Value: true,
 						},
@@ -4884,7 +4884,7 @@ func TestFunctionExpression_String(t *testing.T) {
 					},
 				},
 				PostConditions: &Conditions{
-					{
+					&TestCondition{
 						Test: &BoolExpression{
 							Value: false,
 						},

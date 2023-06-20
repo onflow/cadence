@@ -18,9 +18,12 @@
 
 package sema
 
-import "github.com/onflow/cadence/runtime/ast"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
+)
 
-func (checker *Checker) visitConditions(conditions []*ast.Condition) {
+func (checker *Checker) visitConditions(conditions []ast.Condition) {
 	// all condition blocks are `view`
 	checker.InNewPurityScope(true, func() {
 		// flag the checker to be inside a condition.
@@ -42,14 +45,25 @@ func (checker *Checker) visitConditions(conditions []*ast.Condition) {
 	})
 }
 
-func (checker *Checker) checkCondition(condition *ast.Condition) Type {
+func (checker *Checker) checkCondition(condition ast.Condition) Type {
 
-	// check test expression is boolean
-	checker.VisitExpression(condition.Test, BoolType)
+	switch condition := condition.(type) {
+	case *ast.TestCondition:
 
-	// check message expression results in a string
-	if condition.Message != nil {
-		checker.VisitExpression(condition.Message, StringType)
+		// check test expression is boolean
+		checker.VisitExpression(condition.Test, BoolType)
+
+		// check message expression results in a string
+		if condition.Message != nil {
+			checker.VisitExpression(condition.Message, StringType)
+		}
+
+	case *ast.EmitCondition:
+		// TODO:
+		panic("TODO")
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
 	return nil

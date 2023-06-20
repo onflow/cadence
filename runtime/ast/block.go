@@ -225,12 +225,28 @@ func (b *FunctionBlock) HasStatements() bool {
 
 // Condition
 
-type Condition struct {
+type Condition interface {
+	isCondition()
+	CodeElement() Element
+	Doc() prettier.Doc
+}
+
+// TestCondition
+
+type TestCondition struct {
 	Test    Expression
 	Message Expression
 }
 
-func (c Condition) Doc() prettier.Doc {
+var _ Condition = TestCondition{}
+
+func (c TestCondition) isCondition() {}
+
+func (c TestCondition) CodeElement() Element {
+	return c.Test
+}
+
+func (c TestCondition) Doc() prettier.Doc {
 	doc := c.Test.Doc()
 	if c.Message != nil {
 		doc = prettier.Concat{
@@ -250,9 +266,25 @@ func (c Condition) Doc() prettier.Doc {
 	}
 }
 
+// EmitCondition
+
+type EmitCondition EmitStatement
+
+var _ Condition = &EmitCondition{}
+
+func (c *EmitCondition) isCondition() {}
+
+func (c *EmitCondition) CodeElement() Element {
+	return (*EmitStatement)(c)
+}
+
+func (c *EmitCondition) Doc() prettier.Doc {
+	return (*EmitStatement)(c).Doc()
+}
+
 // Conditions
 
-type Conditions []*Condition
+type Conditions []Condition
 
 func (c *Conditions) IsEmpty() bool {
 	return c == nil || len(*c) == 0

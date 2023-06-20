@@ -220,7 +220,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 				},
 			},
 			PreConditions: &Conditions{
-				{
+				&TestCondition{
 					Test: &BoolExpression{
 						Value: false,
 						Range: Range{
@@ -238,7 +238,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 				},
 			},
 			PostConditions: &Conditions{
-				{
+				&TestCondition{
 					Test: &BoolExpression{
 						Value: true,
 						Range: Range{
@@ -375,7 +375,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 				},
 			},
 			PreConditions: &Conditions{
-				{
+				&TestCondition{
 					Test: &BoolExpression{
 						Value: false,
 					},
@@ -385,7 +385,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 				},
 			},
 			PostConditions: &Conditions{
-				{
+				&TestCondition{
 					Test: &BoolExpression{
 						Value: true,
 					},
@@ -524,7 +524,7 @@ func TestFunctionBlock_String(t *testing.T) {
 				},
 			},
 			PreConditions: &Conditions{
-				{
+				&TestCondition{
 					Test: &BoolExpression{
 						Value: false,
 					},
@@ -534,7 +534,7 @@ func TestFunctionBlock_String(t *testing.T) {
 				},
 			},
 			PostConditions: &Conditions{
-				{
+				&TestCondition{
 					Test: &BoolExpression{
 						Value: true,
 					},

@@ -595,7 +595,7 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 			return
 
 		default:
-			var condition *ast.Condition
+			var condition *ast.TestCondition
 			condition, err = parseCondition(p)
 			if err != nil || condition == nil {
 				return
@@ -609,7 +609,7 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 // parseCondition parses a condition (pre/post)
 //
 //	condition : expression (':' expression )?
-func parseCondition(p *parser) (*ast.Condition, error) {
+func parseCondition(p *parser) (*ast.TestCondition, error) {
 
 	test, err := parseExpression(p, lowestBindingPower)
 	if err != nil {
@@ -628,7 +628,7 @@ func parseCondition(p *parser) (*ast.Condition, error) {
 		}
 	}
 
-	return &ast.Condition{
+	return &ast.TestCondition{
 		Test:    test,
 		Message: message,
 	}, nil
