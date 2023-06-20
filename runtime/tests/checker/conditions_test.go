@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestCheckFunctionConditions(t *testing.T) {
+func TestCheckFunctionTestConditions(t *testing.T) {
 
 	t.Parallel()
 
@@ -46,34 +46,91 @@ func TestCheckFunctionConditions(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckInvalidFunctionPreConditionReference(t *testing.T) {
+func TestCheckFunctionEmitConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("existing types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          event Foo()
+          event Bar()
+
+          fun test(x: Int) {
+              pre {
+                  emit Foo()
+              }
+              post {
+                  emit Bar()
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non-existing types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(x: Int) {
+              pre {
+                  emit Foo()
+              }
+              post {
+                  emit Bar()
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var notDeclaredErr *sema.NotDeclaredError
+
+		require.ErrorAs(t, errs[0], &notDeclaredErr)
+		assert.Equal(t, "Foo", notDeclaredErr.Name)
+
+		require.ErrorAs(t, errs[1], &notDeclaredErr)
+		assert.Equal(t, "Bar", notDeclaredErr.Name)
+	})
+}
+
+func TestCheckInvalidFunctionConditionValueReference(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
+      event Foo(y: Int)
+      event Bar(z: Int)
+
       fun test(x: Int) {
           pre {
               y == 0
+              emit Foo(y: a)
           }
           post {
               z == 0
+              emit Bar(z: b)
           }
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 4)
 
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-	assert.Equal(t,
-		"y",
-		errs[0].(*sema.NotDeclaredError).Name,
-	)
+	var notDeclaredErr *sema.NotDeclaredError
 
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
-	assert.Equal(t,
-		"z",
-		errs[1].(*sema.NotDeclaredError).Name,
-	)
+	require.ErrorAs(t, errs[0], &notDeclaredErr)
+	assert.Equal(t, "y", notDeclaredErr.Name)
+
+	require.ErrorAs(t, errs[1], &notDeclaredErr)
+	assert.Equal(t, "a", notDeclaredErr.Name)
+
+	require.ErrorAs(t, errs[2], &notDeclaredErr)
+	assert.Equal(t, "z", notDeclaredErr.Name)
+
+	require.ErrorAs(t, errs[3], &notDeclaredErr)
+	assert.Equal(t, "b", notDeclaredErr.Name)
 }
 
 func TestCheckInvalidFunctionNonBoolCondition(t *testing.T) {

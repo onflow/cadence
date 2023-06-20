@@ -129,8 +129,7 @@ func (checker *Checker) rewritePostCondition(
 		return checker.rewriteTestPostCondition(postCondition)
 
 	case *ast.EmitCondition:
-		// TODO:
-		panic("TODO")
+		return checker.rewriteEmitPostCondition(postCondition)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -166,6 +165,23 @@ func (checker *Checker) rewriteTestPostCondition(
 	}
 
 	newPostCondition = &newPostTestCondition
+
+	return
+}
+
+func (checker *Checker) rewriteEmitPostCondition(
+	postEmitCondition *ast.EmitCondition,
+) (
+	newPostCondition ast.Condition,
+	extractedExpressions []ast.ExtractedExpression,
+) {
+	// copy condition and set argument expressions to rewritten ones
+	newPostEmitCondition := *postEmitCondition
+
+	// TODO:
+	//beforeExtractor := checker.beforeExtractor()
+
+	newPostCondition = &newPostEmitCondition
 
 	return
 }
