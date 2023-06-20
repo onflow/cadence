@@ -2509,3 +2509,33 @@ func TestInterpretBuiltinEntitlements(t *testing.T) {
 	_, err := inter.Invoke("main")
 	assert.NoError(t, err)
 }
+
+func TestInterpretIdentityMapping(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        struct S {
+            access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                let a: AnyStruct = "hello"
+                return &a as auth(Identity) &AnyStruct
+            }
+        }
+
+        fun main() {
+            let s = S()
+
+            let mutableRef = &s as auth(Mutable) &S
+            let ref1: auth(Mutable) &AnyStruct = mutableRef.foo()
+
+            let insertableRef = &s as auth(Insertable) &S
+            let ref2: auth(Insertable) &AnyStruct = insertableRef.foo()
+
+            let removableRef = &s as auth(Removable) &S
+            let ref3: auth(Removable) &AnyStruct = removableRef.foo()
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	assert.NoError(t, err)
+}
