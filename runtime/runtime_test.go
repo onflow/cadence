@@ -4485,6 +4485,21 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
+	makeDeployTransaction := func(name, code string) []byte {
+		return []byte(fmt.Sprintf(
+			`
+              transaction {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  acct.contracts.add(name: "%s", code: "%s".decodeHex())
+                }
+              }
+            `,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
 	contractInterfaceCode := `
       pub contract interface TestContractInterface {
 
@@ -4585,7 +4600,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	deployTransaction := DeploymentTransaction("TestContractInterface", []byte(contractInterfaceCode))
+	deployTransaction := makeDeployTransaction("TestContractInterface", contractInterfaceCode)
 	err := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTransaction,
@@ -4597,7 +4612,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	deployTransaction = DeploymentTransaction("TestContract", []byte(contractCode))
+	deployTransaction = makeDeployTransaction("TestContract", contractCode)
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTransaction,
