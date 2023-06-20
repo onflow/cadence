@@ -287,6 +287,9 @@ func (m *CapConsMigration) migratePathCapabilitiesInAccount(address common.Addre
 	}
 }
 
+// migratePathCapability migrates a path capability to an ID capability in the given value.
+// If a value is returned, the value must be updated with the replacement in the parent.
+// If nil is returned, the value was not updated and no operation has to be performed.
 func (m *CapConsMigration) migratePathCapability(
 	address common.Address,
 	value interpreter.Value,
@@ -296,6 +299,9 @@ func (m *CapConsMigration) migratePathCapability(
 
 	switch value := value.(type) {
 	case *interpreter.PathCapabilityValue:
+
+		// Migrate the path capability to an ID capability
+
 		oldCapability := value
 
 		addressPath := oldCapability.AddressPath()
@@ -322,6 +328,8 @@ func (m *CapConsMigration) migratePathCapability(
 	case *interpreter.CompositeValue:
 		composite := value
 
+		// Migrate composite's fields
+
 		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) {
 			newFieldValue := m.migratePathCapability(address, fieldValue, reporter)
 			if newFieldValue != nil {
@@ -333,6 +341,8 @@ func (m *CapConsMigration) migratePathCapability(
 				)
 			}
 		})
+
+		// The composite itself does not have to be replaced
 
 		return nil
 
@@ -348,6 +358,8 @@ func (m *CapConsMigration) migratePathCapability(
 	case *interpreter.ArrayValue:
 		array := value
 		var index int
+
+		// Migrate array's elements
 
 		array.Iterate(m.interpreter, func(element interpreter.Value) (resume bool) {
 			newElement := m.migratePathCapability(address, element, reporter)
@@ -365,15 +377,25 @@ func (m *CapConsMigration) migratePathCapability(
 			return true
 		})
 
+		// The array itself does not have to be replaced
+
 		return nil
 
 	case *interpreter.DictionaryValue:
 		dictionary := value
 
+		// Migrate dictionary's values
+
 		dictionary.Iterate(m.interpreter, func(key, value interpreter.Value) (resume bool) {
+
+			// Keys cannot be capabilities at the moment,
+			// so this should never occur in stored data
+
 			if _, ok := key.(interpreter.CapabilityValue); ok {
 				panic(errors.NewUnreachableError())
 			}
+
+			// Migrate the value of the key-value pair
 
 			newValue := m.migratePathCapability(address, value, reporter)
 
@@ -389,6 +411,8 @@ func (m *CapConsMigration) migratePathCapability(
 			return true
 		})
 
+		// The dictionary itself does not have to be replaced
+
 		return nil
 
 	case interpreter.NumberValue,
@@ -398,6 +422,9 @@ func (m *CapConsMigration) migratePathCapability(
 		interpreter.TypeValue,
 		interpreter.PathValue,
 		interpreter.NilValue:
+
+		// Primitive values do not have to be updated,
+		// as they do not contain path capabilities.
 
 		return nil
 	}
