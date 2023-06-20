@@ -1333,6 +1333,18 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
+
+	t.Run("ref array field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			resource interface R {
+				access(M) let foo: [auth(M) &Int]
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
 }
 
 func TestCheckInvalidEntitlementAccess(t *testing.T) {
@@ -1550,20 +1562,6 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
-	})
-
-	t.Run("ref array field", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-			entitlement mapping M {}
-			resource interface R {
-				access(M) let foo: [auth(M) &Int]
-			}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("capability field", func(t *testing.T) {

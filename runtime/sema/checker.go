@@ -1965,7 +1965,7 @@ func (checker *Checker) checkEntitlementMapAccess(
 			}
 		}
 	default:
-		if isContainerType(entitledType) {
+		if isContainerType(declarationType) {
 			return
 		}
 	}
