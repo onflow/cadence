@@ -1916,7 +1916,7 @@ func TestExportReferenceValue(t *testing.T) {
 	            var v:[AnyStruct] = []
 	            acct.save(v, to: /storage/x)
 
-                var ref = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+                var ref = acct.borrow<auth(Insertable) &[AnyStruct]>(from: /storage/x)!
 	            ref.append(ref)
 	            return ref
             }
@@ -1951,7 +1951,7 @@ func TestExportReferenceValue(t *testing.T) {
 	            var v:[AnyStruct] = []
 	            acct.save(v, to: /storage/x)
 
-                var ref1 = acct.borrow<&[AnyStruct]>(from: /storage/x)!
+                var ref1 = acct.borrow<auth(Insertable) &[AnyStruct]>(from: /storage/x)!
                 var ref2 = acct.borrow<&[AnyStruct]>(from: /storage/x)!
 
 	            ref1.append(ref2)

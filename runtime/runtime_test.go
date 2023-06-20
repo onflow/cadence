@@ -1976,7 +1976,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
 	container := []byte(`
       pub resource Container {
-        pub(set) var values: [Int]
+        access(Identity) var values: [Int]
 
         init() {
           self.values = []
@@ -1995,7 +1995,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
         prepare(signer: AuthAccount) {
           signer.save(<-createContainer(), to: /storage/container)
-          signer.link<&Container>(/public/container, target: /storage/container)
+          signer.link<auth(Insertable) &Container>(/public/container, target: /storage/container)
         }
       }
     `)
@@ -2007,11 +2007,13 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
           let ref = publicAccount.getCapability(/public/container)
-              .borrow<&Container>()!
+              .borrow<auth(Insertable) &Container>()!
 
-          let length = ref.values.length
-          ref.values.append(1)
-          let length2 = ref.values.length
+          var valuesRef = ref.values
+
+          let length = valuesRef.length
+          valuesRef.append(1)
+          let length2 = valuesRef.length
         }
       }
     `)
@@ -2024,11 +2026,13 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
           let publicAccount = getAccount(signer.address)
           let ref = publicAccount
               .getCapability(/public/container)
-              .borrow<&Container>()!
+              .borrow<auth(Insertable) &Container>()!
 
-          let length = ref.values.length
-          ref.values.append(2)
-          let length2 = ref.values.length
+          var valuesRef = ref.values
+
+          let length = valuesRef.length
+          valuesRef.append(2)
+          let length2 = valuesRef.length
         }
       }
     `)
