@@ -2510,7 +2510,7 @@ func TestInterpretBuiltinEntitlements(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCheckIdentityMapping(t *testing.T) {
+func TestInterpretIdentityMapping(t *testing.T) {
 
 	t.Parallel()
 
