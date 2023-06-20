@@ -5120,3 +5120,25 @@ func TestCheckAttachProvidedEntitlements(t *testing.T) {
 		require.Equal(t, errs[1].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "E")
 	})
 }
+
+func TestCheckBuiltinEntitlements(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        struct S {
+            access(Mutable) fun foo() {}
+            access(Insertable) fun bar() {}
+            access(Removable) fun baz() {}
+        }
+
+        fun main() {
+            let s = S()
+            let mutableRef = &s as auth(Mutable) &S
+            let insertableRef = &s as auth(Insertable) &S
+            let removableRef = &s as auth(Removable) &S
+        }
+    `)
+
+	assert.NoError(t, err)
+}
