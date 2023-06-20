@@ -3780,7 +3780,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 	runtime := NewTestInterpreterRuntime()
 
-	makeDeployTransaction := func(name, code string) []byte {
+	makeDeployToNewAccountTransaction := func(name, code string) []byte {
 		return []byte(fmt.Sprintf(
 			`
               transaction {
@@ -3896,10 +3896,10 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	deployTransaction := makeDeployTransaction("TestContractInterface", contractInterfaceCode)
+	deployToNewAccountTransaction := makeDeployToNewAccountTransaction("TestContractInterface", contractInterfaceCode)
 	err := runtime.ExecuteTransaction(
 		Script{
-			Source: deployTransaction,
+			Source: deployToNewAccountTransaction,
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -3908,10 +3908,10 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	deployTransaction = makeDeployTransaction("TestContract", contractCode)
+	deployToNewAccountTransaction = makeDeployToNewAccountTransaction("TestContract", contractCode)
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: deployTransaction,
+			Source: deployToNewAccountTransaction,
 		},
 		Context{
 			Interface: runtimeInterface,
