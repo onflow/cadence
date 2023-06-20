@@ -19,9 +19,9 @@
 package runtime
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -108,267 +108,355 @@ func TestCapConsMigration(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
-
-	// language=cadence
-	contract := `
-      pub contract Test {
-
-         pub resource R {}
-
-         pub struct CapabilityWrapper {
-
-             pub let capability: Capability
-
-             init(_ capability: Capability) {
-                 self.capability = capability
-             }
-         }
-
-         pub struct CapabilityOptionalWrapper {
-
-             pub let capability: Capability?
-
-             init(_ capability: Capability?) {
-                 self.capability = capability
-             }
-         }
-
-         pub struct CapabilityArrayWrapper {
-
-             pub let capabilities: [Capability]
-
-             init(_ capabilities: [Capability]) {
-                 self.capabilities = capabilities
-             }
-         }
-
-         pub struct CapabilityDictionaryWrapper {
-
-             pub let capabilities: {Int: Capability}
-
-             init(_ capabilities: {Int: Capability}) {
-                 self.capabilities = capabilities
-             }
-         }
-      }
-    `
-
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	accountCodes := map[Location][]byte{}
-	var events []cadence.Event
-	var loggedMessages []string
+	test := func(setupFunction, checkFunction string) {
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location], nil
-		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{address}, nil
-		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			return accountCodes[location], nil
-		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			accountCodes[location] = code
-			return nil
-		},
-		emitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
-		log: func(message string) {
-			loggedMessages = append(loggedMessages, message)
-		},
-	}
+		rt := newTestInterpreterRuntime()
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+		// language=cadence
+		contract := `
+          pub contract Test {
 
-	// Deploy contract
+              pub resource R {}
 
-	deployTransaction := DeploymentTransaction("Test", []byte(contract))
-	err := rt.ExecuteTransaction(
-		Script{
-			Source: deployTransaction,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
+              pub struct CapabilityWrapper {
 
-	// Setup
+                  pub let capability: Capability
 
-	// language=cadence
-	linkTransaction := `
-      import Test from 0x1
+                  init(_ capability: Capability) {
+                      self.capability = capability
+                  }
+              }
 
-      pub fun save(kind: String, capability: Capability, account: AuthAccount) {
-          account.save(
-              capability,
-              to: StoragePath(identifier: kind.concat("_capability"))!
-          )
-          // TODO:
-          // account.save(
-          //     Test.CapabilityWrapper(capability),
-          //     to: StoragePath(identifier: kind.concat("_capabilityWrapper"))!
-          // )
-          // account.save(
-          //     Test.CapabilityOptionalWrapper(capability),
-          //     to: StoragePath(identifier: kind.concat("_capabilityOptionalWrapper"))!
-          // )
-          // account.save(
-          //     Test.CapabilityArrayWrapper([capability]),
-          //     to: StoragePath(identifier: kind.concat("_capabilityArrayWrapper"))!
-          // )
-          // account.save(
-          //     Test.CapabilityDictionaryWrapper({0: capability}),
-          //     to: StoragePath(identifier: kind.concat("_capabilityDictionaryWrapper"))!
-          // )
-          // TODO: add more cases
-          // TODO: test non existing
-      }
+              pub struct CapabilityOptionalWrapper {
 
-      transaction {
-          prepare(signer: AuthAccount) {
-             signer.link<&Test.R>(/public/r, target: /private/r)
-             signer.link<&Test.R>(/private/r, target: /storage/r)
+                  pub let capability: Capability?
 
-             let publicCap = signer.getCapability<&Test.R>(/public/r)
-             let privateCap = signer.getCapability<&Test.R>(/private/r)
+                  init(_ capability: Capability?) {
+                      self.capability = capability
+                  }
+              }
 
-             save(
-                 kind: "public",
-                 capability: publicCap,
-                 account: signer
-			 )
-             save(
-                 kind: "private",
-                 capability: privateCap,
-                 account: signer
-             )
+              pub struct CapabilityArrayWrapper {
+
+                  pub let capabilities: [Capability]
+
+                  init(_ capabilities: [Capability]) {
+                      self.capabilities = capabilities
+                  }
+              }
+
+              pub struct CapabilityDictionaryWrapper {
+
+                  pub let capabilities: {Int: Capability}
+
+                  init(_ capabilities: {Int: Capability}) {
+                      self.capabilities = capabilities
+                  }
+              }
+
+              pub fun saveExisting(_ wrapper: ((Capability): AnyStruct)) {
+                  self.account.link<&Test.R>(/public/r, target: /private/r)
+                  self.account.link<&Test.R>(/private/r, target: /storage/r)
+
+                  let publicCap = self.account.getCapability<&Test.R>(/public/r)
+                  let privateCap = self.account.getCapability<&Test.R>(/private/r)
+
+                  self.account.save(wrapper(publicCap), to: /storage/publicCapValue)
+                  self.account.save(wrapper(privateCap), to: /storage/privateCapValue)
+              }
+
+              pub fun checkMigratedValues(getter: ((AnyStruct): Capability)) {
+                  self.account.save(<-create R(), to: /storage/r)
+                  self.checkMigratedValue(capValuePath: /storage/publicCapValue, getter: getter)
+                  self.checkMigratedValue(capValuePath: /storage/privateCapValue, getter: getter)
+              }
+
+              priv fun checkMigratedValue(capValuePath: StoragePath, getter: ((AnyStruct): Capability)) {
+                  let capValue = self.account.copy<AnyStruct>(from: capValuePath)!
+                  let cap = getter(capValue)
+                  assert(cap.id != 0)
+                  let ref = cap.borrow<&R>()!
+              }
           }
-      }
-    `
-	err = rt.ExecuteTransaction(
-		Script{
-			Source: []byte(linkTransaction),
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
+        `
 
-	// Migrate
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+		var loggedMessages []string
 
-	migrator, err := NewCapConsMigration(
-		rt,
-		Context{
-			Interface: runtimeInterface,
-		},
-	)
-	require.NoError(t, err)
-
-	reporter := &testCapConsMigrationReporter{}
-
-	err = migrator.Migrate(
-		&AddressSliceIterator{Addresses: []common.Address{address}},
-		&testAccountIDGenerator{},
-		reporter,
-	)
-	require.NoError(t, err)
-
-	// Check migrated links
-
-	require.Equal(t,
-		[]testCapConsLinkMigration{
-			{
-				addressPath: interpreter.AddressPath{
-					Address: address,
-					Path: interpreter.NewUnmeteredPathValue(
-						common.PathDomainPublic,
-						"r",
-					),
-				},
-				capabilityID: 1,
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
 			},
-			{
-				addressPath: interpreter.AddressPath{
-					Address: address,
-					Path: interpreter.NewUnmeteredPathValue(
-						common.PathDomainPrivate,
-						"r",
-					),
-				},
-				capabilityID: 2,
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
 			},
-		},
-		reporter.linkMigrations,
-	)
-
-	// Check migrated capabilities
-
-	require.Equal(t,
-		[]testCapConsPathCapabilityMigration{
-			{
-				address: address,
-				addressPath: interpreter.AddressPath{
-					Address: address,
-					Path: interpreter.NewUnmeteredPathValue(
-						common.PathDomainPrivate,
-						"r",
-					),
-				},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
 			},
-			{
-				address: address,
-				addressPath: interpreter.AddressPath{
-					Address: address,
-					Path: interpreter.NewUnmeteredPathValue(
-						common.PathDomainPublic,
-						"r",
-					),
-				},
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
 			},
-		},
-		reporter.pathCapabilityMigrations,
-	)
-
-	storage, _, err := rt.Storage(Context{
-		Interface: runtimeInterface,
-	})
-	require.NoError(t, err)
-
-	storageMap := storage.GetStorageMap(address, pathDomainStorage, false)
-
-	expectedReferenceStaticType := interpreter.ReferenceStaticType{
-		BorrowedType: interpreter.CompositeStaticType{
-			Location: common.AddressLocation{
-				Name:    "Test",
-				Address: address,
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
 			},
-			QualifiedIdentifier: "Test.R",
-			TypeID:              "A.0000000000000001.Test.R",
-		},
-	}
-
-	expectedCapabilityID := interpreter.UInt64Value(1)
-	for _, kind := range []string{"public", "private"} {
-
-		publicCapability := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(kind+"_capability"))
-		require.IsType(t, &interpreter.IDCapabilityValue{}, publicCapability)
-		if publicCapability, ok := publicCapability.(*interpreter.IDCapabilityValue); ok {
-			assert.Equal(t, expectedCapabilityID, publicCapability.ID)
-			expectedCapabilityID++
-
-			assert.Equal(t, address, common.Address(publicCapability.Address))
-			assert.True(t, publicCapability.BorrowType.Equal(expectedReferenceStaticType))
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
 		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy contract
+
+		deployTransaction := DeploymentTransaction("Test", []byte(contract))
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: deployTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Setup
+
+		setupTx := fmt.Sprintf(
+			// language=cadence
+			`
+              import Test from 0x1
+
+              transaction {
+                  prepare(signer: AuthAccount) {
+                     Test.saveExisting(%s)
+                  }
+              }
+            `,
+			setupFunction,
+		)
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: []byte(setupTx),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Migrate
+
+		migrator, err := NewCapConsMigration(
+			rt,
+			Context{
+				Interface: runtimeInterface,
+			},
+		)
+		require.NoError(t, err)
+
+		reporter := &testCapConsMigrationReporter{}
+
+		err = migrator.Migrate(
+			&AddressSliceIterator{
+				Addresses: []common.Address{
+					address,
+				},
+			},
+			&testAccountIDGenerator{},
+			reporter,
+		)
+		require.NoError(t, err)
+
+		// Check migrated links
+
+		require.Equal(t,
+			[]testCapConsLinkMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: address,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							"r",
+						),
+					},
+					capabilityID: 1,
+				},
+				{
+					addressPath: interpreter.AddressPath{
+						Address: address,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							"r",
+						),
+					},
+					capabilityID: 2,
+				},
+			},
+			reporter.linkMigrations,
+		)
+
+		// Check migrated capabilities
+
+		require.Equal(t,
+			[]testCapConsPathCapabilityMigration{
+				{
+					address: address,
+					addressPath: interpreter.AddressPath{
+						Address: address,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							"r",
+						),
+					},
+				},
+				{
+					address: address,
+					addressPath: interpreter.AddressPath{
+						Address: address,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							"r",
+						),
+					},
+				},
+			},
+			reporter.pathCapabilityMigrations,
+		)
+
+		// Check
+
+		checkScript := fmt.Sprintf(
+			// language=cadence
+			`
+              import Test from 0x1
+
+              pub fun main() {
+                 Test.checkMigratedValues(getter: %s)
+              }
+            `,
+			checkFunction,
+		)
+		_, err = rt.ExecuteScript(
+			Script{
+				Source: []byte(checkScript),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
 	}
+
+	t.Run("directly", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			// language=cadence
+			`
+              fun (cap: Capability): AnyStruct {
+                  return cap
+              }
+            `,
+			// language=cadence
+			`
+              fun (value: AnyStruct): Capability {
+                  return value as! Capability
+              }
+            `,
+		)
+	})
+
+	t.Run("composite", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			// language=cadence
+			`
+              fun (cap: Capability): AnyStruct {
+                  return Test.CapabilityWrapper(cap)
+              }
+            `,
+			// language=cadence
+			`
+              fun (value: AnyStruct): Capability {
+                  let wrapper = value as! Test.CapabilityWrapper
+                  return wrapper.capability
+              }
+            `,
+		)
+	})
+
+	t.Run("optional", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			// language=cadence
+			`
+              fun (cap: Capability): AnyStruct {
+                  return Test.CapabilityOptionalWrapper(cap)
+              }
+            `,
+			// language=cadence
+			`
+              fun (value: AnyStruct): Capability {
+                  let wrapper = value as! Test.CapabilityOptionalWrapper
+                  return wrapper.capability!
+              }
+            `,
+		)
+	})
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			// language=cadence
+			`
+              fun (cap: Capability): AnyStruct {
+                  return Test.CapabilityArrayWrapper([cap])
+              }
+            `,
+			// language=cadence
+			`
+              fun (value: AnyStruct): Capability {
+                  let wrapper = value as! Test.CapabilityArrayWrapper
+                  return wrapper.capabilities[0]
+              }
+            `,
+		)
+	})
+
+	t.Run("dictionary, value", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			// language=cadence
+			`
+              fun (cap: Capability): AnyStruct {
+                  return Test.CapabilityDictionaryWrapper({2: cap})
+              }
+            `,
+			// language=cadence
+			`
+              fun (value: AnyStruct): Capability {
+                  let wrapper = value as! Test.CapabilityDictionaryWrapper
+                  return wrapper.capabilities[2]!
+              }
+            `,
+		)
+	})
+
+	// TODO: add more cases
+	// TODO: test non existing
+
 }
