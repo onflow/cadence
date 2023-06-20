@@ -323,7 +323,7 @@ func (checker *Checker) visitIndexExpression(
 		returnReference := false
 		if !isAssignment && shouldReturnReference(valueIndexedType, elementType) {
 			// TODO: Pass proper entitlement
-			elementType = checker.getReferenceType(elementType, nil)
+			elementType = checker.getReferenceType(elementType, false, nil)
 
 			// Store the result in elaboration, so the interpreter can re-use this.
 			returnReference = true
@@ -334,6 +334,7 @@ func (checker *Checker) visitIndexExpression(
 			IndexExpressionTypes{
 				IndexedType:     valueIndexedType,
 				IndexingType:    indexingType,
+				ResultType:      elementType,
 				ReturnReference: returnReference,
 			},
 		)

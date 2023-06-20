@@ -1001,4 +1001,32 @@ func TestInterpretMemberAccess(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
+
+	t.Run("entitlement map access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                A -> B
+            }
+
+            struct S {
+                access(M) let foo: [String]
+                init() {
+                    self.foo = []
+                }
+            }
+
+            fun test() {
+                let s = S()
+                let sRef = &s as auth(A) &S
+                var foo: auth(B) &[String] = sRef.foo
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }

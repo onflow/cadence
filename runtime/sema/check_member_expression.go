@@ -85,7 +85,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	// in an optional, if it is not already an optional value
 	if isOptional {
 		if _, ok := memberType.(*OptionalType); !ok {
-			memberType = &OptionalType{Type: memberType}
+			memberType = NewOptionalType(checker.memoryGauge, memberType)
 		}
 	}
 
@@ -97,18 +97,18 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getReferenceType(typ Type, authorization Access) Type {
+func (checker *Checker) getReferenceType(typ Type, substituteAuthorization bool, authorization Access) Type {
 	if optionalType, ok := typ.(*OptionalType); ok {
-		return &OptionalType{
-			Type: checker.getReferenceType(optionalType.Type, authorization),
-		}
+		innerType := checker.getReferenceType(optionalType.Type, substituteAuthorization, authorization)
+		return NewOptionalType(checker.memoryGauge, innerType)
 	}
 
-	if authorization == nil {
-		authorization = UnauthorizedAccess
+	auth := UnauthorizedAccess
+	if substituteAuthorization && authorization != nil {
+		auth = authorization
 	}
 
-	return NewReferenceType(checker.memoryGauge, typ, authorization)
+	return NewReferenceType(checker.memoryGauge, typ, auth)
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
@@ -349,7 +349,10 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 		return resultingType
 	}
-	if !member.Access.Equal(resultingAuthorization) {
+
+	shouldSubstituteAuthorization := !member.Access.Equal(resultingAuthorization)
+
+	if shouldSubstituteAuthorization {
 		switch ty := resultingType.(type) {
 		case *FunctionType:
 			resultingType = NewSimpleFunctionType(
@@ -396,26 +399,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		member.DeclarationKind == common.DeclarationKindField {
 
 		// Get a reference to the type
-		resultingType = checker.getReferenceType(resultingType, resultingAuthorization)
-		returnReference = true
-	}
-
-	// If the member,
-	//   1) is accessed via a reference, and
-	//   2) is container-typed,
-	// then the member type should also be a reference.
-
-	// Note: For attachments, `self` is always a reference.
-	// But we do not want to return a reference for `self.something`.
-	// Otherwise, things like `destroy self.something` would become invalid.
-	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
-	// i.e: `accessedSelfMember == nil`
-
-	if accessedSelfMember == nil &&
-		shouldReturnReference(accessedType, resultingType) &&
-		member.DeclarationKind == common.DeclarationKindField {
-		// Get a reference to the type
-		resultingType = checker.getReferenceType(resultingType, resultingAuthorization)
+		resultingType = checker.getReferenceType(resultingType, shouldSubstituteAuthorization, resultingAuthorization)
 		returnReference = true
 	}
 
