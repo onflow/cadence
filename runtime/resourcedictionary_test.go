@@ -615,7 +615,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
              access(all) var rs: @{String: R}
 
-			 access(all) fun setRs(_ s: String, _ r: @R) {
+			 access(all) fun setRs(key s: String, r: @R) {
 				self.rs[s] <-! r
 			 }
 
@@ -653,8 +653,8 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
           prepare(signer1: AuthAccount, signer2: AuthAccount) {
               let c <- Test.createC()
-              c.setRs("a", <- Test.createR(1))
-			  c.setRs("b", <- Test.createR(2))
+              c.setRs(key: "a", r: <- Test.createR(1))
+			  c.setRs(key: "b", r: <- Test.createR(2))
               signer1.save(<-c, to: /storage/c)
           }
       }
@@ -727,7 +727,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
          prepare(signer1: AuthAccount, signer2: AuthAccount) {
              let c <- signer1.load<@Test.C>(from: /storage/c) ?? panic("missing C")
-             c.setRs("x", <- Test.createR(42))
+             c.setRs(key: "x", r: <- Test.createR(42))
              signer2.save(<-c, to: /storage/c2)
          }
      }

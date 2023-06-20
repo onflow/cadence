@@ -402,11 +402,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
             resource R1 {
                 access(all) var r2s: @{Int: R2}
 
-				access(all) fun setR2(_ i: Int, _ r: @R2) {
+				access(all) fun setR2(i: Int, r: @R2) {
 					self.r2s[i] <-! r
                 }
 
-				access(all) fun move(_ i: Int, _ r: @R2?): @R2? {
+				access(all) fun move(i: Int, r: @R2?): @R2? {
 					let optR2 <- self.r2s[i] <- r
 					return <- optR2
                 }
@@ -425,11 +425,11 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
             }
 
             fun test(r1: &R1): String? {
-				r1.setR2(0, <- create R2())
+				r1.setR2(i: 0, r: <- create R2())
                 // The second assignment should not lead to the resource being cleared,
                 // it must be fully moved out of this container before,
                 // not just assigned to the new variable
-				let optR2 <- r1.move(0, nil)
+				let optR2 <- r1.move(i: 0, r: nil)
                 let value = optR2?.value
                 destroy optR2
                 return value
