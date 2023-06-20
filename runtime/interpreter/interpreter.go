@@ -1994,20 +1994,31 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			arrayStaticType := interpreter.convertStaticType(arrayValue.StaticType(interpreter), unwrappedTargetType).(ArrayStaticType)
 			targetElementType := interpreter.MustConvertStaticToSemaType(arrayStaticType.ElementType())
 
-			values := make([]Value, 0, arrayValue.Count())
+			array := arrayValue.array
 
-			arrayValue.Iterate(interpreter, func(v Value) bool {
-				valueType := interpreter.MustConvertStaticToSemaType(v.StaticType(interpreter))
-				values = append(values, interpreter.convert(v, valueType, targetElementType, locationRange))
-				return true
-			})
+			iterator, err := array.Iterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
 
-			return NewArrayValue(
+			return NewArrayValueWithIterator(
 				interpreter,
-				locationRange,
 				arrayStaticType,
 				arrayValue.GetOwner(),
-				values...,
+				array.Count(),
+				func() Value {
+					element, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+					if element == nil {
+						return nil
+					}
+
+					value := MustConvertStoredValue(interpreter, element)
+					valueType := interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+					return interpreter.convert(value, valueType, targetElementType, locationRange)
+				},
 			)
 		}
 
@@ -2018,24 +2029,41 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			targetKeyType := interpreter.MustConvertStaticToSemaType(dictStaticType.KeyType)
 			targetValueType := interpreter.MustConvertStaticToSemaType(dictStaticType.ValueType)
 
-			values := make([]Value, 0, dictValue.Count()*2)
+			dictionary := dictValue.dictionary
 
-			dictValue.Iterate(interpreter, func(key, value Value) bool {
-				keyType := interpreter.MustConvertStaticToSemaType(key.StaticType(interpreter))
-				valueType := interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+			iterator, err := dictionary.Iterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
 
-				convertedKey := interpreter.convert(key, keyType, targetKeyType, locationRange)
-				convertedValue := interpreter.convert(value, valueType, targetValueType, locationRange)
-
-				values = append(values, convertedKey, convertedValue)
-				return true
-			})
-
-			return NewDictionaryValue(
+			return newDictionaryValueWithIterator(
 				interpreter,
 				locationRange,
 				dictStaticType,
-				values...,
+				dictionary.Count(),
+				dictionary.Seed(),
+				common.Address(dictionary.Address()),
+				func() (Value, Value) {
+					k, v, err := iterator.Next()
+
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+					if k == nil || v == nil {
+						return nil, nil
+					}
+
+					key := MustConvertStoredValue(interpreter, k)
+					value := MustConvertStoredValue(interpreter, v)
+
+					keyType := interpreter.MustConvertStaticToSemaType(key.StaticType(interpreter))
+					valueType := interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+
+					convertedKey := interpreter.convert(key, keyType, targetKeyType, locationRange)
+					convertedValue := interpreter.convert(value, valueType, targetValueType, locationRange)
+
+					return convertedKey, convertedValue
+				},
 			)
 		}
 
@@ -2062,6 +2090,9 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 					capability.Address,
 					borrowType,
 				)
+			default:
+				// unsupported capability value
+				panic(errors.NewUnreachableError())
 			}
 		}
 

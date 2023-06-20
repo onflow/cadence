@@ -623,11 +623,11 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			`
 			entitlement X
 
-			fun test(): Bool {
+			fun test(): Capability {
 				account.save(3, to: /storage/foo)
 				let capX = account.getCapability<auth(X) &Int>(/public/foo)
 				let upCap = capX as Capability
-				return upCap as? Capability<auth(X) &Int> == nil
+				return (upCap as? Capability<auth(X) &Int>)!
 			}
 			`,
 			sema.Config{})
@@ -638,7 +638,16 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.FalseValue,
+			interpreter.NewPathCapabilityValue(
+				nil,
+				address,
+				interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
 			value,
 		)
 	})
