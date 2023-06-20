@@ -5132,3 +5132,32 @@ func TestCheckBuiltinEntitlements(t *testing.T) {
 
 	assert.NoError(t, err)
 }
+
+func TestCheckIdentityMapping(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        struct S {
+            access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                let a: AnyStruct = "hello"
+                return &a as auth(Identity) &AnyStruct
+            }
+        }
+
+        fun main() {
+            let s = S()
+
+            let mutableRef = &s as auth(Mutable) &S
+            let ref1: auth(Mutable) &AnyStruct = mutableRef.foo()
+
+            let insertableRef = &s as auth(Insertable) &S
+            let ref2: auth(Insertable) &AnyStruct = insertableRef.foo()
+
+            let removableRef = &s as auth(Removable) &S
+            let ref3: auth(Removable) &AnyStruct = removableRef.foo()
+        }
+    `)
+
+	assert.NoError(t, err)
+}
