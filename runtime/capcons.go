@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -267,20 +268,21 @@ func (m *CapConsMigration) migratePathCapabilitiesInAccount(address common.Addre
 	if count > 0 {
 		for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
 
-			m.migratePathCapability(
+			newValue := m.migratePathCapability(
 				address,
 				value,
-				func(newValue interpreter.Value) {
-					// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
-					identifier := string(key.(interpreter.StringAtreeValue))
-					storageMap.SetValue(
-						m.interpreter,
-						interpreter.StringStorageMapKey(identifier),
-						newValue,
-					)
-				},
 				reporter,
 			)
+
+			if newValue != nil {
+				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+				identifier := string(key.(interpreter.StringAtreeValue))
+				storageMap.SetValue(
+					m.interpreter,
+					interpreter.StringStorageMapKey(identifier),
+					newValue,
+				)
+			}
 		}
 	}
 }
@@ -288,12 +290,14 @@ func (m *CapConsMigration) migratePathCapabilitiesInAccount(address common.Addre
 func (m *CapConsMigration) migratePathCapability(
 	address common.Address,
 	value interpreter.Value,
-	update func(newValue interpreter.Value),
 	reporter CapConsPathCapabilityMigrationReporter,
-) {
+) interpreter.Value {
+	locationRange := interpreter.EmptyLocationRange
+
 	switch value := value.(type) {
 	case *interpreter.PathCapabilityValue:
 		oldCapability := value
+
 		addressPath := oldCapability.AddressPath()
 		capabilityID, ok := m.capabilityIDs[addressPath]
 		if !ok {
@@ -302,15 +306,101 @@ func (m *CapConsMigration) migratePathCapability(
 			}
 			break
 		}
+
 		newCapability := interpreter.NewUnmeteredIDCapabilityValue(
 			capabilityID,
 			oldCapability.Address,
 			oldCapability.BorrowType,
 		)
-		update(newCapability)
+
 		if reporter != nil {
 			reporter.MigratedPathCapability(address, addressPath)
 		}
+
+		return newCapability
+
+	case *interpreter.CompositeValue:
+		composite := value
+
+		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) {
+			newFieldValue := m.migratePathCapability(address, fieldValue, reporter)
+			if newFieldValue != nil {
+				composite.SetMember(
+					m.interpreter,
+					locationRange,
+					fieldName,
+					newFieldValue,
+				)
+			}
+		})
+
+		return nil
+
+	case *interpreter.SomeValue:
+		innerValue := value.InnerValue(m.interpreter, locationRange)
+		newInnerValue := m.migratePathCapability(address, innerValue, reporter)
+		if newInnerValue != nil {
+			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
+		}
+
+		return nil
+
+	case *interpreter.ArrayValue:
+		array := value
+		var index int
+
+		array.Iterate(m.interpreter, func(element interpreter.Value) (resume bool) {
+			newElement := m.migratePathCapability(address, element, reporter)
+			if newElement != nil {
+				array.Set(
+					m.interpreter,
+					locationRange,
+					index,
+					newElement,
+				)
+			}
+
+			index++
+
+			return true
+		})
+
+		return nil
+
+	case *interpreter.DictionaryValue:
+		dictionary := value
+
+		dictionary.Iterate(m.interpreter, func(key, value interpreter.Value) (resume bool) {
+			if _, ok := key.(interpreter.CapabilityValue); ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			newValue := m.migratePathCapability(address, value, reporter)
+
+			if newValue != nil {
+				dictionary.Insert(
+					m.interpreter,
+					locationRange,
+					key,
+					newValue,
+				)
+			}
+
+			return true
+		})
+
+		return nil
+
+	case interpreter.NumberValue,
+		*interpreter.StringValue,
+		interpreter.CharacterValue,
+		interpreter.BoolValue,
+		interpreter.TypeValue,
+		interpreter.PathValue,
+		interpreter.NilValue:
+
+		return nil
 	}
-	// TODO: traverse composites, optionals, arrays, dictionaries, etc.
+
+	panic(errors.NewUnexpectedError("unsupported value type: %T", value))
 }
