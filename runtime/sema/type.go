@@ -3493,6 +3493,10 @@ var AllNumberTypes = append(
 
 var BuiltinEntitlements = map[string]*EntitlementType{}
 
+var BuiltinEntitlementMappings = map[string]*EntitlementMapType{
+	IdentityMappingType.QualifiedIdentifier(): IdentityMappingType,
+}
+
 const NumberTypeMinFieldName = "min"
 const NumberTypeMaxFieldName = "max"
 
