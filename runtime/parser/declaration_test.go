@@ -763,7 +763,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 					FunctionBlock: &ast.FunctionBlock{
 						PreConditions: &ast.Conditions{
 							{
-								Kind: ast.ConditionKindPre,
 								Test: &ast.BoolExpression{
 									Value: true,
 									Range: ast.Range{
@@ -780,7 +779,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 								},
 							},
 							{
-								Kind: ast.ConditionKindPre,
 								Test: &ast.BinaryExpression{
 									Operation: ast.OperationGreater,
 									Left: &ast.IntegerExpression{
@@ -813,7 +811,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						},
 						PostConditions: &ast.Conditions{
 							{
-								Kind: ast.ConditionKindPost,
 								Test: &ast.BoolExpression{
 									Value: false,
 									Range: ast.Range{
@@ -5318,7 +5315,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 					PreConditions: &ast.Conditions{
 						{
-							Kind: ast.ConditionKindPre,
 							Test: &ast.BinaryExpression{
 								Operation: ast.OperationEqual,
 								Left: &ast.IdentifierExpression{
@@ -5341,7 +5337,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 					PostConditions: &ast.Conditions{
 						{
-							Kind: ast.ConditionKindPost,
 							Test: &ast.BinaryExpression{
 								Operation: ast.OperationEqual,
 								Left: &ast.IdentifierExpression{
@@ -5555,7 +5550,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 					PreConditions: &ast.Conditions{
 						{
-							Kind: ast.ConditionKindPre,
 							Test: &ast.BinaryExpression{
 								Operation: ast.OperationEqual,
 								Left: &ast.IdentifierExpression{
@@ -5578,7 +5572,6 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 					PostConditions: &ast.Conditions{
 						{
-							Kind: ast.ConditionKindPost,
 							Test: &ast.BinaryExpression{
 								Operation: ast.OperationEqual,
 								Left: &ast.IdentifierExpression{
@@ -6353,7 +6346,6 @@ func TestParsePreAndPostConditions(t *testing.T) {
 					},
 					PreConditions: &ast.Conditions{
 						{
-							Kind: ast.ConditionKindPre,
 							Test: &ast.BinaryExpression{
 								Operation: ast.OperationNotEqual,
 								Left: &ast.IdentifierExpression{
@@ -6374,7 +6366,6 @@ func TestParsePreAndPostConditions(t *testing.T) {
 							},
 						},
 						{
-							Kind: ast.ConditionKindPre,
 							Test: &ast.BinaryExpression{
 								Operation: ast.OperationGreater,
 								Left: &ast.IdentifierExpression{
@@ -6397,7 +6388,6 @@ func TestParsePreAndPostConditions(t *testing.T) {
 					},
 					PostConditions: &ast.Conditions{
 						{
-							Kind: ast.ConditionKindPost,
 							Test: &ast.BinaryExpression{
 								Operation: ast.OperationEqual,
 								Left: &ast.IdentifierExpression{
@@ -6497,7 +6487,6 @@ func TestParseConditionMessage(t *testing.T) {
 					},
 					PreConditions: &ast.Conditions{
 						{
-							Kind: ast.ConditionKindPre,
 							Test: &ast.BinaryExpression{
 								Operation: ast.OperationGreaterEqual,
 								Left: &ast.IdentifierExpression{
@@ -7934,7 +7923,6 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 					},
 					PreConditions: &ast.Conditions{
 						{
-							Kind: ast.ConditionKindPre,
 							Test: &ast.BoolExpression{
 								Value: true,
 								Range: ast.Range{
@@ -7951,7 +7939,6 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 							},
 						},
 						{
-							Kind: ast.ConditionKindPre,
 							Test: &ast.UnaryExpression{
 								Operation: ast.OperationNegate,
 								Expression: &ast.BoolExpression{

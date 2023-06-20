@@ -221,7 +221,6 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 			},
 			PreConditions: &Conditions{
 				{
-					Kind: ConditionKindPre,
 					Test: &BoolExpression{
 						Value: false,
 						Range: Range{
@@ -240,7 +239,6 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 			},
 			PostConditions: &Conditions{
 				{
-					Kind: ConditionKindPost,
 					Test: &BoolExpression{
 						Value: true,
 						Range: Range{
@@ -275,7 +273,6 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
                 },
                 "PreConditions": [
                     {
-                        "Kind": "ConditionKindPre",
                         "Test": {
                             "Type": "BoolExpression",
                             "Value": false,
@@ -292,7 +289,6 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
                 ],
                 "PostConditions": [
                     {
-                        "Kind": "ConditionKindPost",
                         "Test": {
                             "Type": "BoolExpression",
                             "Value": true,
@@ -380,7 +376,6 @@ func TestFunctionBlock_Doc(t *testing.T) {
 			},
 			PreConditions: &Conditions{
 				{
-					Kind: ConditionKindPre,
 					Test: &BoolExpression{
 						Value: false,
 					},
@@ -391,7 +386,6 @@ func TestFunctionBlock_Doc(t *testing.T) {
 			},
 			PostConditions: &Conditions{
 				{
-					Kind: ConditionKindPost,
 					Test: &BoolExpression{
 						Value: true,
 					},
@@ -531,7 +525,6 @@ func TestFunctionBlock_String(t *testing.T) {
 			},
 			PreConditions: &Conditions{
 				{
-					Kind: ConditionKindPre,
 					Test: &BoolExpression{
 						Value: false,
 					},
@@ -542,7 +535,6 @@ func TestFunctionBlock_String(t *testing.T) {
 			},
 			PostConditions: &Conditions{
 				{
-					Kind: ConditionKindPost,
 					Test: &BoolExpression{
 						Value: true,
 					},

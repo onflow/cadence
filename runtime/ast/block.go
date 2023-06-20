@@ -228,7 +228,6 @@ func (b *FunctionBlock) HasStatements() bool {
 type Condition struct {
 	Test    Expression
 	Message Expression
-	Kind    ConditionKind
 }
 
 func (c Condition) Doc() prettier.Doc {

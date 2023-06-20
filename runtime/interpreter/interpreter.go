@@ -761,7 +761,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 		return result.Value
 	}
 
-	interpreter.visitConditions(preConditions)
+	interpreter.visitConditions(preConditions, ast.ConditionKindPre)
 
 	var returnValue Value
 
@@ -786,7 +786,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 		)
 	}
 
-	interpreter.visitConditions(postConditions)
+	interpreter.visitConditions(postConditions, ast.ConditionKindPost)
 
 	return returnValue
 }
@@ -843,13 +843,13 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
 }
 
-func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
+func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition, kind ast.ConditionKind) {
 	for _, condition := range conditions {
-		interpreter.visitCondition(condition)
+		interpreter.visitCondition(condition, kind)
 	}
 }
 
-func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
+func (interpreter *Interpreter) visitCondition(condition *ast.Condition, kind ast.ConditionKind) {
 
 	// Evaluate the condition as a statement, so we get position information in case of an error
 
@@ -870,7 +870,7 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 	}
 
 	panic(ConditionError{
-		ConditionKind: condition.Kind,
+		ConditionKind: kind,
 		Message:       message,
 		LocationRange: LocationRange{
 			Location:    interpreter.Location,

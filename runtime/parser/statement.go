@@ -521,7 +521,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	var preConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 		p.next()
-		conditions, err := parseConditions(p, ast.ConditionKindPre)
+		conditions, err := parseConditions(p)
 		if err != nil {
 			return nil, err
 		}
@@ -534,7 +534,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	var postConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPost) {
 		p.next()
-		conditions, err := parseConditions(p, ast.ConditionKindPost)
+		conditions, err := parseConditions(p)
 		if err != nil {
 			return nil, err
 		}
@@ -571,7 +571,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 }
 
 // parseConditions parses conditions (pre/post)
-func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditions, err error) {
+func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 
 	p.skipSpaceAndComments()
 	_, err = p.mustOne(lexer.TokenBraceOpen)
@@ -596,7 +596,7 @@ func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditio
 
 		default:
 			var condition *ast.Condition
-			condition, err = parseCondition(p, kind)
+			condition, err = parseCondition(p)
 			if err != nil || condition == nil {
 				return
 			}
@@ -609,7 +609,7 @@ func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditio
 // parseCondition parses a condition (pre/post)
 //
 //	condition : expression (':' expression )?
-func parseCondition(p *parser, kind ast.ConditionKind) (*ast.Condition, error) {
+func parseCondition(p *parser) (*ast.Condition, error) {
 
 	test, err := parseExpression(p, lowestBindingPower)
 	if err != nil {
@@ -629,7 +629,6 @@ func parseCondition(p *parser, kind ast.ConditionKind) (*ast.Condition, error) {
 	}
 
 	return &ast.Condition{
-		Kind:    kind,
 		Test:    test,
 		Message: message,
 	}, nil
