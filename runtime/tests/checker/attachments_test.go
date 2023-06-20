@@ -1442,7 +1442,7 @@ func TestCheckBaseTyping(t *testing.T) {
 			struct interface I {}
 			attachment Test for I {
 				fun foo() {
-					let x = base as! &R{I}
+					let x = base as! &{I}
 				}
 			}`,
 		)
@@ -1460,7 +1460,7 @@ func TestCheckBaseTyping(t *testing.T) {
 			resource interface I {}
 			attachment Test for I {
 				fun foo() {
-					let x = base as! &R{I}
+					let x = base as! &{I}
 				}
 			}`,
 		)
@@ -3962,7 +3962,7 @@ func TestCheckAccessAttachmentIntersection(t *testing.T) {
 		struct R: I {}
 		struct interface I {}
 		attachment A for I {}
-		access(all) fun foo(r: R{I}) {
+		access(all) fun foo(r: {I}) {
 			r[A]
 		}
 		`,
@@ -3985,22 +3985,6 @@ func TestCheckAccessAttachmentIntersection(t *testing.T) {
 		)
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
-	})
-
-	t.Run("intersection concrete base reference", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-		struct R: I {}
-		struct interface I {}
-		attachment A for R {}
-		access(all) fun foo(r: &R{I}) {
-			r[A]
-		}
-		`,
-		)
-		require.NoError(t, err)
 	})
 
 	t.Run("intersection concrete base reference to interface", func(t *testing.T) {
@@ -4096,7 +4080,7 @@ func TestCheckAccessAttachmentIntersection(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		access(all) fun foo(r: &R{J}) {
+		access(all) fun foo(r: &{J}) {
 			r[A]
 		}
 		`,

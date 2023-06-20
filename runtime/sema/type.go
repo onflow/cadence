@@ -4911,9 +4911,16 @@ func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 }
 
 func (t *InterfaceType) RewriteWithIntersectionTypes() (Type, bool) {
-	return &IntersectionType{
-		Types: []*InterfaceType{t},
-	}, true
+	switch t.CompositeKind {
+	case common.CompositeKindResource, common.CompositeKindStructure:
+		return &IntersectionType{
+			Types: []*InterfaceType{t},
+		}, true
+
+	default:
+		return t, false
+	}
+
 }
 
 func (*InterfaceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
