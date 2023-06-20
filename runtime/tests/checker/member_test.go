@@ -719,4 +719,50 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("entitlement map access nested", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+
+            entitlement mapping FooMapping {
+                A -> B
+            }
+            entitlement mapping BarMapping {
+                C -> D
+            }
+            struct Foo {
+                access(FooMapping) let bars: [Bar]
+                init() {
+                    self.bars = [Bar()]
+                }
+            }
+            struct Bar {
+                access(BarMapping) let baz: Baz
+                init() {
+                    self.baz = Baz()
+                }
+            }
+            struct Baz {
+                access(D) fun canOnlyCallOnAuthD() {}
+            }
+            fun test() {
+                let foo = Foo()
+                let fooRef = &foo as auth(A) &Foo
+
+                let bazRef: &Baz = fooRef.bars[0].baz
+
+                // Error: 'fooRef.bars[0].baz' returns an unauthorized reference
+                bazRef.canOnlyCallOnAuthD()
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidAccessError := &sema.InvalidAccessError{}
+		require.ErrorAs(t, errors[0], &invalidAccessError)
+	})
 }

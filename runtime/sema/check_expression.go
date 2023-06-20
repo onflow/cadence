@@ -322,8 +322,9 @@ func (checker *Checker) visitIndexExpression(
 		// then the element type should also be a reference.
 		returnReference := false
 		if !isAssignment && shouldReturnReference(valueIndexedType, elementType) {
-			// TODO: Pass proper entitlement
-			elementType = checker.getReferenceType(elementType, false, nil)
+			// For index expressions, element gets the same authorization as parent.
+			indexedReferenceType := UnwrapOptionalType(valueIndexedType).(*ReferenceType)
+			elementType = checker.getReferenceType(elementType, true, indexedReferenceType.Authorization)
 
 			// Store the result in elaboration, so the interpreter can re-use this.
 			returnReference = true
