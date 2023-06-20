@@ -2254,72 +2254,101 @@ func (checker *Checker) rewritePostConditions(postConditions ast.Conditions) Pos
 	var beforeStatements []ast.Statement
 
 	var rewrittenPostConditions ast.Conditions
+	var allExtractedExpressions []ast.ExtractedExpression
 
 	count := len(postConditions)
 	if count > 0 {
 		rewrittenPostConditions = make([]ast.Condition, count)
 
-		beforeExtractor := checker.beforeExtractor()
-
 		for i, postCondition := range postConditions {
 
-			switch postCondition := postCondition.(type) {
-			case *ast.TestCondition:
-				// copy condition and set expression to rewritten one
-				newPostCondition := *postCondition
-
-				testExtraction := beforeExtractor.ExtractBefore(postCondition.Test)
-
-				extractedExpressions := testExtraction.ExtractedExpressions
-
-				newPostCondition.Test = testExtraction.RewrittenExpression
-
-				if postCondition.Message != nil {
-					messageExtraction := beforeExtractor.ExtractBefore(postCondition.Message)
-
-					newPostCondition.Message = messageExtraction.RewrittenExpression
-
-					extractedExpressions = append(
-						extractedExpressions,
-						messageExtraction.ExtractedExpressions...,
-					)
-				}
-
-				for _, extractedExpression := range extractedExpressions {
-					expression := extractedExpression.Expression
-					startPos := expression.StartPosition()
-
-					// NOTE: no need to check the before statements or update elaboration here:
-					// The before statements are visited/checked later
-					variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
-					variableDeclaration.StartPos = startPos
-					variableDeclaration.Identifier = extractedExpression.Identifier
-					variableDeclaration.Transfer = ast.NewTransfer(
-						checker.memoryGauge,
-						ast.TransferOperationCopy,
-						startPos,
-					)
-					variableDeclaration.Value = expression
-
-					beforeStatements = append(beforeStatements,
-						variableDeclaration,
-					)
-				}
-
-				rewrittenPostConditions[i] = &newPostCondition
-
-			case *ast.EmitCondition:
-				// TODO:
-				panic("TODO")
-			}
-
+			newPostCondition, extractedExpressions := checker.rewritePostCondition(postCondition)
+			rewrittenPostConditions[i] = newPostCondition
+			allExtractedExpressions = append(
+				allExtractedExpressions,
+				extractedExpressions...,
+			)
 		}
+	}
+
+	for _, extractedExpression := range allExtractedExpressions {
+		expression := extractedExpression.Expression
+		startPos := expression.StartPosition()
+
+		// NOTE: no need to check the before statements or update elaboration here:
+		// The before statements are visited/checked later
+		variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
+		variableDeclaration.StartPos = startPos
+		variableDeclaration.Identifier = extractedExpression.Identifier
+		variableDeclaration.Transfer = ast.NewTransfer(
+			checker.memoryGauge,
+			ast.TransferOperationCopy,
+			startPos,
+		)
+		variableDeclaration.Value = expression
+
+		beforeStatements = append(
+			beforeStatements,
+			variableDeclaration,
+		)
 	}
 
 	return PostConditionsRewrite{
 		BeforeStatements:        beforeStatements,
 		RewrittenPostConditions: rewrittenPostConditions,
 	}
+}
+
+func (checker *Checker) rewritePostCondition(
+	postCondition ast.Condition,
+) (
+	newPostCondition ast.Condition,
+	extractedExpressions []ast.ExtractedExpression,
+) {
+	switch postCondition := postCondition.(type) {
+	case *ast.TestCondition:
+		return checker.rewriteTestPostCondition(postCondition)
+
+	case *ast.EmitCondition:
+		// TODO:
+		panic("TODO")
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (checker *Checker) rewriteTestPostCondition(
+	postTestCondition *ast.TestCondition,
+) (
+	newPostCondition ast.Condition,
+	extractedExpressions []ast.ExtractedExpression,
+) {
+	// copy condition and set expression to rewritten one
+	newPostTestCondition := *postTestCondition
+
+	beforeExtractor := checker.beforeExtractor()
+
+	testExtraction := beforeExtractor.ExtractBefore(postTestCondition.Test)
+
+	extractedExpressions = testExtraction.ExtractedExpressions
+
+	newPostTestCondition.Test = testExtraction.RewrittenExpression
+
+	if postTestCondition.Message != nil {
+		messageExtraction := beforeExtractor.ExtractBefore(postTestCondition.Message)
+
+		newPostTestCondition.Message = messageExtraction.RewrittenExpression
+
+		extractedExpressions = append(
+			extractedExpressions,
+			messageExtraction.ExtractedExpressions...,
+		)
+	}
+
+	newPostCondition = &newPostTestCondition
+
+	return
 }
 
 func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos ast.HasPosition) {
