@@ -1776,6 +1776,10 @@ func (interpreter *Interpreter) ConvertAndBox(
 	return interpreter.BoxOptional(locationRange, value, targetType)
 }
 
+// Produces the `valueStaticType` argument into a new static type that conforms
+// to the specification of the `targetSemaType`. At the moment, this means that the
+// authorization of any reference types in `valueStaticType` are changed to match the
+// authorization of any equivalently-positioned reference types in `targetSemaType`.
 func (interpreter *Interpreter) convertStaticType(
 	valueStaticType StaticType,
 	targetSemaType sema.Type,
