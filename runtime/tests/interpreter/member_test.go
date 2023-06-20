@@ -563,6 +563,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	t.Parallel()
 
 	t.Run("composite, field", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 var x: [Int]
@@ -582,6 +584,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite, function", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 pub fun foo(): Int {
@@ -600,6 +604,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, field", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 var x: [Int]
@@ -620,6 +626,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, optional field", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 var x: [Int]?
@@ -640,6 +648,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, primitive field", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 var x: Int
@@ -660,6 +670,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("composite reference, function", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             struct Test {
                 pub fun foo(): Int {
@@ -679,6 +691,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("resource reference, nested", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             resource Foo {
                 var bar: @Bar
@@ -726,7 +740,38 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("composite reference, anystruct typed field, with reference value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Test {
+                var x: AnyStruct
+                init() {
+                    var s = "hello"
+                    self.x = &s as &String
+                }
+            }
+
+            fun test():&AnyStruct  {
+                let test = Test()
+                let testRef = &test as &Test
+                return testRef.x
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, result)
+		ref := result.(*interpreter.EphemeralReferenceValue)
+
+		// Must only have one level of references.
+		require.IsType(t, &interpreter.StringValue{}, ref.Value)
+	})
+
 	t.Run("array, element", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
@@ -739,6 +784,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, element", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
@@ -751,7 +798,26 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("array authorized reference, element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                let arrayRef = &array as auth(A) &[[Int]]
+                var x: auth(A) &[Int] = arrayRef[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 	t.Run("array reference, element, in assignment", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [[Int]] = [[1, 2]]
@@ -766,6 +832,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, optional typed element", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [[Int]?] = [[1, 2]]
@@ -779,6 +847,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("array reference, primitive typed element", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let array: [Int] = [1, 2]
@@ -791,7 +861,31 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("array reference, anystruct typed element, with reference value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): &AnyStruct {
+                var s = "hello"
+                let array: [AnyStruct] = [&s as &String]
+                let arrayRef = &array as &[AnyStruct]
+                return arrayRef[0]
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, result)
+		ref := result.(*interpreter.EphemeralReferenceValue)
+
+		// Must only have one level of references.
+		require.IsType(t, &interpreter.StringValue{}, ref.Value)
+	})
+
 	t.Run("dictionary, value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: {String: Int}} = {"one": {"two": 2}}
@@ -804,6 +898,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
@@ -816,7 +912,26 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("dictionary authorized reference, value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+
+            fun test() {
+                let dict: {String: {String: Int} } = {"one": {"two": 2}}
+                let dictRef = &dict as auth(A) &{String: {String: Int}}
+                var x: auth(A) &{String: Int}? = dictRef["one"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 	t.Run("dictionary reference, value, in assignment", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
@@ -831,6 +946,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, optional typed value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: {String: Int}?} = {"one": {"two": 2}}
@@ -844,6 +961,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let dict: {String: Int} = {"one": 1}
@@ -857,6 +976,8 @@ func TestInterpretMemberAccess(t *testing.T) {
 	})
 
 	t.Run("resource reference, attachment", func(t *testing.T) {
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
             resource R {}
 
@@ -868,6 +989,124 @@ func TestInterpretMemberAccess(t *testing.T) {
 
                 var a: &A? = rRef[A]
                 destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment nested member", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            attachment A for R {
+                var foo: Foo
+                init() {
+                    self.foo = Foo()
+                }
+
+                access(all) fun getNestedMember(): [Int] {
+                    return self.foo.array
+                }
+            }
+
+            struct Foo {
+                var array: [Int]
+                init() {
+                    self.array = []
+                }
+            }
+
+            fun test() {
+                let r <- attach A() to <- create R()
+                let rRef = &r as &R
+
+                var a: &A? = rRef[A]
+
+                var array = a!.getNestedMember()
+
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("entitlement map access on field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                A -> B
+            }
+
+            struct S {
+                access(M) let foo: [String]
+                init() {
+                    self.foo = []
+                }
+            }
+
+            fun test() {
+                let s = S()
+                let sRef = &s as auth(A) &S
+                var foo: auth(B) &[String] = sRef.foo
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("entitlement map access nested", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            entitlement mapping FooMapping {
+                A -> B
+            }
+
+            entitlement mapping BarMapping {
+                B -> C
+            }
+
+            struct Foo {
+                access(FooMapping) let bars: [Bar]
+                init() {
+                    self.bars = [Bar()]
+                }
+            }
+
+            struct Bar {
+                access(BarMapping) let baz: Baz
+                init() {
+                    self.baz = Baz()
+                }
+            }
+
+            struct Baz {
+                access(C) fun canOnlyCallOnAuthC() {}
+            }
+
+            fun test() {
+                let foo = Foo()
+                let fooRef = &foo as auth(A) &Foo
+
+                let barArrayRef: auth(B) &[Bar] = fooRef.bars
+                let barRef: auth(B) &Bar = barArrayRef[0]
+                let bazRef: auth(C) &Baz = barRef.baz
+
+                bazRef.canOnlyCallOnAuthC()
             }
         `)
 
