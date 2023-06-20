@@ -595,7 +595,7 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 			return
 
 		default:
-			var condition *ast.TestCondition
+			var condition ast.Condition
 			condition, err = parseCondition(p)
 			if err != nil || condition == nil {
 				return
@@ -608,8 +608,20 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 
 // parseCondition parses a condition (pre/post)
 //
-//	condition : expression (':' expression )?
-func parseCondition(p *parser) (*ast.TestCondition, error) {
+//	condition :
+//		emitStatement
+//		| expression (':' expression )?
+func parseCondition(p *parser) (ast.Condition, error) {
+
+	if p.isToken(p.current, lexer.TokenIdentifier, keywordEmit) {
+		emitStatement, err := parseEmitStatement(p)
+		if err != nil {
+			return nil, err
+		}
+
+		return (*ast.EmitCondition)(emitStatement), nil
+
+	}
 
 	test, err := parseExpression(p, lowestBindingPower)
 	if err != nil {

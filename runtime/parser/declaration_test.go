@@ -6523,6 +6523,158 @@ func TestParseConditionMessage(t *testing.T) {
 	)
 }
 
+func TestParseEmitAndTestCondition(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+        fun test(n: Int) {
+            pre {
+                emit Foo()
+                n > 0
+            }
+            post {
+                n > 0
+                emit Bar()
+            }
+            return n
+        }
+	`
+	result, errs := testParseProgram(code)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				ParameterList: &ast.ParameterList{
+					Parameters: []*ast.Parameter{
+						{
+							Label: "",
+							Identifier: ast.Identifier{Identifier: "n",
+								Pos: ast.Position{Offset: 18, Line: 2, Column: 17},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
+									},
+								},
+								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
+							},
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+					},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ReturnStatement{
+								Expression: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "n",
+										Pos:        ast.Position{Offset: 210, Line: 11, Column: 19},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 203, Line: 11, Column: 12},
+									EndPos:   ast.Position{Offset: 210, Line: 11, Column: 19},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
+							EndPos:   ast.Position{Offset: 220, Line: 12, Column: 8},
+						},
+					},
+					PreConditions: &ast.Conditions{
+						&ast.EmitCondition{
+							InvocationExpression: &ast.InvocationExpression{
+								InvokedExpression: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "Foo",
+										Pos:        ast.Position{Offset: 67, Line: 4, Column: 21},
+									},
+								},
+								ArgumentsStartPos: ast.Position{Offset: 70, Line: 4, Column: 24},
+								EndPos:            ast.Position{Offset: 71, Line: 4, Column: 25},
+							},
+							StartPos: ast.Position{Offset: 62, Line: 4, Column: 16},
+						},
+						&ast.TestCondition{
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationGreater,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "n",
+										Pos:        ast.Position{Offset: 89, Line: 5, Column: 16},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									PositiveLiteral: []byte("0"),
+									Value:           new(big.Int),
+									Base:            10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 93, Line: 5, Column: 20},
+										EndPos:   ast.Position{Offset: 93, Line: 5, Column: 20},
+									},
+								},
+							},
+						},
+					},
+					PostConditions: &ast.Conditions{
+						&ast.TestCondition{
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationGreater,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "n",
+										Pos:        ast.Position{Offset: 144, Line: 8, Column: 16},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									PositiveLiteral: []byte("0"),
+									Value:           new(big.Int),
+									Base:            10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 148, Line: 8, Column: 20},
+										EndPos:   ast.Position{Offset: 148, Line: 8, Column: 20},
+									},
+								},
+							},
+						},
+						&ast.EmitCondition{
+							InvocationExpression: &ast.InvocationExpression{
+								InvokedExpression: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "Bar",
+										Pos:        ast.Position{Offset: 171, Line: 9, Column: 21},
+									},
+								},
+								ArgumentsStartPos: ast.Position{Offset: 174, Line: 9, Column: 24},
+								EndPos:            ast.Position{Offset: 175, Line: 9, Column: 25},
+							},
+							StartPos: ast.Position{Offset: 166, Line: 9, Column: 16},
+						},
+					},
+				},
+				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		result.Declarations(),
+	)
+}
+
 func TestParseInterface(t *testing.T) {
 
 	t.Parallel()
