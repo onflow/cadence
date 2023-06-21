@@ -4018,11 +4018,6 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: &IntersectionStaticType{
-				Type: NewCompositeStaticTypeComputeTypeID(
-					nil,
-					utils.TestLocation,
-					"S",
-				),
 				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
@@ -4726,11 +4721,6 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
-					Type: NewCompositeStaticTypeComputeTypeID(
-						nil,
-						utils.TestLocation,
-						"S",
-					),
 					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
@@ -4927,14 +4917,19 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		)
 	})
 
-	t.Run("unauthorized reference, intersection AuthAccount", func(t *testing.T) {
+	t.Run("unauthorized reference, intersection I1", func(t *testing.T) {
 
 		t.Parallel()
 
 		value := &AccountCapabilityControllerValue{
 			BorrowType: ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
-					Type: PrimitiveStaticTypeAuthAccount,
+					Types: []interpreter.InterfaceStaticType{
+						{
+							Location:            utils.TestLocation,
+							QualifiedIdentifier: "SimpleInterface",
+						},
+					},
 				},
 				Authorization: UnauthorizedAccess,
 			},
@@ -4953,14 +4948,20 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			0xf6,
 			// tag
 			0xd8, CBORTagIntersectionStaticType,
+			// tag
+			0xd8, CBORTagInterfaceStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			// unsigned 90
-			0x18, 0x5a,
-			// array, length 0
-			0x80,
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 22
+			0x6F,
+			// SimpleInterface
+			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
 		)
 
 		testEncodeDecode(t,

@@ -690,17 +690,17 @@ func TestCheckIntersectionTypeConstructor(t *testing.T) {
 		expectedError error
 	}{
 		{
-			name: "S{I1, I2}",
+			name: "{I1, I2}",
 			code: `
-              let result = IntersectionType(identifier: "S", types: ["I1", "I2"])
+              let result = IntersectionType(types: ["I1", "I2"])
             `,
 			expectedError: nil,
 		},
 		{
-			name: "S{}",
+			name: "{}",
 			code: `
               struct S {}
-              let result = IntersectionType(identifier: "S", types: [])
+              let result = IntersectionType(types: [])
             `,
 			expectedError: nil,
 		},
@@ -708,37 +708,23 @@ func TestCheckIntersectionTypeConstructor(t *testing.T) {
 			name: "{S}",
 			code: `
               struct S {}
-              let result = IntersectionType(identifier: nil, types: ["S"])
+              let result = IntersectionType(types: ["S"])
             `,
 			expectedError: nil,
 		},
 		{
-			name: "type mismatch first arg",
-			code: `
-              let result = IntersectionType(identifier: 3, types: ["I"])
-            `,
-			expectedError: &sema.TypeMismatchError{},
-		},
-		{
-			name: "type mismatch second arg",
-			code: `
-              let result = IntersectionType(identifier: "A", types: [3])
-            `,
-			expectedError: &sema.TypeMismatchError{},
-		},
-		{
 			name: "too many args",
 			code: `
-              let result = IntersectionType(identifier: "A", types: ["I1"], ["I2"])
+              let result = IntersectionType(types: ["I1"], identifier: "A", )
             `,
 			expectedError: &sema.ArgumentCountError{},
 		},
 		{
-			name: "one arg",
+			name: "wrong typed arg",
 			code: `
-              let result = IntersectionType(identifier: "A")
+              let result = IntersectionType(types: "A")
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.TypeMismatchError{},
 		},
 		{
 			name: "no args",
@@ -748,16 +734,9 @@ func TestCheckIntersectionTypeConstructor(t *testing.T) {
 			expectedError: &sema.ArgumentCountError{},
 		},
 		{
-			name: "missing first label",
+			name: "missing label",
 			code: `
-              let result = IntersectionType("S", types: ["I1", "I2"])
-            `,
-			expectedError: &sema.MissingArgumentLabelError{},
-		},
-		{
-			name: "missing second label",
-			code: `
-              let result = IntersectionType(identifier: "S", ["I1", "I2"])
+              let result = IntersectionType(["I1", "I2"])
             `,
 			expectedError: &sema.MissingArgumentLabelError{},
 		},

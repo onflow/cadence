@@ -692,7 +692,6 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		}
 		return interpreter.NewIntersectionStaticType(
 			memoryGauge,
-			nil,
 			types,
 		)
 	case cadence.BlockType:

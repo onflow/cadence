@@ -1365,10 +1365,6 @@ func TestImportRuntimeType(t *testing.T) {
 					}},
 			},
 			expected: &interpreter.IntersectionStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            TestLocation,
-					QualifiedIdentifier: "S",
-				},
 				Types: []interpreter.InterfaceStaticType{
 					{
 						Location:            TestLocation,
@@ -2090,7 +2086,6 @@ func TestExportTypeValue(t *testing.T) {
 
 		ty := interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 				Types: []interpreter.InterfaceStaticType{
 					{
 						Location:            TestLocation,

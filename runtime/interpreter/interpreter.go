@@ -3571,7 +3571,6 @@ func intersectionTypeFunction(invocation Invocation) Value {
 			invocation.Interpreter,
 			NewIntersectionStaticType(
 				invocation.Interpreter,
-				nil,
 				staticIntersections,
 			),
 		),

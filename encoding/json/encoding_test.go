@@ -2704,7 +2704,6 @@ func TestEncodeType(t *testing.T) {
 					Types: []cadence.Type{
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 			// language=json
@@ -2714,9 +2713,6 @@ func TestEncodeType(t *testing.T) {
                 "value": {
                   "staticType": {
                     "kind": "Intersection",
-                    "type": {
-                      "kind": "Int"
-                    },
                     "types": [
                       {
                         "kind": "String"

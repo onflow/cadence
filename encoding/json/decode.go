@@ -1114,12 +1114,9 @@ func (d *Decoder) decodeNominalType(
 }
 
 func (d *Decoder) decodeIntersectionType(
-	typeValue any,
 	intersectionValue []any,
 	results typeDecodingResults,
 ) cadence.Type {
-	typ := d.decodeType(typeValue, results)
-
 	types := make([]cadence.Type, 0, len(intersectionValue))
 	for _, typ := range intersectionValue {
 		types = append(types, d.decodeType(typ, results))
@@ -1127,7 +1124,6 @@ func (d *Decoder) decodeIntersectionType(
 
 	return cadence.NewMeteredIntersectionType(
 		d.gauge,
-		typ,
 		types,
 	)
 }
@@ -1166,9 +1162,7 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, purity, results)
 	case "Intersection":
 		intersectionValue := obj.Get(intersectionTypesKey)
-		typeValue := obj.Get(typeKey)
 		return d.decodeIntersectionType(
-			typeValue,
 			toSlice(intersectionValue),
 			results,
 		)
