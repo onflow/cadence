@@ -8044,7 +8044,6 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
                 let type = Type<{I}>()
 
                 IntersectionType(
-                    identifier: type.identifier,
                     types: [type.identifier]
                 )
             }
@@ -8502,7 +8501,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInstantiationType))
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindNominalType))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindNominalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIntersectionType))

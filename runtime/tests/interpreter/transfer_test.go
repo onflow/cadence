@@ -117,7 +117,7 @@ func TestInterpretTransferCheck(t *testing.T) {
               fun test() {
                   let r <- C.createR()
                   let r2: @CI.R <- r as @CI.R
-                  let r3: @CI.R{CI.RI} <- r2
+                  let r3: @{CI.RI} <- r2
                   destroy r3
               }
             `,
@@ -158,7 +158,7 @@ func TestInterpretTransferCheck(t *testing.T) {
               fun test() {
                   let r <- C.createR()
                   let ref: &CI.R = &r as &CI.R
-                  let intersectionRef: &CI.R{CI.RI} = ref
+                  let intersectionRef: &{CI.RI} = ref
                   destroy r
               }
             `,

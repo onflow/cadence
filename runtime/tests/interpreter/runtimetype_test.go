@@ -578,6 +578,8 @@ func TestInterpretIntersectionType(t *testing.T) {
       let a = IntersectionType(types: ["S.test.R"])!
       let b = IntersectionType(types: ["S.test.S"])!
 
+	  let c = IntersectionType(types: [])
+
       let f = IntersectionType(types: ["X"])
 
       let h = Type<@{R}>()
@@ -599,6 +601,11 @@ func TestInterpretIntersectionType(t *testing.T) {
 			},
 		},
 		inter.Globals.Get("a").GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("c").GetValue(),
 	)
 
 	assert.Equal(t,

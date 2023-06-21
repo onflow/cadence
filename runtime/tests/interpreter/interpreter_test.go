@@ -5040,9 +5040,9 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 	                  return ref as? &R
 	              }
 
-	              fun testValidIntersection(): &R{RI}? {
+	              fun testValidIntersection(): &{RI}? {
 	                  let ref: AnyStruct = getStorageReference(authorized: false)
-	                  return ref as? &R{RI}
+	                  return ref as? &{RI}
 	              }
 	            `,
 			ParseCheckAndInterpretOptions{

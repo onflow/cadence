@@ -533,7 +533,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			fun test(): Bool {
 				let x <- create R()
 				let r = &x as auth(E) &{RI}
-				let r2 = r as! &R{RI}
+				let r2 = r as! &{RI}
 				let isSuccess = r2 != nil
 				destroy x
 				return isSuccess
