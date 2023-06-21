@@ -44,7 +44,7 @@ type AccountCapabilityControllerValue struct {
 	GetTag         func() *StringValue
 	SetTag         func(*StringValue)
 	DeleteFunction FunctionValue
-	SetTagFunction FunctionValue
+	setTagFunction FunctionValue
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
@@ -196,7 +196,7 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	switch name {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
-		if v.tag == nil || v.tag.graphemes == nil {
+		if v.tag == nil {
 			v.tag = v.GetTag()
 			if v.tag == nil {
 				v.tag = EmptyString
@@ -204,7 +204,10 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 		}
 		return v.tag
 	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
-		return v.SetTagFunction
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(inter)
+		}
+		return v.setTagFunction
 
 	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -270,9 +273,8 @@ func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 	)
 }
 
-func NewAccountCapabilityControllerSetTagFunction(
+func (controller *AccountCapabilityControllerValue) newSetTagFunction(
 	inter *Interpreter,
-	controller *AccountCapabilityControllerValue,
 ) *HostFunctionValue {
 	return NewHostFunctionValue(
 		inter,

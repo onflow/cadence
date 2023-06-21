@@ -58,7 +58,7 @@ type StorageCapabilityControllerValue struct {
 	TargetFunction   FunctionValue
 	RetargetFunction FunctionValue
 	DeleteFunction   FunctionValue
-	SetTagFunction   FunctionValue
+	setTagFunction   FunctionValue
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
@@ -220,7 +220,7 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	switch name {
 	case sema.StorageCapabilityControllerTypeTagFieldName:
-		if v.tag == nil || v.tag.graphemes == nil {
+		if v.tag == nil {
 			v.tag = v.GetTag()
 			if v.tag == nil {
 				v.tag = EmptyString
@@ -229,7 +229,10 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 		return v.tag
 
 	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
-		return v.SetTagFunction
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(inter)
+		}
+		return v.setTagFunction
 
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -311,9 +314,8 @@ func (v *StorageCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 	)
 }
 
-func NewStorageCapabilityControllerSetTagFunction(
+func (controller *StorageCapabilityControllerValue) newSetTagFunction(
 	inter *Interpreter,
-	controller *StorageCapabilityControllerValue,
 ) *HostFunctionValue {
 	return NewHostFunctionValue(
 		inter,

@@ -2615,8 +2615,6 @@ func getCapabilityController(
 			newStorageCapabilityControllerRetargetFunction(inter, address, controller)
 		controller.DeleteFunction =
 			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
-		controller.SetTagFunction =
-			interpreter.NewStorageCapabilityControllerSetTagFunction(inter, controller)
 
 	case *interpreter.AccountCapabilityControllerValue:
 		controller.GetTag =
@@ -2626,8 +2624,6 @@ func getCapabilityController(
 
 		controller.DeleteFunction =
 			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
-		controller.SetTagFunction =
-			interpreter.NewAccountCapabilityControllerSetTagFunction(inter, controller)
 	}
 
 	return controller
