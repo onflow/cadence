@@ -1992,7 +1992,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			return ConvertAddress(interpreter, value, locationRange)
 		}
 
-	case *sema.ConstantSizedType, *sema.VariableSizedType:
+	case sema.ArrayType:
 		if arrayValue, isArray := value.(*ArrayValue); isArray && !valueType.Equal(unwrappedTargetType) {
 
 			arrayStaticType := interpreter.convertStaticType(arrayValue.StaticType(interpreter), unwrappedTargetType).(ArrayStaticType)
