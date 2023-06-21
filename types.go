@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -1108,6 +1109,195 @@ func GetFieldsMappedByName(v HasFields) map[string]Value {
 		fieldsMap[field.Identifier] = fieldValues[i]
 	}
 	return fieldsMap
+}
+
+// DecodeFields decodes a HasFields into a struct
+func DecodeFields(hasFields HasFields, s interface{}) error {
+	v := reflect.ValueOf(s)
+	if !v.IsValid() || v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("s must be a pointer to a struct")
+	}
+
+	v = v.Elem()
+	t := v.Type()
+
+	fieldsMap := GetFieldsMappedByName(hasFields)
+
+	for i := 0; i < v.NumField(); i++ {
+		structField := t.Field(i)
+		tag := structField.Tag
+		fieldValue := v.Field(i)
+
+		cadenceFieldNameTag := tag.Get("cadence")
+		if cadenceFieldNameTag == "" {
+			continue
+		}
+
+		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+			return fmt.Errorf("cannot set field %s", structField.Name)
+		}
+
+		cadenceField := fieldsMap[cadenceFieldNameTag]
+		if cadenceField == nil {
+			return fmt.Errorf("%s field not found", cadenceFieldNameTag)
+		}
+
+		cadenceFieldValue := reflect.ValueOf(cadenceField)
+
+		var decodeSpecialFieldFunc func(p reflect.Type, value Value) (*reflect.Value, error)
+
+		switch fieldValue.Kind() {
+		case reflect.Ptr:
+			decodeSpecialFieldFunc = decodeOptional
+		case reflect.Map:
+			decodeSpecialFieldFunc = decodeDict
+		case reflect.Array, reflect.Slice:
+			decodeSpecialFieldFunc = decodeSlice
+		}
+
+		if decodeSpecialFieldFunc != nil {
+			cadenceFieldValuePtr, err := decodeSpecialFieldFunc(fieldValue.Type(), cadenceField)
+			if err != nil {
+				return fmt.Errorf("cannot decode %s field %s: %w", fieldValue.Kind(), structField.Name, err)
+			}
+			cadenceFieldValue = *cadenceFieldValuePtr
+		}
+
+		if !cadenceFieldValue.CanConvert(fieldValue.Type()) {
+			return fmt.Errorf(
+				"cannot convert cadence field %s of type %s to struct field %s of type %s",
+				cadenceFieldNameTag,
+				cadenceField.Type().ID(),
+				structField.Name,
+				fieldValue.Type(),
+			)
+		}
+
+		fieldValue.Set(cadenceFieldValue.Convert(fieldValue.Type()))
+	}
+
+	return nil
+}
+
+func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
+	optional, ok := cadenceField.(Optional)
+	if !ok {
+		return nil, fmt.Errorf("field is not an optional")
+	}
+
+	// if optional is nil, skip and default the field to nil
+	if optional.ToGoValue() == nil {
+		zeroValue := reflect.Zero(valueType)
+		return &zeroValue, nil
+	}
+
+	optionalValue := reflect.ValueOf(optional.Value)
+
+	// Check the type
+	if valueType.Elem() != optionalValue.Type() && valueType.Elem().Kind() != reflect.Interface {
+		return nil, fmt.Errorf("cannot set field: expected %v, got %v",
+			valueType.Elem(), optionalValue.Type())
+	}
+
+	if valueType.Elem().Kind() == reflect.Interface {
+		newInterfaceVal := reflect.New(reflect.TypeOf((*interface{})(nil)).Elem())
+		newInterfaceVal.Elem().Set(optionalValue)
+
+		return &newInterfaceVal, nil
+	}
+
+	// Create a new pointer for optionalValue
+	newPtr := reflect.New(optionalValue.Type())
+	newPtr.Elem().Set(optionalValue)
+
+	return &newPtr, nil
+}
+
+func decodeDict(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
+	dict, ok := cadenceField.(Dictionary)
+	if !ok {
+		return nil, fmt.Errorf("field is not a dictionary")
+	}
+
+	mapKeyType := valueType.Key()
+	mapValueType := valueType.Elem()
+
+	mapValue := reflect.MakeMap(valueType)
+	for _, pair := range dict.Pairs {
+
+		// Convert key and value to their Go counterparts
+		var key, value reflect.Value
+		if mapKeyType.Kind() == reflect.Ptr {
+			return nil, fmt.Errorf("map key cannot be a pointer (optional) type")
+		}
+		key = reflect.ValueOf(pair.Key)
+
+		if mapValueType.Kind() == reflect.Ptr {
+			// If the map value is a pointer type, unwrap it from optional
+			valueOptional, err := decodeOptional(mapValueType, pair.Value)
+			if err != nil {
+				return nil, fmt.Errorf("cannot decode optional map value for key %s: %w", pair.Key.String(), err)
+			}
+			value = *valueOptional
+		} else {
+			value = reflect.ValueOf(pair.Value)
+		}
+
+		if mapKeyType != key.Type() {
+			return nil, fmt.Errorf("map key type mismatch: expected %v, got %v", mapKeyType, key.Type())
+		}
+		if mapValueType != value.Type() && mapValueType.Kind() != reflect.Interface {
+			return nil, fmt.Errorf("map value type mismatch: expected %v, got %v", mapValueType, value.Type())
+		}
+
+		// Add key-value pair to the map
+		mapValue.SetMapIndex(key, value)
+	}
+
+	return &mapValue, nil
+}
+
+func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
+	array, ok := cadenceField.(Array)
+	if !ok {
+		return nil, fmt.Errorf("field is not an array")
+	}
+
+	var arrayValue reflect.Value
+
+	constantSizeArray, ok := array.ArrayType.(*ConstantSizedArrayType)
+	if ok {
+		arrayValue = reflect.New(reflect.ArrayOf(int(constantSizeArray.Size), valueType.Elem())).Elem()
+	} else {
+		// If the array is not constant sized, create a slice
+		arrayValue = reflect.MakeSlice(valueType, len(array.Values), len(array.Values))
+	}
+
+	for i, value := range array.Values {
+		var elementValue reflect.Value
+		if valueType.Elem().Kind() == reflect.Ptr {
+			// If the array value is a pointer type, unwrap it from optional
+			valueOptional, err := decodeOptional(valueType.Elem(), value)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding array element optional: %w", err)
+			}
+			elementValue = *valueOptional
+		} else {
+			elementValue = reflect.ValueOf(value)
+		}
+		if elementValue.Type() != valueType.Elem() && valueType.Elem().Kind() != reflect.Interface {
+			return nil, fmt.Errorf(
+				"array element type mismatch at index %d: expected %v, got %v",
+				i,
+				valueType.Elem(),
+				elementValue.Type(),
+			)
+		}
+
+		arrayValue.Index(i).Set(elementValue)
+	}
+
+	return &arrayValue, nil
 }
 
 // Parameter
