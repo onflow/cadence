@@ -2412,9 +2412,10 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		require.True(
+		require.Equal(
 			t,
-			interpreter.UnauthorizedAccess.Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+			interpreter.UnauthorizedAccess,
+			value.(*interpreter.EphemeralReferenceValue).Authorization,
 		)
 	})
 }
