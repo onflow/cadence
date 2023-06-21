@@ -348,40 +348,6 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("link", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-        view fun foo() {
-            authAccount.link<&Int>(/private/foo, target: /storage/foo)
-        }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 38, Line: 3, Column: 12},
-			EndPos:   ast.Position{Offset: 95, Line: 3, Column: 69},
-		})
-	})
-
-	t.Run("unlink", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-        view fun foo() {
-            authAccount.unlink(/private/foo)
-        }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 38, Line: 3, Column: 12},
-			EndPos:   ast.Position{Offset: 69, Line: 3, Column: 43},
-		})
-	})
-
 	t.Run("add contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `

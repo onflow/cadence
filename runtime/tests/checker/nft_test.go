@@ -962,7 +962,8 @@ pub contract TopShot: NonFungibleToken {
         self.account.save<@Collection>(<- create Collection(), to: /storage/MomentCollection)
 
         // Create a public capability for the Collection
-        self.account.link<&{MomentCollectionPublic}>(/public/MomentCollection, target: /storage/MomentCollection)
+        let cap = self.account.capabilities.storage.issue<&{MomentCollectionPublic}>(/storage/MomentCollection)
+        self.account.capabilities.publish(cap, at: /public/MomentCollection)
 
         // Put the Minter in storage
         self.account.save<@Admin>(<- create Admin(), to: /storage/TopShotAdmin)

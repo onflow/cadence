@@ -904,367 +904,6 @@ func TestCheckAccount_borrow(t *testing.T) {
 	}
 }
 
-func TestCheckAccount_link(t *testing.T) {
-
-	t.Parallel()
-
-	testMissingTypeArgument := func(domain common.PathDomain) {
-
-		testName := fmt.Sprintf(
-			"missing type argument, %s",
-			domain.Identifier(),
-		)
-
-		t.Run(testName, func(t *testing.T) {
-
-			t.Parallel()
-
-			_, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
-                      fun test(): Capability {
-                          return authAccount.link(/%s/r, target: /storage/r)!
-                      }
-                    `,
-					domain.Identifier(),
-				),
-			)
-
-			switch domain {
-			case common.PathDomainPrivate, common.PathDomainPublic:
-				errs := RequireCheckerErrors(t, err, 1)
-
-				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
-
-			default:
-				errs := RequireCheckerErrors(t, err, 2)
-
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
-			}
-		})
-	}
-
-	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth bool) {
-
-		authKeyword := ""
-		if auth {
-			authKeyword = "auth"
-		}
-
-		testName := fmt.Sprintf(
-			"explicit type argument, %s reference, %s",
-			authKeyword,
-			domain.Identifier(),
-		)
-
-		t.Run(testName, func(t *testing.T) {
-
-			t.Parallel()
-
-			t.Run("resource", func(t *testing.T) {
-
-				t.Parallel()
-
-				typeArguments := fmt.Sprintf("<%s &R>", authKeyword)
-
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          resource R {}
-
-                          fun test(): Capability%[1]s {
-                              return authAccount.link%[1]s(/%[2]s/r, target: /storage/r)!
-                          }
-                        `,
-						typeArguments,
-						domain.Identifier(),
-					),
-				)
-
-				switch domain {
-				case common.PathDomainPrivate, common.PathDomainPublic:
-					require.NoError(t, err)
-
-				default:
-					errs := RequireCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				}
-			})
-
-			t.Run("struct", func(t *testing.T) {
-
-				t.Parallel()
-
-				typeArguments := fmt.Sprintf("<%s &S>", authKeyword)
-
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          struct S {}
-
-                          fun test(): Capability%[1]s {
-                              return authAccount.link%[1]s(/%[2]s/s, target: /storage/s)!
-                          }
-                        `,
-						typeArguments,
-						domain.Identifier(),
-					),
-				)
-
-				switch domain {
-				case common.PathDomainPrivate, common.PathDomainPublic:
-					require.NoError(t, err)
-
-				default:
-					errs := RequireCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				}
-			})
-		})
-	}
-
-	testExplicitTypeArgumentTarget := func(domain, targetDomain common.PathDomain) {
-
-		testName := fmt.Sprintf(
-			"explicit type argument, non-reference type, %s -> %s",
-			domain.Identifier(),
-			targetDomain.Identifier(),
-		)
-
-		t.Run(testName, func(t *testing.T) {
-
-			t.Parallel()
-
-			t.Run("resource", func(t *testing.T) {
-
-				t.Parallel()
-
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          resource R {}
-
-                          fun test(): Capability {
-                              return authAccount.link<@R>(/%s/r, target: /%s/r)!
-                          }
-                        `,
-						domain.Identifier(),
-						targetDomain.Identifier(),
-					),
-				)
-
-				switch domain {
-				case common.PathDomainPrivate, common.PathDomainPublic:
-					errs := RequireCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-
-				default:
-					errs := RequireCheckerErrors(t, err, 2)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-				}
-			})
-
-			t.Run("struct", func(t *testing.T) {
-
-				t.Parallel()
-
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          struct S {}
-
-                          fun test(): Capability {
-                              return authAccount.link<S>(/%s/s, target: /%s/s)!
-                          }
-                        `,
-						domain.Identifier(),
-						targetDomain.Identifier(),
-					),
-				)
-
-				switch domain {
-				case common.PathDomainPrivate, common.PathDomainPublic:
-					errs := RequireCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-
-				default:
-					errs := RequireCheckerErrors(t, err, 2)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-				}
-			})
-		})
-	}
-
-	for _, domain := range common.AllPathDomainsByIdentifier {
-		testMissingTypeArgument(domain)
-
-		for _, auth := range []bool{false, true} {
-			testExplicitTypeArgumentReference(domain, auth)
-		}
-
-		for _, targetDomain := range common.AllPathDomainsByIdentifier {
-			testExplicitTypeArgumentTarget(domain, targetDomain)
-		}
-	}
-}
-
-func TestCheckAccount_getLinkTarget(t *testing.T) {
-
-	t.Parallel()
-
-	test := func(domain common.PathDomain, accountType, accountVariable string) {
-
-		testName := fmt.Sprintf(
-			"%s.getLinkTarget: %s",
-			accountType,
-			domain.Identifier(),
-		)
-
-		t.Run(testName, func(t *testing.T) {
-
-			t.Parallel()
-
-			_, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
-                      let path: Path = %s.getLinkTarget(/%s/r)!
-                    `,
-					accountVariable,
-					domain.Identifier(),
-				),
-			)
-
-			switch domain {
-			case common.PathDomainPrivate, common.PathDomainPublic:
-				require.NoError(t, err)
-
-			default:
-				errs := RequireCheckerErrors(t, err, 1)
-
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			}
-		})
-	}
-
-	for _, domain := range common.AllPathDomainsByIdentifier {
-
-		for accountType, accountVariable := range map[string]string{
-			"AuthAccount":   "authAccount",
-			"PublicAccount": "publicAccount",
-		} {
-			test(domain, accountType, accountVariable)
-		}
-	}
-}
-
-func TestCheckAccount_getCapability(t *testing.T) {
-
-	t.Parallel()
-
-	test := func(typed bool, accountType string, domain common.PathDomain, accountVariable string) {
-
-		typedPrefix := ""
-		if !typed {
-			typedPrefix = "un"
-		}
-
-		testName := fmt.Sprintf(
-			"%s.getCapability: %s, %styped",
-			accountType,
-			domain.Identifier(),
-			typedPrefix,
-		)
-
-		t.Run(testName, func(t *testing.T) {
-
-			t.Parallel()
-
-			capabilitySuffix := ""
-			if typed {
-				capabilitySuffix = "<&Int>"
-			}
-
-			code := fmt.Sprintf(
-				`
-	              fun test(): Capability%[3]s {
-	                  return %[1]s.getCapability%[3]s(/%[2]s/r)
-	              }
-
-                  let cap = test()
-	            `,
-				accountVariable,
-				domain.Identifier(),
-				capabilitySuffix,
-			)
-
-			checker, err := ParseAndCheckAccount(t, code)
-
-			switch domain {
-			case common.PathDomainPrivate:
-
-				if accountType == "PublicAccount" {
-					errs := RequireCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-
-					return
-				} else {
-					require.NoError(t, err)
-				}
-
-			case common.PathDomainPublic:
-				require.NoError(t, err)
-
-			default:
-				errs := RequireCheckerErrors(t, err, 1)
-
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-
-				return
-			}
-
-			var expectedBorrowType sema.Type
-			if typed {
-				expectedBorrowType = &sema.ReferenceType{
-					Type: sema.IntType,
-				}
-			}
-
-			capType := RequireGlobalValue(t, checker.Elaboration, "cap")
-
-			assert.Equal(t,
-				&sema.CapabilityType{
-					BorrowType: expectedBorrowType,
-				},
-				capType,
-			)
-		})
-	}
-
-	for _, domain := range common.AllPathDomainsByIdentifier {
-
-		for accountType, accountVariable := range map[string]string{
-			"AuthAccount":   "authAccount",
-			"PublicAccount": "publicAccount",
-		} {
-
-			for _, typed := range []bool{true, false} {
-
-				test(typed, accountType, domain, accountVariable)
-			}
-		}
-	}
-}
-
 func TestCheckAccount_BalanceFields(t *testing.T) {
 	t.Parallel()
 
@@ -1672,40 +1311,11 @@ func TestCheckAccountPaths(t *testing.T) {
 
 	t.Run("publicAccount iteration", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheckAccount(t,
-			`
-			fun test() {
-				let paths = publicAccount.publicPaths
-				for path in paths {
-					let cap = publicAccount.getCapability(path)
-				}
-			}
-		`,
-		)
+		_, err := ParseAndCheckAccount(t, `	
+          let paths: [PublicPath] = publicAccount.publicPaths
+		`)
 
 		require.NoError(t, err)
-	})
-
-	t.Run("iteration type mismatch", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t,
-			`
-			fun test() {
-				let paths = authAccount.publicPaths
-				for path in paths {
-					let t = authAccount.type(at: path)
-				}
-			}
-		`,
-		)
-
-		errors := RequireCheckerErrors(t, err, 1)
-
-		// `type` expects a `StoragePath`, not a `PublicPath`
-		var mismatchError *sema.TypeMismatchError
-		require.ErrorAs(t, errors[0], &mismatchError)
-
-		assert.Equal(t, "StoragePath", mismatchError.ExpectedType.QualifiedString())
 	})
 
 	t.Run("iteration", func(t *testing.T) {
@@ -2167,37 +1777,11 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 	t.Parallel()
 
-	parseAndCheckAccountWithCapabilityControllers := func(t *testing.T, code string) (*sema.Checker, error) {
-		return ParseAndCheckAccountWithConfig(
-			t,
-			code,
-			sema.Config{
-				CapabilityControllersEnabled: true,
-			},
-		)
-	}
-
-	t.Run("AuthAccount.capabilities, disabled", func(t *testing.T) {
+	t.Run("AuthAccount.capabilities", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheckAccount(t, `
-          fun test() {
-		      authAccount.capabilities
-          }
-		`)
-		require.Error(t, err)
-
-		errors := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
-
-	})
-
-	t.Run("AuthAccount.capabilities, enabled", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
           fun test() {
 		      let capabilities: AuthAccount.Capabilities = authAccount.capabilities
 
@@ -2208,9 +1792,6 @@ func TestCheckAccountCapabilities(t *testing.T) {
               capabilities.publish(cap, at: /public/bar)
 
               let cap2: Capability = capabilities.unpublish(/public/bar)!
-
-              let id1: UInt64 = capabilities.migrateLink(/public/bar)!
-              let id2: UInt64 = capabilities.migrateLink(/private/bar)!
           }
 		`)
 		require.NoError(t, err)
@@ -2220,7 +1801,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+		_, err := ParseAndCheckAccount(t, `
           fun test() {
 		      let capabilities: AuthAccount.StorageCapabilities = authAccount.capabilities.storage
 
@@ -2245,7 +1826,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+		_, err := ParseAndCheckAccount(t, `
           fun test() {
 		      let capabilities: AuthAccount.AccountCapabilities = authAccount.capabilities.account
 
@@ -2267,7 +1848,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+		_, err := ParseAndCheckAccount(t, `
           fun test() {
 		      let capabilities: PublicAccount.Capabilities = publicAccount.capabilities
 
@@ -2283,7 +1864,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+		_, err := ParseAndCheckAccount(t, `
 		  let capabilitiesRef: PublicAccount.StorageCapabilities = publicAccount.capabilities.storage
 		`)
 		require.Error(t, err)
@@ -2296,7 +1877,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseAndCheckAccountWithCapabilityControllers(t, `
+		_, err := ParseAndCheckAccount(t, `
 		  let capabilitiesRef: PublicAccount.AccountCapabilities = publicAccount.capabilities.account
 		`)
 		require.Error(t, err)
