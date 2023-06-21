@@ -33,9 +33,9 @@ type AccountCapabilityControllerValue struct {
 	BorrowType   ReferenceStaticType
 	CapabilityID UInt64Value
 
-	// Tag is locally cached result of GetTag, and not stored.
-	// It is populated when the field `Tag` is read.
-	Tag *StringValue
+	// tag is locally cached result of GetTag, and not stored.
+	// It is populated when the field `tag` is read.
+	tag *StringValue
 
 	// Injected functions
 	// Tags are not stored directly inside the controller
@@ -196,13 +196,13 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	switch name {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
-		if v.Tag == nil {
-			v.Tag = v.GetTag()
-			if v.Tag == nil {
-				v.Tag = EmptyString
+		if v.tag == nil || v.tag.graphemes == nil {
+			v.tag = v.GetTag()
+			if v.tag == nil {
+				v.tag = EmptyString
 			}
 		}
-		return v.Tag
+		return v.tag
 	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
 		return v.SetTagFunction
 
@@ -267,5 +267,26 @@ func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 		gauge,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
 		panicHostFunction,
+	)
+}
+
+func NewAccountCapabilityControllerSetTagFunction(
+	inter *Interpreter,
+	controller *AccountCapabilityControllerValue,
+) *HostFunctionValue {
+	return NewHostFunctionValue(
+		inter,
+		sema.AccountCapabilityControllerTypeSetTagFunctionType,
+		func(invocation Invocation) Value {
+			newTagValue, ok := invocation.Arguments[0].(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			controller.tag = newTagValue
+			controller.SetTag(newTagValue)
+
+			return Void
+		},
 	)
 }

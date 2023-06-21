@@ -2615,21 +2615,8 @@ func getCapabilityController(
 			newStorageCapabilityControllerRetargetFunction(inter, address, controller)
 		controller.DeleteFunction =
 			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
-		controller.SetTagFunction = interpreter.NewHostFunctionValue(
-			inter,
-			sema.StorageCapabilityControllerTypeSetTagFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				newTagValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				controller.Tag = newTagValue
-				controller.SetTag(newTagValue)
-
-				return interpreter.Void
-			},
-		)
+		controller.SetTagFunction =
+			interpreter.NewStorageCapabilityControllerSetTagFunction(inter, controller)
 
 	case *interpreter.AccountCapabilityControllerValue:
 		controller.GetTag =
@@ -2639,21 +2626,8 @@ func getCapabilityController(
 
 		controller.DeleteFunction =
 			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
-		controller.SetTagFunction = interpreter.NewHostFunctionValue(
-			inter,
-			sema.AccountCapabilityControllerTypeSetTagFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				newTagValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				controller.Tag = newTagValue
-				controller.SetTag(newTagValue)
-
-				return interpreter.Void
-			},
-		)
+		controller.SetTagFunction =
+			interpreter.NewAccountCapabilityControllerSetTagFunction(inter, controller)
 	}
 
 	return controller
