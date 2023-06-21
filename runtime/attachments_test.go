@@ -181,7 +181,7 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 			return a
 		}
 
-		pub fun returnSameRef(_ ref: &Test.A?): &Test.A? {
+		access(all) fun returnSameRef(_ ref: &Test.A?): &Test.A? {
 		    return ref
 		}
 	 `)

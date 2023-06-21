@@ -1897,7 +1897,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 var r: @R1 <- create R1()
                 let ref1 = &r as &R1
                 let ref2 = ref1.r2
@@ -1906,8 +1906,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 ref3.a
             }
 
-            pub resource R1 {
-                pub let r2: @R2
+            access(all) resource R1 {
+                access(all) let r2: @R2
                 init() {
                     self.r2 <- create R2()
                 }
@@ -1916,8 +1916,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 }
             }
 
-            pub resource R2 {
-                pub let r3: @R3
+            access(all) resource R2 {
+                access(all) let r3: @R3
                 init() {
                     self.r3 <- create R3()
                 }
@@ -1926,8 +1926,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 }
             }
 
-            pub resource R3 {
-                pub let a: Int
+            access(all) resource R3 {
+                access(all) let a: Int
                 init() {
                     self.a = 5
                 }

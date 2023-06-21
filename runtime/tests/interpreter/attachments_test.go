@@ -1592,7 +1592,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 return a.id
             }
 
-		    pub fun returnSameRef(_ ref: &A): &A {
+		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
 		    }`,
 			sema.Config{
@@ -1623,7 +1623,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 let i = a.foo()
             }
 
-		    pub fun returnSameRef(_ ref: &A): &A {
+		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
 		    }`,
 			sema.Config{
@@ -1673,7 +1673,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 return a.id
             }
 
-		    pub fun returnSameRef(_ ref: &A): &A {
+		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
 		    }`,
 			sema.Config{
@@ -1754,7 +1754,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 let i = a.foo()
             }
 
-		    pub fun returnSameRef(_ ref: &A): &A {
+		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
 		    }`,
 			sema.Config{

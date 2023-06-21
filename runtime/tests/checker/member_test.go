@@ -448,7 +448,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct Test {
-                pub fun foo(): Int {
+                access(all) fun foo(): Int {
                     return 1
                 }
             }
@@ -530,7 +530,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct Test {
-                pub fun foo(): Int {
+                access(all) fun foo(): Int {
                     return 1
                 }
             }

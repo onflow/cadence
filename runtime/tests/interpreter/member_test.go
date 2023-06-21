@@ -588,7 +588,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct Test {
-                pub fun foo(): Int {
+                access(all) fun foo(): Int {
                     return 1
                 }
             }
@@ -674,7 +674,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct Test {
-                pub fun foo(): Int {
+                access(all) fun foo(): Int {
                     return 1
                 }
             }
