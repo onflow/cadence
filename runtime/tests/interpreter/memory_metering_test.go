@@ -6964,117 +6964,17 @@ func TestInterpretPathValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretPathCapabilityValueMetering(t *testing.T) {
+func TestInterpretIDCapabilityValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-            resource R {}
-
-            pub fun main(account: AuthAccount) {
-                let r <- create R()
-                account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/cap, target: /storage/r)
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathCapabilityValue))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPathValue))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
-	})
-
-	t.Run("array element", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            resource R {}
-
-            pub fun main(account: AuthAccount) {
-                let r <- create R()
-                account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/cap, target: /storage/r)
-
-                let y = [x]
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCapabilityStaticType))
-	})
-}
-
-// TODO: IDCapability
-
-func TestInterpretPathLinkValueMetering(t *testing.T) {
-	t.Parallel()
-
-	t.Run("creation", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            resource R {}
-
-            pub fun main(account: AuthAccount) {
-                account.link<&R>(/public/cap, target: /private/p)
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		// Metered twice only when Atree validation is enabled.
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPathLinkValue))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
-	})
-}
-
-func TestInterpretAccountLinkValueMetering(t *testing.T) {
-	t.Parallel()
-
-	t.Run("creation", func(t *testing.T) {
-		t.Parallel()
-
-		const script = `
-          #allowAccountLinking
-
-          pub fun main(account: AuthAccount) {
-              account.linkAccount(/private/cap)
-          }
-        `
-
 		meter := newTestMemoryGauge()
 
-		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
-			t,
-			script,
-			ParseCheckAndInterpretOptions{},
-			meter,
-		)
-		require.NoError(t, err)
+		_ = interpreter.NewIDCapabilityValue(meter, 1, interpreter.AddressValue{}, nil)
 
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err = inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		// Metered twice only when Atree validation is enabled.
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAccountLinkValue))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindReferenceStaticType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIDCapabilityValue))
 	})
 }
 
@@ -8703,8 +8603,6 @@ func TestInterpretStorageMapMetering(t *testing.T) {
         pub fun main(account: AuthAccount) {
             let r <- create R()
             account.save(<-r, to: /storage/r)
-            account.link<&R>(/public/cap, target: /storage/r)
-            account.borrow<&R>(from: /storage/r)
         }
     `
 
@@ -8715,8 +8613,8 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	_, err := inter.Invoke("main", account)
 	require.NoError(t, err)
 
-	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindStorageMap))
-	assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindStorageKey))
+	assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageMap))
+	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindStorageKey))
 }
 
 func TestInterpretValueStringConversion(t *testing.T) {

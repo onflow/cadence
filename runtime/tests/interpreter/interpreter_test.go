@@ -10249,8 +10249,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 			name:     "account reference",
 			typeName: "AuthAccount",
 			code: `
-		      let cap = account.linkAccount(/private/test)!
-		      let ref = cap.borrow()!
+		      let ref = &account as &AuthAccount
 		    `,
 		},
 	}
