@@ -2615,7 +2615,8 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+		var destroyedResourceErr interpreter.DestroyedResourceError
+		require.ErrorAs(t, err, &destroyedResourceErr)
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -2663,7 +2664,8 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+		var destroyedResourceErr interpreter.DestroyedResourceError
+		require.ErrorAs(t, err, &destroyedResourceErr)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -2711,7 +2713,8 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ReentrantResourceDestructionError{})
+		var destroyedResourceErr interpreter.DestroyedResourceError
+		require.ErrorAs(t, err, &destroyedResourceErr)
 	})
 }
 
@@ -2852,4 +2855,58 @@ func TestInterpretResourceFunctionResourceFunctionValidity(t *testing.T) {
 
 	_, err := inter.Invoke("main")
 	require.NoError(t, err)
+}
+
+func TestInterpretInnerResourceDestruction(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        pub resource InnerResource {
+            pub var name: String
+            pub(set) var parent: &OuterResource?
+
+            init(_ name: String) {
+                self.name = name
+                self.parent = nil
+            }
+
+            destroy() {
+                self.parent!.shenanigans()
+            }
+        }
+
+        pub resource OuterResource {
+            pub var inner1: @InnerResource
+            pub var inner2: @InnerResource
+
+            init() {
+                self.inner1 <- create InnerResource("inner1")
+                self.inner2 <- create InnerResource("inner2")
+
+                self.inner1.parent = &self as &OuterResource
+                self.inner2.parent = &self as &OuterResource
+            }
+
+            pub fun shenanigans() {
+                self.inner1 <-> self.inner2
+            }
+
+            destroy() {
+                destroy self.inner1
+                destroy self.inner2
+            }
+        }
+
+        pub fun main() {
+            let a <- create OuterResource()
+            destroy a
+        }`,
+	)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+
+	var destroyedResourceErr interpreter.DestroyedResourceError
+	require.ErrorAs(t, err, &destroyedResourceErr)
 }
