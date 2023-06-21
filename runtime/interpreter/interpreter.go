@@ -1995,7 +1995,13 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	case *sema.ConstantSizedType, *sema.VariableSizedType:
 		if arrayValue, isArray := value.(*ArrayValue); isArray && !valueType.Equal(unwrappedTargetType) {
 
-			arrayStaticType := interpreter.convertStaticType(arrayValue.StaticType(interpreter), unwrappedTargetType).(ArrayStaticType)
+			oldArrayStaticType := arrayValue.StaticType(interpreter)
+			arrayStaticType := interpreter.convertStaticType(oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
+
+			if oldArrayStaticType.Equal(arrayStaticType) {
+				return value
+			}
+
 			targetElementType := interpreter.MustConvertStaticToSemaType(arrayStaticType.ElementType())
 
 			array := arrayValue.array
@@ -2029,7 +2035,13 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	case *sema.DictionaryType:
 		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
 
-			dictStaticType := interpreter.convertStaticType(dictValue.StaticType(interpreter), unwrappedTargetType).(DictionaryStaticType)
+			oldDictStaticType := dictValue.StaticType(interpreter)
+			dictStaticType := interpreter.convertStaticType(oldDictStaticType, unwrappedTargetType).(DictionaryStaticType)
+
+			if oldDictStaticType.Equal(dictStaticType) {
+				return value
+			}
+
 			targetKeyType := interpreter.MustConvertStaticToSemaType(dictStaticType.KeyType)
 			targetValueType := interpreter.MustConvertStaticToSemaType(dictStaticType.ValueType)
 
