@@ -2740,7 +2740,7 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 	})
 }
 
-func TestCheckResurceReferenceMethodInvocationAfterMove(t *testing.T) {
+func TestCheckResourceReferenceMethodInvocationAfterMove(t *testing.T) {
 
 	t.Parallel()
 
