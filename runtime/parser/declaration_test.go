@@ -9432,3 +9432,59 @@ func TestSoftKeywordsInFunctionDeclaration(t *testing.T) {
 		testSoftKeyword(keyword)
 	}
 }
+
+func TestParseDeprecatedAccessModifiers(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pub", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub fun foo ( ) { }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "`pub` is no longer a valid access keyword",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				},
+			},
+			errs,
+		)
+
+	})
+
+	t.Run("priv", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" priv fun foo ( ) { }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "`priv` is no longer a valid access keyword",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				},
+			},
+			errs,
+		)
+
+	})
+
+	t.Run("pub(set)", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" pub(set) fun foo ( ) { }")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "`pub` is no longer a valid access keyword",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				},
+			},
+			errs,
+		)
+
+	})
+}

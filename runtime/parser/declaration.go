@@ -214,6 +214,9 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				purity = parsePurityAnnotation(p)
 				continue
 
+			case KeywordPub, KeywordPriv:
+				return nil, p.syntaxError(fmt.Sprintf("`%s` is no longer a valid access keyword", p.currentTokenSource()))
+
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
 					return nil, p.syntaxError("invalid second access modifier")
@@ -1639,6 +1642,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				purityPos = &pos
 				purity = parsePurityAnnotation(p)
 				continue
+
+			case KeywordPub, KeywordPriv:
+				return nil, p.syntaxError(fmt.Sprintf("`%s` is no longer a valid access keyword", p.currentTokenSource()))
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
