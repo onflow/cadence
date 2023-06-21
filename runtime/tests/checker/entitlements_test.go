@@ -2779,14 +2779,14 @@ func TestCheckEntitlementTypeAnnotation(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
 			entitlement E
 			resource interface I {
-				let e: E{E}
+				let e: {E}
 			}
 		`)
 
 		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
-		require.IsType(t, &sema.InvalidIntersectionTypeError{}, errs[1])
+		require.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
 	})
 
 	t.Run("reference", func(t *testing.T) {
@@ -2990,14 +2990,14 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
 			entitlement mapping E {}
 			resource interface I {
-				let e: E{E}
+				let e: {E}
 			}
 		`)
 
 		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
-		require.IsType(t, &sema.InvalidIntersectionTypeError{}, errs[1])
+		require.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
 	})
 
 	t.Run("reference", func(t *testing.T) {

@@ -430,22 +430,9 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 
 				checker, err := ParseAndCheck(t, code)
 
-				// NOTE: type mismatch is only tested when both kinds are not contracts
-				// (which can not be passed by value)
+				errs := RequireCheckerErrors(t, err, 1)
 
-				if firstKind != common.CompositeKindContract &&
-					secondKind != common.CompositeKindContract {
-
-					errs := RequireCheckerErrors(t, err, 2)
-
-					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-
-				} else {
-					errs := RequireCheckerErrors(t, err, 1)
-
-					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-				}
+				assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 
 				require.NotNil(t, checker)
 

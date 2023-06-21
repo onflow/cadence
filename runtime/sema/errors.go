@@ -3407,27 +3407,6 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 	)
 }
 
-// InvalidIntersectionTypeError
-
-type InvalidIntersectionTypeError struct {
-	Type Type
-	ast.Range
-}
-
-var _ SemanticError = &InvalidIntersectionTypeError{}
-var _ errors.UserError = &InvalidIntersectionTypeError{}
-
-func (*InvalidIntersectionTypeError) isSemanticError() {}
-
-func (*InvalidIntersectionTypeError) IsUserError() {}
-
-func (e *InvalidIntersectionTypeError) Error() string {
-	return fmt.Sprintf(
-		"cannot restrict type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
 // InvalidIntersectedTypeError
 
 type InvalidIntersectedTypeError struct {
