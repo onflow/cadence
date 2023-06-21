@@ -24,6 +24,4 @@ var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
 
 func init() {
 	AuthAccountContractsTypeAddFunctionType.RequiredArgumentCount = RequiredArgumentCount(2)
-	AuthAccountTypeGetCapabilityFunctionTypeParameterT.Optional = true
-	PublicAccountTypeGetCapabilityFunctionTypeParameterT.Optional = true
 }
