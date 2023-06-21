@@ -643,10 +643,8 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
               transaction {
                  prepare(signer: AuthAccount) {
                      signer.save(42, to: /storage/test)
-                     signer.link<&Int>(
-                         /private/test,
-                         target: /storage/test
-                     )
+                     let cap = signer.capabilities.storage.issue<&Int>(/storage/test)
+                     signer.capabilities.publish(cap, at: /public/test)
                  }
               }
             `),
@@ -706,7 +704,14 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, cadence.NewInt(42), value)
+		require.Equal(t,
+			cadence.NewIDCapability(
+				1,
+				cadence.Address(signer),
+				cadence.NewReferenceType(false, cadence.IntType{}),
+			),
+			value,
+		)
 	})
 
 	t.Run("read stored, public, non-existing", func(t *testing.T) {
@@ -1909,7 +1914,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 		nonEmptyKeys,
 	)
 
-	expectedUUID := interpreter.NewUnmeteredUInt64Value(0)
+	expectedUUID := interpreter.NewUnmeteredUInt64Value(1)
 	assert.Equal(t,
 		[]resourceOwnerChange{
 			{

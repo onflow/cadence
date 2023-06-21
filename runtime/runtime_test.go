@@ -4245,15 +4245,13 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
           prepare(acct: AuthAccount) {
 
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
-                  /public/receiver,
-                  target: /storage/vault
+              let receiverCap = acct.capabilities.storage.issue<&AnyResource{FungibleToken.Receiver}>(
+                  /storage/vault
               )
+              acct.capabilities.publish(receiverCap, at: /public/receiver)
 
-              acct.link<&FungibleToken.Vault>(
-                  /private/vault,
-                  target: /storage/vault
-              )
+              let vaultCap = acct.capabilities.storage.issue<&FungibleToken.Vault>(/storage/vault)
+              acct.capabilities.publish(vaultCap, at: /public/vault)
           }
       }
     `)
@@ -4269,15 +4267,13 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
               acct.save(<-vault, to: /storage/vault)
 
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
-                  /public/receiver,
-                  target: /storage/vault
+              let receiverCap = acct.capabilities.storage.issue<&AnyResource{FungibleToken.Receiver}>(
+                  /storage/vault
               )
+              acct.capabilities.publish(receiverCap, at: /public/receiver)
 
-              acct.link<&FungibleToken.Vault>(
-                  /private/vault,
-                  target: /storage/vault
-              )
+              let vaultCap = acct.capabilities.storage.issue<&FungibleToken.Vault>(/storage/vault)
+              acct.capabilities.publish(vaultCap, at: /public/vault)
           }
       }
     `)
@@ -4379,15 +4375,13 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       transaction {
 
           prepare(acct: AuthAccount) {
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
-                  /public/receiver,
-                  target: /storage/vault
+              let receiverCap = acct.capabilities.storage.issue<&AnyResource{FungibleToken.Receiver}>(
+                  /storage/vault
               )
+              acct.capabilities.publish(receiverCap, at: /public/receiver1)
 
-              acct.link<&FungibleToken.Vault>(
-                  /private/vault,
-                  target: /storage/vault
-              )
+              let vaultCap = acct.capabilities.storage.issue<&FungibleToken.Vault>(/storage/vault)
+              acct.capabilities.publish(vaultCap, at: /public/vault1)
           }
       }
     `)
@@ -4403,15 +4397,13 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
               acct.save(<-vault, to: /storage/vault)
 
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
-                  /public/receiver,
-                  target: /storage/vault
+              let receiverCap = acct.capabilities.storage.issue<&AnyResource{FungibleToken.Receiver}>(
+                  /storage/vault
               )
+              acct.capabilities.publish(receiverCap, at: /public/receiver2)
 
-              acct.link<&FungibleToken.Vault>(
-                  /private/vault,
-                  target: /storage/vault
-              )
+              let vaultCap = acct.capabilities.storage.issue<&FungibleToken.Vault>(/storage/vault)
+              acct.capabilities.publish(vaultCap, at: /public/vault2)
           }
       }
     `)
@@ -5171,7 +5163,8 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
               rs[1].logOwnerAddress()
 
               signer.save(<-rs, to: /storage/rs)
-              signer.link<&[Test.R]>(/public/rs, target: /storage/rs)
+              let cap = signer.capabilities.storage.issue<&[Test.R]>(/storage/rs)
+              signer.capabilities.publish(cap, at: /public/rs)
 
               let ref1 = signer.borrow<&[Test.R]>(from: /storage/rs)!
               log(ref1[0].owner?.address)
@@ -5180,7 +5173,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
               ref1[1].logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
+              let ref2 = publicAccount.capabilities.borrow<&[Test.R]>(/public/rs)!
               log(ref2[0].owner?.address)
               log(ref2[1].owner?.address)
               ref2[0].logOwnerAddress()
@@ -5202,7 +5195,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
               ref1[1].logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
+              let ref2 = publicAccount.capabilities.borrow<&[Test.R]>(/public/rs)!
               log(ref2[0].owner?.address)
               log(ref2[1].owner?.address)
               ref2[0].logOwnerAddress()
@@ -7881,11 +7874,6 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 
           prepare(acct: AuthAccount) {
               acct.save(Foo.Bar(), to: /storage/bar)
-
-              acct.link<&Foo.Bar>(
-                  /public/bar,
-                  target: /storage/bar
-              )
           }
       }
     `)
