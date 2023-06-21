@@ -5405,15 +5405,14 @@ func (interpreter *Interpreter) withResourceDestruction(
 	locationRange LocationRange,
 	f func(),
 ) {
-	_, exists := interpreter.SharedState.resourceDestruction[storageID]
+	_, exists := interpreter.SharedState.destroyedResources[storageID]
 	if exists {
-		panic(ReentrantResourceDestructionError{
+		panic(DestroyedResourceError{
 			LocationRange: locationRange,
 		})
 	}
-	interpreter.SharedState.resourceDestruction[storageID] = struct{}{}
+
+	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
 
 	f()
-
-	delete(interpreter.SharedState.resourceDestruction, storageID)
 }
