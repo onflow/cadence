@@ -851,44 +851,42 @@ func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind 
 
 func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast.ConditionKind) {
 
-	var statement ast.Statement
-	var messageExpression ast.Expression
-
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
 		// Evaluate the condition as a statement, so we get position information in case of an error
-		statement = ast.NewExpressionStatement(interpreter, condition.Test)
-		messageExpression = condition.Message
+		statement := ast.NewExpressionStatement(interpreter, condition.Test)
+
+		result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+
+		value, valueOk := result.Value.(BoolValue)
+
+		if ok && valueOk && bool(value) {
+			return
+		}
+
+		messageExpression := condition.Message
+		var message string
+		if messageExpression != nil {
+			messageValue := interpreter.evalExpression(messageExpression)
+			message = messageValue.(*StringValue).Str
+		}
+
+		panic(ConditionError{
+			ConditionKind: kind,
+			Message:       message,
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: statement,
+			},
+		})
 
 	case *ast.EmitCondition:
-		statement = (*ast.EmitStatement)(condition)
+		interpreter.evalStatement((*ast.EmitStatement)(condition))
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	result, ok := interpreter.evalStatement(statement).(ExpressionResult)
-
-	value, valueOk := result.Value.(BoolValue)
-
-	if ok && valueOk && bool(value) {
-		return
-	}
-
-	var message string
-	if messageExpression != nil {
-		messageValue := interpreter.evalExpression(messageExpression)
-		message = messageValue.(*StringValue).Str
-	}
-
-	panic(ConditionError{
-		ConditionKind: kind,
-		Message:       message,
-		LocationRange: LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: statement,
-		},
-	})
 }
 
 // declareVariable declares a variable in the latest scope

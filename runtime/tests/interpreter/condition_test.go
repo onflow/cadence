@@ -36,7 +36,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestInterpretFunctionPreCondition(t *testing.T) {
+func TestInterpretFunctionPreTestCondition(t *testing.T) {
 
 	t.Parallel()
 
@@ -65,7 +65,52 @@ func TestInterpretFunctionPreCondition(t *testing.T) {
 	AssertValuesEqual(t, inter, zero, value)
 }
 
-func TestInterpretFunctionPostCondition(t *testing.T) {
+func TestInterpretFunctionPreEmitCondition(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t,
+		`
+          event Foo(x: Int)
+
+          fun test(x: Int): Int {
+              pre {
+                  emit Foo(x: x)
+              }
+              return x
+          }
+        `,
+	)
+	require.NoError(t, err)
+
+	answer := interpreter.NewUnmeteredIntValueFromInt64(42)
+	result, err := inter.Invoke("test", answer)
+	require.NoError(t, err)
+
+	AssertValuesEqual(t, inter, answer, result)
+
+	events := getEvents()
+	require.Len(t, events, 1)
+	event := events[0]
+
+	expectedEvent := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		inter.Location,
+		"Foo",
+		common.CompositeKindEvent,
+		[]interpreter.CompositeField{
+			{
+				Name:  "x",
+				Value: answer,
+			},
+		},
+		common.ZeroAddress,
+	)
+	AssertValuesEqual(t, inter, expectedEvent, event.event)
+}
+
+func TestInterpretFunctionPostTestCondition(t *testing.T) {
 
 	t.Parallel()
 
@@ -95,7 +140,53 @@ func TestInterpretFunctionPostCondition(t *testing.T) {
 	AssertValuesEqual(t, inter, zero, value)
 }
 
-func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
+func TestInterpretFunctionPostEmitCondition(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t,
+		`
+          event Foo(y: Int)
+
+          fun test(x: Int): Int {
+              post {
+                  emit Foo(y: y)
+              }
+              let y = x
+              return y
+          }
+        `,
+	)
+	require.NoError(t, err)
+
+	answer := interpreter.NewUnmeteredIntValueFromInt64(42)
+	result, err := inter.Invoke("test", answer)
+	require.NoError(t, err)
+
+	AssertValuesEqual(t, inter, answer, result)
+
+	events := getEvents()
+	require.Len(t, events, 1)
+	event := events[0]
+
+	expectedEvent := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		inter.Location,
+		"Foo",
+		common.CompositeKindEvent,
+		[]interpreter.CompositeField{
+			{
+				Name:  "y",
+				Value: answer,
+			},
+		},
+		common.ZeroAddress,
+	)
+	AssertValuesEqual(t, inter, expectedEvent, event.event)
+}
+
+func TestInterpretFunctionWithResultAndPostTestConditionWithResult(t *testing.T) {
 
 	t.Parallel()
 
@@ -124,7 +215,50 @@ func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
 	AssertValuesEqual(t, inter, zero, value)
 }
 
-func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) {
+func TestInterpretFunctionWithResultAndPostEmitConditionWithResult(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+          event Foo(x: Int)
+
+          fun test(x: Int): Int {
+              post {
+                  emit Foo(x: result)
+              }
+              return x
+          }
+        `)
+	require.NoError(t, err)
+
+	answer := interpreter.NewUnmeteredIntValueFromInt64(42)
+	result, err := inter.Invoke("test", answer)
+	require.NoError(t, err)
+
+	AssertValuesEqual(t, inter, answer, result)
+
+	events := getEvents()
+	require.Len(t, events, 1)
+	event := events[0]
+
+	expectedEvent := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		inter.Location,
+		"Foo",
+		common.CompositeKindEvent,
+		[]interpreter.CompositeField{
+			{
+				Name:  "x",
+				Value: answer,
+			},
+		},
+		common.ZeroAddress,
+	)
+	AssertValuesEqual(t, inter, expectedEvent, event.event)
+}
+
+func TestInterpretFunctionWithoutResultAndPostTestConditionWithResult(t *testing.T) {
 
 	t.Parallel()
 
@@ -148,7 +282,48 @@ func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) 
 	)
 }
 
-func TestInterpretFunctionPostConditionWithBefore(t *testing.T) {
+func TestInterpretFunctionWithoutResultAndPostEmitConditionWithResult(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+      event Foo(x: Int)
+
+      fun test() {
+          post {
+              emit Foo(x: result)
+          }
+          let result = 42
+      }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	events := getEvents()
+	require.Len(t, events, 1)
+	event := events[0]
+
+	answer := interpreter.NewUnmeteredIntValueFromInt64(42)
+	expectedEvent := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		inter.Location,
+		"Foo",
+		common.CompositeKindEvent,
+		[]interpreter.CompositeField{
+			{
+				Name:  "x",
+				Value: answer,
+			},
+		},
+		common.ZeroAddress,
+	)
+	AssertValuesEqual(t, inter, expectedEvent, event.event)
+}
+
+func TestInterpretFunctionPostTestConditionWithBefore(t *testing.T) {
 
 	t.Parallel()
 
@@ -177,7 +352,56 @@ func TestInterpretFunctionPostConditionWithBefore(t *testing.T) {
 	)
 }
 
-func TestInterpretFunctionPostConditionWithBeforeFailingPreCondition(t *testing.T) {
+func TestInterpretFunctionPostEmitConditionWithBefore(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+      event Foo(x: Int, beforeX: Int)
+
+      var x = 0
+
+      fun test() {
+          pre {
+              x == 0
+          }
+          post {
+              emit Foo(x: x, beforeX: before(x))
+          }
+          x = x + 1
+      }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	events := getEvents()
+	require.Len(t, events, 1)
+	event := events[0]
+
+	expectedEvent := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		inter.Location,
+		"Foo",
+		common.CompositeKindEvent,
+		[]interpreter.CompositeField{
+			{
+				Name:  "x",
+				Value: interpreter.NewUnmeteredIntValueFromInt64(1),
+			},
+			{
+				Name:  "beforeX",
+				Value: interpreter.NewUnmeteredIntValueFromInt64(0),
+			},
+		},
+		common.ZeroAddress,
+	)
+	AssertValuesEqual(t, inter, expectedEvent, event.event)
+}
+
+func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *testing.T) {
 
 	t.Parallel()
 
@@ -207,7 +431,7 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreCondition(t *testing.
 	)
 }
 
-func TestInterpretFunctionPostConditionWithBeforeFailingPostCondition(t *testing.T) {
+func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *testing.T) {
 
 	t.Parallel()
 
@@ -401,13 +625,19 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
+			var events []testEvent
+
 			inter, err := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
 					`
+                      event InterX(x: Int)
+                      event ImplX(x: Int)
+
                       access(all) %[1]s interface Test {
                           access(all) fun test(x: Int): Int {
                               pre {
                                   x > 0: "x must be positive"
+                                  emit InterX(x: x)
                               }
                           }
                       }
@@ -416,6 +646,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
                           access(all) fun test(x: Int): Int {
                               pre {
                                   x < 2: "x must be smaller than 2"
+                                  emit ImplX(x: x)
                               }
                               return x
                           }
@@ -436,31 +667,126 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				ParseCheckAndInterpretOptions{
 					Config: &interpreter.Config{
 						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+						OnEventEmitted: func(
+							_ *interpreter.Interpreter,
+							_ interpreter.LocationRange,
+							event *interpreter.CompositeValue,
+							eventType *sema.CompositeType,
+						) error {
+							events = append(events, testEvent{
+								event:     event,
+								eventType: eventType,
+							})
+							return nil
+						},
 					},
 				},
 			)
 			require.NoError(t, err)
 
-			_, err = inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(0))
-			RequireError(t, err)
+			t.Run("callTest(0)", func(t *testing.T) {
 
-			var conditionErr interpreter.ConditionError
-			require.ErrorAs(t, err, &conditionErr)
+				events = nil
 
-			value, err := inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(1))
-			require.NoError(t, err)
+				_, err = inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(0))
+				RequireError(t, err)
 
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.NewUnmeteredIntValueFromInt64(1),
-				value,
-			)
+				var conditionErr interpreter.ConditionError
+				require.ErrorAs(t, err, &conditionErr)
 
-			_, err = inter.Invoke("callTest", interpreter.NewUnmeteredIntValueFromInt64(2))
-			RequireError(t, err)
+				require.Len(t, events, 0)
+			})
 
-			require.ErrorAs(t, err, &conditionErr)
+			t.Run("callTest(1)", func(t *testing.T) {
+
+				events = nil
+
+				value := interpreter.NewUnmeteredIntValueFromInt64(1)
+
+				result, err := inter.Invoke("callTest", value)
+				require.NoError(t, err)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					value,
+					result,
+				)
+
+				require.Len(t, events, 2)
+
+				AssertValuesEqual(t,
+					inter,
+					interpreter.NewCompositeValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						inter.Location,
+						"InterX",
+						common.CompositeKindEvent,
+						[]interpreter.CompositeField{
+							{
+								Name:  "x",
+								Value: value,
+							},
+						},
+						common.ZeroAddress,
+					),
+					events[0].event,
+				)
+
+				AssertValuesEqual(t,
+					inter,
+					interpreter.NewCompositeValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						inter.Location,
+						"ImplX",
+						common.CompositeKindEvent,
+						[]interpreter.CompositeField{
+							{
+								Name:  "x",
+								Value: value,
+							},
+						},
+						common.ZeroAddress,
+					),
+					events[1].event,
+				)
+			})
+
+			t.Run("callTest(2)", func(t *testing.T) {
+
+				events = nil
+
+				value := interpreter.NewUnmeteredIntValueFromInt64(2)
+
+				_, err = inter.Invoke("callTest", value)
+				RequireError(t, err)
+
+				var conditionErr interpreter.ConditionError
+				require.ErrorAs(t, err, &conditionErr)
+
+				require.Len(t, events, 1)
+
+				AssertValuesEqual(t,
+					inter,
+					interpreter.NewCompositeValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						inter.Location,
+						"InterX",
+						common.CompositeKindEvent,
+						[]interpreter.CompositeField{
+							{
+								Name:  "x",
+								Value: value,
+							},
+						},
+						common.ZeroAddress,
+					),
+					events[0].event,
+				)
+			})
 		})
 	}
 }
