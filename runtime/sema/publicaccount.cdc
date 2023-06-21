@@ -28,17 +28,6 @@ pub struct PublicAccount {
     /// All public paths of this account.
     pub let publicPaths: [PublicPath]
 
-    /// **DEPRECATED**: Use `capabilities.get` instead.
-    ///
-    /// Returns the capability at the given public path.
-    pub fun getCapability<T: &Any>(_ path: PublicPath): Capability<T>
-
-    /// **DEPRECATED**
-    ///
-    /// Returns the target path of the capability at the given public or private path,
-    /// or nil if there exists no capability at the given path.
-    pub fun getLinkTarget(_ path: CapabilityPath): Path?
-
     /// Iterate over all the public paths of an account.
     /// passing each path and type in turn to the provided callback function.
     ///
