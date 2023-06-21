@@ -609,7 +609,41 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("can borrow with supertype then downcast", func(t *testing.T) {
+	t.Run("cannot borrow with supertype then downcast", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+			resource R {}
+			fun test(): &R? {
+				let r <- create R()
+				account.save(<-r, to: /storage/foo)
+				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
+				let cap = account.getCapability(/public/foo)
+				return cap.borrow<auth(X | Y) &R>()! as? auth(X, Y) &R
+			}
+			`,
+			sema.Config{},
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NilOptionalValue,
+			value,
+		)
+	})
+
+	t.Run("can borrow with two types", func(t *testing.T) {
 		t.Parallel()
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
@@ -626,7 +660,8 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 				account.save(<-r, to: /storage/foo)
 				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
 				let cap = account.getCapability(/public/foo)
-				return cap.borrow<auth(X | Y) &R>()! as! auth(X, Y) &R
+				cap.borrow<auth(X | Y) &R>()! as? auth(X, Y) &R
+				return cap.borrow<auth(X, Y) &R>()! as! auth(X, Y) &R
 			}
 			`,
 			sema.Config{},

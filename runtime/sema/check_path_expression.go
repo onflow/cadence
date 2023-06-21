@@ -48,8 +48,8 @@ var isValidIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`).MatchStri
 func CheckPathLiteral(domainString, identifier string, domainRangeThunk, idRangeThunk func() ast.Range) (Type, error) {
 
 	// Check that the domain is valid
-	domain, ok := common.AllPathDomainsByIdentifier[domainString]
-	if !ok {
+	domain := common.PathDomainFromIdentifier(domainString)
+	if domain == common.PathDomainUnknown {
 		return PathType, &InvalidPathDomainError{
 			ActualDomain: domainString,
 			Range:        domainRangeThunk(),

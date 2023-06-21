@@ -83,6 +83,8 @@ func (*AttachmentDeclaration) isDeclaration() {}
 // but will be rejected in semantic analysis
 func (*AttachmentDeclaration) isStatement() {}
 
+func (*AttachmentDeclaration) isCompositeLikeDeclaration() {}
+
 func (d *AttachmentDeclaration) DeclarationIdentifier() *Identifier {
 	return &d.Identifier
 }
@@ -126,13 +128,13 @@ var attachmentConformanceSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Line{},
 }
 
-func (e *AttachmentDeclaration) Doc() prettier.Doc {
+func (d *AttachmentDeclaration) Doc() prettier.Doc {
 	var doc prettier.Concat
 
-	if e.Access != AccessNotSpecified {
+	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			prettier.Text(e.Access.Keyword()),
+			prettier.Text(d.Access.Keyword()),
 			prettier.Space,
 		)
 	}
@@ -141,18 +143,17 @@ func (e *AttachmentDeclaration) Doc() prettier.Doc {
 		doc,
 		attachmentStatementDoc,
 		prettier.Space,
-		prettier.Text(e.Identifier.Identifier),
+		prettier.Text(d.Identifier.Identifier),
 		prettier.Space,
 		attachmentStatementForDoc,
 		prettier.Space,
-		e.BaseType.Doc(),
+		d.BaseType.Doc(),
 	)
-
 	var membersDoc prettier.Concat
 
-	if e.RequiredEntitlements != nil && len(e.RequiredEntitlements) > 0 {
+	if d.RequiredEntitlements != nil && len(d.RequiredEntitlements) > 0 {
 		membersDoc = append(membersDoc, membersStartDoc)
-		for _, entitlement := range e.RequiredEntitlements {
+		for _, entitlement := range d.RequiredEntitlements {
 			var entitlementRequiredDoc = prettier.Indent{
 				Doc: prettier.Concat{
 					attachmentRequireDoc,
@@ -168,20 +169,20 @@ func (e *AttachmentDeclaration) Doc() prettier.Doc {
 				entitlementRequiredDoc,
 			)
 		}
-		if len(e.Members.declarations) > 0 {
-			membersDoc = append(membersDoc, prettier.HardLine{}, e.Members.docWithNoBraces())
+		if len(d.Members.declarations) > 0 {
+			membersDoc = append(membersDoc, prettier.HardLine{}, d.Members.docWithNoBraces())
 		}
 		membersDoc = append(membersDoc, prettier.HardLine{}, membersEndDoc)
 	} else {
-		membersDoc = append(membersDoc, prettier.Line{}, e.Members.Doc())
+		membersDoc = append(membersDoc, prettier.Line{}, d.Members.Doc())
 	}
 
-	if len(e.Conformances) > 0 {
+	if len(d.Conformances) > 0 {
 		conformancesDoc := prettier.Concat{
 			prettier.Line{},
 		}
 
-		for i, conformance := range e.Conformances {
+		for i, conformance := range d.Conformances {
 			if i > 0 {
 				conformancesDoc = append(
 					conformancesDoc,

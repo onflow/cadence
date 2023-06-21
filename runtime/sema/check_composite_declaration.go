@@ -30,7 +30,8 @@ func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDecl
 	return
 }
 
-func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
+func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType, astBaseType *ast.NominalType) {
+
 	baseType := attachmentType.baseType
 
 	if baseType == nil {
@@ -42,6 +43,7 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 		if ty.CompositeKind.SupportsAttachments() {
 			return
 		}
+
 	case *CompositeType:
 		if ty.Location == nil {
 			break
@@ -49,8 +51,10 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 		if ty.Kind.SupportsAttachments() {
 			return
 		}
+
 	case *SimpleType:
-		if ty == AnyResourceType || ty == AnyStructType {
+		switch ty {
+		case AnyResourceType, AnyStructType, InvalidType:
 			return
 		}
 	}
@@ -58,6 +62,7 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType) {
 	checker.report(&InvalidBaseTypeError{
 		BaseType:   baseType,
 		Attachment: attachmentType,
+		Range:      ast.NewRangeFromPositioned(checker.memoryGauge, astBaseType),
 	})
 }
 
@@ -141,8 +146,11 @@ func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDe
 
 	checker.visitCompositeLikeDeclaration(declaration, kind)
 	attachmentType := checker.Elaboration.CompositeDeclarationType(declaration)
-	checker.checkAttachmentBaseType(attachmentType)
 	checker.checkAttachmentMembersAccess(attachmentType)
+	checker.checkAttachmentBaseType(
+		attachmentType,
+		declaration.BaseType,
+	)
 	return
 }
 
@@ -287,14 +295,12 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	inheritedMembers := map[string]struct{}{}
 	typeRequirementsInheritedMembers := map[string]map[string]struct{}{}
 
-	for i, interfaceType := range compositeType.ExplicitInterfaceConformances {
-		interfaceNominalType := declaration.ConformanceList()[i]
-
+	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
 		checker.checkCompositeLikeConformance(
 			declaration,
 			compositeType,
-			interfaceType,
-			interfaceNominalType.Identifier,
+			conformance.InterfaceType,
+			conformance.ConformanceChainRoot,
 			compositeConformanceCheckOptions{
 				checkMissingMembers:            checkMissingMembers,
 				interfaceTypeIsTypeRequirement: false,
@@ -867,8 +873,8 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 
 			var inheritedMembers StringMemberOrderedMap
 
-			for _, compositeTypeConformance := range compositeType.ExplicitInterfaceConformances {
-				conformanceNestedTypes := compositeTypeConformance.GetNestedTypes()
+			for _, compositeTypeConformance := range compositeType.EffectiveInterfaceConformances() {
+				conformanceNestedTypes := compositeTypeConformance.InterfaceType.GetNestedTypes()
 
 				nestedType, ok := conformanceNestedTypes.Get(nestedTypeIdentifier)
 				if !ok {
@@ -901,15 +907,15 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 						if member.HasImplementation {
 							checker.report(
 								&MultipleInterfaceDefaultImplementationsError{
-									CompositeType: nestedCompositeType,
-									Member:        member,
+									CompositeKindedType: nestedCompositeType,
+									Member:              member,
 								},
 							)
 						} else {
 							checker.report(
 								&DefaultFunctionConflictError{
-									CompositeType: nestedCompositeType,
-									Member:        member,
+									CompositeKindedType: nestedCompositeType,
+									Member:              member,
 								},
 							)
 						}
@@ -921,6 +927,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 						inheritedMembers.Set(memberName, member)
 					}
 				})
+
 			}
 
 			inheritedMembers.Foreach(func(memberName string, member *Member) {
@@ -1216,14 +1223,14 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 }
 
 func (checker *Checker) explicitInterfaceConformances(
-	declaration ast.CompositeLikeDeclaration,
-	compositeType *CompositeType,
+	conformingDeclaration ast.ConformingDeclaration,
+	compositeKindedType CompositeKindedType,
 ) []*InterfaceType {
 
 	var interfaceTypes []*InterfaceType
 	seenConformances := map[*InterfaceType]bool{}
 
-	for _, conformance := range declaration.ConformanceList() {
+	for _, conformance := range conformingDeclaration.ConformanceList() {
 		convertedType := checker.ConvertType(conformance)
 
 		if interfaceType, ok := convertedType.(*InterfaceType); ok {
@@ -1232,9 +1239,9 @@ func (checker *Checker) explicitInterfaceConformances(
 			if seenConformances[interfaceType] {
 				checker.report(
 					&DuplicateConformanceError{
-						CompositeType: compositeType,
-						InterfaceType: interfaceType,
-						Range:         ast.NewRangeFromPositioned(checker.memoryGauge, conformance.Identifier),
+						CompositeKindedType: compositeKindedType,
+						InterfaceType:       interfaceType,
+						Range:               ast.NewRangeFromPositioned(checker.memoryGauge, conformance.Identifier),
 					},
 				)
 			}
@@ -1329,8 +1336,8 @@ type compositeConformanceCheckOptions struct {
 func (checker *Checker) checkCompositeLikeConformance(
 	compositeDeclaration ast.CompositeLikeDeclaration,
 	compositeType *CompositeType,
-	interfaceType *InterfaceType,
-	compositeKindMismatchIdentifier ast.Identifier,
+	conformance *InterfaceType,
+	conformanceChainRoot *InterfaceType,
 	options compositeConformanceCheckOptions,
 	inheritedMembers map[string]struct{},
 	// type requirement name -> inherited members
@@ -1344,23 +1351,13 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 	// Ensure the composite kinds match, e.g. a structure shouldn't be able
 	// to conform to a resource interface
-
-	if !(interfaceType.CompositeKind == compositeType.Kind ||
-		interfaceType.CompositeKind == compositeType.getBaseCompositeKind()) {
-		checker.report(
-			&CompositeKindMismatchError{
-				ExpectedKind: compositeType.Kind,
-				ActualKind:   interfaceType.CompositeKind,
-				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, compositeKindMismatchIdentifier),
-			},
-		)
-	}
+	checker.checkConformanceKindMatch(compositeDeclaration, compositeType, conformance)
 
 	// Check initializer requirement
 
 	// TODO: add support for overloaded initializers
 
-	if interfaceType.InitializerParameters != nil {
+	if conformance.InitializerParameters != nil {
 
 		initializerType := NewSimpleFunctionType(
 			compositeType.ConstructorPurity,
@@ -1368,8 +1365,8 @@ func (checker *Checker) checkCompositeLikeConformance(
 			VoidTypeAnnotation,
 		)
 		interfaceInitializerType := NewSimpleFunctionType(
-			interfaceType.InitializerPurity,
-			interfaceType.InitializerParameters,
+			conformance.InitializerPurity,
+			conformance.InitializerParameters,
 			VoidTypeAnnotation,
 		)
 
@@ -1377,16 +1374,16 @@ func (checker *Checker) checkCompositeLikeConformance(
 		if !initializerType.Equal(interfaceInitializerType) {
 			initializerMismatch = &InitializerMismatch{
 				CompositePurity:     compositeType.ConstructorPurity,
-				InterfacePurity:     interfaceType.InitializerPurity,
+				InterfacePurity:     conformance.InitializerPurity,
 				CompositeParameters: compositeType.ConstructorParameters,
-				InterfaceParameters: interfaceType.InitializerParameters,
+				InterfaceParameters: conformance.InitializerParameters,
 			}
 		}
 	}
 
 	// Determine missing members and member conformance
 
-	interfaceType.Members.Foreach(func(name string, interfaceMember *Member) {
+	conformance.Members.Foreach(func(name string, interfaceMember *Member) {
 
 		// Conforming types do not provide a concrete member
 		// for the member in the interface if it is predeclared
@@ -1400,7 +1397,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 			// If the composite member exists, check if it satisfies the mem
 
-			if !checker.memberSatisfied(compositeMember, interfaceMember) {
+			if !checker.memberSatisfied(compositeType, compositeMember, interfaceMember) {
 				memberMismatches = append(
 					memberMismatches,
 					MemberMismatch{
@@ -1422,15 +1419,15 @@ func (checker *Checker) checkCompositeLikeConformance(
 					if interfaceMember.HasImplementation {
 						checker.report(
 							&MultipleInterfaceDefaultImplementationsError{
-								CompositeType: compositeType,
-								Member:        interfaceMember,
+								CompositeKindedType: compositeType,
+								Member:              interfaceMember,
 							},
 						)
 					} else {
 						checker.report(
 							&DefaultFunctionConflictError{
-								CompositeType: compositeType,
-								Member:        interfaceMember,
+								CompositeKindedType: compositeType,
+								Member:              interfaceMember,
 							},
 						)
 					}
@@ -1450,7 +1447,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 	// Determine missing nested composite type definitions
 
-	interfaceType.NestedTypes.Foreach(func(name string, typeRequirement Type) {
+	conformance.NestedTypes.Foreach(func(name string, typeRequirement Type) {
 
 		// Only nested composite declarations are type requirements of the interface
 
@@ -1484,21 +1481,82 @@ func (checker *Checker) checkCompositeLikeConformance(
 			&ConformanceError{
 				CompositeDeclaration:           compositeDeclaration,
 				CompositeType:                  compositeType,
-				InterfaceType:                  interfaceType,
+				InterfaceType:                  conformanceChainRoot,
 				Pos:                            compositeDeclaration.DeclarationIdentifier().Pos,
 				InitializerMismatch:            initializerMismatch,
 				MissingMembers:                 missingMembers,
 				MemberMismatches:               memberMismatches,
 				MissingNestedCompositeTypes:    missingNestedCompositeTypes,
 				InterfaceTypeIsTypeRequirement: options.interfaceTypeIsTypeRequirement,
+				NestedInterfaceType:            conformance,
 			},
 		)
 	}
 
 }
 
+// checkConformanceKindMatch ensures the composite kinds match.
+// e.g. a structure shouldn't be able to conform to a resource interface.
+func (checker *Checker) checkConformanceKindMatch(
+	conformingDeclaration ast.ConformingDeclaration,
+	compositeKindedType CompositeKindedType,
+	interfaceConformance *InterfaceType,
+) {
+
+	// Check if the conformance kind matches the declaration type's kind.
+	if interfaceConformance.CompositeKind == compositeKindedType.GetCompositeKind() {
+		return
+	}
+
+	// For attachments, check if the conformance kind matches the base type's kind.
+	if compositeType, ok := compositeKindedType.(*CompositeType); ok &&
+		interfaceConformance.CompositeKind == compositeType.getBaseCompositeKind() {
+		return
+	}
+
+	// If not a match, then report an error.
+
+	var compositeKindMismatchIdentifier *ast.Identifier
+
+	conformances := conformingDeclaration.ConformanceList()
+
+	if len(conformances) == 0 {
+		// For type requirements, there is no explicit conformance.
+		// Hence, log the error at the type requirement (i.e: declaration identifier)
+		compositeKindMismatchIdentifier = conformingDeclaration.DeclarationIdentifier()
+	} else {
+		// Otherwise, find the conformance which resulted in the mismatch,
+		// and log the error there.
+		for _, conformance := range conformances {
+			if conformance.Identifier.Identifier == interfaceConformance.Identifier {
+				compositeKindMismatchIdentifier = &conformance.Identifier
+				break
+			}
+		}
+
+		// If not found, then that means, the mismatching interface is a grandparent.
+		// Then it should have already been reported when checking the parent.
+		// Hence, no need to report an error here again.
+	}
+
+	if compositeKindMismatchIdentifier == nil {
+		return
+	}
+
+	checker.report(
+		&CompositeKindMismatchError{
+			ExpectedKind: compositeKindedType.GetCompositeKind(),
+			ActualKind:   interfaceConformance.CompositeKind,
+			Range:        ast.NewRangeFromPositioned(checker.memoryGauge, compositeKindMismatchIdentifier),
+		},
+	)
+}
+
 // TODO: return proper error
-func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member) bool {
+func (checker *Checker) memberSatisfied(
+	compositeKindedType CompositeKindedType,
+	compositeMember, interfaceMember *Member,
+) bool {
 
 	// Check declaration kind
 	if compositeMember.DeclarationKind != interfaceMember.DeclarationKind {
@@ -1580,7 +1638,6 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 
 				return false
 			}
-
 		}
 	}
 
@@ -1699,23 +1756,27 @@ func (checker *Checker) checkTypeRequirement(
 	// Check that the composite declaration declares at least the conformances
 	// that the type requirement stated
 
-	for _, requiredConformance := range requiredCompositeType.ExplicitInterfaceConformances {
+	for _, requiredConformance := range requiredCompositeType.EffectiveInterfaceConformances() {
 		found := false
-		for _, conformance := range declaredCompositeType.ExplicitInterfaceConformances {
-			if conformance == requiredConformance {
+
+		for _, conformance := range declaredCompositeType.EffectiveInterfaceConformances() {
+			if conformance.InterfaceType == requiredConformance.InterfaceType {
 				found = true
 				break
 			}
+
 		}
+
 		if !found {
 			checker.report(
 				&MissingConformanceError{
 					CompositeType: declaredCompositeType,
-					InterfaceType: requiredConformance,
+					InterfaceType: requiredConformance.InterfaceType,
 					Range:         ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.DeclarationIdentifier()),
 				},
 			)
 		}
+
 	}
 
 	// Check the conformance of the composite to the type requirement
@@ -1758,7 +1819,7 @@ func (checker *Checker) checkTypeRequirement(
 		compositeDeclaration,
 		declaredCompositeType,
 		requiredInterfaceType,
-		*compositeDeclaration.DeclarationIdentifier(),
+		requiredInterfaceType,
 		compositeConformanceCheckOptions{
 			checkMissingMembers:            true,
 			interfaceTypeIsTypeRequirement: true,

@@ -438,6 +438,34 @@ func FromStringFunctionType(ty Type) *FunctionType {
 	)
 }
 
+// fromBigEndianBytes
+
+const FromBigEndianBytesFunctionName = "fromBigEndianBytes"
+
+func FromBigEndianBytesFunctionDocstring(ty Type) string {
+	return fmt.Sprintf(
+		"Attempts to parse %s from a big-endian byte representation. Returns `nil` on invalid input.",
+		ty.String(),
+	)
+}
+
+func FromBigEndianBytesFunctionType(ty Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "bytes",
+				TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: ty,
+			},
+		),
+	}
+}
+
 // toBigEndianBytes
 
 const ToBigEndianBytesFunctionName = "toBigEndianBytes"
@@ -1588,6 +1616,14 @@ var (
 
 	Word64TypeAnnotation = NewTypeAnnotation(Word64Type)
 
+	// Word128Type represents the 128-bit unsigned integer type `Word128`
+	// which does NOT check for overflow and underflow
+	Word128Type = NewNumericType(Word128TypeName).
+			WithTag(Word128TypeTag).
+			WithIntRange(Word128TypeMinIntBig, Word128TypeMaxIntBig)
+
+	Word128TypeAnnotation = NewTypeAnnotation(Word128Type)
+
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName).
 			WithTag(FixedPointTypeTag).
@@ -1714,6 +1750,19 @@ var (
 
 	Word64TypeMinInt = new(big.Int)
 	Word64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
+
+	// 1 << 128
+	Word128TypeMaxIntPlusOneBig = func() *big.Int {
+		word128TypeMaxPlusOne := big.NewInt(1)
+		word128TypeMaxPlusOne.Lsh(word128TypeMaxPlusOne, 128)
+		return word128TypeMaxPlusOne
+	}()
+	Word128TypeMinIntBig = new(big.Int)
+	Word128TypeMaxIntBig = func() *big.Int {
+		word128TypeMax := new(big.Int)
+		word128TypeMax.Sub(Word128TypeMaxIntPlusOneBig, big.NewInt(1))
+		return word128TypeMax
+	}()
 
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
@@ -2324,8 +2373,8 @@ func (t *VariableSizedType) IsImportable(results map[*Member]bool) bool {
 	return t.Type.IsImportable(results)
 }
 
-func (v *VariableSizedType) IsEquatable() bool {
-	return v.Type.IsEquatable()
+func (t *VariableSizedType) IsEquatable() bool {
+	return t.Type.IsEquatable()
 }
 
 func (t *VariableSizedType) IsComparable() bool {
@@ -3331,6 +3380,8 @@ func init() {
 		PublicKeyType,
 		SignatureAlgorithmType,
 		HashAlgorithmType,
+		StorageCapabilityControllerType,
+		AccountCapabilityControllerType,
 	)
 
 	for _, ty := range types {
@@ -3411,6 +3462,7 @@ var AllUnsignedIntegerTypes = []Type{
 	Word16Type,
 	Word32Type,
 	Word64Type,
+	Word128Type,
 }
 
 var AllIntegerTypes = append(
@@ -3538,6 +3590,16 @@ func init() {
 				fromStringDocstring,
 			))
 
+			// add .fromBigEndianBytes() method
+			fromBigEndianBytesFnType := FromBigEndianBytesFunctionType(numberType)
+			fromBigEndianBytesDocstring := FromBigEndianBytesFunctionDocstring(numberType)
+			addMember(NewUnmeteredPublicFunctionMember(
+				functionType,
+				FromBigEndianBytesFunctionName,
+				fromBigEndianBytesFnType,
+				fromBigEndianBytesDocstring,
+			))
+
 			BaseValueActivation.Set(
 				typeName,
 				baseFunctionVariable(
@@ -3628,6 +3690,13 @@ var AddressTypeFromBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(TheAddressType),
 }
 
+const AddressTypeFromStringFunctionName = "fromString"
+const AddressTypeFromStringFunctionDocString = `
+Attempts to parse an Address from the input string. Returns nil on invalid input.
+`
+
+var AddressTypeFromStringFunctionType = FromStringFunctionType(TheAddressType)
+
 func init() {
 	// Declare a conversion function for the address type
 
@@ -3657,6 +3726,12 @@ func init() {
 		AddressTypeFromBytesFunctionName,
 		AddressTypeFromBytesFunctionType,
 		AddressTypeFromBytesFunctionDocString,
+	))
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		AddressTypeFromStringFunctionName,
+		AddressTypeFromStringFunctionType,
+		AddressTypeFromStringFunctionDocString,
 	))
 
 	BaseValueActivation.Set(
@@ -3798,6 +3873,11 @@ type EnumInfo struct {
 	Cases   []string
 }
 
+type Conformance struct {
+	InterfaceType        *InterfaceType
+	ConformanceChainRoot *InterfaceType
+}
+
 type CompositeType struct {
 	Location      common.Location
 	EnumRawType   Type
@@ -3822,15 +3902,17 @@ type CompositeType struct {
 	Fields                              []string
 	ConstructorParameters               []Parameter
 	ImplicitTypeRequirementConformances []*CompositeType
-	// an internal set of field `ExplicitInterfaceConformances`
-	explicitInterfaceConformanceSet     *InterfaceSet
-	ExplicitInterfaceConformances       []*InterfaceType
-	Kind                                common.CompositeKind
-	cachedIdentifiersLock               sync.RWMutex
-	explicitInterfaceConformanceSetOnce sync.Once
-	memberResolversOnce                 sync.Once
-	ConstructorPurity                   FunctionPurity
-	hasComputedMembers                  bool
+	// an internal set of field `effectiveInterfaceConformances`
+	effectiveInterfaceConformanceSet     *InterfaceSet
+	effectiveInterfaceConformances       []Conformance
+	ExplicitInterfaceConformances        []*InterfaceType
+	Kind                                 common.CompositeKind
+	cachedIdentifiersLock                sync.RWMutex
+	effectiveInterfaceConformanceSetOnce sync.Once
+	effectiveInterfaceConformancesOnce   sync.Once
+	memberResolversOnce                  sync.Once
+	ConstructorPurity                    FunctionPurity
+	hasComputedMembers                   bool
 	// Only applicable for native composite types
 	importable            bool
 	supportedEntitlements *EntitlementOrderedSet
@@ -3847,21 +3929,31 @@ func (t *CompositeType) Tag() TypeTag {
 	return CompositeTypeTag
 }
 
-func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
-	t.initializeExplicitInterfaceConformanceSet()
-	return t.explicitInterfaceConformanceSet
+func (t *CompositeType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	t.initializeEffectiveInterfaceConformanceSet()
+	return t.effectiveInterfaceConformanceSet
 }
 
-func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
-	t.explicitInterfaceConformanceSetOnce.Do(func() {
-		// TODO: also include conformances' conformances recursively
-		//   once interface can have conformances
+func (t *CompositeType) initializeEffectiveInterfaceConformanceSet() {
+	t.effectiveInterfaceConformanceSetOnce.Do(func() {
+		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
 
-		t.explicitInterfaceConformanceSet = NewInterfaceSet()
-		for _, conformance := range t.ExplicitInterfaceConformances {
-			t.explicitInterfaceConformanceSet.Add(conformance)
+		for _, conformance := range t.EffectiveInterfaceConformances() {
+			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
 		}
 	})
+}
+
+func (t *CompositeType) EffectiveInterfaceConformances() []Conformance {
+	t.effectiveInterfaceConformancesOnce.Do(func() {
+		t.effectiveInterfaceConformances = distinctConformances(
+			t.ExplicitInterfaceConformances,
+			nil,
+			map[*InterfaceType]struct{}{},
+		)
+	})
+
+	return t.effectiveInterfaceConformances
 }
 
 func (t *CompositeType) addImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
@@ -4009,7 +4101,7 @@ func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 			set.SetAll(access.Entitlements)
 		}
 	})
-	t.ExplicitInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
+	t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
 		set.SetAll(it.SupportedEntitlements())
 	})
 
@@ -4160,8 +4252,8 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	var typeRequirements []*CompositeType
 
 	if containerComposite, ok := t.containerType.(*CompositeType); ok {
-		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
-			ty, ok := conformance.NestedTypes.Get(t.Identifier)
+		for _, conformance := range containerComposite.EffectiveInterfaceConformances() {
+			ty, ok := conformance.InterfaceType.NestedTypes.Get(t.Identifier)
 			if !ok {
 				continue
 			}
@@ -4283,7 +4375,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 		// However, if this composite type is a type requirement,
 		// it acts like an interface and does not have to declare members.
 
-		t.ExplicitInterfaceConformanceSet().
+		t.EffectiveInterfaceConformanceSet().
 			ForEach(func(conformance *InterfaceType) {
 				for name, resolver := range conformance.GetMembers() { //nolint:maprange
 					if _, ok := memberResolvers[name]; !ok {
@@ -4376,10 +4468,45 @@ func NewPublicFunctionMember(
 	functionType *FunctionType,
 	docString string,
 ) *Member {
+	return NewFunctionMember(
+		memoryGauge,
+		containerType,
+		UnauthorizedAccess,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewUnmeteredFunctionMember(
+	containerType Type,
+	access ast.PrimitiveAccess,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+	return NewFunctionMember(
+		nil,
+		containerType,
+		PrimitiveAccess(access),
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewFunctionMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
 
 	return &Member{
 		ContainerType: containerType,
-		Access:        PrimitiveAccess(ast.AccessPublic),
+		Access:        access,
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
@@ -4415,16 +4542,55 @@ func NewPublicConstantFieldMember(
 	fieldType Type,
 	docString string,
 ) *Member {
+	return NewFieldMember(
+		memoryGauge,
+		containerType,
+		UnauthorizedAccess,
+		ast.VariableKindConstant,
+		identifier,
+		fieldType,
+		docString,
+	)
+}
+
+func NewUnmeteredFieldMember(
+	containerType Type,
+	access ast.PrimitiveAccess,
+	variableKind ast.VariableKind,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
+	return NewFieldMember(
+		nil,
+		containerType,
+		PrimitiveAccess(access),
+		variableKind,
+		identifier,
+		fieldType,
+		docString,
+	)
+}
+
+func NewFieldMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access Access,
+	variableKind ast.VariableKind,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
 	return &Member{
 		ContainerType: containerType,
-		Access:        PrimitiveAccess(ast.AccessPublic),
+		Access:        access,
 		Identifier: ast.NewIdentifier(
 			memoryGauge,
 			identifier,
 			ast.EmptyPosition,
 		),
 		DeclarationKind: common.DeclarationKindField,
-		VariableKind:    ast.VariableKindConstant,
+		VariableKind:    variableKind,
 		TypeAnnotation:  NewTypeAnnotation(fieldType),
 		DocString:       docString,
 	}
@@ -4515,14 +4681,21 @@ type InterfaceType struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
-	Identifier            string
-	Fields                []string
-	InitializerParameters []Parameter
-	CompositeKind         common.CompositeKind
-	cachedIdentifiersLock sync.RWMutex
-	memberResolversOnce   sync.Once
-	InitializerPurity     FunctionPurity
-	supportedEntitlements *EntitlementOrderedSet
+
+	Identifier                           string
+	Fields                               []string
+	InitializerParameters                []Parameter
+	CompositeKind                        common.CompositeKind
+	cachedIdentifiersLock                sync.RWMutex
+	memberResolversOnce                  sync.Once
+	effectiveInterfaceConformancesOnce   sync.Once
+	effectiveInterfaceConformanceSetOnce sync.Once
+	InitializerPurity                    FunctionPurity
+
+	ExplicitInterfaceConformances    []*InterfaceType
+	effectiveInterfaceConformances   []Conformance
+	effectiveInterfaceConformanceSet *InterfaceSet
+	supportedEntitlements            *EntitlementOrderedSet
 }
 
 var _ Type = &InterfaceType{}
@@ -4775,6 +4948,82 @@ func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 
 func (t *InterfaceType) FieldPosition(name string, declaration *ast.InterfaceDeclaration) ast.Position {
 	return declaration.Members.FieldPosition(name, declaration.CompositeKind)
+}
+
+func (t *InterfaceType) EffectiveInterfaceConformances() []Conformance {
+	t.effectiveInterfaceConformancesOnce.Do(func() {
+		t.effectiveInterfaceConformances = distinctConformances(
+			t.ExplicitInterfaceConformances,
+			nil,
+			map[*InterfaceType]struct{}{},
+		)
+	})
+
+	return t.effectiveInterfaceConformances
+}
+
+func (t *InterfaceType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	t.initializeEffectiveInterfaceConformanceSet()
+	return t.effectiveInterfaceConformanceSet
+}
+
+func (t *InterfaceType) initializeEffectiveInterfaceConformanceSet() {
+	t.effectiveInterfaceConformanceSetOnce.Do(func() {
+		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
+
+		for _, conformance := range t.EffectiveInterfaceConformances() {
+			t.effectiveInterfaceConformanceSet.Add(conformance.InterfaceType)
+		}
+	})
+}
+
+// distinctConformances recursively visit conformances and their conformances,
+// and return all the distinct conformances as an array.
+func distinctConformances(
+	conformances []*InterfaceType,
+	parent *InterfaceType,
+	seenConformances map[*InterfaceType]struct{},
+) []Conformance {
+
+	if len(conformances) == 0 {
+		return nil
+	}
+
+	collectedConformances := make([]Conformance, 0)
+
+	var conformanceChainRoot *InterfaceType
+
+	for _, conformance := range conformances {
+		if _, ok := seenConformances[conformance]; ok {
+			continue
+		}
+		seenConformances[conformance] = struct{}{}
+
+		if parent == nil {
+			conformanceChainRoot = conformance
+		} else {
+			conformanceChainRoot = parent
+		}
+
+		collectedConformances = append(
+			collectedConformances,
+			Conformance{
+				InterfaceType:        conformance,
+				ConformanceChainRoot: conformanceChainRoot,
+			},
+		)
+
+		// Recursively collect conformances
+		nestedConformances := distinctConformances(
+			conformance.ExplicitInterfaceConformances,
+			conformanceChainRoot,
+			seenConformances,
+		)
+
+		collectedConformances = append(collectedConformances, nestedConformances...)
+	}
+
+	return collectedConformances
 }
 
 // DictionaryType consists of the key and value type
@@ -5723,7 +5972,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		case IntegerType, SignedIntegerType,
 			UIntType,
 			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
-			Word8Type, Word16Type, Word32Type, Word64Type:
+			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type:
 
 			return true
 
@@ -5926,8 +6175,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// and `Vs` is a subset of `Us`.
 
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
-						typedSuperType.RestrictionSet().
-							IsSubsetOf(typedSubType.RestrictionSet())
+						typedSuperType.EffectiveRestrictionSet().
+							IsSubsetOf(typedSubType.EffectiveRestrictionSet())
 				}
 
 				if restrictedSubtype, ok := restrictedSubtype.(*CompositeType); ok {
@@ -5937,10 +6186,9 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					// and `T` conforms to `Vs`.
 					// `Us` and `Vs` do *not* have to be subsets.
 
-					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
-						typedSuperType.RestrictionSet().
-							IsSubsetOf(restrictedSubtype.ExplicitInterfaceConformanceSet())
+						typedSuperType.EffectiveRestrictionSet().
+							IsSubsetOf(restrictedSubtype.EffectiveInterfaceConformanceSet())
 				}
 
 			case *CompositeType:
@@ -5950,8 +6198,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				// and `T` conforms to `Us`.
 
 				return IsSubType(typedSubType, typedSuperType.Type) &&
-					typedSuperType.RestrictionSet().
-						IsSubsetOf(typedSubType.ExplicitInterfaceConformanceSet())
+					typedSuperType.EffectiveRestrictionSet().
+						IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 			}
 
 		default:
@@ -6045,13 +6293,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				return false
 			}
 
-			// TODO: once interfaces can conform to interfaces, include
-			return typedSubType.ExplicitInterfaceConformanceSet().
+			return typedSubType.EffectiveInterfaceConformanceSet().
 				Contains(typedSuperType)
 
-		// An interface type is a supertype of a restricted type if the restricted set contains
-		// that explicit interface type. Once interfaces can conform to interfaces, this should instead
-		// check that at least one value in the restriction set is a subtype of the interface supertype
+		// An interface type is a supertype of a restricted type if at least one value
+		// in the restriction set is a subtype of the interface supertype.
 
 		// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
 		// resource interface I { /* ... */ }
@@ -6060,11 +6306,11 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// let i : {I} = ... // some operation constructing `i`
 		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
 		case *RestrictedType:
-			return typedSubType.RestrictionSet().Contains(typedSuperType)
+			return typedSubType.EffectiveRestrictionSet().Contains(typedSuperType)
 
 		case *InterfaceType:
-			// TODO: Once interfaces can conform to interfaces, check conformances here
-			return false
+			return typedSubType.EffectiveInterfaceConformanceSet().
+				Contains(typedSuperType)
 		}
 
 	case ParameterizedType:
@@ -6300,12 +6546,12 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 type RestrictedType struct {
 	Type Type
 	// an internal set of field `Restrictions`
-	restrictionSet        *InterfaceSet
-	Restrictions          []*InterfaceType
-	restrictionSetOnce    sync.Once
-	memberResolvers       map[string]MemberResolver
-	memberResolversOnce   sync.Once
-	supportedEntitlements *EntitlementOrderedSet
+	effectiveRestrictionSet     *InterfaceSet
+	Restrictions                []*InterfaceType
+	effectiveRestrictionSetOnce sync.Once
+	memberResolvers             map[string]MemberResolver
+	memberResolversOnce         sync.Once
+	supportedEntitlements       *EntitlementOrderedSet
 }
 
 var _ Type = &RestrictedType{}
@@ -6313,7 +6559,7 @@ var _ Type = &RestrictedType{}
 func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []*InterfaceType) *RestrictedType {
 	common.UseMemory(memoryGauge, common.RestrictedSemaTypeMemoryUsage)
 
-	// Also meter the cost for the `restrictionSet` here, since ordered maps are not separately metered.
+	// Also meter the cost for the `effectiveRestrictionSet` here, since ordered maps are not separately metered.
 	wrapperUsage, entryListUsage, entriesUsage := common.NewOrderedMapMemoryUsages(uint64(len(restrictions)))
 	common.UseMemory(memoryGauge, wrapperUsage)
 	common.UseMemory(memoryGauge, entryListUsage)
@@ -6325,16 +6571,21 @@ func NewRestrictedType(memoryGauge common.MemoryGauge, typ Type, restrictions []
 	}
 }
 
-func (t *RestrictedType) RestrictionSet() *InterfaceSet {
-	t.initializeRestrictionSet()
-	return t.restrictionSet
+func (t *RestrictedType) EffectiveRestrictionSet() *InterfaceSet {
+	t.initializeEffectiveRestrictionSet()
+	return t.effectiveRestrictionSet
 }
 
-func (t *RestrictedType) initializeRestrictionSet() {
-	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = NewInterfaceSet()
+func (t *RestrictedType) initializeEffectiveRestrictionSet() {
+	t.effectiveRestrictionSetOnce.Do(func() {
+		t.effectiveRestrictionSet = NewInterfaceSet()
 		for _, restriction := range t.Restrictions {
-			t.restrictionSet.Add(restriction)
+			t.effectiveRestrictionSet.Add(restriction)
+
+			// Also add the interfaces to which this restricting interface conforms.
+			for _, conformance := range restriction.EffectiveInterfaceConformances() {
+				t.effectiveRestrictionSet.Add(conformance.InterfaceType)
+			}
 		}
 	})
 }
@@ -6408,8 +6659,8 @@ func (t *RestrictedType) Equal(other Type) bool {
 
 	// Check that the set of restrictions are equal; order does not matter
 
-	restrictionSet := t.RestrictionSet()
-	otherRestrictionSet := otherRestrictedType.RestrictionSet()
+	restrictionSet := t.EffectiveRestrictionSet()
+	otherRestrictionSet := otherRestrictedType.EffectiveRestrictionSet()
 
 	if restrictionSet.Len() != otherRestrictionSet.Len() {
 		return false
@@ -6592,8 +6843,8 @@ func (t *RestrictedType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	}
 
 	// a restricted type supports all the entitlements of its interfaces and its restricted type
-	set = orderedmap.New[EntitlementOrderedSet](t.RestrictionSet().Len())
-	t.RestrictionSet().ForEach(func(it *InterfaceType) {
+	set = orderedmap.New[EntitlementOrderedSet](t.EffectiveRestrictionSet().Len())
+	t.EffectiveRestrictionSet().ForEach(func(it *InterfaceType) {
 		set.SetAll(it.SupportedEntitlements())
 	})
 	if supportingType, ok := t.Type.(EntitlementSupportingType); ok {
@@ -6893,6 +7144,8 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 	}
 }
 
+const CapabilityTypeBorrowFunctionName = "borrow"
+
 const capabilityTypeBorrowFunctionDocString = `
 Returns a reference to the object targeted by the capability.
 
@@ -6902,9 +7155,15 @@ If there is an object stored, a reference is returned as an optional, provided i
 If the stored object cannot be borrowed using the given type, the function panics.
 `
 
+const CapabilityTypeCheckFunctionName = "check"
+
 const capabilityTypeCheckFunctionDocString = `
 Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
 `
+
+var CapabilityTypeAddressFieldType = TheAddressType
+
+const CapabilityTypeAddressFieldName = "address"
 
 const capabilityTypeAddressFieldDocString = `
 The address of the capability
@@ -6919,14 +7178,18 @@ func (t *CapabilityType) Map(gauge common.MemoryGauge, typeParamMap map[*TypePar
 	return f(NewCapabilityType(gauge, borrowType))
 }
 
+var CapabilityTypeIDFieldType = UInt64Type
+
+const CapabilityTypeIDFieldName = "id"
+
+const capabilityTypeIDFieldDocString = `
+The ID of the capability
+`
+
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
 }
-
-const CapabilityTypeBorrowFunctionName = "borrow"
-const CapabilityTypeCheckFunctionName = "check"
-const CapabilityTypeAddressFieldName = "address"
 
 func (t *CapabilityType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
@@ -6946,33 +7209,18 @@ func (t *CapabilityType) initializeMemberResolvers() {
 			NewUnmeteredPublicConstantFieldMember(
 				t,
 				CapabilityTypeAddressFieldName,
-				TheAddressType,
+				CapabilityTypeAddressFieldType,
 				capabilityTypeAddressFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				CapabilityTypeIDFieldName,
+				CapabilityTypeIDFieldType,
+				capabilityTypeIDFieldDocString,
 			),
 		})
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
-}
-
-var NativeCompositeTypes = map[string]*CompositeType{}
-
-func init() {
-	types := []*CompositeType{
-		AccountKeyType,
-		PublicKeyType,
-		HashAlgorithmType,
-		SignatureAlgorithmType,
-		AuthAccountType,
-		AuthAccountKeysType,
-		AuthAccountContractsType,
-		PublicAccountType,
-		PublicAccountKeysType,
-		PublicAccountContractsType,
-	}
-
-	for _, semaType := range types {
-		NativeCompositeTypes[semaType.QualifiedIdentifier()] = semaType
-	}
 }
 
 const AccountKeyTypeName = "AccountKey"
@@ -7465,4 +7713,40 @@ func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(
 
 func (t *EntitlementMapType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+var NativeCompositeTypes = map[string]*CompositeType{}
+
+func init() {
+	compositeTypes := []*CompositeType{
+		AccountKeyType,
+		PublicKeyType,
+		HashAlgorithmType,
+		SignatureAlgorithmType,
+		AuthAccountType,
+		PublicAccountType,
+	}
+
+	for len(compositeTypes) > 0 {
+		lastIndex := len(compositeTypes) - 1
+		compositeType := compositeTypes[lastIndex]
+		compositeTypes[lastIndex] = nil
+		compositeTypes = compositeTypes[:lastIndex]
+
+		NativeCompositeTypes[compositeType.QualifiedIdentifier()] = compositeType
+
+		nestedTypes := compositeType.NestedTypes
+		if nestedTypes == nil {
+			continue
+		}
+
+		nestedTypes.Foreach(func(_ string, nestedType Type) {
+			nestedCompositeType, ok := nestedType.(*CompositeType)
+			if !ok {
+				return
+			}
+
+			compositeTypes = append(compositeTypes, nestedCompositeType)
+		})
+	}
 }

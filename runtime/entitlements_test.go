@@ -59,7 +59,7 @@ func TestAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 		import Test from 0x1
 		transaction {
 			prepare(signer: AuthAccount) {
-				let cap = signer.getCapability<auth(Test.X) &Int>(/public/foo)
+				let cap = signer.getCapability<auth(Test.X, Test.Y) &Int>(/public/foo)
 				let ref = cap.borrow()!
 				let downcastRef = ref as! auth(Test.X, Test.Y) &Int
 			}
@@ -142,7 +142,7 @@ func TestAccountEntitlementSaveAndLoadFail(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save(3, to: /storage/foo)
-				signer.link<auth(Test.X) &Int>(/public/foo, target: /storage/foo)
+				signer.link<auth(Test.X, Test.Y) &Int>(/public/foo, target: /storage/foo)
 			}
 		}
 	 `)

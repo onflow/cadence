@@ -27,16 +27,20 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+// ConformingDeclaration
+type ConformingDeclaration interface {
+	Declaration
+	ConformanceList() []*NominalType
+}
+
 // CompositeDeclaration
 
 // NOTE: For events, only an empty initializer is declared
 
 type CompositeLikeDeclaration interface {
-	Element
-	Declaration
-	Statement
+	ConformingDeclaration
+	isCompositeLikeDeclaration()
 	Kind() common.CompositeKind
-	ConformanceList() []*NominalType
 }
 
 type CompositeDeclaration struct {
@@ -90,6 +94,8 @@ func (*CompositeDeclaration) isDeclaration() {}
 // NOTE: statement, so it can be represented in the AST,
 // but will be rejected in semantic analysis
 func (*CompositeDeclaration) isStatement() {}
+
+func (*CompositeDeclaration) isCompositeLikeDeclaration() {}
 
 func (d *CompositeDeclaration) DeclarationIdentifier() *Identifier {
 	return &d.Identifier

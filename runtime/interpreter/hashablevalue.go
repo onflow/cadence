@@ -90,7 +90,7 @@ const (
 	HashInputTypeWord16
 	HashInputTypeWord32
 	HashInputTypeWord64
-	_ // future: Word128
+	HashInputTypeWord128
 	_ // future: Word256
 	_
 

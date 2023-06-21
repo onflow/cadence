@@ -9379,7 +9379,7 @@ func TestCheckBadResourceInterface(t *testing.T) {
 
 		_, err := ParseAndCheck(t, "resource interface foo{struct d:foo{ contract d:foo{ contract x:foo{ struct d{} contract d:foo{ contract d:foo {}}}}}}")
 
-		errs := RequireCheckerErrors(t, err, 24)
+		errs := RequireCheckerErrors(t, err, 22)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -9393,18 +9393,16 @@ func TestCheckBadResourceInterface(t *testing.T) {
 		assert.IsType(t, &sema.RedeclarationError{}, errs[9])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[12])
-		assert.IsType(t, &sema.ConformanceError{}, errs[13])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[14])
-		assert.IsType(t, &sema.ConformanceError{}, errs[15])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[16])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[17])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[18])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[19])
+		assert.IsType(t, &sema.ConformanceError{}, errs[12])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[13])
+		assert.IsType(t, &sema.ConformanceError{}, errs[14])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[15])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[16])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[17])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[18])
+		assert.IsType(t, &sema.ConformanceError{}, errs[19])
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[20])
 		assert.IsType(t, &sema.ConformanceError{}, errs[21])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[22])
-		assert.IsType(t, &sema.ConformanceError{}, errs[23])
 	})
 }
 

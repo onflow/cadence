@@ -1,12 +1,7 @@
 # Documentation
 
-This directory contains the documentation for Cadence.
+This directory documention for contributors to/developers of Cadence.
 
-The [`language` directory](https://github.com/onflow/cadence/tree/master/docs/language) contains the Cadence Language Reference.
-The contents of this directory are deployed to the [Flow Documentation website](https://docs.onflow.org).
-This is done through the `docs` directory in the [`onflow/flow` repository](https://github.com/onflow/flow),
-which pulls in the content when it is built.
+If you are looking for documentation for Cadence, it can be found at https://developers.flow.com/cadence.
 
-The remaining files in this directory can be considered developer/contributor documentation.
-
-Documentation is written in Markdown or [MDX](https://mdxjs.com/), an extension of Markdown.
+The source for the user documentation is at https://github.com/onflow/docs/tree/main/docs/cadence, not in this repository.
