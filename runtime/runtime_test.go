@@ -2009,7 +2009,8 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
         prepare(signer: AuthAccount) {
           signer.save(<-createContainer(), to: /storage/container)
-          signer.link<&Container>(/public/container, target: /storage/container)
+          let cap = signer.capabilities.storage.issue<&Container>(/storage/container)
+          signer.capabilities.publish(cap, at: /public/container)
         }
       }
     `)
@@ -2020,8 +2021,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.getCapability(/public/container)
-              .borrow<&Container>()!
+          let ref = publicAccount.capabilities.borrow<&Container>(/public/container)!
 
           let length = ref.values.length
           ref.values.append(1)
@@ -2036,9 +2036,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount
-              .getCapability(/public/container)
-              .borrow<&Container>()!
+          let ref = publicAccount.capabilities.borrow<&Container>(/public/container)!
 
           let length = ref.values.length
           ref.values.append(2)
@@ -2486,7 +2484,8 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 
         prepare(signer: AuthAccount) {
           signer.save(<-createR(), to: /storage/r)
-          signer.link<&R>(/public/r, target: /storage/r)
+          let cap = signer.capabilities.storage.issue<&R>(/storage/r)
+          signer.capabilities.publish(cap, at: /public/r)
         }
       }
     `)
@@ -2497,9 +2496,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount
-              .getCapability(/public/r)
-              .borrow<&R>()!
+          let ref = publicAccount.capabilities.borrow<&R>(/public/r)!
           ref.x()
         }
       }
@@ -2585,7 +2582,8 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           signer.save(<-createR(), to: /storage/r)
-          signer.link<&AnyResource{RI}>(/public/r, target: /storage/r)
+          let cap = signer.capabilities.storage.issue<&AnyResource{RI}>(/storage/r)
+          signer.capabilities.publish(cap, at: /public/r) 
         }
       }
     `)
@@ -2600,9 +2598,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let ref = signer
-              .getCapability(/public/r)
-              .borrow<&AnyResource{RI}>()!
+          let ref = signer.capabilities.borrow<&AnyResource{RI}>(/public/r)!
           ref.x()
         }
       }
@@ -3161,7 +3157,8 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           signer.save(<-createR(), to: /storage/r)
-          signer.link<&R>(/public/r, target: /storage/r)
+          let cap = signer.capabilities.storage.issue<&R>(/storage/r)
+          signer.capabilities.publish(cap, at: /public/r)
         }
       }
     `)
@@ -3176,7 +3173,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
               transaction {
 
                 prepare(signer: AuthAccount) {
-                  log(getAccount(0x%s).getCapability(/public/r).borrow<&R>()!.test())
+                  log(getAccount(0x%s).capabilities.borrow<&R>(/public/r)!.test())
                 }
               }
             `,
