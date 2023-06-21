@@ -22,40 +22,226 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func TestInclusiveRange(t *testing.T) {
+type inclusiveRangeConstructionTest struct {
+	ty         sema.Type
+	s, e, step int64
+}
+
+func TestInclusiveRangeConstruction(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
 
-	runValidCase := func(t *testing.T, memberType sema.Type, withStep bool) {
-		t.Run(memberType.String(), func(t *testing.T) {
+	validTestCases := []inclusiveRangeConstructionTest{
+		// Int*
+		{
+			ty:   sema.IntType,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.IntType,
+			s:    10,
+			e:    -10,
+			step: -2,
+		},
+		{
+			ty:   sema.Int8Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Int8Type,
+			s:    10,
+			e:    -10,
+			step: -2,
+		},
+		{
+			ty:   sema.Int16Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Int16Type,
+			s:    10,
+			e:    -10,
+			step: -2,
+		},
+		{
+			ty:   sema.Int32Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Int32Type,
+			s:    10,
+			e:    -10,
+			step: -2,
+		},
+		{
+			ty:   sema.Int64Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Int64Type,
+			s:    10,
+			e:    -10,
+			step: -2,
+		},
+		{
+			ty:   sema.Int128Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Int128Type,
+			s:    10,
+			e:    -10,
+			step: -2,
+		},
+		{
+			ty:   sema.Int256Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Int256Type,
+			s:    10,
+			e:    -10,
+			step: -2,
+		},
+
+		// UInt*
+		{
+			ty:   sema.UIntType,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.UInt8Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.UInt16Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.UInt32Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.UInt64Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.UInt128Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.UInt256Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+
+		// Word*
+		{
+			ty:   sema.Word8Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Word16Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Word32Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Word64Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Word128Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+		{
+			ty:   sema.Word256Type,
+			s:    0,
+			e:    10,
+			step: 2,
+		},
+	}
+
+	runValidCase := func(t *testing.T, testCase inclusiveRangeConstructionTest, withStep bool) {
+		t.Run(testCase.ty.String(), func(t *testing.T) {
 			t.Parallel()
 
 			var code string
 			if withStep {
 				code = fmt.Sprintf(
 					`
-					   let s : %s = 10
-					   let e : %s = 20
-					   let step : %s = 2
+					   let s : %s = %d
+					   let e : %s = %d
+					   let step : %s = %d
 					   let r = InclusiveRange(s, e, step: step)
+
+					   let rs = r.start
+					   let re = r.end
+					   let rstep = r.step
+					   let contains_res = r.contains(s)
 					`,
-					memberType.String(), memberType.String(), memberType.String())
+					testCase.ty.String(), testCase.s, testCase.ty.String(), testCase.e, testCase.ty.String(), testCase.step)
 			} else {
 				code = fmt.Sprintf(
 					`
-					   let s : %s = 10
-					   let e : %s = 20
+					   let s : %s = %d
+					   let e : %s = %d
 					   let r = InclusiveRange(s, e)
+
+					   let rs = r.start
+					   let re = r.end
+					   let rstep = r.step
+					   let contains_res = r.contains(s)
 					`,
-					memberType.String(), memberType.String())
+					testCase.ty.String(), testCase.s, testCase.ty.String(), testCase.e)
 			}
 
 			checker, err := ParseAndCheckWithOptions(t, code,
@@ -67,30 +253,25 @@ func TestInclusiveRange(t *testing.T) {
 			)
 
 			require.NoError(t, err)
-			resType := RequireGlobalValue(t, checker.Elaboration, "r")
-			require.Equal(t,
-				&sema.InclusiveRangeType{
-					MemberType: memberType,
-				},
-				resType,
-			)
+
+			checkType := func(t *testing.T, name string, expectedType sema.Type) {
+				resType := RequireGlobalValue(t, checker.Elaboration, name)
+				assert.IsType(t, expectedType, resType)
+			}
+
+			checkType(t, "r", &sema.InclusiveRangeType{
+				MemberType: testCase.ty,
+			})
+			checkType(t, "rs", testCase.ty)
+			checkType(t, "re", testCase.ty)
+			checkType(t, "rstep", testCase.ty)
+			checkType(t, "contains_res", sema.BoolType)
 		})
 	}
 
-	runValidCaseWithoutStep := func(t *testing.T, memberType sema.Type) {
-		runValidCase(t, memberType, false)
-	}
-	runValidCaseWithStep := func(t *testing.T, memberType sema.Type) {
-		runValidCase(t, memberType, true)
-	}
-
-	for _, integerType := range sema.AllIntegerTypes {
-		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
-			continue
-		}
-
-		runValidCaseWithStep(t, integerType)
-		runValidCaseWithoutStep(t, integerType)
+	// Run each test case with and without step.
+	for _, testCase := range validTestCases {
+		runValidCase(t, testCase, true)
+		runValidCase(t, testCase, false)
 	}
 }

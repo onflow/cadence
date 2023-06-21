@@ -90,7 +90,7 @@ func NewInclusiveRangeValueWithStep(
 			Value: start,
 		},
 		{
-			Name:  sema.InclusiveRangeTypeEndInclusiveFieldName,
+			Name:  sema.InclusiveRangeTypeEndFieldName,
 			Value: end,
 		},
 		{
@@ -112,19 +112,6 @@ func NewInclusiveRangeValueWithStep(
 		rangeType,
 	)
 
-	rangeValue.ComputedFields = map[string]ComputedField{
-		sema.InclusiveRangeTypeCountFieldName: func(interpreter *Interpreter, locationRange LocationRange) Value {
-			start := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeStartFieldName)
-			endInclusive := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeEndInclusiveFieldName)
-			step := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeStepFieldName)
-
-			diff := convertAndAssertIntegerValue(endInclusive.Minus(interpreter, start, locationRange))
-
-			// Perform integer division & drop the decimal part.
-			// Note that step is guaranteed to be non-zero.
-			return diff.Div(interpreter, step, locationRange)
-		},
-	}
 	rangeValue.Functions = map[string]FunctionValue{
 		sema.InclusiveRangeTypeContainsFunctionName: NewHostFunctionValue(
 			interpreter,
@@ -158,7 +145,7 @@ func rangeContains(
 	needleValue Value,
 ) BoolValue {
 	start := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeStartFieldName)
-	endInclusive := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeEndInclusiveFieldName)
+	endInclusive := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeEndFieldName)
 	step := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeStepFieldName)
 
 	needleInteger := convertAndAssertIntegerValue(needleValue)

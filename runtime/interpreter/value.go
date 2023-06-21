@@ -16286,7 +16286,7 @@ func NewUnmeteredCompositeField(name string, value Value) CompositeField {
 // Create a CompositeValue with the provided StaticType.
 // Useful when we wish to utilize CompositeValue as the value
 // for a type which isn't CompositeType.
-// For e.g. RangeType
+// For e.g. InclusiveRangeType
 func NewCompositeValueWithStaticType(
 	interpreter *Interpreter,
 	locationRange LocationRange,

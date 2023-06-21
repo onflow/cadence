@@ -5324,12 +5324,17 @@ func (r *InclusiveRangeType) RewriteWithRestrictedTypes() (Type, bool) {
 }
 
 const InclusiveRangeTypeStartFieldName = "start"
-const InclusiveRangeTypeEndInclusiveFieldName = "endInclusive"
-const InclusiveRangeTypeStepFieldName = "step"
-const InclusiveRangeTypeCountFieldName = "count"
+const inclusiveRangeTypeStartFieldDocString = `
+The start of the InclusiveRange sequence
+`
+const InclusiveRangeTypeEndFieldName = "end"
+const inclusiveRangeTypeEndFieldDocString = `
+The end of the InclusiveRange sequence
+`
 
-const inclusiveRangeTypeCountFieldDocString = `
-The number of entries in the Range sequence
+const InclusiveRangeTypeStepFieldName = "step"
+const inclusiveRangeTypeStepFieldDocString = `
+The step size of the InclusiveRange sequence
 `
 
 const InclusiveRangeTypeContainsFunctionName = "contains"
@@ -5361,7 +5366,7 @@ func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
 func (r *InclusiveRangeType) initializeMemberResolvers() {
 	r.memberResolversOnce.Do(func() {
 		r.memberResolvers = withBuiltinMembers(r, map[string]MemberResolver{
-			InclusiveRangeTypeCountFieldName: {
+			InclusiveRangeTypeStartFieldName: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
@@ -5369,7 +5374,31 @@ func (r *InclusiveRangeType) initializeMemberResolvers() {
 						r,
 						identifier,
 						r.ElementType(false),
-						inclusiveRangeTypeCountFieldDocString,
+						inclusiveRangeTypeStartFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeEndFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						r,
+						identifier,
+						r.ElementType(false),
+						inclusiveRangeTypeEndFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeStepFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						r,
+						identifier,
+						r.ElementType(false),
+						inclusiveRangeTypeStepFieldDocString,
 					)
 				},
 			},
