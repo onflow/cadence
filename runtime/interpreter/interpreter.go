@@ -448,7 +448,7 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	var self *MemberAccessibleValue
 	var base *EphemeralReferenceValue
-	var boundAuth *EntitlementSetAuthorization
+	var boundAuth Authorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.Self
 		base = boundFunc.Base
@@ -1713,7 +1713,7 @@ func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.
 				return sema.NewReferenceType(
 					interpreter,
 					refType.Type,
-					interpreter.MustConvertStaticAuthorizationToSemaAccess(*interpreter.SharedState.currentEntitlementMappedValue),
+					interpreter.MustConvertStaticAuthorizationToSemaAccess(interpreter.SharedState.currentEntitlementMappedValue),
 				)
 			}
 		}
@@ -4900,7 +4900,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 		return resultValue
 	}
 	if mappedAccess, isMappedAccess := (*memberAccess).(sema.EntitlementMapAccess); isMappedAccess {
-		var auth EntitlementSetAuthorization
+		var auth Authorization
 		switch selfValue := self.(type) {
 		case AuthorizedValue:
 			selfAccess := interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization())
@@ -4908,9 +4908,9 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 			if err != nil {
 				panic(err)
 			}
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, imageAccess).(EntitlementSetAuthorization)
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, imageAccess)
 		default:
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess.Codomain()).(EntitlementSetAuthorization)
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess.Codomain())
 		}
 
 		switch refValue := resultValue.(type) {
@@ -4919,7 +4919,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 		case *StorageReferenceValue:
 			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
 		case BoundFunctionValue:
-			return NewBoundFunctionValue(interpreter, refValue.Function, refValue.Self, refValue.Base, &auth)
+			return NewBoundFunctionValue(interpreter, refValue.Function, refValue.Self, refValue.Base, auth)
 		}
 	}
 	return resultValue
