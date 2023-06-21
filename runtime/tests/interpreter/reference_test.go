@@ -1235,5 +1235,48 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+
+	})
+}
+
+func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t,
+			`
+            pub resource Foo {
+
+                pub let id: UInt8
+
+                init() {
+                    self.id = 12
+                }
+
+                pub fun something() {}
+            }
+
+            fun main() {
+                var foo <- create Foo()
+                var fooRef = &foo as &Foo
+
+                // Invocation should not un-track the reference
+                fooRef.something()
+
+                // Moving the resource should update the tracking
+                var newFoo <- foo
+
+            	fooRef.id
+
+            	destroy newFoo
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
 	})
 }

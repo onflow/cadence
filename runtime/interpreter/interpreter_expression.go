@@ -685,6 +685,9 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 	case sema.Word128Type:
 		// BigInt value is already metered at parser.
 		return NewUnmeteredWord128ValueFromBigInt(value)
+	case sema.Word256Type:
+		// BigInt value is already metered at parser.
+		return NewUnmeteredWord256ValueFromBigInt(value)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -928,6 +931,15 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	function, ok := result.(FunctionValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
+	}
+
+	// Bound functions
+	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
+		self := *boundFunction.Self
+		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
+			storageID := resource.StorageID()
+			interpreter.trackReferencedResourceKindedValue(storageID, resource)
+		}
 	}
 
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body

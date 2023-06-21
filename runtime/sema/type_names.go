@@ -47,6 +47,7 @@ const (
 	Word32TypeName  = "Word32"
 	Word64TypeName  = "Word64"
 	Word128TypeName = "Word128"
+	Word256TypeName = "Word256"
 
 	Fix64TypeName  = "Fix64"
 	UFix64TypeName = "UFix64"

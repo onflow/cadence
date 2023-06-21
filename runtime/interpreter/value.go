@@ -1698,17 +1698,25 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *ArrayValue) Iterate(gauge common.MemoryGauge, f func(element Value) (resume bool)) {
-	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-		// atree.Array iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
+func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
+	iterate := func() {
+		err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+			// atree.Array iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
 
-		resume = f(MustConvertStoredValue(gauge, element))
+			resume = f(MustConvertStoredValue(interpreter, element))
 
-		return resume, nil
-	})
-	if err != nil {
-		panic(errors.NewExternalError(err))
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
 	}
 }
 
@@ -1762,8 +1770,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -1779,9 +1785,17 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
-	v.Walk(interpreter, func(element Value) {
-		maybeDestroy(interpreter, locationRange, element)
-	})
+	storageID := v.StorageID()
+
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Walk(interpreter, func(element Value) {
+				maybeDestroy(interpreter, locationRange, element)
+			})
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -1935,6 +1949,8 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRang
 
 func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
 
@@ -2007,6 +2023,8 @@ func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReference
 
 func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRange, element Value) {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
@@ -2052,6 +2070,8 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -2105,6 +2125,8 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -12963,7 +12985,7 @@ func NewWord128ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Word
 var Word128MemoryUsage = common.NewBigIntMemoryUsage(16)
 
 func NewWord128ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) Word128Value {
-	common.UseMemory(memoryGauge, Int128MemoryUsage)
+	common.UseMemory(memoryGauge, Word128MemoryUsage)
 	value := bigIntConstructor()
 	return NewUnmeteredWord128ValueFromBigInt(value)
 }
@@ -13494,6 +13516,558 @@ func (v Word128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 }
 
 func (Word128Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
+// Word256Value
+
+type Word256Value struct {
+	BigInt *big.Int
+}
+
+func NewWord256ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Word256Value {
+	return NewWord256ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			return new(big.Int).SetInt64(value)
+		},
+	)
+}
+
+var Word256MemoryUsage = common.NewBigIntMemoryUsage(32)
+
+func NewWord256ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) Word256Value {
+	common.UseMemory(memoryGauge, Word256MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredWord256ValueFromBigInt(value)
+}
+
+func NewUnmeteredWord256ValueFromUint64(value uint64) Word256Value {
+	return NewUnmeteredWord256ValueFromBigInt(new(big.Int).SetUint64(value))
+}
+
+func NewUnmeteredWord256ValueFromBigInt(value *big.Int) Word256Value {
+	return Word256Value{
+		BigInt: value,
+	}
+}
+
+var _ Value = Word256Value{}
+var _ atree.Storable = Word256Value{}
+var _ NumberValue = Word256Value{}
+var _ IntegerValue = Word256Value{}
+var _ EquatableValue = Word256Value{}
+var _ ComparableValue = Word256Value{}
+var _ HashableValue = Word256Value{}
+var _ MemberAccessibleValue = Word256Value{}
+
+func (Word256Value) isValue() {}
+
+func (v Word256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitWord256Value(interpreter, v)
+}
+
+func (Word256Value) Walk(_ *Interpreter, _ func(Value)) {
+	// NO-OP
+}
+
+func (Word256Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord256)
+}
+
+func (Word256Value) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
+func (v Word256Value) ToInt(locationRange LocationRange) int {
+	if !v.BigInt.IsInt64() {
+		panic(OverflowError{LocationRange: locationRange})
+	}
+	return int(v.BigInt.Int64())
+}
+
+func (v Word256Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
+func (v Word256Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
+	return new(big.Int).Set(v.BigInt)
+}
+
+func (v Word256Value) String() string {
+	return format.BigInt(v.BigInt)
+}
+
+func (v Word256Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Word256Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
+func (v Word256Value) Negate(*Interpreter, LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and wrap around in case of overflow.
+			//
+			// Note that since v and o are both in the range [0, 2**256 - 1),
+			// their sum will be in range [0, 2*(2**256 - 1)).
+			// Hence it is sufficient to subtract 2**256 to wrap around.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.Word256TypeMaxIntBig) > 0 {
+				sum.Sub(sum, sema.Word256TypeMaxIntPlusOneBig)
+			}
+			return sum
+		},
+	)
+}
+
+func (v Word256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and wrap around in case of underflow.
+			//
+			// Note that since v and o are both in the range [0, 2**256 - 1),
+			// their difference will be in range [-(2**256 - 1), 2**256 - 1).
+			// Hence it is sufficient to add 2**256 to wrap around.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Sign() < 0 {
+				diff.Add(diff, sema.Word256TypeMaxIntPlusOneBig)
+			}
+			return diff
+		},
+	)
+}
+
+func (v Word256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{LocationRange: locationRange})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
+}
+
+func (v Word256Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.Word256TypeMaxIntBig) > 0 {
+				res.Mod(res, sema.Word256TypeMaxIntPlusOneBig)
+			}
+			return res
+		},
+	)
+}
+
+func (v Word256Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{LocationRange: locationRange})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
+
+}
+
+func (v Word256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == -1)
+}
+
+func (v Word256Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp <= 0)
+}
+
+func (v Word256Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == 1)
+}
+
+func (v Word256Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp >= 0)
+}
+
+func (v Word256Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+	otherInt, ok := other.(Word256Value)
+	if !ok {
+		return false
+	}
+	cmp := v.BigInt.Cmp(otherInt.BigInt)
+	return cmp == 0
+}
+
+// HashInput returns a byte slice containing:
+// - HashInputTypeWord256 (1 byte)
+// - big int encoded in big endian (n bytes)
+func (v Word256Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
+
+	length := 1 + len(b)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeWord256)
+	copy(buffer[1:], b)
+	return buffer
+}
+
+func ConvertWord256(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+	return NewWord256ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+
+			var v *big.Int
+
+			switch value := value.(type) {
+			case BigNumberValue:
+				v = value.ToBigInt(memoryGauge)
+
+			case NumberValue:
+				v = big.NewInt(int64(value.ToInt(locationRange)))
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			if v.Cmp(sema.Word256TypeMaxIntBig) > 0 || v.Sign() < 0 {
+				// When Sign() < 0, Mod will add sema.Word256TypeMaxIntPlusOneBig
+				// to ensure the range is [0, sema.Word256TypeMaxIntPlusOneBig)
+				v.Mod(v, sema.Word256TypeMaxIntPlusOneBig)
+			}
+
+			return v
+		},
+	)
+}
+
+func (v Word256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
+}
+
+func (v Word256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
+}
+
+func (v Word256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
+
+}
+
+func (v Word256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{LocationRange: locationRange})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{LocationRange: locationRange})
+			}
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
+}
+
+func (v Word256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{LocationRange: locationRange})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{LocationRange: locationRange})
+			}
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
+}
+
+func (v Word256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word256Type, locationRange)
+}
+
+func (Word256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (Word256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+	// Numbers have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) ToBigEndianBytes() []byte {
+	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+}
+
+func (v Word256Value) ConformsToStaticType(
+	_ *Interpreter,
+	_ LocationRange,
+	_ TypeConformanceResults,
+) bool {
+	return true
+}
+
+func (Word256Value) IsStorable() bool {
+	return true
+}
+
+func (v Word256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return v, nil
+}
+
+func (Word256Value) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (Word256Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Word256Value) Transfer(
+	interpreter *Interpreter,
+	_ LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v Word256Value) Clone(_ *Interpreter) Value {
+	return NewUnmeteredWord256ValueFromBigInt(v.BigInt)
+}
+
+func (Word256Value) DeepRemove(_ *Interpreter) {
+	// NO-OP
+}
+
+func (v Word256Value) ByteSize() uint32 {
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
+}
+
+func (v Word256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (Word256Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
@@ -14764,8 +15338,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -14784,45 +15356,53 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
-	// if this type has attachments, destroy all of them before invoking the destructor
-	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
-		// an attachment's destructor may make reference to `base`, so we must set the base value
-		// for the attachment before invoking its destructor. For other functions, this happens
-		// automatically when the attachment is accessed with the access expression `v[A]`, which
-		// is a necessary pre-requisite for calling any members of the attachment. However, in
-		// the case of a destructor, this is called implicitly, and thus must have its `base`
-		// set manually
-		attachment.setBaseValue(interpreter, v)
-		attachment.Destroy(interpreter, locationRange)
-	})
+	storageID := v.StorageID()
 
-	interpreter = v.getInterpreter(interpreter)
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			// if this type has attachments, destroy all of them before invoking the destructor
+			v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
+				// an attachment's destructor may make reference to `base`, so we must set the base value
+				// for the attachment before invoking its destructor. For other functions, this happens
+				// automatically when the attachment is accessed with the access expression `v[A]`, which
+				// is a necessary pre-requisite for calling any members of the attachment. However, in
+				// the case of a destructor, this is called implicitly, and thus must have its `base`
+				// set manually
+				attachment.setBaseValue(interpreter, v)
+				attachment.Destroy(interpreter, locationRange)
+			})
 
-	// if composite was deserialized, dynamically link in the destructor
-	if v.Destructor == nil {
-		v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-	}
+			interpreter = v.getInterpreter(interpreter)
 
-	destructor := v.Destructor
+			// if composite was deserialized, dynamically link in the destructor
+			if v.Destructor == nil {
+				v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+			}
 
-	if destructor != nil {
-		var base *EphemeralReferenceValue
-		var self MemberAccessibleValue = v
-		if v.Kind == common.CompositeKindAttachment {
-			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
-		}
-		invocation := NewInvocation(
-			interpreter,
-			&self,
-			base,
-			nil,
-			nil,
-			nil,
-			locationRange,
-		)
+			destructor := v.Destructor
 
-		destructor.invoke(invocation)
-	}
+			if destructor != nil {
+				var base *EphemeralReferenceValue
+				var self MemberAccessibleValue = v
+				if v.Kind == common.CompositeKindAttachment {
+					base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
+				}
+				invocation := NewInvocation(
+					interpreter,
+					&self,
+					base,
+					nil,
+					nil,
+					nil,
+					locationRange,
+				)
+
+				destructor.invoke(invocation)
+			}
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -14846,6 +15426,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			}
 		},
 	)
+
 }
 
 func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -16131,20 +16712,27 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Value) (resume bool)) {
-	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
-		// atree.OrderedMap iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
+func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+	iterate := func() {
+		err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+			// atree.OrderedMap iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
 
-		resume = f(
-			MustConvertStoredValue(gauge, key),
-			MustConvertStoredValue(gauge, value),
-		)
+			resume = f(
+				MustConvertStoredValue(interpreter, key),
+				MustConvertStoredValue(interpreter, value),
+			)
 
-		return resume, nil
-	})
-	if err != nil {
-		panic(errors.NewExternalError(err))
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
 	}
 }
 
@@ -16229,8 +16817,6 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
-	storageID := v.StorageID()
-
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -16246,12 +16832,21 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	v.Iterate(interpreter, func(key, value Value) (resume bool) {
-		// Resources cannot be keys at the moment, so should theoretically not be needed
-		maybeDestroy(interpreter, locationRange, key)
-		maybeDestroy(interpreter, locationRange, value)
-		return true
-	})
+	storageID := v.StorageID()
+
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Iterate(interpreter, func(key, value Value) (resume bool) {
+				// Resources cannot be keys at the moment, so should theoretically not be needed
+				maybeDestroy(interpreter, locationRange, key)
+				maybeDestroy(interpreter, locationRange, value)
+
+				return true
+			})
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -16296,21 +16891,29 @@ func (v *DictionaryValue) ForEachKey(
 		)
 	}
 
-	err := v.dictionary.IterateKeys(
-		func(item atree.Value) (bool, error) {
-			key := MustConvertStoredValue(interpreter, item)
+	iterate := func() {
+		err := v.dictionary.IterateKeys(
+			func(item atree.Value) (bool, error) {
+				key := MustConvertStoredValue(interpreter, item)
 
-			shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+				shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			return bool(shouldContinue), nil
-		},
-	)
+				return bool(shouldContinue), nil
+			},
+		)
 
-	if err != nil {
-		panic(errors.NewExternalError(err))
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
 	}
 }
 
@@ -16387,6 +16990,8 @@ func (v *DictionaryValue) SetKey(
 	keyValue Value,
 	value Value,
 ) {
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -16669,6 +17274,8 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
@@ -16723,6 +17330,8 @@ func (v *DictionaryValue) Insert(
 	locationRange LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
+
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
@@ -17139,6 +17748,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
+
 	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {

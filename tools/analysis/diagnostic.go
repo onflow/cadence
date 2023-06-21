@@ -23,10 +23,21 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+type SuggestedFix struct {
+	Message   string
+	TextEdits []TextEdit
+}
+
+type TextEdit struct {
+	Replacement string
+	ast.Range
+}
+
 type Diagnostic struct {
 	Location         common.Location
 	Category         string
 	Message          string
 	SecondaryMessage string
+	SuggestedFixes   []SuggestedFix
 	ast.Range
 }

@@ -510,7 +510,7 @@ func newAccountKeysAddFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyAddedEventType,
+				AccountKeyAddedFromPublicKeyEventType,
 				[]interpreter.Value{
 					addressValue,
 					publicKeyValue,
@@ -781,7 +781,7 @@ func newAccountKeysRevokeFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyRemovedEventType,
+				AccountKeyRemovedFromPublicKeyIndexEventType,
 				[]interpreter.Value{
 					addressValue,
 					indexValue,
@@ -1358,7 +1358,7 @@ func newAuthAccountContractsChangeFunction(
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue, locationRange)
+			code, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
 			if err != nil {
 				panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 			}
@@ -2081,7 +2081,7 @@ func NewHashAlgorithmFromValue(
 
 func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
 	codeHash := sha3.Sum256(code)
-	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
+	return interpreter.ByteSliceToConstantSizedByteArrayValue(inter, codeHash[:])
 }
 
 func newAuthAccountStorageCapabilitiesValue(

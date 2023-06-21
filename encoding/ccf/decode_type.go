@@ -179,6 +179,9 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 	case TypeWord128:
 		return cadence.TheWord128Type, nil
 
+	case TypeWord256:
+		return cadence.TheWord256Type, nil
+
 	case TypeFix64:
 		return cadence.TheFix64Type, nil
 
@@ -265,6 +268,12 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 
 	case TypeVoid:
 		return cadence.TheVoidType, nil
+
+	case TypeAnyStructAttachmentType:
+		return cadence.TheAnyStructAttachmentType, nil
+
+	case TypeAnyResourceAttachmentType:
+		return cadence.TheAnyResourceAttachmentType, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported encoded simple type ID %d", simpleTypeID)
@@ -581,12 +590,14 @@ func (d *Decoder) decodeRestrictedType(
 			return nil, fmt.Errorf("found duplicate restricted type %s", restrictedTypeID)
 		}
 
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
-		//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
-		if !stringsAreSortedBytewise(previousRestrictedTypeID, restrictedTypeID) {
-			return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousRestrictedTypeID, restrictedTypeID)
+		if d.dm.enforceSortRestrictedTypes == EnforceSortBytewiseLexical {
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
+			//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
+			if !stringsAreSortedBytewise(previousRestrictedTypeID, restrictedTypeID) {
+				return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousRestrictedTypeID, restrictedTypeID)
+			}
 		}
 
 		restrictionTypeIDs[restrictedTypeID] = struct{}{}
