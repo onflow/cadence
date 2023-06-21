@@ -577,6 +577,360 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("capability downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			entitlement Y
+
+			fun test(): Bool {
+				account.save(3, to: /storage/foo)
+				let capX = account.getCapability<auth(X, Y) &Int>(/public/foo)
+				let upCap = capX as Capability<auth(X) &Int>
+				return upCap as? Capability<auth(X, Y) &Int> == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("unparameterized capability downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Capability {
+				account.save(3, to: /storage/foo)
+				let capX = account.getCapability<auth(X) &Int>(/public/foo)
+				let upCap = capX as Capability
+				return (upCap as? Capability<auth(X) &Int>)!
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewPathCapabilityValue(
+				nil,
+				address,
+				interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
+			value,
+		)
+	})
+
+	t.Run("ref downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: auth(X) &Int = &1
+				let upArr = arr as &Int
+				return upArr as? auth(X) &Int == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("optional ref downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: auth(X) &Int? = &1
+				let upArr = arr as &Int?
+				return upArr as? auth(X) &Int? == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("ref array downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: [auth(X) &Int] = [&1, &2]
+				let upArr = arr as [&Int]
+				return upArr as? [auth(X) &Int] == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("ref constant array downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: [auth(X) &Int; 2] = [&1, &2]
+				let upArr = arr as [&Int; 2]
+				return upArr as? [auth(X) &Int; 2] == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("ref constant array downcast no change", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: [auth(X) &Int; 2] = [&1, &2]
+				let upArr = arr as [auth(X) &Int; 2]
+				return upArr as? [auth(X) &Int; 2] == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			value,
+		)
+	})
+
+	t.Run("ref array element downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: [auth(X) &Int] = [&1, &2]
+				let upArr = arr as [&Int]
+				return upArr[0] as? auth(X) &Int == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("ref constant array element downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: [auth(X) &Int; 2] = [&1, &2]
+				let upArr = arr as [&Int; 2]
+				return upArr[0] as? auth(X) &Int == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("ref dict downcast", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let dict: {String: auth(X) &Int} = {"foo": &3}
+				let upDict = dict as {String: &Int}
+				return upDict as? {String: auth(X) &Int} == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("ref dict element downcast forced", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let dict: {String: auth(X) &Int} = {"foo": &3}
+				let upDict = dict as {String: &Int}
+				return upDict["foo"]! as? auth(X) &Int == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
 }
 
 func TestInterpretCapabilityEntitlements(t *testing.T) {
@@ -669,6 +1023,77 @@ func TestInterpretCapabilityEntitlements(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("upcast runtime entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+			struct S {}
+			fun test(): Bool {
+				let s = S()
+				account.save(s, to: /storage/foo)
+				account.link<auth(X) &S>(/public/foo, target: /storage/foo)
+				let cap: Capability<auth(X) &S> = account.getCapability<auth(X) &S>(/public/foo)
+				let runtimeType = cap.getType() 
+				let upcastCap = cap as Capability<&S> 
+				let upcastRuntimeType = upcastCap.getType() 
+				return runtimeType == upcastRuntimeType 
+			}
+			`,
+			sema.Config{},
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			value,
+		)
+	})
+
+	t.Run("upcast runtime type", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			struct S {}
+			fun test(): Bool {
+				let s = S()
+				account.save(s, to: /storage/foo)
+				account.link<&S>(/public/foo, target: /storage/foo)
+				let cap: Capability<&S> = account.getCapability<&S>(/public/foo)
+				let runtimeType = cap.getType() 
+				let upcastCap = cap as Capability<&AnyStruct> 
+				let upcastRuntimeType = upcastCap.getType() 
+				return runtimeType == upcastRuntimeType 
+			}
+			`,
+			sema.Config{},
+		)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
 	})
 
 	t.Run("can check with supertype", func(t *testing.T) {

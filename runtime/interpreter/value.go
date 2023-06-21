@@ -16191,6 +16191,68 @@ func newDictionaryValueFromOrderedMap(
 	}
 }
 
+func newDictionaryValueWithIterator(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	staticType DictionaryStaticType,
+	count uint64,
+	seed uint64,
+	address common.Address,
+	values func() (Value, Value),
+) *DictionaryValue {
+	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+
+	var v *DictionaryValue
+
+	config := interpreter.SharedState.Config
+
+	if config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			// NOTE: in defer, as v is only initialized at the end of the function
+			// if there was no error during construction
+			if v == nil {
+				return
+			}
+
+			typeInfo := v.Type.String()
+			count := v.Count()
+
+			interpreter.reportDictionaryValueConstructTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
+
+	constructor := func() *atree.OrderedMap {
+		orderedMap, err := atree.NewMapFromBatchData(
+			config.Storage,
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			staticType,
+			newValueComparator(interpreter, locationRange),
+			newHashInputProvider(interpreter, locationRange),
+			seed,
+			func() (atree.Value, atree.Value, error) {
+				key, value := values()
+				return key, value, nil
+			},
+		)
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+		return orderedMap
+	}
+
+	// values are added to the dictionary after creation, not here
+	v = newDictionaryValueFromConstructor(interpreter, staticType, count, constructor)
+
+	return v
+}
+
 func newDictionaryValueFromConstructor(
 	gauge common.MemoryGauge,
 	staticType DictionaryStaticType,
