@@ -178,8 +178,22 @@ func (checker *Checker) rewriteEmitPostCondition(
 	// copy condition and set argument expressions to rewritten ones
 	newPostEmitCondition := *postEmitCondition
 
-	// TODO:
-	//beforeExtractor := checker.beforeExtractor()
+	beforeExtractor := checker.beforeExtractor()
+
+	invocationExtraction := beforeExtractor.ExtractBefore(postEmitCondition.InvocationExpression)
+
+	extractedExpressions = invocationExtraction.ExtractedExpressions
+
+	if rewrittenInvocationExpression, ok := invocationExtraction.RewrittenExpression.(*ast.InvocationExpression); ok {
+		newPostEmitCondition.InvocationExpression = rewrittenInvocationExpression
+	} else {
+		checker.report(&InvalidEmitConditionError{
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				postEmitCondition.InvocationExpression,
+			),
+		})
+	}
 
 	newPostCondition = &newPostEmitCondition
 
