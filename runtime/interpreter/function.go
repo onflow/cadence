@@ -325,7 +325,7 @@ type BoundFunctionValue struct {
 	Function           FunctionValue
 	Base               *EphemeralReferenceValue
 	Self               *MemberAccessibleValue
-	BoundAuthorization *EntitlementSetAuthorization
+	BoundAuthorization Authorization
 }
 
 var _ Value = BoundFunctionValue{}
@@ -336,7 +336,7 @@ func NewBoundFunctionValue(
 	function FunctionValue,
 	self *MemberAccessibleValue,
 	base *EphemeralReferenceValue,
-	boundAuth *EntitlementSetAuthorization,
+	boundAuth Authorization,
 ) BoundFunctionValue {
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
