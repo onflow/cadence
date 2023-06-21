@@ -194,7 +194,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			r1,
 			r1Type,
 		)
@@ -317,7 +317,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			r1,
 			r1Type,
 		)
@@ -435,7 +435,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			r1,
 			r1Type,
 		)
@@ -557,7 +557,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
 		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			r1,
 			r1Type,
 		)

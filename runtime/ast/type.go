@@ -534,25 +534,29 @@ func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error
 
 // ReferenceType
 
+type Authorization struct {
+	EntitlementSet EntitlementSet `json:"EntitlementSet"`
+}
+
 type ReferenceType struct {
-	Type       Type     `json:"ReferencedType"`
-	StartPos   Position `json:"-"`
-	Authorized bool
+	Type          Type           `json:"ReferencedType"`
+	StartPos      Position       `json:"-"`
+	Authorization *Authorization `json:"Authorization"`
 }
 
 var _ Type = &ReferenceType{}
 
 func NewReferenceType(
 	memoryGauge common.MemoryGauge,
-	authorized bool,
+	authorization *Authorization,
 	typ Type,
 	startPos Position,
 ) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceTypeMemoryUsage)
 	return &ReferenceType{
-		Authorized: authorized,
-		Type:       typ,
-		StartPos:   startPos,
+		Authorization: authorization,
+		Type:          typ,
+		StartPos:      startPos,
 	}
 }
 
@@ -570,13 +574,27 @@ func (t *ReferenceType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return t.Type.EndPosition(memoryGauge)
 }
 
-const referenceTypeAuthKeywordSpaceDoc = prettier.Text("auth ")
+const referenceTypeAuthKeywordDoc = prettier.Text("auth")
 const referenceTypeSymbolDoc = prettier.Text("&")
 
 func (t *ReferenceType) Doc() prettier.Doc {
 	var doc prettier.Concat
-	if t.Authorized {
-		doc = append(doc, referenceTypeAuthKeywordSpaceDoc)
+	if t.Authorization != nil {
+		doc = append(doc, referenceTypeAuthKeywordDoc)
+		entitlementSet := t.Authorization.EntitlementSet
+		if entitlementSet != nil && len(entitlementSet.Entitlements()) > 0 {
+			entitlements := entitlementSet.Entitlements()
+			// TODO: add indentation, improve separators. follow e.g. ParameterList.Doc()
+			doc = append(doc, prettier.Text("("))
+			for i, entitlement := range entitlements {
+				doc = append(doc, entitlement.Doc())
+				if i < len(entitlements)-1 {
+					doc = append(doc, prettier.Text(entitlementSet.Separator().String()), prettier.Space)
+				}
+			}
+			doc = append(doc, prettier.Text(")"))
+		}
+		doc = append(doc, prettier.Space)
 	}
 
 	return append(

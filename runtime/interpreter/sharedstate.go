@@ -43,6 +43,7 @@ type SharedState struct {
 	storageMutatedDuringIteration               bool
 	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool
+	currentEntitlementMappedValue               Authorization
 }
 
 func NewSharedState(config *Config) *SharedState {

@@ -1629,12 +1629,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType{},
+				Authorization: UnauthorizedAccess,
 			}
 			target := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType{},
+				Authorization: UnauthorizedAccess,
 			}
 			assert.True(t, source.Equal(target))
 		})
@@ -1643,12 +1643,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType{},
+				Authorization: UnauthorizedAccess,
 			}
 			target := &ReferenceType{
-				Type:       StringType{},
-				Authorized: false,
+				Type:          StringType{},
+				Authorization: UnauthorizedAccess,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1657,12 +1657,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType{},
+				Authorization: UnauthorizedAccess,
 			}
 			target := &ReferenceType{
-				Type:       IntType{},
-				Authorized: true,
+				Type:          IntType{},
+				Authorization: EntitlementMapAuthorization{TypeID: "foo"},
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1671,12 +1671,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: true,
+				Type:          IntType{},
+				Authorization: EntitlementMapAuthorization{TypeID: "foo"},
 			}
 			target := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType{},
+				Authorization: UnauthorizedAccess,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1685,8 +1685,8 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: true,
+				Type:          IntType{},
+				Authorization: EntitlementMapAuthorization{TypeID: "foo"},
 			}
 			target := AnyType{}
 			assert.False(t, source.Equal(target))

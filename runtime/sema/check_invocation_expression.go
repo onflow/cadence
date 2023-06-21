@@ -299,7 +299,7 @@ func (checker *Checker) checkMemberInvocationArgumentLabels(
 	invocationExpression *ast.InvocationExpression,
 	memberExpression *ast.MemberExpression,
 ) {
-	_, member, _ := checker.visitMember(memberExpression)
+	_, _, member, _ := checker.visitMember(memberExpression)
 
 	if member == nil || len(member.ArgumentLabels) == 0 {
 		return

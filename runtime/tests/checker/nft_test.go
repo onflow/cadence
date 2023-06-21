@@ -69,11 +69,15 @@ pub contract interface NonFungibleToken {
         pub let id: UInt64
     }
 
+    // entitles references to withdraw:
+    // TODO: https://github.com/onflow/cadence/issues/2503
+    entitlement Withdrawable
+
     // Interface to mediate withdraws from the Collection
     //
     pub resource interface Provider {
         // withdraw removes an NFT from the collection and moves it to the caller
-        pub fun withdraw(withdrawID: UInt64): @NFT {
+        access(Withdrawable) fun withdraw(withdrawID: UInt64): @NFT {
             post {
                 result.id == withdrawID: "The ID of the withdrawn token must be the same as the requested ID"
             }
@@ -106,7 +110,7 @@ pub contract interface NonFungibleToken {
         pub var ownedNFTs: @{UInt64: NFT}
 
         // withdraw removes an NFT from the collection and moves it to the caller
-        pub fun withdraw(withdrawID: UInt64): @NFT
+        access(Withdrawable) fun withdraw(withdrawID: UInt64): @NFT
 
         // deposit takes a NFT and adds it to the collections dictionary
         // and adds the ID to the id array
@@ -648,7 +652,7 @@ pub contract TopShot: NonFungibleToken {
         // that is to be removed from the Collection
         //
         // returns: @NonFungibleToken.NFT the token that was withdrawn
-        pub fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+        access(NonFungibleToken.Withdrawable) fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
 
             // Remove the nft from the Collection
             let token <- self.ownedNFTs.remove(key: withdrawID) 
@@ -754,7 +758,7 @@ pub contract TopShot: NonFungibleToken {
         // Returns: A reference to the NFT
         pub fun borrowMoment(id: UInt64): &TopShot.NFT? {
             if self.ownedNFTs[id] != nil {
-                let ref = (&self.ownedNFTs[id] as auth &NonFungibleToken.NFT?)!
+                let ref = (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
                 return ref as! &TopShot.NFT
             } else {
                 return nil

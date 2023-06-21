@@ -671,7 +671,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -763,7 +763,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			array1,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -782,7 +782,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			array2,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -844,7 +844,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -965,7 +965,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			array,
 			&sema.VariableSizedType{
 				Type: rType,

@@ -1147,7 +1147,7 @@ func TestStringer(t *testing.T) {
 					common.ZeroAddress,
 				)
 				arrayRef := NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					array,
 					&sema.VariableSizedType{
 						Type: sema.AnyStructType,
@@ -4158,7 +4158,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					TrueValue,
 					sema.BoolType,
 				)
@@ -4169,7 +4169,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					TrueValue,
 					sema.StringType,
 				)
@@ -4185,7 +4185,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(_ *Interpreter) Value {
 				return NewUnmeteredStorageReferenceValue(
-					false,
+					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					sema.BoolType,
@@ -4197,7 +4197,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(_ *Interpreter) Value {
 				return NewUnmeteredStorageReferenceValue(
-					false,
+					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					sema.StringType,
@@ -4220,8 +4220,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 						"test",
 					),
 					ReferenceStaticType{
-						Authorized:     false,
-						BorrowedType:   PrimitiveStaticTypeBool,
+						Authorization:  UnauthorizedAccess,
 						ReferencedType: PrimitiveStaticTypeBool,
 					},
 				)
@@ -4240,8 +4239,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					NewUnmeteredUInt64Value(4),
 					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
 					ReferenceStaticType{
-						Authorized:     false,
-						BorrowedType:   PrimitiveStaticTypeBool,
+						Authorization:  UnauthorizedAccess,
 						ReferencedType: PrimitiveStaticTypeBool,
 					},
 				)

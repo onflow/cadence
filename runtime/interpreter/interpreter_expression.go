@@ -194,7 +194,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			if isNestedResourceMove {
 				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, identifier)
 			} else {
-				resultValue = interpreter.getMember(target, locationRange, identifier)
+				resultValue = interpreter.getMemberWithAuthMapping(target, locationRange, identifier)
 			}
 			if resultValue == nil && !allowMissing {
 				panic(UseBeforeInitializationError{
@@ -1065,11 +1065,12 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		HasPosition: expression.Expression,
 	}
 
-	expectedType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType
+	expectedType := interpreter.substituteMappedEntitlements(interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
 		valueStaticType := value.StaticType(interpreter)
+		valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
 		switch expression.Operation {
@@ -1079,14 +1080,12 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			value = interpreter.BoxOptional(locationRange, value, expectedType)
+			value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
 
 			return NewSomeValueNonCopying(interpreter, value)
 
 		case ast.OperationForceCast:
 			if !isSubType {
-				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
-
 				locationRange := LocationRange{
 					Location:    interpreter.Location,
 					HasPosition: expression.Expression,
@@ -1100,7 +1099,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			return interpreter.BoxOptional(locationRange, value, expectedType)
+			return interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -1143,6 +1142,25 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
+	makeReference := func(value Value, typ *sema.ReferenceType) *EphemeralReferenceValue {
+		var auth Authorization
+
+		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
+		// of that mapped access in the body of the function should be replaced with the computed output of the map
+		if _, isMapped := typ.Authorization.(sema.EntitlementMapAccess); isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
+			auth = interpreter.SharedState.currentEntitlementMappedValue
+		} else {
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization)
+		}
+
+		return NewEphemeralReferenceValue(
+			interpreter,
+			auth,
+			value,
+			typ.Type,
+		)
+	}
+
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
 		innerBorrowType, ok := typ.Type.(*sema.ReferenceType)
@@ -1166,12 +1184,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewEphemeralReferenceValue(
-					interpreter,
-					innerBorrowType.Authorized,
-					innerValue,
-					innerBorrowType.Type,
-				),
+				makeReference(innerValue, innerBorrowType),
 			)
 
 		case NilValue:
@@ -1189,18 +1202,13 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			return interpreter.BoxOptional(
 				locationRange,
-				NewEphemeralReferenceValue(
-					interpreter,
-					innerBorrowType.Authorized,
-					result,
-					innerBorrowType.Type,
-				),
+				makeReference(result, innerBorrowType),
 				borrowType,
 			)
 		}
 
 	case *sema.ReferenceType:
-		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
+		return makeReference(result, typ)
 	}
 	panic(errors.NewUnreachableError())
 }
@@ -1272,9 +1280,21 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
 	// Instead, we create an implicit constructor argument containing a reference to the base.
+
+	var auth Authorization = UnauthorizedAccess
+	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
+
+	if attachmentType.RequiredEntitlements.Len() > 0 {
+		baseAccess := sema.EntitlementSetAccess{
+			SetKind:      sema.Conjunction,
+			Entitlements: attachmentType.RequiredEntitlements,
+		}
+		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
+	}
+
 	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
-		false,
+		auth,
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
@@ -1305,13 +1325,10 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		panic(errors.NewUnreachableError())
 	}
 
-	// when `v[A]` is executed, we set `A`'s base to `&v`
-	attachment.setBaseValue(interpreter, base)
-
 	base.SetTypeKey(
 		interpreter,
 		locationRange,
-		interpreter.MustSemaTypeOfValue(attachment),
+		attachmentType,
 		attachment,
 	)
 

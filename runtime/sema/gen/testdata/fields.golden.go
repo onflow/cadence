@@ -42,7 +42,8 @@ This is a test optional integer.
 const TestTypeTestRefIntFieldName = "testRefInt"
 
 var TestTypeTestRefIntFieldType = &ReferenceType{
-	Type: UInt64Type,
+	Type:          UInt64Type,
+	Authorization: UnauthorizedAccess,
 }
 
 const TestTypeTestRefIntFieldDocString = `

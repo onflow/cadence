@@ -694,7 +694,7 @@ pub contract TopShot: NonFungibleToken {
         // Returns: A reference to the NFT
         pub fun borrowMoment(id: UInt64): &TopShot.NFT? {
             if self.ownedNFTs[id] != nil {
-                let ref = (&self.ownedNFTs[id] as auth &NonFungibleToken.NFT?)!
+                let ref = (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
                 return ref as! &TopShot.NFT
             } else {
                 return nil

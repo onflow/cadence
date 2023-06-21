@@ -114,6 +114,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		interpreter,
 		nil,
 		nil,
+		nil,
 		transferredArguments,
 		argumentTypes,
 		typeParameterTypes,
@@ -142,6 +143,13 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	}
 	if invocation.Base != nil {
 		interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
+	}
+	if invocation.BoundAuthorization != nil {
+		oldInvocationValue := interpreter.SharedState.currentEntitlementMappedValue
+		interpreter.SharedState.currentEntitlementMappedValue = invocation.BoundAuthorization
+		defer func() {
+			interpreter.SharedState.currentEntitlementMappedValue = oldInvocationValue
+		}()
 	}
 
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)

@@ -273,7 +273,7 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 ) ReferenceValue {
 	return NewStorageReferenceValue(
 		interpreter,
-		resultBorrowType.Authorized,
+		ConvertSemaAccesstoStaticAuthorization(interpreter, resultBorrowType.Authorization),
 		capabilityAddress,
 		v.TargetPath,
 		resultBorrowType.Type,
