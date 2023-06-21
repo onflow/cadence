@@ -227,14 +227,9 @@ type testRuntimeInterface struct {
 	interactionUsed            func() (uint64, error)
 	updatedContractCode        bool
 	generateAccountID          func(address common.Address) (uint64, error)
-}
 
-func (i *testRuntimeInterface) GenerateAccountID(address common.Address) (uint64, error) {
-	if i.generateAccountID == nil {
-		return 0, nil
-	}
-
-	return i.generateAccountID(address)
+	uuid       uint64
+	accountIDs map[common.Address]uint64
 }
 
 // testRuntimeInterface should implement Interface
@@ -451,7 +446,8 @@ func (i *testRuntimeInterface) ResourceOwnerChanged(
 
 func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
 	if i.generateUUID == nil {
-		return 0, nil
+		i.uuid++
+		return i.uuid, nil
 	}
 	return i.generateUUID()
 }
@@ -628,6 +624,18 @@ func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]strin
 	}
 
 	return i.getAccountContractNames(address)
+}
+
+func (i *testRuntimeInterface) GenerateAccountID(address common.Address) (uint64, error) {
+	if i.generateAccountID == nil {
+		if i.accountIDs == nil {
+			i.accountIDs = map[common.Address]uint64{}
+		}
+		i.accountIDs[address]++
+		return i.accountIDs[address], nil
+	}
+
+	return i.generateAccountID(address)
 }
 
 func (i *testRuntimeInterface) RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue) {

@@ -1120,13 +1120,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
 	accountCodes := map[Location]string{}
 
-	var uuid uint64
-
 	runtimeInterface := &testRuntimeInterface{
-		generateUUID: func() (uint64, error) {
-			uuid++
-			return uuid, nil
-		},
 		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
