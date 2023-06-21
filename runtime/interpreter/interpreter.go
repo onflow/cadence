@@ -1877,7 +1877,6 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				return NewAccountReferenceValue(
 					interpreter,
 					ref.Address,
-					ref.SourcePath,
 					unwrappedTargetType.Type,
 				)
 
@@ -4163,7 +4162,6 @@ func (interpreter *Interpreter) pathCapabilityBorrowFunction(
 				reference = NewAccountReferenceValue(
 					interpreter,
 					address,
-					pathValue,
 					borrowType.Type,
 				)
 
@@ -4280,131 +4278,6 @@ func (interpreter *Interpreter) pathCapabilityCheckFunction(
 			}
 		},
 	)
-}
-
-func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
-	address common.Address,
-	path PathValue,
-	wantedBorrowType *sema.ReferenceType,
-	checkTargetExists bool,
-	locationRange LocationRange,
-) (
-	target CapabilityTarget,
-	authorized bool,
-	err error,
-) {
-	wantedReferenceType := wantedBorrowType
-
-	seenPaths := map[PathValue]struct{}{}
-	paths := []PathValue{path}
-
-	for {
-		// Detect cyclic links
-
-		if _, ok := seenPaths[path]; ok {
-			return nil, false, CyclicLinkError{
-				Address:       address,
-				Paths:         paths,
-				LocationRange: locationRange,
-			}
-		} else {
-			seenPaths[path] = struct{}{}
-		}
-
-		domain := path.Domain.Identifier()
-		identifier := path.Identifier
-
-		storageMapKey := StringStorageMapKey(identifier)
-
-		switch path.Domain {
-		case common.PathDomainStorage:
-
-			if checkTargetExists &&
-				!interpreter.StoredValueExists(address, domain, storageMapKey) {
-
-				return nil, false, nil
-			}
-
-			return PathCapabilityTarget(path),
-				wantedReferenceType.Authorized,
-				nil
-
-		case common.PathDomainPublic,
-			common.PathDomainPrivate:
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-			if value == nil {
-				return nil, false, nil
-			}
-
-			switch value := value.(type) {
-			case PathLinkValue:
-				allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
-
-				if !sema.IsSubType(allowedType, wantedBorrowType) {
-					return nil, false, nil
-				}
-
-				targetPath := value.TargetPath
-				paths = append(paths, targetPath)
-				path = targetPath
-
-			case AccountLinkValue:
-				if !interpreter.IsSubTypeOfSemaType(
-					AuthAccountReferenceStaticType,
-					wantedBorrowType,
-				) {
-					return nil, false, nil
-				}
-
-				return AccountCapabilityTarget(address),
-					false,
-					nil
-
-			case *IDCapabilityValue:
-
-				// For backwards-compatibility, follow ID capability values
-				// which are published in the public or private domain
-
-				capabilityBorrowType, ok :=
-					interpreter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				reference := interpreter.SharedState.Config.IDCapabilityBorrowHandler(
-					interpreter,
-					locationRange,
-					value.Address,
-					value.ID,
-					wantedBorrowType,
-					capabilityBorrowType,
-				)
-				if reference == nil {
-					return nil, false, nil
-				}
-
-				switch reference := reference.(type) {
-				case *StorageReferenceValue:
-					address = reference.TargetStorageAddress
-					targetPath := reference.TargetPath
-					paths = append(paths, targetPath)
-					path = targetPath
-
-				case *AccountReferenceValue:
-					return AccountCapabilityTarget(reference.Address),
-						false,
-						nil
-
-				default:
-					return nil, false, nil
-				}
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		}
-	}
 }
 
 func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
@@ -5051,34 +4924,6 @@ func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atr
 
 func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
-}
-
-// ConfigureAccountLinkingAllowed configures if execution is allowed to use account linking,
-// depending on the occurrence of the pragma declaration #allowAccountLinking.
-//
-// The pragma declaration must appear as a top-level declaration (i.e. not nested in the program),
-// and must appear before all other declarations (i.e. at the top of the program).
-//
-// This requirement is also checked statically.
-//
-// This is a temporary feature, which is planned to get replaced by capability controllers,
-// and a new Account type with entitlements.
-func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
-	config := interpreter.SharedState.Config
-
-	config.AccountLinkingAllowed = false
-
-	declarations := interpreter.Program.Program.Declarations()
-	if len(declarations) < 1 {
-		return
-	}
-
-	pragmaDeclaration, isPragma := declarations[0].(*ast.PragmaDeclaration)
-	if !isPragma || !sema.IsAllowAccountLinkingPragma(pragmaDeclaration) {
-		return
-	}
-
-	config.AccountLinkingAllowed = true
 }
 
 func (interpreter *Interpreter) idCapabilityBorrowFunction(

@@ -845,22 +845,6 @@ func TestImportValue(t *testing.T) {
 			},
 		},
 		{
-			label: "Path Link (invalid)",
-			value: cadence.PathLink{
-				TargetPath: cadence.Path{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test",
-				},
-				BorrowType: "Int",
-			},
-			expected: nil,
-		},
-		{
-			label:    "Account Link (invalid)",
-			value:    cadence.AccountLink{},
-			expected: nil,
-		},
-		{
 			label: "path Capability (invalid)",
 			value: cadence.NewPathCapability(
 				cadence.Address{0x1},
@@ -2322,110 +2306,6 @@ func TestExportIDCapabilityValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
-}
-
-func TestExportPathLinkValue(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("Int", func(t *testing.T) {
-
-		link := interpreter.PathLinkValue{
-			TargetPath: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			Type: interpreter.PrimitiveStaticTypeInt,
-		}
-
-		actual, err := exportValueWithInterpreter(
-			link,
-			newTestInterpreter(t),
-			interpreter.EmptyLocationRange,
-			seenReferences{},
-		)
-		require.NoError(t, err)
-
-		expected := cadence.PathLink{
-			TargetPath: cadence.Path{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			BorrowType: "Int",
-		}
-
-		assert.Equal(t, expected, actual)
-	})
-
-	t.Run("Struct", func(t *testing.T) {
-
-		const code = `
-          struct S {}
-        `
-		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
-		require.NoError(t, err)
-
-		checker, err := sema.NewChecker(
-			program,
-			TestLocation,
-			nil,
-			&sema.Config{
-				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
-			},
-		)
-		require.NoError(t, err)
-
-		err = checker.Check()
-		require.NoError(t, err)
-
-		inter := newTestInterpreter(t)
-		inter.Program = interpreter.ProgramFromChecker(checker)
-
-		capability := interpreter.PathLinkValue{
-			TargetPath: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
-		}
-
-		actual, err := exportValueWithInterpreter(
-			capability,
-			inter,
-			interpreter.EmptyLocationRange,
-			seenReferences{},
-		)
-		require.NoError(t, err)
-
-		expected := cadence.PathLink{
-			TargetPath: cadence.Path{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			BorrowType: "S.test.S",
-		}
-
-		assert.Equal(t, expected, actual)
-	})
-}
-
-func TestExportAccountLinkValue(t *testing.T) {
-
-	t.Parallel()
-
-	link := interpreter.AccountLinkValue{}
-
-	actual, err := exportValueWithInterpreter(
-		link,
-		newTestInterpreter(t),
-		interpreter.EmptyLocationRange,
-		seenReferences{},
-	)
-	require.NoError(t, err)
-
-	expected := cadence.AccountLink{}
-
-	assert.Equal(t, expected, actual)
 }
 
 func TestExportCompositeValueWithFunctionValueField(t *testing.T) {

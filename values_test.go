@@ -342,22 +342,6 @@ func newValueTestCases() map[string]valueTestCase {
 			},
 			string: "S.test.FooAttachment(bar: 1)",
 		},
-		"PathLink": {
-			value: NewPathLink(
-				Path{
-					Domain:     common.PathDomainStorage,
-					Identifier: "foo",
-				},
-				"Int",
-			),
-			string: "PathLink<Int>(/storage/foo)",
-			noType: true,
-		},
-		"AccountLink": {
-			value:  NewAccountLink(),
-			string: "AccountLink()",
-			noType: true,
-		},
 		"StoragePath": {
 			value: Path{
 				Domain:     common.PathDomainStorage,

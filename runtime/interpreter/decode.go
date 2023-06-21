@@ -315,12 +315,6 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagIDCapabilityValue:
 			storable, err = d.decodeIDCapability()
 
-		case CBORTagPathLinkValue:
-			storable, err = d.decodePathLink()
-
-		case CBORTagAccountLinkValue:
-			storable, err = d.decodeAccountLink()
-
 		case CBORTagPublishedValue:
 			storable, err = d.decodePublishedValue()
 
@@ -1214,62 +1208,6 @@ func (d StorableDecoder) decodeAccountCapabilityController() (*AccountCapability
 		borrowReferenceStaticType,
 		UInt64Value(capabilityID),
 	), nil
-}
-
-func (d StorableDecoder) decodePathLink() (PathLinkValue, error) {
-
-	const expectedLength = encodedPathLinkValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return EmptyPathLinkValue, errors.NewUnexpectedError(
-				"invalid link encoding: expected [%d]any, got %s",
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return EmptyPathLinkValue, err
-	}
-
-	if size != expectedLength {
-		return EmptyPathLinkValue, errors.NewUnexpectedError(
-			"invalid link encoding: expected [%d]any, got [%d]any",
-			expectedLength,
-			size,
-		)
-	}
-
-	// Decode path at array index encodedPathLinkValueTargetPathFieldKey
-	num, err := d.decoder.DecodeTagNumber()
-	if err != nil {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
-	}
-	if num != CBORTagPathValue {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
-	}
-	pathValue, err := d.decodePath()
-	if err != nil {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
-	}
-
-	// Decode type at array index encodedPathLinkValueTypeFieldKey
-	staticType, err := d.DecodeStaticType()
-	if err != nil {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link type encoding: %w", err)
-	}
-
-	return NewPathLinkValue(d.memoryGauge, pathValue, staticType), nil
-}
-
-func (d StorableDecoder) decodeAccountLink() (AccountLinkValue, error) {
-	common.UseMemory(d.memoryGauge, common.AccountLinkValueMemoryUsage)
-	err := d.decoder.Skip()
-	if err != nil {
-		return AccountLinkValue{}, err
-	}
-
-	return AccountLinkValue{}, nil
 }
 
 func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {

@@ -3129,9 +3129,6 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 			case *interpreter.IDCapabilityValue:
 				capabilityValue = readValue
 
-			case interpreter.LinkValue:
-				panic(errors.NewDefaultUserError("cannot unpublish linked capability"))
-
 			default:
 				panic(errors.NewUnreachableError())
 			}
@@ -3379,10 +3376,6 @@ func newAccountCapabilitiesGetFunction(
 			switch readValue := readValue.(type) {
 			case *interpreter.IDCapabilityValue:
 				readCapabilityValue = readValue
-
-			case interpreter.LinkValue:
-				// TODO: return PathCapabilityValue?
-				return interpreter.Nil
 
 			default:
 				panic(errors.NewUnreachableError())

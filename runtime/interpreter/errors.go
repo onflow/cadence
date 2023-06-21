@@ -463,34 +463,6 @@ func (e OverwriteError) Error() string {
 	)
 }
 
-// CyclicLinkError
-type CyclicLinkError struct {
-	LocationRange
-	Paths   []PathValue
-	Address common.Address
-}
-
-var _ errors.UserError = CyclicLinkError{}
-
-func (CyclicLinkError) IsUserError() {}
-
-func (e CyclicLinkError) Error() string {
-	var builder strings.Builder
-	for i, path := range e.Paths {
-		if i > 0 {
-			builder.WriteString(" -> ")
-		}
-		builder.WriteString(path.String())
-	}
-	paths := builder.String()
-
-	return fmt.Sprintf(
-		"cyclic link in account %s: %s",
-		e.Address.ShortHexWithPrefix(),
-		paths,
-	)
-}
-
 // ArrayIndexOutOfBoundsError
 type ArrayIndexOutOfBoundsError struct {
 	LocationRange
@@ -973,19 +945,4 @@ func (e InvalidAttachmentOperationTargetError) Error() string {
 		"cannot add or remove attachment with non-owned value (%T)",
 		e.Value,
 	)
-}
-
-// AccountLinkingForbiddenError is the error which is reported
-// when a user uses the account link function,
-// but account linking is not allowed
-type AccountLinkingForbiddenError struct {
-	LocationRange
-}
-
-var _ errors.UserError = AccountLinkingForbiddenError{}
-
-func (AccountLinkingForbiddenError) IsUserError() {}
-
-func (e AccountLinkingForbiddenError) Error() string {
-	return "account linking is not allowed"
 }

@@ -50,9 +50,7 @@ func (checker *Checker) VisitPragmaDeclaration(declaration *ast.PragmaDeclaratio
 		}
 
 	case *ast.IdentifierExpression:
-		if IsAllowAccountLinkingPragma(declaration) {
-			checker.reportInvalidNonHeaderPragma(declaration)
-		}
+		// NO-OP
 
 	default:
 		checker.report(&InvalidPragmaError{
@@ -75,18 +73,4 @@ func (checker *Checker) reportInvalidNonHeaderPragma(declaration *ast.PragmaDecl
 			declaration,
 		),
 	})
-}
-
-// allowAccountLinkingPragmaIdentifier is the identifier that needs to be used in a pragma to allow account linking.
-// This is a temporary feature.
-const allowAccountLinkingPragmaIdentifier = "allowAccountLinking"
-
-func IsAllowAccountLinkingPragma(declaration *ast.PragmaDeclaration) bool {
-	identifierExpression, ok := declaration.Expression.(*ast.IdentifierExpression)
-	if !ok {
-		return false
-	}
-
-	return identifierExpression.Identifier.Identifier ==
-		allowAccountLinkingPragmaIdentifier
 }

@@ -244,8 +244,6 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	return NewAccountReferenceValue(
 		interpreter,
 		capabilityAddress,
-		// NOTE: no source path, not a path capability (linking API)
-		EmptyPathValue,
 		resultBorrowType.Type,
 	)
 }

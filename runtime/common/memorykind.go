@@ -41,8 +41,6 @@ const (
 	MemoryKindPathValue
 	MemoryKindIDCapabilityValue
 	MemoryKindPathCapabilityValue
-	MemoryKindPathLinkValue
-	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
 	MemoryKindAccountReferenceValue
 	MemoryKindEphemeralReferenceValue
@@ -103,8 +101,6 @@ const (
 	MemoryKindCadenceContractValueSize
 	MemoryKindCadenceEnumValueBase
 	MemoryKindCadenceEnumValueSize
-	MemoryKindCadencePathLinkValue
-	MemoryKindCadenceAccountLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceIDCapabilityValue

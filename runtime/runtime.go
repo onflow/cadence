@@ -147,10 +147,6 @@ type Runtime interface {
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 
-	// Deprecated: ReadLinked dereferences the path and returns the value stored at the target.
-	//
-	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
-
 	// Storage returns the storage system and an interpreter which can be used for
 	// accessing values in storage.
 	//
@@ -623,86 +619,6 @@ func (r *interpreterRuntime) ReadStored(
 	}
 
 	return exportedValue, nil
-}
-
-func (r *interpreterRuntime) ReadLinked(
-	address common.Address,
-	path cadence.Path,
-	context Context,
-) (
-	val cadence.Value,
-	err error,
-) {
-	location := context.Location
-
-	var codesAndPrograms codesAndPrograms
-
-	defer r.Recover(
-		func(internalErr Error) {
-			err = internalErr
-		},
-		location,
-		codesAndPrograms,
-	)
-
-	_, inter, err := r.Storage(context)
-	if err != nil {
-		// error is already wrapped as Error in Storage
-		return nil, err
-	}
-
-	pathValue := valueImporter{inter: inter}.importPathValue(path)
-
-	target, _, err := inter.GetPathCapabilityFinalTarget(
-		address,
-		pathValue,
-		// Use top-most type to follow link all the way to final target
-		&sema.ReferenceType{
-			Type: sema.AnyType,
-		},
-		true,
-		interpreter.EmptyLocationRange,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if target == nil {
-		return nil, nil
-	}
-
-	switch target := target.(type) {
-	case interpreter.AccountCapabilityTarget:
-		return nil, nil
-
-	case interpreter.PathCapabilityTarget:
-
-		targetPath := interpreter.PathValue(target)
-
-		if targetPath == interpreter.EmptyPathValue {
-			return nil, nil
-		}
-
-		domain := targetPath.Domain.Identifier()
-		identifier := targetPath.Identifier
-
-		storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-		value := inter.ReadStored(address, domain, storageMapKey)
-
-		var exportedValue cadence.Value
-		if value != nil {
-			exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
-			if err != nil {
-				return nil, newError(err, location, codesAndPrograms)
-			}
-		}
-
-		return exportedValue, nil
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
 }
 
 func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {
