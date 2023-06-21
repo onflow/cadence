@@ -807,7 +807,9 @@ func TestInterpretMemberAccess(t *testing.T) {
             fun test() {
                 let array: [[Int]] = [[1, 2]]
                 let arrayRef = &array as auth(A) &[[Int]]
-                var x: auth(A) &[Int] = arrayRef[0]
+
+                // Must return an unauthorized reference.
+                var x: &[Int] = arrayRef[0]
             }
         `)
 
@@ -921,7 +923,9 @@ func TestInterpretMemberAccess(t *testing.T) {
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
                 let dictRef = &dict as auth(A) &{String: {String: Int}}
-                var x: auth(A) &{String: Int}? = dictRef["one"]
+
+                // Must return an unauthorized reference.
+                var x: &{String: Int}? = dictRef["one"]
             }
         `)
 
@@ -1057,56 +1061,6 @@ func TestInterpretMemberAccess(t *testing.T) {
                 let s = S()
                 let sRef = &s as auth(A) &S
                 var foo: auth(B) &[String] = sRef.foo
-            }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("entitlement map access nested", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            entitlement A
-            entitlement B
-            entitlement C
-
-            entitlement mapping FooMapping {
-                A -> B
-            }
-
-            entitlement mapping BarMapping {
-                B -> C
-            }
-
-            struct Foo {
-                access(FooMapping) let bars: [Bar]
-                init() {
-                    self.bars = [Bar()]
-                }
-            }
-
-            struct Bar {
-                access(BarMapping) let baz: Baz
-                init() {
-                    self.baz = Baz()
-                }
-            }
-
-            struct Baz {
-                access(C) fun canOnlyCallOnAuthC() {}
-            }
-
-            fun test() {
-                let foo = Foo()
-                let fooRef = &foo as auth(A) &Foo
-
-                let barArrayRef: auth(B) &[Bar] = fooRef.bars
-                let barRef: auth(B) &Bar = barArrayRef[0]
-                let bazRef: auth(C) &Baz = barRef.baz
-
-                bazRef.canOnlyCallOnAuthC()
             }
         `)
 
