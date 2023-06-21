@@ -57,7 +57,6 @@ type Visitor interface {
 	VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue)
 	VisitAddressValue(interpreter *Interpreter, value AddressValue)
 	VisitPathValue(interpreter *Interpreter, value PathValue)
-	VisitPathCapabilityValue(interpreter *Interpreter, value *PathCapabilityValue)
 	VisitIDCapabilityValue(interpreter *Interpreter, value *IDCapabilityValue)
 	VisitPublishedValue(interpreter *Interpreter, value *PublishedValue)
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
@@ -106,7 +105,6 @@ type EmptyVisitor struct {
 	EphemeralReferenceValueVisitor          func(interpreter *Interpreter, value *EphemeralReferenceValue)
 	AddressValueVisitor                     func(interpreter *Interpreter, value AddressValue)
 	PathValueVisitor                        func(interpreter *Interpreter, value PathValue)
-	PathCapabilityValueVisitor              func(interpreter *Interpreter, value *PathCapabilityValue)
 	IDCapabilityValueVisitor                func(interpreter *Interpreter, value *IDCapabilityValue)
 	PublishedValueVisitor                   func(interpreter *Interpreter, value *PublishedValue)
 	InterpretedFunctionValueVisitor         func(interpreter *Interpreter, value *InterpretedFunctionValue)
@@ -382,13 +380,6 @@ func (v EmptyVisitor) VisitPathValue(interpreter *Interpreter, value PathValue) 
 		return
 	}
 	v.PathValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitPathCapabilityValue(interpreter *Interpreter, value *PathCapabilityValue) {
-	if v.PathCapabilityValueVisitor == nil {
-		return
-	}
-	v.PathCapabilityValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitIDCapabilityValue(interpreter *Interpreter, value *IDCapabilityValue) {

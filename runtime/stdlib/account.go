@@ -3030,9 +3030,6 @@ func newAuthAccountCapabilitiesPublishFunction(
 			case *interpreter.IDCapabilityValue:
 				capabilityValue = firstValue
 
-			case *interpreter.PathCapabilityValue:
-				panic(errors.NewDefaultUserError("cannot publish linked capability"))
-
 			default:
 				panic(errors.NewUnreachableError())
 			}

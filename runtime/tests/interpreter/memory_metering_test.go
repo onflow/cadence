@@ -8919,34 +8919,6 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		testValueStringConversion(t, script)
 	})
 
-	t.Run("path Capability", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            pub fun main(a: Capability<&{Foo}>) {
-                log(a)
-            }
-
-            struct interface Foo {}
-            struct Bar: Foo {}
-        `
-
-		testValueStringConversion(t,
-			script,
-			interpreter.NewUnmeteredPathCapabilityValue(
-				interpreter.AddressValue{1},
-				interpreter.PathValue{
-					Domain:     common.PathDomainPublic,
-					Identifier: "somepath",
-				},
-				interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Bar",
-					TypeID:              "S.test.Bar",
-				},
-			))
-	})
-
 	t.Run("ID Capability", func(t *testing.T) {
 		t.Parallel()
 

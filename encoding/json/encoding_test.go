@@ -2617,70 +2617,31 @@ func TestEncodeType(t *testing.T) {
 	})
 }
 
-func TestEncodeCapability(t *testing.T) {
+func TestEncodeIDCapability(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("path", func(t *testing.T) {
-
-		path, err := cadence.NewPath(common.PathDomainPublic, "foo")
-		require.NoError(t, err)
-
-		testEncodeAndDecode(
-			t,
-			cadence.NewPathCapability(
-				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				path,
-				cadence.IntType{},
-			),
-			// language=json
-			`
-              {
-                "type": "Capability",
-                "value": {
-                  "path": {
-                    "type": "Path",
-                    "value": {
-                      "domain": "public",
-                      "identifier": "foo"
-                    }
-                  },
-                  "borrowType": {
-                    "kind": "Int"
-                  },
-                  "address": "0x0000000102030405"
-                }
-              }
-            `,
-		)
-	})
-
-	t.Run("ID", func(t *testing.T) {
-
-		t.Parallel()
-
-		testEncodeAndDecode(
-			t,
-			cadence.NewIDCapability(
-				6,
-				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				cadence.IntType{},
-			),
-			// language=json
-			`
-              {
-                "type": "Capability",
-                "value": {
-                  "borrowType": {
-                    "kind": "Int"
-                  },
-                  "address": "0x0000000102030405",
-                  "id": "6"
-                }
-              }
-            `,
-		)
-	})
+	testEncodeAndDecode(
+		t,
+		cadence.NewIDCapability(
+			6,
+			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			cadence.IntType{},
+		),
+		// language=json
+		`
+          {
+            "type": "Capability",
+            "value": {
+              "borrowType": {
+                "kind": "Int"
+              },
+              "address": "0x0000000102030405",
+              "id": "6"
+            }
+          }
+        `,
+	)
 }
 
 func TestDecodeFixedPoints(t *testing.T) {

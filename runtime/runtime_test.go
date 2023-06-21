@@ -3620,7 +3620,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
 
-	t.Run("function with un-importable argument errors and error propagates (path capability)", func(t *testing.T) {
+	t.Run("function with un-importable argument errors and error propagates (ID capability)", func(t *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
@@ -3628,12 +3628,9 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloArg",
 			[]cadence.Value{
-				cadence.NewPathCapability(
+				cadence.NewIDCapability(
+					1,
 					cadence.Address{},
-					cadence.Path{
-						Domain:     common.PathDomainPublic,
-						Identifier: "test",
-					},
 					cadence.AddressType{}, // this will error during `importValue`
 				),
 			},
@@ -7101,12 +7098,9 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewPathCapability(
+			cadence.NewIDCapability(
+				cadence.UInt64(1),
 				cadence.BytesToAddress([]byte{0x1}),
-				cadence.Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "xxx",
-				},
 				nil,
 			),
 			res,
@@ -7465,7 +7459,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 		address, err := common.BytesToAddress([]byte{0x42})
 		require.NoError(t, err)
 
-		_, err = runtime.ReadLinked(
+		_, err = runtime.ReadStored(
 			address,
 			cadence.Path{
 				Domain:     common.PathDomainStorage,

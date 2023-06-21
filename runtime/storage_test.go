@@ -30,12 +30,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/common/orderedmap"
-	"github.com/onflow/cadence/runtime/interpreter"
-
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
+	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -659,7 +658,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	t.Run("read stored, existing", func(t *testing.T) {
+	t.Run("read stored, storage, existing", func(t *testing.T) {
 
 		value, err := runtime.ReadStored(
 			signer,
@@ -676,7 +675,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		require.Equal(t, cadence.NewInt(42), value)
 	})
 
-	t.Run("read stored, non-existing", func(t *testing.T) {
+	t.Run("read stored, storage, non-existing", func(t *testing.T) {
 
 		value, err := runtime.ReadStored(
 			signer,
@@ -693,12 +692,12 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		require.Equal(t, nil, value)
 	})
 
-	t.Run("read linked, existing", func(t *testing.T) {
+	t.Run("read stored, public, existing", func(t *testing.T) {
 
-		value, err := runtime.ReadLinked(
+		value, err := runtime.ReadStored(
 			signer,
 			cadence.Path{
-				Domain:     common.PathDomainPrivate,
+				Domain:     common.PathDomainPublic,
 				Identifier: "test",
 			},
 			Context{
@@ -710,12 +709,12 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		require.Equal(t, cadence.NewInt(42), value)
 	})
 
-	t.Run("read linked, non-existing", func(t *testing.T) {
+	t.Run("read stored, public, non-existing", func(t *testing.T) {
 
-		value, err := runtime.ReadLinked(
+		value, err := runtime.ReadStored(
 			signer,
 			cadence.Path{
-				Domain:     common.PathDomainPrivate,
+				Domain:     common.PathDomainPublic,
 				Identifier: "other",
 			},
 			Context{
@@ -1362,7 +1361,8 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageSavePathCapability(t *testing.T) {
+// TODO: issue + save, get public + save
+func TestRuntimeStorageSaveIDCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -1437,12 +1437,9 @@ func TestRuntimeStorageSavePathCapability(t *testing.T) {
 				value, err := runtime.ReadStored(signer, storagePath, context)
 				require.NoError(t, err)
 
-				expected := cadence.NewPathCapability(
+				expected := cadence.NewIDCapability(
+					cadence.UInt64(1),
 					cadence.Address(signer),
-					cadence.Path{
-						Domain:     domain,
-						Identifier: "test",
-					},
 					ty,
 				)
 

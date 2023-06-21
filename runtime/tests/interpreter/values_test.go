@@ -1142,15 +1142,6 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 		return randomArrayValue(inter, currentDepth)
 	case Composite:
 		return randomCompositeValue(inter, common.CompositeKindStructure, currentDepth)
-	case PathCapability:
-		return interpreter.NewUnmeteredPathCapabilityValue(
-			randomAddressValue(),
-			randomPathValue(),
-			interpreter.ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-		)
 	case IDCapability:
 		return interpreter.NewUnmeteredIDCapabilityValue(
 			interpreter.UInt64Value(randomInt(math.MaxInt-1)),
@@ -1547,7 +1538,6 @@ const (
 
 	Void
 	Nil // `Never?`
-	PathCapability
 	IDCapability
 
 	// Containers

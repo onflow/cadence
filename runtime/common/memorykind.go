@@ -40,7 +40,6 @@ const (
 	MemoryKindTypeValue
 	MemoryKindPathValue
 	MemoryKindIDCapabilityValue
-	MemoryKindPathCapabilityValue
 	MemoryKindStorageReferenceValue
 	MemoryKindAccountReferenceValue
 	MemoryKindEphemeralReferenceValue
@@ -104,7 +103,6 @@ const (
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceIDCapabilityValue
-	MemoryKindCadencePathCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
