@@ -497,9 +497,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
                  return ref.address
               }
             `,
-			sema.Config{
-				AccountLinkingEnabled: true,
-			},
+			sema.Config{},
 		)
 
 		// link
@@ -922,9 +920,7 @@ func TestInterpretCapability_check(t *testing.T) {
                   return cap.check<auth &AuthAccount>()
               }
             `,
-			sema.Config{
-				AccountLinkingEnabled: true,
-			},
+			sema.Config{},
 		)
 
 		// link

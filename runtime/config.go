@@ -35,8 +35,6 @@ type Config struct {
 	ResourceOwnerChangeHandlerEnabled bool
 	// CoverageReport enables and collects coverage reporting metrics
 	CoverageReport *CoverageReport
-	// AccountLinkingEnabled specifies if account linking is enabled
-	AccountLinkingEnabled bool
 	// AttachmentsEnabled specifies if attachments are enabled
 	AttachmentsEnabled bool
 	// CapabilityControllersEnabled specifies if capability controllers are enabled

@@ -20,8 +20,6 @@ package sema
 
 //go:generate go run ./gen authaccount.cdc authaccount.gen.go
 
-var AuthAccountTypeLinkAccountFunctionTypePathParameterTypeAnnotation = AuthAccountTypeLinkAccountFunctionType.Parameters[0].TypeAnnotation
-
 var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
 
 func init() {

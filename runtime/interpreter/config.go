@@ -68,8 +68,6 @@ type Config struct {
 	AtreeValueValidationEnabled bool
 	// AccountLinkingAllowed determines if the account linking function is allowed to be used
 	AccountLinkingAllowed bool
-	// OnAccountLinked is triggered when an account is linked by the program
-	OnAccountLinked OnAccountLinkedFunc
 	// IDCapabilityCheckHandler is used to check ID capabilities
 	IDCapabilityCheckHandler IDCapabilityCheckHandlerFunc
 	// IDCapabilityBorrowHandler is used to borrow ID capabilities

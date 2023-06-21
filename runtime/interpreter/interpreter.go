@@ -114,14 +114,6 @@ type OnMeterComputationFunc func(
 	intensity uint,
 )
 
-// OnAccountLinkedFunc is a function that is triggered when an account is linked by the program.
-type OnAccountLinkedFunc func(
-	inter *Interpreter,
-	locationRange LocationRange,
-	address AddressValue,
-	path PathValue,
-) error
-
 // IDCapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
 type IDCapabilityBorrowHandlerFunc func(
 	inter *Interpreter,

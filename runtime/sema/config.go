@@ -53,8 +53,6 @@ type Config struct {
 	AllowNativeDeclarations bool
 	// AllowStaticDeclarations determines if declarations may be static
 	AllowStaticDeclarations bool
-	// AccountLinkingEnabled determines if account linking is enabled
-	AccountLinkingEnabled bool
 	// AttachmentsEnabled determines if attachments are enabled
 	AttachmentsEnabled bool
 	// CapabilityControllersEnabled determines if capability controllers are enabled

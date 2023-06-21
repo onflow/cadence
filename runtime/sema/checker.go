@@ -2488,9 +2488,6 @@ func (checker *Checker) isAvailableMember(expressionType Type, identifier string
 	switch expressionType {
 	case AuthAccountType:
 		switch identifier {
-		case AuthAccountTypeLinkAccountFunctionName:
-			return checker.Config.AccountLinkingEnabled
-
 		case AuthAccountTypeCapabilitiesFieldName:
 			return checker.Config.CapabilityControllersEnabled
 		}

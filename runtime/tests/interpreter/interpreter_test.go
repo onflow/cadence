@@ -10173,10 +10173,6 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 		code     string
 	}
 
-	checkerConfig := sema.Config{
-		AccountLinkingEnabled: true,
-	}
-
 	testFunctionReturn := func(tc testCase) {
 
 		t.Run(fmt.Sprintf("function return: %s", tc.name), func(t *testing.T) {
@@ -10205,7 +10201,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 					tc.typeName,
 					tc.code,
 				),
-				checkerConfig,
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")
@@ -10239,7 +10235,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 					tc.typeName,
 					tc.code,
 				),
-				checkerConfig,
+				sema.Config{},
 			)
 
 			_, err := inter.Invoke("test")

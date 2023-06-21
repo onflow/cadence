@@ -7063,11 +7063,7 @@ func TestInterpretAccountLinkValueMetering(t *testing.T) {
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
 			t,
 			script,
-			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					AccountLinkingEnabled: true,
-				},
-			},
+			ParseCheckAndInterpretOptions{},
 			meter,
 		)
 		require.NoError(t, err)

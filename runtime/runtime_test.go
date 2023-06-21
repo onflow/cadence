@@ -8039,7 +8039,6 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 	t.Parallel()
 
 	rt := newTestInterpreterRuntime()
-	rt.defaultConfig.AccountLinkingEnabled = true
 
 	script := []byte(`
       #allowAccountLinking
