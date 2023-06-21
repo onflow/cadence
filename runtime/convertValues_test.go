@@ -1471,7 +1471,7 @@ func TestExportResourceValue(t *testing.T) {
 	actual := exportValueFromScript(t, script)
 	expected := cadence.ValueWithCachedTypeID(
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
+			cadence.NewUInt64(1),
 			cadence.NewInt(42),
 		}).WithType(newFooResourceType()),
 	)
@@ -1493,7 +1493,7 @@ func TestExportResourceArrayValue(t *testing.T) {
         }
 
         pub fun main(): @[Foo] {
-            return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)]
+            return <- [<- create Foo(bar: 3), <- create Foo(bar: 4)]
         }
     `
 
@@ -1506,12 +1506,12 @@ func TestExportResourceArrayValue(t *testing.T) {
 	expected := cadence.ValueWithCachedTypeID(
 		cadence.NewArray([]cadence.Value{
 			cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(1),
+				cadence.NewUInt64(1),
+				cadence.NewInt(3),
 			}).WithType(fooResourceType),
 			cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(2),
+				cadence.NewUInt64(2),
+				cadence.NewInt(4),
 			}).WithType(fooResourceType),
 		}).WithType(&cadence.VariableSizedArrayType{
 			ElementType: &cadence.ResourceType{
@@ -1549,8 +1549,8 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 
         pub fun main(): @{String: Foo} {
             return <- {
-                "a": <- create Foo(bar: 1),
-                "b": <- create Foo(bar: 2)
+                "a": <- create Foo(bar: 3),
+                "b": <- create Foo(bar: 4)
             }
         }
     `
@@ -1566,15 +1566,15 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 			{
 				Key: cadence.String("b"),
 				Value: cadence.NewResource([]cadence.Value{
-					cadence.NewUInt64(0),
-					cadence.NewInt(2),
+					cadence.NewUInt64(2),
+					cadence.NewInt(4),
 				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.String("a"),
 				Value: cadence.NewResource([]cadence.Value{
-					cadence.NewUInt64(0),
-					cadence.NewInt(1),
+					cadence.NewUInt64(1),
+					cadence.NewInt(3),
 				}).WithType(fooResourceType),
 			},
 		}).WithType(&cadence.DictionaryType{
@@ -1664,9 +1664,9 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	)
 	expected := cadence.ValueWithCachedTypeID(
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
+			cadence.NewUInt64(2),
 			cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
+				cadence.NewUInt64(1),
 				cadence.NewInt(42),
 			}).WithType(barResourceType),
 		}).WithType(fooResourceType),
@@ -1810,10 +1810,9 @@ func TestExportReferenceValue(t *testing.T) {
             transaction {
                 prepare(signer: AuthAccount) {
                     signer.save(1, to: /storage/test)
-                    signer.link<&Int>(
-                        /public/test,
-                        target: /storage/test
-                    )
+                    let cap = signer.capabilities.storage.issue<&Int>(/storage/test)
+                    signer.capabilities.publish(cap, at: /public/test)
+
                 }
             }
         `
@@ -1845,7 +1844,7 @@ func TestExportReferenceValue(t *testing.T) {
 
 		script := `
             pub fun main(): &AnyStruct {
-                return getAccount(0x1).getCapability(/public/test).borrow<&AnyStruct>()!
+                return getAccount(0x1).capabilities.borrow<&AnyStruct>(/public/test)!
             }
         `
 

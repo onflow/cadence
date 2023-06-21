@@ -544,7 +544,7 @@ func TestAccountAttachmentCapability(t *testing.T) {
 			prepare(signer: AuthAccount) {
 				let r <- Test.makeRWithA()
 				signer.save(<-r, to: /storage/foo)
-				let cap = signer.link<&{Test.I}>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&{Test.I}>(/storage/foo)!
 				signer.inbox.publish(cap, name: "foo", recipient: 0x2)
 			}
 		}
