@@ -2463,7 +2463,7 @@ func TestEncodeType(t *testing.T) {
                   "staticType": {
                     "kind": "Function",
 					"purity": "",
-                    "typeID": "(<T>(String):Int)",
+                    "typeID": "fun<T>(String):Int",
                     "return": {
                       "kind": "Int"
                     },
@@ -2510,6 +2510,7 @@ func TestEncodeType(t *testing.T) {
 				{	
 					"kind" : "Function",
 					"purity": "view",
+                    "typeID": "view fun(String):Int",
 					"return" : {"kind" : "Int"},
 					"typeParameters": [],
 					"parameters" : [
@@ -3487,7 +3488,7 @@ func TestExportFunctionValue(t *testing.T) {
             "value": {
               "functionType": {
                 "kind": "Function",
-                "typeID": "(():Void)",
+                "typeID": "fun():Void",
                 "parameters": [],
                 "typeParameters": [],
                 "purity":"",

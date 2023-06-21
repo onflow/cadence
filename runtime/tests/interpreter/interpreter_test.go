@@ -10354,7 +10354,7 @@ func TestInterpretConditionsWrapperFunctionType(t *testing.T) {
               fun test(x: Int) {}
           }
 
-          fun test(): ((Int): Void) {
+          fun test(): fun (Int): Void {
               let s = S()
               return s.test
           }
@@ -10384,7 +10384,7 @@ func TestInterpretConditionsWrapperFunctionType(t *testing.T) {
                   }
               }
 
-              fun test(): ((Int): Void) {
+              fun test(): fun (Int): Void {
                   let s = C.S()
                   return s.test
               }

@@ -2487,8 +2487,7 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var destroyedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &destroyedResourceErr)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -2536,8 +2535,7 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var destroyedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &destroyedResourceErr)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -2585,8 +2583,7 @@ func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		var destroyedResourceErr interpreter.DestroyedResourceError
-		require.ErrorAs(t, err, &destroyedResourceErr)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
 
@@ -2779,6 +2776,5 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	var destroyedResourceErr interpreter.DestroyedResourceError
-	require.ErrorAs(t, err, &destroyedResourceErr)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }

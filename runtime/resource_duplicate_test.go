@@ -30,10 +30,12 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
+func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Reported error", func(t *testing.T) {
@@ -263,7 +265,13 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+
+		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[0])
+
 	})
 
 	t.Run("forEachKey", func(t *testing.T) {
@@ -443,8 +451,14 @@ func TestResourceDuplicationUsingDestructorIteration(t *testing.T) {
 				Location:  common.ScriptLocation{},
 			},
 		)
+		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+
+		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[0])
 	})
 }
 
