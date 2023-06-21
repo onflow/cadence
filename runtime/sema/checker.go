@@ -2483,21 +2483,3 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 		)
 	}
 }
-
-func (checker *Checker) isAvailableMember(expressionType Type, identifier string) bool {
-	switch expressionType {
-	case AuthAccountType:
-		switch identifier {
-		case AuthAccountTypeCapabilitiesFieldName:
-			return checker.Config.CapabilityControllersEnabled
-		}
-
-	case PublicAccountType:
-		switch identifier {
-		case PublicAccountTypeCapabilitiesFieldName:
-			return checker.Config.CapabilityControllersEnabled
-		}
-	}
-
-	return true
-}

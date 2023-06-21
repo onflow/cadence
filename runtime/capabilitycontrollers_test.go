@@ -41,7 +41,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	) {
 
 		rt := newTestInterpreterRuntime()
-		rt.defaultConfig.CapabilityControllersEnabled = true
 
 		accountCodes := map[Location][]byte{}
 		accountIDs := map[common.Address]uint64{}

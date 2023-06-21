@@ -37,6 +37,4 @@ type Config struct {
 	CoverageReport *CoverageReport
 	// AttachmentsEnabled specifies if attachments are enabled
 	AttachmentsEnabled bool
-	// CapabilityControllersEnabled specifies if capability controllers are enabled
-	CapabilityControllersEnabled bool
 }

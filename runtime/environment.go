@@ -162,7 +162,6 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
 		AttachmentsEnabled:               e.config.AttachmentsEnabled,
-		CapabilityControllersEnabled:     e.config.CapabilityControllersEnabled,
 	}
 }
 
