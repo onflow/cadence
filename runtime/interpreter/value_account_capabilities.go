@@ -37,7 +37,6 @@ func NewAuthAccountCapabilitiesValue(
 	borrowFunction FunctionValue,
 	publishFunction FunctionValue,
 	unpublishFunction FunctionValue,
-	migrateLinkFunction FunctionValue,
 	storageCapabilitiesConstructor func() Value,
 	accountCapabilitiesConstructor func() Value,
 ) Value {
@@ -47,7 +46,6 @@ func NewAuthAccountCapabilitiesValue(
 		sema.AuthAccountCapabilitiesTypeBorrowFunctionName:      borrowFunction,
 		sema.AuthAccountCapabilitiesTypePublishFunctionName:     publishFunction,
 		sema.AuthAccountCapabilitiesTypeUnpublishFunctionName:   unpublishFunction,
-		sema.AuthAccountCapabilitiesTypeMigrateLinkFunctionName: migrateLinkFunction,
 	}
 
 	var storageCapabilities Value

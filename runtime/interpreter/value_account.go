@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -69,11 +68,6 @@ func NewAuthAccountValue(
 	var saveFunction *HostFunctionValue
 	var borrowFunction *HostFunctionValue
 	var checkFunction *HostFunctionValue
-	var linkFunction *HostFunctionValue
-	var linkAccountFunction *HostFunctionValue
-	var unlinkFunction *HostFunctionValue
-	var getLinkTargetFunction *HostFunctionValue
-	var getCapabilityFunction *HostFunctionValue
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -190,44 +184,6 @@ func NewAuthAccountValue(
 				checkFunction = inter.authAccountCheckFunction(address)
 			}
 			return checkFunction
-
-		case sema.AuthAccountTypeLinkFunctionName:
-			if linkFunction == nil {
-				linkFunction = inter.authAccountLinkFunction(address)
-			}
-			return linkFunction
-
-		case sema.AuthAccountTypeLinkAccountFunctionName:
-			if linkAccountFunction == nil {
-				linkAccountFunction = inter.authAccountLinkAccountFunction(address)
-			}
-			return linkAccountFunction
-
-		case sema.AuthAccountTypeUnlinkFunctionName:
-			if unlinkFunction == nil {
-				unlinkFunction = inter.authAccountUnlinkFunction(address)
-			}
-			return unlinkFunction
-
-		case sema.AuthAccountTypeGetLinkTargetFunctionName:
-			if getLinkTargetFunction == nil {
-				getLinkTargetFunction = inter.accountGetLinkTargetFunction(
-					sema.AuthAccountTypeGetLinkTargetFunctionType,
-					address,
-				)
-			}
-			return getLinkTargetFunction
-
-		case sema.AuthAccountTypeGetCapabilityFunctionName:
-			if getCapabilityFunction == nil {
-				getCapabilityFunction = accountGetCapabilityFunction(
-					gauge,
-					address,
-					sema.CapabilityPathType,
-					sema.AuthAccountTypeGetCapabilityFunctionType,
-				)
-			}
-			return getCapabilityFunction
 		}
 
 		return nil
@@ -287,8 +243,6 @@ func NewPublicAccountValue(
 	var contracts Value
 	var capabilities Value
 	var forEachPublicFunction *HostFunctionValue
-	var getLinkTargetFunction *HostFunctionValue
-	var getCapabilityFunction *HostFunctionValue
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
@@ -335,26 +289,6 @@ func NewPublicAccountValue(
 
 		case sema.PublicAccountTypeStorageCapacityFieldName:
 			return storageCapacityGet(inter)
-
-		case sema.PublicAccountTypeGetLinkTargetFunctionName:
-			if getLinkTargetFunction == nil {
-				getLinkTargetFunction = inter.accountGetLinkTargetFunction(
-					sema.PublicAccountTypeGetLinkTargetFunctionType,
-					address,
-				)
-			}
-			return getLinkTargetFunction
-
-		case sema.PublicAccountTypeGetCapabilityFunctionName:
-			if getCapabilityFunction == nil {
-				getCapabilityFunction = accountGetCapabilityFunction(
-					gauge,
-					address,
-					sema.PublicPathType,
-					sema.PublicAccountTypeGetCapabilityFunctionType,
-				)
-			}
-			return getCapabilityFunction
 		}
 
 		return nil
@@ -379,81 +313,5 @@ func NewPublicAccountValue(
 		computeField,
 		nil,
 		stringer,
-	)
-}
-
-func accountGetCapabilityFunction(
-	gauge common.MemoryGauge,
-	addressValue AddressValue,
-	pathType sema.Type,
-	funcType *sema.FunctionType,
-) *HostFunctionValue {
-
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		gauge,
-		funcType,
-		func(invocation Invocation) Value {
-
-			path, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			interpreter := invocation.Interpreter
-
-			pathStaticType := path.StaticType(interpreter)
-
-			if !interpreter.IsSubTypeOfSemaType(pathStaticType, pathType) {
-				pathSemaType := interpreter.MustConvertStaticToSemaType(pathStaticType)
-
-				panic(TypeMismatchError{
-					ExpectedType:  pathType,
-					ActualType:    pathSemaType,
-					LocationRange: invocation.LocationRange,
-				})
-			}
-
-			// NOTE: the type parameter is optional, for backwards compatibility
-
-			var borrowType *sema.ReferenceType
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				// we handle the nil case for this below
-				borrowType, _ = ty.(*sema.ReferenceType)
-			}
-
-			var borrowStaticType StaticType
-			if borrowType != nil {
-				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
-			}
-
-			// Read stored capability, if any
-
-			domain := path.Domain.Identifier()
-			identifier := path.Identifier
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			readValue := interpreter.ReadStored(address, domain, storageMapKey)
-			if capabilityValue, ok := readValue.(*IDCapabilityValue); ok {
-				// TODO: only if interpreter.IsSubType(capabilityValue.BorrowType, borrowStaticType) ?
-				return NewIDCapabilityValue(
-					gauge,
-					capabilityValue.ID,
-					addressValue,
-					borrowStaticType,
-				)
-			}
-
-			return NewPathCapabilityValue(
-				gauge,
-				addressValue,
-				path,
-				borrowStaticType,
-			)
-		},
 	)
 }
