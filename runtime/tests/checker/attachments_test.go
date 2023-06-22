@@ -4176,7 +4176,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-				pub resource R {}
+				access(all) resource R {}
 
 				entitlement mapping M {
 					Mutable -> Insertable
@@ -4236,8 +4236,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 					Mutable -> Insertable
 				}
 
-				pub resource R {
-					pub fun foo() {
+				access(all) resource R {
+					access(all) fun foo() {
 						var xRef = self[A]!.x
 						xRef.append("y")
 					}
