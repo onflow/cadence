@@ -91,7 +91,7 @@ const (
 	HashInputTypeWord32
 	HashInputTypeWord64
 	HashInputTypeWord128
-	_ // future: Word256
+	HashInputTypeWord256
 	_
 
 	// Fix*

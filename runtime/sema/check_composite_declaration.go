@@ -1067,7 +1067,7 @@ func (checker *Checker) declareContractValue(
 			ty:         compositeType,
 			docString:  declaration.DocString,
 			// NOTE: contracts are always public
-			access:     PrimitiveAccess(ast.AccessPublic),
+			access:     PrimitiveAccess(ast.AccessAll),
 			kind:       common.DeclarationKindContract,
 			pos:        declaration.Identifier.Pos,
 			isConstant: true,
@@ -1112,7 +1112,7 @@ func (checker *Checker) declareEnumConstructor(
 			&Member{
 				ContainerType: constructorType,
 				// enum cases are always public
-				Access:          PrimitiveAccess(ast.AccessPublic),
+				Access:          PrimitiveAccess(ast.AccessAll),
 				Identifier:      enumCase.Identifier,
 				TypeAnnotation:  memberCaseTypeAnnotation,
 				DeclarationKind: common.DeclarationKindField,
@@ -1139,7 +1139,7 @@ func (checker *Checker) declareEnumConstructor(
 		ty:         constructorType,
 		docString:  declaration.DocString,
 		// NOTE: enums are always public
-		access:         PrimitiveAccess(ast.AccessPublic),
+		access:         PrimitiveAccess(ast.AccessAll),
 		kind:           common.DeclarationKindEnum,
 		pos:            declaration.Identifier.Pos,
 		isConstant:     true,
@@ -1961,7 +1961,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 		effectiveAccess := checker.effectiveMemberAccess(fieldAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&
-			effectiveAccess.Equal(PrimitiveAccess(ast.AccessPrivate)) {
+			effectiveAccess.Equal(PrimitiveAccess(ast.AccessSelf)) {
 
 			checker.report(
 				&InvalidAccessModifierError{
@@ -2037,7 +2037,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 		effectiveAccess := checker.effectiveMemberAccess(functionAccess, containerKind)
 
 		if requireNonPrivateMemberAccess &&
-			effectiveAccess.Equal(PrimitiveAccess(ast.AccessPrivate)) {
+			effectiveAccess.Equal(PrimitiveAccess(ast.AccessSelf)) {
 
 			checker.report(
 				&InvalidAccessModifierError{
@@ -2100,7 +2100,7 @@ func (checker *Checker) eventMembersAndOrigins(
 			identifier.Identifier,
 			&Member{
 				ContainerType:   containerType,
-				Access:          PrimitiveAccess(ast.AccessPublic),
+				Access:          PrimitiveAccess(ast.AccessAll),
 				Identifier:      identifier,
 				DeclarationKind: common.DeclarationKindField,
 				TypeAnnotation:  typeAnnotation,
@@ -2152,7 +2152,7 @@ func (checker *Checker) enumMembersAndOrigins(
 		// Enum cases must be effectively public
 		enumAccess := checker.accessFromAstAccess(enumCase.Access)
 
-		if !checker.effectiveCompositeMemberAccess(enumAccess).Equal(PrimitiveAccess(ast.AccessPublic)) {
+		if !checker.effectiveCompositeMemberAccess(enumAccess).Equal(PrimitiveAccess(ast.AccessAll)) {
 			checker.report(
 				&InvalidAccessModifierError{
 					DeclarationKind: enumCase.DeclarationKind(),
@@ -2173,7 +2173,7 @@ func (checker *Checker) enumMembersAndOrigins(
 		EnumRawValueFieldName,
 		&Member{
 			ContainerType: containerType,
-			Access:        PrimitiveAccess(ast.AccessPublic),
+			Access:        PrimitiveAccess(ast.AccessAll),
 			Identifier: ast.NewIdentifier(
 				checker.memoryGauge,
 				EnumRawValueFieldName,
@@ -2402,7 +2402,7 @@ func (checker *Checker) declareLowerScopedValue(
 
 	variable := &Variable{
 		Identifier:      identifier,
-		Access:          PrimitiveAccess(ast.AccessPublic),
+		Access:          PrimitiveAccess(ast.AccessAll),
 		DeclarationKind: kind,
 		Type:            ty,
 		IsConstant:      true,
@@ -2445,9 +2445,9 @@ func (checker *Checker) declareBaseValue(baseType Type, attachmentType *Composit
 	// -------------------------------
 	// entitlement E
 	// entitlement F
-	// pub attachment A for R {
+	// access(all) attachment A for R {
 	//     require entitlement E
-	//     pub fun foo() { ... }
+	//     access(all) fun foo() { ... }
 	// }
 	// -------------------------------
 	// within the body of `foo`, the `base` value will be entitled to `E` but not `F`, because only `E` was required in the attachment's declaration

@@ -404,16 +404,16 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
 					`
-                      pub %[1]s interface Test {
-                          pub fun test(x: Int): Int {
+                      access(all) %[1]s interface Test {
+                          access(all) fun test(x: Int): Int {
                               pre {
                                   x > 0: "x must be positive"
                               }
                           }
                       }
 
-                      pub %[1]s TestImpl: Test {
-                          pub fun test(x: Int): Int {
+                      access(all) %[1]s TestImpl: Test {
+                          access(all) fun test(x: Int): Int {
                               pre {
                                   x < 2: "x must be smaller than 2"
                               }
@@ -421,7 +421,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
                           }
                       }
 
-                      pub fun callTest(x: Int): Int {
+                      access(all) fun callTest(x: Int): Int {
                           %[2]s
                           let res = %[3]s.test(x: x)
                           %[4]s
@@ -491,7 +491,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					if compositeKind == common.CompositeKindContract {
 						// use the contract singleton, so it is loaded
 						testFunction = `
-					       pub fun test() {
+					       access(all) fun test() {
 					            TestImpl
 					       }
                         `
@@ -501,7 +501,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						testFunction =
 							fmt.Sprintf(
 								`
-					               pub fun test(x: Int): %[1]s%[2]s {
+					               access(all) fun test(x: Int): %[1]s%[2]s {
 					                   return %[3]s %[4]s TestImpl%[5]s
 					               }
                                 `,
@@ -516,7 +516,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					checker, err := checker.ParseAndCheck(t,
 						fmt.Sprintf(
 							`
-					             pub %[1]s interface Test {
+					             access(all) %[1]s interface Test {
 					                 init(x: Int) {
 					                     pre {
 					                         x > 0: "x must be positive"
@@ -524,7 +524,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					                 }
 					             }
 
-					             pub %[1]s TestImpl: Test {
+					             access(all) %[1]s TestImpl: Test {
 					                 init(x: Int) {
 					                     pre {
 					                         x < 2: "x must be smaller than 2"
@@ -623,18 +623,18 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
 
-          pub struct interface Also {
-             pub fun test(x: Int) {
+          access(all) struct interface Also {
+             access(all) fun test(x: Int) {
                  pre {
                      x >= 0: "x >= 0"
                  }
              }
           }
 
-          pub contract interface Test {
+          access(all) contract interface Test {
 
-              pub struct Nested {
-                  pub fun test(x: Int) {
+              access(all) struct Nested {
+                  access(all) fun test(x: Int) {
                       pre {
                           x >= 1: "x >= 1"
                       }
@@ -642,10 +642,10 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
               }
           }
 
-          pub contract TestImpl: Test {
+          access(all) contract TestImpl: Test {
 
-              pub struct Nested: Also {
-                  pub fun test(x: Int) {
+              access(all) struct Nested: Also {
+                  access(all) fun test(x: Int) {
                       pre {
                           x < 2: "x < 2"
                       }
@@ -653,7 +653,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
               }
           }
 
-          pub fun test(x: Int) {
+          access(all) fun test(x: Int) {
               TestImpl.Nested().test(x: x)
           }
         `,
@@ -797,11 +797,11 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
-          pub contract interface CI {
+          access(all) contract interface CI {
 
-              pub resource R {
+              access(all) resource R {
 
-                  pub x: Int
+                  access(all) x: Int
 
                   init(_ x: Int) {
                       pre { x > 1: "invalid init" }
@@ -813,18 +813,18 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
               }
           }
 
-          pub contract C: CI {
+          access(all) contract C: CI {
 
-              pub resource R {
+              access(all) resource R {
 
-                  pub let x: Int
+                  access(all) let x: Int
 
                   init(_ x: Int) {
                       self.x = x
                   }
               }
 
-              pub fun test(_ x: Int) {
+              access(all) fun test(_ x: Int) {
                   let r <- create C.R(x)
                   destroy r
               }

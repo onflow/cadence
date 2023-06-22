@@ -258,23 +258,7 @@ func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) 
 }
 
 func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) Type {
-	elementType := checker.visitIndexExpression(expression, false)
-	if elementType == InvalidType {
-		return elementType
-	}
-
-	indexExprTypes := checker.Elaboration.IndexExpressionTypes(expression)
-	parentType := indexExprTypes.IndexedType
-
-	// If the element,
-	//   1) is accessed via a reference, and
-	//   2) is container-typed,
-	// then the element type should also be a reference.
-	if shouldReturnReference(parentType, elementType) {
-		elementType = checker.getReferenceType(elementType)
-	}
-
-	return elementType
+	return checker.visitIndexExpression(expression, false)
 }
 
 // visitIndexExpression checks if the indexed expression is indexable,
@@ -332,11 +316,24 @@ func (checker *Checker) visitIndexExpression(
 
 		checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
+		// If the element,
+		//   1) is accessed via a reference, and
+		//   2) is container-typed,
+		// then the element type should also be a reference.
+		returnReference := false
+		if !isAssignment && shouldReturnReference(valueIndexedType, elementType) {
+			elementType = checker.getReferenceType(elementType)
+
+			// Store the result in elaboration, so the interpreter can re-use this.
+			returnReference = true
+		}
+
 		checker.Elaboration.SetIndexExpressionTypes(
 			indexExpression,
 			IndexExpressionTypes{
-				IndexedType:  valueIndexedType,
-				IndexingType: indexingType,
+				IndexedType:     valueIndexedType,
+				IndexingType:    indexingType,
+				ReturnReference: returnReference,
 			},
 		)
 

@@ -26,10 +26,11 @@ import (
 )
 
 type MemberInfo struct {
-	AccessedType  Type
-	ResultingType Type
-	Member        *Member
-	IsOptional    bool
+	AccessedType    Type
+	ResultingType   Type
+	Member          *Member
+	IsOptional      bool
+	ReturnReference bool
 }
 
 type CastTypes struct {
@@ -88,8 +89,9 @@ type SwapStatementTypes struct {
 }
 
 type IndexExpressionTypes struct {
-	IndexedType  ValueIndexableType
-	IndexingType Type
+	IndexedType     ValueIndexableType
+	IndexingType    Type
+	ReturnReference bool
 }
 
 type NumberConversionArgumentTypes struct {

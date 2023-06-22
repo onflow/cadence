@@ -1443,7 +1443,7 @@ func FunctionDocument(
 		doc = append(
 			doc,
 			prettier.Text(access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 

@@ -1817,30 +1817,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 		switch access := access.(type) {
 		case PrimitiveAccess:
 			switch ast.PrimitiveAccess(access) {
-			case ast.AccessPublicSettable:
-				// Public settable access for a constant is not sensible
-				// and type declarations must be public for now
-
-				if isConstant || isTypeDeclaration {
-					var explanation string
-					switch {
-					case isConstant:
-						explanation = "constants can never be set"
-					case isTypeDeclaration:
-						explanation = invalidTypeDeclarationAccessModifierExplanation
-					}
-
-					checker.report(
-						&InvalidAccessModifierError{
-							Access:          access,
-							Explanation:     explanation,
-							DeclarationKind: declarationKind,
-							Pos:             startPos,
-						},
-					)
-				}
-
-			case ast.AccessPrivate:
+			case ast.AccessSelf:
 				// Type declarations must be public for now
 
 				if isTypeDeclaration {
@@ -2158,7 +2135,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		IsInstanceFunctionName,
 		IsInstanceFunctionType,
 		common.DeclarationKindFunction,
-		ast.AccessPublic,
+		ast.AccessAll,
 		true,
 		isInstanceFunctionDocString,
 	)
@@ -2169,7 +2146,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		GetTypeFunctionName,
 		GetTypeFunctionType,
 		common.DeclarationKindFunction,
-		ast.AccessPublic,
+		ast.AccessAll,
 		true,
 		getTypeFunctionDocString,
 	)
@@ -2180,14 +2157,14 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		case common.CompositeKindContract:
 
 			// All contracts have a predeclared member
-			// `priv let account: AuthAccount`,
+			// `access(self) let account: AuthAccount`,
 			// which is ignored in serialization
 
 			addPredeclaredMember(
 				ContractAccountFieldName,
 				AuthAccountType,
 				common.DeclarationKindField,
-				ast.AccessPrivate,
+				ast.AccessSelf,
 				true,
 				contractAccountFieldDocString,
 			)
@@ -2196,7 +2173,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			// All resources have two predeclared fields:
 
-			// `pub let owner: PublicAccount?`,
+			// `access(all) let owner: PublicAccount?`,
 			// ignored in serialization
 
 			addPredeclaredMember(
@@ -2205,19 +2182,19 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 					Type: PublicAccountType,
 				},
 				common.DeclarationKindField,
-				ast.AccessPublic,
+				ast.AccessAll,
 				true,
 				resourceOwnerFieldDocString,
 			)
 
-			// `pub let uuid: UInt64`,
+			// `access(all) let uuid: UInt64`,
 			// included in serialization
 
 			addPredeclaredMember(
 				ResourceUUIDFieldName,
 				UInt64Type,
 				common.DeclarationKindField,
-				ast.AccessPublic,
+				ast.AccessAll,
 				false,
 				resourceUUIDFieldDocString,
 			)
@@ -2228,7 +2205,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 				CompositeForEachAttachmentFunctionName,
 				CompositeForEachAttachmentFunctionType(compositeKindedType.GetCompositeKind()),
 				common.DeclarationKindFunction,
-				ast.AccessPublic,
+				ast.AccessAll,
 				true,
 				compositeForEachAttachmentFunctionDocString,
 			)
@@ -2411,7 +2388,7 @@ func (checker *Checker) effectiveMemberAccess(access Access, containerKind Conta
 
 func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
 	if access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
-		return PrimitiveAccess(ast.AccessPublic)
+		return PrimitiveAccess(ast.AccessAll)
 	} else {
 		return access
 	}
@@ -2424,10 +2401,10 @@ func (checker *Checker) effectiveCompositeMemberAccess(access Access) Access {
 
 	switch checker.Config.AccessCheckMode {
 	case AccessCheckModeStrict, AccessCheckModeNotSpecifiedRestricted:
-		return PrimitiveAccess(ast.AccessPrivate)
+		return PrimitiveAccess(ast.AccessSelf)
 
 	case AccessCheckModeNotSpecifiedUnrestricted, AccessCheckModeNone:
-		return PrimitiveAccess(ast.AccessPublic)
+		return PrimitiveAccess(ast.AccessAll)
 
 	default:
 		panic(errors.NewUnreachableError())

@@ -163,7 +163,7 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main(): [UFix64] {
+            access(all) fun main(): [UFix64] {
                 let block = getCurrentBlock()
 
                 let id = block.id

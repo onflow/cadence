@@ -38,7 +38,7 @@ func TestRLPDecodeString(t *testing.T) {
 
 	script := []byte(`
 
-      pub fun main(_ data: [UInt8]): [UInt8] {
+      access(all) fun main(_ data: [UInt8]): [UInt8] {
           return RLP.decodeString(data)
       }
     `)
@@ -181,7 +181,7 @@ func TestRLPDecodeList(t *testing.T) {
 
 	script := []byte(`
 
-      pub fun main(_ data: [UInt8]): [[UInt8]] {
+      access(all) fun main(_ data: [UInt8]): [[UInt8]] {
           return RLP.decodeList(data)
       }
     `)

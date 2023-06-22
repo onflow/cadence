@@ -1213,6 +1213,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType:   sema.Word128Type,
 			staticType: PrimitiveStaticTypeWord128,
 		},
+		{
+			name:       "Word256",
+			semaType:   sema.Word256Type,
+			staticType: PrimitiveStaticTypeWord256,
+		},
 
 		{
 			name:       "Fix64",

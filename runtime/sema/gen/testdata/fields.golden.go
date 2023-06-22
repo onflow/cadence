@@ -168,7 +168,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestIntFieldName,
 				TestTypeTestIntFieldType,
@@ -176,7 +176,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestOptIntFieldName,
 				TestTypeTestOptIntFieldType,
@@ -184,7 +184,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestRefIntFieldName,
 				TestTypeTestRefIntFieldType,
@@ -192,7 +192,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestVarIntsFieldName,
 				TestTypeTestVarIntsFieldType,
@@ -200,7 +200,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestConstIntsFieldName,
 				TestTypeTestConstIntsFieldType,
@@ -208,7 +208,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestParamFieldName,
 				TestTypeTestParamFieldType,
@@ -216,7 +216,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestAddressFieldName,
 				TestTypeTestAddressFieldType,
@@ -224,7 +224,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestTypeFieldName,
 				TestTypeTestTypeFieldType,
@@ -232,7 +232,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestCapFieldName,
 				TestTypeTestCapFieldType,
@@ -240,7 +240,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestCapIntFieldName,
 				TestTypeTestCapIntFieldType,
@@ -248,7 +248,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestRestrictedWithoutTypeFieldName,
 				TestTypeTestRestrictedWithoutTypeFieldType,
@@ -256,7 +256,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestRestrictedWithTypeFieldName,
 				TestTypeTestRestrictedWithTypeFieldType,
@@ -264,7 +264,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				TestTypeTestRestrictedWithoutRestrictionsFieldName,
 				TestTypeTestRestrictedWithoutRestrictionsFieldType,

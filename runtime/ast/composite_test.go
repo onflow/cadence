@@ -34,7 +34,7 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &FieldDeclaration{
-		Access:       AccessPublic,
+		Access:       AccessAll,
 		Flags:        FieldDeclarationFlagsIsStatic | FieldDeclarationFlagsIsNative,
 		VariableKind: VariableKindConstant,
 		Identifier: Identifier{
@@ -66,7 +66,7 @@ func TestFieldDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "FieldDeclaration",
-            "Access": "AccessPublic",
+            "Access": "AccessAll",
             "IsStatic": true,
             "IsNative": true,
             "VariableKind": "VariableKindConstant",
@@ -108,7 +108,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
-			Access:       AccessPublic,
+			Access:       AccessAll,
 			VariableKind: VariableKindConstant,
 			Flags:        FieldDeclarationFlagsIsNative | FieldDeclarationFlagsIsStatic,
 			Identifier: Identifier{
@@ -128,21 +128,23 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Group{
 				Doc: prettier.Concat{
-					prettier.Text("pub"),
-					prettier.Text(" "),
-					prettier.Text("static"),
-					prettier.Text(" "),
-					prettier.Text("native"),
-					prettier.Text(" "),
-					prettier.Text("let"),
-					prettier.Text(" "),
-					prettier.Group{
-						Doc: prettier.Concat{
-							prettier.Text("xyz"),
-							prettier.Text(": "),
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("CD"),
+					prettier.Text("access(all)"),
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.Text("static"),
+						prettier.Text(" "),
+						prettier.Text("native"),
+						prettier.Text(" "),
+						prettier.Text("let"),
+						prettier.Text(" "),
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("xyz"),
+								prettier.Text(": "),
+								prettier.Concat{
+									prettier.Text("@"),
+									prettier.Text("CD"),
+								},
 							},
 						},
 					},
@@ -199,7 +201,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -217,16 +219,14 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Group{
 				Doc: prettier.Concat{
-					prettier.Text("pub"),
-					prettier.Text(" "),
-					prettier.Group{
-						Doc: prettier.Concat{
-							prettier.Text("xyz"),
-							prettier.Text(": "),
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("CD"),
-							},
+					prettier.Text("access(all)"),
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.Text("xyz"),
+						prettier.Text(": "),
+						prettier.Concat{
+							prettier.Text("@"),
+							prettier.Text("CD"),
 						},
 					},
 				},
@@ -281,7 +281,7 @@ func TestFieldDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
-			Access:       AccessPublic,
+			Access:       AccessAll,
 			VariableKind: VariableKindConstant,
 			Identifier: Identifier{
 				Identifier: "xyz",
@@ -298,7 +298,8 @@ func TestFieldDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"pub let xyz: @CD",
+			`access(all)
+let xyz: @CD`,
 			decl.String(),
 		)
 	})
@@ -335,7 +336,7 @@ func TestFieldDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FieldDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -351,7 +352,8 @@ func TestFieldDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"pub xyz: @CD",
+			`access(all)
+xyz: @CD`,
 			decl.String(),
 		)
 
@@ -390,7 +392,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &CompositeDeclaration{
-		Access:        AccessPublic,
+		Access:        AccessAll,
 		CompositeKind: common.CompositeKindResource,
 		Identifier: Identifier{
 			Identifier: "AB",
@@ -420,7 +422,7 @@ func TestCompositeDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "CompositeDeclaration",
-            "Access": "AccessPublic", 
+            "Access": "AccessAll", 
             "CompositeKind": "CompositeKindResource",
             "Identifier": {
                 "Identifier": "AB",
@@ -460,7 +462,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -483,8 +485,8 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("pub"),
-				prettier.Text(" "),
+				prettier.Text("access(all)"),
+				prettier.HardLine{},
 				prettier.Text("resource"),
 				prettier.Text(" "),
 				prettier.Text("AB"),
@@ -518,7 +520,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -555,8 +557,8 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("pub"),
-				prettier.Text(" "),
+				prettier.Text("access(all)"),
+				prettier.HardLine{},
 				prettier.Text("resource"),
 				prettier.Text(" "),
 				prettier.Text("AB"),
@@ -606,7 +608,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindEvent,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -636,8 +638,8 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("pub"),
-				prettier.Text(" "),
+				prettier.Text("access(all)"),
+				prettier.HardLine{},
 				prettier.Text("event"),
 				prettier.Text(" "),
 				prettier.Text("AB"),
@@ -668,7 +670,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindEnum,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -693,8 +695,8 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("pub"),
-				prettier.Text(" "),
+				prettier.Text("access(all)"),
+				prettier.HardLine{},
 				prettier.Text("enum"),
 				prettier.Text(" "),
 				prettier.Text("AB"),
@@ -741,7 +743,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -763,7 +765,8 @@ func TestCompositeDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"pub resource AB: CD, EF {}",
+			`access(all)
+resource AB: CD, EF {}`,
 			decl.String(),
 		)
 	})
@@ -773,7 +776,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -809,9 +812,10 @@ func TestCompositeDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"pub resource AB: CD, EF {\n"+
-				"    x: X\n"+
-				"}",
+			`access(all)
+resource AB: CD, EF {
+    x: X
+}`,
 			decl.String(),
 		)
 	})
@@ -821,7 +825,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindEvent,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -850,7 +854,8 @@ func TestCompositeDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"pub event AB(e: E)",
+			`access(all)
+event AB(e: E)`,
 			decl.String(),
 		)
 	})
@@ -860,7 +865,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &CompositeDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindEnum,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -884,9 +889,10 @@ func TestCompositeDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"pub enum AB: CD {\n"+
-				"    case x\n"+
-				"}",
+			`access(all)
+enum AB: CD {
+    case x
+}`,
 			decl.String(),
 		)
 	})

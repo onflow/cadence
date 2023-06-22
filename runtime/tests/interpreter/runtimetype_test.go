@@ -572,7 +572,7 @@ func TestInterpretRestrictedType(t *testing.T) {
       struct B : S {}
 
       struct interface S2 {
-        pub let foo : Int
+        access(all) let foo : Int
       }
 
       let a = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.R"])!

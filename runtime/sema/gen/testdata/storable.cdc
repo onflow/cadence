@@ -1,1 +1,1 @@
-pub struct Test: Storable {}
+access(all) struct Test: Storable {}

@@ -147,7 +147,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 				value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
 
 				// If the indexing value is a reference, then return a reference for the resulting value.
-				return interpreter.maybeGetReference(indexExpression, target, value)
+				return interpreter.maybeGetReference(indexExpression, value)
 			}
 		},
 		set: func(value Value) {
@@ -222,18 +222,8 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			}
 
 			// Return a reference, if the member is accessed via a reference.
-			//
-			// However, for attachments, `self` is always a reference.
-			// But we do not want to return a reference for `self.something`.
-			// Otherwise, things like `destroy self.something` would become invalid.
-			// Hence, special case `self`, and return a reference only if the member is not accessed via self.
-
-			accessingSelf := false
-			if identifierExpression, ok := memberExpression.Expression.(*ast.IdentifierExpression); ok {
-				accessingSelf = identifierExpression.Identifier.Identifier == sema.SelfIdentifier
-			}
-
-			if !accessingSelf && shouldReturnReference(target, resultValue) {
+			// This is pre-computed at the checker.
+			if memberInfo.ReturnReference {
 				// Get a reference to the value
 				resultValue = interpreter.getReferenceValue(resultValue, memberType)
 			}
@@ -248,31 +238,21 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	}
 }
 
-func shouldReturnReference(parent, member Value) bool {
-	_, parentIsReference := parent.(ReferenceValue)
-	return parentIsReference && isContainerValue(member)
-}
-
-func isContainerValue(value Value) bool {
-	switch value := value.(type) {
-	case *CompositeValue,
-		*SimpleCompositeValue,
-		*DictionaryValue,
-		*ArrayValue:
-		return true
-	case *SomeValue:
-		return isContainerValue(value.value)
-	default:
-		return false
-	}
-}
-
 // getReferenceValue Returns a reference to a given value.
 // Reference to an optional should return an optional reference.
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
 func (interpreter *Interpreter) getReferenceValue(value Value, semaType sema.Type) Value {
+	switch value.(type) {
+	case NilValue:
+		// Reference to a nil, should return a nil.
+		return value
+	case ReferenceValue:
+		// If the value is already a reference then return the same reference.
+		return value
+	}
+
 	optionalType, ok := semaType.(*sema.OptionalType)
 	if ok {
 		semaType = optionalType.Type
@@ -758,6 +738,9 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 	case sema.Word128Type:
 		// BigInt value is already metered at parser.
 		return NewUnmeteredWord128ValueFromBigInt(value)
+	case sema.Word256Type:
+		// BigInt value is already metered at parser.
+		return NewUnmeteredWord256ValueFromBigInt(value)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -933,17 +916,16 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 		value := typedResult.GetKey(interpreter, locationRange, indexingValue)
 
 		// If the indexing value is a reference, then return a reference for the resulting value.
-		return interpreter.maybeGetReference(expression, typedResult, value)
+		return interpreter.maybeGetReference(expression, value)
 	}
 }
 
 func (interpreter *Interpreter) maybeGetReference(
 	expression *ast.IndexExpression,
-	parentValue ValueIndexableValue,
 	memberValue Value,
 ) Value {
-	if shouldReturnReference(parentValue, memberValue) {
-		indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
+	indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
+	if indexExpressionTypes.ReturnReference {
 		elementType := indexExpressionTypes.IndexedType.ElementType(false)
 
 		// Get a reference to the value
@@ -1020,6 +1002,15 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	function, ok := result.(FunctionValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
+	}
+
+	// Bound functions
+	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
+		self := *boundFunction.Self
+		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
+			storageID := resource.StorageID()
+			interpreter.trackReferencedResourceKindedValue(storageID, resource)
+		}
 	}
 
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
@@ -1240,7 +1231,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
 		// of that mapped access in the body of the function should be replaced with the computed output of the map
 		if _, isMapped := typ.Authorization.(sema.EntitlementMapAccess); isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
-			auth = *interpreter.SharedState.currentEntitlementMappedValue
+			auth = interpreter.SharedState.currentEntitlementMappedValue
 		} else {
 			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization)
 		}

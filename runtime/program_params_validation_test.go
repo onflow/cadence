@@ -113,10 +113,10 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: Foo) {
+            access(all) fun main(arg: Foo) {
             }
 
-            pub struct Foo {
+            access(all) struct Foo {
             }
         `
 
@@ -128,11 +128,11 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: Foo?) {
+            access(all) fun main(arg: Foo?) {
             }
 
-            pub struct Foo {
-                pub var funcTypedField: fun(): Void
+            access(all) struct Foo {
+                access(all) var funcTypedField: fun(): Void
 
                 init() {
                     self.funcTypedField = fun() {}
@@ -148,7 +148,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: AnyStruct?) {
+            access(all) fun main(arg: AnyStruct?) {
             }
         `
 
@@ -160,13 +160,13 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: {Bar}) {
+            access(all) fun main(arg: {Bar}) {
             }
 
-            pub struct Foo: Bar {
+            access(all) struct Foo: Bar {
             }
 
-            pub struct interface Bar {
+            access(all) struct interface Bar {
             }
         `
 
@@ -178,11 +178,11 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: {Bar}?) {
+            access(all) fun main(arg: {Bar}?) {
             }
 
-            pub struct interface Bar {
-                pub var funcTypedField: fun():Void
+            access(all) struct interface Bar {
+                access(all) var funcTypedField: fun():Void
             }
         `
 
@@ -194,11 +194,11 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: @Baz?) {
+            access(all) fun main(arg: @Baz?) {
                 destroy arg
             }
 
-            pub resource Baz {
+            access(all) resource Baz {
             }
         `
 
@@ -210,7 +210,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: @AnyResource?) {
+            access(all) fun main(arg: @AnyResource?) {
                 destroy arg
             }
         `
@@ -223,10 +223,10 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: Foo?) {
+            access(all) fun main(arg: Foo?) {
             }
 
-            pub contract Foo {
+            access(all) contract Foo {
             }
         `
 
@@ -238,7 +238,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: [String]) {
+            access(all) fun main(arg: [String]) {
             }
         `
 
@@ -255,7 +255,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: [fun():Void]) {
+            access(all) fun main(arg: [fun():Void]) {
             }
         `
 
@@ -272,7 +272,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: {String: Bool}) {
+            access(all) fun main(arg: {String: Bool}) {
             }
         `
 
@@ -289,7 +289,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: Capability<&Int>?) {
+            access(all) fun main(arg: Capability<&Int>?) {
             }
         `
 
@@ -301,7 +301,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(arg: {String: fun():Void}) {
+            access(all) fun main(arg: {String: fun():Void}) {
             }
         `
 
@@ -324,7 +324,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
-                        pub fun main(arg: %s?) {
+                        access(all) fun main(arg: %s?) {
                         }
                     `,
 					typString,
@@ -406,7 +406,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
-                    pub fun main(arg: %s) {
+                    access(all) fun main(arg: %s) {
                     }`,
 					test.typeSignature,
 				)
@@ -430,10 +430,10 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main(arg: AnyStruct?) {
+                access(all) fun main(arg: AnyStruct?) {
                 }
-                pub struct Foo {
-                    pub var nonImportableField: PublicAccount.Keys?
+                access(all) struct Foo {
+                    access(all) var nonImportableField: PublicAccount.Keys?
                     init() {
                         self.nonImportableField = nil
                     }
@@ -448,15 +448,15 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main(arg: {Bar}?) {
+                access(all) fun main(arg: {Bar}?) {
                 }
-                pub struct Foo: Bar {
-                    pub var nonImportableField: PublicAccount.Keys?
+                access(all) struct Foo: Bar {
+                    access(all) var nonImportableField: PublicAccount.Keys?
                     init() {
                         self.nonImportableField = nil
                     }
                 }
-                pub struct interface Bar {
+                access(all) struct interface Bar {
                 }
             `
 
@@ -468,7 +468,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main(arg: AnyStruct) {
+                access(all) fun main(arg: AnyStruct) {
                 }
             `
 
@@ -482,7 +482,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main(arg: [AnyStruct]) {
+                access(all) fun main(arg: [AnyStruct]) {
                 }
             `
 
@@ -502,7 +502,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		err := executeScript(t,
-			`pub fun main(arg: HashAlgorithm) {}`,
+			`access(all) fun main(arg: HashAlgorithm) {}`,
 			cadence.NewEnum(
 				[]cadence.Value{
 					cadence.NewUInt8(0),
@@ -519,7 +519,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		err := executeScript(t,
-			`pub fun main(arg: SignatureAlgorithm) {}`,
+			`access(all) fun main(arg: SignatureAlgorithm) {}`,
 			cadence.NewEnum(
 				[]cadence.Value{
 					cadence.NewUInt8(0),
@@ -637,8 +637,8 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-                pub contract C {
-                    pub struct Foo {}
+                access(all) contract C {
+                    access(all) struct Foo {}
                 }
             `),
 		}
@@ -661,9 +661,9 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-                pub contract C {
-                    pub struct Foo {
-                        pub var funcTypedField: fun (): Void
+                access(all) contract C {
+                    access(all) struct Foo {
+                        access(all) var funcTypedField: fun (): Void
 
                         init() {
                             self.funcTypedField = fun () {}
@@ -706,10 +706,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-                pub contract C {
-                    pub struct Foo: Bar {}
+                access(all) contract C {
+                    access(all) struct Foo: Bar {}
 
-                    pub struct interface Bar {}
+                    access(all) struct interface Bar {}
                 }
             `),
 		}
@@ -731,9 +731,9 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-                pub contract C {
-                    pub struct interface Bar {
-                        pub var funcTypedField: fun (): Void
+                access(all) contract C {
+                    access(all) struct interface Bar {
+                        access(all) var funcTypedField: fun (): Void
                     }
                 }
             `),
@@ -762,8 +762,8 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-                pub contract C {
-                    pub resource Baz {}
+                access(all) contract C {
+                    access(all) resource Baz {}
                 }
             `),
 		}
@@ -809,7 +809,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-                pub contract C {}
+                access(all) contract C {}
             `),
 		}
 		script := `
@@ -1016,9 +1016,9 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-               pub contract C {
-                   pub struct Foo {
-                      pub var nonImportableField: PublicAccount.Keys?
+               access(all) contract C {
+                   access(all) struct Foo {
+                      access(all) var nonImportableField: PublicAccount.Keys?
 
                       init() {
                           self.nonImportableField = nil
@@ -1046,15 +1046,15 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-               pub contract C {
-                    pub struct Foo: Bar {
-                        pub var nonImportableField: PublicAccount.Keys?
+               access(all) contract C {
+                    access(all) struct Foo: Bar {
+                        access(all) var nonImportableField: PublicAccount.Keys?
                         init() {
                             self.nonImportableField = nil
                         }
                     }
 
-                    pub struct interface Bar {}
+                    access(all) struct interface Bar {}
                }
             `),
 		}
