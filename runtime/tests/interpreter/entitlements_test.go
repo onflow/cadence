@@ -2514,28 +2514,106 @@ func TestInterpretIdentityMapping(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-        struct S {
-            access(Identity) fun foo(): auth(Identity) &AnyStruct {
-                let a: AnyStruct = "hello"
-                return &a as auth(Identity) &AnyStruct
+	t.Run("owned value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
             }
-        }
 
-        fun main() {
-            let s = S()
+            fun main() {
+                let s = S()
 
-            let mutableRef = &s as auth(Mutable) &S
-            let ref1: auth(Mutable) &AnyStruct = mutableRef.foo()
+                // OK: Must return an unauthorized ref
+                let resultRef1: &AnyStruct = s.foo()
+            }
+        `)
 
-            let insertableRef = &s as auth(Insertable) &S
-            let ref2: auth(Insertable) &AnyStruct = insertableRef.foo()
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
 
-            let removableRef = &s as auth(Removable) &S
-            let ref3: auth(Removable) &AnyStruct = removableRef.foo()
-        }
-    `)
+	t.Run("unauthorized ref", func(t *testing.T) {
+		t.Parallel()
 
-	_, err := inter.Invoke("main")
-	assert.NoError(t, err)
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let ref = &s as &S
+
+                // OK: Must return an unauthorized ref
+                let resultRef1: &AnyStruct = ref.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic entitled ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let mutableRef = &s as auth(Mutable) &S
+                let ref1: auth(Mutable) &AnyStruct = mutableRef.foo()
+
+                let insertableRef = &s as auth(Insertable) &S
+                let ref2: auth(Insertable) &AnyStruct = insertableRef.foo()
+
+                let removableRef = &s as auth(Removable) &S
+                let ref3: auth(Removable) &AnyStruct = removableRef.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("entitlement set ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let ref1 = &s as auth(Insertable | Removable) &S
+                let resultRef1: auth(Insertable | Removable) &AnyStruct = ref1.foo()
+
+                let ref2 = &s as auth(Insertable, Removable) &S
+                let resultRef2: auth(Insertable, Removable) &AnyStruct = ref2.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
 }
