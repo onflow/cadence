@@ -45,6 +45,7 @@ type SharedState struct {
 	MutationDuringCapabilityControllerIteration bool
 	containerValueIteration                     map[atree.StorageID]struct{}
 	destroyedResources                          map[atree.StorageID]struct{}
+	currentEntitlementMappedValue               Authorization
 }
 
 func NewSharedState(config *Config) *SharedState {

@@ -282,7 +282,8 @@ const AuthAccountTypeBorrowFunctionName = "borrow"
 var AuthAccountTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -354,7 +355,8 @@ const AuthAccountTypeLinkFunctionName = "link"
 var AuthAccountTypeLinkFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -423,7 +425,8 @@ var AuthAccountTypeLinkAccountFunctionType = &FunctionType{
 			Type: MustInstantiate(
 				&CapabilityType{},
 				&ReferenceType{
-					Type: AuthAccountType,
+					Type:          AuthAccountType,
+					Authorization: UnauthorizedAccess,
 				},
 			),
 		},
@@ -443,7 +446,8 @@ const AuthAccountTypeGetCapabilityFunctionName = "getCapability"
 var AuthAccountTypeGetCapabilityFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -789,7 +793,8 @@ const AuthAccountContractsTypeBorrowFunctionName = "borrow"
 var AuthAccountContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -1086,7 +1091,8 @@ const AuthAccountInboxTypeUnpublishFunctionName = "unpublish"
 var AuthAccountInboxTypeUnpublishFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -1126,7 +1132,8 @@ const AuthAccountInboxTypeClaimFunctionName = "claim"
 var AuthAccountInboxTypeClaimFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -1229,7 +1236,8 @@ const AuthAccountCapabilitiesTypeGetFunctionName = "get"
 var AuthAccountCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -1267,7 +1275,8 @@ const AuthAccountCapabilitiesTypeBorrowFunctionName = "borrow"
 var AuthAccountCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -1464,7 +1473,8 @@ var AuthAccountStorageCapabilitiesTypeGetControllerFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
 			Type: &ReferenceType{
-				Type: StorageCapabilityControllerType,
+				Type:          StorageCapabilityControllerType,
+				Authorization: UnauthorizedAccess,
 			},
 		},
 	),
@@ -1488,7 +1498,8 @@ var AuthAccountStorageCapabilitiesTypeGetControllersFunctionType = &FunctionType
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
 			Type: &ReferenceType{
-				Type: StorageCapabilityControllerType,
+				Type:          StorageCapabilityControllerType,
+				Authorization: UnauthorizedAccess,
 			},
 		},
 	),
@@ -1513,7 +1524,8 @@ var AuthAccountStorageCapabilitiesTypeForEachControllerFunctionType = &FunctionT
 				Parameters: []Parameter{
 					{
 						TypeAnnotation: NewTypeAnnotation(&ReferenceType{
-							Type: StorageCapabilityControllerType,
+							Type:          StorageCapabilityControllerType,
+							Authorization: UnauthorizedAccess,
 						}),
 					},
 				},
@@ -1546,7 +1558,8 @@ const AuthAccountStorageCapabilitiesTypeIssueFunctionName = "issue"
 var AuthAccountStorageCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -1636,7 +1649,8 @@ var AuthAccountAccountCapabilitiesTypeGetControllerFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
 			Type: &ReferenceType{
-				Type: AccountCapabilityControllerType,
+				Type:          AccountCapabilityControllerType,
+				Authorization: UnauthorizedAccess,
 			},
 		},
 	),
@@ -1654,7 +1668,8 @@ var AuthAccountAccountCapabilitiesTypeGetControllersFunctionType = &FunctionType
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
 			Type: &ReferenceType{
-				Type: AccountCapabilityControllerType,
+				Type:          AccountCapabilityControllerType,
+				Authorization: UnauthorizedAccess,
 			},
 		},
 	),
@@ -1675,7 +1690,8 @@ var AuthAccountAccountCapabilitiesTypeForEachControllerFunctionType = &FunctionT
 				Parameters: []Parameter{
 					{
 						TypeAnnotation: NewTypeAnnotation(&ReferenceType{
-							Type: AccountCapabilityControllerType,
+							Type:          AccountCapabilityControllerType,
+							Authorization: UnauthorizedAccess,
 						}),
 					},
 				},
@@ -1710,6 +1726,7 @@ var AuthAccountAccountCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParamet
 		Type: &RestrictedType{
 			Type: AuthAccountType,
 		},
+		Authorization: UnauthorizedAccess,
 	},
 }
 

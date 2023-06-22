@@ -309,7 +309,7 @@ func defineReferenceType() {
 		nullDenotation: func(p *parser, right ast.Type, tokenRange ast.Range) ast.Type {
 			return ast.NewReferenceType(
 				p.memoryGauge,
-				false,
+				nil,
 				right,
 				tokenRange.StartPos,
 			)
@@ -520,7 +520,8 @@ func defineRestrictedOrDictionaryType() {
 				return left, nil, true
 			}
 
-			nominalTypes, endPos, err := parseNominalTypes(p, lexer.TokenBraceClose)
+			nominalTypes, endPos, err := parseNominalTypes(p, lexer.TokenBraceClose, lexer.TokenComma)
+
 			if err != nil {
 				return nil, err, true
 			}
@@ -544,10 +545,27 @@ func defineRestrictedOrDictionaryType() {
 	)
 }
 
-// parseNominalTypes parses zero or more nominal types separated by comma.
+func parseNominalType(
+	p *parser,
+	rightBindingPower int,
+) (*ast.NominalType, error) {
+	ty, err := parseType(p, lowestBindingPower)
+	if err != nil {
+		return nil, err
+	}
+	nominalType, ok := ty.(*ast.NominalType)
+	if !ok {
+		return nil, p.syntaxError("unexpected non-nominal type: %s", ty)
+	}
+	return nominalType, nil
+}
+
+// parseNominalTypes parses zero or more nominal types separated by a separator, either
+// a comma `,` or a vertical bar `|`.
 func parseNominalTypes(
 	p *parser,
 	endTokenType lexer.TokenType,
+	separator lexer.TokenType,
 ) (
 	nominalTypes []*ast.NominalType,
 	endPos ast.Position,
@@ -559,17 +577,17 @@ func parseNominalTypes(
 		p.skipSpaceAndComments()
 
 		switch p.current.Type {
-		case lexer.TokenComma:
+		case separator:
 			if expectType {
-				return nil, ast.EmptyPosition, p.syntaxError("unexpected comma")
+				return nil, ast.EmptyPosition, p.syntaxError("unexpected separator")
 			}
-			// Skip the comma
+			// Skip the separator
 			p.next()
 			expectType = true
 
 		case endTokenType:
 			if expectType && len(nominalTypes) > 0 {
-				p.reportSyntaxError("missing type after comma")
+				p.reportSyntaxError("missing type after separator")
 			}
 			endPos = p.current.EndPos
 			atEnd = true
@@ -586,21 +604,17 @@ func parseNominalTypes(
 				return nil, ast.EmptyPosition, p.syntaxError(
 					"unexpected token: got %s, expected %s or %s",
 					p.current.Type,
-					lexer.TokenComma,
+					separator,
 					endTokenType,
 				)
 			}
 
-			ty, err := parseType(p, lowestBindingPower)
-			if err != nil {
-				return nil, ast.EmptyPosition, err
-			}
-
 			expectType = false
 
-			nominalType, ok := ty.(*ast.NominalType)
-			if !ok {
-				return nil, ast.EmptyPosition, p.syntaxError("unexpected non-nominal type: %s", ty)
+			nominalType, err := parseNominalType(p, lowestBindingPower)
+
+			if err != nil {
+				return nil, ast.EmptyPosition, err
 			}
 			nominalTypes = append(nominalTypes, nominalType)
 		}
@@ -937,7 +951,25 @@ func defineIdentifierTypes() {
 			case KeywordAuth:
 				p.skipSpaceAndComments()
 
-				_, err := p.mustOne(lexer.TokenAmpersand)
+				var authorization ast.Authorization
+
+				_, err := p.mustOne(lexer.TokenParenOpen)
+				if err != nil {
+					return nil, err
+				}
+
+				entitlements, err := parseEntitlementList(p)
+				if err != nil {
+					return nil, err
+				}
+				authorization.EntitlementSet = entitlements
+				_, err = p.mustOne(lexer.TokenParenClose)
+				if err != nil {
+					return nil, err
+				}
+				p.skipSpaceAndComments()
+
+				_, err = p.mustOne(lexer.TokenAmpersand)
 				if err != nil {
 					return nil, err
 				}
@@ -949,7 +981,7 @@ func defineIdentifierTypes() {
 
 				return ast.NewReferenceType(
 					p.memoryGauge,
-					true,
+					&authorization,
 					right,
 					token.StartPos,
 				), nil

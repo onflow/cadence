@@ -103,7 +103,8 @@ const PublicAccountTypeGetCapabilityFunctionName = "getCapability"
 var PublicAccountTypeGetCapabilityFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -236,7 +237,8 @@ const PublicAccountContractsTypeBorrowFunctionName = "borrow"
 var PublicAccountContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -419,7 +421,8 @@ const PublicAccountCapabilitiesTypeGetFunctionName = "get"
 var PublicAccountCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -455,7 +458,8 @@ const PublicAccountCapabilitiesTypeBorrowFunctionName = "borrow"
 var PublicAccountCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 

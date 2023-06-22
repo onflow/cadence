@@ -81,6 +81,7 @@ func newContractRemovalTransaction(contractName string) string {
 
 func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 	rt := newTestInterpreterRuntime()
+	rt.defaultConfig.AttachmentsEnabled = true
 
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
@@ -530,19 +531,19 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const importCode = `
-		    pub contract TestImport {
+    	    	    pub contract TestImport {
 
-		        pub struct TestStruct {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        pub struct TestStruct {
+    	    	            pub let a: Int
+    	    	            pub var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		executeTransaction := newContractDeploymentTransactor(t)
 
@@ -550,38 +551,38 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		const oldCode = `
-		    import TestImport from 0x42
+    	    	    import TestImport from 0x42
 
-		    pub contract Test {
+    	    	    pub contract Test {
 
-		        pub var x: TestImport.TestStruct
+    	    	        pub var x: TestImport.TestStruct
 
-		        init() {
-		            self.x = TestImport.TestStruct()
-		        }
-		    }
-		`
+    	    	        init() {
+    	    	            self.x = TestImport.TestStruct()
+    	    	        }
+    	    	    }
+    	    	`
 
 		const newCode = `
-		    pub contract Test {
+    	    	    pub contract Test {
 
-		        pub var x: TestStruct
+    	    	        pub var x: TestStruct
 
-		        init() {
-		            self.x = TestStruct()
-		        }
+    	    	        init() {
+    	    	            self.x = TestStruct()
+    	    	        }
 
-		        pub struct TestStruct {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        pub struct TestStruct {
+    	    	            pub let a: Int
+    	    	            pub var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err = executeTransaction(newContractAddTransaction("Test", oldCode))
 		require.NoError(t, err)
@@ -1204,59 +1205,59 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const importCode = `
-		    pub contract TestImport {
-		        pub struct interface AnInterface {
-		            pub a: Int
-		        }
-		    }
-		`
+    	    	    pub contract TestImport {
+    	    	        pub struct interface AnInterface {
+    	    	            pub a: Int
+    	    	        }
+    	    	    }
+    	    	`
 
 		executeTransaction := newContractDeploymentTransactor(t)
 		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
 		require.NoError(t, err)
 
 		const oldCode = `
-		    import TestImport from 0x42
+    	    	    import TestImport from 0x42
 
-		    pub contract Test {
-		        pub struct TestStruct1 {
-		            pub let a: Int
-		            init() {
-		                self.a = 123
-		            }
-		        }
+    	    	    pub contract Test {
+    	    	        pub struct TestStruct1 {
+    	    	            pub let a: Int
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
 
-		        pub struct TestStruct2: TestImport.AnInterface {
-		            pub let a: Int
+    	    	        pub struct TestStruct2: TestImport.AnInterface {
+    	    	            pub let a: Int
 
-		            init() {
-		                self.a = 123
-		            }
-		        }
-		    }
-	    `
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
+    	    	    }
+    	    `
 
 		const newCode = `
-		    import TestImport from 0x42
+    	    	    import TestImport from 0x42
 
-		    pub contract Test {
+    	    	    pub contract Test {
 
-		        pub struct TestStruct2: TestImport.AnInterface {
-		            pub let a: Int
+    	    	        pub struct TestStruct2: TestImport.AnInterface {
+    	    	            pub let a: Int
 
-		            init() {
-		                self.a = 123
-		            }
-		        }
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
 
-		        pub struct TestStruct1 {
-		            pub let a: Int
-		            init() {
-		                self.a = 123
-		            }
-		        }
-		    }
-		`
+    	    	        pub struct TestStruct1 {
+    	    	            pub let a: Int
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err = executeTransaction(newContractAddTransaction("Test", oldCode))
 		require.NoError(t, err)
@@ -1641,24 +1642,24 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-		    pub contract Test {
+    	    	    pub contract Test {
 
-		        pub struct TestStruct {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        pub struct TestStruct {
+    	    	            pub let a: Int
+    	    	            pub var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		const updateCode1 = `
-		    pub contract Test {
-		    }
-		`
+    	    	    pub contract Test {
+    	    	    }
+    	    	`
 
 		executeTransaction := newContractDeploymentTransactor(t)
 
@@ -1672,17 +1673,17 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertMissingDeclarationError(t, cause, "TestStruct")
 
 		const updateCode2 = `
-		    pub contract Test {
+    	    	    pub contract Test {
 
-		        pub struct TestStruct {
-		            pub let a: String
+    	    	        pub struct TestStruct {
+    	    	            pub let a: String
 
-		            init() {
-		                self.a = "hello123"
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = "hello123"
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err = executeTransaction(newContractUpdateTransaction("Test", updateCode2))
 		RequireError(t, err)
@@ -1696,34 +1697,34 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-		    pub contract Test {
+    	    	    pub contract Test {
 
-		        pub struct TestStruct {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        pub struct TestStruct {
+    	    	            pub let a: Int
+    	    	            pub var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		const newCode = `
-		    pub contract Test {
+    	    	    pub contract Test {
 
-		        pub struct TestStructRenamed {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        pub struct TestStructRenamed {
+    	    	            pub let a: Int
+    	    	            pub var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
 		RequireError(t, err)
@@ -1737,11 +1738,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const code = `
-		    pub contract Test {
-		        pub enum TestEnum: Int {
-		        }
-		    }
-		`
+    	    	    pub contract Test {
+    	    	        pub enum TestEnum: Int {
+    	    	        }
+    	    	    }
+    	    	`
 
 		err := testDeployAndRemove(t, "Test", code)
 		RequireError(t, err)
@@ -1752,11 +1753,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 	t.Run("Remove contract interface with enum", func(t *testing.T) {
 
 		const code = `
-		    pub contract interface Test {
-		        pub enum TestEnum: Int {
-		        }
-		    }
-		`
+    	    	    pub contract interface Test {
+    	    	        pub enum TestEnum: Int {
+    	    	        }
+    	    	    }
+    	    	`
 
 		err := testDeployAndRemove(t, "Test", code)
 		RequireError(t, err)
@@ -1769,16 +1770,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const code = `
-		    pub contract Test {
-		        pub struct TestStruct {
-		            pub let a: Int
+    	    	    pub contract Test {
+    	    	        pub struct TestStruct {
+    	    	            pub let a: Int
 
-		            init() {
-		                self.a = 123
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err := testDeployAndRemove(t, "Test", code)
 		require.NoError(t, err)
@@ -1789,15 +1790,15 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-		    pub contract Test {
-		        pub struct A {}
-		        pub struct B {}
-		    }
-		`
+    	    	    pub contract Test {
+    	    	        pub struct A {}
+    	    	        pub struct B {}
+    	    	    }
+    	    	`
 
 		const newCode = `
-		    pub contract Test {}
-		`
+    	    	    pub contract Test {}
+    	    	`
 
 		// Errors reporting was previously non-deterministic,
 		// assert that reports are deterministic
@@ -1880,6 +1881,17 @@ func assertConformanceMismatchError(
 	require.ErrorAs(t, err, &conformanceMismatchError)
 
 	assert.Equal(t, erroneousDeclName, conformanceMismatchError.DeclName)
+}
+
+func assertEntitlementRequirementMismatchError(
+	t *testing.T,
+	err error,
+	erroneousDeclName string,
+) {
+	var entitlementMismatchError *stdlib.RequiredEntitlementMismatchError
+	require.ErrorAs(t, err, &entitlementMismatchError)
+
+	assert.Equal(t, erroneousDeclName, entitlementMismatchError.DeclName)
 }
 
 func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase string, foundEnumCase string) {
@@ -2110,6 +2122,130 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("removing required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+    	    	    	    	pub entitlement X
+    	    	    	    	pub entitlement Y
+    	    	    	    	pub attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	    	require entitlement Y
+    	    	    	    	}
+            }
+        `
+
+		const newCode = `
+            pub contract Test {
+                pub entitlement X
+    	    	    	    	pub entitlement Y
+                pub attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("reordering required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+    	    	    	    	pub entitlement X
+    	    	    	    	pub entitlement Y
+    	    	    	    	pub attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	    	require entitlement Y
+    	    	    	    	}
+            }
+        `
+
+		const newCode = `
+            pub contract Test {
+                pub entitlement X
+    	    	    	    	pub entitlement Y
+                pub attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement Y
+    	    	    	    	    	require entitlement X
+    	    	    	    	}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("renaming required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+    	    	    	    	pub entitlement X
+    	    	    	    	pub entitlement Y
+    	    	    	    	pub attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement Y
+    	    	    	    	}
+            }
+        `
+
+		const newCode = `
+            pub contract Test {
+                pub entitlement X
+    	    	    	    	pub entitlement Y
+                pub attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+
+		assertEntitlementRequirementMismatchError(t, cause, "Foo")
+	})
+
+	t.Run("adding required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+    	    	    	    	pub entitlement X
+    	    	    	    	pub entitlement Y
+    	    	    	    	pub attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	}
+            }
+        `
+
+		const newCode = `
+            pub contract Test {
+                pub entitlement X
+    	    	    	    	pub entitlement Y
+                pub attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	    	require entitlement Y
+    	    	    	    	}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+
+		assertEntitlementRequirementMismatchError(t, cause, "Foo")
+	})
+
 	t.Run("missing comma in parameter list of old contract", func(t *testing.T) {
 
 		t.Parallel()
@@ -2187,11 +2323,11 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 	const name = "Test"
 	const oldCode = `
-	  pub contract Test { init() { 1 } }
-	`
+    	  pub contract Test { init() { 1 } }
+    	`
 	const newCode = `
-	  pub contract Test { init() { 2 } }
-	`
+    	  pub contract Test { init() { 2 } }
+    	`
 
 	address := common.MustBytesToAddress([]byte{0x42})
 

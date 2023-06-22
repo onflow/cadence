@@ -476,6 +476,11 @@ func (d *Decoder) decodeCapabilityType(
 	return cadence.NewMeteredCapabilityType(d.gauge, borrowType), nil
 }
 
+func (d *Decoder) decodeAuthorization() (cadence.Authorization, error) {
+	err := d.dec.DecodeNil()
+	return cadence.UnauthorizedAccess, err
+}
+
 // decodeReferenceType decodes reference-type or reference-type-value as
 // language=CDDL
 // reference-type =
@@ -505,8 +510,8 @@ func (d *Decoder) decodeReferenceType(
 		return nil, err
 	}
 
-	// element 0: authorized
-	authorized, err := d.dec.DecodeBool()
+	// element 0: authorization
+	authorization, err := d.decodeAuthorization()
 	if err != nil {
 		return nil, err
 	}
@@ -521,7 +526,7 @@ func (d *Decoder) decodeReferenceType(
 		return nil, errors.New("unexpected nil type as reference type")
 	}
 
-	return cadence.NewMeteredReferenceType(d.gauge, authorized, elementType), nil
+	return cadence.NewMeteredReferenceType(d.gauge, authorization, elementType), nil
 }
 
 // decodeRestrictedType decodes restricted-type or restricted-type-value as

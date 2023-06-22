@@ -158,15 +158,19 @@ var ReferenceTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
-			Identifier:     "authorized",
-			TypeAnnotation: BoolTypeAnnotation,
+			Identifier: "entitlements",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: StringType,
+				},
+			),
 		},
 		{
 			Identifier:     "type",
 			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	MetaTypeAnnotation,
+	OptionalMetaTypeAnnotation,
 )
 
 var CapabilityTypeFunctionType = NewSimpleFunctionType(
@@ -228,9 +232,16 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	},
 
 	{
-		Name:      "ReferenceType",
-		Value:     ReferenceTypeFunctionType,
-		DocString: "Creates a run-time type representing a reference type of the given type, with authorization provided by the first argument.",
+		Name:  "ReferenceType",
+		Value: ReferenceTypeFunctionType,
+		DocString: `
+		Creates a run-time type representing a reference type of the given type. 
+
+		The first argument specifies the set of entitlements to which this reference is entitled. 
+
+		Providing an empty array will result in an unauthorized return value. 
+
+		Providing invalid entitlements in the input array will result in a nil return value`,
 	},
 
 	{

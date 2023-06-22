@@ -170,10 +170,15 @@ type jsonDictionaryType struct {
 	Kind      string    `json:"kind"`
 }
 
+type jsonAuthorization struct {
+	Kind         string            `json:"kind"`
+	Entitlements []jsonNominalType `json:"entitlements"`
+}
+
 type jsonReferenceType struct {
-	Type       jsonValue `json:"type"`
-	Kind       string    `json:"kind"`
-	Authorized bool      `json:"authorized"`
+	Type          jsonValue         `json:"type"`
+	Kind          string            `json:"kind"`
+	Authorization jsonAuthorization `json:"authorization"`
 }
 
 type jsonRestrictedType struct {
@@ -656,6 +661,40 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	}
 }
 
+func prepareAuthorization(auth cadence.Authorization) jsonAuthorization {
+	var kind string
+	var entitlements []jsonNominalType
+	switch auth := auth.(type) {
+	case cadence.Unauthorized:
+		kind = "Unauthorized"
+	case cadence.EntitlementMapAuthorization:
+		kind = "EntitlementMapAuthorization"
+		entitlements = []jsonNominalType{
+			{
+				Kind:   "EntitlementMap",
+				TypeID: string(auth.TypeID),
+			},
+		}
+	case cadence.EntitlementSetAuthorization:
+		for _, entitlement := range auth.Entitlements {
+			entitlements = append(entitlements, jsonNominalType{
+				Kind:   "Entitlement",
+				TypeID: string(entitlement),
+			})
+		}
+		switch auth.Kind {
+		case cadence.Conjunction:
+			kind = "EntitlementConjunctionSet"
+		case cadence.Disjunction:
+			kind = "EntitlementDisjunctionSet"
+		}
+	}
+	return jsonAuthorization{
+		Kind:         kind,
+		Entitlements: entitlements,
+	}
+}
+
 func preparePathLink(x cadence.PathLink) jsonValue {
 	return jsonValueObject{
 		Type: linkTypeStr,
@@ -912,9 +951,9 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return typeJson
 	case *cadence.ReferenceType:
 		return jsonReferenceType{
-			Kind:       "Reference",
-			Authorized: typ.Authorized,
-			Type:       prepareType(typ.Type, results),
+			Kind:          "Reference",
+			Authorization: prepareAuthorization(typ.Authorization),
+			Type:          prepareType(typ.Type, results),
 		}
 	case *cadence.RestrictedType:
 		restrictions := make([]jsonValue, len(typ.Restrictions))

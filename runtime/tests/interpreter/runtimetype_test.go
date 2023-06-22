@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -502,22 +503,24 @@ func TestInterpretReferenceType(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       resource R {}
       struct S {}
+	  entitlement X
 
-      let a = ReferenceType(authorized: true, type: Type<@R>())
-      let b = ReferenceType(authorized: false, type: Type<String>())
-      let c = ReferenceType(authorized: true, type: Type<S>()) 
-      let d = Type<auth &R>()
+      let a = ReferenceType(entitlements: ["S.test.X"], type: Type<@R>())!
+      let b = ReferenceType(entitlements: [], type: Type<String>())!
+      let c = ReferenceType(entitlements: ["S.test.X"], type: Type<S>())!
+      let d = Type<auth(X) &R>()
+	  let e = ReferenceType(entitlements: ["S.test.Y"], type: Type<S>())
     `)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.CompositeStaticType{
+				ReferencedType: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "R",
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.R",
 				},
-				Authorized: true,
+				Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
 			},
 		},
 		inter.Globals.Get("a").GetValue(),
@@ -526,8 +529,8 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.PrimitiveStaticTypeString,
-				Authorized:   false,
+				ReferencedType: interpreter.PrimitiveStaticTypeString,
+				Authorization:  interpreter.UnauthorizedAccess,
 			},
 		},
 		inter.Globals.Get("b").GetValue(),
@@ -536,12 +539,12 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.CompositeStaticType{
+				ReferencedType: interpreter.CompositeStaticType{
 					QualifiedIdentifier: "S",
 					Location:            utils.TestLocation,
 					TypeID:              "S.test.S",
 				},
-				Authorized: true,
+				Authorization: interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
 			},
 		},
 		inter.Globals.Get("c").GetValue(),
@@ -550,6 +553,11 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		inter.Globals.Get("a").GetValue(),
 		inter.Globals.Get("d").GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("e").GetValue(),
 	)
 }
 
@@ -707,8 +715,8 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.PrimitiveStaticTypeString,
-					Authorized:   false,
+					ReferencedType: interpreter.PrimitiveStaticTypeString,
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},
@@ -719,8 +727,8 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.PrimitiveStaticTypeInt,
-					Authorized:   false,
+					ReferencedType: interpreter.PrimitiveStaticTypeInt,
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},
@@ -731,12 +739,12 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.CompositeStaticType{
+					ReferencedType: interpreter.CompositeStaticType{
 						QualifiedIdentifier: "R",
 						Location:            utils.TestLocation,
 						TypeID:              "S.test.R",
 					},
-					Authorized: false,
+					Authorization: interpreter.UnauthorizedAccess,
 				},
 			},
 		},

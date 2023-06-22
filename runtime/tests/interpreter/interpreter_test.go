@@ -24,9 +24,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/activations"
 
-	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -4884,7 +4885,9 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
           resource R: RI {}
 
-          fun testInvalidUnauthorized(): Bool {
+		  entitlement E
+
+          fun testValidUnauthorized(): Bool {
               let r  <- create R()
               let ref: AnyStruct = &r as &R{RI}
               let ref2 = ref as? &R
@@ -4895,7 +4898,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
           fun testValidAuthorized(): Bool {
               let r  <- create R()
-              let ref: AnyStruct = &r as auth &R{RI}
+              let ref: AnyStruct = &r as auth(E) &R{RI}
               let ref2 = ref as? &R
               let isNil = ref2 == nil
               destroy r
@@ -4912,13 +4915,13 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
           }
         `)
 
-		result, err := inter.Invoke("testInvalidUnauthorized")
+		result, err := inter.Invoke("testValidUnauthorized")
 		require.NoError(t, err)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.TrueValue,
+			interpreter.FalseValue,
 			result,
 		)
 
@@ -4954,7 +4957,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		// Inject a function that returns a storage reference value,
 		// which is borrowed as:
 		// - `&R{RI}` (unauthorized, if argument for parameter `authorized` == false)
-		// - `auth &R{RI}` (authorized, if argument for parameter `authorized` == true)
+		// - `auth(E) &R{RI}` (authorized, if argument for parameter `authorized` == true)
 
 		storageAddress := common.MustBytesToAddress([]byte{0x42})
 		storagePath := interpreter.PathValue{
@@ -4980,11 +4983,22 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			func(invocation interpreter.Invocation) interpreter.Value {
 				authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
 
+				var auth interpreter.Authorization = interpreter.UnauthorizedAccess
+				if authorized {
+					auth = interpreter.ConvertSemaAccesstoStaticAuthorization(
+						invocation.Interpreter,
+						sema.NewEntitlementSetAccess(
+							[]*sema.EntitlementType{getType("E").(*sema.EntitlementType)},
+							sema.Conjunction,
+						),
+					)
+				}
+
 				riType := getType("RI").(*sema.InterfaceType)
 				rType := getType("R")
 
 				return &interpreter.StorageReferenceValue{
-					Authorized:           authorized,
+					Authorization:        auth,
 					TargetStorageAddress: storageAddress,
 					TargetPath:           storagePath,
 					BorrowedType: &sema.RestrictedType{
@@ -5008,29 +5022,31 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		var err error
 		inter, err = parseCheckAndInterpretWithOptions(t,
 			`
-              resource interface RI {}
+	              resource interface RI {}
 
-              resource R: RI {}
+	              resource R: RI {}
 
-              fun createR(): @R {
-                  return <- create R()
-              }
+				  entitlement E
 
-              fun testInvalidUnauthorized(): &R? {
-                  let ref: AnyStruct = getStorageReference(authorized: false)
-                  return ref as? &R
-              }
+	              fun createR(): @R {
+	                  return <- create R()
+	              }
 
-              fun testValidAuthorized(): &R? {
-                  let ref: AnyStruct = getStorageReference(authorized: true)
-                  return ref as? &R
-              }
+	              fun testValidUnauthorized(): &R? {
+	                  let ref: AnyStruct = getStorageReference(authorized: false)
+	                  return ref as? &R
+	              }
 
-              fun testValidRestricted(): &R{RI}? {
-                  let ref: AnyStruct = getStorageReference(authorized: false)
-                  return ref as? &R{RI}
-              }
-            `,
+	              fun testValidAuthorized(): &R? {
+	                  let ref: AnyStruct = getStorageReference(authorized: true)
+	                  return ref as? &R
+	              }
+
+	              fun testValidRestricted(): &R{RI}? {
+	                  let ref: AnyStruct = getStorageReference(authorized: false)
+	                  return ref as? &R{RI}
+	              }
+	            `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
 					BaseValueActivation: baseValueActivation,
@@ -5059,13 +5075,11 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		storageMapKey := interpreter.StringStorageMapKey(storagePath.Identifier)
 		storageMap.WriteValue(inter, storageMapKey, r)
 
-		result, err := inter.Invoke("testInvalidUnauthorized")
+		result, err := inter.Invoke("testValidUnauthorized")
 		require.NoError(t, err)
 
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.Nil,
+		assert.IsType(t,
+			&interpreter.SomeValue{},
 			result,
 		)
 
@@ -9993,8 +10007,9 @@ func TestInterpretOptionalReference(t *testing.T) {
 	require.Equal(
 		t,
 		&interpreter.EphemeralReferenceValue{
-			Value:        interpreter.NewUnmeteredIntValueFromInt64(1),
-			BorrowedType: sema.IntType,
+			Value:         interpreter.NewUnmeteredIntValueFromInt64(1),
+			BorrowedType:  sema.IntType,
+			Authorization: interpreter.UnauthorizedAccess,
 		},
 		value,
 	)
@@ -10109,8 +10124,9 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	require.Equal(
 		t,
 		&interpreter.EphemeralReferenceValue{
-			Value:        interpreter.NewUnmeteredIntValueFromInt64(2),
-			BorrowedType: sema.IntType,
+			Value:         interpreter.NewUnmeteredIntValueFromInt64(2),
+			BorrowedType:  sema.IntType,
+			Authorization: interpreter.UnauthorizedAccess,
 		},
 		variable.GetValue(),
 	)
@@ -10192,6 +10208,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
                       struct S {}
 
+					  entitlement E
+
                       fun getRef(): &AnyStruct  {
                          %[2]s
                          return ref
@@ -10209,9 +10227,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 			)
 
 			_, err := inter.Invoke("test")
-			RequireError(t, err)
-
-			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+			require.NoError(t, err)
 		})
 	}
 
@@ -10230,6 +10246,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
                       struct S {}
 
+					  entitlement E
+
                       fun test(): &%[1]s {
                           %[2]s
                           let ref2: &AnyStruct = ref
@@ -10243,9 +10261,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 			)
 
 			_, err := inter.Invoke("test")
-			RequireError(t, err)
-
-			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+			require.NoError(t, err)
 		})
 	}
 
@@ -10264,7 +10280,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 		var authKeyword, testNameSuffix string
 		if authorized {
-			authKeyword = "auth"
+			authKeyword = "auth(E)"
 			testNameSuffix = ", auth"
 		}
 

@@ -21,6 +21,7 @@ package cadence
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -2100,40 +2101,158 @@ func (t *FunctionType) Equal(other Type) bool {
 	return t.ReturnType.Equal(otherType.ReturnType)
 }
 
+// Authorization
+
+type Authorization interface {
+	isAuthorization()
+	ID() string
+	Equal(auth Authorization) bool
+}
+
+type Unauthorized struct{}
+
+var UnauthorizedAccess Authorization = Unauthorized{}
+
+func (Unauthorized) isAuthorization() {}
+
+func (Unauthorized) ID() string {
+	return ""
+}
+
+func (Unauthorized) Equal(auth Authorization) bool {
+	switch auth.(type) {
+	case Unauthorized:
+		return true
+	}
+	return false
+}
+
+type EntitlementSetKind uint8
+
+const (
+	Conjunction EntitlementSetKind = iota
+	Disjunction
+)
+
+type EntitlementSetAuthorization struct {
+	Entitlements []common.TypeID
+	Kind         EntitlementSetKind
+}
+
+var _ Authorization = EntitlementSetAuthorization{}
+
+func NewEntitlementSetAuthorization(gauge common.MemoryGauge, entitlements []common.TypeID, kind EntitlementSetKind) EntitlementSetAuthorization {
+	common.UseMemory(gauge, common.MemoryUsage{
+		Kind:   common.MemoryKindCadenceEntitlementSetAccess,
+		Amount: uint64(len(entitlements)),
+	})
+	return EntitlementSetAuthorization{
+		Entitlements: entitlements,
+		Kind:         kind,
+	}
+}
+
+func (EntitlementSetAuthorization) isAuthorization() {}
+
+func (e EntitlementSetAuthorization) ID() string {
+	var builder strings.Builder
+	builder.WriteString("auth(")
+	var separator string
+
+	if e.Kind == Conjunction {
+		separator = ", "
+	} else if e.Kind == Disjunction {
+		separator = " | "
+	}
+
+	for i, entitlement := range e.Entitlements {
+		builder.WriteString(string(entitlement))
+		if i < len(e.Entitlements) {
+			builder.WriteString(separator)
+		}
+	}
+	builder.WriteString(")")
+	return builder.String()
+}
+
+func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
+	switch auth := auth.(type) {
+	case EntitlementSetAuthorization:
+		if len(e.Entitlements) != len(auth.Entitlements) {
+			return false
+		}
+
+		for i, entitlement := range e.Entitlements {
+			if auth.Entitlements[i] != entitlement {
+				return false
+			}
+		}
+		return e.Kind == auth.Kind
+	}
+	return false
+}
+
+type EntitlementMapAuthorization struct {
+	TypeID common.TypeID
+}
+
+var _ Authorization = EntitlementMapAuthorization{}
+
+func NewEntitlementMapAuthorization(gauge common.MemoryGauge, id common.TypeID) EntitlementMapAuthorization {
+	common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindCadenceEntitlementMapAccess))
+	return EntitlementMapAuthorization{
+		TypeID: id,
+	}
+}
+
+func (EntitlementMapAuthorization) isAuthorization() {}
+
+func (e EntitlementMapAuthorization) ID() string {
+	return fmt.Sprintf("auth(%s)", e.TypeID)
+}
+
+func (e EntitlementMapAuthorization) Equal(auth Authorization) bool {
+	switch auth := auth.(type) {
+	case EntitlementMapAuthorization:
+		return e.TypeID == auth.TypeID
+	}
+	return false
+}
+
 // ReferenceType
 
 type ReferenceType struct {
-	Type       Type
-	Authorized bool
-	typeID     string
+	Type          Type
+	Authorization Authorization
+	typeID        string
 }
 
 var _ Type = &ReferenceType{}
 
 func NewReferenceType(
-	authorized bool,
+	authorization Authorization,
 	typ Type,
 ) *ReferenceType {
 	return &ReferenceType{
-		Authorized: authorized,
-		Type:       typ,
+		Authorization: authorization,
+		Type:          typ,
 	}
 }
 
 func NewMeteredReferenceType(
 	gauge common.MemoryGauge,
-	authorized bool,
+	authorization Authorization,
 	typ Type,
 ) *ReferenceType {
 	common.UseMemory(gauge, common.CadenceReferenceTypeMemoryUsage)
-	return NewReferenceType(authorized, typ)
+	return NewReferenceType(authorization, typ)
 }
 
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) ID() string {
 	if t.typeID == "" {
-		t.typeID = sema.FormatReferenceTypeID(t.Authorized, t.Type.ID())
+		t.typeID = fmt.Sprintf("%s&%s", t.Authorization.ID(), t.Type.ID())
 	}
 	return t.typeID
 }
@@ -2144,7 +2263,7 @@ func (t *ReferenceType) Equal(other Type) bool {
 		return false
 	}
 
-	return t.Authorized == otherType.Authorized &&
+	return t.Authorization.Equal(otherType.Authorization) &&
 		t.Type.Equal(otherType.Type)
 }
 

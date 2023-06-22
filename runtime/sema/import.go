@@ -19,7 +19,6 @@
 package sema
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -36,7 +35,7 @@ type ImportElement struct {
 	Type            Type
 	ArgumentLabels  []string
 	DeclarationKind common.DeclarationKind
-	Access          ast.Access
+	Access          Access
 }
 
 // ElaborationImport

@@ -1219,14 +1219,58 @@ func TestImportRuntimeType(t *testing.T) {
 			},
 		},
 		{
-			label: "Reference",
+			label: "Unauthorized Reference",
 			actual: &cadence.ReferenceType{
-				Authorized: false,
-				Type:       cadence.IntType{},
+				Authorization: cadence.UnauthorizedAccess,
+				Type:          cadence.IntType{},
 			},
 			expected: interpreter.ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: interpreter.PrimitiveStaticTypeInt,
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Entitlement Set Reference",
+			actual: &cadence.ReferenceType{
+				Authorization: cadence.EntitlementSetAuthorization{
+					Kind:         cadence.Conjunction,
+					Entitlements: []common.TypeID{"E", "F"},
+				},
+				Type: cadence.IntType{},
+			},
+			expected: interpreter.ReferenceStaticType{
+				Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"E", "F"}, sema.Conjunction),
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+
+		{
+			label: "Entitlement Disjoint Set Reference",
+			actual: &cadence.ReferenceType{
+				Authorization: cadence.EntitlementSetAuthorization{
+					Kind:         cadence.Disjunction,
+					Entitlements: []common.TypeID{"E", "F"},
+				},
+				Type: cadence.IntType{},
+			},
+			expected: interpreter.ReferenceStaticType{
+				Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"E", "F"}, sema.Disjunction),
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Entitlement Map Reference",
+			actual: &cadence.ReferenceType{
+				Authorization: cadence.EntitlementMapAuthorization{
+					TypeID: "M",
+				},
+				Type: cadence.IntType{},
+			},
+			expected: interpreter.ReferenceStaticType{
+				Authorization: interpreter.EntitlementMapAuthorization{
+					TypeID: "M",
+				},
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
@@ -1814,12 +1858,14 @@ func TestExportReferenceValue(t *testing.T) {
 				nil,
 			}).WithType(&cadence.VariableSizedArrayType{
 				ElementType: &cadence.ReferenceType{
-					Type: cadence.AnyStructType{},
+					Type:          cadence.AnyStructType{},
+					Authorization: cadence.UnauthorizedAccess,
 				},
 			}),
 		}).WithType(&cadence.VariableSizedArrayType{
 			ElementType: &cadence.ReferenceType{
-				Type: cadence.AnyStructType{},
+				Type:          cadence.AnyStructType{},
+				Authorization: cadence.UnauthorizedAccess,
 			},
 		})
 
@@ -4202,7 +4248,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
-			&cadence.ReferenceType{Type: cadence.IntType{}},
+			&cadence.ReferenceType{Type: cadence.IntType{}, Authorization: cadence.UnauthorizedAccess},
 		)
 
 		script := `
@@ -4303,9 +4349,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
-			&cadence.ReferenceType{
-				Type: cadence.IntType{},
-			},
+			&cadence.ReferenceType{Type: cadence.IntType{}, Authorization: cadence.UnauthorizedAccess},
 		)
 
 		script := `
@@ -4352,7 +4396,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-			&cadence.ReferenceType{Type: cadence.IntType{}},
+			&cadence.ReferenceType{Type: cadence.IntType{}, Authorization: cadence.UnauthorizedAccess},
 		)
 
 		script := `

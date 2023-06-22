@@ -563,6 +563,16 @@ func (*generator) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) str
 	panic("transaction declarations are not supported")
 }
 
+func (*generator) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) struct{} {
+	// TODO
+	panic("entitlement declarations are not supported")
+}
+
+func (*generator) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) struct{} {
+	// TODO
+	panic("entitlement declarations are not supported")
+}
+
 func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{}) {
 	fieldName := decl.Identifier.Identifier
 	fullTypeName := g.currentFullTypeName()
@@ -650,6 +660,8 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 				Type: dst.NewIdent("ReferenceType"),
 				Elts: []dst.Expr{
 					goKeyValue("Type", borrowType),
+					// TODO: add support for parsing entitlements
+					goKeyValue("Authorization", dst.NewIdent("UnauthorizedAccess")),
 				},
 			},
 		}

@@ -883,8 +883,8 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
               fun invalidBorrowS(): &S2? {
                   let s = S()
                   account.save(s, to: /storage/another_s)
-                  let borrowedS = account.borrow<auth &AnyStruct>(from: /storage/another_s)
-                  return borrowedS as! auth &S2?
+                  let borrowedS = account.borrow<&AnyStruct>(from: /storage/another_s)
+                  return borrowedS as! &S2?
               }
             `,
 			sema.Config{},
@@ -1062,8 +1062,8 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						nil,
 						&sema.ReferenceType{
-							Authorized: false,
-							Type:       rType,
+							Authorization: sema.UnauthorizedAccess,
+							Type:          rType,
 						},
 					)
 
@@ -1111,8 +1111,8 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						nil,
 						&sema.ReferenceType{
-							Authorized: false,
-							Type:       r2Type,
+							Authorization: sema.UnauthorizedAccess,
+							Type:          r2Type,
 						},
 					)
 
@@ -1215,8 +1215,8 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						nil,
 						&sema.ReferenceType{
-							Authorized: false,
-							Type:       sType,
+							Authorization: sema.UnauthorizedAccess,
+							Type:          sType,
 						},
 					)
 
@@ -1265,8 +1265,8 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						nil,
 						&sema.ReferenceType{
-							Authorized: false,
-							Type:       s2Type,
+							Authorization: sema.UnauthorizedAccess,
+							Type:          s2Type,
 						},
 					)
 
@@ -1372,8 +1372,8 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
 					nil,
 					&sema.ReferenceType{
-						Authorized: false,
-						Type:       sType,
+						Authorization: sema.UnauthorizedAccess,
+						Type:          sType,
 					},
 				)
 
@@ -1454,8 +1454,8 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
 					nil,
 					&sema.ReferenceType{
-						Authorized: false,
-						Type:       sType,
+						Authorization: sema.UnauthorizedAccess,
+						Type:          sType,
 					},
 				)
 
@@ -1483,8 +1483,8 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				expectedBorrowType = interpreter.ConvertSemaToStaticType(
 					nil,
 					&sema.ReferenceType{
-						Authorized: false,
-						Type:       sType,
+						Authorization: sema.UnauthorizedAccess,
+						Type:          sType,
 					},
 				)
 
@@ -1917,8 +1917,8 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 						expectedBorrowType := interpreter.ConvertSemaToStaticType(
 							nil,
 							&sema.ReferenceType{
-								Authorized: false,
-								Type:       sema.IntType,
+								Authorization: sema.UnauthorizedAccess,
+								Type:          sema.IntType,
 							},
 						)
 						require.Equal(t,

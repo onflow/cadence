@@ -20,6 +20,7 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
@@ -29,3 +30,5 @@ type StringVariableOrderedMap = orderedmap.OrderedMap[string, *Variable]
 type TypeParameterTypeOrderedMap = orderedmap.OrderedMap[*TypeParameter, Type]
 type StringImportElementOrderedMap = orderedmap.OrderedMap[string, ImportElement]
 type MemberFieldDeclarationOrderedMap = orderedmap.OrderedMap[*Member, *ast.FieldDeclaration]
+type EntitlementOrderedSet = orderedmap.OrderedMap[*EntitlementType, struct{}]
+type TypeIDOrderedSet = orderedmap.OrderedMap[common.TypeID, struct{}]

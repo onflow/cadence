@@ -35,6 +35,8 @@ type StatementDeclarationVisitor[T any] interface {
 	VisitCompositeDeclaration(*CompositeDeclaration) T
 	VisitAttachmentDeclaration(*AttachmentDeclaration) T
 	VisitInterfaceDeclaration(*InterfaceDeclaration) T
+	VisitEntitlementDeclaration(*EntitlementDeclaration) T
+	VisitEntitlementMappingDeclaration(*EntitlementMappingDeclaration) T
 	VisitTransactionDeclaration(*TransactionDeclaration) T
 }
 
@@ -82,6 +84,12 @@ func AcceptDeclaration[T any](declaration Declaration, visitor DeclarationVisito
 
 	case ElementTypeTransactionDeclaration:
 		return visitor.VisitTransactionDeclaration(declaration.(*TransactionDeclaration))
+
+	case ElementTypeEntitlementDeclaration:
+		return visitor.VisitEntitlementDeclaration(declaration.(*EntitlementDeclaration))
+
+	case ElementTypeEntitlementMappingDeclaration:
+		return visitor.VisitEntitlementMappingDeclaration(declaration.(*EntitlementMappingDeclaration))
 	}
 
 	panic(errors.NewUnreachableError())
@@ -159,6 +167,9 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 
 	case ElementTypeTransactionDeclaration:
 		return visitor.VisitTransactionDeclaration(statement.(*TransactionDeclaration))
+
+	case ElementTypeEntitlementDeclaration:
+		return visitor.VisitEntitlementDeclaration(statement.(*EntitlementDeclaration))
 
 	case ElementTypeRemoveStatement:
 		return visitor.VisitRemoveStatement(statement.(*RemoveStatement))
