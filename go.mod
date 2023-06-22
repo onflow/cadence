@@ -32,6 +32,7 @@ require (
 require (
 	github.com/SaveTheRbtz/mph v0.1.2
 	github.com/bytecodealliance/wasmtime-go/v7 v7.0.0
+	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/k0kubun/pp/v3 v3.2.0
 	github.com/logrusorgru/aurora/v4 v4.0.0
 )
@@ -41,7 +42,7 @@ require github.com/zeebo/xxh3 v1.0.2 // indirect
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fxamacker/circlehash v0.3.0 // indirect
-	github.com/k0kubun/pp v3.0.1+incompatible // indirect
+	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
