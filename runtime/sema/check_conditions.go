@@ -45,7 +45,7 @@ func (checker *Checker) visitConditions(conditions []ast.Condition) {
 	})
 }
 
-func (checker *Checker) checkCondition(condition ast.Condition) Type {
+func (checker *Checker) checkCondition(condition ast.Condition) {
 
 	switch condition := condition.(type) {
 	case *ast.TestCondition:
@@ -64,8 +64,6 @@ func (checker *Checker) checkCondition(condition ast.Condition) Type {
 	default:
 		panic(errors.NewUnreachableError())
 	}
-
-	return nil
 }
 
 func (checker *Checker) rewritePostConditions(postConditions ast.Conditions) PostConditionsRewrite {
