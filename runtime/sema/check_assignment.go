@@ -122,8 +122,8 @@ func (checker *Checker) checkAssignment(
 // to a resource; because resources are moved instead of copied, we cannot currently
 // track the origin of a write target when it is a resource. Consider:
 //
-//	pub resource R {
-//	  pub(set) var x: Int
+//	access(all) resource R {
+//	  access(all) var x: Int
 //	  init(x: Int) {
 //	    self.x = x
 //	  }
@@ -347,6 +347,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		checker.report(
 			&InvalidAssignmentAccessError{
 				Name:              member.Identifier.Identifier,
+				ContainerType:     member.ContainerType,
 				RestrictingAccess: member.Access,
 				DeclarationKind:   member.DeclarationKind,
 				Range:             ast.NewRangeFromPositioned(checker.memoryGauge, target.Identifier),

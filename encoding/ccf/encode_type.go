@@ -411,34 +411,50 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 		return err
 	}
 
-	switch len(restrictions) {
-	case 0:
-		// Short-circuit if there is no restriction.
-		return nil
-
-	case 1:
-		// Avoid overhead of sorting if there is only one restriction.
-		// Encode restriction type with given encodeTypeFn.
-		return encodeTypeFn(restrictions[0], tids)
-
-	default:
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
-		//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
-		sorter := newBytewiseCadenceTypeSorter(restrictions)
-
-		sort.Sort(sorter)
-
-		for _, index := range sorter.indexes {
+	switch e.em.sortRestrictedTypes {
+	case SortNone:
+		for _, res := range restrictions {
 			// Encode restriction type with given encodeTypeFn.
-			err = encodeRestrictionTypeFn(restrictions[index], tids)
+			err = encodeRestrictionTypeFn(res, tids)
 			if err != nil {
 				return err
 			}
 		}
-
 		return nil
+
+	case SortBytewiseLexical:
+		switch len(restrictions) {
+		case 0:
+			// Short-circuit if there is no restriction.
+			return nil
+
+		case 1:
+			// Avoid overhead of sorting if there is only one restriction.
+			// Encode restriction type with given encodeTypeFn.
+			return encodeTypeFn(restrictions[0], tids)
+
+		default:
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
+			//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
+			sorter := newBytewiseCadenceTypeSorter(restrictions)
+
+			sort.Sort(sorter)
+
+			for _, index := range sorter.indexes {
+				// Encode restriction type with given encodeTypeFn.
+				err = encodeRestrictionTypeFn(restrictions[index], tids)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		}
+
+	default:
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for restricted types: %d", e.em.sortRestrictedTypes))
 	}
 }
 

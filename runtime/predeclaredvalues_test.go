@@ -44,8 +44,8 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	}
 
 	contract := []byte(`
-	  pub contract C {
-	      pub fun foo(): Int {
+	  access(all) contract C {
+	      access(all) fun foo(): Int {
 	          return foo
 	      }
 	  }
@@ -54,7 +54,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	script := []byte(`
 	  import C from 0x1
 
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 		  return foo + C.foo()
 	  }
 	`)

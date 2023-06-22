@@ -74,13 +74,11 @@ func (mode AccessCheckMode) IsWriteableAccess(access Access) bool {
 	switch mode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
-
-		return access.PermitsAccess(PrimitiveAccess(ast.AccessPublicSettable))
+		return false
 
 	case AccessCheckModeNotSpecifiedUnrestricted:
 
-		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
-			access.PermitsAccess(PrimitiveAccess(ast.AccessPublicSettable))
+		return access == PrimitiveAccess(ast.AccessNotSpecified)
 
 	case AccessCheckModeNone:
 		return true
