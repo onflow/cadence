@@ -510,6 +510,15 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 			"170141183460469231731687303715884105728": {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			"340282366920938463463374607431768211455": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
+		"Word256": {
+			"0":   {0},
+			"42":  {42},
+			"127": {127},
+			"128": {128},
+			"57896044618658097711785492504343953926634992332820282019728792003956564819967":  {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			"57896044618658097711785492504343953926634992332820282019728792003956564819968":  {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			"115792089237316195423570985008687907853269984665640564039457584007913129639935": {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
 		// Fix*
 		"Fix64": {
 			"0.0":   {0, 0, 0, 0, 0, 0, 0, 0},
@@ -715,6 +724,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			"[127]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(127)),
 			"[128]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(128)),
 			"[200]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt128ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
 		},
 		"UInt256": {
 			"[0]":   interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(0)),
@@ -722,6 +732,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			"[127]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(127)),
 			"[128]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(128)),
 			"[200]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredUInt256ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
 		},
 		// Word*
 		"Word8": {
@@ -761,6 +772,15 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 			"[127]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(127)),
 			"[128]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(128)),
 			"[200]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord128ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
+		},
+		"Word256": {
+			"[0]":   interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(0)),
+			"[42]":  interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(42)),
+			"[127]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(127)),
+			"[128]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(128)),
+			"[200]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(200)),
+			"[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]": interpreter.NewUnmeteredWord256ValueFromBigInt(big.NewInt(0).SetBytes([]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255})),
 		},
 		// Fix*
 		"Fix64": {
@@ -852,6 +872,10 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 		"Word128": {
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
 			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+		},
+		"Word256": {
+			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
+			"[0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]",
 		},
 		// Fix*
 		"Fix64": {

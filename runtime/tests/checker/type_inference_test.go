@@ -816,17 +816,17 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				code: `
                     let x = [Foo(), Bar(), Baz()]
 
-                    pub struct interface I1 {}
+                    access(all) struct interface I1 {}
 
-                    pub struct interface I2 {}
+                    access(all) struct interface I2 {}
 
-                    pub struct interface I3 {}
+                    access(all) struct interface I3 {}
 
-                    pub struct Foo: I1, I2 {}
+                    access(all) struct Foo: I1, I2 {}
 
-                    pub struct Bar: I2, I3 {}
+                    access(all) struct Bar: I2, I3 {}
 
-                    pub struct Baz: I1, I2, I3 {}
+                    access(all) struct Baz: I1, I2, I3 {}
                 `,
 				expectedElementType: &sema.RestrictedType{
 					Type: sema.AnyStructType,
@@ -844,11 +844,11 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				code: `
                     let x = [[Bar()], [Baz()]]
 
-                    pub struct interface Foo {}
+                    access(all) struct interface Foo {}
 
-                    pub struct Bar: Foo {}
+                    access(all) struct Bar: Foo {}
 
-                    pub struct Baz: Foo {}
+                    access(all) struct Baz: Foo {}
                 `,
 				expectedElementType: &sema.VariableSizedType{
 					Type: &sema.RestrictedType{
@@ -869,11 +869,11 @@ func TestCheckArraySupertypeInference(t *testing.T) {
                     // Covariance is supported with explicit type annotation.
                     let x = [[Bar()], [Baz()]] as [[{Foo}]]
 
-                    pub struct interface Foo {}
+                    access(all) struct interface Foo {}
 
-                    pub struct Bar: Foo {}
+                    access(all) struct Bar: Foo {}
 
-                    pub struct Baz: Foo {}
+                    access(all) struct Baz: Foo {}
                 `,
 				expectedElementType: &sema.VariableSizedType{
 					Type: &sema.RestrictedType{
@@ -937,9 +937,9 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 		code := `
             let x = [<- create Foo(), Bar()]
 
-            pub resource Foo {}
+            access(all) resource Foo {}
 
-            pub struct Bar {}
+            access(all) struct Bar {}
         `
 		_, err := ParseAndCheck(t, code)
 		errs := RequireCheckerErrors(t, err, 1)
@@ -1016,17 +1016,17 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				code: `
                     let x = {0: Foo(), 1: Bar(), 2: Baz()}
 
-                    pub struct interface I1 {}
+                    access(all) struct interface I1 {}
 
-                    pub struct interface I2 {}
+                    access(all) struct interface I2 {}
 
-                    pub struct interface I3 {}
+                    access(all) struct interface I3 {}
 
-                    pub struct Foo: I1, I2 {}
+                    access(all) struct Foo: I1, I2 {}
 
-                    pub struct Bar: I2, I3 {}
+                    access(all) struct Bar: I2, I3 {}
 
-                    pub struct Baz: I1, I2, I3 {}
+                    access(all) struct Baz: I1, I2, I3 {}
                 `,
 				expectedKeyType: sema.IntType,
 				expectedValueType: &sema.RestrictedType{
@@ -1045,11 +1045,11 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				code: `
                     let x = { 0: {100: Bar()}, 1: {200: Baz()} }
 
-                    pub struct interface Foo {}
+                    access(all) struct interface Foo {}
 
-                    pub struct Bar: Foo {}
+                    access(all) struct Bar: Foo {}
 
-                    pub struct Baz: Foo {}
+                    access(all) struct Baz: Foo {}
                 `,
 				expectedKeyType: sema.IntType,
 				expectedValueType: &sema.DictionaryType{
@@ -1072,11 +1072,11 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
                     // Covariance is supported with explicit type annotation.
                     let x = { 0: {100: Bar()}, 1: {200: Baz()} } as {Int: {Int: {Foo}}}
 
-                    pub struct interface Foo {}
+                    access(all) struct interface Foo {}
 
-                    pub struct Bar: Foo {}
+                    access(all) struct Bar: Foo {}
 
-                    pub struct Baz: Foo {}
+                    access(all) struct Baz: Foo {}
                 `,
 				expectedKeyType: sema.IntType,
 				expectedValueType: &sema.DictionaryType{
@@ -1104,7 +1104,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				code: `
                     let x <- {0: <- {10: <- create Foo()}, 1: <- {"one": <- create Foo()}}
 
-                    pub resource Foo {}
+                    access(all) resource Foo {}
                 `,
 				expectedKeyType:   sema.IntType,
 				expectedValueType: sema.AnyResourceType,
@@ -1133,9 +1133,9 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		code := `
             let x = {0: <- create Foo(), 1: Bar()}
 
-            pub resource Foo {}
+            access(all) resource Foo {}
 
-            pub struct Bar {}
+            access(all) struct Bar {}
         `
 		_, err := ParseAndCheck(t, code)
 		errs := RequireCheckerErrors(t, err, 1)
@@ -1232,15 +1232,15 @@ func TestCheckCompositeSupertypeInference(t *testing.T) {
 		code := `
                 let x = true ? Foo() : Bar()
 
-                pub struct interface I1 {}
+                access(all) struct interface I1 {}
 
-                pub struct interface I2: I1 {}
+                access(all) struct interface I2: I1 {}
 
-                pub struct interface I3: I1 {}
+                access(all) struct interface I3: I1 {}
 
-                pub struct Foo: I2 {}
+                access(all) struct Foo: I2 {}
 
-                pub struct Bar: I3 {}
+                access(all) struct Bar: I3 {}
             `
 
 		expectedType := &sema.RestrictedType{

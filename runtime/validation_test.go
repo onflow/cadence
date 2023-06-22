@@ -95,7 +95,7 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
-          pub fun main(value: AnyStruct) {}
+          access(all) fun main(value: AnyStruct) {}
         `)
 
 		runtimeInterface := &testRuntimeInterface{

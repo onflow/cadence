@@ -156,7 +156,7 @@ func (e EntitlementAccess) subset(other EntitlementAccess) bool {
 func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
 	switch other := other.(type) {
 	case PrimitiveAccess:
-		return other == AccessPublic || other == AccessPublicSettable
+		return other == AccessAll
 	case EntitlementAccess:
 		return e.subset(other)
 	default:
@@ -170,11 +170,10 @@ type PrimitiveAccess uint8
 
 const (
 	AccessNotSpecified PrimitiveAccess = iota
-	AccessPrivate
+	AccessSelf
 	AccessContract
 	AccessAccount
-	AccessPublic
-	AccessPublicSettable
+	AccessAll
 )
 
 func PrimitiveAccessCount() int {
@@ -189,9 +188,8 @@ func (PrimitiveAccess) isAccess() {}
 
 var BasicAccesses = []PrimitiveAccess{
 	AccessNotSpecified,
-	AccessPrivate,
-	AccessPublic,
-	AccessPublicSettable,
+	AccessSelf,
+	AccessAll,
 }
 
 var AllAccesses = append(BasicAccesses[:],
@@ -203,12 +201,10 @@ func (a PrimitiveAccess) Keyword() string {
 	switch a {
 	case AccessNotSpecified:
 		return ""
-	case AccessPrivate:
-		return "priv"
-	case AccessPublic:
-		return "pub"
-	case AccessPublicSettable:
-		return "pub(set)"
+	case AccessSelf:
+		return "access(self)"
+	case AccessAll:
+		return "access(all)"
 	case AccessAccount:
 		return "access(account)"
 	case AccessContract:
@@ -222,12 +218,10 @@ func (a PrimitiveAccess) Description() string {
 	switch a {
 	case AccessNotSpecified:
 		return "not specified"
-	case AccessPrivate:
-		return "private"
-	case AccessPublic:
-		return "public"
-	case AccessPublicSettable:
-		return "public settable"
+	case AccessSelf:
+		return "self"
+	case AccessAll:
+		return "all"
 	case AccessAccount:
 		return "account"
 	case AccessContract:

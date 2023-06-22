@@ -72,6 +72,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 		{sema.Word32Type, "42", interpreter.NewUnmeteredWord32Value(42)},
 		{sema.Word64Type, "42", interpreter.NewUnmeteredWord64Value(42)},
 		{sema.Word128Type, "42", interpreter.NewUnmeteredWord128ValueFromUint64(42)},
+		{sema.Word256Type, "42", interpreter.NewUnmeteredWord256ValueFromUint64(42)},
 		{sema.Fix64Type, "1.23", interpreter.NewUnmeteredFix64Value(123000000)},
 		{sema.UFix64Type, "1.23", interpreter.NewUnmeteredUFix64Value(123000000)},
 	}

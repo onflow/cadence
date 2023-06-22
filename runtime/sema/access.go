@@ -117,7 +117,7 @@ func (e EntitlementSetAccess) Equal(other Access) bool {
 func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
-		return otherAccess == PrimitiveAccess(ast.AccessPrivate)
+		return otherAccess == PrimitiveAccess(ast.AccessSelf)
 	case EntitlementSetAccess:
 		switch otherAccess.SetKind {
 		case Disjunction:
@@ -186,7 +186,7 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 func (e EntitlementSetAccess) IsLessPermissiveThan(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
-		return ast.PrimitiveAccess(otherAccess) != ast.AccessPrivate
+		return ast.PrimitiveAccess(otherAccess) != ast.AccessSelf
 	case EntitlementSetAccess:
 		// subset check returns true on equality, and we want this function to be false on equality, so invert the >= check
 		return !e.PermitsAccess(otherAccess)
@@ -240,7 +240,7 @@ func (e EntitlementMapAccess) Equal(other Access) bool {
 func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
-		return otherAccess == PrimitiveAccess(ast.AccessPrivate)
+		return otherAccess == PrimitiveAccess(ast.AccessSelf)
 	case EntitlementMapAccess:
 		return e.Type.Equal(otherAccess.Type)
 	// if we are initializing a field that was declared with an entitlement-mapped reference type,
@@ -277,7 +277,7 @@ func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
 func (e EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
-		return ast.PrimitiveAccess(otherAccess) != ast.AccessPrivate
+		return ast.PrimitiveAccess(otherAccess) != ast.AccessSelf
 	case EntitlementMapAccess:
 		// this should be false on equality
 		return !e.Type.Equal(otherAccess.Type)
@@ -417,6 +417,6 @@ func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
 		return ast.PrimitiveAccess(a) >= ast.PrimitiveAccess(otherPrimitive)
 	}
-	// only priv access is guaranteed to be less permissive than entitlement-based access, but cannot appear in interfaces
-	return ast.PrimitiveAccess(a) != ast.AccessPrivate
+	// only access(self) access is guaranteed to be less permissive than entitlement-based access, but cannot appear in interfaces
+	return ast.PrimitiveAccess(a) != ast.AccessSelf
 }

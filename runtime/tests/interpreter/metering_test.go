@@ -38,7 +38,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
-          pub fun a() {
+          access(all) fun a() {
               true
               true
           }
@@ -165,7 +165,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
-          pub fun a() {
+          access(all) fun a() {
               var i = 1
               while i <= 4 {
                   i = i + 1
@@ -292,9 +292,9 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
-          pub fun a() {}
+          access(all) fun a() {}
 
-          pub fun b() {
+          access(all) fun b() {
               true
               true
               a()
@@ -312,7 +312,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 		`
           import b from "imported"
 
-          pub fun c() {
+          access(all) fun c() {
               true
               true
               b()
@@ -320,7 +320,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
               true
           }
 
-          pub fun d() {
+          access(all) fun d() {
               true
               true
               c()

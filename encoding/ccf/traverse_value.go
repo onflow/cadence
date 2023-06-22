@@ -65,6 +65,10 @@ func compositeTypesFromValue(v cadence.Value) ([]cadence.Type, ccfTypeIDByCadenc
 
 func (ct *compositeTypes) traverseValue(v cadence.Value) {
 
+	if v == nil {
+		return
+	}
+
 	// Traverse type for composite/interface types.
 	checkRuntimeType := ct.traverseType(v.Type())
 
@@ -202,6 +206,7 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		cadence.Word32Type,
 		cadence.Word64Type,
 		cadence.Word128Type,
+		cadence.Word256Type,
 		cadence.Fix64Type,
 		cadence.UFix64Type,
 		cadence.PathType,

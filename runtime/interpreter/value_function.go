@@ -325,7 +325,7 @@ type BoundFunctionValue struct {
 	Function           FunctionValue
 	Base               *EphemeralReferenceValue
 	Self               *MemberAccessibleValue
-	BoundAuthorization *EntitlementSetAuthorization
+	BoundAuthorization Authorization
 }
 
 var _ Value = BoundFunctionValue{}
@@ -336,7 +336,7 @@ func NewBoundFunctionValue(
 	function FunctionValue,
 	self *MemberAccessibleValue,
 	base *EphemeralReferenceValue,
-	boundAuth *EntitlementSetAuthorization,
+	boundAuth Authorization,
 ) BoundFunctionValue {
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
@@ -386,7 +386,15 @@ func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 }
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	invocation.Self = f.Self
+	self := f.Self
+	invocation.Self = self
+	if self != nil {
+		if resource, ok := (*self).(ResourceKindedValue); ok && resource.IsDestroyed() {
+			panic(DestroyedResourceError{
+				LocationRange: invocation.LocationRange,
+			})
+		}
+	}
 	invocation.Base = f.Base
 	invocation.BoundAuthorization = f.BoundAuthorization
 	return f.Function.invoke(invocation)

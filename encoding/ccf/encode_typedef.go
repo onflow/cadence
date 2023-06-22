@@ -136,30 +136,46 @@ func (e *Encoder) encodeCompositeTypeFields(typ cadence.CompositeType, tids ccfT
 		return err
 	}
 
-	switch len(fieldTypes) {
-	case 0:
-		// Short-circuit if there is no field type.
-		return nil
-
-	case 1:
-		// Avoid overhead of sorting if there is only one field.
-		return e.encodeCompositeTypeField(fieldTypes[0], tids)
-
-	default:
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "composite-type.fields MUST be sorted by name"
-		sortedIndexes := e.getSortedFieldIndex(typ)
-
-		for _, index := range sortedIndexes {
-			// Encode field
-			err = e.encodeCompositeTypeField(fieldTypes[index], tids)
+	switch e.em.sortCompositeFields {
+	case SortNone:
+		// Encode fields without sorting.
+		for _, fieldType := range fieldTypes {
+			err = e.encodeCompositeTypeField(fieldType, tids)
 			if err != nil {
 				return err
 			}
 		}
-
 		return nil
+
+	case SortBytewiseLexical:
+		switch len(fieldTypes) {
+		case 0:
+			// Short-circuit if there is no field type.
+			return nil
+
+		case 1:
+			// Avoid overhead of sorting if there is only one field.
+			return e.encodeCompositeTypeField(fieldTypes[0], tids)
+
+		default:
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "composite-type.fields MUST be sorted by name"
+			sortedIndexes := e.getSortedFieldIndex(typ)
+
+			for _, index := range sortedIndexes {
+				// Encode field
+				err = e.encodeCompositeTypeField(fieldTypes[index], tids)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		}
+
+	default:
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for composite field types: %d", e.em.sortCompositeFields))
 	}
 }
 

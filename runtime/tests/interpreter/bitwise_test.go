@@ -88,6 +88,9 @@ var bitwiseTestValueFunctions = map[string]func(int) interpreter.NumberValue{
 	"Word128": func(v int) interpreter.NumberValue {
 		return interpreter.NewUnmeteredWord128ValueFromUint64(uint64(v))
 	},
+	"Word256": func(v int) interpreter.NumberValue {
+		return interpreter.NewUnmeteredWord256ValueFromUint64(uint64(v))
+	},
 }
 
 func init() {

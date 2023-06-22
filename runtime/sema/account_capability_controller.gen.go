@@ -31,6 +31,25 @@ For example, it could be used to describe the purpose of the capability.
 Empty by default.
 `
 
+const AccountCapabilityControllerTypeSetTagFunctionName = "setTag"
+
+var AccountCapabilityControllerTypeSetTagFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "tag",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const AccountCapabilityControllerTypeSetTagFunctionDocString = `
+Updates this controller's tag to the provided string
+`
+
 const AccountCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var AccountCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -89,15 +108,22 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublicSettable,
+				ast.AccessAll,
 				ast.VariableKindVariable,
 				AccountCapabilityControllerTypeTagFieldName,
 				AccountCapabilityControllerTypeTagFieldType,
 				AccountCapabilityControllerTypeTagFieldDocString,
 			),
+			NewUnmeteredFunctionMember(
+				t,
+				ast.AccessAll,
+				AccountCapabilityControllerTypeSetTagFunctionName,
+				AccountCapabilityControllerTypeSetTagFunctionType,
+				AccountCapabilityControllerTypeSetTagFunctionDocString,
+			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				AccountCapabilityControllerTypeBorrowTypeFieldName,
 				AccountCapabilityControllerTypeBorrowTypeFieldType,
@@ -105,7 +131,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				AccountCapabilityControllerTypeCapabilityIDFieldName,
 				AccountCapabilityControllerTypeCapabilityIDFieldType,
@@ -113,7 +139,7 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				AccountCapabilityControllerTypeDeleteFunctionName,
 				AccountCapabilityControllerTypeDeleteFunctionType,
 				AccountCapabilityControllerTypeDeleteFunctionDocString,
