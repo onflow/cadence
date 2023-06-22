@@ -33,14 +33,14 @@ func TestCheckInvalidEventTypeRequirementConformance(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      pub contract interface CI {
+      access(all) contract interface CI {
 
-          pub event E(a: Int)
+          access(all) event E(a: Int)
       }
 
-      pub contract C: CI {
+      access(all) contract C: CI {
 
-          pub event E(b: String)
+          access(all) event E(b: String)
       }
     `)
 
@@ -59,11 +59,11 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 				`
                   %s
 
-                  pub contract interface CI {
+                  access(all) contract interface CI {
                       %s
                   }
 
-                  pub contract C: CI {
+                  access(all) contract C: CI {
                       %s
                   }
                 `,
@@ -88,8 +88,8 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 
 		test(
 			``,
-			`pub struct S {}`,
-			`pub struct S {}`,
+			`access(all) struct S {}`,
+			`access(all) struct S {}`,
 			true,
 		)
 	})
@@ -101,10 +101,10 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 		test(
 			``,
 			`
-              pub struct S {}
+              access(all) struct S {}
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo() {}
               }
             `,
@@ -119,12 +119,12 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 		test(
 			``,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo()
               }
             `,
 			`
-              pub struct S {}
+              access(all) struct S {}
             `,
 			false,
 		)
@@ -137,12 +137,12 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 		test(
 			``,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(x: Int)
               }
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(y: Int) {}
               }
             `,
@@ -157,12 +157,12 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 		test(
 			``,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(x: Int)
               }
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(x: String) {}
               }
             `,
@@ -177,12 +177,12 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 		test(
 			``,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(x y: String)
               }
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(x z: String) {}
               }
             `,
@@ -196,16 +196,16 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 
 		test(
 			`
-                pub struct interface I {}
-                pub struct T: I {}
+                access(all) struct interface I {}
+                access(all) struct T: I {}
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(bar: {I})
               }
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(bar: T) {}
               }
             `,
@@ -219,17 +219,17 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 
 		test(
 			`
-                pub contract X {
+                access(all) contract X {
                     struct Bar {}
                 }
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(bar: X.Bar)
               }
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(bar: X.Bar) {}
               }
             `,
@@ -243,21 +243,21 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 
 		test(
 			`
-              pub contract X {
+              access(all) contract X {
                   struct Bar {}
               }
 
-              pub contract Y {
+              access(all) contract Y {
                   struct Bar {}
               }
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(bar: X.Bar)
               }
             `,
 			`
-              pub struct S {
+              access(all) struct S {
                   fun foo(bar: Y.Bar) {}
               }
             `,
@@ -508,12 +508,12 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-      pub resource interface I {
+      access(all) resource interface I {
           let x: Int 
           init(x: Int)
       }
 
-      pub resource R: I {
+      access(all) resource R: I {
         let x: Int 
         init() {
             self.x = 1
@@ -532,8 +532,8 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 
 		require.Equal(t, &sema.MemberMismatchNote{
 			Range: ast.Range{
-				StartPos: ast.Position{Offset: 142, Line: 9, Column: 8},
-				EndPos:   ast.Position{Offset: 145, Line: 9, Column: 11},
+				StartPos: ast.Position{Offset: 158, Line: 9, Column: 8},
+				EndPos:   ast.Position{Offset: 161, Line: 9, Column: 11},
 			},
 		}, notes[0])
 	})
@@ -543,11 +543,11 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        pub resource interface I {
+        access(all) resource interface I {
             fun foo(): Int
         }
 
-        pub resource R: I {
+        access(all) resource R: I {
         }
         `)
 
@@ -563,12 +563,12 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        pub resource interface I {
+        access(all) resource interface I {
             fun foo(): Int
             fun bar(): Int
         }
 
-        pub resource R: I {
+        access(all) resource R: I {
         }
         `)
 
@@ -584,11 +584,11 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        pub contract interface I {
-            pub struct S {}
+        access(all) contract interface I {
+            access(all) struct S {}
         }
 
-        pub contract C: I {
+        access(all) contract C: I {
         }
         `)
 
@@ -604,12 +604,12 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        pub contract interface I {
-            pub struct S {}
-            pub resource R {}
+        access(all) contract interface I {
+            access(all) struct S {}
+            access(all) resource R {}
         }
 
-        pub contract C: I {
+        access(all) contract C: I {
         }
         `)
 
@@ -625,12 +625,12 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        pub contract interface I {
-            pub struct S {}
-            pub fun foo() 
+        access(all) contract interface I {
+            access(all) struct S {}
+            access(all) fun foo() 
         }
 
-        pub contract C: I {
+        access(all) contract C: I {
         }
         `)
 

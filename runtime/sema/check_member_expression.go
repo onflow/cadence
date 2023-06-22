@@ -89,24 +89,6 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 		}
 	}
 
-	// If the member,
-	//   1) is accessed via a reference, and
-	//   2) is container-typed,
-	// then the member type should also be a reference.
-
-	// Note: For attachments, `self` is always a reference.
-	// But we do not want to return a reference for `self.something`.
-	// Otherwise, things like `destroy self.something` would become invalid.
-	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
-	// i.e: `accessedSelfMember == nil`
-
-	if accessedSelfMember == nil &&
-		shouldReturnReference(accessedType, memberType) &&
-		member.DeclarationKind == common.DeclarationKindField {
-		// Get a reference to the type
-		memberType = checker.getReferenceType(memberType)
-	}
-
 	return memberType
 }
 
@@ -148,6 +130,10 @@ func isContainerType(typ Type) bool {
 	case *OptionalType:
 		return isContainerType(typ.Type)
 	default:
+		switch typ {
+		case AnyStructType, AnyResourceType:
+			return true
+		}
 		return false
 	}
 }
@@ -158,14 +144,17 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
 	}
 
+	returnReference := false
+
 	defer func() {
 		checker.Elaboration.SetMemberExpressionMemberInfo(
 			expression,
 			MemberInfo{
-				AccessedType:  accessedType,
-				ResultingType: resultingType,
-				Member:        member,
-				IsOptional:    isOptional,
+				AccessedType:    accessedType,
+				ResultingType:   resultingType,
+				Member:          member,
+				IsOptional:      isOptional,
+				ReturnReference: returnReference,
 			},
 		)
 	}()
@@ -385,6 +374,26 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			)
 		}
 	}
+
+	// If the member,
+	//   1) is accessed via a reference, and
+	//   2) is container-typed,
+	// then the member type should also be a reference.
+
+	// Note: For attachments, `self` is always a reference.
+	// But we do not want to return a reference for `self.something`.
+	// Otherwise, things like `destroy self.something` would become invalid.
+	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
+	// i.e: `accessedSelfMember == nil`
+
+	if accessedSelfMember == nil &&
+		shouldReturnReference(accessedType, resultingType) &&
+		member.DeclarationKind == common.DeclarationKindField {
+		// Get a reference to the type
+		resultingType = checker.getReferenceType(resultingType)
+		returnReference = true
+	}
+
 	return accessedType, resultingType, member, isOptional
 }
 

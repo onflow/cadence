@@ -1,1 +1,1 @@
-pub struct Test {}
+access(all) struct Test {}

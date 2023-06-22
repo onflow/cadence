@@ -108,7 +108,7 @@ func (d *EntitlementDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(d.Access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 
@@ -242,7 +242,7 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(d.Access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 

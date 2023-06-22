@@ -96,6 +96,13 @@ tools/constructorcheck/constructorcheck.so:
 tools/golangci-lint/golangci-lint:
 	(cd tools/golangci-lint && $(MAKE))
 
+.PHONY: clean-linter
+clean-linter:
+	rm -f tools/golangci-lint/golangci-lint \
+		tools/maprange/maprange.so \
+		tools/unkeyed/unkeyed.so \
+		tools/constructorcheck/constructorcheck.so
+
 .PHONY: check-headers
 check-headers:
 	@./check-headers.sh

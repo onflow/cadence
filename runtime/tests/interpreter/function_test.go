@@ -39,14 +39,14 @@ func TestInterpretResultVariable(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            pub resource R {
-                pub let id: UInt8
+            access(all) resource R {
+                access(all) let id: UInt8
                 init() {
                     self.id = 1
                 }
             }
 
-            pub fun main(): @R  {
+            access(all) fun main(): @R  {
                 post {
                     result.id == 1: "invalid id"
                 }
@@ -72,14 +72,14 @@ func TestInterpretResultVariable(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            pub resource R {
-                pub let id: UInt8
+            access(all) resource R {
+                access(all) let id: UInt8
                 init() {
                     self.id = 1
                 }
             }
 
-            pub fun main(): @R?  {
+            access(all) fun main(): @R?  {
                 post {
                     result!.id == 1: "invalid id"
                 }
@@ -110,14 +110,14 @@ func TestInterpretResultVariable(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            pub resource R {
-                pub let id: UInt8
+            access(all) resource R {
+                access(all) let id: UInt8
                 init() {
                     self.id = 1
                 }
             }
 
-            pub fun main(): @R?  {
+            access(all) fun main(): @R?  {
                 post {
                     result == nil: "invalid result"
                 }
@@ -134,14 +134,14 @@ func TestInterpretResultVariable(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            pub resource R {
-                pub let id: UInt8
+            access(all) resource R {
+                access(all) let id: UInt8
                 init() {
                     self.id = 1
                 }
             }
 
-            pub fun main(): @AnyResource  {
+            access(all) fun main(): @AnyResource  {
                 post {
                     result != nil: "invalid value"
                 }
@@ -176,8 +176,11 @@ func TestInterpretResultVariable(t *testing.T) {
 		var checkerErrors []error
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
-            pub resource R {
-                pub(set) var id: UInt8
+            access(all) resource R {
+                access(all) var id: UInt8
+				access(all) fun setID(_ id: UInt8) {
+					self.id = id
+				}
                 init() {
                     self.id = 1
                 }
@@ -185,29 +188,29 @@ func TestInterpretResultVariable(t *testing.T) {
 
             var ref: &R? = nil
 
-            pub fun main(): @R? {
+            access(all) fun main(): @R? {
                 var r <- createAndStoreRef()
                 if var r2 <- r {
-                    r2.id = 2
+                    r2.setID(2)
                     return <- r2
                 }
 
                 return nil
             }
 
-            pub fun createAndStoreRef(): @R? {
+            access(all) fun createAndStoreRef(): @R? {
                 post {
                     storeRef(result)
                 }
                 return <- create R()
             }
 
-            pub fun storeRef(_ r: &R?): Bool {
+            access(all) fun storeRef(_ r: &R?): Bool {
                 ref = r
                 return r != nil
             }
 
-            pub fun getID(): UInt8 {
+            access(all) fun getID(): UInt8 {
                 return ref!.id
             }`,
 			ParseCheckAndInterpretOptions{
@@ -234,8 +237,13 @@ func TestInterpretResultVariable(t *testing.T) {
 		var checkerErrors []error
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
-            pub resource R {
-                pub(set) var id: UInt8
+            access(all) resource R {
+                access(all) var id: UInt8
+
+				access(all) fun setID(_ id: UInt8) {
+					self.id = id
+				}
+
                 init() {
                     self.id = 1
                 }
@@ -243,25 +251,25 @@ func TestInterpretResultVariable(t *testing.T) {
 
             var ref: &R? = nil
 
-            pub fun main(): @R {
+            access(all) fun main(): @R {
                 var r <- createAndStoreRef()
-                r.id = 2
+                r.setID(2)
                 return <- r
             }
 
-            pub fun createAndStoreRef(): @R {
+            access(all) fun createAndStoreRef(): @R {
                 post {
                     storeRef(result)
                 }
                 return <- create R()
             }
 
-            pub fun storeRef(_ r: &R): Bool {
+            access(all) fun storeRef(_ r: &R): Bool {
                 ref = r
                 return r != nil
             }
 
-            pub fun getID(): UInt8 {
+            access(all) fun getID(): UInt8 {
                 return ref!.id
             }`,
 			ParseCheckAndInterpretOptions{

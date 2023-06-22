@@ -962,8 +962,12 @@ func TestStringer(t *testing.T) {
 			expected: "64",
 		},
 		"Word128": {
-			value:    NewUnmeteredWord128ValueFromUint64(64),
-			expected: "64",
+			value:    NewUnmeteredWord128ValueFromUint64(128),
+			expected: "128",
+		},
+		"Word256": {
+			value:    NewUnmeteredWord256ValueFromUint64(256),
+			expected: "256",
 		},
 		"UFix64": {
 			value:    NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
@@ -1480,6 +1484,18 @@ func TestGetHashInput(t *testing.T) {
 			value:    NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
 			expected: append([]byte{byte(HashInputTypeWord128)}, sema.Word128TypeMaxIntBig.Bytes()...),
 		},
+		"Word256": {
+			value:    NewUnmeteredWord256ValueFromUint64(256),
+			expected: []byte{byte(HashInputTypeWord256), 1, 0},
+		},
+		"Word256 min": {
+			value:    NewUnmeteredWord256ValueFromUint64(0),
+			expected: append([]byte{byte(HashInputTypeWord256)}, 0),
+		},
+		"Word256 max": {
+			value:    NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeWord256)}, sema.Word256TypeMaxIntBig.Bytes()...),
+		},
 		"UFix64": {
 			value:    NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
@@ -1682,19 +1698,23 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	// Obtain a self referencing (cyclic) ephemeral reference value.
 
 	code := `
-        pub fun getEphemeralRef(): &Foo {
+        access(all) fun getEphemeralRef(): &Foo {
             var foo = Foo()
             var fooRef = &foo as &Foo
 
             // Create the cyclic reference
-            fooRef.bar = fooRef
+            fooRef.setBar(fooRef)
 
             return fooRef
         }
 
-        pub struct Foo {
+        access(all) struct Foo {
 
-            pub(set) var bar: &Foo?
+            access(all) var bar: &Foo?
+
+			access(all) fun setBar(_ bar: &Foo) {
+				self.bar = bar
+			}
 
             init() {
                 self.bar = nil
@@ -3405,6 +3425,7 @@ func TestNumberValue_Equal(t *testing.T) {
 		"Word32":  NewUnmeteredWord32Value(32),
 		"Word64":  NewUnmeteredWord64Value(64),
 		"Word128": NewUnmeteredWord128ValueFromUint64(128),
+		"Word256": NewUnmeteredWord256ValueFromUint64(256),
 		"UFix64":  NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
 		"Fix64":   NewUnmeteredFix64ValueWithInteger(-32, EmptyLocationRange),
 	}
@@ -3704,7 +3725,7 @@ func TestNonStorable(t *testing.T) {
 	storage := newUnmeteredInMemoryStorage()
 
 	code := `
-      pub struct Foo {
+      access(all) struct Foo {
 
           let bar: &Int?
 
@@ -3784,6 +3805,7 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 		sema.Word32Type:  NewUnmeteredWord32Value(42),
 		sema.Word64Type:  NewUnmeteredWord64Value(42),
 		sema.Word128Type: NewUnmeteredWord128ValueFromUint64(42),
+		sema.Word256Type: NewUnmeteredWord256ValueFromUint64(42),
 		sema.Int8Type:    NewUnmeteredInt8Value(42),
 		sema.Int16Type:   NewUnmeteredInt16Value(42),
 		sema.Int32Type:   NewUnmeteredInt32Value(42),
@@ -4088,6 +4110,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			sema.Word32Type:  NewUnmeteredWord32Value(42),
 			sema.Word64Type:  NewUnmeteredWord64Value(42),
 			sema.Word128Type: NewUnmeteredWord128ValueFromUint64(42),
+			sema.Word256Type: NewUnmeteredWord256ValueFromUint64(42),
 			sema.Int8Type:    NewUnmeteredInt8Value(42),
 			sema.Int16Type:   NewUnmeteredInt16Value(42),
 			sema.Int32Type:   NewUnmeteredInt32Value(42),

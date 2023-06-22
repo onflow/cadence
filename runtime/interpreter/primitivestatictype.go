@@ -152,7 +152,7 @@ const (
 	PrimitiveStaticTypeWord32
 	PrimitiveStaticTypeWord64
 	PrimitiveStaticTypeWord128
-	_ // future: Word256
+	PrimitiveStaticTypeWord256
 	_
 
 	// Fix*
@@ -248,6 +248,7 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeInt128,
 		PrimitiveStaticTypeInt256,
 		PrimitiveStaticTypeWord128,
+		PrimitiveStaticTypeWord256,
 		PrimitiveStaticTypeInteger,
 		PrimitiveStaticTypeSignedInteger,
 		PrimitiveStaticTypeNumber,
@@ -397,6 +398,8 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.Word64Type
 	case PrimitiveStaticTypeWord128:
 		return sema.Word128Type
+	case PrimitiveStaticTypeWord256:
+		return sema.Word256Type
 
 	// Fix*
 	case PrimitiveStaticTypeFix64:
@@ -529,6 +532,8 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeWord64
 	case sema.Word128Type:
 		typ = PrimitiveStaticTypeWord128
+	case sema.Word256Type:
+		typ = PrimitiveStaticTypeWord256
 
 	// Fix*
 	case sema.Fix64Type:

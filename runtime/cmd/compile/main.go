@@ -67,7 +67,7 @@ func main() {
 	// Export all public functions
 
 	for i, functionDeclaration := range functionDeclarations {
-		if functionDeclaration.Access != ast.AccessPublic {
+		if functionDeclaration.Access != ast.AccessAll {
 			continue
 		}
 

@@ -124,7 +124,7 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 			panic(cadenceErrors.NewUnexpectedErrorFromCause(err))
 		}
 
-		dec := NewDecoder(d.gauge, rawFields.rawFields)
+		dec := d.dm.NewDecoder(d.gauge, rawFields.rawFields)
 		fields, err := dec.decodeCompositeFields(types, dec.decodeInlineType)
 		if err != nil {
 			return nil, err
@@ -402,12 +402,14 @@ func (d *Decoder) decodeCompositeFields(types *cadenceTypeByCCFTypeID, decodeTyp
 			return nil, fmt.Errorf("found duplicate field name %s in composite-type", field.Identifier)
 		}
 
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "composite-type.fields MUST be sorted by name"
-		//   "composite-type-value.fields MUST be sorted by name."
-		if !stringsAreSortedBytewise(previousFieldName, field.Identifier) {
-			return nil, fmt.Errorf("field names are not sorted in composite-type (%s, %s)", previousFieldName, field.Identifier)
+		if d.dm.enforceSortCompositeFields == EnforceSortBytewiseLexical {
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "composite-type.fields MUST be sorted by name"
+			//   "composite-type-value.fields MUST be sorted by name."
+			if !stringsAreSortedBytewise(previousFieldName, field.Identifier) {
+				return nil, fmt.Errorf("field names are not sorted in composite-type (%s, %s)", previousFieldName, field.Identifier)
+			}
 		}
 
 		fieldNames[field.Identifier] = struct{}{}

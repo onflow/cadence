@@ -34,7 +34,7 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -65,8 +65,8 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub %s Foo {
+                access(all) contract C {
+                    access(all) %s Foo {
                         %s %s x: [Int]
                 
                         init() {
@@ -74,7 +74,7 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo %s Foo()
                         foo.x[0] = 3
                         %s
@@ -103,7 +103,7 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -134,8 +134,8 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub %s Foo {
+                access(all) contract C {
+                    access(all) %s Foo {
                         %s %s x: {Int: Int}
                 
                         init() {
@@ -143,7 +143,7 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo %s Foo()
                         foo.x[0] = 3
                         %s
@@ -172,7 +172,7 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -191,15 +191,15 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub struct Bar {
-                        pub let foo: Foo
+                access(all) contract C {
+                    access(all) struct Bar {
+                        access(all) let foo: Foo
                         init() {
                             self.foo = Foo()
                         }
                     }
 
-                    pub struct Foo {
+                    access(all) struct Foo {
                         %s %s x: [Int]
                 
                         init() {
@@ -207,7 +207,7 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let bar = Bar()
                         bar.foo.x[0] = 3
                     }
@@ -233,7 +233,7 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -252,15 +252,15 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub struct Bar {
-                        pub let foo: Foo
+                access(all) contract C {
+                    access(all) struct Bar {
+                        access(all) let foo: Foo
                         init() {
                             self.foo = Foo()
                         }
                     }
 
-                    pub struct Foo {
+                    access(all) struct Foo {
                         %s %s x: {Int: Int}
                 
                         init() {
@@ -268,7 +268,7 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let bar = Bar()
                         bar.foo.x[0] = 3
                     }
@@ -294,7 +294,7 @@ func TestCheckMutateContractIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -313,7 +313,7 @@ func TestCheckMutateContractIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract Foo {
+                access(all) contract Foo {
                     %s %s x: [Int]
                 
                     init() {
@@ -321,7 +321,7 @@ func TestCheckMutateContractIndexAccess(t *testing.T) {
                     }
                 }
                 
-                pub fun bar() {
+                access(all) fun bar() {
                     Foo.x[0] = 1
                 }
             `, access.Keyword(), declaration.Keywords()),
@@ -354,7 +354,7 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -373,10 +373,10 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract Foo {
-                    pub let x: S
+                access(all) contract Foo {
+                    access(all) let x: S
                     
-                    pub struct S {
+                    access(all) struct S {
                         %s %s y: [Int]
                         init() {
                             self.y = [3]
@@ -388,7 +388,7 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
                     }
                 }
                 
-                pub fun bar() {
+                access(all) fun bar() {
                     Foo.x.y[0] = 1
                 }                
             `, access.Keyword(), declaration.Keywords()),
@@ -421,7 +421,7 @@ func TestCheckContractStructInitIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -440,10 +440,10 @@ func TestCheckContractStructInitIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract Foo {
-                    pub let x: S
+                access(all) contract Foo {
+                    access(all) let x: S
                     
-                    pub struct S {
+                    access(all) struct S {
                         %s %s y: [Int]
                         init() {
                             self.y = [3]
@@ -476,7 +476,7 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -525,8 +525,8 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub %s Foo {
+                access(all) contract C {
+                    access(all) %s Foo {
                         %s %s x: [Int]
                 
                         init() {
@@ -534,7 +534,7 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo %s Foo()
                         foo.x%s
                         %s
@@ -569,7 +569,7 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -614,8 +614,8 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub %s Foo {
+                access(all) contract C {
+                    access(all) %s Foo {
                         %s %s x: {Int: Int}
                 
                         init() {
@@ -623,7 +623,7 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo %s Foo()
                         foo.x%s
                         %s
@@ -653,92 +653,25 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
 	}
 }
 
-func TestCheckPubSetAccessModifier(t *testing.T) {
-
-	t.Parallel()
-	t.Run("pub set dict", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-            pub contract C {
-                pub struct Foo {
-                    pub(set) var x: {Int: Int}
-            
-                    init() {
-                        self.x = {3: 3}
-                    }
-                }
-
-                pub fun bar() {
-                    let foo = Foo()
-                    foo.x[0] = 3
-                }
-            }
-        `,
-		)
-		require.NoError(t, err)
-
-	})
-}
-
-func TestCheckPubSetNestedAccessModifier(t *testing.T) {
-
-	t.Parallel()
-	t.Run("pub set nested", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-            pub contract C {
-                pub struct Bar {
-                    pub let foo: Foo
-                    init() { 
-                       self.foo = Foo()
-                    }
-                }
-                
-                pub struct Foo {
-                    pub(set) var x: [Int]
-                
-                    init() {
-                       self.x = [3]
-                    }
-                }
-                
-                pub fun bar() {
-                    let bar = Bar()
-                    bar.foo.x[0] = 3
-                }
-            }
-        `,
-		)
-		require.NoError(t, err)
-
-	})
-}
-
 func TestCheckSelfContainingStruct(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub let", func(t *testing.T) {
+	t.Run("access(all) let", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract C {
-                pub struct Foo {
-                    pub let x: {Int: Int}
+            access(all) contract C {
+                access(all) struct Foo {
+                    access(all) let x: {Int: Int}
             
                     init() {
                         self.x = {3: 3}
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo = Foo()
                         foo.x[0] = 3
                     }
@@ -755,26 +688,26 @@ func TestCheckMutationThroughReference(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub let", func(t *testing.T) {
+	t.Run("access(all) let", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun main() {
+            access(all) fun main() {
                 let foo = Foo()
                 foo.ref.arr.append("y")
               }
               
-              pub struct Foo {
-                pub let ref: &Bar
+              access(all) struct Foo {
+                access(all) let ref: &Bar
                 init() {
                   self.ref = &Bar() as &Bar
                 }
               }
               
-              pub struct Bar {
-                pub let arr: [String]
+              access(all) struct Bar {
+                access(all) let arr: [String]
                 init() {
                   self.arr = ["x"]
                 }
@@ -791,27 +724,27 @@ func TestCheckMutationThroughInnerReference(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub let", func(t *testing.T) {
+	t.Run("access(all) let", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun main() {
+            access(all) fun main() {
                 let foo = Foo()
                 var arrayRef = foo.ref.arr
                 arrayRef[0] = "y"
               }
               
-              pub struct Foo {
-                pub let ref: &Bar
+              access(all) struct Foo {
+                access(all) let ref: &Bar
                 init() {
                   self.ref = &Bar() as &Bar
                 }
               }
               
-              pub struct Bar {
-                pub let arr: [String]
+              access(all) struct Bar {
+                access(all) let arr: [String]
                 init() {
                   self.arr = ["x"]
                 }
@@ -826,32 +759,32 @@ func TestCheckMutationThroughAccess(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub let", func(t *testing.T) {
+	t.Run("access(all) let", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract C {
-                pub struct Foo {
-                    pub let arr: [Int]
+            access(all) contract C {
+                access(all) struct Foo {
+                    access(all) let arr: [Int]
                     init() {
                         self.arr = [3]
                     }
                 }
                 
-                priv let foo : Foo
+                access(self) let foo : Foo
             
                 init() {
                     self.foo = Foo()
                 }
             
-                pub fun getFoo(): Foo {
+                access(all) fun getFoo(): Foo {
                     return self.foo
                 }
             }
             
-            pub fun main() {
+            access(all) fun main() {
                 let a = C.getFoo()
                 a.arr.append(0) // a.arr is now [3, 0]
             }

@@ -332,7 +332,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-            pub fun test() {
+            access(all) fun test() {
                 foo(1)
             }
         `,
