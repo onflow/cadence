@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -38,6 +39,16 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
+
+var deterministicEncMode, _ = ccf.EncOptions{
+	SortCompositeFields: ccf.SortBytewiseLexical,
+	SortRestrictedTypes: ccf.SortBytewiseLexical,
+}.EncMode()
+
+var deterministicDecMode, _ = ccf.DecOptions{
+	EnforceSortCompositeFields: ccf.EnforceSortBytewiseLexical,
+	EnforceSortRestrictedTypes: ccf.EnforceSortBytewiseLexical,
+}.DecMode()
 
 type encodeTest struct {
 	name        string
@@ -2533,32 +2544,136 @@ func TestEncodeWord128(t *testing.T) {
 func TestDecodeWord128Invalid(t *testing.T) {
 	t.Parallel()
 
-	_, err := ccf.Decode(nil, []byte{
-		// language=json, format=json-cdc
-		// {"type":"Word128","value":"0"}
-		//
-		// language=edn, format=ccf
-		// 130([137(52), 0])
-		//
-		// language=cbor, format=ccf
-		// tag
-		0xd8, ccf.CBORTagTypeAndValue,
-		// array, 2 items follow
-		0x82,
-		// tag
-		0xd8, ccf.CBORTagSimpleType,
-		// Word128 type ID (52)
-		0x18, 0x34,
-		// Invalid type
-		0xd7,
-		// bytes, 16 bytes follow
-		0x50,
-		// 340282366920938463463374607431768211455
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	})
-	require.Error(t, err)
-	assert.Equal(t, "ccf: failed to decode: failed to decode Word128: cbor: cannot decode CBOR tag type to big.Int", err.Error())
+	decModes := []ccf.DecMode{ccf.EventsDecMode, deterministicDecMode}
+
+	for _, dm := range decModes {
+		_, err := dm.Decode(nil, []byte{
+			// language=json, format=json-cdc
+			// {"type":"Word128","value":"0"}
+			//
+			// language=edn, format=ccf
+			// 130([137(52), 0])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Word128 type ID (52)
+			0x18, 0x34,
+			// Invalid type
+			0xd7,
+			// bytes, 16 bytes follow
+			0x50,
+			// 340282366920938463463374607431768211455
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		})
+		require.Error(t, err)
+		assert.Equal(t, "ccf: failed to decode: failed to decode Word128: cbor: cannot decode CBOR tag type to big.Int", err.Error())
+	}
+}
+
+func TestEncodeWord256(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			name: "Zero",
+			val:  cadence.NewWord256(0),
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Word256","value":"0"}
+				//
+				// language=edn, format=ccf
+				// 130([137(53), 0])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Word256 type ID (53)
+				0x18, 0x35,
+				// tag (big num)
+				0xc2,
+				// bytes, 0 bytes follow
+				0x40,
+			},
+		},
+		{
+			name: "Max",
+			val:  cadence.Word256{Value: sema.Word256TypeMaxIntBig},
+			expected: []byte{
+				// language=json, format=json-cdc
+				// {"type":"Word256","value":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}
+				//
+				// language=edn, format=ccf
+				// 130([137(53), 115792089237316195423570985008687907853269984665640564039457584007913129639935])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Word256 type ID (53)
+				0x18, 0x35,
+				// tag (big num)
+				0xc2,
+				// bytes, 32 bytes follow
+				0x58, 0x20,
+				// 115792089237316195423570985008687907853269984665640564039457584007913129639935
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			},
+		},
+	}...)
+}
+
+func TestDecodeWord256Invalid(t *testing.T) {
+	t.Parallel()
+
+	decModes := []ccf.DecMode{ccf.EventsDecMode, deterministicDecMode}
+
+	for _, dm := range decModes {
+		_, err := dm.Decode(nil, []byte{
+			// language=json, format=json-cdc
+			// {"type":"Word256","value":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}
+			//
+			// language=edn, format=ccf
+			// 130([137(53), 0])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Word256 type ID (53)
+			0x18, 0x35,
+			// Invalid type
+			0xd7,
+			// bytes, 32 bytes follow
+			0x58, 0x20,
+			// 115792089237316195423570985008687907853269984665640564039457584007913129639935
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		})
+		require.Error(t, err)
+		assert.Equal(t, "ccf: failed to decode: failed to decode Word256: cbor: cannot decode CBOR tag type to big.Int", err.Error())
+	}
 }
 
 func TestEncodeFix64(t *testing.T) {
@@ -5997,7 +6112,23 @@ func TestEncodeEvent(t *testing.T) {
 		},
 	}
 
-	testAllEncodeAndDecode(t, simpleEvent, resourceEvent, abstractEvent)
+	testCases := []encodeTest{simpleEvent, resourceEvent, abstractEvent}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actualCBOR, err := ccf.EventsEncMode.Encode(tc.val)
+			require.NoError(t, err)
+			utils.AssertEqualWithDiff(t, tc.expected, actualCBOR)
+
+			decodedVal, err := ccf.EventsDecMode.Decode(nil, actualCBOR)
+			require.NoError(t, err)
+			assert.Equal(
+				t,
+				cadence.ValueWithCachedTypeID(tc.val),
+				cadence.ValueWithCachedTypeID(decodedVal),
+			)
+		})
+	}
 }
 
 func TestEncodeContract(t *testing.T) {
@@ -7650,6 +7781,8 @@ func TestEncodeSimpleTypes(t *testing.T) {
 	for _, ty := range []simpleTypes{
 		{cadence.AnyType{}, ccf.TypeAny},
 		{cadence.AnyResourceType{}, ccf.TypeAnyResource},
+		{cadence.AnyStructAttachmentType{}, ccf.TypeAnyStructAttachmentType},
+		{cadence.AnyResourceAttachmentType{}, ccf.TypeAnyResourceAttachmentType},
 		{cadence.MetaType{}, ccf.TypeMetaType},
 		{cadence.VoidType{}, ccf.TypeVoid},
 		{cadence.NeverType{}, ccf.TypeNever},
@@ -7682,6 +7815,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		{cadence.Word32Type{}, ccf.TypeWord32},
 		{cadence.Word64Type{}, ccf.TypeWord64},
 		{cadence.Word128Type{}, ccf.TypeWord128},
+		{cadence.Word256Type{}, ccf.TypeWord256},
 		{cadence.Fix64Type{}, ccf.TypeFix64},
 		{cadence.UFix64Type{}, ccf.TypeUFix64},
 		{cadence.BlockType{}, ccf.TypeBlock},
@@ -7701,7 +7835,17 @@ func TestEncodeSimpleTypes(t *testing.T) {
 	} {
 		var w bytes.Buffer
 
-		encoder := ccf.CBOREncMode.NewStreamEncoder(&w)
+		cborEncMode := func() cbor.EncMode {
+			options := cbor.CoreDetEncOptions()
+			options.BigIntConvert = cbor.BigIntConvertNone
+			encMode, err := options.EncMode()
+			if err != nil {
+				panic(err)
+			}
+			return encMode
+		}()
+
+		encoder := cborEncMode.NewStreamEncoder(&w)
 
 		err := encoder.EncodeRawBytes([]byte{
 			// tag
@@ -7992,10 +8136,131 @@ func TestEncodeType(t *testing.T) {
 		)
 	})
 
+	t.Run("with static struct no sort", func(t *testing.T) {
+		t.Parallel()
+
+		val := cadence.TypeValue{
+			StaticType: &cadence.StructType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+				Fields: []cadence.Field{
+					{Identifier: "foo", Type: cadence.IntType{}},
+					{Identifier: "bar", Type: cadence.IntType{}},
+				},
+				Initializers: [][]cadence.Parameter{
+					{
+						{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+					},
+				},
+			},
+		}
+
+		expectedCBOR := []byte{
+			// language=json, format=json-cdc
+			// {"value":{"staticType":{"type":"","kind":"Struct","typeID":"S.test.S","fields":[{"type":{"kind":"Int"},"id":"foo"},{"type":{"kind":"Int"},"id":"bar"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"},{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
+			//
+			// language=edn, format=ccf
+			// 130([137(41), 208([h'', "S.test.S", null, [["foo", 185(4)], ["bar", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 elements follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Meta type ID (41)
+			0x18, 0x29,
+			// tag
+			0xd8, ccf.CBORTagStructTypeValue,
+			// array, 5 elements follow
+			0x85,
+			// bytes, 0 bytes follow
+			0x40,
+			// string, 8 bytes follow
+			0x68,
+			// S.test.So
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53,
+			// type (nil for struct)
+			0xf6,
+			// fields
+			// array, 2 element follows
+			0x82,
+			// array, 2 elements follow
+			0x82,
+			// string, 3 bytes follow
+			0x63,
+			// foo
+			0x66, 0x6f, 0x6f,
+			// tag
+			0xd8, ccf.CBORTagSimpleTypeValue,
+			// Int type (4)
+			0x04,
+			// array, 2 elements follow
+			0x82,
+			// string, 3 bytes follow
+			0x63,
+			// bar
+			0x62, 0x61, 0x72,
+			// tag
+			0xd8, ccf.CBORTagSimpleTypeValue,
+			// Int type (4)
+			0x04,
+			// initializers
+			// array, 1 elements follow
+			0x81,
+			// array, 2 element follows
+			0x82,
+			// array, 3 elements follow
+			0x83,
+			// string, 3 bytes follow
+			0x63,
+			// foo
+			0x66, 0x6f, 0x6f,
+			// string, 3 bytes follow
+			0x63,
+			// bar
+			0x62, 0x61, 0x72,
+			// tag
+			0xd8, ccf.CBORTagSimpleTypeValue,
+			// Int type (4)
+			0x04,
+			// array, 3 elements follow
+			0x83,
+			// string, 3 bytes follow
+			0x63,
+			// qux
+			0x71, 0x75, 0x78,
+			// string, 3 bytes follow
+			0x63,
+			// bax
+			0x62, 0x61, 0x7a,
+			// tag
+			0xd8, ccf.CBORTagSimpleTypeValue,
+			// String type (1)
+			0x01,
+		}
+
+		// Encode value without sorting of composite fields.
+		actualCBOR, err := ccf.Encode(val)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+
+		// Decode value without enforcing sorting of composite fields.
+		decodedVal, err := ccf.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			cadence.ValueWithCachedTypeID(val),
+			cadence.ValueWithCachedTypeID(decodedVal),
+		)
+	})
+
 	t.Run("with static struct", func(t *testing.T) {
 		t.Parallel()
 
-		testEncodeAndDecode(
+		testEncodeAndDecodeEx(
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.StructType{
@@ -8003,6 +8268,7 @@ func TestEncodeType(t *testing.T) {
 					QualifiedIdentifier: "S",
 					Fields: []cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType{}},
+						{Identifier: "bar", Type: cadence.IntType{}},
 					},
 					Initializers: [][]cadence.Parameter{
 						{
@@ -8014,10 +8280,10 @@ func TestEncodeType(t *testing.T) {
 			},
 			[]byte{
 				// language=json, format=json-cdc
-				// {"value":{"staticType":{"type":"","kind":"Struct","typeID":"S.test.S","fields":[{"type":{"kind":"Int"},"id":"foo"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"},{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
+				// {"value":{"staticType":{"type":"","kind":"Struct","typeID":"S.test.S","fields":[{"type":{"kind":"Int"},"id":"foo"},{"type":{"kind":"Int"},"id":"bar"}],"initializers":[[{"type":{"kind":"Int"},"label":"foo","id":"bar"},{"type":{"kind":"String"},"label":"qux","id":"baz"}]]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 208([h'', "S.test.S", null, [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
+				// 130([137(41), 208([h'', "S.test.S", null, [["bar", 185(4)], ["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -8041,8 +8307,18 @@ func TestEncodeType(t *testing.T) {
 				// type (nil for struct)
 				0xf6,
 				// fields
-				// array, 1 element follows
-				0x81,
+				// array, 2 element follows
+				0x82,
+				// array, 2 elements follow
+				0x82,
+				// string, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type (4)
+				0x04,
 				// array, 2 elements follow
 				0x82,
 				// string, 3 bytes follow
@@ -8086,6 +8362,22 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// String type (1)
 				0x01,
+			},
+			cadence.TypeValue{
+				StaticType: &cadence.StructType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "S",
+					Fields: []cadence.Field{
+						{Identifier: "bar", Type: cadence.IntType{}},
+						{Identifier: "foo", Type: cadence.IntType{}},
+					},
+					Initializers: [][]cadence.Parameter{
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						},
+					},
+				},
 			},
 		)
 	})
@@ -8945,7 +9237,6 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagReferenceTypeValue,
 				// array, 2 elements follow
 				0x82,
-				// authorized
 				// nil
 				0xf6,
 				// tag
@@ -10586,12 +10877,16 @@ func TestDecodeFix64(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := ccf.Decode(nil, tc.encodedData)
-			if tc.check != nil {
-				tc.check(t, actual, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tc.expected, actual)
+			decModes := []ccf.DecMode{ccf.EventsDecMode, deterministicDecMode}
+
+			for _, dm := range decModes {
+				actual, err := dm.Decode(nil, tc.encodedData)
+				if tc.check != nil {
+					tc.check(t, actual, err)
+				} else {
+					require.NoError(t, err)
+					assert.Equal(t, tc.expected, actual)
+				}
 			}
 		})
 	}
@@ -11473,9 +11768,14 @@ func TestDecodeInvalidType(t *testing.T) {
 			// array, 0 items follow
 			0x80,
 		}
-		_, err := ccf.Decode(nil, encodedData)
-		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: ``", err.Error())
+
+		decModes := []ccf.DecMode{ccf.EventsDecMode, deterministicDecMode}
+
+		for _, dm := range decModes {
+			_, err := dm.Decode(nil, encodedData)
+			require.Error(t, err)
+			assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: ``", err.Error())
+		}
 	})
 
 	t.Run("invalid type ID", func(t *testing.T) {
@@ -11526,9 +11826,14 @@ func TestDecodeInvalidType(t *testing.T) {
 			// array, 0 items follow
 			0x80,
 		}
-		_, err := ccf.Decode(nil, encodedData)
-		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: invalid type ID `I`: invalid identifier location type ID: missing location", err.Error())
+
+		decModes := []ccf.DecMode{ccf.EventsDecMode, deterministicDecMode}
+
+		for _, dm := range decModes {
+			_, err := dm.Decode(nil, encodedData)
+			require.Error(t, err)
+			assert.Equal(t, "ccf: failed to decode: invalid type ID `I`: invalid identifier location type ID: missing location", err.Error())
+		}
 	})
 
 	t.Run("unknown location prefix", func(t *testing.T) {
@@ -11579,9 +11884,14 @@ func TestDecodeInvalidType(t *testing.T) {
 			// array, 0 items follow
 			0x80,
 		}
-		_, err := ccf.Decode(nil, encodedData)
-		require.Error(t, err)
-		assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: `N.PublicKey`", err.Error())
+
+		decModes := []ccf.DecMode{ccf.EventsDecMode, deterministicDecMode}
+
+		for _, dm := range decModes {
+			_, err := dm.Decode(nil, encodedData)
+			require.Error(t, err)
+			assert.Equal(t, "ccf: failed to decode: invalid type ID for built-in: `N.PublicKey`", err.Error())
+		}
 	})
 }
 
@@ -11597,7 +11907,7 @@ func testEncodeAndDecodeEx(t *testing.T, val cadence.Value, expectedCBOR []byte,
 }
 
 func testEncode(t *testing.T, val cadence.Value, expectedCBOR []byte) (actualCBOR []byte) {
-	actualCBOR, err := ccf.Encode(val)
+	actualCBOR, err := deterministicEncMode.Encode(val)
 	require.NoError(t, err)
 
 	utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
@@ -11605,7 +11915,7 @@ func testEncode(t *testing.T, val cadence.Value, expectedCBOR []byte) (actualCBO
 }
 
 func testDecode(t *testing.T, actualCBOR []byte, expectedVal cadence.Value) {
-	decodedVal, err := ccf.Decode(nil, actualCBOR)
+	decodedVal, err := deterministicDecMode.Decode(nil, actualCBOR)
 	require.NoError(t, err)
 	assert.Equal(
 		t,
@@ -12103,7 +12413,7 @@ func TestDeployedEvents(t *testing.T) {
 				// {"value":{"id":"A.f919ee77447b7497.FlowFees.FeesDeducted","fields":[{"value":{"value":"0.01797293","type":"UFix64"},"name":"amount"},{"value":{"value":"1.00000000","type":"UFix64"},"name":"inclusionEffort"},{"value":{"value":"0.00360123","type":"UFix64"},"name":"executionEffort"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
-				// 129([[162([h'', "A.f919ee77447b7497.FlowFees.FeesDeducted", [["amount", 137(23)], ["executionEffort", 137(23)], ["inclusionEffort", 137(23)]]])], [136(h''), [1797293, 360123, 100000000]]])
+				// 129([[162([h'', "A.f919ee77447b7497.FlowFees.FeesDeducted", [["amount", 137(23)], ["inclusionEffort", 137(23)], ["executionEffort", 137(23)]]])], [136(h''), [1797293, 100000000, 360123]]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -12148,8 +12458,8 @@ func TestDeployedEvents(t *testing.T) {
 				0x82,
 				// text, 15 bytes follow
 				0x6f,
-				// executionEffort
-				0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74,
+				// inclusionEffort
+				0x69, 0x6e, 0x63, 0x6c, 0x75, 0x73, 0x69, 0x6f, 0x6e, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// UFix64 type ID (23)
@@ -12159,8 +12469,8 @@ func TestDeployedEvents(t *testing.T) {
 				0x82,
 				// text, 15 bytes follow
 				0x6f,
-				// inclusionEffort
-				0x69, 0x6e, 0x63, 0x6c, 0x75, 0x73, 0x69, 0x6f, 0x6e, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74,
+				// executionEffort
+				0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// UFix64 type ID (23)
@@ -12177,10 +12487,10 @@ func TestDeployedEvents(t *testing.T) {
 				0x83,
 				// 1797293
 				0x1a, 0x00, 0x1b, 0x6c, 0xad,
-				// 360123
-				0x1a, 0x00, 0x05, 0x7e, 0xbb,
 				// 100000000
 				0x1a, 0x05, 0xf5, 0xe1, 0x00,
+				// 360123
+				0x1a, 0x00, 0x05, 0x7e, 0xbb,
 			},
 		},
 		{
@@ -12253,7 +12563,7 @@ func TestDeployedEvents(t *testing.T) {
 				// {"value":{"id":"A.8624b52f9ddcd04a.FlowIDTableStaking.DelegatorRewardsPaid","fields":[{"value":{"value":"e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb","type":"String"},"name":"nodeID"},{"value":{"value":"92","type":"UInt32"},"name":"delegatorID"},{"value":{"value":"4.38760261","type":"UFix64"},"name":"amount"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
-				// 129([[162([h'', "A.8624b52f9ddcd04a.FlowIDTableStaking.DelegatorRewardsPaid", [["amount", 137(23)], ["nodeID", 137(1)], ["delegatorID", 137(14)]]])], [136(h''), [438760261, "e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb", 92]]])
+				// 129([[162([h'', "A.8624b52f9ddcd04a.FlowIDTableStaking.DelegatorRewardsPaid", [["nodeID", 137(1)], ["delegatorID", 137(14)], ["amount", 137(23)]]])], [136(h''), ["e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb", 92, 438760261]]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -12267,7 +12577,7 @@ func TestDeployedEvents(t *testing.T) {
 				// event type:
 				// id: []byte{}
 				// cadence-type-id: "A.8624b52f9ddcd04a.FlowIDTableStaking.DelegatorRewardsPaid"
-				// 3 field: [["amount", type(ufix64)], ["nodeID", type(string)], ["delegatorID", type(uint32)]]
+				// 3 field: [["nodeID", type(string)], ["delegatorID", type(uint32)], ["amount", type(ufix64)]]
 				// tag
 				0xd8, ccf.CBORTagEventType,
 				// array, 3 element follows
@@ -12288,24 +12598,13 @@ func TestDeployedEvents(t *testing.T) {
 				0x82,
 				// text, 6 bytes follow
 				0x66,
-				// "amount"
-				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
-				// tag
-				0xd8, ccf.CBORTagSimpleType,
-				// UFix64 type ID (23)
-				0x17,
-				// field 1
-				// array, 2 element follows
-				0x82,
-				// text, 6 bytes follow
-				0x66,
 				// "nodeID"
 				0x6e, 0x6f, 0x64, 0x65, 0x49, 0x44,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// String type ID (1)
 				0x01,
-				// field 2
+				// field 1
 				// array, 2 element follows
 				0x82,
 				// text, 11 bytes follow
@@ -12316,6 +12615,17 @@ func TestDeployedEvents(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleType,
 				// UInt32 type ID (14)
 				0x0e,
+				// field 2
+				// array, 2 element follows
+				0x82,
+				// text, 6 bytes follow
+				0x66,
+				// "amount"
+				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix64 type ID (23)
+				0x17,
 
 				// element 1: type and value
 				// array, 2 element follows
@@ -12326,14 +12636,14 @@ func TestDeployedEvents(t *testing.T) {
 				0x40,
 				// array, 3 items follow
 				0x83,
-				// 438760261
-				0x1a, 0x1a, 0x26, 0xf3, 0x45,
 				// text, 64 bytes follow
 				0x78, 0x40,
 				// "e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb"
 				0x65, 0x35, 0x32, 0x63, 0x62, 0x63, 0x64, 0x38, 0x32, 0x35, 0x65, 0x33, 0x32, 0x38, 0x61, 0x63, 0x61, 0x63, 0x38, 0x64, 0x62, 0x36, 0x62, 0x63, 0x62, 0x64, 0x63, 0x62, 0x62, 0x36, 0x65, 0x37, 0x37, 0x32, 0x34, 0x38, 0x36, 0x32, 0x63, 0x38, 0x62, 0x38, 0x39, 0x62, 0x30, 0x39, 0x64, 0x38, 0x35, 0x65, 0x64, 0x63, 0x63, 0x66, 0x34, 0x31, 0x66, 0x66, 0x39, 0x39, 0x38, 0x31, 0x65, 0x62,
 				// 92
 				0x18, 0x5c,
+				// 438760261
+				0x1a, 0x1a, 0x26, 0xf3, 0x45,
 			},
 		},
 		{
@@ -12344,7 +12654,7 @@ func TestDeployedEvents(t *testing.T) {
 				// {"value":{"id":"A.8624b52f9ddcd04a.FlowIDTableStaking.EpochTotalRewardsPaid","fields":[{"value":{"value":"1316543.00000000","type":"UFix64"},"name":"total"},{"value":{"value":"53.04112895","type":"UFix64"},"name":"fromFees"},{"value":{"value":"1316489.95887105","type":"UFix64"},"name":"minted"},{"value":{"value":"6.04080767","type":"UFix64"},"name":"feesBurned"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
-				// 129([[162([h'', "A.8624b52f9ddcd04a.FlowIDTableStaking.EpochTotalRewardsPaid", [["total", 137(23)], ["minted", 137(23)], ["fromFees", 137(23)], ["feesBurned", 137(23)]]])], [136(h''), [131654300000000, 131648995887105, 5304112895, 604080767]]])
+				// 129([[162([h'', "A.8624b52f9ddcd04a.FlowIDTableStaking.EpochTotalRewardsPaid", [["total", 137(23)], ["fromFees", 137(23)], ["minted", 137(23)], ["feesBurned", 137(23)]]])], [136(h''), [131654300000000, 5304112895, 131648995887105, 604080767]]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -12387,10 +12697,10 @@ func TestDeployedEvents(t *testing.T) {
 				// field 1
 				// array, 2 element follows
 				0x82,
-				// text, 6 bytes follow
-				0x66,
-				// "minted"
-				0x6d, 0x69, 0x6e, 0x74, 0x65, 0x64,
+				// text, 8 bytes follow
+				0x68,
+				// "fromFees"
+				0x66, 0x72, 0x6f, 0x6d, 0x46, 0x65, 0x65, 0x73,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// UFix64 type ID (23)
@@ -12398,10 +12708,10 @@ func TestDeployedEvents(t *testing.T) {
 				// field 2
 				// array, 2 element follows
 				0x82,
-				// text, 8 bytes follow
-				0x68,
-				// "fromFees"
-				0x66, 0x72, 0x6f, 0x6d, 0x46, 0x65, 0x65, 0x73,
+				// text, 6 bytes follow
+				0x66,
+				// "minted"
+				0x6d, 0x69, 0x6e, 0x74, 0x65, 0x64,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// UFix64 type ID (23)
@@ -12429,10 +12739,10 @@ func TestDeployedEvents(t *testing.T) {
 				0x84,
 				// 131654300000000
 				0x1b, 0x00, 0x00, 0x77, 0xbd, 0x27, 0xc8, 0xdf, 0x00,
-				// 131648995887105
-				0x1b, 0x00, 0x00, 0x77, 0xbb, 0xeb, 0xa2, 0x88, 0x01,
 				// 5304112895
 				0x1b, 0x00, 0x00, 0x00, 0x01, 0x3c, 0x26, 0x56, 0xff,
+				// 131648995887105
+				0x1b, 0x00, 0x00, 0x77, 0xbb, 0xeb, 0xa2, 0x88, 0x01,
 				// 604080767
 				0x1a, 0x24, 0x01, 0x8a, 0x7f,
 			},
@@ -12507,7 +12817,7 @@ func TestDeployedEvents(t *testing.T) {
 				// {"value":{"id":"A.8624b52f9ddcd04a.FlowIDTableStaking.RewardsPaid","fields":[{"value":{"value":"e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb","type":"String"},"name":"nodeID"},{"value":{"value":"1745.49955740","type":"UFix64"},"name":"amount"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
-				// 129([[162([h'', "A.8624b52f9ddcd04a.FlowIDTableStaking.RewardsPaid", [["amount", 137(23)], ["nodeID", 137(1)]]])], [136(h''), [174549955740, "e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb"]]])
+				// 129([[162([h'', "A.8624b52f9ddcd04a.FlowIDTableStaking.RewardsPaid", [["nodeID", 137(1)], ["amount", 137(23)]]])], [136(h''), ["e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb", 174549955740]]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -12520,7 +12830,7 @@ func TestDeployedEvents(t *testing.T) {
 				// event type:
 				// id: []byte{}
 				// cadence-type-id: "A.8624b52f9ddcd04a.FlowIDTableStaking.RewardsPaid"
-				// 2 field: [["amount", type(ufix64)], ["nodeID", type(string)]]
+				// 2 field: [["nodeID", type(string)], ["amount", type(ufix64)]]
 				// tag
 				0xd8, ccf.CBORTagEventType,
 				// array, 3 element follows
@@ -12541,23 +12851,23 @@ func TestDeployedEvents(t *testing.T) {
 				0x82,
 				// text, 6 bytes follow
 				0x66,
-				// "amount"
-				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
-				// tag
-				0xd8, ccf.CBORTagSimpleType,
-				// UFix64 type ID (23)
-				0x17,
-				// field 1
-				// array, 2 element follows
-				0x82,
-				// text, 6 bytes follow
-				0x66,
 				// "nodeID"
 				0x6e, 0x6f, 0x64, 0x65, 0x49, 0x44,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// String type ID (1)
 				0x01,
+				// field 1
+				// array, 2 element follows
+				0x82,
+				// text, 6 bytes follow
+				0x66,
+				// "amount"
+				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix64 type ID (23)
+				0x17,
 
 				// element 1: type and value
 				// array, 2 element follows
@@ -12568,12 +12878,12 @@ func TestDeployedEvents(t *testing.T) {
 				0x40,
 				// array, 2 items follow
 				0x82,
-				// 174549955740
-				0x1b, 0x00, 0x00, 0x00, 0x28, 0xa3, 0xfc, 0xf4, 0x9c,
 				// string, 64 bytes follow
 				0x78, 0x40,
 				// "e52cbcd825e328acac8db6bcbdcbb6e7724862c8b89b09d85edccf41ff9981eb"
 				0x65, 0x35, 0x32, 0x63, 0x62, 0x63, 0x64, 0x38, 0x32, 0x35, 0x65, 0x33, 0x32, 0x38, 0x61, 0x63, 0x61, 0x63, 0x38, 0x64, 0x62, 0x36, 0x62, 0x63, 0x62, 0x64, 0x63, 0x62, 0x62, 0x36, 0x65, 0x37, 0x37, 0x32, 0x34, 0x38, 0x36, 0x32, 0x63, 0x38, 0x62, 0x38, 0x39, 0x62, 0x30, 0x39, 0x64, 0x38, 0x35, 0x65, 0x64, 0x63, 0x63, 0x66, 0x34, 0x31, 0x66, 0x66, 0x39, 0x39, 0x38, 0x31, 0x65, 0x62,
+				// 174549955740
+				0x1b, 0x00, 0x00, 0x00, 0x28, 0xa3, 0xfc, 0xf4, 0x9c,
 			},
 		},
 		{
@@ -12584,7 +12894,7 @@ func TestDeployedEvents(t *testing.T) {
 				// {"value":{"id":"A.1654653399040a61.FlowToken.TokensDeposited","fields":[{"value":{"value":"1316489.95887105","type":"UFix64"},"name":"amount"},{"value":{"value":null,"type":"Optional"},"name":"to"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
-				// 129([[162([h'', "A.1654653399040a61.FlowToken.TokensDeposited", [["to", 138(137(3))], ["amount", 137(23)]]])], [136(h''), [null, 131648995887105]]])
+				// 129([[162([h'', "A.1654653399040a61.FlowToken.TokensDeposited", [["amount", 137(23)], ["to", 138(137(3))]]])], [136(h''), [131648995887105, null]]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -12616,6 +12926,17 @@ func TestDeployedEvents(t *testing.T) {
 				// field 0
 				// array, 2 element follows
 				0x82,
+				// text, 6 bytes follow
+				0x66,
+				// "amount"
+				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix64 type ID (23)
+				0x17,
+				// field 1
+				// array, 2 element follows
+				0x82,
 				// text, 2 bytes follow
 				0x62,
 				// "to"
@@ -12626,17 +12947,6 @@ func TestDeployedEvents(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleType,
 				// Address type ID (3)
 				0x03,
-				// field 1
-				// array, 2 element follows
-				0x82,
-				// text, 6 bytes follow
-				0x66,
-				// "amount"
-				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
-				// tag
-				0xd8, ccf.CBORTagSimpleType,
-				// UFix64 type ID (23)
-				0x17,
 
 				// element 1: type and value
 				// array, 2 element follows
@@ -12647,10 +12957,10 @@ func TestDeployedEvents(t *testing.T) {
 				0x40,
 				// array, 2 items follow
 				0x82,
-				// null
-				0xf6,
 				// 131648995887105
 				0x1b, 0x00, 0x00, 0x77, 0xbb, 0xeb, 0xa2, 0x88, 0x01,
+				// null
+				0xf6,
 			},
 		},
 		{
@@ -12661,7 +12971,7 @@ func TestDeployedEvents(t *testing.T) {
 				// {"value":{"id":"A.1654653399040a61.FlowToken.TokensDeposited","fields":[{"value":{"value":"1745.49955740","type":"UFix64"},"name":"amount"},{"value":{"value":{"value":"0x8624b52f9ddcd04a","type":"Address"},"type":"Optional"},"name":"to"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
-				// 129([[162([h'', "A.1654653399040a61.FlowToken.TokensDeposited", [["to", 138(137(3))], ["amount", 137(23)]]])], [136(h''), [h'8624B52F9DDCD04A', 174549955740]]])
+				// 129([[162([h'', "A.1654653399040a61.FlowToken.TokensDeposited", [["amount", 137(23)], ["to", 138(137(3))]]])], [136(h''), [174549955740, h'8624B52F9DDCD04A']]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -12693,6 +13003,17 @@ func TestDeployedEvents(t *testing.T) {
 				// field 0
 				// array, 2 element follows
 				0x82,
+				// text, 6 bytes follow
+				0x66,
+				// "amount"
+				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix64 type ID (23)
+				0x17,
+				// field 1
+				// array, 2 element follows
+				0x82,
 				// text, 2 bytes follow
 				0x62,
 				// "to"
@@ -12703,17 +13024,6 @@ func TestDeployedEvents(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleType,
 				// Address type ID (3)
 				0x03,
-				// field 1
-				// array, 2 element follows
-				0x82,
-				// text, 6 bytes follow
-				0x66,
-				// "amount"
-				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
-				// tag
-				0xd8, ccf.CBORTagSimpleType,
-				// UFix64 type ID (23)
-				0x17,
 
 				// element 1: type and value
 				// array, 2 element follows
@@ -12724,12 +13034,12 @@ func TestDeployedEvents(t *testing.T) {
 				0x40,
 				// array, 2 items follow
 				0x82,
+				// 174549955740
+				0x1b, 0x00, 0x00, 0x00, 0x28, 0xa3, 0xfc, 0xf4, 0x9c,
 				// bytes, 8 bytes follow
 				0x48,
 				// 0x8624b52f9ddcd04a
 				0x86, 0x24, 0xb5, 0x2f, 0x9d, 0xdc, 0xd0, 0x4a,
-				// 174549955740
-				0x1b, 0x00, 0x00, 0x00, 0x28, 0xa3, 0xfc, 0xf4, 0x9c,
 			},
 		},
 		{
@@ -12802,7 +13112,7 @@ func TestDeployedEvents(t *testing.T) {
 				// {"value":{"id":"A.1654653399040a61.FlowToken.TokensWithdrawn","fields":[{"value":{"value":"53.04112895","type":"UFix64"},"name":"amount"},{"value":{"value":{"value":"0xf919ee77447b7497","type":"Address"},"type":"Optional"},"name":"from"}]},"type":"Event"}
 				//
 				// language=edn, format=ccf
-				// 129([[162([h'', "A.1654653399040a61.FlowToken.TokensWithdrawn", [["from", 138(137(3))], ["amount", 137(23)]]])], [136(h''), [h'F919EE77447B7497', 5304112895]]])
+				// 129([[162([h'', "A.1654653399040a61.FlowToken.TokensWithdrawn", [["amount", 137(23)], ["from", 138(137(3))]]])], [136(h''), [5304112895, h'F919EE77447B7497']]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -12834,6 +13144,17 @@ func TestDeployedEvents(t *testing.T) {
 				// field 0
 				// array, 2 element follows
 				0x82,
+				// text, 6 bytes follow
+				0x66,
+				// "amount"
+				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// UFix64 type ID (23)
+				0x17,
+				// field 1
+				// array, 2 element follows
+				0x82,
 				// text, 4 bytes follow
 				0x64,
 				// "from"
@@ -12844,17 +13165,6 @@ func TestDeployedEvents(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleType,
 				// Address type ID (3)
 				0x03,
-				// field 1
-				// array, 2 element follows
-				0x82,
-				// text, 6 bytes follow
-				0x66,
-				// "amount"
-				0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
-				// tag
-				0xd8, ccf.CBORTagSimpleType,
-				// UFix64 type ID (23)
-				0x17,
 
 				// element 1: type and value
 				// array, 2 element follows
@@ -12865,12 +13175,12 @@ func TestDeployedEvents(t *testing.T) {
 				0x40,
 				// array, 2 items follow
 				0x82,
+				// 5304112895
+				0x1b, 0x00, 0x00, 0x00, 0x01, 0x3c, 0x26, 0x56, 0xff,
 				// bytes, 8 bytes follow
 				0x48,
 				// 0xf919ee77447b7497
 				0xf9, 0x19, 0xee, 0x77, 0x44, 0x7b, 0x74, 0x97,
-				// 5304112895
-				0x1b, 0x00, 0x00, 0x00, 0x01, 0x3c, 0x26, 0x56, 0xff,
 			},
 		},
 	}
@@ -12880,17 +13190,20 @@ func TestDeployedEvents(t *testing.T) {
 			t.Parallel()
 
 			// Encode Cadence value to CCF
-			actualCBOR, err := ccf.Encode(tc.event)
+			actualCBOR, err := ccf.EventsEncMode.Encode(tc.event)
 			require.NoError(t, err)
 			utils.AssertEqualWithDiff(t, tc.expectedCBOR, actualCBOR)
 
 			// Decode CCF to Cadence value
-			decodedEvent, err := ccf.Decode(nil, actualCBOR)
+			decodedEvent, err := ccf.EventsDecMode.Decode(nil, actualCBOR)
 			require.NoError(t, err)
 
-			// Test original event and decoded events are equal even if
-			// fields are ordered differently due to deterministic encoding.
-			testEventEquality(t, tc.event, decodedEvent.(cadence.Event))
+			// Since event encoding doesn't sort fields, make sure that input event is identical to decoded event.
+			require.Equal(
+				t,
+				cadence.ValueWithCachedTypeID(tc.event),
+				cadence.ValueWithCachedTypeID(decodedEvent),
+			)
 		})
 	}
 
@@ -13100,10 +13413,10 @@ func createFlowTokenTokensWithdrawnEvent() cadence.Event {
 	addressBytes, _ := hex.DecodeString("f919ee77447b7497")
 
 	amount, _ := cadence.NewUFix64("53.04112895")
-	to := cadence.NewOptional(cadence.BytesToAddress(addressBytes))
+	from := cadence.NewOptional(cadence.BytesToAddress(addressBytes))
 
 	return cadence.NewEvent(
-		[]cadence.Value{amount, to},
+		[]cadence.Value{amount, from},
 	).WithType(newFlowTokenTokensWithdrawnEventType())
 }
 
@@ -13264,38 +13577,17 @@ func createFlowIDTableStakingRewardsPaidEvent() cadence.Event {
 	).WithType(newFlowIDTableStakingRewardsPaidEventType())
 }
 
-func testEventEquality(t *testing.T, event1 cadence.Event, event2 cadence.Event) {
-	require.True(t, event1.Type().Equal(event2.Type()))
-	require.Equal(t, len(event1.Fields), len(event2.Fields))
-	require.Equal(t, len(event1.EventType.Fields), len(event2.EventType.Fields))
-
-	for i, event1FieldType := range event1.EventType.Fields {
-
-		foundField := false
-
-		for j, event2FieldType := range event2.EventType.Fields {
-			if event1FieldType.Identifier == event2FieldType.Identifier {
-				require.Equal(t, event1.Fields[i], event2.Fields[j])
-				foundField = true
-				break
-			}
-		}
-
-		require.True(t, foundField)
-	}
-}
-
 func TestDecodeTruncatedData(t *testing.T) {
 	t.Parallel()
 
-	data, err := ccf.Encode(createFlowTokenTokensWithdrawnEvent())
+	data, err := deterministicEncMode.Encode(createFlowTokenTokensWithdrawnEvent())
 	require.NoError(t, err)
 
-	_, err = ccf.Decode(nil, data)
+	_, err = deterministicDecMode.Decode(nil, data)
 	require.NoError(t, err)
 
 	for i := len(data) - 1; i >= 0; i-- {
-		decodedVal, err := ccf.Decode(nil, data[:i])
+		decodedVal, err := deterministicDecMode.Decode(nil, data[:i])
 		require.Nil(t, decodedVal)
 		require.Error(t, err)
 	}
@@ -14122,7 +14414,7 @@ func TestDecodeInvalidData(t *testing.T) {
 	test := func(tc testCase) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			decodedVal, err := ccf.Decode(nil, tc.data)
+			decodedVal, err := deterministicDecMode.Decode(nil, tc.data)
 			require.Nil(t, decodedVal)
 			require.Error(t, err)
 		})
@@ -14343,4 +14635,975 @@ func TestEncodeValueOfRestrictedInterface(t *testing.T) {
 			0x80,
 		},
 	)
+}
+
+func TestCyclicReferenceValue(t *testing.T) {
+
+	// Test data is from TestRuntimeScriptReturnSpecial in runtime_test.go
+	t.Run("recursive reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			access(all) fun main(): AnyStruct {
+				let refs: [&AnyStruct] = []
+				refs.append(&refs as &AnyStruct)
+				return refs
+			}
+        `
+
+		actual := exportFromScript(t, script)
+
+		expected := cadence.NewArray([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				nil,
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: &cadence.ReferenceType{
+					Authorization: cadence.Unauthorized{},
+					Type:          cadence.AnyStructType{},
+				},
+			}),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: &cadence.ReferenceType{
+				Authorization: cadence.Unauthorized{},
+				Type:          cadence.AnyStructType{},
+			},
+		})
+
+		assert.Equal(t, expected, actual)
+
+		testEncodeAndDecode(
+			t,
+			expected,
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":[{"value":[null],"type":"Array"}],"type":"Array"}
+				//
+				// language=edn, format=ccf
+				// 130([139(142([false, 137(39)])), [130([139(142([false, 137(39)])), [null]])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// static type
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// tag
+				0xd8, ccf.CBORTagReferenceType,
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+
+				// data
+				// array, 1 items follow
+				0x81,
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagVarsizedArrayType,
+				// tag
+				0xd8, ccf.CBORTagReferenceType,
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+				// array, 1 items follow
+				0x81,
+				// nil
+				0xf6,
+			},
+		)
+	})
+}
+
+func TestSortOptions(t *testing.T) {
+	// Test sorting of:
+	// - composite fields ("count", "sum")
+	// - restricted types ("HasCount", "HasSum")
+
+	sortFieldsEncMode, err := ccf.EncOptions{
+		SortCompositeFields: ccf.SortBytewiseLexical,
+	}.EncMode()
+	require.NoError(t, err)
+
+	sortRestrictedTypesEncMode, err := ccf.EncOptions{
+		SortRestrictedTypes: ccf.SortBytewiseLexical,
+	}.EncMode()
+	require.NoError(t, err)
+
+	enforceSortedFieldsDecMode, err := ccf.DecOptions{
+		EnforceSortCompositeFields: ccf.EnforceSortBytewiseLexical,
+	}.DecMode()
+	require.NoError(t, err)
+
+	enforceSortedRestrictedTypesDecMode, err := ccf.DecOptions{
+		EnforceSortRestrictedTypes: ccf.EnforceSortBytewiseLexical,
+	}.DecMode()
+	require.NoError(t, err)
+
+	hasCountInterfaceType := cadence.NewResourceInterfaceType(
+		common.NewStringLocation(nil, "test"),
+		"HasCount",
+		nil,
+		nil,
+	)
+
+	hasSumInterfaceType := cadence.NewResourceInterfaceType(
+		common.NewStringLocation(nil, "test"),
+		"HasSum",
+		nil,
+		nil,
+	)
+
+	statsType := cadence.NewResourceType(
+		common.NewStringLocation(nil, "test"),
+		"Stats",
+		[]cadence.Field{
+			cadence.NewField("count", cadence.NewIntType()),
+			cadence.NewField("sum", cadence.NewIntType()),
+		},
+		nil,
+	)
+
+	countSumRestrictedType := cadence.NewRestrictedType(
+		nil,
+		[]cadence.Type{
+			hasCountInterfaceType,
+			hasSumInterfaceType,
+		},
+	)
+
+	val := cadence.NewArray([]cadence.Value{
+		cadence.NewResource(
+			[]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewInt(2),
+			},
+		).WithType(statsType),
+	}).WithType(cadence.NewVariableSizedArrayType(countSumRestrictedType))
+
+	t.Run("no sort", func(t *testing.T) {
+		expectedStatsType := cadence.NewResourceType(
+			common.NewStringLocation(nil, "test"),
+			"Stats",
+			[]cadence.Field{
+				cadence.NewField("count", cadence.NewIntType()),
+				cadence.NewField("sum", cadence.NewIntType()),
+			},
+			nil,
+		)
+
+		expectedCountSumRestrictedType := cadence.NewRestrictedType(
+			nil,
+			[]cadence.Type{
+				hasCountInterfaceType,
+				hasSumInterfaceType,
+			},
+		)
+
+		expectedVal := cadence.NewArray([]cadence.Value{
+			cadence.NewResource(
+				[]cadence.Value{
+					cadence.NewInt(1),
+					cadence.NewInt(2),
+				},
+			).WithType(expectedStatsType),
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+
+		expectedCBOR := []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":{"id":"S.test.Stats","fields":[{"value":{"value":"1","type":"Int"},"name":"count"},{"value":{"value":"2","type":"Int"},"name":"sum"}]},"type":"Resource"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[161([h'', "S.test.Stats", [["count", 137(4)], ["sum", 137(4)]]]), 177([h'01', "S.test.HasSum"]), 177([h'02', "S.test.HasCount"]), ], [139(143([null, [136(h'02'), 136(h'01')]])), [130([136(h''), [2, 1]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 3 items follow
+			0x83,
+			// resource type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.Stats"
+			// 2 fields: [["count", type(int)], ["sum", type(int)]]
+			// tag
+			0xd8, ccf.CBORTagResourceType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 12 bytes follow
+			0x6c,
+			// S.test.Stats
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x73,
+			// fields
+			// array, 2 items follow
+			0x82,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 5 bytes follow
+			0x65,
+			// count
+			0x63, 0x6f, 0x75, 0x6e, 0x74,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// field 1
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// sum
+			0x73, 0x75, 0x6d,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// resource interface type:
+			// id: []byte{1}
+			// cadence-type-id: "S.test.HasSum"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 13 bytes follow
+			0x6d,
+			// S.test.HasSum
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x53, 0x75, 0x6d,
+			// resource interface type:
+			// id: []byte{2}
+			// cadence-type-id: "S.test.HasCount"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 2
+			0x02,
+			// cadence-type-id
+			// string, 15 bytes follow
+			0x6f,
+			// S.test.HasCount
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x43, 0x6f, 0x75, 0x6e, 0x74,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagRestrictedType,
+			// array, 2 items follow
+			0x82,
+			// type
+			// null
+			0xf6,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+
+			// array, 1 item follows
+			0x81,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 byte follows
+			0x40,
+			// array, 2 items follow
+			0x82,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+		}
+
+		// Encode value without sorting.
+		actualCBOR, err := ccf.Encode(val)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+
+		// Decode value without enforcing sorting.
+		decodedVal, err := ccf.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			cadence.ValueWithCachedTypeID(expectedVal),
+			cadence.ValueWithCachedTypeID(decodedVal),
+		)
+
+		// Decode value enforcing sorting of composite fields should return error.
+		_, err = enforceSortedFieldsDecMode.Decode(nil, actualCBOR)
+		require.Error(t, err)
+
+		// Decode value enforcing sorting of restricted types should return error.
+		_, err = enforceSortedRestrictedTypesDecMode.Decode(nil, actualCBOR)
+		require.Error(t, err)
+	})
+
+	t.Run("sort composite fields only", func(t *testing.T) {
+		expectedStatsType := cadence.NewResourceType(
+			common.NewStringLocation(nil, "test"),
+			"Stats",
+			[]cadence.Field{
+				cadence.NewField("sum", cadence.NewIntType()),
+				cadence.NewField("count", cadence.NewIntType()),
+			},
+			nil,
+		)
+
+		expectedCountSumRestrictedType := cadence.NewRestrictedType(
+			nil,
+			[]cadence.Type{
+				hasCountInterfaceType,
+				hasSumInterfaceType,
+			},
+		)
+
+		expectedVal := cadence.NewArray([]cadence.Value{
+			cadence.NewResource(
+				[]cadence.Value{
+					cadence.NewInt(2),
+					cadence.NewInt(1),
+				},
+			).WithType(expectedStatsType),
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+
+		expectedCBOR := []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":{"id":"S.test.Stats","fields":[{"value":{"value":"1","type":"Int"},"name":"count"},{"value":{"value":"2","type":"Int"},"name":"sum"}]},"type":"Resource"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[161([h'', "S.test.Stats", [["sum", 137(4)], ["count", 137(4)]]]), 177([h'01', "S.test.HasSum"]), 177([h'02', "S.test.HasCount"]), ], [139(143([null, [136(h'02'), 136(h'01')]])), [130([136(h''), [2, 1]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 3 items follow
+			0x83,
+			// resource type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.Stats"
+			// 2 fields: [["sum", type(int)], ["count", type(int)]]
+			// tag
+			0xd8, ccf.CBORTagResourceType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 12 bytes follow
+			0x6c,
+			// S.test.Stats
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x73,
+			// fields
+			// array, 2 items follow
+			0x82,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// sum
+			0x73, 0x75, 0x6d,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// field 1
+			// array, 2 items follow
+			0x82,
+			// text, 5 bytes follow
+			0x65,
+			// count
+			0x63, 0x6f, 0x75, 0x6e, 0x74,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// resource interface type:
+			// id: []byte{1}
+			// cadence-type-id: "S.test.HasSum"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 13 bytes follow
+			0x6d,
+			// S.test.HasSum
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x53, 0x75, 0x6d,
+			// resource interface type:
+			// id: []byte{2}
+			// cadence-type-id: "S.test.HasCount"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 2
+			0x02,
+			// cadence-type-id
+			// string, 15 bytes follow
+			0x6f,
+			// S.test.HasCount
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x43, 0x6f, 0x75, 0x6e, 0x74,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagRestrictedType,
+			// array, 2 items follow
+			0x82,
+			// type
+			// null
+			0xf6,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+
+			// array, 1 item follows
+			0x81,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 byte follows
+			0x40,
+			// array, 2 items follow
+			0x82,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+		}
+
+		// Encode value with sorted composite fields.
+		actualCBOR, err := sortFieldsEncMode.Encode(val)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+
+		// Decode value enforcing sorting of composite fields.
+		decodedVal, err := enforceSortedFieldsDecMode.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			cadence.ValueWithCachedTypeID(expectedVal),
+			cadence.ValueWithCachedTypeID(decodedVal),
+		)
+
+		// Decode value without enforcing sorting should return no error.
+		_, err = ccf.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+
+		// Decode value enforcing sorting of restricted types should return error.
+		_, err = enforceSortedRestrictedTypesDecMode.Decode(nil, actualCBOR)
+		require.Error(t, err)
+	})
+
+	t.Run("sort restricted types only", func(t *testing.T) {
+		expectedStatsType := cadence.NewResourceType(
+			common.NewStringLocation(nil, "test"),
+			"Stats",
+			[]cadence.Field{
+				cadence.NewField("count", cadence.NewIntType()),
+				cadence.NewField("sum", cadence.NewIntType()),
+			},
+			nil,
+		)
+
+		expectedCountSumRestrictedType := cadence.NewRestrictedType(
+			nil,
+			[]cadence.Type{
+				hasSumInterfaceType,
+				hasCountInterfaceType,
+			},
+		)
+
+		expectedVal := cadence.NewArray([]cadence.Value{
+			cadence.NewResource(
+				[]cadence.Value{
+					cadence.NewInt(1),
+					cadence.NewInt(2),
+				},
+			).WithType(expectedStatsType),
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+
+		expectedCBOR := []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":{"id":"S.test.Stats","fields":[{"value":{"value":"1","type":"Int"},"name":"count"},{"value":{"value":"2","type":"Int"},"name":"sum"}]},"type":"Resource"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[161([h'', "S.test.Stats", [["count", 137(4)], ["sum", 137(4)]]]), 177([h'01', "S.test.HasSum"]), 177([h'02', "S.test.HasCount"]), ], [139(143([null, [136(h'01'), 136(h'02')]])), [130([136(h''), [2, 1]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 3 items follow
+			0x83,
+			// resource type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.Stats"
+			// 2 fields: [["count", type(int)], ["sum", type(int)]]
+			// tag
+			0xd8, ccf.CBORTagResourceType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 12 bytes follow
+			0x6c,
+			// S.test.Stats
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x73,
+			// fields
+			// array, 2 items follow
+			0x82,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 5 bytes follow
+			0x65,
+			// count
+			0x63, 0x6f, 0x75, 0x6e, 0x74,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// field 1
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// sum
+			0x73, 0x75, 0x6d,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// resource interface type:
+			// id: []byte{1}
+			// cadence-type-id: "S.test.HasSum"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 13 bytes follow
+			0x6d,
+			// S.test.HasSum
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x53, 0x75, 0x6d,
+			// resource interface type:
+			// id: []byte{2}
+			// cadence-type-id: "S.test.HasCount"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 2
+			0x02,
+			// cadence-type-id
+			// string, 15 bytes follow
+			0x6f,
+			// S.test.HasCount
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x43, 0x6f, 0x75, 0x6e, 0x74,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagRestrictedType,
+			// array, 2 items follow
+			0x82,
+			// type
+			// null
+			0xf6,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+
+			// array, 1 item follows
+			0x81,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 byte follows
+			0x40,
+			// array, 2 items follow
+			0x82,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+		}
+
+		// Encode value with sorted restricted types.
+		actualCBOR, err := sortRestrictedTypesEncMode.Encode(val)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+
+		// Decode value enforcing sorting of restricted types.
+		decodedVal, err := enforceSortedRestrictedTypesDecMode.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			cadence.ValueWithCachedTypeID(expectedVal),
+			cadence.ValueWithCachedTypeID(decodedVal),
+		)
+
+		// Decode value without enforcing sorting should return no error.
+		_, err = ccf.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+
+		// Decode value enforcing sorting of composite fields should return error.
+		_, err = enforceSortedFieldsDecMode.Decode(nil, actualCBOR)
+		require.Error(t, err)
+	})
+
+	t.Run("sort", func(t *testing.T) {
+		expectedStatsType := cadence.NewResourceType(
+			common.NewStringLocation(nil, "test"),
+			"Stats",
+			[]cadence.Field{
+				cadence.NewField("sum", cadence.NewIntType()),
+				cadence.NewField("count", cadence.NewIntType()),
+			},
+			nil,
+		)
+
+		expectedCountSumRestrictedType := cadence.NewRestrictedType(
+			nil,
+			[]cadence.Type{
+				hasSumInterfaceType,
+				hasCountInterfaceType,
+			},
+		)
+
+		expectedVal := cadence.NewArray([]cadence.Value{
+			cadence.NewResource(
+				[]cadence.Value{
+					cadence.NewInt(2),
+					cadence.NewInt(1),
+				},
+			).WithType(expectedStatsType),
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+
+		expectedCBOR := []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":{"id":"S.test.Stats","fields":[{"value":{"value":"1","type":"Int"},"name":"count"},{"value":{"value":"2","type":"Int"},"name":"sum"}]},"type":"Resource"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 129([[161([h'', "S.test.Stats", [["sum", 137(4)], ["count", 137(4)]]]), 177([h'01', "S.test.HasSum"]), 177([h'02', "S.test.HasCount"])], [139(143([null, [136(h'01'), 136(h'02')]])), [130([136(h''), [2, 1]])]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 3 items follow
+			0x83,
+			// resource type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.Stats"
+			// 2 fields: [["sum", type(int)], ["count", type(int)]]
+			// tag
+			0xd8, ccf.CBORTagResourceType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 12 bytes follow
+			0x6c,
+			// S.test.Stats
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x73,
+			// fields
+			// array, 2 items follow
+			0x82,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// sum
+			0x73, 0x75, 0x6d,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// field 1
+			// array, 2 items follow
+			0x82,
+			// text, 5 bytes follow
+			0x65,
+			// count
+			0x63, 0x6f, 0x75, 0x6e, 0x74,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+			// resource interface type:
+			// id: []byte{1}
+			// cadence-type-id: "S.test.HasSum"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 13 bytes follow
+			0x6d,
+			// S.test.HasSum
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x53, 0x75, 0x6d,
+			// resource interface type:
+			// id: []byte{2}
+			// cadence-type-id: "S.test.HasCount"
+			// tag
+			0xd8, ccf.CBORTagResourceInterfaceType,
+			// array, 2 items follow
+			0x82,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 2
+			0x02,
+			// cadence-type-id
+			// string, 15 bytes follow
+			0x6f,
+			// S.test.HasCount
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x61, 0x73, 0x43, 0x6f, 0x75, 0x6e, 0x74,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagRestrictedType,
+			// array, 2 items follow
+			0x82,
+			// type
+			// null
+			0xf6,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+
+			// array, 1 item follows
+			0x81,
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 byte follows
+			0x40,
+			// array, 2 items follow
+			0x82,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 2
+			0x02,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 byte follows
+			0x41,
+			// 1
+			0x01,
+		}
+
+		// Encode value with sorted composite fields and restricted types.
+		actualCBOR, err := deterministicEncMode.Encode(val)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+
+		// Decode value enforcing sorting of composite fields and restricted types.
+		decodedVal, err := deterministicDecMode.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(
+			t,
+			cadence.ValueWithCachedTypeID(expectedVal),
+			cadence.ValueWithCachedTypeID(decodedVal),
+		)
+
+		// Decode value without enforcing sorting should return no error.
+		_, err = ccf.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+
+		// Decode value enforcing sorting of composite fields should return no error.
+		_, err = enforceSortedFieldsDecMode.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+
+		// Decode value enforcing sorting of restricted types should return no error.
+		_, err = enforceSortedRestrictedTypesDecMode.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+	})
+}
+
+func TestInvalidEncodingOptions(t *testing.T) {
+	opts := ccf.EncOptions{
+		SortCompositeFields: 100,
+	}
+	_, err := opts.EncMode()
+	require.Error(t, err)
+
+	opts = ccf.EncOptions{
+		SortRestrictedTypes: 100,
+	}
+	_, err = opts.EncMode()
+	require.Error(t, err)
+}
+
+func TestInvalidDecodingOptions(t *testing.T) {
+	opts := ccf.DecOptions{
+		EnforceSortCompositeFields: 100,
+	}
+	_, err := opts.DecMode()
+	require.Error(t, err)
+
+	opts = ccf.DecOptions{
+		EnforceSortRestrictedTypes: 100,
+	}
+	_, err = opts.DecMode()
+	require.Error(t, err)
 }

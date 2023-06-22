@@ -2769,3 +2769,40 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
 }
+
+func TestCheckResourceReferenceMethodInvocationAfterMove(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        resource Foo {
+
+            let id: UInt8
+
+            init() {
+                self.id = 12
+            }
+
+            access(all) fun something() {}
+        }
+
+        fun main() {
+            var foo <- create Foo()
+            var fooRef = &foo as &Foo
+
+            // Invocation should not un-track the reference
+            fooRef.something()
+
+            // Moving the resource should update the tracking
+            var newFoo <- foo
+
+        	fooRef.id
+
+        	destroy newFoo
+        }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+	assert.ErrorAs(t, errs[0], &invalidatedRefError)
+}

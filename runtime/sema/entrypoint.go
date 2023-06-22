@@ -70,5 +70,12 @@ func (checker *Checker) EntryPointParameters() []Parameter {
 		return functionType.Parameters
 	}
 
+	compositeDeclarations := checker.Program.CompositeDeclarations()
+	if len(compositeDeclarations) > 0 {
+		compositeDeclaration := compositeDeclarations[0]
+		compositeType := checker.Elaboration.CompositeDeclarationType(compositeDeclaration)
+		return compositeType.ConstructorParameters
+	}
+
 	return nil
 }

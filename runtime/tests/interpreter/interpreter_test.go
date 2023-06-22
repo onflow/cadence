@@ -636,7 +636,7 @@ func TestInterpretArrayEquality(t *testing.T) {
 		for _, opStr := range []string{"==", "!="} {
 			op := opStr
 			testname := fmt.Sprintf("test variable size array %s at nesting level %d", op, nestingLevel)
-			code := fmt.Sprintf(` 
+			code := fmt.Sprintf(`
 					let xs = %s
 					return xs %s xs
 				`,
@@ -4336,8 +4336,8 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
       resource TestResource {}
 
       let x: {Type: String} = {
-        Type<Int16>(): "a", 
-        Type<String>(): "b", 
+        Type<Int16>(): "a",
+        Type<String>(): "b",
         Type<AnyStruct>(): "c",
         Type<@TestResource>(): "f"
       }
@@ -7263,6 +7263,10 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		"Word128": {
 			value: interpreter.NewUnmeteredWord128ValueFromUint64(42),
 			ty:    sema.Word128Type,
+		},
+		"Word256": {
+			value: interpreter.NewUnmeteredWord256ValueFromUint64(42),
+			ty:    sema.Word256Type,
 		},
 		// Fix*
 		"Fix64": {
@@ -10308,4 +10312,108 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 		testFunctionReturn(tc)
 		testVariableDeclaration(tc)
 	}
+}
+
+func TestInterpretCompositeTypeHandler(t *testing.T) {
+
+	t.Parallel()
+
+	testType := &sema.CompositeType{}
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          fun test(): Type? {
+              return CompositeType("TEST")
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				CompositeTypeHandler: func(location common.Location, typeID common.TypeID) *sema.CompositeType {
+					if typeID == "TEST" {
+						return testType
+					}
+
+					return nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	testStaticType := interpreter.ConvertSemaToStaticType(nil, testType)
+
+	require.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredTypeValue(testStaticType)),
+		value,
+	)
+}
+
+func TestInterpretConditionsWrapperFunctionType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct interface SI {
+              fun test(x: Int) {
+                  pre { true }
+              }
+          }
+
+          struct S: SI {
+              fun test(x: Int) {}
+          }
+
+          fun test(): fun (Int): Void {
+              let s = S()
+              return s.test
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              contract interface CI {
+                  struct S {
+                      fun test(x: Int) {
+                          pre { true }
+                      }
+                  }
+              }
+
+              contract C: CI {
+                  struct S {
+                      fun test(x: Int) {}
+                  }
+              }
+
+              fun test(): fun (Int): Void {
+                  let s = C.S()
+                  return s.test
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }
