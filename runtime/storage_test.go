@@ -949,10 +949,8 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
                  <-TopShot.createEmptyCollection(),
                  to: /storage/MomentCollection
               )
-              signer.link<&TopShot.Collection>(
-                 /public/MomentCollection,
-                 target: /storage/MomentCollection
-              )
+              let cap = signer.capabilities.storage.issue<&TopShot.Collection>(/storage/MomentCollection)
+              signer.capabilities.publish(/public/MomentCollection)
           }
       }
     `
@@ -1093,10 +1091,6 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
                  <-Test.createEmptyCollection(),
                  to: /storage/MainCollection
               )
-              self.account.link<&Collection>(
-                 /public/MainCollection,
-                 target: /storage/MainCollection
-              )
           }
 
           access(all) fun mint(): @NFT {
@@ -1216,10 +1210,8 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
                  <-Test.createEmptyCollection(),
                  to: /storage/TestCollection
               )
-              signer.link<&Test.Collection>(
-                 /public/TestCollection,
-                 target: /storage/TestCollection
-              )
+              let cap = signer.capabilities.storage.issue<&Test.Collection>(/storage/TestCollection)
+              signer.capabilities.publish(cap, at: /public/TestCollection)
           }
       }
     `
@@ -1255,8 +1247,8 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 
           execute {
               getAccount(0x2)
-                  .getCapability(/public/TestCollection)
-                  .borrow<&Test.Collection>()!
+                  .capabilities
+                  .borrow<&Test.Collection>(/public/TestCollection)!
                   .batchDeposit(collection: <-self.collection)
           }
       }
@@ -1287,7 +1279,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageUnlink(t *testing.T) {
+func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 
 	t.Parallel()
 
@@ -1306,7 +1298,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// Store a value and link a capability
+	// Store a value and publish a capability
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -1315,12 +1307,10 @@ func TestRuntimeStorageUnlink(t *testing.T) {
                   prepare(signer: AuthAccount) {
                       signer.save(42, to: /storage/test)
 
-                      signer.link<&Int>(
-                          /public/test,
-                          target: /storage/test
-                      )
+                      let cap = signer.capabilities.storage.issue<&Int>(/storage/test)
+                      signer.capabilities.publish(cap, at: /public/test)
 
-                      assert(signer.getCapability<&Int>(/public/test).borrow() != nil)
+                      assert(signer.capabilities.borrow<&Int>(/public/test) != nil)
                   }
               }
             `),
@@ -1332,16 +1322,16 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Unlink the capability
+	// Unpublish the capability
 
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
             transaction {
                 prepare(signer: AuthAccount) {
-                    signer.unlink(/public/test)
+                    signer.capabilities.unpublish(/public/test)
 
-                    assert(signer.getCapability<&Int>(/public/test).borrow() == nil)
+                    assert(signer.capabilities.borrow<&Int>(/public/test) == nil)
                 }
             }
             `),
@@ -1353,14 +1343,14 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Get the capability after unlink
+	// Get the capability after unpublish
 
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
               transaction {
                   prepare(signer: AuthAccount) {
-                      assert(signer.getCapability<&Int>(/public/test).borrow() == nil)
+                      assert(signer.capabilities.borrow<&Int>(/public/test) == nil)
                   }
               }
             `),

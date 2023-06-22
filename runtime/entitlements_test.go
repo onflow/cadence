@@ -50,7 +50,8 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save(3, to: /storage/foo)
-				signer.link<auth(Test.X, Test.Y) &Int>(/public/foo, target: /storage/foo)
+				let cap = signer.capabilities.storage.issue<auth(Test.X, Test.Y) &Int>(/storage/foo)
+                signer.capabilities.publish(cap, at: /public/foo)
 			}
 		}
 	 `)
@@ -59,8 +60,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 		import Test from 0x1
 		transaction {
 			prepare(signer: AuthAccount) {
-				let cap = signer.getCapability<auth(Test.X, Test.Y) &Int>(/public/foo)
-				let ref = cap.borrow()!
+				let ref = signer.capabilities.borrow<auth(Test.X, Test.Y) &Int>(/public/foo)!
 				let downcastRef = ref as! auth(Test.X, Test.Y) &Int
 			}
 		}

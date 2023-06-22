@@ -7001,119 +7001,38 @@ func TestRuntimePanics(t *testing.T) {
 
 }
 
-func TestRuntimeGetCapability(t *testing.T) {
+func TestRuntimeInvalidContainerTypeConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("invalid: private path, public account used as auth account", func(t *testing.T) {
+	runtime := newTestInterpreterRuntime()
 
-		t.Parallel()
-
-		runtime := newTestInterpreterRuntime()
-
-		script := []byte(`
-          access(all) fun main(): Capability {
+	script := []byte(`
+          access(all) fun main() {
               let dict: {Int: AuthAccount} = {}
               let ref = &dict as &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
-              return dict.values[0].getCapability(/private/xxx)
           }
         `)
 
-		runtimeInterface := &testRuntimeInterface{}
+	runtimeInterface := &testRuntimeInterface{}
 
-		_, err := runtime.ExecuteScript(
-			Script{
-				Source: script,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
 
-		RequireError(t, err)
+	RequireError(t, err)
 
-		assertRuntimeErrorIsUserError(t, err)
+	assertRuntimeErrorIsUserError(t, err)
 
-		var typeErr interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &typeErr)
-	})
-
-	t.Run("invalid: public path, public account used as auth account", func(t *testing.T) {
-
-		t.Parallel()
-
-		runtime := newTestInterpreterRuntime()
-
-		script := []byte(`
-          access(all) fun main(): Capability {
-              let dict: {Int: AuthAccount} = {}
-              let ref = &dict as &{Int: AnyStruct}
-              ref[0] = getAccount(0x01) as AnyStruct
-              return dict.values[0].getCapability(/public/xxx)
-          }
-        `)
-
-		runtimeInterface := &testRuntimeInterface{}
-
-		_, err := runtime.ExecuteScript(
-			Script{
-				Source: script,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-
-		RequireError(t, err)
-
-		assertRuntimeErrorIsUserError(t, err)
-
-		var typeErr interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &typeErr)
-	})
-
-	t.Run("valid: public path, public account used as public account", func(t *testing.T) {
-
-		t.Parallel()
-
-		runtime := newTestInterpreterRuntime()
-
-		script := []byte(`
-          access(all) fun main(): Capability {
-              let dict: {Int: PublicAccount} = {}
-              let ref = &dict as &{Int: AnyStruct}
-              ref[0] = getAccount(0x01) as AnyStruct
-              return dict.values[0].getCapability(/public/xxx)
-          }
-        `)
-
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-		}
-
-		res, err := runtime.ExecuteScript(
-			Script{
-				Source: script,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-
-		require.NoError(t, err)
-		require.Equal(t,
-			cadence.NewIDCapability(
-				cadence.UInt64(1),
-				cadence.BytesToAddress([]byte{0x1}),
-				nil,
-			),
-			res,
-		)
-	})
+	var typeErr interpreter.ContainerMutationError
+	require.ErrorAs(t, err, &typeErr)
 }
 
 func TestRuntimeStackOverflow(t *testing.T) {
