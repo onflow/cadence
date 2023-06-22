@@ -204,8 +204,7 @@ type MemberResolver struct {
 		targetRange ast.Range,
 		report func(error),
 	) *Member
-	Kind     common.DeclarationKind
-	Mutating bool
+	Kind common.DeclarationKind
 }
 
 // supertype of interfaces and composites
@@ -1996,8 +1995,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 	if _, ok := arrayType.(*VariableSizedType); ok {
 
 		members["append"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 				elementType := arrayType.ElementType(false)
 				return NewFunctionMember(
@@ -2012,8 +2010,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["appendAll"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -2094,8 +2091,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["insert"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -2112,8 +2108,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["remove"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -2130,8 +2125,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["removeFirst"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -2148,8 +2142,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["removeLast"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -5307,8 +5300,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				},
 			},
 			"insert": {
-				Kind:     common.DeclarationKindFunction,
-				Mutating: true,
+				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewFunctionMember(
 						memoryGauge,
@@ -5321,8 +5313,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				},
 			},
 			"remove": {
-				Kind:     common.DeclarationKindFunction,
-				Mutating: true,
+				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewFunctionMember(
 						memoryGauge,
