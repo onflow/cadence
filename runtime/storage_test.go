@@ -950,7 +950,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
                  to: /storage/MomentCollection
               )
               let cap = signer.capabilities.storage.issue<&TopShot.Collection>(/storage/MomentCollection)
-              signer.capabilities.publish(/public/MomentCollection)
+              signer.capabilities.publish(cap, at: /public/MomentCollection)
           }
       }
     `
@@ -990,8 +990,8 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
               let recipient = getAccount(0x42)
 
               // get the Collection reference for the receiver
-              let receiverRef = recipient.getCapability(/public/MomentCollection)
-                  .borrow<&{TopShot.MomentCollectionPublic}>()!
+              let receiverRef = recipient.capabilities
+                  .borrow<&{TopShot.MomentCollectionPublic}>(/public/MomentCollection)!
 
               // deposit the NFT in the receivers collection
               receiverRef.batchDeposit(tokens: <-self.transferTokens)
@@ -1527,12 +1527,10 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
           prepare(signer: AuthAccount) {
               signer.save(<-Test.createR(), to: /storage/r)
 
-              signer.link<&Test.R{Test.RI}>(
-                 /public/r,
-                 target: /storage/r
-              )
+              let cap = signer.capabilities.storage.issue<&Test.R{Test.RI}>(/storage/r)
+              signer.capabilities.publish(cap, at: /public/r)
 
-              let ref = signer.getCapability<&Test.R{Test.RI}>(/public/r).borrow()!
+              let ref = signer.capabilities.borrow<&Test.R{Test.RI}>(/public/r)!
 
               let casted = (ref as AnyStruct) as! &Test.R
           }
@@ -1626,12 +1624,10 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
           prepare(signer: AuthAccount) {
               signer.save(<-Test.createR(), to: /storage/r)
 
-              signer.link<&Test.R{Test.RI}>(
-                 /public/r,
-                 target: /storage/r
-              )
+              let cap = signer.capabilities.storage.issue<&Test.R{Test.RI}>(/storage/r)
+              signer.capabilities.publish(cap, at: /public/r)
 
-              let ref = signer.getCapability<&Test.R{Test.RI}>(/public/r).borrow()!
+              let ref = signer.capabilities.borrow<&Test.R{Test.RI}>(/public/r)!
 
               let casted = (ref as AnyStruct) as! auth(Test.E) &Test.R
           }
