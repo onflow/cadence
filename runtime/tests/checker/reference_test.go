@@ -2825,7 +2825,7 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
             resource R {}
 
             attachment A for R {
-                pub(set) var id: UInt8
+                access(all) var id: UInt8
                 init() {
                     self.id = 1
                 }
