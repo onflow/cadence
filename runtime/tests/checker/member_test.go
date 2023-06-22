@@ -692,4 +692,25 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("anyresource swap on reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource Foo {}
+
+            fun test() {
+                let dict: @{String: AnyResource} <- {"foo": <- create Foo(), "bar": <- create Foo()}
+                let dictRef = &dict as &{String: AnyResource}
+
+                dictRef["foo"] <-> dictRef["bar"]
+
+                destroy dict
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }

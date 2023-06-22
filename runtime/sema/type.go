@@ -5437,7 +5437,7 @@ func (*DictionaryType) isValueIndexableType() bool {
 	return true
 }
 
-func (t *DictionaryType) ElementType(_ bool) Type {
+func (t *DictionaryType) ElementType(isAssignment bool) Type {
 	return &OptionalType{Type: t.ValueType}
 }
 
