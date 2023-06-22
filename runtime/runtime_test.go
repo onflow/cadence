@@ -4974,14 +4974,15 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
               r.logOwnerAddress()
 
               signer.save(<-r, to: /storage/r)
-              signer.link<&Test.R>(/public/r, target: /storage/r)
+              let cap = signer.capabilities.storage.issue<&Test.R>(/storage/r)
+              signer.capabilities.publish(cap, at: /public/r)
 
               let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
               log(ref1.owner?.address)
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
+              let ref2 = publicAccount.capabilities.borrow<&Test.R>(/public/r)!
               log(ref2.owner?.address)
               ref2.logOwnerAddress()
           }
@@ -5003,7 +5004,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
+              let ref2 = publicAccount.capabilities.borrow<&Test.R>(/public/r)!
               log(ref2.owner?.address)
               log(ref2.owner?.balance)
               log(ref2.owner?.availableBalance)
@@ -5347,7 +5348,8 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
               rs["b"]?.logOwnerAddress()
 
               signer.save(<-rs, to: /storage/rs)
-              signer.link<&{String: Test.R}>(/public/rs, target: /storage/rs)
+              let cap = signer.capabilities.storage.issue<&{String: Test.R}>(/storage/rs)
+              signer.capabilities.publish(cap, at: /public/rs)
 
               let ref1 = signer.borrow<&{String: Test.R}>(from: /storage/rs)!
               log(ref1["a"]?.owner?.address)
@@ -5356,7 +5358,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
               ref1["b"]?.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
+              let ref2 = publicAccount.capabilities.borrow<&{String: Test.R}>(/public/rs)!
               log(ref2["a"]?.owner?.address)
               log(ref2["b"]?.owner?.address)
               ref2["a"]?.logOwnerAddress()
@@ -5378,7 +5380,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
               ref1["b"]?.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
+              let ref2 = publicAccount.capabilities.borrow<&{String: Test.R}>(/public/rs)!
               log(ref2["a"]?.owner?.address)
               log(ref2["b"]?.owner?.address)
               ref2["a"]?.logOwnerAddress()
