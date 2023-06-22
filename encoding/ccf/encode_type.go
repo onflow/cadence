@@ -390,19 +390,7 @@ func (e *Encoder) encodeIntersectionTypeWithRawTag(
 		return err
 	}
 
-	// Encode array head of length 2.
-	err = e.enc.EncodeArrayHead(2)
-	if err != nil {
-		return err
-	}
-
-	// element 0: type with given encodeTypeFn
-	err = encodeTypeFn(typ.Type, tids)
-	if err != nil {
-		return err
-	}
-
-	// element 1: types as array.
+	// types as array.
 
 	// Encode array head with number of types.
 	intersectionTypes := typ.Types
