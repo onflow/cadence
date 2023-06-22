@@ -1934,4 +1934,73 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			require.NoError(t, err)
 		})
 	})
+
+	t.Run("assignment", func(t *testing.T) {
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Mutable) &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+		})
+
+		t.Run("insertable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Insertable) &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("removable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+		})
+	})
 }

@@ -112,17 +112,17 @@ func (checker *Checker) getReferenceType(typ Type, substituteAuthorization bool,
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
-	if !isReferenceType(parentType) {
+	if _, isReference := referenceType(parentType); !isReference {
 		return false
 	}
 
 	return isContainerType(memberType)
 }
 
-func isReferenceType(typ Type) bool {
+func referenceType(typ Type) (*ReferenceType, bool) {
 	unwrappedType := UnwrapOptionalType(typ)
-	_, isReference := unwrappedType.(*ReferenceType)
-	return isReference
+	refType, isReference := unwrappedType.(*ReferenceType)
+	return refType, isReference
 }
 
 func isContainerType(typ Type) bool {

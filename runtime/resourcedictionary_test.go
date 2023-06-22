@@ -58,7 +58,7 @@ const resourceDictionaryContract = `
 
      pub resource C {
 
-         pub(set) var rs: @{String: R}
+         access(Identity) var rs: @{String: R}
 
          init() {
              self.rs <- {}
@@ -166,7 +166,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
      transaction {
 
          prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
+             let c = signer.borrow<auth(Insertable) &Test.C>(from: /storage/c)!
              c.rs["a"] <-! Test.createR(1)
              c.rs["b"] <-! Test.createR(2)
         }

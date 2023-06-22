@@ -260,7 +260,11 @@ func (checker *Checker) recordReferenceCreation(target, expr ast.Expression) {
 }
 
 func (checker *Checker) recordReference(targetVariable *Variable, expr ast.Expression) {
-	if targetVariable == nil || !isReferenceType(targetVariable.Type) {
+	if targetVariable == nil {
+		return
+	}
+
+	if _, isReference := referenceType(targetVariable.Type); !isReference {
 		return
 	}
 

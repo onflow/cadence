@@ -2928,6 +2928,37 @@ func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	)
 }
 
+// UnauthorizedReferenceAssignmentError
+
+type UnauthorizedReferenceAssignmentError struct {
+	RequiredAccess Access
+	FoundAccess    Access
+	ast.Range
+}
+
+var _ SemanticError = &UnauthorizedReferenceAssignmentError{}
+var _ errors.UserError = &UnauthorizedReferenceAssignmentError{}
+var _ errors.SecondaryError = &UnauthorizedReferenceAssignmentError{}
+
+func (*UnauthorizedReferenceAssignmentError) isSemanticError() {}
+
+func (*UnauthorizedReferenceAssignmentError) IsUserError() {}
+
+func (e *UnauthorizedReferenceAssignmentError) Error() string {
+	return fmt.Sprintf(
+		"invalid assignment: can only assign to a reference with (%s) access, but found a (%s) reference",
+		e.RequiredAccess.Description(),
+		e.FoundAccess.Description(),
+	)
+}
+
+func (e *UnauthorizedReferenceAssignmentError) SecondaryError() string {
+	return fmt.Sprintf(
+		"consider taking a reference with `%s` access",
+		e.RequiredAccess.Description(),
+	)
+}
+
 // InvalidCharacterLiteralError
 
 type InvalidCharacterLiteralError struct {
