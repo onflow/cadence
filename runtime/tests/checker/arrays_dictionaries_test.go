@@ -1650,4 +1650,79 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			require.NoError(t, err)
 		})
 	})
+
+	t.Run("public functions", func(t *testing.T) {
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutable) &[String]
+                    arrayRef.contains("hello")
+                    arrayRef.firstIndex(of: "hello")
+                    arrayRef.slice(from: 2, upTo: 4)
+                    arrayRef.concat(["hello"])
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef.contains("hello")
+                    arrayRef.firstIndex(of: "hello")
+                    arrayRef.slice(from: 2, upTo: 4)
+                    arrayRef.concat(["hello"])
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("insertable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insertable) &[String]
+                    arrayRef.contains("hello")
+                    arrayRef.firstIndex(of: "hello")
+                    arrayRef.slice(from: 2, upTo: 4)
+                    arrayRef.concat(["hello"])
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("removable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Removable) &[String]
+                    arrayRef.contains("hello")
+                    arrayRef.firstIndex(of: "hello")
+                    arrayRef.slice(from: 2, upTo: 4)
+                    arrayRef.concat(["hello"])
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+	})
 }
