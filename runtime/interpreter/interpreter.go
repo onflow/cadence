@@ -857,10 +857,16 @@ func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast
 		statement := ast.NewExpressionStatement(interpreter, condition.Test)
 
 		result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-		value, valueOk := result.Value.(BoolValue)
+		value, ok := result.Value.(BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-		if ok && valueOk && bool(value) {
+		if value {
 			return
 		}
 
