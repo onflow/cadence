@@ -176,7 +176,8 @@ const PublicAccountContractsTypeBorrowFunctionName = "borrow"
 var PublicAccountContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -223,7 +224,7 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFieldMember(
 			PublicAccountContractsType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountContractsTypeNamesFieldName,
 			PublicAccountContractsTypeNamesFieldType,
@@ -231,14 +232,14 @@ func init() {
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountContractsType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			PublicAccountContractsTypeGetFunctionName,
 			PublicAccountContractsTypeGetFunctionType,
 			PublicAccountContractsTypeGetFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountContractsType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			PublicAccountContractsTypeBorrowFunctionName,
 			PublicAccountContractsTypeBorrowFunctionType,
 			PublicAccountContractsTypeBorrowFunctionDocString,
@@ -328,21 +329,21 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFunctionMember(
 			PublicAccountKeysType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			PublicAccountKeysTypeGetFunctionName,
 			PublicAccountKeysTypeGetFunctionType,
 			PublicAccountKeysTypeGetFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountKeysType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			PublicAccountKeysTypeForEachFunctionName,
 			PublicAccountKeysTypeForEachFunctionType,
 			PublicAccountKeysTypeForEachFunctionDocString,
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountKeysType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountKeysTypeCountFieldName,
 			PublicAccountKeysTypeCountFieldType,
@@ -359,7 +360,8 @@ const PublicAccountCapabilitiesTypeGetFunctionName = "get"
 var PublicAccountCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -395,7 +397,8 @@ const PublicAccountCapabilitiesTypeBorrowFunctionName = "borrow"
 var PublicAccountCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -443,14 +446,14 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFunctionMember(
 			PublicAccountCapabilitiesType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			PublicAccountCapabilitiesTypeGetFunctionName,
 			PublicAccountCapabilitiesTypeGetFunctionType,
 			PublicAccountCapabilitiesTypeGetFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountCapabilitiesType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			PublicAccountCapabilitiesTypeBorrowFunctionName,
 			PublicAccountCapabilitiesTypeBorrowFunctionType,
 			PublicAccountCapabilitiesTypeBorrowFunctionDocString,
@@ -481,7 +484,7 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountTypeAddressFieldName,
 			PublicAccountTypeAddressFieldType,
@@ -489,7 +492,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountTypeBalanceFieldName,
 			PublicAccountTypeBalanceFieldType,
@@ -497,7 +500,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountTypeAvailableBalanceFieldName,
 			PublicAccountTypeAvailableBalanceFieldType,
@@ -505,7 +508,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountTypeStorageUsedFieldName,
 			PublicAccountTypeStorageUsedFieldType,
@@ -513,7 +516,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountTypeStorageCapacityFieldName,
 			PublicAccountTypeStorageCapacityFieldType,
@@ -521,7 +524,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountTypeContractsFieldName,
 			PublicAccountTypeContractsFieldType,
@@ -529,7 +532,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountTypeKeysFieldName,
 			PublicAccountTypeKeysFieldType,
@@ -537,7 +540,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountTypeCapabilitiesFieldName,
 			PublicAccountTypeCapabilitiesFieldType,
@@ -545,7 +548,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			PublicAccountTypePublicPathsFieldName,
 			PublicAccountTypePublicPathsFieldType,
@@ -553,7 +556,7 @@ func init() {
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			PublicAccountTypeForEachPublicFunctionName,
 			PublicAccountTypeForEachPublicFunctionType,
 			PublicAccountTypeForEachPublicFunctionDocString,

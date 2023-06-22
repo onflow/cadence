@@ -217,8 +217,8 @@ func TestCheckNilCoalescingWithNever(t *testing.T) {
 
 	_, err := ParseAndCheckWithPanic(t,
 		`
-          pub let x: Int? = nil
-          pub let y = x ?? panic("nope")
+          access(all) let x: Int? = nil
+          access(all) let y = x ?? panic("nope")
         `,
 	)
 

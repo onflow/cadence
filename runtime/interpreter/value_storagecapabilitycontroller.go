@@ -58,6 +58,7 @@ type StorageCapabilityControllerValue struct {
 	TargetFunction   FunctionValue
 	RetargetFunction FunctionValue
 	DeleteFunction   FunctionValue
+	setTagFunction   FunctionValue
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
@@ -227,6 +228,12 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 		}
 		return v.tag
 
+	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(inter)
+		}
+		return v.setTagFunction
+
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
 
@@ -252,17 +259,7 @@ func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 }
 
 func (v *StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
-	switch identifier {
-	case sema.StorageCapabilityControllerTypeTagFieldName:
-		stringValue, ok := value.(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		v.tag = stringValue
-		v.SetTag(stringValue)
-		return true
-	}
-
+	// Storage capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -273,7 +270,7 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 ) ReferenceValue {
 	return NewStorageReferenceValue(
 		interpreter,
-		resultBorrowType.Authorized,
+		ConvertSemaAccesstoStaticAuthorization(interpreter, resultBorrowType.Authorization),
 		capabilityAddress,
 		v.TargetPath,
 		resultBorrowType.Type,
@@ -314,5 +311,25 @@ func (v *StorageCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 		gauge,
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
 		panicHostFunction,
+	)
+}
+
+func (controller *StorageCapabilityControllerValue) newSetTagFunction(
+	inter *Interpreter,
+) *HostFunctionValue {
+	return NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeSetTagFunctionType,
+		func(invocation Invocation) Value {
+			newTagValue, ok := invocation.Arguments[0].(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			controller.tag = newTagValue
+			controller.SetTag(newTagValue)
+
+			return Void
+		},
 	)
 }

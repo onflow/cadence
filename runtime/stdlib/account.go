@@ -633,6 +633,7 @@ func newAccountKeysForEachFunction(
 					inter,
 					nil,
 					nil,
+					nil,
 					[]interpreter.Value{key},
 					accountKeysForEachCallbackTypeParams,
 					nil,
@@ -1289,7 +1290,7 @@ func newAccountContractsBorrowFunction(
 			// A contract value would never be moved or destroyed, within the execution of a program.
 			reference := interpreter.NewEphemeralReferenceValue(
 				inter,
-				false,
+				interpreter.UnauthorizedAccess,
 				contractValue,
 				referenceType.Type,
 			)
@@ -2176,7 +2177,8 @@ func newAuthAccountStorageCapabilitiesGetControllerFunction(
 
 var storageCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
 	Type: interpreter.ReferenceStaticType{
-		BorrowedType: interpreter.PrimitiveStaticTypeStorageCapabilityController,
+		ReferencedType: interpreter.PrimitiveStaticTypeStorageCapabilityController,
+		Authorization:  interpreter.UnauthorizedAccess,
 	},
 }
 
@@ -2238,7 +2240,8 @@ func newAuthAccountStorageCapabilitiesGetControllersFunction(
 // `forEachController(forPath: StoragePath, _ function: fun(&StorageCapabilityController): Bool)`
 var authAccountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	&sema.ReferenceType{
-		Type: sema.StorageCapabilityControllerType,
+		Type:          sema.StorageCapabilityControllerType,
+		Authorization: sema.UnauthorizedAccess,
 	},
 }
 
@@ -2304,6 +2307,7 @@ func newAuthAccountStorageCapabilitiesForEachControllerFunction(
 
 				subInvocation := interpreter.NewInvocation(
 					inter,
+					nil,
 					nil,
 					nil,
 					[]interpreter.Value{referenceValue},
@@ -2642,7 +2646,7 @@ func getStorageCapabilityControllerReference(
 
 	return interpreter.NewEphemeralReferenceValue(
 		inter,
-		false,
+		interpreter.UnauthorizedAccess,
 		storageCapabilityController,
 		sema.StorageCapabilityControllerType,
 	)
@@ -3459,7 +3463,7 @@ func getAccountCapabilityControllerReference(
 
 	return interpreter.NewEphemeralReferenceValue(
 		inter,
-		false,
+		interpreter.UnauthorizedAccess,
 		accountCapabilityController,
 		sema.AccountCapabilityControllerType,
 	)
@@ -3498,7 +3502,8 @@ func newAuthAccountAccountCapabilitiesGetControllerFunction(
 
 var accountCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
 	Type: interpreter.ReferenceStaticType{
-		BorrowedType: interpreter.PrimitiveStaticTypeAccountCapabilityController,
+		ReferencedType: interpreter.PrimitiveStaticTypeAccountCapabilityController,
+		Authorization:  interpreter.UnauthorizedAccess,
 	},
 }
 
@@ -3553,7 +3558,8 @@ func newAuthAccountAccountCapabilitiesGetControllersFunction(
 // `forEachController(_ function: fun(&AccountCapabilityController): Bool)`
 var authAccountAccountCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	&sema.ReferenceType{
-		Type: sema.AccountCapabilityControllerType,
+		Type:          sema.AccountCapabilityControllerType,
+		Authorization: sema.UnauthorizedAccess,
 	},
 }
 
@@ -3624,6 +3630,7 @@ func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 
 				subInvocation := interpreter.NewInvocation(
 					inter,
+					nil,
 					nil,
 					nil,
 					[]interpreter.Value{referenceValue},

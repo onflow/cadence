@@ -526,8 +526,13 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("struct external write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pub struct R {
-            pub(set) var x: Int
+        access(all) struct R {
+            access(all) var x: Int
+
+			access(all) fun setX(_ x: Int) {
+				self.x = x
+			}
+
             init(x: Int) {
                 self.x = x
             }
@@ -535,7 +540,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
         
         let r = R(x: 0)
         view fun foo(){
-            r.x = 3
+            r.setX(3)
         }
         `)
 
@@ -543,24 +548,23 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 203, Line: 11, Column: 12},
-			EndPos:   ast.Position{Offset: 209, Line: 11, Column: 18},
+			StartPos: ast.Position{Offset: 272, Line: 16, Column: 12},
+			EndPos:   ast.Position{Offset: 280, Line: 16, Column: 20},
 		})
 	})
 
 	t.Run("struct param write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pub struct R {
-            pub(set) var x: Int
+        access(all) struct R {
+            access(all) var x: Int
             init(x: Int) {
                 self.x = x
             }
-        }
-        
-        view fun foo(_ r: R): R {
-            r.x = 3
-            return r
+			view fun foo(_ r: R): R {
+				r.x = 3
+				return r
+			}
         }
         `)
 
@@ -570,20 +574,20 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("struct param nested write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-        pub struct R {
-            pub(set) var x: Int
+        access(all) struct R {
+            access(all) var x: Int
             init(x: Int) {
                 self.x = x
             }
-        }
-        
-        view fun foo(_ r: R): R {
-            if true {
-                while true {
-                    r.x = 3
-                }
-            }
-            return r
+
+			access(all) view fun foo(_ r: R): R {
+				if true {
+					while true {
+						r.x = 3
+					}
+				}
+				return r
+			}
         }
         `)
 
@@ -678,14 +682,14 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct S {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(x: Int) {
                 self.x = x
             }
-        }
-        
-        view fun foo(_ s: &S) {
-            s.x = 3
+
+			view fun foo(_ s: &S) {
+				s.x = 3
+			}
         }
         `)
 
@@ -693,8 +697,8 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 183, Line: 10, Column: 12},
-			EndPos:   ast.Position{Offset: 189, Line: 10, Column: 18},
+			StartPos: ast.Position{Offset: 155, Line: 9, Column: 4},
+			EndPos:   ast.Position{Offset: 161, Line: 9, Column: 10},
 		})
 	})
 
@@ -702,16 +706,14 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct S {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(_ x: Int) {
                 self.x = x
             }
-        }
 
-		let s = [&S(0) as &S]
-        
-        view fun foo() {
-            s[0].x = 3
+			access(all) view fun foo(_ s: [&S]) {
+				s[0].x = 3
+			}
         }
         `)
 
@@ -719,8 +721,8 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 204, Line: 12, Column: 13},
-			EndPos:   ast.Position{Offset: 212, Line: 12, Column: 21},
+			StartPos: ast.Position{Offset: 172, Line: 9, Column: 5},
+			EndPos:   ast.Position{Offset: 180, Line: 9, Column: 13},
 		})
 	})
 
@@ -728,7 +730,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         struct S {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(x: Int) {
                 self.x = x
             }
@@ -744,8 +746,8 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 		assert.IsType(t, &sema.PurityError{}, errs[1])
 		assert.Equal(t, errs[1].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 168, Line: 10, Column: 12},
-			EndPos:   ast.Position{Offset: 174, Line: 10, Column: 18},
+			StartPos: ast.Position{Offset: 171, Line: 10, Column: 12},
+			EndPos:   ast.Position{Offset: 177, Line: 10, Column: 18},
 		})
 	})
 }
@@ -754,16 +756,15 @@ func TestCheckResourceWritePurity(t *testing.T) {
 	t.Run("resource param write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-            pub resource R {
-                pub(set) var x: Int
+            access(all) resource R {
+                access(all) var x: Int
                 init(x: Int) {
                     self.x = x
                 }
-            }
-
-            view fun foo(_ r: @R): @R {
-                r.x = 3
-                return <-r
+				view fun foo(_ r: @R): @R {
+					r.x = 3
+					return <-r
+				}
             }
             `)
 
@@ -771,15 +772,15 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 217, Line: 10, Column: 16},
-			EndPos:   ast.Position{Offset: 223, Line: 10, Column: 22},
+			StartPos: ast.Position{Offset: 194, Line: 8, Column: 5},
+			EndPos:   ast.Position{Offset: 200, Line: 8, Column: 11},
 		})
 	})
 
 	t.Run("destroy", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-            pub resource R {}
+            access(all) resource R {}
 
             view fun foo(_ r: @R){
                 destroy r
@@ -790,28 +791,27 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 83, Line: 5, Column: 16},
-			EndPos:   ast.Position{Offset: 91, Line: 5, Column: 24},
+			StartPos: ast.Position{Offset: 91, Line: 5, Column: 16},
+			EndPos:   ast.Position{Offset: 99, Line: 5, Column: 24},
 		})
 	})
 
 	t.Run("resource param nested write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-            pub resource R {
-                pub(set) var x: Int
+            access(all) resource R {
+                access(all) var x: Int
                 init(x: Int) {
                     self.x = x
                 }
-            }
-
-            view fun foo(_ r: @R): @R {
-                if true {
-                    while true {
-                        r.x = 3
-                    }
-                }
-                return <-r
+				view fun foo(_ r: @R): @R {
+					if true {
+						while true {
+							r.x = 3
+						}
+					}
+					return <-r
+				}
             }
             `)
 
@@ -819,25 +819,24 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 284, Line: 12, Column: 24},
-			EndPos:   ast.Position{Offset: 290, Line: 12, Column: 30},
+			StartPos: ast.Position{Offset: 230, Line: 10, Column: 7},
+			EndPos:   ast.Position{Offset: 236, Line: 10, Column: 13},
 		})
 	})
 
 	t.Run("internal resource write", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-            pub resource R {
-                pub(set) var x: Int
+            access(all) resource R {
+                access(all) var x: Int
                 view init(x: Int) {
                     self.x = x
                 }
-            }
-
-            view fun foo(): @R {
-                let r <- create R(x: 0)
-                r.x = 1
-                return <-r
+				view fun foo(): @R {
+					let r <- create R(x: 0)
+					r.x = 1
+					return <-r
+				}
             }
             `)
 
@@ -845,25 +844,24 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 255, Line: 11, Column: 16},
-			EndPos:   ast.Position{Offset: 261, Line: 11, Column: 22},
+			StartPos: ast.Position{Offset: 221, Line: 9, Column: 5},
+			EndPos:   ast.Position{Offset: 227, Line: 9, Column: 11},
 		})
 	})
 
 	t.Run("external resource move", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-            pub resource R {
-                pub(set) var x: Int
+            access(all) resource R {
+                access(all) var x: Int
                 init(x: Int) {
                     self.x = x
                 }
-            }
-
-            view fun foo(_ f: @R): @R {
-                let b <- f
-                b.x = 3
-                return <-b
+				view fun foo(_ f: @R): @R {
+					let b <- f
+					b.x = 3
+					return <-b
+				}
             }
             `)
 
@@ -871,8 +869,8 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 244, Line: 11, Column: 16},
-			EndPos:   ast.Position{Offset: 250, Line: 11, Column: 22},
+			StartPos: ast.Position{Offset: 210, Line: 9, Column: 5},
+			EndPos:   ast.Position{Offset: 216, Line: 9, Column: 11},
 		})
 	})
 
@@ -880,15 +878,14 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         resource R {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(_ x: Int) {
                 self.x = x
             }
-        }
-        
-        view fun foo(_ a: @[R], _ x: Int): @[R] {
-            a[x].x = 4
-            return <-a
+			view fun foo(_ a: @[R], _ x: Int): @[R] {
+				a[x].x = 4
+				return <-a
+			}
         }
         `)
 
@@ -896,8 +893,8 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 206, Line: 10, Column: 13},
-			EndPos:   ast.Position{Offset: 214, Line: 10, Column: 21},
+			StartPos: ast.Position{Offset: 177, Line: 8, Column: 5},
+			EndPos:   ast.Position{Offset: 185, Line: 8, Column: 13},
 		})
 	})
 
@@ -905,15 +902,14 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
         resource R {
-            pub(set) var x: Int
+            access(all) var x: Int
             init(_ x: Int) {
                 self.x = x
             }
-        }
-        
-        view fun foo(_ a: @[[R]], _ x: Int): @[[R]] {
-            a[x][x].x = 4
-            return <-a
+			view fun foo(_ a: @[[R]], _ x: Int): @[[R]] {
+				a[x][x].x = 4
+				return <-a
+			}
         }
         `)
 
@@ -921,16 +917,16 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 213, Line: 10, Column: 16},
-			EndPos:   ast.Position{Offset: 221, Line: 10, Column: 24},
+			StartPos: ast.Position{Offset: 184, Line: 8, Column: 8},
+			EndPos:   ast.Position{Offset: 192, Line: 8, Column: 16},
 		})
 	})
 
 	t.Run("resource moves", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
-            pub resource R {
-                pub(set) var x: Int
+            access(all) resource R {
+                access(all) var x: Int
                 init(x: Int) {
                     self.x = x
                 }

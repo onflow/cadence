@@ -1147,8 +1147,8 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 			interpreter.UInt64Value(randomInt(math.MaxInt-1)),
 			randomAddressValue(),
 			interpreter.ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: interpreter.PrimitiveStaticTypeAnyStruct,
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 		)
 	case Some:

@@ -789,7 +789,7 @@ func TestLexBasic(t *testing.T) {
 
 	t.Run("comparisons", func(t *testing.T) {
 		testLex(t,
-			"=<><-<=>=",
+			"=<><-<=>=->",
 			[]token{
 				{
 					Token: Token{
@@ -853,10 +853,20 @@ func TestLexBasic(t *testing.T) {
 				},
 				{
 					Token: Token{
-						Type: TokenEOF,
+						Type: TokenRightArrow,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+						},
+					},
+					Source: "->",
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
 						},
 					},
 				},

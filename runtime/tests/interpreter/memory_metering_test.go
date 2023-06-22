@@ -71,7 +71,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-        pub fun main() {
+        access(all) fun main() {
                 let x: [Int8] = []
                 let y: [[String]] = [[]]
                 let z: [[[Bool]]] = [[[]]]
@@ -104,7 +104,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		const script = `
-          pub fun main() {
+          access(all) fun main() {
               let values: [[Int128]] = [[], [], []]
               for value in values {
               let a = value
@@ -134,7 +134,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-        pub fun main() {
+        access(all) fun main() {
                 let x: [Int128] = []
                 x.contains(5)
         }
@@ -157,7 +157,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-        pub fun main() {
+        access(all) fun main() {
                 let x: [Int8] = []
                 x.append(3)
                 x.append(4)
@@ -180,7 +180,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-        pub fun main() {
+        access(all) fun main() {
                 let x: [Int128] = [] // 2 data slabs
                 x.append(0) // fits in existing slab
                 x.append(1) // fits in existing slab
@@ -210,7 +210,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-        pub fun main() {
+        access(all) fun main() {
 				var i = 0;
                 let x: [Int128] = [] // 2 data slabs
                 while i < 120 { // should result in 4 meta data slabs and 60 slabs
@@ -236,7 +236,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-        pub fun main() {
+        access(all) fun main() {
                 let x: [Int128] = []
                 x.insert(at:0, 3)
                 x.insert(at:1, 3)
@@ -258,7 +258,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main() {
+                access(all) fun main() {
                 let x: [Int8] = []
                 x.insert(at:0, 3)
                 x.insert(at:1, 3)
@@ -282,7 +282,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-    pub fun main() {
+    access(all) fun main() {
         let x: [Int128] = [0, 1, 2, 3] // uses 2 data slabs and 1 metadata slab
         x[0] = 1 // adds 1 data and 1 metadata slab 
         x[2] = 1  // adds 1 data and 1 metadata slab 
@@ -304,7 +304,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                pub fun main() {
+                access(all) fun main() {
                         let x: [Int128] = [0, 1, 2] // uses 2 data slabs and 1 metadata slab
                         x[0] = 1 // fits in existing slab
                         x[2] = 1 // fits in existing slab
@@ -326,7 +326,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-    pub fun main() {
+    access(all) fun main() {
         let x: [Int8; 0] = []
         let y: [Int8; 1] = [2]
         let z: [Int8; 2] = [2, 4]
@@ -359,7 +359,7 @@ func TestInterpretArrayMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-    pub fun main() {
+    access(all) fun main() {
         let x: [Int128] = [] // 2 data slabs
         x.insert(at:0, 3) // fits in existing slab
         x.insert(at:1, 3) // fits in existing slab
@@ -396,7 +396,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
+	            access(all) fun main() {
 	                let x: {Int8: String} = {}
 	                let y: {String: {Int8: String}} = {"a": {}}
 	            }
@@ -428,7 +428,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	        pub fun main() {
+	        access(all) fun main() {
 	            let values: [{Int8: String}] = [{}, {}, {}]
 	            for value in values {
 	              let a = value
@@ -459,7 +459,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
+	            access(all) fun main() {
 	                let x: {Int8: String} = {}
 	                x.containsKey(5)
 	            }
@@ -478,7 +478,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
+	            access(all) fun main() {
 	                let x: {Int8: String} = {} 
 	                x.insert(key: 5, "")
 	                x.insert(key: 4, "")
@@ -504,7 +504,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
+	            access(all) fun main() {
 	                let x: {Int8: String} = {} // 2 data slabs
 	                x.insert(key: 0, "") // fits in slab
 	                x.insert(key: 1, "") // fits in slab
@@ -535,7 +535,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	            pub fun main() {
+	            access(all) fun main() {
 	                let x: {Int8: Int8} = {} // 2 data slabs
 	                x.insert(key: 0, 0) // all fit in slab
 	                x.insert(key: 1, 1) 
@@ -566,7 +566,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: {Int8: String} = {3: "a"} // 2 data slabs
                 x[3] = "b" // fits in existing slab
                 x[3] = "c" // fits in existing slab
@@ -591,7 +591,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: {Int8: String} = {3: "a"} // 2 data slabs
                 x[3] = "b" // fits in existing slab
                 x[4] = "d" // fits in existing slab
@@ -618,11 +618,11 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {}
+            access(all) struct S {}
 
-            pub resource R {
-                pub let a: String
-                pub let b: String
+            access(all) resource R {
+                access(all) let a: String
+                access(all) let b: String
 
                 init(a: String, b: String) {
                     self.a = a
@@ -630,7 +630,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
                 }
             }
 
-            pub fun main() {
+            access(all) fun main() {
                 let s = S()
                 let r <- create R(a: "a", b: "b")
                 destroy r
@@ -661,9 +661,9 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {}
+            access(all) struct S {}
 
-            pub fun main() {
+            access(all) fun main() {
                 let values = [S(), S(), S()]
                 for value in values {
                   let a = value
@@ -697,7 +697,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: AuthAccount) {
+            access(all) fun main(a: AuthAccount) {
             
             }
         `
@@ -716,7 +716,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: PublicAccount) {
+            access(all) fun main(a: PublicAccount) {
             
             }
         `
@@ -739,8 +739,8 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {}
-            pub fun main() {
+            access(all) struct S {}
+            access(all) fun main() {
                 let s = S()
             }
         `
@@ -762,13 +762,13 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {
-                pub let a: String
+            access(all) struct S {
+                access(all) let a: String
                 init(_ a: String) {
                     self.a = a
                 }
             }
-            pub fun main() {
+            access(all) fun main() {
                 let s = S("a")
             }
         `
@@ -791,15 +791,15 @@ func TestInterpretCompositeFieldMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {
-                pub let a: String
-                pub let b: String
+            access(all) struct S {
+                access(all) let a: String
+                access(all) let b: String
                 init(_ a: String, _ b: String) {
                     self.a = a
                     self.b = b
                 }
             }
-            pub fun main() {
+            access(all) fun main() {
                 let s = S("a", "b")
             }
         `
@@ -826,7 +826,7 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {}
+            access(all) fun main() {}
         `
 
 		meter := newTestMemoryGauge()
@@ -843,7 +843,7 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let funcPointer = fun(a: String): String {
                     return a
                 }
@@ -864,7 +864,7 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let funcPointer1 = fun(a: String): String {
                     return a
                 }
@@ -893,11 +893,11 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct Foo {
-                pub fun bar() {}
+            access(all) struct Foo {
+                access(all) fun bar() {}
             }
 
-            pub fun main() {}
+            access(all) fun main() {}
         `
 
 		meter := newTestMemoryGauge()
@@ -914,11 +914,11 @@ func TestInterpretInterpretedFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct Foo {
+            access(all) struct Foo {
                 init() {}
             }
 
-            pub fun main() {}
+            access(all) fun main() {}
         `
 
 		meter := newTestMemoryGauge()
@@ -941,7 +941,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {}
+            access(all) fun main() {}
         `
 
 		meter := newTestMemoryGauge()
@@ -956,7 +956,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let funcPointer1 = fun(a: String): String {
                     return a
                 }
@@ -980,11 +980,11 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct Foo {
-                pub fun bar() {}
+            access(all) struct Foo {
+                access(all) fun bar() {}
             }
 
-            pub fun main() {}
+            access(all) fun main() {}
         `
 
 		meter := newTestMemoryGauge()
@@ -1001,11 +1001,11 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct Foo {
+            access(all) struct Foo {
                 init() {}
             }
 
-            pub fun main() {}
+            access(all) fun main() {}
         `
 
 		meter := newTestMemoryGauge()
@@ -1022,7 +1022,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let a = Int8(5)
 
                 let b = CompositeType("PublicKey")
@@ -1045,7 +1045,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 assert(true)
             }
         `
@@ -1085,7 +1085,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let publicKey = PublicKey(
                     publicKey: "0102".decodeHex(),
                     signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1134,7 +1134,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let publicKey1 = PublicKey(
                     publicKey: "0102".decodeHex(),
                     signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1192,11 +1192,11 @@ func TestInterpretBoundFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct Foo {
-                pub fun bar() {}
+            access(all) struct Foo {
+                access(all) fun bar() {}
             }
 
-            pub fun main() {}
+            access(all) fun main() {}
         `
 
 		meter := newTestMemoryGauge()
@@ -1213,11 +1213,11 @@ func TestInterpretBoundFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct Foo {
+            access(all) struct Foo {
                 init() {}
             }
 
-            pub fun main() {}
+            access(all) fun main() {}
         `
 
 		meter := newTestMemoryGauge()
@@ -1234,11 +1234,11 @@ func TestInterpretBoundFunctionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct Foo {
-                pub fun bar() {}
+            access(all) struct Foo {
+                access(all) fun bar() {}
             }
 
-            pub fun main() {
+            access(all) fun main() {
                 let foo = Foo()
                 foo.bar()
                 foo.bar()
@@ -1265,7 +1265,7 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: String? = "hello"
             }
         `
@@ -1283,7 +1283,7 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: {Int8: String} = {1: "foo", 2: "bar"}
                 let y = x[0]
                 let z = x[1]
@@ -1307,7 +1307,7 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: {Int8: String} = {1: "foo", 2: "bar"}
                 x[0] = "a"
                 x[1] = "b"
@@ -1330,7 +1330,7 @@ func TestInterpretOptionalValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let type: Type = Type<Int>()
                 let a = OptionalType(type)
             }
@@ -1358,7 +1358,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1
             }
         `
@@ -1377,7 +1377,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 + 2
             }
         `
@@ -1396,7 +1396,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 - 2
             }
         `
@@ -1415,7 +1415,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 * 2
             }
         `
@@ -1434,7 +1434,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 / 2
             }
         `
@@ -1453,7 +1453,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 % 2
             }
         `
@@ -1472,7 +1472,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 | 2
             }
         `
@@ -1491,7 +1491,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 ^ 2
             }
         `
@@ -1510,7 +1510,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 & 2
             }
         `
@@ -1529,7 +1529,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 << 2
             }
         `
@@ -1548,7 +1548,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 >> 2
             }
         `
@@ -1567,7 +1567,7 @@ func TestInterpretIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1
                 let y = -x
             }
@@ -1592,7 +1592,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt
             }
         `
@@ -1612,7 +1612,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt + 2 as UInt
             }
         `
@@ -1631,7 +1631,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as UInt - 2 as UInt
             }
         `
@@ -1650,7 +1650,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt).saturatingSubtract(2 as UInt)
             }
         `
@@ -1669,7 +1669,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt * 2 as UInt
             }
         `
@@ -1688,7 +1688,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt / 2 as UInt
             }
         `
@@ -1707,7 +1707,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt % 2 as UInt
             }
         `
@@ -1726,7 +1726,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt | 2 as UInt
             }
         `
@@ -1745,7 +1745,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt ^ 2 as UInt
             }
         `
@@ -1764,7 +1764,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt & 2 as UInt
             }
         `
@@ -1783,7 +1783,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt << 2 as UInt
             }
         `
@@ -1802,7 +1802,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt >> 2 as UInt
             }
         `
@@ -1821,7 +1821,7 @@ func TestInterpretUIntMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1
                 let y = -x
             }
@@ -1846,7 +1846,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt8
             }
         `
@@ -1866,7 +1866,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt8 + 2 as UInt8
             }
         `
@@ -1887,7 +1887,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt8).saturatingAdd(2 as UInt8)
             }
         `
@@ -1908,7 +1908,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as UInt8 - 2 as UInt8
             }
         `
@@ -1929,7 +1929,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt8).saturatingSubtract(2 as UInt8)
             }
         `
@@ -1950,7 +1950,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt8 * 2 as UInt8
             }
         `
@@ -1971,7 +1971,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt8).saturatingMultiply(2 as UInt8)
             }
         `
@@ -1992,7 +1992,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt8 / 2 as UInt8
             }
         `
@@ -2013,7 +2013,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt8 % 2 as UInt8
             }
         `
@@ -2034,7 +2034,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt8 | 2 as UInt8
             }
         `
@@ -2055,7 +2055,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt8 ^ 2 as UInt8
             }
         `
@@ -2076,7 +2076,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt8 & 2 as UInt8
             }
         `
@@ -2098,7 +2098,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt8 << 2 as UInt8
             }
         `
@@ -2119,7 +2119,7 @@ func TestInterpretUInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt8 >> 2 as UInt8
             }
         `
@@ -2145,7 +2145,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt16
             }
         `
@@ -2165,7 +2165,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt16 + 2 as UInt16
             }
         `
@@ -2186,7 +2186,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt16).saturatingAdd(2 as UInt16)
             }
         `
@@ -2207,7 +2207,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as UInt16 - 2 as UInt16
             }
         `
@@ -2228,7 +2228,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt16).saturatingSubtract(2 as UInt16)
             }
         `
@@ -2249,7 +2249,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt16 * 2 as UInt16
             }
         `
@@ -2270,7 +2270,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt16).saturatingMultiply(2 as UInt16)
             }
         `
@@ -2291,7 +2291,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt16 / 2 as UInt16
             }
         `
@@ -2312,7 +2312,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt16 % 2 as UInt16
             }
         `
@@ -2333,7 +2333,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt16 | 2 as UInt16
             }
         `
@@ -2354,7 +2354,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt16 ^ 2 as UInt16
             }
         `
@@ -2375,7 +2375,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt16 & 2 as UInt16
             }
         `
@@ -2396,7 +2396,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt16 << 2 as UInt16
             }
         `
@@ -2417,7 +2417,7 @@ func TestInterpretUInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt16 >> 2 as UInt16
             }
         `
@@ -2443,7 +2443,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt32
             }
         `
@@ -2463,7 +2463,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt32 + 2 as UInt32
             }
         `
@@ -2484,7 +2484,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt32).saturatingAdd(2 as UInt32)
             }
         `
@@ -2505,7 +2505,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as UInt32 - 2 as UInt32
             }
         `
@@ -2526,7 +2526,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt32).saturatingSubtract(2 as UInt32)
             }
         `
@@ -2547,7 +2547,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt32 * 2 as UInt32
             }
         `
@@ -2568,7 +2568,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt32).saturatingMultiply(2 as UInt32)
             }
         `
@@ -2589,7 +2589,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt32 / 2 as UInt32
             }
         `
@@ -2610,7 +2610,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt32 % 2 as UInt32
             }
         `
@@ -2631,7 +2631,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt32 | 2 as UInt32
             }
         `
@@ -2652,7 +2652,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt32 ^ 2 as UInt32
             }
         `
@@ -2673,7 +2673,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt32 & 2 as UInt32
             }
         `
@@ -2694,7 +2694,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt32 << 2 as UInt32
             }
         `
@@ -2715,7 +2715,7 @@ func TestInterpretUInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt32 >> 2 as UInt32
             }
         `
@@ -2741,7 +2741,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt64
             }
         `
@@ -2761,7 +2761,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt64 + 2 as UInt64
             }
         `
@@ -2782,7 +2782,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt64).saturatingAdd(2 as UInt64)
             }
         `
@@ -2803,7 +2803,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as UInt64 - 2 as UInt64
             }
         `
@@ -2824,7 +2824,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt64).saturatingSubtract(2 as UInt64)
             }
         `
@@ -2845,7 +2845,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt64 * 2 as UInt64
             }
         `
@@ -2866,7 +2866,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt64).saturatingMultiply(2 as UInt64)
             }
         `
@@ -2887,7 +2887,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt64 / 2 as UInt64
             }
         `
@@ -2908,7 +2908,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt64 % 2 as UInt64
             }
         `
@@ -2929,7 +2929,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt64 | 2 as UInt64
             }
         `
@@ -2950,7 +2950,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt64 ^ 2 as UInt64
             }
         `
@@ -2971,7 +2971,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt64 & 2 as UInt64
             }
         `
@@ -2992,7 +2992,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt64 << 2 as UInt64
             }
         `
@@ -3013,7 +3013,7 @@ func TestInterpretUInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt64 >> 2 as UInt64
             }
         `
@@ -3039,7 +3039,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt128
             }
         `
@@ -3059,7 +3059,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt128 + 2 as UInt128
             }
         `
@@ -3080,7 +3080,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt128).saturatingAdd(2 as UInt128)
             }
         `
@@ -3101,7 +3101,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as UInt128 - 2 as UInt128
             }
         `
@@ -3122,7 +3122,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt128).saturatingSubtract(2 as UInt128)
             }
         `
@@ -3144,7 +3144,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt128 * 2 as UInt128
             }
         `
@@ -3165,7 +3165,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt128).saturatingMultiply(2 as UInt128)
             }
         `
@@ -3186,7 +3186,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt128 / 2 as UInt128
             }
         `
@@ -3207,7 +3207,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt128 % 2 as UInt128
             }
         `
@@ -3228,7 +3228,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt128 | 2 as UInt128
             }
         `
@@ -3249,7 +3249,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt128 ^ 2 as UInt128
             }
         `
@@ -3270,7 +3270,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt128 & 2 as UInt128
             }
         `
@@ -3291,7 +3291,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt128 << 2 as UInt128
             }
         `
@@ -3312,7 +3312,7 @@ func TestInterpretUInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt128 >> 2 as UInt128
             }
         `
@@ -3338,7 +3338,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt256
             }
         `
@@ -3358,7 +3358,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt256 + 2 as UInt256
             }
         `
@@ -3379,7 +3379,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt256).saturatingAdd(2 as UInt256)
             }
         `
@@ -3400,7 +3400,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as UInt256 - 2 as UInt256
             }
         `
@@ -3421,7 +3421,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt256).saturatingSubtract(2 as UInt256)
             }
         `
@@ -3442,7 +3442,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as UInt256 * 2 as UInt256
             }
         `
@@ -3463,7 +3463,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = (1 as UInt256).saturatingMultiply(2 as UInt256)
             }
         `
@@ -3484,7 +3484,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt256 / 2 as UInt256
             }
         `
@@ -3505,7 +3505,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt256 % 2 as UInt256
             }
         `
@@ -3526,7 +3526,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt256 | 2 as UInt256
             }
         `
@@ -3547,7 +3547,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt256 ^ 2 as UInt256
             }
         `
@@ -3568,7 +3568,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt256 & 2 as UInt256
             }
         `
@@ -3589,7 +3589,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt256 << 2 as UInt256
             }
         `
@@ -3610,7 +3610,7 @@ func TestInterpretUInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as UInt256 >> 2 as UInt256
             }
         `
@@ -3636,7 +3636,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 1
             }
         `
@@ -3655,7 +3655,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 1 + 2
             }
         `
@@ -3676,7 +3676,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 1
                 let y: Int8 = x.saturatingAdd(2)
             }
@@ -3698,7 +3698,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 1 - 2
             }
         `
@@ -3719,7 +3719,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 1
                 let y: Int8 = x.saturatingSubtract(2)
             }
@@ -3741,7 +3741,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 1 * 2
             }
         `
@@ -3762,7 +3762,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 1
                 let y: Int8 = x.saturatingMultiply(2)
             }
@@ -3784,7 +3784,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 3 / 2
             }
         `
@@ -3805,7 +3805,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 3
                 let y: Int8 = x.saturatingMultiply(2)
             }
@@ -3827,7 +3827,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 3 % 2
             }
         `
@@ -3848,7 +3848,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 1
                 let y: Int8 = -x
             }
@@ -3870,7 +3870,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 3 | 2
             }
         `
@@ -3891,7 +3891,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 3 ^ 2
             }
         `
@@ -3912,7 +3912,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 3 & 2
             }
         `
@@ -3933,7 +3933,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 3 << 2
             }
         `
@@ -3954,7 +3954,7 @@ func TestInterpretInt8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int8 = 3 >> 2
             }
         `
@@ -3981,7 +3981,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 1
             }
         `
@@ -4000,7 +4000,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 1 + 2
             }
         `
@@ -4021,7 +4021,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 1
                 let y: Int16 = x.saturatingAdd(2)
             }
@@ -4043,7 +4043,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 1 - 2
             }
         `
@@ -4064,7 +4064,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 1
                 let y: Int16 = x.saturatingSubtract(2)
             }
@@ -4086,7 +4086,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 1 * 2
             }
         `
@@ -4107,7 +4107,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 1
                 let y: Int16 = x.saturatingMultiply(2)
             }
@@ -4129,7 +4129,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 3 / 2
             }
         `
@@ -4150,7 +4150,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 3
                 let y: Int16 = x.saturatingMultiply(2)
             }
@@ -4172,7 +4172,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 3 % 2
             }
         `
@@ -4193,7 +4193,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 1
                 let y: Int16 = -x
             }
@@ -4215,7 +4215,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 3 | 2
             }
         `
@@ -4236,7 +4236,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 3 ^ 2
             }
         `
@@ -4257,7 +4257,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 3 & 2
             }
         `
@@ -4278,7 +4278,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 3 << 2
             }
         `
@@ -4299,7 +4299,7 @@ func TestInterpretInt16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int16 = 3 >> 2
             }
         `
@@ -4325,7 +4325,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 1
             }
         `
@@ -4344,7 +4344,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 1 + 2
             }
         `
@@ -4365,7 +4365,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 1
                 let y: Int32 = x.saturatingAdd(2)
             }
@@ -4387,7 +4387,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 1 - 2
             }
         `
@@ -4408,7 +4408,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 1
                 let y: Int32 = x.saturatingSubtract(2)
             }
@@ -4430,7 +4430,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 1 * 2
             }
         `
@@ -4451,7 +4451,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 1
                 let y: Int32 = x.saturatingMultiply(2)
             }
@@ -4473,7 +4473,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 3 / 2
             }
         `
@@ -4494,7 +4494,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 3
                 let y: Int32 = x.saturatingMultiply(2)
             }
@@ -4516,7 +4516,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 3 % 2
             }
         `
@@ -4537,7 +4537,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 1
                 let y: Int32 = -x
             }
@@ -4559,7 +4559,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 3 | 2
             }
         `
@@ -4580,7 +4580,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 3 ^ 2
             }
         `
@@ -4601,7 +4601,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 3 & 2
             }
         `
@@ -4622,7 +4622,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 3 << 2
             }
         `
@@ -4643,7 +4643,7 @@ func TestInterpretInt32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int32 = 3 >> 2
             }
         `
@@ -4669,7 +4669,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 1
             }
         `
@@ -4688,7 +4688,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 1 + 2
             }
         `
@@ -4709,7 +4709,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 1
                 let y: Int64 = x.saturatingAdd(2)
             }
@@ -4731,7 +4731,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 1 - 2
             }
         `
@@ -4752,7 +4752,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 1
                 let y: Int64 = x.saturatingSubtract(2)
             }
@@ -4774,7 +4774,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 1 * 2
             }
         `
@@ -4795,7 +4795,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 1
                 let y: Int64 = x.saturatingMultiply(2)
             }
@@ -4817,7 +4817,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 3 / 2
             }
         `
@@ -4838,7 +4838,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 3
                 let y: Int64 = x.saturatingMultiply(2)
             }
@@ -4860,7 +4860,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 3 % 2
             }
         `
@@ -4881,7 +4881,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 1
                 let y: Int64 = -x
             }
@@ -4903,7 +4903,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 3 | 2
             }
         `
@@ -4924,7 +4924,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 3 ^ 2
             }
         `
@@ -4945,7 +4945,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 3 & 2
             }
         `
@@ -4966,7 +4966,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 3 << 2
             }
         `
@@ -4987,7 +4987,7 @@ func TestInterpretInt64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int64 = 3 >> 2
             }
         `
@@ -5013,7 +5013,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 1
             }
         `
@@ -5032,7 +5032,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 1 + 2
             }
         `
@@ -5053,7 +5053,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 1
                 let y: Int128 = x.saturatingAdd(2)
             }
@@ -5075,7 +5075,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 1 - 2
             }
         `
@@ -5096,7 +5096,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 1
                 let y: Int128 = x.saturatingSubtract(2)
             }
@@ -5118,7 +5118,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 1 * 2
             }
         `
@@ -5139,7 +5139,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 1
                 let y: Int128 = x.saturatingMultiply(2)
             }
@@ -5161,7 +5161,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 3 / 2
             }
         `
@@ -5182,7 +5182,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 3
                 let y: Int128 = x.saturatingMultiply(2)
             }
@@ -5204,7 +5204,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 3 % 2
             }
         `
@@ -5225,7 +5225,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 1
                 let y: Int128 = -x
             }
@@ -5247,7 +5247,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 3 | 2
             }
         `
@@ -5268,7 +5268,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 3 ^ 2
             }
         `
@@ -5289,7 +5289,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 3 & 2
             }
         `
@@ -5310,7 +5310,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 3 << 2
             }
         `
@@ -5331,7 +5331,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 3 >> 2
             }
         `
@@ -5352,7 +5352,7 @@ func TestInterpretInt128Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int128 = 1
                 x == 1
                 x != 1
@@ -5382,7 +5382,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 1
             }
         `
@@ -5401,7 +5401,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 1 + 2
             }
         `
@@ -5422,7 +5422,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 1
                 let y: Int256 = x.saturatingAdd(2)
             }
@@ -5444,7 +5444,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 1 - 2
             }
         `
@@ -5465,7 +5465,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 1
                 let y: Int256 = x.saturatingSubtract(2)
             }
@@ -5487,7 +5487,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 1 * 2
             }
         `
@@ -5508,7 +5508,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 1
                 let y: Int256 = x.saturatingMultiply(2)
             }
@@ -5530,7 +5530,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 3 / 2
             }
         `
@@ -5551,7 +5551,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 3
                 let y: Int256 = x.saturatingMultiply(2)
             }
@@ -5573,7 +5573,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 3 % 2
             }
         `
@@ -5594,7 +5594,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 1
                 let y: Int256 = -x
             }
@@ -5616,7 +5616,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 3 | 2
             }
         `
@@ -5637,7 +5637,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 3 ^ 2
             }
         `
@@ -5658,7 +5658,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 3 & 2
             }
         `
@@ -5679,7 +5679,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 3 << 2
             }
         `
@@ -5700,7 +5700,7 @@ func TestInterpretInt256Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Int256 = 3 >> 2
             }
         `
@@ -5726,7 +5726,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word8
             }
         `
@@ -5747,7 +5747,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word8 + 2 as Word8
             }
         `
@@ -5768,7 +5768,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as Word8 - 2 as Word8
             }
         `
@@ -5789,7 +5789,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word8 * 2 as Word8
             }
         `
@@ -5810,7 +5810,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word8 / 2 as Word8
             }
         `
@@ -5831,7 +5831,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word8 % 2 as Word8
             }
         `
@@ -5852,7 +5852,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word8 | 2 as Word8
             }
         `
@@ -5873,7 +5873,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word8 ^ 2 as Word8
             }
         `
@@ -5894,7 +5894,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word8 & 2 as Word8
             }
         `
@@ -5915,7 +5915,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word8 << 2 as Word8
             }
         `
@@ -5936,7 +5936,7 @@ func TestInterpretWord8Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word8 >> 2 as Word8
             }
         `
@@ -5962,7 +5962,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word16
             }
         `
@@ -5982,7 +5982,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word16 + 2 as Word16
             }
         `
@@ -6003,7 +6003,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as Word16 - 2 as Word16
             }
         `
@@ -6024,7 +6024,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word16 * 2 as Word16
             }
         `
@@ -6045,7 +6045,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word16 / 2 as Word16
             }
         `
@@ -6066,7 +6066,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word16 % 2 as Word16
             }
         `
@@ -6087,7 +6087,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word16 | 2 as Word16
             }
         `
@@ -6108,7 +6108,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word16 ^ 2 as Word16
             }
         `
@@ -6129,7 +6129,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word16 & 2 as Word16
             }
         `
@@ -6150,7 +6150,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word16 << 2 as Word16
             }
         `
@@ -6171,7 +6171,7 @@ func TestInterpretWord16Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word16 >> 2 as Word16
             }
         `
@@ -6197,7 +6197,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word32
             }
         `
@@ -6217,7 +6217,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word32 + 2 as Word32
             }
         `
@@ -6238,7 +6238,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as Word32 - 2 as Word32
             }
         `
@@ -6259,7 +6259,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word32 * 2 as Word32
             }
         `
@@ -6280,7 +6280,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word32 / 2 as Word32
             }
         `
@@ -6301,7 +6301,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word32 % 2 as Word32
             }
         `
@@ -6322,7 +6322,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word32 | 2 as Word32
             }
         `
@@ -6343,7 +6343,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word32 ^ 2 as Word32
             }
         `
@@ -6364,7 +6364,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word32 & 2 as Word32
             }
         `
@@ -6385,7 +6385,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word32 << 2 as Word32
             }
         `
@@ -6406,7 +6406,7 @@ func TestInterpretWord32Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word32 >> 2 as Word32
             }
         `
@@ -6432,7 +6432,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word64
             }
         `
@@ -6452,7 +6452,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word64 + 2 as Word64
             }
         `
@@ -6473,7 +6473,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 3 as Word64 - 2 as Word64
             }
         `
@@ -6494,7 +6494,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 1 as Word64 * 2 as Word64
             }
         `
@@ -6515,7 +6515,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word64 / 2 as Word64
             }
         `
@@ -6536,7 +6536,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word64 % 2 as Word64
             }
         `
@@ -6557,7 +6557,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word64 | 2 as Word64
             }
         `
@@ -6578,7 +6578,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word64 ^ 2 as Word64
             }
         `
@@ -6599,7 +6599,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word64 & 2 as Word64
             }
         `
@@ -6620,7 +6620,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word64 << 2 as Word64
             }
         `
@@ -6641,7 +6641,7 @@ func TestInterpretWord64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 10 as Word64 >> 2 as Word64
             }
         `
@@ -6667,7 +6667,7 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 		script := `
               resource R {}
 
-              pub fun main(account: AuthAccount) {
+              access(all) fun main(account: AuthAccount) {
                   account.borrow<&R>(from: /storage/r)
               }
             `
@@ -6692,7 +6692,7 @@ func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
 		script := `
           resource R {}
 
-          pub fun main(): &Int {
+          access(all) fun main(): &Int {
               let x: Int = 1
               let y = &x as &Int
               return y
@@ -6714,7 +6714,7 @@ func TestInterpretEphemeralReferenceValueMetering(t *testing.T) {
 		script := `
           resource R {}
 
-          pub fun main(): &Int {
+          access(all) fun main(): &Int {
               let x: Int? = 1
               let y = &x as &Int?
               return y!
@@ -6740,7 +6740,7 @@ func TestInterpretStringMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = "a"
             }
         `
@@ -6758,7 +6758,7 @@ func TestInterpretStringMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = "a"
                 let y = x
             }
@@ -6777,7 +6777,7 @@ func TestInterpretStringMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = "İ"
             }
         `
@@ -6795,7 +6795,7 @@ func TestInterpretStringMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = "ABC".toLower()
             }
         `
@@ -6814,7 +6814,7 @@ func TestInterpretStringMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = "İ".toLower()
             }
         `
@@ -6836,7 +6836,7 @@ func TestInterpretCharacterMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Character = "a"
             }
         `
@@ -6854,7 +6854,7 @@ func TestInterpretCharacterMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Character = "a"
                 let y = x
             }
@@ -6873,7 +6873,7 @@ func TestInterpretCharacterMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: String = "a"
                 let y: Character = x[0]
             }
@@ -6895,7 +6895,7 @@ func TestInterpretAddressValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Address = 0x0
             }
         `
@@ -6912,7 +6912,7 @@ func TestInterpretAddressValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = Address(0x0)
             }
         `
@@ -6933,7 +6933,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = /public/bar
             }
         `
@@ -6950,7 +6950,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = PublicPath(identifier: "bar")
             }
         `
@@ -6985,7 +6985,7 @@ func TestInterpretTypeValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let t: Type = Type<Int>()
             }
         `
@@ -7002,7 +7002,7 @@ func TestInterpretTypeValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let t: Type = ConstantSizedArrayType(type: Type<Int>(), size: 2)
             }
         `
@@ -7020,7 +7020,7 @@ func TestInterpretTypeValueMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let v = 5
                 let t: Type = v.getType()
             }
@@ -7045,7 +7045,7 @@ func TestInterpretVariableMetering(t *testing.T) {
             var a = 3
             let b = false
 
-            pub fun main() {
+            access(all) fun main() {
                 
             }
         `
@@ -7062,7 +7062,7 @@ func TestInterpretVariableMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: String, b: Bool) {
+            access(all) fun main(a: String, b: Bool) {
                 
             }
         `
@@ -7083,7 +7083,7 @@ func TestInterpretVariableMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 var x = fun (x: String, y: Bool) {}
             }
         `
@@ -7100,7 +7100,7 @@ func TestInterpretVariableMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 var x = fun (x: String, y: Bool) {}
                 x("", false)
             }
@@ -7124,7 +7124,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 1.4
             }
         `
@@ -7144,7 +7144,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 1.4 + 2.5
             }
         `
@@ -7166,7 +7166,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 1.4
                 let y: Fix64 = x.saturatingAdd(2.5)
             }
@@ -7189,7 +7189,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 1.4 - 2.5
             }
         `
@@ -7211,7 +7211,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 1.4
                 let y: Fix64 = x.saturatingSubtract(2.5)
             }
@@ -7234,7 +7234,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 1.4 * 2.5
             }
         `
@@ -7256,7 +7256,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 1.4
                 let y: Fix64 = x.saturatingMultiply(2.5)
             }
@@ -7279,7 +7279,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 3.4 / 2.5
             }
         `
@@ -7301,7 +7301,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 3.4
                 let y: Fix64 = x.saturatingMultiply(2.5)
             }
@@ -7324,7 +7324,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 3.4 % 2.5
             }
         `
@@ -7349,7 +7349,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 1.4
                 let y: Fix64 = -x
             }
@@ -7373,7 +7373,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: FixedPoint = -1.4
             }
         `
@@ -7393,7 +7393,7 @@ func TestInterpretFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Fix64 = 1.0
                 x == 1.0
                 x != 1.0
@@ -7423,7 +7423,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 1.4
             }
         `
@@ -7443,7 +7443,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 1.4 + 2.5
             }
         `
@@ -7465,7 +7465,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 1.4
                 let y: UFix64 = x.saturatingAdd(2.5)
             }
@@ -7488,7 +7488,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 2.5 - 1.4 
             }
         `
@@ -7510,7 +7510,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 1.4
                 let y: UFix64 = x.saturatingSubtract(2.5)
             }
@@ -7533,7 +7533,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 1.4 * 2.5
             }
         `
@@ -7555,7 +7555,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 1.4
                 let y: UFix64 = x.saturatingMultiply(2.5)
             }
@@ -7578,7 +7578,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 3.4 / 2.5
             }
         `
@@ -7600,7 +7600,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 3.4
                 let y: UFix64 = x.saturatingMultiply(2.5)
             }
@@ -7623,7 +7623,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 3.4 % 2.5
             }
         `
@@ -7648,7 +7648,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: FixedPoint = 1.4
             }
         `
@@ -7668,7 +7668,7 @@ func TestInterpretUFix64Metering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: UFix64 = 1.0
                 x == 1.0
                 x != 1.0
@@ -7696,11 +7696,11 @@ func TestInterpretTokenMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 var x: String = "hello"
             }
 
-            pub struct foo {
+            access(all) struct foo {
                 var x: Int
 
                 init() {
@@ -7714,7 +7714,7 @@ func TestInterpretTokenMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(32), meter.getMemory(common.MemoryKindTypeToken))
+		assert.Equal(t, uint64(38), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindSpaceToken))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 	})
@@ -7723,7 +7723,7 @@ func TestInterpretTokenMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 var a: [String] = []
                 var b = 4 + 6
                 var c = true && false != false
@@ -7735,7 +7735,7 @@ func TestInterpretTokenMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(36), meter.getMemory(common.MemoryKindTypeToken))
+		assert.Equal(t, uint64(39), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(31), meter.getMemory(common.MemoryKindSpaceToken))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 	})
@@ -7749,14 +7749,14 @@ func TestInterpretTokenMetering(t *testing.T) {
             */
 
             // single line comment
-            pub fun main() {}
+            access(all) fun main() {}
         `
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(11), meter.getMemory(common.MemoryKindTypeToken))
+		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(7), meter.getMemory(common.MemoryKindSpaceToken))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 	})
@@ -7765,7 +7765,7 @@ func TestInterpretTokenMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 var a = 1
                 var b = 0b1
                 var c = 0o1
@@ -7778,7 +7778,7 @@ func TestInterpretTokenMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindTypeToken))
+		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(26), meter.getMemory(common.MemoryKindSpaceToken))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
 	})
@@ -7795,7 +7795,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 		script := `
             struct S {}
 
-            pub fun main(account: AuthAccount) {
+            access(all) fun main(account: AuthAccount) {
                 let s = CompositeType("")
             }
         `
@@ -7812,7 +7812,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 		script = `
             struct S {}
 
-            pub fun main(account: AuthAccount) {
+            access(all) fun main(account: AuthAccount) {
                 let s = CompositeType("S.test.S")
             }
         `
@@ -7841,7 +7841,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let foo = 4
                 let bar = 5
             }
@@ -7860,7 +7860,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(foo: String, bar: String) {
+            access(all) fun main(foo: String, bar: String) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -7881,9 +7881,9 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {}
+            access(all) fun main() {}
 
-            pub struct foo {
+            access(all) struct foo {
                 var x: String
                 var y: String
 
@@ -7892,7 +7892,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
                     self.y = "b"
                 }
 
-                pub fun bar() {}
+                access(all) fun bar() {}
             }
         `
 
@@ -7901,14 +7901,14 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindIdentifier))
 	})
 
 	t.Run("member resolvers", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {            // 2 - 'main', empty-return-type
+            access(all) fun main() {            // 2 - 'main', empty-return-type
                 let foo = ["a", "b"]    // 1
                 foo.length              // 3 - 'foo', 'length', constant field resolver
                 foo.length              // 3 - 'foo', 'length', constant field resolver (not re-used)
@@ -7922,7 +7922,7 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
-		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindIdentifier))
+		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindIdentifier))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 }
@@ -7936,7 +7936,7 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
 		script := `
             struct interface I {}
 
-            pub fun main() {
+            access(all) fun main() {
                 let type = Type<AnyStruct{I}>()
 
                 RestrictedType(
@@ -7964,7 +7964,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 FunctionType(parameters: [], return: Type<Never>())
             }
         `
@@ -7982,9 +7982,9 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun hello() {}
+            access(all) fun hello() {}
 
-            pub fun main() {
+            access(all) fun main() {
                 let a = [hello]
             }
         `
@@ -8002,11 +8002,11 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {
+            access(all) struct S {
                 fun naught() {}
             }
 
-            pub fun main() {
+            access(all) fun main() {
                 let x = S()
                 let y = x.naught
             }
@@ -8025,11 +8025,11 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {
+            access(all) struct S {
                 fun naught() {}
             }
 
-            pub fun main() {
+            access(all) fun main() {
                 let x = S()
                 x.naught.isInstance(Type<Int>())
             }
@@ -8041,7 +8041,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindFunctionStaticType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionStaticType))
 	})
 }
 
@@ -8052,15 +8052,15 @@ func TestInterpretASTMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 foo(a: "hello", b: 23)
                 bar("hello", 23)
             }
 
-            pub fun foo(a: String, b: Int) {
+            access(all) fun foo(a: String, b: Int) {
             }
 
-            pub fun bar(_ a: String, _ b: Int) {
+            access(all) fun bar(_ a: String, _ b: Int) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -8074,7 +8074,7 @@ func TestInterpretASTMetering(t *testing.T) {
 
 	t.Run("blocks", func(t *testing.T) {
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 var i = 0
                 if i != 0 {
                     i = 0
@@ -8109,26 +8109,26 @@ func TestInterpretASTMetering(t *testing.T) {
 		script := `
             import Foo from 0x42
 
-            pub let x = 1
-            pub var y = 2
+            access(all) let x = 1
+            access(all) var y = 2
 
-            pub fun main() {
+            access(all) fun main() {
                 var z = 3
             }
 
-            pub fun foo(_ x: String, _ y: Int) {}
+            access(all) fun foo(_ x: String, _ y: Int) {}
 
-            pub struct A {
-                pub var a: String
+            access(all) struct A {
+                access(all) var a: String
 
                 init() {
                     self.a = "hello"
                 }
             }
 
-            pub struct interface B {}
+            access(all) struct interface B {}
 
-            pub resource C {
+            access(all) resource C {
                 let a: Int
 
                 init() {
@@ -8136,12 +8136,12 @@ func TestInterpretASTMetering(t *testing.T) {
                 }
             }
 
-            pub resource interface D {}
+            access(all) resource interface D {}
 
-            pub enum E: Int8 {
-                pub case a
-                pub case b
-                pub case c
+            access(all) enum E: Int8 {
+                access(all) case a
+                access(all) case b
+                access(all) case c
             }
 
             transaction {}
@@ -8151,7 +8151,7 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		importedChecker, err := checker.ParseAndCheckWithOptions(t,
 			`
-                pub let Foo = 1
+                access(all) let Foo = 1
             `,
 			checker.ParseAndCheckOptions{
 				Location: utils.ImportedLocation,
@@ -8215,7 +8215,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 var a = 5
 
                 while a < 10 {               // while
@@ -8243,13 +8243,13 @@ func TestInterpretASTMetering(t *testing.T) {
                 }
             }
 
-            pub fun foo(): Int {
+            access(all) fun foo(): Int {
                  return 5                    // return
             }
 
             resource bar {}
 
-            pub contract Events {
+            access(all) contract Events {
                 event FooEvent(x: Int, y: Int)
 
                 fun events() {
@@ -8303,7 +8303,7 @@ func TestInterpretASTMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 var a = 5                                // integer expr
                 var b = 1.2 + 2.3                        // binary, fixed-point expr
                 var c = !true                            // unary, boolean expr
@@ -8360,14 +8360,14 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindForceExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathExpression))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryEntry))
-		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindPrimitiveStaticType))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindPrimitiveStaticType))
 	})
 
 	t.Run("types", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 var a: Int = 5                                     // nominal type
                 var b: String? = "hello"                           // optional type
                 var c: [Int; 2] = [1, 2]                           // constant sized type
@@ -8409,24 +8409,24 @@ func TestInterpretASTMetering(t *testing.T) {
 
 	t.Run("position info", func(t *testing.T) {
 		script := `
-            pub let x = 1
-            pub var y = 2
+            access(all) let x = 1
+            access(all) var y = 2
 
-            pub fun main() {
+            access(all) fun main() {
                 var z = 3
             }
 
-            pub fun foo(_ x: String, _ y: Int) {}
+            access(all) fun foo(_ x: String, _ y: Int) {}
 
-            pub struct A {
-                pub var a: String
+            access(all) struct A {
+                access(all) var a: String
 
                 init() {
                     self.a = "hello"
                 }
             }
 
-            pub struct interface B {}
+            access(all) struct interface B {}
         `
 
 		meter := newTestMemoryGauge()
@@ -8436,8 +8436,8 @@ func TestInterpretASTMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(229), meter.getMemory(common.MemoryKindPosition))
-		assert.Equal(t, uint64(124), meter.getMemory(common.MemoryKindRange))
+		assert.Equal(t, uint64(271), meter.getMemory(common.MemoryKindPosition))
+		assert.Equal(t, uint64(145), meter.getMemory(common.MemoryKindRange))
 	})
 
 	t.Run("locations", func(t *testing.T) {
@@ -8448,8 +8448,8 @@ func TestInterpretASTMetering(t *testing.T) {
 
 		importedChecker, err := checker.ParseAndCheckWithOptions(t,
 			`
-                pub let A = 1
-                pub let B = 1
+                access(all) let A = 1
+                access(all) let B = 1
             `,
 			checker.ParseAndCheckOptions{
 				Location: utils.ImportedLocation,
@@ -8500,7 +8500,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {}
+            access(all) fun main() {}
         `
 
 		meter := newTestMemoryGauge()
@@ -8518,11 +8518,11 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 foo(a: "hello", b: 23)
             }
 
-            pub fun foo(a: String, b: Int) {
+            access(all) fun foo(a: String, b: Int) {
             }
         `
 
@@ -8541,7 +8541,7 @@ func TestInterpretVariableActivationMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 if true {
                     let a = 1
                 }
@@ -8566,16 +8566,16 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let a: {Int: AnyStruct{Foo}} = {}           // dictionary + restricted
                 let b: [&Int] = []                          // variable-sized + reference
                 let c: [Int?; 2] = [1, 2]                   // constant-sized + optional
                 let d: [Capability<&Bar>] = []             //  capability + variable-sized + reference
             }
 
-            pub struct interface Foo {}
+            access(all) struct interface Foo {}
 
-            pub struct Bar: Foo {}
+            access(all) struct Bar: Foo {}
         `
 
 		meter := newTestMemoryGauge()
@@ -8600,7 +8600,7 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	script := `
         resource R {}
 
-        pub fun main(account: AuthAccount) {
+        access(all) fun main(account: AuthAccount) {
             let r <- create R()
             account.save(<-r, to: /storage/r)
         }
@@ -8824,7 +8824,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
-                    pub fun main() {
+                    access(all) fun main() {
                         let x = %s
                         log(x)
                     }
@@ -8845,7 +8845,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = Foo()
                 log(x)
             }
@@ -8865,7 +8865,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = 4
                 log(&x as &AnyStruct)
             }
@@ -8878,7 +8878,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = fun(a: String, b: Bool) {}
                 log(&x as &AnyStruct)
             }
@@ -8891,13 +8891,13 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x = Foo()
                 log(x.bar)
             }
 
             struct Foo {
-                pub fun bar(a: String, b: Bool) {}
+                access(all) fun bar(a: String, b: Bool) {}
             }
         `
 
@@ -8908,7 +8908,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 let x: Void = foo()
                 log(x)
             }
@@ -8923,7 +8923,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: Capability<&{Foo}>) {
+            access(all) fun main(a: Capability<&{Foo}>) {
                 log(a)
             }
 
@@ -8948,7 +8948,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 log(Type<Int>())
             }
         `
@@ -9028,7 +9028,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			}
 
 			script := fmt.Sprintf(`
-                pub fun main() {
+                access(all) fun main() {
                     log(Type<%s>())
                 }`,
 				sema.NewTypeAnnotation(primitiveStaticType.SemaType()).
@@ -9074,7 +9074,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			},
 			{
 				name:        "Auth Reference",
-				constructor: "auth &AnyStruct",
+				constructor: "auth(X) &AnyStruct",
 			},
 			{
 				name:        "Capability",
@@ -9088,7 +9088,8 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				t.Parallel()
 
 				script := fmt.Sprintf(`
-                    pub fun main() {
+				    entitlement X
+                    access(all) fun main() {
                         log(Type<%s>())
                     }
                 `,
@@ -9108,7 +9109,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 log(Type<Foo>())
             }
 
@@ -9127,7 +9128,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main() {
+            access(all) fun main() {
                 log(Type<AnyStruct{Foo}>())
             }
 

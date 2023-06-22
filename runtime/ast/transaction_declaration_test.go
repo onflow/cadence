@@ -103,7 +103,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		},
 		Fields: []*FieldDeclaration{
 			{
-				Access:       AccessPublic,
+				Access:       AccessAll,
 				VariableKind: VariableKindConstant,
 				Identifier: Identifier{
 					Identifier: "f",
@@ -121,6 +121,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		Prepare: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindPrepare,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				ParameterList: &ParameterList{
 					Parameters: []*Parameter{
 						{
@@ -153,6 +154,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		Execute: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindExecute,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				FunctionBlock: &FunctionBlock{
 					Block: &Block{
 						Statements: []Statement{
@@ -208,7 +210,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 						prettier.HardLine{},
 						prettier.Group{
 							Doc: prettier.Concat{
-								prettier.Text("pub"),
+								prettier.Text("access(all)"),
 								prettier.Text(" "),
 								prettier.Text("let"),
 								prettier.Text(" "),
@@ -365,7 +367,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		},
 		Fields: []*FieldDeclaration{
 			{
-				Access:       AccessPublic,
+				Access:       AccessAll,
 				VariableKind: VariableKindConstant,
 				Identifier: Identifier{
 					Identifier: "f",
@@ -383,6 +385,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		Prepare: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindPrepare,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				ParameterList: &ParameterList{
 					Parameters: []*Parameter{
 						{
@@ -415,6 +418,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		Execute: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindExecute,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				FunctionBlock: &FunctionBlock{
 					Block: &Block{
 						Statements: []Statement{
@@ -444,7 +448,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 	require.Equal(
 		t,
 		"transaction(x: X) {\n"+
-			"    pub let f: @F\n"+
+			"    access(all) let f: @F\n"+
 			"    \n"+
 			"    prepare(signer: AuthAccount) {}\n"+
 			"    \n"+

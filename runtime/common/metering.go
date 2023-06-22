@@ -59,17 +59,20 @@ var (
 
 	// AST Declarations
 
-	FunctionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
-	CompositeDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
-	AttachmentDeclarationMemoryUsage      = NewConstantMemoryUsage(MemoryKindAttachmentDeclaration)
-	InterfaceDeclarationMemoryUsage       = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
-	ImportDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindImportDeclaration)
-	TransactionDeclarationMemoryUsage     = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
-	FieldDeclarationMemoryUsage           = NewConstantMemoryUsage(MemoryKindFieldDeclaration)
-	EnumCaseDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindEnumCaseDeclaration)
-	VariableDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
-	SpecialFunctionDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindSpecialFunctionDeclaration)
-	PragmaDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindPragmaDeclaration)
+	FunctionDeclarationMemoryUsage           = NewConstantMemoryUsage(MemoryKindFunctionDeclaration)
+	CompositeDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindCompositeDeclaration)
+	AttachmentDeclarationMemoryUsage         = NewConstantMemoryUsage(MemoryKindAttachmentDeclaration)
+	InterfaceDeclarationMemoryUsage          = NewConstantMemoryUsage(MemoryKindInterfaceDeclaration)
+	EntitlementDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindEntitlementDeclaration)
+	EntitlementMappingElementMemoryUsage     = NewConstantMemoryUsage(MemoryKindEntitlementMappingElement)
+	EntitlementMappingDeclarationMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMappingDeclaration)
+	ImportDeclarationMemoryUsage             = NewConstantMemoryUsage(MemoryKindImportDeclaration)
+	TransactionDeclarationMemoryUsage        = NewConstantMemoryUsage(MemoryKindTransactionDeclaration)
+	FieldDeclarationMemoryUsage              = NewConstantMemoryUsage(MemoryKindFieldDeclaration)
+	EnumCaseDeclarationMemoryUsage           = NewConstantMemoryUsage(MemoryKindEnumCaseDeclaration)
+	VariableDeclarationMemoryUsage           = NewConstantMemoryUsage(MemoryKindVariableDeclaration)
+	SpecialFunctionDeclarationMemoryUsage    = NewConstantMemoryUsage(MemoryKindSpecialFunctionDeclaration)
+	PragmaDeclarationMemoryUsage             = NewConstantMemoryUsage(MemoryKindPragmaDeclaration)
 
 	// AST Statements
 
@@ -156,27 +159,29 @@ var (
 
 	// Static Types
 
-	PrimitiveStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
-	CompositeStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
-	InterfaceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
-	VariableSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
-	ConstantSizedStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
-	DictionaryStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
-	OptionalStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
-	RestrictedStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
-	ReferenceStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
-	CapabilityStaticTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
-	FunctionStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
-
+	PrimitiveStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindPrimitiveStaticType)
+	CompositeStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindCompositeStaticType)
+	InterfaceStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindInterfaceStaticType)
+	VariableSizedStaticTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindVariableSizedStaticType)
+	ConstantSizedStaticTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindConstantSizedStaticType)
+	DictionaryStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindDictionaryStaticType)
+	OptionalStaticTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindOptionalStaticType)
+	RestrictedStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindRestrictedStaticType)
+	ReferenceStaticTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindReferenceStaticType)
+	CapabilityStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
+	FunctionStaticTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
+	EntitlementMapStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapStaticAccess)
 	// Sema types
 
-	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
-	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
-	DictionarySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
-	OptionalSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
-	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
-	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
-	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+	VariableSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
+	RestrictedSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
+	ReferenceSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	EntitlementSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindEntitlementSemaType)
+	EntitlementMapSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapSemaType)
+	CapabilitySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
 
 	// Storage related memory usages
 
@@ -253,6 +258,7 @@ var (
 	StorageCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("StorageCapabilityController(borrowType: , capabilityID: , target: )"))
 	AccountCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("AccountCapabilityController(borrowType: , capabilityID: )"))
 	PublishedValueStringMemoryUsage                   = NewRawStringMemoryUsage(len("PublishedValue<>()"))
+	AuthStringMemoryUsage                             = NewRawStringMemoryUsage(len("auth() "))
 
 	// Static types string representations
 

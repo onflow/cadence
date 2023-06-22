@@ -3525,7 +3525,7 @@ func TestCBORTagValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(222), byte(CBORTag_Count))
+		require.Equal(t, byte(225), byte(CBORTag_Count))
 	})
 }
 
@@ -3585,8 +3585,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: PrimitiveStaticTypeBool,
-				Authorized:   false,
+				ReferencedType: PrimitiveStaticTypeBool,
+				Authorization:  UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3596,41 +3596,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("authorized reference, primitive, Bool", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := &StorageCapabilityControllerValue{
-			TargetPath: publicPathValue,
-			BorrowType: ReferenceStaticType{
-				BorrowedType: PrimitiveStaticTypeBool,
-				Authorized:   true,
-			},
-			CapabilityID: capabilityID,
-		}
-
-		encoded := assemble(
-			// tag
-			0xd8, CBORTagReferenceStaticType,
-			// array, 2 items follow
-			0x82,
-			// true
-			0xf5,
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			// tag
 			0xd8, CBORTagPrimitiveStaticType,
 			0x6,
@@ -3651,9 +3621,10 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: OptionalStaticType{
+				ReferencedType: OptionalStaticType{
 					Type: PrimitiveStaticTypeBool,
 				},
+				Authorization: UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3663,8 +3634,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			// tag
 			0xd8, CBORTagOptionalStaticType,
 			// tag
@@ -3687,11 +3661,12 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: NewCompositeStaticTypeComputeTypeID(
+				ReferencedType: NewCompositeStaticTypeComputeTypeID(
 					nil,
 					utils.TestLocation,
 					"SimpleStruct",
 				),
+				Authorization: UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3701,8 +3676,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			// tag
 			0xd8, CBORTagCompositeStaticType,
 			// array, 2 items follow
@@ -3734,10 +3712,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: InterfaceStaticType{
+				ReferencedType: InterfaceStaticType{
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "SimpleInterface",
 				},
+				Authorization: UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3747,8 +3726,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			// tag
 			0xd8, CBORTagInterfaceStaticType,
 			// array, 2 items follow
@@ -3780,9 +3762,10 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: VariableSizedStaticType{
+				ReferencedType: VariableSizedStaticType{
 					Type: PrimitiveStaticTypeBool,
 				},
+				Authorization: UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3792,8 +3775,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			// tag
 			0xd8, CBORTagVariableSizedStaticType,
 			// tag
@@ -3816,10 +3802,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: ConstantSizedStaticType{
+				ReferencedType: ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeBool,
 					Size: 42,
 				},
+				Authorization: UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3829,8 +3816,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			// tag
 			0xd8, CBORTagConstantSizedStaticType,
 			// array, 2 items follow
@@ -3857,10 +3847,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: DictionaryStaticType{
+				ReferencedType: DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeBool,
 					ValueType: PrimitiveStaticTypeString,
 				},
+				Authorization: UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3870,8 +3861,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			// tag
 			0xd8, CBORTagDictionaryStaticType,
 			// array, 2 items follow
@@ -3899,7 +3893,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: &RestrictedStaticType{
+				ReferencedType: &RestrictedStaticType{
 					Type: NewCompositeStaticTypeComputeTypeID(
 						nil,
 						utils.TestLocation,
@@ -3916,6 +3910,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 						},
 					},
 				},
+				Authorization: UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3925,8 +3920,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			// tag
 			0xd8, CBORTagRestrictedStaticType,
 			// array, 2 items follow
@@ -4000,7 +3998,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		expected := &StorageCapabilityControllerValue{
 			TargetPath: path,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: PrimitiveStaticTypeNever,
+				ReferencedType: PrimitiveStaticTypeNever,
+				Authorization:  UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -4067,8 +4066,8 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 
 		value := &AccountCapabilityControllerValue{
 			BorrowType: ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: PrimitiveStaticTypeAuthAccount,
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeAuthAccount,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -4078,8 +4077,11 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			0xd8, CBORTagPrimitiveStaticType,
 			// unsigned 90
 			0x18, 0x5a,
@@ -4099,9 +4101,10 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 
 		value := &AccountCapabilityControllerValue{
 			BorrowType: ReferenceStaticType{
-				BorrowedType: &RestrictedStaticType{
+				ReferencedType: &RestrictedStaticType{
 					Type: PrimitiveStaticTypeAuthAccount,
 				},
+				Authorization: UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -4111,8 +4114,11 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagReferenceStaticType,
 			// array, 2 items follow
 			0x82,
-			// false
-			0xf4,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
 			// tag
 			0xd8, CBORTagRestrictedStaticType,
 			// array, 2 items follow
@@ -4123,39 +4129,6 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			0x18, 0x5a,
 			// array, length 0
 			0x80,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("authorized reference, AuthAccount", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := &AccountCapabilityControllerValue{
-			BorrowType: ReferenceStaticType{
-				Authorized:   true,
-				BorrowedType: PrimitiveStaticTypeAuthAccount,
-			},
-			CapabilityID: capabilityID,
-		}
-
-		encoded := assemble(
-			// tag
-			0xd8, CBORTagReferenceStaticType,
-			// array, 2 items follow
-			0x82,
-			// true
-			0xf5,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			// unsigned 90
-			0x18, 0x5a,
 		)
 
 		testEncodeDecode(t,
@@ -4182,7 +4155,8 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 
 		expected := &AccountCapabilityControllerValue{
 			BorrowType: ReferenceStaticType{
-				BorrowedType: borrowType,
+				ReferencedType: borrowType,
+				Authorization:  UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}

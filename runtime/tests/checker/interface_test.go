@@ -288,9 +288,9 @@ func TestCheckInterfaceUse(t *testing.T) {
 			_, err := ParseAndCheckWithPanic(t,
 				fmt.Sprintf(
 					`
-                      pub %[1]s interface Test %[2]s
+                      access(all) %[1]s interface Test %[2]s
 
-                      pub let test: %[3]s%[4]s %[5]s panic("")
+                      access(all) let test: %[3]s%[4]s %[5]s panic("")
                     `,
 					kind.Keyword(),
 					body,
@@ -880,7 +880,7 @@ func TestCheckInvalidInterfaceConformanceFunctionPrivateAccessModifier(t *testin
                       }
 
                       %[1]s TestImpl: Test {
-                          priv fun test(): Int {
+                          access(self) fun test(): Int {
                               return 1
                           }
                       }
@@ -990,7 +990,7 @@ func TestCheckInvalidInterfaceConformanceFieldPrivateAccessModifier(t *testing.T
                       }
 
                       %[1]s TestImpl: Test {
-                          priv var x: Int
+                          access(self) var x: Int
 
                           init(x: Int) {
                              self.x = x
@@ -1019,11 +1019,11 @@ func TestCheckInvalidInterfaceConformanceFieldMismatchAccessModifierMoreRestrict
 				fmt.Sprintf(
 					`
                       %[1]s interface Test {
-                          pub(set) x: Int
+                          access(all) x: Int
                       }
 
                       %[1]s TestImpl: Test {
-                          pub var x: Int
+                          access(account) var x: Int
 
                           init(x: Int) {
                              self.x = x
@@ -1052,7 +1052,7 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatchAccessModifierMoreRestr
 				fmt.Sprintf(
 					`
                       %[1]s interface Test {
-                          pub fun x()
+                          access(all) fun x()
                       }
 
                       %[1]s TestImpl: Test {
@@ -1081,11 +1081,11 @@ func TestCheckInterfaceConformanceFieldMorePermissiveAccessModifier(t *testing.T
 				fmt.Sprintf(
 					`
                       %[1]s interface Test {
-                          pub x: Int
+                          access(all) x: Int
                       }
 
                       %[1]s TestImpl: Test {
-                          pub(set) var x: Int
+                          access(all) var x: Int
 
                           init(x: Int) {
                              self.x = x
@@ -2892,13 +2892,17 @@ func TestCheckInterfaceInheritance(t *testing.T) {
             struct interface Bar: Foo {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 
 		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
 		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
+
+		// forEachAttachment params conflict between foo and bar
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[1], &interfaceMemberConflictError)
 	})
 
 	t.Run("mismatching inner conformance", func(t *testing.T) {
@@ -2913,13 +2917,17 @@ func TestCheckInterfaceInheritance(t *testing.T) {
             struct Baz: Bar {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 
 		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
 		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
+
+		// forEachAttachment params conflict between foo and bar
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[1], &interfaceMemberConflictError)
 	})
 
 	t.Run("nested mismatching conformance", func(t *testing.T) {
@@ -2934,14 +2942,18 @@ func TestCheckInterfaceInheritance(t *testing.T) {
             struct Baz: Bar {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		conformanceError := &sema.CompositeKindMismatchError{}
 		require.ErrorAs(t, errs[0], &conformanceError)
 		assert.Equal(t, common.CompositeKindResource, conformanceError.ExpectedKind)
 		assert.Equal(t, common.CompositeKindStructure, conformanceError.ActualKind)
 
-		require.ErrorAs(t, errs[1], &conformanceError)
+		// forEachAttachment params conflict between foo and bar
+		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[1], &interfaceMemberConflictError)
+
+		require.ErrorAs(t, errs[2], &conformanceError)
 		assert.Equal(t, common.CompositeKindStructure, conformanceError.ExpectedKind)
 		assert.Equal(t, common.CompositeKindResource, conformanceError.ActualKind)
 	})
@@ -2952,11 +2964,11 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                pub fun hello()
+                access(all) fun hello()
             }
 
             struct interface Bar: Foo {
-                pub fun hello()
+                access(all) fun hello()
             }
         `)
 
@@ -2970,11 +2982,35 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                pub fun hello()
+                access(all) fun hello()
             }
 
             struct interface Bar: Foo {
-                pub fun hello(): String
+                access(all) fun hello(): String
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods mismatching entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+
+            struct interface Foo {
+                access(X) fun hello(): String
+            }
+
+            struct interface Bar: Foo {
+                access(all) fun hello(): String
             }
         `)
 
@@ -2992,11 +3028,11 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                pub var x: String
+                access(all) var x: String
             }
 
             struct interface Bar: Foo {
-                pub var x: String
+                access(all) var x: String
             }
         `)
 
@@ -3009,11 +3045,35 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                pub var x: String
+                access(all) var x: String
             }
 
             struct interface Bar: Foo {
-                pub var x: Int
+                access(all) var x: Int
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "x", memberConflictError.MemberName)
+		assert.Equal(t, "Foo", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate fields, mismatching entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+
+            struct interface Foo {
+                access(all) var x: String
+            }
+
+            struct interface Bar: Foo {
+                access(X) var x: String
             }
         `)
 
@@ -3031,11 +3091,11 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                pub var x: String
+                access(all) var x: String
             }
 
             struct interface Bar: Foo {
-                pub let x: String
+                access(all) let x: String
             }
         `)
 
@@ -3053,11 +3113,11 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                pub(set) var x: String
+                access(all) var x: String
             }
 
             struct interface Bar: Foo {
-                pub var x: String
+                access(account) var x: String
             }
         `)
 
@@ -3075,11 +3135,11 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                pub fun hello()
+                access(all) fun hello()
             }
 
             struct interface Bar: Foo {
-                pub var hello: Void
+                access(all) var hello: Void
             }
         `)
 
@@ -3097,13 +3157,13 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                pub fun hello() {
+                access(all) fun hello() {
                     pre { true }
                 }
             }
 
             struct interface Bar: Foo {
-                pub fun hello()
+                access(all) fun hello()
             }
         `)
 
@@ -3116,11 +3176,11 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface Foo {
-                pub fun hello()
+                access(all) fun hello()
             }
 
             struct interface Bar: Foo {
-                pub fun hello() {
+                access(all) fun hello() {
                     pre { true }
                 }
             }
@@ -3135,13 +3195,13 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello(): Int
+                access(all) fun hello(): Int
             }
 
             struct interface B: A {}
 
             struct interface P {
-                pub fun hello(): String
+                access(all) fun hello(): String
             }
 
             struct interface Q: P {}
@@ -3164,13 +3224,79 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello(): Int
+                access(all) fun hello(): Int
             }
 
             struct interface B: A {}
 
             struct interface P {
-                pub fun hello(): String
+                access(all) fun hello(): String
+            }
+
+            struct interface Q: P {}
+
+            struct X: B, Q {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, "B", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Equal(t, "Q", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "P", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods same type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello(): Int
+            }
+
+            struct interface B: A {}
+
+            struct interface P {
+                access(all) fun hello(): Int
+            }
+
+            struct interface Q: P {}
+
+            struct X: B, Q {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		conformanceError := &sema.ConformanceError{}
+		require.ErrorAs(t, errs[0], &conformanceError)
+		assert.Equal(t, "B", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "A", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+
+		require.ErrorAs(t, errs[1], &conformanceError)
+		assert.Equal(t, "Q", conformanceError.InterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "P", conformanceError.NestedInterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("duplicate methods same type different entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+            struct interface A {
+                access(E) fun hello(): Int
+            }
+
+            struct interface B: A {}
+
+            struct interface P {
+                access(all) fun hello(): Int
             }
 
             struct interface Q: P {}
@@ -3196,7 +3322,7 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
@@ -3217,7 +3343,7 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
@@ -3272,7 +3398,7 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
@@ -3281,7 +3407,7 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
             struct C: B {}
 
-            pub fun main() {
+            access(all) fun main() {
                 var c = C()
                 c.hello()
             }
@@ -3296,13 +3422,13 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
 
             struct interface B: A {
-                pub fun hello() {
+                access(all) fun hello() {
                     pre { true }
                 }
             }
@@ -3322,13 +3448,13 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
 
             struct interface B: A {
-                pub fun hello()
+                access(all) fun hello()
             }
         `)
 
@@ -3349,14 +3475,14 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             }
 
             struct interface B: A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
 
             struct C: B {}
 
-            pub fun main() {
+            access(all) fun main() {
                 var c = C()
                 c.hello()
             }
@@ -3371,13 +3497,13 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     pre { true }
                 }
             }
 
             struct interface B: A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
@@ -3397,11 +3523,11 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello()
+                access(all) fun hello()
             }
 
             struct interface B: A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
@@ -3421,13 +3547,13 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
 
             struct interface B: A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 2
                 }
             }
@@ -3447,17 +3573,17 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
 
             struct interface B: A {
-                pub fun hello()
+                access(all) fun hello()
             }
 
             struct interface C: B {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 2
                 }
             }
@@ -3488,13 +3614,13 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
 
             struct interface B {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 2
                 }
             }
@@ -3516,13 +3642,13 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
 
             struct interface B: A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 2
                 }
             }
@@ -3548,13 +3674,13 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
 
             struct interface B {
-                pub fun hello() {
+                access(all) fun hello() {
                     pre { true }
                 }
             }
@@ -3575,13 +3701,13 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct interface A {
-                pub fun hello() {
+                access(all) fun hello() {
                     var a = 1
                 }
             }
 
             struct interface B {
-                pub fun hello() {
+                access(all) fun hello() {
                     pre { true }
                 }
             }
@@ -3613,7 +3739,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 struct Nested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3625,7 +3751,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract X: C {
                 struct Nested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3642,7 +3768,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 struct Nested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3659,6 +3785,38 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
+	t.Run("type requirement wrong entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+            contract interface A {
+                struct Nested {
+                    access(all) fun test(): Int {
+                        return 3
+                    }
+                }
+            }
+
+            contract interface B: A {}
+
+            contract interface C: B {}
+
+            contract X: C {
+				struct Nested {
+                    access(E) fun test(): Int {
+                        return 3
+                    }
+                }
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
 	t.Run("type requirement multiple", func(t *testing.T) {
 
 		t.Parallel()
@@ -3666,7 +3824,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 struct ANested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3674,7 +3832,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract interface B {
                 struct BNested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 4
                     }
                 }
@@ -3684,13 +3842,13 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract X: C {
                 struct ANested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
 
                 struct BNested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3707,7 +3865,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 struct ANested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3715,7 +3873,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract interface B {
                 struct BNested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 4
                     }
                 }
@@ -3725,7 +3883,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract X: C {
                 struct ANested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3733,7 +3891,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
            contract Y: C {
                 struct BNested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3761,7 +3919,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 struct Nested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3769,7 +3927,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract interface B: A {
                 struct Nested {
-                    pub fun test(): String {
+                    access(all) fun test(): String {
                         return "three"
                     }
                 }
@@ -3790,7 +3948,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 struct Nested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3798,7 +3956,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract interface B: A {
                 struct Nested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3819,7 +3977,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 resource interface Nested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3827,7 +3985,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract interface B: A {
                 resource interface Nested {
-                    pub fun test(): String {
+                    access(all) fun test(): String {
                         return "three"
                     }
                 }
@@ -3848,7 +4006,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 struct interface Nested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3856,7 +4014,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract interface B: A {
                 resource Nested {
-                    pub fun test(): String {
+                    access(all) fun test(): String {
                         return "three"
                     }
                 }
@@ -3877,7 +4035,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 struct Nested {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3885,7 +4043,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract interface B {
                 struct Nested {
-                    pub fun test(): String {
+                    access(all) fun test(): String {
                         return "three"
                     }
                 }
@@ -3908,7 +4066,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             contract interface A {
                 struct NestedA {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -3916,7 +4074,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
             contract interface B {
                 struct NestedB {
-                    pub fun test(): String {
+                    access(all) fun test(): String {
                         return "three"
                     }
                 }
@@ -3966,7 +4124,7 @@ func TestCheckInterfaceEventsInheritance(t *testing.T) {
             }
 
             contract X: A {
-                pub fun test() {
+                access(all) fun test() {
                    emit FooEvent("hello")
                 }
             }
@@ -3996,7 +4154,7 @@ func TestCheckInterfaceEventsInheritance(t *testing.T) {
             contract interface C: B {}
 
             contract X: C {
-                pub fun test() {
+                access(all) fun test() {
                    emit FooEvent("hello")
                 }
             }

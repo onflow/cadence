@@ -45,7 +45,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-            pub fun test() {
+            access(all) fun test() {
                 foo()
             }
         `,

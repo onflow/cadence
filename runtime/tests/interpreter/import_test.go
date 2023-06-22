@@ -67,7 +67,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,
-		Access:          ast.AccessPublic,
+		Access:          sema.UnauthorizedAccess,
 		Type:            fooType,
 	})
 
@@ -156,12 +156,12 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	importedCheckerA, err := checker.ParseAndCheckWithOptions(t,
 		`
           // this function *SHOULD* be imported in the importing program
-          pub fun a(): Int {
+          access(all) fun a(): Int {
               return 1
           }
 
           // this function should *NOT* be imported in the importing program
-          pub fun b(): Int {
+          access(all) fun b(): Int {
               return 11
           }
         `,
@@ -177,12 +177,12 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	importedCheckerB, err := checker.ParseAndCheckWithOptions(t,
 		`
           // this function *SHOULD* be imported in the importing program
-          pub fun b(): Int {
+          access(all) fun b(): Int {
               return 2
           }
 
           // this function should *NOT* be imported in the importing program
-          pub fun a(): Int {
+          access(all) fun a(): Int {
               return 22
           }
         `,
@@ -199,7 +199,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 		`
           import a, b from 0x1
 
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return a() + b()
           }
         `,

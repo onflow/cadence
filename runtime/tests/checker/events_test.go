@@ -261,7 +261,7 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-              pub event Transfer(to: Int, from: Int)
+              access(all) event Transfer(to: Int, from: Int)
             `,
 			ParseAndCheckOptions{
 				Location: utils.ImportedLocation,
@@ -272,7 +272,7 @@ func TestCheckEmitEvent(t *testing.T) {
 		_, err = ParseAndCheckWithOptions(t, `
               import Transfer from "imported"
 
-              pub fun test() {
+              access(all) fun test() {
                   emit Transfer(to: 1, from: 2)
               }
             `,

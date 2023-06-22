@@ -61,9 +61,9 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-		pub struct S {}
+		access(all) struct S {}
 
-		pub fun main() {
+		access(all) fun main() {
 			let s = CompositeType("A.0000000000000001.S")
 		}
         `
@@ -107,10 +107,10 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 	t.Parallel()
 
 	contracts := [...][]byte{
-		[]byte(`pub contract C0 {}`),
-		[]byte(`pub contract C1 {}`),
-		[]byte(`pub contract C2 {}`),
-		[]byte(`pub contract C3 {}`),
+		[]byte(`access(all) contract C0 {}`),
+		[]byte(`access(all) contract C1 {}`),
+		[]byte(`access(all) contract C2 {}`),
+		[]byte(`access(all) contract C3 {}`),
 	}
 
 	importExpressions := [len(contracts)]string{}
@@ -125,7 +125,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 
 			t.Parallel()
 
-			script := "pub fun main() {}"
+			script := "access(all) fun main() {}"
 			for j := 0; j <= imports; j++ {
 				script = importExpressions[j] + script
 			}
@@ -210,7 +210,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: Int) {
+            access(all) fun main(a: Int) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -246,7 +246,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: Int) {
+            access(all) fun main(a: Int) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -289,7 +289,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: Int8) {
+            access(all) fun main(a: Int8) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -325,7 +325,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: Int16) {
+            access(all) fun main(a: Int16) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -361,7 +361,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: Int32) {
+            access(all) fun main(a: Int32) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -397,7 +397,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: Int64) {
+            access(all) fun main(a: Int64) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -433,7 +433,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: Int128) {
+            access(all) fun main(a: Int128) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -469,7 +469,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(a: Int256) {
+            access(all) fun main(a: Int256) {
             }
         `
 		meter := newTestMemoryGauge()
@@ -505,7 +505,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Int {
+            access(all) fun main(): Int {
 				let a = Int(2)
 				return a
             }
@@ -540,7 +540,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Int {
+            access(all) fun main(): Int {
 				let a = Int(1)
 				let b = a << 64
 				return b
@@ -576,7 +576,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Int8 {
+            access(all) fun main(): Int8 {
                 return 12
             }
         `
@@ -607,7 +607,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Int16 {
+            access(all) fun main(): Int16 {
                 return 12
             }
         `
@@ -638,7 +638,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Int32 {
+            access(all) fun main(): Int32 {
                 return 12
             }
         `
@@ -669,7 +669,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Int64 {
+            access(all) fun main(): Int64 {
                 return 12
             }
         `
@@ -700,7 +700,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Int128 {
+            access(all) fun main(): Int128 {
                 return 12
             }
         `
@@ -731,7 +731,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Int256 {
+            access(all) fun main(): Int256 {
                 return 12
             }
         `
@@ -766,7 +766,7 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 	testMetering := func(strLiteral string) (meteredAmount, actualLen uint64) {
 
 		script := fmt.Sprintf(`
-                pub fun main() {
+                access(all) fun main() {
                     let s = "%s"
                     log(s)
                 }
@@ -1004,7 +1004,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main() {}
+            access(all) fun main() {}
         `)
 
 		err := executeScript(script, memoryMeter{})
@@ -1015,7 +1015,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: String) {}
+            access(all) fun main(x: String) {}
         `)
 
 		err := executeScript(
@@ -1032,7 +1032,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main() {
+            access(all) fun main() {
                 0b
             }
         `)
@@ -1052,7 +1052,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main() {
+            access(all) fun main() {
                 let x: [AnyStruct] = []
             }
         `)
@@ -1181,7 +1181,7 @@ func TestMeterEncoding(t *testing.T) {
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(`
-                pub fun main() {
+                access(all) fun main() {
                     let acc = getAuthAccount(0x02)
                     var i = 0
                     var f = Foo()
@@ -1192,8 +1192,8 @@ func TestMeterEncoding(t *testing.T) {
                     }
                 }
 
-                pub struct Foo {
-                    priv var id: Int
+                access(all) struct Foo {
+                    access(self) var id: Int
                     init() {
                         self.id = 123456789
                     }

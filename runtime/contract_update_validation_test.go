@@ -81,6 +81,7 @@ func newContractRemovalTransaction(contractName string) string {
 
 func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 	rt := newTestInterpreterRuntime()
+	rt.defaultConfig.AttachmentsEnabled = true
 
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
@@ -154,8 +155,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: String
+            access(all) contract Test {
+                access(all) var a: String
                 init() {
                     self.a = "hello"
                 }
@@ -163,8 +164,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: Int
+            access(all) contract Test {
+                access(all) var a: Int
                 init() {
                     self.a = 0
                 }
@@ -183,8 +184,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: String
+            access(all) contract Test {
+                access(all) var a: String
 
                 init() {
                     self.a = "hello"
@@ -193,9 +194,9 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: String
-                pub var b: Int
+            access(all) contract Test {
+                access(all) var a: String
+                access(all) var b: Int
 
                 init() {
                     self.a = "hello"
@@ -216,9 +217,9 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: String
-                pub var b: Int
+            access(all) contract Test {
+                access(all) var a: String
+                access(all) var b: Int
 
                 init() {
                     self.a = "hello"
@@ -228,8 +229,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: String
+            access(all) contract Test {
+                access(all) var a: String
 
                 init() {
                     self.a = "hello"
@@ -246,17 +247,17 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var a: @TestResource
+                access(all) var a: @TestResource
 
                 init() {
                     self.a <- create Test.TestResource()
                 }
 
-                pub resource TestResource {
+                access(all) resource TestResource {
 
-                    pub let b: Int
+                    access(all) let b: Int
 
                     init() {
                         self.b = 1234
@@ -266,17 +267,17 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var a: @Test.TestResource
+                access(all) var a: @Test.TestResource
 
                 init() {
                     self.a <- create Test.TestResource()
                 }
 
-                pub resource TestResource {
+                access(all) resource TestResource {
 
-                    pub let b: String
+                    access(all) let b: String
 
                     init() {
                         self.b = "string_1234"
@@ -297,17 +298,17 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var a: @TestResource
+                access(all) var a: @TestResource
 
                 init() {
                     self.a <- create Test.TestResource()
                 }
 
-                pub resource TestResource {
+                access(all) resource TestResource {
 
-                    pub var b: String
+                    access(all) var b: String
 
                     init() {
                         self.b = "hello"
@@ -317,18 +318,18 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var a: @Test.TestResource
+                access(all) var a: @Test.TestResource
 
                 init() {
                     self.a <- create Test.TestResource()
                 }
 
-                pub resource TestResource {
+                access(all) resource TestResource {
 
-                    pub var b: String
-                    pub var c: Int
+                    access(all) var b: String
+                    access(all) var c: Int
 
                     init() {
                         self.b = "hello"
@@ -350,17 +351,17 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: [TestStruct; 1]
+                access(all) var x: [TestStruct; 1]
 
                 init() {
                     self.x = [TestStruct()]
                 }
 
-                pub struct TestStruct {
-                    pub let a: Int
-                    pub var b: Int
+                access(all) struct TestStruct {
+                    access(all) let a: Int
+                    access(all) var b: Int
 
                     init() {
                         self.a = 123
@@ -371,17 +372,17 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: [TestStruct; 1]
+                access(all) var x: [TestStruct; 1]
 
                 init() {
                     self.x = [TestStruct()]
                 }
 
-                pub struct TestStruct {
-                    pub let a: Int
-                    pub var b: String
+                access(all) struct TestStruct {
+                    access(all) let a: Int
+                    access(all) var b: String
 
                     init() {
                         self.a = 123
@@ -403,18 +404,18 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: {String: Foo}
+                access(all) var x: {String: Foo}
 
                 init() {
                     self.x = { "foo" : Foo() }
                 }
 
-                pub struct Foo {
+                access(all) struct Foo {
 
-                    pub let a: Foo?
-                    pub let b: Bar
+                    access(all) let a: Foo?
+                    access(all) let b: Bar
 
                     init() {
                         self.a = nil
@@ -422,10 +423,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     }
                 }
 
-                pub struct Bar {
+                access(all) struct Bar {
 
-                    pub let c: Foo?
-                    pub let d: Bar?
+                    access(all) let c: Foo?
+                    access(all) let d: Bar?
 
                     init() {
                         self.c = nil
@@ -436,18 +437,18 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: {String: Foo}
+                access(all) var x: {String: Foo}
 
                 init() {
                     self.x = { "foo" : Foo() }
                 }
 
-                pub struct Foo {
+                access(all) struct Foo {
 
-                    pub let a: Foo?
-                    pub let b: Bar
+                    access(all) let a: Foo?
+                    access(all) let b: Bar
 
                     init() {
                         self.a = nil
@@ -455,10 +456,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     }
                 }
 
-                pub struct Bar {
+                access(all) struct Bar {
 
-                    pub let c: Foo?
-                    pub let d: String
+                    access(all) let c: Foo?
+                    access(all) let d: String
 
                     init() {
                         self.c = nil
@@ -480,18 +481,18 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: Test.TestStruct
-                pub var y: TestStruct
+                access(all) var x: Test.TestStruct
+                access(all) var y: TestStruct
 
                 init() {
                     self.x = Test.TestStruct()
                     self.y = TestStruct()
                 }
 
-                pub struct TestStruct {
-                    pub let a: Int
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -501,18 +502,18 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: TestStruct
-                pub var y: Test.TestStruct
+                access(all) var x: TestStruct
+                access(all) var y: Test.TestStruct
 
                 init() {
                     self.x = TestStruct()
                     self.y = Test.TestStruct()
                 }
 
-                pub struct TestStruct {
-                    pub let a: Int
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -530,19 +531,19 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const importCode = `
-		    pub contract TestImport {
+    	    	    access(all) contract TestImport {
 
-		        pub struct TestStruct {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        access(all) struct TestStruct {
+    	    	            access(all) let a: Int
+    	    	            access(all) var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		executeTransaction := newContractDeploymentTransactor(t)
 
@@ -550,38 +551,38 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 
 		const oldCode = `
-		    import TestImport from 0x42
+    	    	    import TestImport from 0x42
 
-		    pub contract Test {
+    	    	    access(all) contract Test {
 
-		        pub var x: TestImport.TestStruct
+    	    	        access(all) var x: TestImport.TestStruct
 
-		        init() {
-		            self.x = TestImport.TestStruct()
-		        }
-		    }
-		`
+    	    	        init() {
+    	    	            self.x = TestImport.TestStruct()
+    	    	        }
+    	    	    }
+    	    	`
 
 		const newCode = `
-		    pub contract Test {
+    	    	    access(all) contract Test {
 
-		        pub var x: TestStruct
+    	    	        access(all) var x: TestStruct
 
-		        init() {
-		            self.x = TestStruct()
-		        }
+    	    	        init() {
+    	    	            self.x = TestStruct()
+    	    	        }
 
-		        pub struct TestStruct {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        access(all) struct TestStruct {
+    	    	            access(all) let a: Int
+    	    	            access(all) var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err = executeTransaction(newContractAddTransaction("Test", oldCode))
 		require.NoError(t, err)
@@ -598,16 +599,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract interface Test {
-                pub var a: String
-                pub fun getA() : String
+            access(all) contract interface Test {
+                access(all) var a: String
+                access(all) fun getA() : String
             }
         `
 
 		const newCode = `
-            pub contract interface Test {
-                pub var a: Int
-                pub fun getA() : Int
+            access(all) contract interface Test {
+                access(all) var a: Int
+                access(all) fun getA() : Int
             }
         `
 
@@ -623,22 +624,22 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract interface Test {
-                pub var a: String
-                pub fun getA() : String
+            access(all) contract interface Test {
+                access(all) var a: String
+                access(all) fun getA() : String
             }
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var a: String
+                access(all) var a: String
 
                 init() {
                     self.a = "hello"
                 }
 
-                pub fun getA() : String {
+                access(all) fun getA() : String {
                     return self.a
                 }
             }
@@ -662,24 +663,24 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var a: String
+                access(all) var a: String
 
                 init() {
                     self.a = "hello"
                 }
 
-                pub fun getA() : String {
+                access(all) fun getA() : String {
                     return self.a
                 }
             }
         `
 
 		const newCode = `
-            pub contract interface Test {
-                pub var a: String
-                pub fun getA() : String
+            access(all) contract interface Test {
+                access(all) var a: String
+                access(all) fun getA() : String
             }
         `
 
@@ -701,34 +702,34 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: UsedStruct
+                access(all) var x: UsedStruct
 
                 init() {
                     self.x = UsedStruct()
                 }
 
-                pub struct UsedStruct {
-                    pub let a: Int
+                access(all) struct UsedStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
                     }
 
-                    pub fun getA() : Int {
+                    access(all) fun getA() : Int {
                         return self.a
                     }
                 }
 
-                pub struct UnusedStruct {
-                    pub let a: Int
+                access(all) struct UnusedStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
                     }
 
-                    pub fun getA() : Int {
+                    access(all) fun getA() : Int {
                         return self.a
                     }
                 }
@@ -736,38 +737,38 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: UsedStruct
+                access(all) var x: UsedStruct
 
                 init() {
                     self.x = UsedStruct()
                 }
 
-                pub struct UsedStruct {
-                    pub let a: Int
+                access(all) struct UsedStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
                     }
 
-                    pub fun getA() : String {
+                    access(all) fun getA() : String {
                         return "hello_123"
                     }
 
-                    pub fun getA_new() : Int {
+                    access(all) fun getA_new() : Int {
                         return self.a
                     }
                 }
 
-                pub struct UnusedStruct {
-                    pub let a: String
+                access(all) struct UnusedStruct {
+                    access(all) let a: String
 
                     init() {
                         self.a = "string_456"
                     }
 
-                    pub fun getA() : String {
+                    access(all) fun getA() : String {
                         return self.a
                     }
                 }
@@ -789,33 +790,33 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: Foo
+                access(all) var x: Foo
 
                 init() {
                     self.x = Foo.up
                 }
 
-                pub enum Foo: UInt8 {
-                    pub case up
-                    pub case down
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: Foo
+                access(all) var x: Foo
 
                 init() {
                     self.x = Foo.up
                 }
 
-                pub enum Foo: UInt128 {
-                    pub case up
-                    pub case down
+                access(all) enum Foo: UInt128 {
+                    access(all) case up
+                    access(all) case down
                 }
             }
         `
@@ -832,33 +833,33 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: AnyStruct{TestStruct}?
+                access(all) var x: AnyStruct{TestStruct}?
 
                 init() {
                     self.x = nil
                 }
 
-                pub struct interface TestStruct {
-                    pub let a: String
-                    pub var b: Int
+                access(all) struct interface TestStruct {
+                    access(all) let a: String
+                    access(all) var b: Int
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var x: AnyStruct{TestStruct}?
+                access(all) var x: AnyStruct{TestStruct}?
 
                 init() {
                     self.x = nil
                 }
 
-                pub struct interface TestStruct {
-                    pub let a: Int
-                    pub var b: Int
+                access(all) struct interface TestStruct {
+                    access(all) let a: Int
+                    access(all) var b: Int
                 }
             }
        `
@@ -875,17 +876,17 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub struct interface TestStruct {
-                    pub var a: Int
+            access(all) contract Test {
+                access(all) struct interface TestStruct {
+                    access(all) var a: Int
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub struct TestStruct {
-                    pub let a: Int
+            access(all) contract Test {
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -912,14 +913,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub struct TestStruct {
-                    pub let a: Int
+            access(all) contract Test {
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -937,9 +938,9 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub struct TestStruct {
-                    pub let a: Int
+            access(all) contract Test {
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -949,7 +950,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
             }
         `
 
@@ -965,8 +966,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: String
+            access(all) contract Test {
+                access(all) var a: String
                 init() {
                     self.a = "hello"
                 }
@@ -974,8 +975,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var b: Int
+            access(all) contract Test {
+                access(all) var b: Int
                 init() {
                     self.b = 0
                 }
@@ -994,31 +995,31 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: String
+            access(all) contract Test {
+                access(all) var a: String
 
                 init() {
                     self.a = "hello"
                 }
 
-                pub struct interface TestStruct {
-                    pub var a: Int
+                access(all) struct interface TestStruct {
+                    access(all) var a: Int
                 }
             }
        `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: Int
-                pub var b: String
+            access(all) contract Test {
+                access(all) var a: Int
+                access(all) var b: String
 
                 init() {
                     self.a = 0
                     self.b = "hello"
                 }
 
-                pub struct TestStruct {
-                    pub let a: Int
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -1052,31 +1053,31 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: String
+            access(all) contract Test {
+                access(all) var a: String
 
                 init() {
                     self.a = "hello"
                 }
 
-                pub struct interface TestStruct {
-                    pub var a: Int
+                access(all) struct interface TestStruct {
+                    access(all) var a: Int
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: Int
-                pub var b: String
+            access(all) contract Test {
+                access(all) var a: Int
+                access(all) var b: String
 
                 init() {
                     self.a = 0
                     self.b = "hello"
                 }
 
-                pub struct TestStruct {
-                    pub let a: Int
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -1089,22 +1090,22 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		RequireError(t, err)
 
 		const expectedError = "error: mismatching field `a` in `Test`\n" +
-			" --> 0000000000000042.Test:3:27\n" +
+			" --> 0000000000000042.Test:3:35\n" +
 			"  |\n" +
-			"3 |                 pub var a: Int\n" +
-			"  |                            ^^^ incompatible type annotations. expected `String`, found `Int`\n" +
+			"3 |                 access(all) var a: Int\n" +
+			"  |                                    ^^^ incompatible type annotations. expected `String`, found `Int`\n" +
 			"\n" +
 			"error: found new field `b` in `Test`\n" +
-			" --> 0000000000000042.Test:4:24\n" +
+			" --> 0000000000000042.Test:4:32\n" +
 			"  |\n" +
-			"4 |                 pub var b: String\n" +
-			"  |                         ^\n" +
+			"4 |                 access(all) var b: String\n" +
+			"  |                                 ^\n" +
 			"\n" +
 			"error: trying to convert structure interface `TestStruct` to a structure\n" +
-			"  --> 0000000000000042.Test:11:27\n" +
+			"  --> 0000000000000042.Test:11:35\n" +
 			"   |\n" +
-			"11 |                 pub struct TestStruct {\n" +
-			"   |                            ^^^^^^^^^^"
+			"11 |                 access(all) struct TestStruct {\n" +
+			"   |                                    ^^^^^^^^^^"
 
 		require.Contains(t, err.Error(), expectedError)
 	})
@@ -1114,16 +1115,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var vault: Capability<&TestStruct>?
+                access(all) var vault: Capability<&TestStruct>?
 
                 init() {
                     self.vault = nil
                 }
 
-                pub struct TestStruct {
-                    pub let a: Int
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -1133,16 +1134,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var vault: Capability<&TestStruct>?
+                access(all) var vault: Capability<&TestStruct>?
 
                 init() {
                     self.vault = nil
                 }
 
-                pub struct TestStruct {
-                    pub let a: Int
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -1160,10 +1161,10 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub struct TestStruct {
-                    pub let a: Int
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -1173,9 +1174,9 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
-                pub var add: fun(Int, Int): Int
+                access(all) var add: fun(Int, Int): Int
 
                 init() {
                     self.add = fun (a: Int, b: Int): Int {
@@ -1183,8 +1184,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     }
                 }
 
-                pub struct TestStruct {
-                    pub let a: Int
+                access(all) struct TestStruct {
+                    access(all) let a: Int
 
                     init() {
                         self.a = 123
@@ -1204,59 +1205,59 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const importCode = `
-		    pub contract TestImport {
-		        pub struct interface AnInterface {
-		            pub a: Int
-		        }
-		    }
-		`
+    	    	    access(all) contract TestImport {
+    	    	        access(all) struct interface AnInterface {
+    	    	            access(all) a: Int
+    	    	        }
+    	    	    }
+    	    	`
 
 		executeTransaction := newContractDeploymentTransactor(t)
 		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
 		require.NoError(t, err)
 
 		const oldCode = `
-		    import TestImport from 0x42
+    	    	    import TestImport from 0x42
 
-		    pub contract Test {
-		        pub struct TestStruct1 {
-		            pub let a: Int
-		            init() {
-		                self.a = 123
-		            }
-		        }
+    	    	    access(all) contract Test {
+    	    	        access(all) struct TestStruct1 {
+    	    	            access(all) let a: Int
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
 
-		        pub struct TestStruct2: TestImport.AnInterface {
-		            pub let a: Int
+    	    	        access(all) struct TestStruct2: TestImport.AnInterface {
+    	    	            access(all) let a: Int
 
-		            init() {
-		                self.a = 123
-		            }
-		        }
-		    }
-	    `
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
+    	    	    }
+    	    `
 
 		const newCode = `
-		    import TestImport from 0x42
+    	    	    import TestImport from 0x42
 
-		    pub contract Test {
+    	    	    access(all) contract Test {
 
-		        pub struct TestStruct2: TestImport.AnInterface {
-		            pub let a: Int
+    	    	        access(all) struct TestStruct2: TestImport.AnInterface {
+    	    	            access(all) let a: Int
 
-		            init() {
-		                self.a = 123
-		            }
-		        }
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
 
-		        pub struct TestStruct1 {
-		            pub let a: Int
-		            init() {
-		                self.a = 123
-		            }
-		        }
-		    }
-		`
+    	    	        access(all) struct TestStruct1 {
+    	    	            access(all) let a: Int
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err = executeTransaction(newContractAddTransaction("Test", oldCode))
 		require.NoError(t, err)
@@ -1270,33 +1271,33 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
                 // simple nominal type
-                pub var a: TestStruct
+                access(all) var a: TestStruct
 
                 // qualified nominal type
-                pub var b: Test.TestStruct
+                access(all) var b: Test.TestStruct
 
                 // optional type
-                pub var c: Int?
+                access(all) var c: Int?
 
                 // variable sized type
-                pub var d: [Int]
+                access(all) var d: [Int]
 
                 // constant sized type
-                pub var e: [Int; 2]
+                access(all) var e: [Int; 2]
 
                 // dictionary type
-                pub var f: {Int: String}
+                access(all) var f: {Int: String}
 
                 // restricted type
-                pub var g: {TestInterface}
+                access(all) var g: {TestInterface}
 
                 // instantiation and reference types
-                pub var h:  Capability<&TestStruct>?
+                access(all) var h:  Capability<&TestStruct>?
 
                 // function type
-                pub var i: Capability<&fun(Int, Int): Int>?
+                access(all) var i: Capability<&fun(Int, Int): Int>?
 
                 init() {
                     var count: Int = 567
@@ -1311,49 +1312,49 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.i = nil
                 }
 
-                pub struct TestStruct:TestInterface {
-                    pub let a: Int
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
                     init() {
                         self.a = 123
                     }
                 }
 
-                pub struct interface TestInterface {
-                    pub let a: Int
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
+            access(all) contract Test {
 
 
                 // function type
-                pub var i: Capability<&fun(Int, Int): Int>?
+                access(all) var i: Capability<&fun(Int, Int): Int>?
 
                 // instantiation and reference types
-                pub var h:  Capability<&TestStruct>?
+                access(all) var h:  Capability<&TestStruct>?
 
                 // restricted type
-                pub var g: {TestInterface}
+                access(all) var g: {TestInterface}
 
                 // dictionary type
-                pub var f: {Int: String}
+                access(all) var f: {Int: String}
 
                 // constant sized type
-                pub var e: [Int; 2]
+                access(all) var e: [Int; 2]
 
                 // variable sized type
-                pub var d: [Int]
+                access(all) var d: [Int]
 
                 // optional type
-                pub var c: Int?
+                access(all) var c: Int?
 
                 // qualified nominal type
-                pub var b: Test.TestStruct
+                access(all) var b: Test.TestStruct
 
                 // simple nominal type
-                pub var a: TestStruct
+                access(all) var a: TestStruct
 
                 init() {
                     var count: Int = 567
@@ -1368,15 +1369,15 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.i = nil
                 }
 
-                pub struct TestStruct:TestInterface {
-                    pub let a: Int
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
                     init() {
                         self.a = 123
                     }
                 }
 
-                pub struct interface TestInterface {
-                    pub let a: Int
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
                 }
             }
         `
@@ -1390,13 +1391,13 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
                 // restricted type
-                pub var a: {TestInterface}
-                pub var b: {TestInterface}
-                pub var c: AnyStruct{TestInterface}
-                pub var d: AnyStruct{TestInterface}
+                access(all) var a: {TestInterface}
+                access(all) var b: {TestInterface}
+                access(all) var c: AnyStruct{TestInterface}
+                access(all) var d: AnyStruct{TestInterface}
 
                 init() {
                     var count: Int = 567
@@ -1406,25 +1407,25 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.d = TestStruct()
                 }
 
-                pub struct TestStruct:TestInterface {
-                    pub let a: Int
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
                     init() {
                         self.a = 123
                     }
                 }
 
-                pub struct interface TestInterface {
-                    pub let a: Int
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: {TestInterface}
-                pub var b: AnyStruct{TestInterface}
-                pub var c: {TestInterface}
-                pub var d: AnyStruct{TestInterface}
+            access(all) contract Test {
+                access(all) var a: {TestInterface}
+                access(all) var b: AnyStruct{TestInterface}
+                access(all) var c: {TestInterface}
+                access(all) var d: AnyStruct{TestInterface}
 
                 init() {
                     var count: Int = 567
@@ -1434,15 +1435,15 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.d = TestStruct()
                 }
 
-                pub struct TestStruct:TestInterface {
-                    pub let a: Int
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
                     init() {
                         self.a = 123
                     }
                 }
 
-                pub struct interface TestInterface {
-                    pub let a: Int
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
                 }
             }
         `
@@ -1456,11 +1457,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
+            access(all) contract Test {
 
                 // restricted type
-                pub var a: TestStruct{TestInterface}
-                pub var b: {TestInterface}
+                access(all) var a: TestStruct{TestInterface}
+                access(all) var b: {TestInterface}
 
                 init() {
                     var count: Int = 567
@@ -1468,23 +1469,23 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.b = TestStruct()
                 }
 
-                pub struct TestStruct:TestInterface {
-                    pub let a: Int
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
                     init() {
                         self.a = 123
                     }
                 }
 
-                pub struct interface TestInterface {
-                    pub let a: Int
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: {TestInterface}
-                pub var b: TestStruct{TestInterface}
+            access(all) contract Test {
+                access(all) var a: {TestInterface}
+                access(all) var b: TestStruct{TestInterface}
 
                 init() {
                     var count: Int = 567
@@ -1492,15 +1493,15 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.b = TestStruct()
                 }
 
-                pub struct TestStruct:TestInterface {
-                    pub let a: Int
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
                     init() {
                         self.a = 123
                     }
                 }
 
-                pub struct interface TestInterface {
-                    pub let a: Int
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
                 }
             }
         `
@@ -1508,12 +1509,12 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "pub var a: {TestInterface}"+
-			"\n  |                            ^^^^^^^^^^^^^^^ "+
+		assert.Contains(t, err.Error(), "access(all) var a: {TestInterface}"+
+			"\n  |                                    ^^^^^^^^^^^^^^^ "+
 			"incompatible type annotations. expected `TestStruct{TestInterface}`, found `{TestInterface}`")
 
-		assert.Contains(t, err.Error(), "pub var b: TestStruct{TestInterface}"+
-			"\n  |                            ^^^^^^^^^^^^^^^^^^^^^^^^^ "+
+		assert.Contains(t, err.Error(), "access(all) var b: TestStruct{TestInterface}"+
+			"\n  |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^ "+
 			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct{TestInterface}`")
 	})
 
@@ -1522,19 +1523,19 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub enum Foo: UInt8 {
-                    pub case up
-                    pub case down
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
                 }
             }
        `
 
 		const newCode = `
-            pub contract Test {
-                pub enum Foo: UInt8 {
-                    pub case up
-                    pub case down
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
                 }
             }
         `
@@ -1548,18 +1549,18 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub enum Foo: UInt8 {
-                    pub case up
-                    pub case down
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub enum Foo: UInt8 {
-                    pub case up
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
                 }
             }
         `
@@ -1576,20 +1577,20 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub enum Foo: UInt8 {
-                    pub case up
-                    pub case down
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub enum Foo: UInt8 {
-                    pub case up
-                    pub case down
-                    pub case left
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                    access(all) case left
                 }
             }
         `
@@ -1603,21 +1604,21 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub enum Foo: UInt8 {
-                    pub case up
-                    pub case down
-                    pub case left
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                    access(all) case left
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub enum Foo: UInt8 {
-                    pub case down
-                    pub case left
-                    pub case up
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case down
+                    access(all) case left
+                    access(all) case up
                 }
             }
         `
@@ -1641,24 +1642,24 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-		    pub contract Test {
+    	    	    access(all) contract Test {
 
-		        pub struct TestStruct {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        access(all) struct TestStruct {
+    	    	            access(all) let a: Int
+    	    	            access(all) var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		const updateCode1 = `
-		    pub contract Test {
-		    }
-		`
+    	    	    access(all) contract Test {
+    	    	    }
+    	    	`
 
 		executeTransaction := newContractDeploymentTransactor(t)
 
@@ -1672,17 +1673,17 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertMissingDeclarationError(t, cause, "TestStruct")
 
 		const updateCode2 = `
-		    pub contract Test {
+    	    	    access(all) contract Test {
 
-		        pub struct TestStruct {
-		            pub let a: String
+    	    	        access(all) struct TestStruct {
+    	    	            access(all) let a: String
 
-		            init() {
-		                self.a = "hello123"
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = "hello123"
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err = executeTransaction(newContractUpdateTransaction("Test", updateCode2))
 		RequireError(t, err)
@@ -1696,34 +1697,34 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-		    pub contract Test {
+    	    	    access(all) contract Test {
 
-		        pub struct TestStruct {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        access(all) struct TestStruct {
+    	    	            access(all) let a: Int
+    	    	            access(all) var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		const newCode = `
-		    pub contract Test {
+    	    	    access(all) contract Test {
 
-		        pub struct TestStructRenamed {
-		            pub let a: Int
-		            pub var b: Int
+    	    	        access(all) struct TestStructRenamed {
+    	    	            access(all) let a: Int
+    	    	            access(all) var b: Int
 
-		            init() {
-		                self.a = 123
-		                self.b = 456
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	                self.b = 456
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
 		RequireError(t, err)
@@ -1737,11 +1738,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const code = `
-		    pub contract Test {
-		        pub enum TestEnum: Int {
-		        }
-		    }
-		`
+    	    	    access(all) contract Test {
+    	    	        access(all) enum TestEnum: Int {
+    	    	        }
+    	    	    }
+    	    	`
 
 		err := testDeployAndRemove(t, "Test", code)
 		RequireError(t, err)
@@ -1752,11 +1753,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 	t.Run("Remove contract interface with enum", func(t *testing.T) {
 
 		const code = `
-		    pub contract interface Test {
-		        pub enum TestEnum: Int {
-		        }
-		    }
-		`
+    	    	    access(all) contract interface Test {
+    	    	        access(all) enum TestEnum: Int {
+    	    	        }
+    	    	    }
+    	    	`
 
 		err := testDeployAndRemove(t, "Test", code)
 		RequireError(t, err)
@@ -1769,16 +1770,16 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const code = `
-		    pub contract Test {
-		        pub struct TestStruct {
-		            pub let a: Int
+    	    	    access(all) contract Test {
+    	    	        access(all) struct TestStruct {
+    	    	            access(all) let a: Int
 
-		            init() {
-		                self.a = 123
-		            }
-		        }
-		    }
-		`
+    	    	            init() {
+    	    	                self.a = 123
+    	    	            }
+    	    	        }
+    	    	    }
+    	    	`
 
 		err := testDeployAndRemove(t, "Test", code)
 		require.NoError(t, err)
@@ -1789,15 +1790,15 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-		    pub contract Test {
-		        pub struct A {}
-		        pub struct B {}
-		    }
-		`
+    	    	    access(all) contract Test {
+    	    	        access(all) struct A {}
+    	    	        access(all) struct B {}
+    	    	    }
+    	    	`
 
 		const newCode = `
-		    pub contract Test {}
-		`
+    	    	    access(all) contract Test {}
+    	    	`
 
 		// Errors reporting was previously non-deterministic,
 		// assert that reports are deterministic
@@ -1882,6 +1883,17 @@ func assertConformanceMismatchError(
 	assert.Equal(t, erroneousDeclName, conformanceMismatchError.DeclName)
 }
 
+func assertEntitlementRequirementMismatchError(
+	t *testing.T,
+	err error,
+	erroneousDeclName string,
+) {
+	var entitlementMismatchError *stdlib.RequiredEntitlementMismatchError
+	require.ErrorAs(t, err, &entitlementMismatchError)
+
+	assert.Equal(t, erroneousDeclName, entitlementMismatchError.DeclName)
+}
+
 func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase string, foundEnumCase string) {
 	var enumMismatchError *stdlib.EnumCaseMismatchError
 	require.ErrorAs(t, err, &enumMismatchError)
@@ -1936,36 +1948,36 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: Foo
+            access(all) contract Test {
+                access(all) var a: Foo
                 init() {
                     self.a = Foo()
                 }
 
-                pub struct Foo {
+                access(all) struct Foo {
                     init() {}
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: Foo
+            access(all) contract Test {
+                access(all) var a: Foo
                 init() {
                     self.a = Foo()
                 }
 
-                pub struct Foo: Bar {
+                access(all) struct Foo: Bar {
                     init() {
                     }
 
-                    pub fun getName(): String {
+                    access(all) fun getName(): String {
                         return "John"
                     }
                 }
 
-                pub struct interface Bar {
-                    pub fun getName(): String
+                access(all) struct interface Bar {
+                    access(all) fun getName(): String
                 }
             }
         `
@@ -1979,35 +1991,35 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: Foo
+            access(all) contract Test {
+                access(all) var a: Foo
                 init() {
                     self.a = Foo()
                 }
 
-                pub struct Foo {
+                access(all) struct Foo {
                     init() {}
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: Foo
+            access(all) contract Test {
+                access(all) var a: Foo
                 init() {
                     self.a = Foo()
                 }
 
-                pub struct Foo: Bar {
-                    pub var name: String
+                access(all) struct Foo: Bar {
+                    access(all) var name: String
 
                     init() {
                         self.name = "John"
                     }
                 }
 
-                pub struct interface Bar {
-                    pub var name: String
+                access(all) struct interface Bar {
+                    access(all) var name: String
                 }
             }
         `
@@ -2025,33 +2037,33 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: Foo
+            access(all) contract Test {
+                access(all) var a: Foo
                 init() {
                     self.a = Foo()
                 }
 
-                pub struct Foo: Bar {
+                access(all) struct Foo: Bar {
                     init() {}
                 }
 
-                pub struct interface Bar {
+                access(all) struct interface Bar {
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: Foo
+            access(all) contract Test {
+                access(all) var a: Foo
                 init() {
                     self.a = Foo()
                 }
 
-                pub struct Foo {
+                access(all) struct Foo {
                     init() {}
                 }
 
-                pub struct interface Bar {
+                access(all) struct interface Bar {
                 }
             }
         `
@@ -2069,45 +2081,169 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            pub contract Test {
-                pub var a: Foo
+            access(all) contract Test {
+                access(all) var a: Foo
                 init() {
                     self.a = Foo()
                 }
 
-                pub struct Foo: First, Second {
+                access(all) struct Foo: First, Second {
                     init() {}
                 }
 
-                pub struct interface First {
+                access(all) struct interface First {
                 }
 
-                pub struct interface Second {
+                access(all) struct interface Second {
                 }
             }
         `
 
 		const newCode = `
-            pub contract Test {
-                pub var a: Foo
+            access(all) contract Test {
+                access(all) var a: Foo
                 init() {
                     self.a = Foo()
                 }
 
-                pub struct Foo: Second, First {
+                access(all) struct Foo: Second, First {
                     init() {}
                 }
 
-                pub struct interface First {
+                access(all) struct interface First {
                 }
 
-                pub struct interface Second {
+                access(all) struct interface Second {
                 }
             }
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
 		require.NoError(t, err)
+	})
+
+	t.Run("removing required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+    	    	    	    	access(all) entitlement X
+    	    	    	    	access(all) entitlement Y
+    	    	    	    	access(all) attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	    	require entitlement Y
+    	    	    	    	}
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) entitlement X
+    	    	    	    	access(all) entitlement Y
+                access(all) attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("reordering required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+    	    	    	    	access(all) entitlement X
+    	    	    	    	access(all) entitlement Y
+    	    	    	    	access(all) attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	    	require entitlement Y
+    	    	    	    	}
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) entitlement X
+    	    	    	    	access(all) entitlement Y
+                access(all) attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement Y
+    	    	    	    	    	require entitlement X
+    	    	    	    	}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("renaming required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+    	    	    	    	access(all) entitlement X
+    	    	    	    	access(all) entitlement Y
+    	    	    	    	access(all) attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement Y
+    	    	    	    	}
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) entitlement X
+    	    	    	    	access(all) entitlement Y
+                access(all) attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+
+		assertEntitlementRequirementMismatchError(t, cause, "Foo")
+	})
+
+	t.Run("adding required entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+    	    	    	    	access(all) entitlement X
+    	    	    	    	access(all) entitlement Y
+    	    	    	    	access(all) attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	}
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) entitlement X
+    	    	    	    	access(all) entitlement Y
+                access(all) attachment Foo for AnyStruct {
+    	    	    	    	    	require entitlement X
+    	    	    	    	    	require entitlement Y
+    	    	    	    	}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+
+		assertEntitlementRequirementMismatchError(t, cause, "Foo")
 	})
 
 	t.Run("missing comma in parameter list of old contract", func(t *testing.T) {
@@ -2119,14 +2255,14 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		const contractName = "Test"
 
 		const oldCode = `
-          pub contract Test {
-              pub fun test(a: Int b: Int) {}
+          access(all) contract Test {
+              access(all) fun test(a: Int b: Int) {}
           }
         `
 
 		const newCode = `
-          pub contract Test {
-              pub fun test(a: Int, b: Int) {}
+          access(all) contract Test {
+              access(all) fun test(a: Int, b: Int) {}
           }
         `
 
@@ -2187,11 +2323,11 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 
 	const name = "Test"
 	const oldCode = `
-	  pub contract Test { init() { 1 } }
-	`
+    	  access(all) contract Test { init() { 1 } }
+    	`
 	const newCode = `
-	  pub contract Test { init() { 2 } }
-	`
+    	  access(all) contract Test { init() { 2 } }
+    	`
 
 	address := common.MustBytesToAddress([]byte{0x42})
 

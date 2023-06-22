@@ -71,7 +71,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: String) {}
+            access(all) fun main(x: String) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -90,7 +90,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: String?) {}
+            access(all) fun main(x: String?) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -110,7 +110,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt) {}
+            access(all) fun main(x: UInt) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -122,7 +122,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt8) {}
+            access(all) fun main(x: UInt8) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -134,7 +134,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt16) {}
+            access(all) fun main(x: UInt16) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -146,7 +146,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt32) {}
+            access(all) fun main(x: UInt32) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -158,7 +158,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt64) {}
+            access(all) fun main(x: UInt64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -170,7 +170,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt128) {}
+            access(all) fun main(x: UInt128) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -182,7 +182,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt256) {}
+            access(all) fun main(x: UInt256) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -194,7 +194,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int) {}
+            access(all) fun main(x: Int) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -206,7 +206,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int8) {}
+            access(all) fun main(x: Int8) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -218,7 +218,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int16) {}
+            access(all) fun main(x: Int16) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -230,7 +230,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int32) {}
+            access(all) fun main(x: Int32) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -242,7 +242,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int64) {}
+            access(all) fun main(x: Int64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -254,7 +254,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int128) {}
+            access(all) fun main(x: Int128) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -266,7 +266,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int256) {}
+            access(all) fun main(x: Int256) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -278,7 +278,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word8) {}
+            access(all) fun main(x: Word8) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -290,7 +290,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word16) {}
+            access(all) fun main(x: Word16) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -302,7 +302,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word32) {}
+            access(all) fun main(x: Word32) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -314,7 +314,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word64) {}
+            access(all) fun main(x: Word64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -326,7 +326,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word128) {}
+            access(all) fun main(x: Word128) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -338,7 +338,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word256) {}
+            access(all) fun main(x: Word256) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -350,7 +350,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Fix64) {}
+            access(all) fun main(x: Fix64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -366,7 +366,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UFix64) {}
+            access(all) fun main(x: UFix64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -381,9 +381,9 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Foo) {}
+            access(all) fun main(x: Foo) {}
 
-            pub struct Foo {}
+            access(all) struct Foo {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -499,7 +499,8 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 
 			script := []byte(fmt.Sprintf(
 				`
-                  pub fun main(x: %s) {}
+				  access(all) entitlement X
+                  access(all) fun main(x: %s) {}
                 `,
 				test.TypeName,
 			))
@@ -575,8 +576,8 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 				})
 
 			script := []byte(`
-                    pub struct S {}
-                    pub fun main(x: S) {}
+                    access(all) struct S {}
+                    access(all) fun main(x: S) {}
                 `)
 
 			_, err := runtime.ExecuteScript(

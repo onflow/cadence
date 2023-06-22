@@ -115,7 +115,8 @@ const TestTypeTypeParamWithBoundFunctionName = "typeParamWithBound"
 var TestTypeTypeParamWithBoundFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -192,56 +193,56 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				TestTypeNothingFunctionName,
 				TestTypeNothingFunctionType,
 				TestTypeNothingFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				TestTypeParamsFunctionName,
 				TestTypeParamsFunctionType,
 				TestTypeParamsFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				TestTypeReturnBoolFunctionName,
 				TestTypeReturnBoolFunctionType,
 				TestTypeReturnBoolFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				TestTypeParamsAndReturnFunctionName,
 				TestTypeParamsAndReturnFunctionType,
 				TestTypeParamsAndReturnFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				TestTypeTypeParamFunctionName,
 				TestTypeTypeParamFunctionType,
 				TestTypeTypeParamFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				TestTypeTypeParamWithBoundFunctionName,
 				TestTypeTypeParamWithBoundFunctionType,
 				TestTypeTypeParamWithBoundFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				TestTypeTypeParamWithBoundAndParamFunctionName,
 				TestTypeTypeParamWithBoundAndParamFunctionType,
 				TestTypeTypeParamWithBoundAndParamFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				TestTypeViewFunctionFunctionName,
 				TestTypeViewFunctionFunctionType,
 				TestTypeViewFunctionFunctionDocString,

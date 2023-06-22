@@ -1115,7 +1115,7 @@ func TestStringer(t *testing.T) {
 					common.ZeroAddress,
 				)
 				arrayRef := NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					array,
 					&sema.VariableSizedType{
 						Type: sema.AnyStructType,
@@ -1662,19 +1662,23 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	// Obtain a self referencing (cyclic) ephemeral reference value.
 
 	code := `
-        pub fun getEphemeralRef(): &Foo {
+        access(all) fun getEphemeralRef(): &Foo {
             var foo = Foo()
             var fooRef = &foo as &Foo
 
             // Create the cyclic reference
-            fooRef.bar = fooRef
+            fooRef.setBar(fooRef)
 
             return fooRef
         }
 
-        pub struct Foo {
+        access(all) struct Foo {
 
-            pub(set) var bar: &Foo?
+            access(all) var bar: &Foo?
+
+			access(all) fun setBar(_ bar: &Foo) {
+				self.bar = bar
+			}
 
             init() {
                 self.bar = nil
@@ -3395,7 +3399,7 @@ func TestNonStorable(t *testing.T) {
 	storage := newUnmeteredInMemoryStorage()
 
 	code := `
-      pub struct Foo {
+      access(all) struct Foo {
 
           let bar: &Int?
 
@@ -3851,7 +3855,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					TrueValue,
 					sema.BoolType,
 				)
@@ -3862,7 +3866,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					TrueValue,
 					sema.StringType,
 				)
@@ -3878,7 +3882,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(_ *Interpreter) Value {
 				return NewUnmeteredStorageReferenceValue(
-					false,
+					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					sema.BoolType,
@@ -3890,7 +3894,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(_ *Interpreter) Value {
 				return NewUnmeteredStorageReferenceValue(
-					false,
+					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					sema.StringType,
@@ -3910,8 +3914,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					NewUnmeteredUInt64Value(4),
 					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
 					ReferenceStaticType{
-						Authorized:     false,
-						BorrowedType:   PrimitiveStaticTypeBool,
+						Authorization:  UnauthorizedAccess,
 						ReferencedType: PrimitiveStaticTypeBool,
 					},
 				)

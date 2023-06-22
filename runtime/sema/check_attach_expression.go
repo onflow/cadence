@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) Type {
@@ -102,6 +103,41 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 		default:
 			return reportInvalidBase(baseType)
 		}
+	}
+
+	checker.Elaboration.SetAttachTypes(expression, attachmentCompositeType)
+
+	// compute the set of all the entitlements provided to this attachment
+	providedEntitlements := orderedmap.New[EntitlementOrderedSet](len(expression.Entitlements))
+	for _, entitlement := range expression.Entitlements {
+		nominalType := checker.convertNominalType(entitlement)
+		if entitlementType, isEntitlement := nominalType.(*EntitlementType); isEntitlement {
+			_, present := providedEntitlements.Set(entitlementType, struct{}{})
+			if present {
+				checker.report(&DuplicateEntitlementProvidedError{
+					Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+					Entitlement: entitlementType,
+				})
+			}
+			continue
+		}
+		checker.report(&InvalidNonEntitlementProvidedError{
+			Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+			InvalidType: nominalType,
+		})
+	}
+
+	// if the attachment requires entitlements, check that they are provided as requested
+	if attachmentCompositeType.RequiredEntitlements != nil {
+		attachmentCompositeType.RequiredEntitlements.Foreach(func(key *EntitlementType, _ struct{}) {
+			if !providedEntitlements.Contains(key) {
+				checker.report(&RequiredEntitlementNotProvidedError{
+					Range:               ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+					AttachmentType:      attachmentCompositeType,
+					RequiredEntitlement: key,
+				})
+			}
+		})
 	}
 
 	return baseType

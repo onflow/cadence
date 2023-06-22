@@ -2274,12 +2274,13 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 
 				_, err := ParseAndCheckWithAny(t,
 					fmt.Sprintf(`
+						  entitlement X
                           resource interface I {}
 
                           resource R: I {}
 
                           let r <- create R()
-                          let ref = &r as auth &%[1]s
+                          let ref = &r as auth(X) &%[1]s
                           let ref2 = ref as &%[1]s
                         `,
 						ty,
@@ -2298,10 +2299,11 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
                           resource interface I {}
 
                           resource R: I {}
+						  entitlement X
 
                           let r <- create R()
                           let ref = &r as &%[1]s
-                          let ref2 = ref as auth &%[1]s
+                          let ref2 = ref as auth(X) &%[1]s
                         `,
 						ty,
 					),
@@ -2338,9 +2340,10 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
                           struct interface I {}
 
                           struct S: I {}
+						  entitlement X
 
                           let s = S()
-                          let ref = &s as auth &%[1]s
+                          let ref = &s as auth(X) &%[1]s
                           let ref2 = ref as &%[1]s
                         `,
 						ty,
@@ -2360,10 +2363,11 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
                           struct interface I {}
 
                           struct S: I {}
+						  entitlement X
 
                           let s = S()
                           let ref = &s as &%[1]s
-                          let ref2 = ref as auth &%[1]s
+                          let ref2 = ref as auth(X) &%[1]s
                         `,
 						ty,
 					),
@@ -2397,8 +2401,9 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 
 				_, err := ParseAndCheckWithAny(t,
 					fmt.Sprintf(`
+						  entitlement X
                           let i = 1
-                          let ref = &i as auth &%[1]s
+                          let ref = &i as auth(X) &%[1]s
                           let ref2 = ref as &%[1]s
                         `,
 						ty,
@@ -2415,9 +2420,10 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 				_, err := ParseAndCheckWithAny(t,
 					fmt.Sprintf(
 						`
+						  entitlement X
                           let i = 1
                           let ref = &i as &%[1]s
-                          let ref2 = ref as auth &%[1]s
+                          let ref2 = ref as auth(X) &%[1]s
                         `,
 						ty,
 					),
@@ -2453,9 +2459,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
           resource interface I2 {}
 
           resource R: I1, I2 {}
+		  entitlement X
 
           let x <- create R()
-          let r = &x as auth &R{I1, I2}
+          let r = &x as auth(X) &R{I1, I2}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -2489,9 +2496,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
           resource interface I2 {}
 
           resource R: I1, I2 {}
+		  entitlement X
 
           let x <- create R()
-          let r = &x as auth &R{I1}
+          let r = &x as auth(X) &R{I1}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -2525,9 +2533,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
           resource R1: I {}
 
           resource R2: I {}
+		  entitlement X
 
           let x <- create R1()
-          let r = &x as auth &R1{I}
+          let r = &x as auth(X) &R1{I}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -2563,9 +2572,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
           resource interface I {}
 
           resource R: I {}
+		  entitlement X
 
           let x <- create R()
-          let r = &x as auth &R
+          let r = &x as auth(X) &R
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -2599,9 +2609,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
           resource R1: I {}
 
           resource R2: I {}
+		  entitlement X
 
           let x <- create R1()
-          let r = &x as auth &R1
+          let r = &x as auth(X) &R1
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -2642,9 +2653,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                   resource interface RI {}
 
                   resource R: RI {}
+				  entitlement X
 
                   let x <- create R()
-                  let r = &x as auth &%s{RI}
+                  let r = &x as auth(X) &%s{RI}
                 `,
 				ty,
 			)
@@ -2682,9 +2694,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                   resource interface RI {}
 
                   resource R: RI {}
+				  entitlement X
 
                   let x <- create R()
-                  let r = &x as auth &%s
+                  let r = &x as auth(X) &%s
                 `,
 				ty,
 			)
@@ -2720,9 +2733,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                   resource interface RI {}
 
                   resource R {}
+				  entitlement X
 
                   let x <- create R()
-                  let r = &x as auth &%s{RI}
+                  let r = &x as auth(X) &%s{RI}
                 `,
 				ty,
 			)
@@ -2766,9 +2780,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
           resource interface I {}
 
           resource R: I {}
+		  entitlement X
 
           let x <- create R()
-          let r = &x as auth &R{I}
+          let r = &x as auth(X) &R{I}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -2800,11 +2815,12 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
           resource interface I {}
 
           resource R: I {}
+		  entitlement X
 
           resource T: I {}
 
           let x <- create R()
-          let r = &x as auth &R{I}
+          let r = &x as auth(X) &R{I}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -2846,9 +2862,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                   resource interface RI {}
 
                   resource R: RI {}
+				  entitlement X
 
                   let x <- create R()
-                  let r = &x as auth &%s{RI}
+                  let r = &x as auth(X) &%s{RI}
                 `,
 				ty,
 			)
@@ -2887,9 +2904,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                   resource interface RI {}
 
                   resource R {}
+				  entitlement X
 
                   let x <- create R()
-                  let r = &x as auth &%s{RI}
+                  let r = &x as auth(X) &%s{RI}
                 `,
 				ty,
 			)
@@ -2929,9 +2947,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                   resource interface RI {}
 
                   resource R: RI {}
+				  entitlement X
 
                   let x <- create R()
-                  let r = &x as auth &%s
+                  let r = &x as auth(X) &%s
                 `,
 				ty,
 			)
@@ -2970,9 +2989,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
               // NOTE: R does not conform to RI
               resource R {}
+			  entitlement X
 
               let x <- create R()
-              let r = &x as auth &R
+              let r = &x as auth(X) &R
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -3014,9 +3034,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
               resource interface RI {}
 
               resource R: RI {}
+			  entitlement X
 
               let x <- create R()
-              let r = &x as auth &R
+              let r = &x as auth(X) &R
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -3054,9 +3075,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
               resource interface I {}
 
               resource R: I {}
+			  entitlement X
 
               let x <- create R()
-              let r = &x as auth &R{I}
+              let r = &x as auth(X) &R{I}
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -3096,9 +3118,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
               resource interface I2 {}
 
               resource R: I1, I2 {}
+			  entitlement X
 
               let x <- create R()
-              let r = &x as auth &R{I1}
+              let r = &x as auth(X) &R{I1}
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -3138,9 +3161,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
               resource interface I2 {}
 
               resource R: I1 {}
+			  entitlement X
 
               let x <- create R()
-              let r = &x as auth &R{I1}
+              let r = &x as auth(X) &R{I1}
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -3190,9 +3214,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                       resource interface I2 {}
 
                       resource R: I1, I2 {}
+					  entitlement X
 
                       let x <- create R()
-                      let r = &x as auth &%s{I1, I2}
+                      let r = &x as auth(X) &%s{I1, I2}
                     `,
 					ty,
 				)
@@ -3244,9 +3269,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                       resource interface I2 {}
 
                       resource R: I1, I2 {}
+					  entitlement X
 
                       let x <- create R()
-                      let r = &x as auth &%s{I1}
+                      let r = &x as auth(X) &%s{I1}
                     `,
 					ty,
 				)
@@ -3291,9 +3317,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                       resource interface I2 {}
 
                       resource R: I1 {}
+					  entitlement X
 
                       let x <- create R()
-                      let r = &x as auth &%s{I1}
+                      let r = &x as auth(X) &%s{I1}
                     `,
 					ty,
 				)
@@ -3336,9 +3363,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                       resource interface I {}
 
                       resource R: I {}
+					  entitlement X
 
                       let x <- create R()
-                      let r = &x as auth &%s
+                      let r = &x as auth(X) &%s
                     `,
 					ty,
 				)
@@ -3385,9 +3413,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
               resource interface I2 {}
 
               resource R: I1, I2 {}
+			  entitlement X
 
               let x <- create R()
-              let r = &x as auth &R{I1}
+              let r = &x as auth(X) &R{I1}
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -3432,9 +3461,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
                       resource interface I2 {}
 
                       resource R: I1, I2 {}
+					  entitlement X
 
                       let x <- create R()
-                      let r = &x as auth &%s{I1}
+                      let r = &x as auth(X) &%s{I1}
                     `,
 					ty,
 				)
@@ -3487,9 +3517,10 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
               resource interface I2 {}
 
               resource R: I1, I2 {}
+			  entitlement X
 
               let x <- create R()
-              let r = &x as auth &R
+              let r = &x as auth(X) &R
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -3537,9 +3568,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
           struct interface I2 {}
 
           struct S: I1, I2 {}
+		  entitlement X
 
           let x = S()
-          let s = &x as auth &S{I1, I2}
+          let s = &x as auth(X) &S{I1, I2}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -3573,9 +3605,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
           struct interface I2 {}
 
           struct S: I1, I2 {}
+		  entitlement X
 
           let x = S()
-          let s = &x as auth &S{I1}
+          let s = &x as auth(X) &S{I1}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -3609,9 +3642,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
           struct S1: I {}
 
           struct S2: I {}
+		  entitlement X
 
           let x = S1()
-          let s = &x as auth &S1{I}
+          let s = &x as auth(X) &S1{I}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -3647,9 +3681,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
           struct interface I {}
 
           struct S: I {}
+		  entitlement X
 
           let x = S()
-          let s = &x as auth &S
+          let s = &x as auth(X) &S
 
         `
 
@@ -3684,9 +3719,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
           struct S1: I {}
 
           struct S2: I {}
+		  entitlement X
 
           let x = S1()
-          let s = &x as auth &S1
+          let s = &x as auth(X) &S1
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -3727,9 +3763,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                   struct interface SI {}
 
                   struct S: SI {}
+				  entitlement X
 
                   let x = S()
-                  let s = &x as auth &%s{SI}
+                  let s = &x as auth(X) &%s{SI}
                 `,
 				ty,
 			)
@@ -3768,9 +3805,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                   struct interface SI {}
 
                   struct S: SI {}
+				  entitlement X
 
                   let x = S()
-                  let s = &x as auth &%s
+                  let s = &x as auth(X) &%s
                 `,
 				ty,
 			)
@@ -3807,9 +3845,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                   struct interface SI {}
 
                   struct S {}
+				  entitlement X
 
                   let x = S()
-                  let s = &x as auth &%s{SI}
+                  let s = &x as auth(X) &%s{SI}
                 `,
 				ty,
 			)
@@ -3853,9 +3892,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
           struct interface I {}
 
           struct S: I {}
+		  entitlement X
 
           let x = S()
-          let s = &x as auth &S{I}
+          let s = &x as auth(X) &S{I}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -3889,9 +3929,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
           struct S: I {}
 
           struct T: I {}
+		  entitlement X
 
           let x = S()
-          let s = &x as auth &S{I}
+          let s = &x as auth(X) &S{I}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -3933,9 +3974,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                   struct interface RI {}
 
                   struct S: RI {}
+				  entitlement X
 
                   let x = S()
-                  let s = &x as auth &%s{RI}
+                  let s = &x as auth(X) &%s{RI}
                 `,
 				ty,
 			)
@@ -3974,9 +4016,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                   struct interface RI {}
 
                   struct S {}
+				  entitlement X
 
                   let x = S()
-                  let s = &x as auth &%s{RI}
+                  let s = &x as auth(X) &%s{RI}
                 `,
 				ty,
 			)
@@ -4016,9 +4059,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
                   struct interface SI {}
 
                   struct S: SI {}
+				  entitlement X
 
                   let x = S()
-                  let s = &x as auth &%s
+                  let s = &x as auth(X) &%s
                 `,
 				ty,
 			)
@@ -4057,9 +4101,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
               // NOTE: S does not conform to SI
               struct S {}
+			  entitlement X
 
               let x = S()
-              let s = &x as auth &S
+              let s = &x as auth(X) &S
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -4101,9 +4146,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
               struct interface SI {}
 
               struct S: SI {}
+			  entitlement X
 
               let x = S()
-              let s = &x as auth &S
+              let s = &x as auth(X) &S
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -4142,8 +4188,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
               struct S: I {}
 
+			  entitlement X
+
               let x = S()
-              let s = &x as auth &S{I}
+              let s = &x as auth(X) &S{I}
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -4184,8 +4232,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
               struct S: I1, I2 {}
 
+			  entitlement X
+
               let x = S()
-              let s = &x as auth &S{I1}
+              let s = &x as auth(X) &S{I1}
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -4226,8 +4276,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
               struct S: I1 {}
 
+			  entitlement X
+
               let x = S()
-              let s = &x as auth &S{I1}
+              let s = &x as auth(X) &S{I1}
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -4278,8 +4330,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I1, I2 {}
 
+					  entitlement X
+
                       let x = S()
-                      let s = &x as auth &%s{I1, I2}
+                      let s = &x as auth(X) &%s{I1, I2}
                     `,
 					ty,
 				)
@@ -4332,8 +4386,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I1, I2 {}
 
+					  entitlement X
+
                       let x = S()
-                      let s = &x as auth &%s{I1}
+                      let s = &x as auth(X) &%s{I1}
                     `,
 					ty,
 				)
@@ -4379,8 +4435,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I1 {}
 
+					  entitlement X
+
                       let x = S()
-                      let s = &x as auth &%s{I1}
+                      let s = &x as auth(X) &%s{I1}
                     `,
 					ty,
 				)
@@ -4424,8 +4482,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I {}
 
+					  entitlement X
+
                       let x = S()
-                      let s = &x as auth &%s
+                      let s = &x as auth(X) &%s
                     `,
 					ty,
 				)
@@ -4473,8 +4533,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I1, I2 {}
 
+					  entitlement X
+
                       let x = S()
-                      let s = &x as auth &%s{I1}
+                      let s = &x as auth(X) &%s{I1}
                     `,
 					ty,
 				)
@@ -4518,8 +4580,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
               struct S: I1, I2 {}
 
+			  entitlement X
+
               let x = S()
-              let s = &x as auth &S{I1}
+              let s = &x as auth(X) &S{I1}
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -4560,8 +4624,10 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
               struct S: I1, I2 {}
 
+			  entitlement X
+
               let x = S()
-              let s = &x as auth &S
+              let s = &x as auth(X) &S
             `
 
 			t.Run("static", func(t *testing.T) {
@@ -4649,9 +4715,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.NoError(t, err)
 			})
 
 			t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
@@ -4745,9 +4809,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
 				})
 
 				t.Run(fmt.Sprintf("%s -> conforming restricted type", ty), func(t *testing.T) {
@@ -4768,9 +4836,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
 				})
 
 				t.Run(fmt.Sprintf("restricted %s -> non-conforming restricted type", ty), func(t *testing.T) {
@@ -4791,11 +4863,18 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 3)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 3)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+					} else {
+						errs := RequireCheckerErrors(t, err, 2)
+
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+					}
 				})
 			}
 
@@ -4818,9 +4897,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.NoError(t, err)
 			})
 
 			t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
@@ -4870,9 +4947,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
 				})
 
 				t.Run(fmt.Sprintf("restricted %s -> non-conforming resource", ty), func(t *testing.T) {
@@ -4893,10 +4974,16 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 2)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 2)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+					} else {
+						errs := RequireCheckerErrors(t, err, 1)
+
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					}
 				})
 
 				t.Run(fmt.Sprintf("%s -> unrestricted type", ty), func(t *testing.T) {
@@ -4917,9 +5004,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
 				})
 
 				// Supertype: restricted AnyResource / Any
@@ -5010,9 +5101,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
-
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.NoError(t, err)
 				})
 
 				t.Run(fmt.Sprintf("restricted type -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
@@ -5069,9 +5158,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 						if ty == sema.AnyType && otherType == sema.AnyResourceType {
 
-							errs := RequireCheckerErrors(t, err, 1)
+							if name == "static" {
+								errs := RequireCheckerErrors(t, err, 1)
 
-							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+								assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							} else {
+								require.NoError(t, err)
+							}
 
 							return
 						}
@@ -5100,9 +5193,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := RequireCheckerErrors(t, err, 1)
+						if name == "static" {
+							errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						} else {
+							require.NoError(t, err)
+						}
 					})
 
 					t.Run(fmt.Sprintf("restricted %s -> restricted %s with non-conformance restriction", ty, otherType), func(t *testing.T) {
@@ -5126,9 +5223,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := RequireCheckerErrors(t, err, 1)
+						if name == "static" {
+							errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						} else {
+							require.NoError(t, err)
+						}
 					})
 
 					t.Run(fmt.Sprintf("%s -> restricted %s", ty, otherType), func(t *testing.T) {
@@ -5150,9 +5251,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := RequireCheckerErrors(t, err, 1)
+						if name == "static" {
+							errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						} else {
+							require.NoError(t, err)
+						}
 					})
 
 					// Supertype: AnyResource / Any
@@ -5178,16 +5283,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 							),
 						)
 
-						if ty == sema.AnyType && otherType == sema.AnyResourceType {
-
+						if ty == sema.AnyType && otherType == sema.AnyResourceType && name == "static" {
 							errs := RequireCheckerErrors(t, err, 1)
 
 							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-
-							return
+						} else {
+							require.NoError(t, err)
 						}
-
-						require.NoError(t, err)
 					})
 
 				}
@@ -5296,9 +5398,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.NoError(t, err)
 			})
 
 			t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
@@ -5392,9 +5492,13 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
 				})
 
 				t.Run(fmt.Sprintf("%s -> conforming restricted type", ty), func(t *testing.T) {
@@ -5415,9 +5519,13 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
 				})
 
 				t.Run(fmt.Sprintf("restricted %s -> non-conforming restricted type", ty), func(t *testing.T) {
@@ -5438,11 +5546,19 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 3)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 3)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+					} else {
+
+						errs := RequireCheckerErrors(t, err, 2)
+
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+					}
 				})
 			}
 
@@ -5465,9 +5581,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					),
 				)
 
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.NoError(t, err)
 			})
 
 			t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
@@ -5517,9 +5631,13 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
 				})
 
 				t.Run(fmt.Sprintf("restricted %s -> non-conforming resource", ty), func(t *testing.T) {
@@ -5540,10 +5658,16 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 2)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 2)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+					} else {
+						errs := RequireCheckerErrors(t, err, 1)
+
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					}
 				})
 
 				t.Run(fmt.Sprintf("%s -> unrestricted type", ty), func(t *testing.T) {
@@ -5564,9 +5688,14 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
+					if name == "static" {
+						errs := RequireCheckerErrors(t, err, 1)
 
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
+
 				})
 
 				// Supertype: restricted AnyStruct / Any
@@ -5657,9 +5786,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					errs := RequireCheckerErrors(t, err, 1)
-
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.NoError(t, err)
 				})
 
 				t.Run(fmt.Sprintf("restricted type -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
@@ -5715,9 +5842,13 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 						if ty == sema.AnyType && otherType == sema.AnyStructType {
 
-							errs := RequireCheckerErrors(t, err, 1)
+							if name == "static" {
+								errs := RequireCheckerErrors(t, err, 1)
 
-							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+								assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							} else {
+								require.NoError(t, err)
+							}
 
 							return
 						}
@@ -5746,9 +5877,13 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := RequireCheckerErrors(t, err, 1)
+						if name == "static" {
+							errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						} else {
+							require.NoError(t, err)
+						}
 					})
 
 					t.Run(fmt.Sprintf("restricted %s -> restricted %s with non-conformance restriction", ty, otherType), func(t *testing.T) {
@@ -5772,9 +5907,13 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := RequireCheckerErrors(t, err, 1)
+						if name == "static" {
+							errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						} else {
+							require.NoError(t, err)
+						}
 					})
 
 					t.Run(fmt.Sprintf("%s -> restricted %s", ty, otherType), func(t *testing.T) {
@@ -5796,9 +5935,13 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 							),
 						)
 
-						errs := RequireCheckerErrors(t, err, 1)
+						if name == "static" {
+							errs := RequireCheckerErrors(t, err, 1)
 
-						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						} else {
+							require.NoError(t, err)
+						}
 					})
 
 					// Supertype: AnyStruct / Any
@@ -6485,7 +6628,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let y = x.bar as String
 
                 struct Foo {
-                    pub var bar: String
+                    access(all) var bar: String
 
                     init() {
                         self.bar = "hello"

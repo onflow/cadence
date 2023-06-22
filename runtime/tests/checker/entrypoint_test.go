@@ -35,7 +35,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub fun main() {}
+            access(all) fun main() {}
         `)
 
 		require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub fun main(a: Int) {}
+            access(all) fun main(a: Int) {}
         `)
 
 		require.NoError(t, err)
@@ -113,9 +113,9 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub struct SomeStruct {}
+            access(all) struct SomeStruct {}
 
-            pub fun main(a: Int) {}
+            access(all) fun main(a: Int) {}
         `)
 
 		require.NoError(t, err)
@@ -139,9 +139,9 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub struct interface SomeInterface {}
+            access(all) struct interface SomeInterface {}
 
-            pub fun main(a: Int) {}
+            access(all) fun main(a: Int) {}
         `)
 
 		require.NoError(t, err)
@@ -165,7 +165,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub struct SomeStruct {}
+            access(all) struct SomeStruct {}
 
             transaction(a: Int) {}
         `)
@@ -182,7 +182,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub fun main(a: Int) {}
+            access(all) fun main(a: Int) {}
 
             transaction(a: Int) {}
         `)
@@ -199,8 +199,8 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			pub contract SimpleContract {
-				pub let v: Int
+			access(all) contract SimpleContract {
+				access(all) let v: Int
 				init(a: Int) {
 					self.v = a
 				}
@@ -228,7 +228,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			pub contract SimpleContract {
+			access(all) contract SimpleContract {
 				init() {}
 			}		
         `)

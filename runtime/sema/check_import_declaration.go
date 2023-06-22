@@ -246,7 +246,7 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 		)
 
 		// NOTE: declare constant variable with invalid type to silence rest of program
-		const access = ast.AccessPrivate
+		const access = PrimitiveAccess(ast.AccessSelf)
 
 		_, err := checker.valueActivations.declare(variableDeclaration{
 			identifier:               identifier.Identifier,

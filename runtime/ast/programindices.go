@@ -31,6 +31,10 @@ type programIndices struct {
 	_importDeclarations []*ImportDeclaration
 	// Use `interfaceDeclarations` instead
 	_interfaceDeclarations []*InterfaceDeclaration
+	// Use `entitlementDeclarations` instead
+	_entitlementDeclarations []*EntitlementDeclaration
+	// Use `entitlementMappingDeclarations` instead
+	_entitlementMappingDeclarations []*EntitlementMappingDeclaration
 	// Use `compositeDeclarations` instead
 	_compositeDeclarations []*CompositeDeclaration
 	// Use `attachmentDeclarations` instead
@@ -56,6 +60,16 @@ func (i *programIndices) importDeclarations(declarations []Declaration) []*Impor
 func (i *programIndices) interfaceDeclarations(declarations []Declaration) []*InterfaceDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._interfaceDeclarations
+}
+
+func (i *programIndices) entitlementDeclarations(declarations []Declaration) []*EntitlementDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._entitlementDeclarations
+}
+
+func (i *programIndices) entitlementMappingDeclarations(declarations []Declaration) []*EntitlementMappingDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._entitlementMappingDeclarations
 }
 
 func (i *programIndices) compositeDeclarations(declarations []Declaration) []*CompositeDeclaration {
@@ -98,6 +112,8 @@ func (i *programIndices) init(declarations []Declaration) {
 	i._compositeDeclarations = make([]*CompositeDeclaration, 0)
 	i._attachmentDeclarations = make([]*AttachmentDeclaration, 0)
 	i._interfaceDeclarations = make([]*InterfaceDeclaration, 0)
+	i._entitlementDeclarations = make([]*EntitlementDeclaration, 0)
+	i._entitlementMappingDeclarations = make([]*EntitlementMappingDeclaration, 0)
 	i._functionDeclarations = make([]*FunctionDeclaration, 0)
 	i._transactionDeclarations = make([]*TransactionDeclaration, 0)
 
@@ -118,6 +134,12 @@ func (i *programIndices) init(declarations []Declaration) {
 
 		case *InterfaceDeclaration:
 			i._interfaceDeclarations = append(i._interfaceDeclarations, declaration)
+
+		case *EntitlementDeclaration:
+			i._entitlementDeclarations = append(i._entitlementDeclarations, declaration)
+
+		case *EntitlementMappingDeclaration:
+			i._entitlementMappingDeclarations = append(i._entitlementMappingDeclarations, declaration)
 
 		case *FunctionDeclaration:
 			i._functionDeclarations = append(i._functionDeclarations, declaration)

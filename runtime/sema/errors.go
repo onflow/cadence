@@ -655,7 +655,7 @@ type InvalidAccessModifierError struct {
 	Explanation     string
 	Pos             ast.Position
 	DeclarationKind common.DeclarationKind
-	Access          ast.Access
+	Access          Access
 }
 
 var _ SemanticError = &InvalidAccessModifierError{}
@@ -671,7 +671,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		explanation = fmt.Sprintf(". %s", e.Explanation)
 	}
 
-	if e.Access == ast.AccessNotSpecified {
+	if e.Access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return fmt.Sprintf(
 			"invalid effective access modifier for %s%s",
 			e.DeclarationKind.Name(),
@@ -681,7 +681,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		return fmt.Sprintf(
 			"invalid access modifier for %s: `%s`%s",
 			e.DeclarationKind.Name(),
-			e.Access.Keyword(),
+			e.Access.AccessKeyword(),
 			explanation,
 		)
 	}
@@ -692,11 +692,11 @@ func (e *InvalidAccessModifierError) StartPosition() ast.Position {
 }
 
 func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	if e.Access == ast.AccessNotSpecified {
+	if e.Access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return e.Pos
 	}
 
-	length := len(e.Access.Keyword())
+	length := len(e.Access.AccessKeyword())
 	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
@@ -2874,7 +2874,7 @@ func (e *InvalidOptionalChainingError) Error() string {
 
 type InvalidAccessError struct {
 	Name              string
-	RestrictingAccess ast.Access
+	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -2899,7 +2899,8 @@ func (e *InvalidAccessError) Error() string {
 
 type InvalidAssignmentAccessError struct {
 	Name              string
-	RestrictingAccess ast.Access
+	ContainerType     Type
+	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -2923,8 +2924,8 @@ func (e *InvalidAssignmentAccessError) Error() string {
 
 func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"consider making it publicly settable with `%s`",
-		ast.AccessPublicSettable.Keyword(),
+		"consider adding a setter function to %s",
+		e.ContainerType.QualifiedString(),
 	)
 }
 
@@ -4000,6 +4001,276 @@ func (e *InvalidatedResourceReferenceError) ErrorNotes() []errors.ErrorNote {
 	}
 }
 
+// InvalidEntitlementAccessError
+type InvalidEntitlementAccessError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidEntitlementAccessError{}
+var _ errors.UserError = &InvalidEntitlementAccessError{}
+
+func (*InvalidEntitlementAccessError) isSemanticError() {}
+
+func (*InvalidEntitlementAccessError) IsUserError() {}
+
+func (e *InvalidEntitlementAccessError) Error() string {
+	return "only struct or resource members may be declared with entitlement access"
+}
+
+func (e *InvalidEntitlementAccessError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidEntitlementAccessError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidMultipleMappedEntitlementError
+type InvalidMultipleMappedEntitlementError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidMultipleMappedEntitlementError{}
+var _ errors.UserError = &InvalidMultipleMappedEntitlementError{}
+
+func (*InvalidMultipleMappedEntitlementError) isSemanticError() {}
+
+func (*InvalidMultipleMappedEntitlementError) IsUserError() {}
+
+func (e *InvalidMultipleMappedEntitlementError) Error() string {
+	return "entitlement mappings cannot be used as part of an entitlement set"
+}
+
+func (e *InvalidMultipleMappedEntitlementError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMultipleMappedEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidNonEntitlementTypeInMapError
+type InvalidNonEntitlementTypeInMapError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidNonEntitlementTypeInMapError{}
+var _ errors.UserError = &InvalidNonEntitlementTypeInMapError{}
+
+func (*InvalidNonEntitlementTypeInMapError) isSemanticError() {}
+
+func (*InvalidNonEntitlementTypeInMapError) IsUserError() {}
+
+func (e *InvalidNonEntitlementTypeInMapError) Error() string {
+	return "cannot use non-entitlement type in entitlement mapping"
+}
+
+func (e *InvalidNonEntitlementTypeInMapError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidNonEntitlementTypeInMapError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidMappedEntitlementMemberError
+type InvalidMappedEntitlementMemberError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidMappedEntitlementMemberError{}
+var _ errors.UserError = &InvalidMappedEntitlementMemberError{}
+
+func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
+
+func (*InvalidMappedEntitlementMemberError) IsUserError() {}
+
+func (e *InvalidMappedEntitlementMemberError) Error() string {
+	return "mapped entitlement access modifiers may only be used for fields or accessors with a reference type authorized with the same mapped entitlement"
+}
+
+func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMappedEntitlementMemberError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidNonEntitlementAccessError
+type InvalidNonEntitlementAccessError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementAccessError{}
+var _ errors.UserError = &InvalidNonEntitlementAccessError{}
+
+func (*InvalidNonEntitlementAccessError) isSemanticError() {}
+
+func (*InvalidNonEntitlementAccessError) IsUserError() {}
+
+func (e *InvalidNonEntitlementAccessError) Error() string {
+	return "only entitlements may be used in access modifiers"
+}
+
+// DirectEntitlementAnnotationError
+type DirectEntitlementAnnotationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &DirectEntitlementAnnotationError{}
+var _ errors.UserError = &DirectEntitlementAnnotationError{}
+
+func (*DirectEntitlementAnnotationError) isSemanticError() {}
+
+func (*DirectEntitlementAnnotationError) IsUserError() {}
+
+func (e *DirectEntitlementAnnotationError) Error() string {
+	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
+}
+
+// UnrepresentableEntitlementMapOutputError
+type UnrepresentableEntitlementMapOutputError struct {
+	Input EntitlementSetAccess
+	Map   *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &UnrepresentableEntitlementMapOutputError{}
+var _ errors.UserError = &UnrepresentableEntitlementMapOutputError{}
+
+func (*UnrepresentableEntitlementMapOutputError) isSemanticError() {}
+
+func (*UnrepresentableEntitlementMapOutputError) IsUserError() {}
+
+func (e *UnrepresentableEntitlementMapOutputError) Error() string {
+	return fmt.Sprintf("cannot map %s through %s because the output is unrepresentable", e.Input.AccessKeyword(), e.Map.QualifiedString())
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
+// InvalidMappedAuthorizationOutsideOfFieldError
+type InvalidMappedAuthorizationOutsideOfFieldError struct {
+	Map *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &InvalidMappedAuthorizationOutsideOfFieldError{}
+var _ errors.UserError = &InvalidMappedAuthorizationOutsideOfFieldError{}
+
+func (*InvalidMappedAuthorizationOutsideOfFieldError) isSemanticError() {}
+
+func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
+	return fmt.Sprintf(
+		"cannot use mapped entitlement authorization for %s outside of a field or accessor function using the same entitlement access",
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
+type DuplicateEntitlementRequirementError struct {
+	Entitlement *EntitlementType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementRequirementError{}
+var _ errors.UserError = &DuplicateEntitlementRequirementError{}
+
+func (*DuplicateEntitlementRequirementError) isSemanticError() {}
+
+func (*DuplicateEntitlementRequirementError) IsUserError() {}
+
+func (e *DuplicateEntitlementRequirementError) Error() string {
+	return fmt.Sprintf("entitlement %s is already required by this attachment", e.Entitlement.QualifiedString())
+}
+
+type DuplicateEntitlementProvidedError struct {
+	Entitlement *EntitlementType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementProvidedError{}
+var _ errors.UserError = &DuplicateEntitlementProvidedError{}
+
+func (*DuplicateEntitlementProvidedError) isSemanticError() {}
+
+func (*DuplicateEntitlementProvidedError) IsUserError() {}
+
+func (e *DuplicateEntitlementProvidedError) Error() string {
+	return fmt.Sprintf("entitlement %s is already provided to this attachment", e.Entitlement.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type InvalidNonEntitlementRequirement struct {
+	InvalidType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementRequirement{}
+var _ errors.UserError = &InvalidNonEntitlementRequirement{}
+
+func (*InvalidNonEntitlementRequirement) isSemanticError() {}
+
+func (*InvalidNonEntitlementRequirement) IsUserError() {}
+
+func (e *InvalidNonEntitlementRequirement) Error() string {
+	return fmt.Sprintf("cannot use %s as an entitlement requirement", e.InvalidType.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type InvalidNonEntitlementProvidedError struct {
+	InvalidType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementProvidedError{}
+var _ errors.UserError = &InvalidNonEntitlementProvidedError{}
+
+func (*InvalidNonEntitlementProvidedError) isSemanticError() {}
+
+func (*InvalidNonEntitlementProvidedError) IsUserError() {}
+
+func (e *InvalidNonEntitlementProvidedError) Error() string {
+	return fmt.Sprintf("cannot provide %s as an entitlement to this attachment", e.InvalidType.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type RequiredEntitlementNotProvidedError struct {
+	RequiredEntitlement *EntitlementType
+	AttachmentType      *CompositeType
+	ast.Range
+}
+
+var _ SemanticError = &RequiredEntitlementNotProvidedError{}
+var _ errors.UserError = &RequiredEntitlementNotProvidedError{}
+
+func (*RequiredEntitlementNotProvidedError) isSemanticError() {}
+
+func (*RequiredEntitlementNotProvidedError) IsUserError() {}
+
+func (e *RequiredEntitlementNotProvidedError) Error() string {
+	return fmt.Sprintf(
+		"attachment type %s requires entitlement %s to be provided when attaching",
+		e.AttachmentType.QualifiedString(),
+		e.RequiredEntitlement.QualifiedString(),
+	)
+}
+
 // InvalidBaseTypeError
 
 type InvalidBaseTypeError struct {
@@ -4162,4 +4433,50 @@ func (*AttachmentsNotEnabledError) IsUserError() {}
 
 func (e *AttachmentsNotEnabledError) Error() string {
 	return "attachments are not enabled and cannot be used in this environment"
+}
+
+// InvalidAttachmentEntitlementError
+type InvalidAttachmentEntitlementError struct {
+	Attachment               *CompositeType
+	AttachmentAccessModifier Access
+	InvalidEntitlement       *EntitlementType
+	Pos                      ast.Position
+}
+
+var _ SemanticError = &InvalidAttachmentEntitlementError{}
+var _ errors.UserError = &InvalidAttachmentEntitlementError{}
+
+func (*InvalidAttachmentEntitlementError) isSemanticError() {}
+
+func (*InvalidAttachmentEntitlementError) IsUserError() {}
+
+func (e *InvalidAttachmentEntitlementError) Error() string {
+	entitlementDescription := "entitlements"
+	if e.InvalidEntitlement != nil {
+		entitlementDescription = fmt.Sprintf("`%s`", e.InvalidEntitlement.QualifiedIdentifier())
+	}
+
+	return fmt.Sprintf("cannot use %s in the access modifier for a member in `%s`",
+		entitlementDescription,
+		e.Attachment.QualifiedIdentifier())
+}
+
+func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
+	switch access := e.AttachmentAccessModifier.(type) {
+	case PrimitiveAccess:
+		return "attachments declared with `access(all)` access do not support entitlements on their members"
+	case EntitlementMapAccess:
+		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
+			e.InvalidEntitlement.QualifiedIdentifier(),
+			access.Type.QualifiedIdentifier())
+	}
+	return ""
+}
+
+func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidAttachmentEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
 }

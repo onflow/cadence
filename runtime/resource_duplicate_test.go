@@ -44,32 +44,32 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 
 		script := `
 	// This Vault class is from Flow docs, used as our "victim" in this example
-	pub resource Vault {
+	access(all) resource Vault {
 		// Balance of a user's Vault
 		// we use unsigned fixed point numbers for balances
 		// because they can represent decimals and do not allow negative values
-		pub var balance: UFix64
+		access(all) var balance: UFix64
 	
 		init(balance: UFix64) {
 			self.balance = balance
 		}
 	
-		pub fun withdraw(amount: UFix64): @Vault {
+		access(all) fun withdraw(amount: UFix64): @Vault {
 			self.balance = self.balance - amount
 			return <-create Vault(balance: amount)
 		}
 	
-		pub fun deposit(from: @Vault) {
+		access(all) fun deposit(from: @Vault) {
 			self.balance = self.balance + from.balance
 			destroy from
 		}
 	}
 	
 	// --- this code actually makes use of the vuln ---
-	pub resource DummyResource {
-		pub var dictRef: &{Bool: AnyResource};
-		pub var arrRef: &[Vault];
-		pub var victim: @Vault;
+	access(all) resource DummyResource {
+		access(all) var dictRef: &{Bool: AnyResource};
+		access(all) var arrRef: &[Vault];
+		access(all) var victim: @Vault;
 		init(dictRef: &{Bool: AnyResource}, arrRef: &[Vault], victim: @Vault) {
 			self.dictRef = dictRef;
 			self.arrRef = arrRef;
@@ -82,7 +82,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		}
 	}
 	
-	pub fun duplicateResource(victim1: @Vault, victim2: @Vault): @[Vault]{
+	access(all) fun duplicateResource(victim1: @Vault, victim2: @Vault): @[Vault]{
 		let arr : @[Vault] <- [];
 		let dict: @{Bool: DummyResource} <- { }
 		let ref = &dict as &{Bool: AnyResource};
@@ -102,7 +102,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 	
 	// --- end of vuln code ---
 	
-	pub fun main() {
+	access(all) fun main() {
 	
 		var v1 <- create Vault(balance: 1000.0); // This will be duplicated
 		var v2 <- create Vault(balance: 1.0); // This will be lost
@@ -176,21 +176,21 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		t.Parallel()
 
 		script := `
-		pub resource Vault {
-            pub var balance: UFix64
-            pub var dictRef: &{Bool: Vault};
+		access(all) resource Vault {
+            access(all) var balance: UFix64
+            access(all) var dictRef: &{Bool: Vault};
 
             init(balance: UFix64, _ dictRef: &{Bool: Vault}) {
                 self.balance = balance
                 self.dictRef = dictRef;
             }
 
-            pub fun withdraw(amount: UFix64): @Vault {
+            access(all) fun withdraw(amount: UFix64): @Vault {
                 self.balance = self.balance - amount
                 return <-create Vault(balance: amount, self.dictRef)
             }
 
-            pub fun deposit(from: @Vault) {
+            access(all) fun deposit(from: @Vault) {
                 self.balance = self.balance + from.balance
                 destroy from
             }
@@ -200,7 +200,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
             }
         }
 
-        pub fun main(): UFix64 {
+        access(all) fun main(): UFix64 {
 
             let dict: @{Bool: Vault} <- { }
             let dictRef = &dict as &{Bool: Vault};
@@ -279,9 +279,9 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		t.Parallel()
 
 		script := `
-	pub resource R{}
+	access(all) resource R{}
 
-	pub fun main() {
+	access(all) fun main() {
 		var dict: @{Int: R} <- {}
 
 		var r1: @R? <- create R()
@@ -363,21 +363,21 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		t.Parallel()
 
 		script := `
-		pub resource Vault {
-            pub var balance: UFix64
-            pub var arrRef: &[Vault]
+		access(all) resource Vault {
+            access(all) var balance: UFix64
+            access(all) var arrRef: &[Vault]
 
             init(balance: UFix64, _ arrRef: &[Vault]) {
                 self.balance = balance
                 self.arrRef = arrRef;
             }
 
-            pub fun withdraw(amount: UFix64): @Vault {
+            access(all) fun withdraw(amount: UFix64): @Vault {
                 self.balance = self.balance - amount
                 return <-create Vault(balance: amount, self.arrRef)
             }
 
-            pub fun deposit(from: @Vault) {
+            access(all) fun deposit(from: @Vault) {
                 self.balance = self.balance + from.balance
                 destroy from
             }
@@ -387,7 +387,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
             }
         }
 
-        pub fun main(): UFix64 {
+        access(all) fun main(): UFix64 {
 
             let arr: @[Vault] <- []
             let arrRef = &arr as &[Vault];
@@ -549,13 +549,23 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 	const holderContract = `
       import FlowToken from 0x1
 
-      pub contract Holder {
+      access(all) contract Holder {
 
-          pub (set) var content: @FlowToken.Vault?
+          access(all) var content: @FlowToken.Vault?
 
           init() {
               self.content <- nil
           }
+
+		  access(all) fun setContent(_ vault: @FlowToken.Vault?) {
+			self.content <-! vault
+		  }
+
+		  access(all) fun swapContent(_ vault: @FlowToken.Vault?): @FlowToken.Vault? {
+			let oldVault <- self.content <- vault
+			return <-oldVault
+		  }
+		  
       }
     `
 	err = runtime.ExecuteTransaction(
@@ -587,20 +597,20 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
               let vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
 
               // Move vault into the contract
-              Holder.content <-! vault
+              Holder.setContent(<-vault)
 
               // Save the contract into storage (invalid, even if same account)
               acct.save(Holder as AnyStruct, to: /storage/holder)
 
               // Move vault back out of the contract
-              let vault2 <- Holder.content <- nil
+              let vault2 <- Holder.swapContent(nil)
               let unwrappedVault2 <- vault2!
 
               // Load the contract back from storage
               let dupeContract = acct.load<AnyStruct>(from: /storage/holder)! as! Holder
 
               // Move the vault of of the duplicated contract
-              let dupeVault <- dupeContract.content <- nil
+              let dupeVault <- dupeContract.swapContent(nil)
               let unwrappedDupeVault <- dupeVault!
 
               // Deposit the duplicated vault into the original vault

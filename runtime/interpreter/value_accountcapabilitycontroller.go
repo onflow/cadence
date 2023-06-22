@@ -44,6 +44,7 @@ type AccountCapabilityControllerValue struct {
 	GetTag         func() *StringValue
 	SetTag         func(*StringValue)
 	DeleteFunction FunctionValue
+	setTagFunction FunctionValue
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
@@ -202,6 +203,11 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 			}
 		}
 		return v.tag
+	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(inter)
+		}
+		return v.setTagFunction
 
 	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -217,22 +223,12 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 }
 
 func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
-	// Storage capability controllers have no removable members (fields / functions)
+	// Account capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
-	switch identifier {
-	case sema.AccountCapabilityControllerTypeTagFieldName:
-		stringValue, ok := value.(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-		v.tag = stringValue
-		v.SetTag(stringValue)
-		return true
-	}
-
+	// Account capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -272,5 +268,25 @@ func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 		gauge,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
 		panicHostFunction,
+	)
+}
+
+func (controller *AccountCapabilityControllerValue) newSetTagFunction(
+	inter *Interpreter,
+) *HostFunctionValue {
+	return NewHostFunctionValue(
+		inter,
+		sema.AccountCapabilityControllerTypeSetTagFunctionType,
+		func(invocation Invocation) Value {
+			newTagValue, ok := invocation.Arguments[0].(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			controller.tag = newTagValue
+			controller.SetTag(newTagValue)
+
+			return Void
+		},
 	)
 }

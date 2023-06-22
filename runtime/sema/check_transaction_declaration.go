@@ -186,6 +186,7 @@ func (checker *Checker) visitTransactionPrepareFunction(
 	checker.checkFunction(
 		prepareFunction.FunctionDeclaration.ParameterList,
 		nil,
+		UnauthorizedAccess,
 		prepareFunctionType,
 		prepareFunction.FunctionDeclaration.FunctionBlock,
 		true,
@@ -235,6 +236,7 @@ func (checker *Checker) visitTransactionExecuteFunction(
 	checker.checkFunction(
 		&ast.ParameterList{},
 		nil,
+		UnauthorizedAccess,
 		executeFunctionType,
 		executeFunction.FunctionDeclaration.FunctionBlock,
 		true,

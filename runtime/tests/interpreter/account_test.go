@@ -881,8 +881,8 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
               fun invalidBorrowS(): &S2? {
                   let s = S()
                   account.save(s, to: /storage/another_s)
-                  let borrowedS = account.borrow<auth &AnyStruct>(from: /storage/another_s)
-                  return borrowedS as! auth &S2?
+                  let borrowedS = account.borrow<&AnyStruct>(from: /storage/another_s)
+                  return borrowedS as! &S2?
               }
             `,
 			sema.Config{},

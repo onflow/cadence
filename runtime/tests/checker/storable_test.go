@@ -78,7 +78,8 @@ func TestCheckStorable(t *testing.T) {
 			nestedTypes = append(nestedTypes,
 				&sema.CapabilityType{
 					BorrowType: &sema.ReferenceType{
-						Type: ty,
+						Type:          ty,
+						Authorization: sema.UnauthorizedAccess,
 					},
 				},
 			)
@@ -143,7 +144,8 @@ func TestCheckStorable(t *testing.T) {
 			storableTypes,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: nonStorableType,
+					Type:          nonStorableType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 		)
@@ -151,7 +153,8 @@ func TestCheckStorable(t *testing.T) {
 
 	nonStorableTypes = append(nonStorableTypes,
 		&sema.ReferenceType{
-			Type: sema.BoolType,
+			Type:          sema.BoolType,
+			Authorization: sema.UnauthorizedAccess,
 		},
 	)
 
