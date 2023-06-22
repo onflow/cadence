@@ -278,7 +278,7 @@ func TestInterpretEntitledReferences(t *testing.T) {
 			true,
 			`
 			entitlement X
-			pub fun test(): Bool {
+			access(all) fun test(): Bool {
 				let ref = &1 as auth(X) &Int
 				let anyStruct = ref as AnyStruct
 				let downRef = (anyStruct as? &Int)!
@@ -1572,7 +1572,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			priv let myFoo: Int
+			access(self) let myFoo: Int
 			access(M) fun foo(): auth(M) &Int {
 				return &self.myFoo as auth(M) &Int
 			}
@@ -2777,7 +2777,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			struct S {}
 			struct T {}
 			access(M) attachment A for S {
-				priv let t: T
+				access(self) let t: T
 				init(t: T) {
 					self.t = t
 				}

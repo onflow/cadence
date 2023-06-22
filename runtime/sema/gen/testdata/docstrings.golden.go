@@ -121,7 +121,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				DocstringsTypeOwoFieldName,
 				DocstringsTypeOwoFieldType,
@@ -129,7 +129,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				DocstringsTypeUwuFieldName,
 				DocstringsTypeUwuFieldType,
@@ -137,14 +137,14 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				DocstringsTypeNwnFunctionName,
 				DocstringsTypeNwnFunctionType,
 				DocstringsTypeNwnFunctionDocString,
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				ast.VariableKindConstant,
 				DocstringsTypeWithBlanksFieldName,
 				DocstringsTypeWithBlanksFieldType,
@@ -152,14 +152,14 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				DocstringsTypeIsSmolBeanFunctionName,
 				DocstringsTypeIsSmolBeanFunctionType,
 				DocstringsTypeIsSmolBeanFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				ast.AccessAll,
 				DocstringsTypeRunningOutOfIdeasFunctionName,
 				DocstringsTypeRunningOutOfIdeasFunctionType,
 				DocstringsTypeRunningOutOfIdeasFunctionDocString,

@@ -36,7 +36,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 	t.Run("no conformances", func(t *testing.T) {
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -58,7 +58,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 			`
         {
             "Type": "InterfaceDeclaration",
-            "Access": "AccessPublic",
+            "Access": "AccessAll",
             "CompositeKind": "CompositeKindResource",
             "Identifier": {
                 "Identifier": "AB",
@@ -81,7 +81,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 	t.Run("with conformances", func(t *testing.T) {
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -110,7 +110,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 			`
         {
             "Type": "InterfaceDeclaration",
-            "Access": "AccessPublic", 
+            "Access": "AccessAll", 
             "CompositeKind": "CompositeKindResource",
             "Identifier": {
                 "Identifier": "AB",
@@ -151,7 +151,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -162,7 +162,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("pub"),
+				prettier.Text("access(all)"),
 				prettier.Text(" "),
 				prettier.Text("resource"),
 				prettier.Text(" "),
@@ -181,7 +181,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -206,7 +206,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("pub"),
+				prettier.Text("access(all)"),
 				prettier.Text(" "),
 				prettier.Text("resource"),
 				prettier.Text(" "),
@@ -246,7 +246,7 @@ func TestInterfaceDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -256,7 +256,7 @@ func TestInterfaceDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"pub resource interface AB {}",
+			"access(all) resource interface AB {}",
 			decl.String(),
 		)
 
@@ -267,7 +267,7 @@ func TestInterfaceDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &InterfaceDeclaration{
-			Access:        AccessPublic,
+			Access:        AccessAll,
 			CompositeKind: common.CompositeKindResource,
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -291,7 +291,7 @@ func TestInterfaceDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"pub resource interface AB {\n"+
+			"access(all) resource interface AB {\n"+
 				"    x: X\n"+
 				"}",
 			decl.String(),

@@ -32,7 +32,7 @@ func TestEntitlementDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &EntitlementDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: Identifier{
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
@@ -52,7 +52,7 @@ func TestEntitlementDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "EntitlementDeclaration",
-            "Access": "AccessPublic", 
+            "Access": "AccessAll", 
             "Identifier": {
                 "Identifier": "AB",
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -76,7 +76,7 @@ func TestEntitlementDeclaration_Doc(t *testing.T) {
 		t.Parallel()
 
 		decl := &EntitlementDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
@@ -85,7 +85,7 @@ func TestEntitlementDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("pub"),
+				prettier.Text("access(all)"),
 				prettier.Text(" "),
 				prettier.Text("entitlement "),
 				prettier.Text("AB"),
@@ -105,7 +105,7 @@ func TestEntitlementDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &EntitlementDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
@@ -113,7 +113,7 @@ func TestEntitlementDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"pub entitlement AB",
+			"access(all) entitlement AB",
 			decl.String(),
 		)
 
@@ -125,7 +125,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &EntitlementMappingDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: Identifier{
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
@@ -161,7 +161,7 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "EntitlementMappingDeclaration",
-            "Access": "AccessPublic", 
+            "Access": "AccessAll", 
             "Identifier": {
                 "Identifier": "AB",
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -205,7 +205,7 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 	t.Parallel()
 
 	decl := &EntitlementMappingDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: Identifier{
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
@@ -236,7 +236,7 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 	require.Equal(
 		t,
 		prettier.Concat{
-			prettier.Text("pub"),
+			prettier.Text("access(all)"),
 			prettier.Text(" "),
 			prettier.Text("entitlement "),
 			prettier.Text("mapping "),
@@ -266,7 +266,7 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 	t.Parallel()
 
 	decl := &EntitlementMappingDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: Identifier{
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
@@ -296,7 +296,7 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 
 	require.Equal(
 		t,
-		`pub entitlement mapping AB {
+		`access(all) entitlement mapping AB {
     X -> Y
 }`,
 		decl.String(),

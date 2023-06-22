@@ -1,25 +1,25 @@
-pub struct Test {
+access(all) struct Test {
     /// This is a test function.
-    pub fun nothing() {}
+    access(all) fun nothing() {}
 
     /// This is a test function with parameters.
-    pub fun params(a: Int, _ b: String) {}
+    access(all) fun params(a: Int, _ b: String) {}
 
     /// This is a test function with a return type.
-    pub fun returnBool(): Bool {}
+    access(all) fun returnBool(): Bool {}
 
     /// This is a test function with parameters and a return type.
-    pub fun paramsAndReturn(a: Int, _ b: String): Bool {}
+    access(all) fun paramsAndReturn(a: Int, _ b: String): Bool {}
 
     /// This is a test function with a type parameter.
-    pub fun typeParam<T>() {}
+    access(all) fun typeParam<T>() {}
 
     /// This is a test function with a type parameter and a type bound.
-    pub fun typeParamWithBound<T: &Any>() {}
+    access(all) fun typeParamWithBound<T: &Any>() {}
 
     /// This is a test function with a type parameter and a parameter using it.
-    pub fun typeParamWithBoundAndParam<T>(t: T) {}
+    access(all) fun typeParamWithBoundAndParam<T>(t: T) {}
 
     /// This is a function with 'view' modifier
-    pub view fun viewFunction() {}
+    access(all) view fun viewFunction() {}
 }

@@ -1698,19 +1698,23 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	// Obtain a self referencing (cyclic) ephemeral reference value.
 
 	code := `
-        pub fun getEphemeralRef(): &Foo {
+        access(all) fun getEphemeralRef(): &Foo {
             var foo = Foo()
             var fooRef = &foo as &Foo
 
             // Create the cyclic reference
-            fooRef.bar = fooRef
+            fooRef.setBar(fooRef)
 
             return fooRef
         }
 
-        pub struct Foo {
+        access(all) struct Foo {
 
-            pub(set) var bar: &Foo?
+            access(all) var bar: &Foo?
+
+			access(all) fun setBar(_ bar: &Foo) {
+				self.bar = bar
+			}
 
             init() {
                 self.bar = nil
@@ -3721,7 +3725,7 @@ func TestNonStorable(t *testing.T) {
 	storage := newUnmeteredInMemoryStorage()
 
 	code := `
-      pub struct Foo {
+      access(all) struct Foo {
 
           let bar: &Int?
 

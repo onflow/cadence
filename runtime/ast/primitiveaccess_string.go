@@ -9,16 +9,15 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[AccessNotSpecified-0]
-	_ = x[AccessPrivate-1]
+	_ = x[AccessSelf-1]
 	_ = x[AccessContract-2]
 	_ = x[AccessAccount-3]
-	_ = x[AccessPublic-4]
-	_ = x[AccessPublicSettable-5]
+	_ = x[AccessAll-4]
 }
 
-const _PrimitiveAccess_name = "AccessNotSpecifiedAccessPrivateAccessContractAccessAccountAccessPublicAccessPublicSettable"
+const _PrimitiveAccess_name = "AccessNotSpecifiedAccessSelfAccessContractAccessAccountAccessAll"
 
-var _PrimitiveAccess_index = [...]uint8{0, 18, 31, 45, 58, 70, 90}
+var _PrimitiveAccess_index = [...]uint8{0, 18, 28, 42, 55, 64}
 
 func (i PrimitiveAccess) String() string {
 	if i >= PrimitiveAccess(len(_PrimitiveAccess_index)-1) {

@@ -549,13 +549,23 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 	const holderContract = `
       import FlowToken from 0x1
 
-      pub contract Holder {
+      access(all) contract Holder {
 
-          pub (set) var content: @FlowToken.Vault?
+          access(all) var content: @FlowToken.Vault?
 
           init() {
               self.content <- nil
           }
+
+		  access(all) fun setContent(_ vault: @FlowToken.Vault?) {
+			self.content <-! vault
+		  }
+
+		  access(all) fun swapContent(_ vault: @FlowToken.Vault?): @FlowToken.Vault? {
+			let oldVault <- self.content <- vault
+			return <-oldVault
+		  }
+		  
       }
     `
 	err = runtime.ExecuteTransaction(
@@ -587,20 +597,20 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
               let vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
 
               // Move vault into the contract
-              Holder.content <-! vault
+              Holder.setContent(<-vault)
 
               // Save the contract into storage (invalid, even if same account)
               acct.save(Holder as AnyStruct, to: /storage/holder)
 
               // Move vault back out of the contract
-              let vault2 <- Holder.content <- nil
+              let vault2 <- Holder.swapContent(nil)
               let unwrappedVault2 <- vault2!
 
               // Load the contract back from storage
               let dupeContract = acct.load<AnyStruct>(from: /storage/holder)! as! Holder
 
               // Move the vault of of the duplicated contract
-              let dupeVault <- dupeContract.content <- nil
+              let dupeVault <- dupeContract.swapContent(nil)
               let unwrappedDupeVault <- dupeVault!
 
               // Deposit the duplicated vault into the original vault

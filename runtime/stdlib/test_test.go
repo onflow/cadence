@@ -141,7 +141,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
             import Test
 
-            pub fun test(): Bool {
+            access(all) fun test(): Bool {
                 let matcher = Test.newMatcher(fun (_ value: AnyStruct): Bool {
                      if !value.getType().isSubtype(of: Type<Int>()) {
                         return false
@@ -168,7 +168,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
 
                let matcher = Test.newMatcher(fun (_ value: Int): Bool {
                     return value == 7
@@ -192,7 +192,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
 
                let matcher = Test.newMatcher(fun (_ value: Int): Bool {
                     return (value + 7) == 4
@@ -217,7 +217,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
 
                let matcher = Test.newMatcher(fun (_ value: &Foo): Bool {
                    return value.a == 4
@@ -232,8 +232,8 @@ func TestTestNewMatcher(t *testing.T) {
                return res
            }
 
-           pub resource Foo {
-               pub let a: Int
+           access(all) resource Foo {
+               access(all) let a: Int
 
                init(_ a: Int) {
                    self.a = a
@@ -255,7 +255,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
 	       import Test
 
-	       pub fun test() {
+	       access(all) fun test() {
 
 	           let matcher = Test.newMatcher(fun (_ value: @Foo): Bool {
 	                destroy value
@@ -263,7 +263,7 @@ func TestTestNewMatcher(t *testing.T) {
 	           })
 	       }
 
-	       pub resource Foo {}
+	       access(all) resource Foo {}
 	    `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -278,7 +278,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
 	       import Test
 
-	       pub fun test(): Bool {
+	       access(all) fun test(): Bool {
 
 	           let matcher = Test.newMatcher<Int>(fun (_ value: Int): Bool {
 	                return value == 7
@@ -302,7 +302,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
 	       import Test
 
-	       pub fun test() {
+	       access(all) fun test() {
 
 	           let matcher = Test.newMatcher<String>(fun (_ value: Int): Bool {
 	                return value == 7
@@ -323,7 +323,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
 	       import Test
 
-	       pub fun test() {
+	       access(all) fun test() {
 
 	           let matcher1 = Test.newMatcher(fun (_ value: Int): Bool {
 	                return (value + 5) == 10
@@ -359,7 +359,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.equal(1)
            }
         `
@@ -377,7 +377,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let matcher = Test.equal(1)
                return matcher.test(1)
            }
@@ -397,13 +397,13 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let f = Foo()
                let matcher = Test.equal(f)
                return matcher.test(f)
            }
 
-           pub struct Foo {}
+           access(all) struct Foo {}
         `
 
 		inter, err := newTestContractInterpreter(t, script)
@@ -420,13 +420,13 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let f <- create Foo()
                let matcher = Test.equal(<-f)
                return matcher.test(<- create Foo())
            }
 
-           pub resource Foo {}
+           access(all) resource Foo {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -443,7 +443,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let matcher = Test.equal<String>("hello")
            }
         `
@@ -461,7 +461,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let matcher = Test.equal<String>(1)
            }
         `
@@ -479,7 +479,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let one = Test.equal(1)
                let two = Test.equal(2)
 
@@ -504,7 +504,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let one = Test.equal(1)
                let two = Test.equal(2)
 
@@ -528,7 +528,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let one = Test.equal(1)
                let two = Test.equal(2)
 
@@ -552,7 +552,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let one = Test.equal(1)
 
 		        let notOne = Test.not(one)
@@ -560,7 +560,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		        return notOne.test(2)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let one = Test.equal(1)
 
 		        let notOne = Test.not(one)
@@ -587,7 +587,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let one = Test.equal(1)
                let two = Test.equal(2)
                let three = Test.equal(3)
@@ -612,7 +612,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let foo <- create Foo()
                let bar <- create Bar()
 
@@ -625,8 +625,8 @@ func TestTestEqualMatcher(t *testing.T) {
                    && matcher.test(<-create Bar())
            }
 
-           pub resource Foo {}
-           pub resource Bar {}
+           access(all) resource Foo {}
+           access(all) resource Bar {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -644,7 +644,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let foo <- create Foo()
                let bar <- create Bar()
 
@@ -656,8 +656,8 @@ func TestTestEqualMatcher(t *testing.T) {
                return matcher.test(<-create Foo())
            }
 
-           pub resource Foo {}
-           pub resource Bar {}
+           access(all) resource Foo {}
+           access(all) resource Bar {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -964,7 +964,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        let scriptResult = Test.ScriptResult(
@@ -976,7 +976,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		        return successful.test(scriptResult)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        let scriptResult = Test.ScriptResult(
@@ -1007,7 +1007,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        let transactionResult = Test.TransactionResult(
@@ -1018,7 +1018,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		        return successful.test(transactionResult)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        let transactionResult = Test.TransactionResult(
@@ -1048,7 +1048,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        return successful.test("hello")
@@ -1073,7 +1073,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let failed = Test.beFailed()
 
 		        let scriptResult = Test.ScriptResult(
@@ -1085,7 +1085,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		        return failed.test(scriptResult)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let failed = Test.beFailed()
 
 		        let scriptResult = Test.ScriptResult(
@@ -1116,7 +1116,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let failed = Test.beFailed()
 
 		        let transactionResult = Test.TransactionResult(
@@ -1127,7 +1127,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		        return failed.test(transactionResult)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let failed = Test.beFailed()
 
 		        let transactionResult = Test.TransactionResult(
@@ -1157,7 +1157,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let failed = Test.beFailed()
 
 		        return failed.test([])
@@ -1182,13 +1182,13 @@ func TestTestBeNilMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let isNil = Test.beNil()
 
 		        return isNil.test(nil)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let isNil = Test.beNil()
 
 		        return isNil.test([1, 2])
@@ -1218,13 +1218,13 @@ func TestTestBeEmptyMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let emptyArray = Test.beEmpty()
 
 		        return emptyArray.test([])
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let emptyArray = Test.beEmpty()
 
 		        return emptyArray.test([42, 23, 31])
@@ -1249,14 +1249,14 @@ func TestTestBeEmptyMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let emptyDict = Test.beEmpty()
 		        let dict: {Bool: Int} = {}
 
 		        return emptyDict.test(dict)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let emptyDict = Test.beEmpty()
 		        let dict: {Bool: Int} = {true: 1, false: 0}
 
@@ -1282,7 +1282,7 @@ func TestTestBeEmptyMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let emptyDict = Test.beEmpty()
 
 		        return emptyDict.test("empty")
@@ -1309,13 +1309,13 @@ func TestTestHaveElementCountMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let hasThreeElements = Test.haveElementCount(3)
 
 		        return hasThreeElements.test([42, 23, 31])
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let hasThreeElements = Test.haveElementCount(3)
 
 		        return hasThreeElements.test([42])
@@ -1340,14 +1340,14 @@ func TestTestHaveElementCountMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let hasTwoElements = Test.haveElementCount(2)
 		        let dict: {Bool: Int} = {true: 1, false: 0}
 
 		        return hasTwoElements.test(dict)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let hasTwoElements = Test.haveElementCount(2)
 		        let dict: {Bool: Int} = {}
 
@@ -1373,7 +1373,7 @@ func TestTestHaveElementCountMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let hasTwoElements = Test.haveElementCount(2)
 
 		        return hasTwoElements.test("two")
@@ -1400,13 +1400,13 @@ func TestTestContainMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let containsTwenty = Test.contain(20)
 
 		        return containsTwenty.test([42, 20, 31])
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let containsTwenty = Test.contain(20)
 
 		        return containsTwenty.test([42])
@@ -1431,14 +1431,14 @@ func TestTestContainMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let containsFalse = Test.contain(false)
 		        let dict: {Bool: Int} = {true: 1, false: 0}
 
 		        return containsFalse.test(dict)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let containsFive = Test.contain(5)
 		        let dict: {Int: Bool} = {1: true, 0: false}
 
@@ -1464,7 +1464,7 @@ func TestTestContainMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let containsFalse = Test.contain(false)
 
 		        return containsFalse.test("false")
@@ -1491,13 +1491,13 @@ func TestTestBeGreaterThanMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let greaterThanFive = Test.beGreaterThan(5)
 
 		        return greaterThanFive.test(7)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let greaterThanFive = Test.beGreaterThan(5)
 
 		        return greaterThanFive.test(2)
@@ -1522,7 +1522,7 @@ func TestTestBeGreaterThanMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let greaterThanFive = Test.beGreaterThan(5)
 
 		        return greaterThanFive.test("7")
@@ -1547,13 +1547,13 @@ func TestTestBeLessThanMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let lessThanSeven = Test.beLessThan(7)
 
 		        return lessThanSeven.test(5)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let lessThanSeven = Test.beLessThan(7)
 
 		        return lessThanSeven.test(9)
@@ -1578,7 +1578,7 @@ func TestTestBeLessThanMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let lessThanSeven = Test.beLessThan(7)
 
 		        return lessThanSeven.test(true)
@@ -1603,7 +1603,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect("this string", Test.equal("this string"))
            }
         `
@@ -1621,7 +1621,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect("this string", Test.equal("other string"))
            }
         `
@@ -1640,7 +1640,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect("string", Test.equal(1))
            }
         `
@@ -1659,7 +1659,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect<String>("hello", Test.equal("hello"))
            }
         `
@@ -1677,7 +1677,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect<Int>("string", Test.equal(1))
            }
         `
@@ -1695,13 +1695,13 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let f1 <- create Foo()
                let f2 <- create Foo()
                Test.expect(<-f1, Test.equal(<-f2))
            }
 
-           pub resource Foo {}
+           access(all) resource Foo {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -1717,14 +1717,14 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let foo <- create Foo()
                let bar = Bar()
                Test.expect(<-foo, Test.equal(bar))
            }
 
-           pub resource Foo {}
-           pub struct Bar {}
+           access(all) resource Foo {}
+           access(all) struct Bar {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -1739,14 +1739,14 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let foo = Foo()
                let bar <- create Bar()
                Test.expect(foo, Test.equal(<-bar))
            }
 
-           pub struct Foo {}
-           pub resource Bar {}
+           access(all) struct Foo {}
+           access(all) resource Bar {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -1766,21 +1766,21 @@ func TestTestExpectFailure(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all) fun test() {
 		        let foo = Foo(answer: 42)
 		        Test.expectFailure(fun(): Void {
 		            foo.correctAnswer(42)
 		        }, errorMessageSubstring: "wrong answer!")
 		    }
 
-		    pub struct Foo {
-		        priv let answer: UInt8
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
 
 		        init(answer: UInt8) {
 		            self.answer = answer
 		        }
 
-		        pub fun correctAnswer(_ input: UInt8): Bool {
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
 		            if self.answer != input {
 		                panic("wrong answer!")
 		            }
@@ -1807,21 +1807,21 @@ func TestTestExpectFailure(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all) fun test() {
 		        let foo = Foo(answer: 42)
 		        Test.expectFailure(fun(): Void {
 		            foo.correctAnswer(43)
 		        }, errorMessageSubstring: "wrong answer!")
 		    }
 
-		    pub struct Foo {
-		        priv let answer: UInt8
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
 
 		        init(answer: UInt8) {
 		            self.answer = answer
 		        }
 
-		        pub fun correctAnswer(_ input: UInt8): Bool {
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
 		            if self.answer != input {
 		                panic("wrong answer!")
 		            }
@@ -1843,21 +1843,21 @@ func TestTestExpectFailure(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all) fun test() {
 		        let foo = Foo(answer: 42)
 		        Test.expectFailure(fun(): Void {
 		            foo.correctAnswer(43)
 		        }, errorMessageSubstring: "what is wrong?")
 		    }
 
-		    pub struct Foo {
-		        priv let answer: UInt8
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
 
 		        init(answer: UInt8) {
 		            self.answer = answer
 		        }
 
-		        pub fun correctAnswer(_ input: UInt8): Bool {
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
 		            if self.answer != input {
 		                panic("wrong answer!")
 		            }
@@ -1884,7 +1884,7 @@ func TestTestExpectFailure(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all) fun test() {
 		        let foo = Foo(answer: 42)
 		        Test.expectFailure(fun(answer: UInt64): Foo {
 		            foo.correctAnswer(42)
@@ -1892,14 +1892,14 @@ func TestTestExpectFailure(t *testing.T) {
 		        }, errorMessageSubstring: "wrong answer")
 		    }
 
-		    pub struct Foo {
-		        priv let answer: UInt8
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
 
 		        init(answer: UInt8) {
 		            self.answer = answer
 		        }
 
-		        pub fun correctAnswer(_ input: UInt8): Bool {
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
 		            if self.answer != input {
 		                panic("wrong answer!")
 		            }
@@ -1919,21 +1919,21 @@ func TestTestExpectFailure(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all) fun test() {
 		        let foo = Foo(answer: 42)
 		        Test.expectFailure(fun(): Void {
 		            foo.correctAnswer(42)
 		        }, errorMessageSubstring: ["wrong answer"])
 		    }
 
-		    pub struct Foo {
-		        priv let answer: UInt8
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
 
 		        init(answer: UInt8) {
 		            self.answer = answer
 		        }
 
-		        pub fun correctAnswer(_ input: UInt8): Bool {
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
 		            if self.answer != input {
 		                panic("wrong answer!")
 		            }
