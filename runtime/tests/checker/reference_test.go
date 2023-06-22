@@ -2792,7 +2792,7 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 
           fun test() {
               let rs <- {0: <-create R()}
-              let ref = &rs as &{Int: R}
+              let ref = &rs as auth(Removable) &{Int: R}
               let container <- [<-rs]
               let r <- ref.remove(key: 0)
               destroy container

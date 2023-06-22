@@ -5310,9 +5310,10 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				Kind:     common.DeclarationKindFunction,
 				Mutating: true,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
+					return NewFunctionMember(
 						memoryGauge,
 						t,
+						insertableEntitledAccess,
 						identifier,
 						DictionaryInsertFunctionType(t),
 						dictionaryTypeInsertFunctionDocString,
@@ -5323,9 +5324,10 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				Kind:     common.DeclarationKindFunction,
 				Mutating: true,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
+					return NewFunctionMember(
 						memoryGauge,
 						t,
+						removableEntitledAccess,
 						identifier,
 						DictionaryRemoveFunctionType(t),
 						dictionaryTypeRemoveFunctionDocString,
