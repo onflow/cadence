@@ -799,39 +799,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		)
 	})
 
-	t.Run("different intersection type", func(t *testing.T) {
-
-		t.Parallel()
-
-		require.False(t,
-			(&IntersectionStaticType{
-				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
-				},
-			}).Equal(
-				&IntersectionStaticType{
-					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
-					},
-				},
-			),
-		)
-	})
-
 	t.Run("fewer intersections", func(t *testing.T) {
 
 		t.Parallel()

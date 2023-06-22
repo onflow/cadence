@@ -4034,22 +4034,6 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		encoded := assemble(
 			// tag
 			0xd8, CBORTagIntersectionStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagCompositeStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 1
-			0x61,
-			// S
-			0x53,
 			// array, length 2
 			0x82,
 			// tag
@@ -4749,22 +4733,6 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xf6,
 			// tag
 			0xd8, CBORTagIntersectionStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagCompositeStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 1
-			0x61,
-			// S
-			0x53,
 			// array, length 2
 			0x82,
 			// tag
@@ -4948,6 +4916,8 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			0xf6,
 			// tag
 			0xd8, CBORTagIntersectionStaticType,
+			// array, 1 item follows
+			0x81,
 			// tag
 			0xd8, CBORTagInterfaceStaticType,
 			// array, 2 items follow

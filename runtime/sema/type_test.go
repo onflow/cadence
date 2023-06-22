@@ -1339,12 +1339,19 @@ func TestCommonSuperType(t *testing.T) {
 			Members:       &StringMemberOrderedMap{},
 		}
 
+		interfaceType2 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I2",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
+		}
+
 		intersectionType1 := &IntersectionType{
 			Types: []*InterfaceType{interfaceType1},
 		}
 
 		intersectionType2 := &IntersectionType{
-			Types: []*InterfaceType{interfaceType1},
+			Types: []*InterfaceType{interfaceType2},
 		}
 
 		tests := []testCase{
@@ -1362,7 +1369,7 @@ func TestCommonSuperType(t *testing.T) {
 					intersectionType1,
 					intersectionType2,
 				},
-				expectedSuperType: InvalidType,
+				expectedSuperType: AnyStructType,
 			},
 		}
 
@@ -1381,30 +1388,41 @@ func TestCommonSuperType(t *testing.T) {
 			Members:       &StringMemberOrderedMap{},
 		}
 
-		intersectionType1 := &IntersectionType{
-			Types: []*InterfaceType{interfaceType1},
+		interfaceType2 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
 		}
 
-		intersectionType2 := &IntersectionType{
-			Types: []*InterfaceType{interfaceType1},
+		capType1 := &CapabilityType{
+			BorrowType: &IntersectionType{
+				Types: []*InterfaceType{interfaceType1},
+			},
+		}
+
+		capType2 := &CapabilityType{
+			BorrowType: &IntersectionType{
+				Types: []*InterfaceType{interfaceType2},
+			},
 		}
 
 		tests := []testCase{
 			{
 				name: "homogenous",
 				types: []Type{
-					intersectionType1,
-					intersectionType1,
+					capType1,
+					capType1,
 				},
-				expectedSuperType: intersectionType1,
+				expectedSuperType: capType1,
 			},
 			{
 				name: "heterogeneous",
 				types: []Type{
-					intersectionType1,
-					intersectionType2,
+					capType1,
+					capType2,
 				},
-				expectedSuperType: InvalidType,
+				expectedSuperType: AnyStructType,
 			},
 		}
 
