@@ -50,7 +50,7 @@ func main() {
 }
 
 type benchResult struct {
-	// N is the the number of iterations
+	// N is the number of iterations
 	Iterations int `json:"iterations"`
 	// T is the total time taken
 	Time time.Duration `json:"time"`

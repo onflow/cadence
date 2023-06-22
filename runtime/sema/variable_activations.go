@@ -129,7 +129,7 @@ func (a *VariableActivation) DeclareValue(declaration ValueDeclaration) {
 		DeclarationKind: declaration.ValueDeclarationKind(),
 		Type:            declaration.ValueDeclarationType(),
 		// TODO: add access to ValueDeclaration and use declaration's access instead here
-		Access:          PrimitiveAccess(ast.AccessPublic),
+		Access:          PrimitiveAccess(ast.AccessAll),
 		IsConstant:      declaration.ValueDeclarationIsConstant(),
 		ArgumentLabels:  declaration.ValueDeclarationArgumentLabels(),
 		Pos:             declaration.ValueDeclarationPosition(),
@@ -146,7 +146,7 @@ func (a *VariableActivation) DeclareType(declaration TypeDeclaration) {
 		DeclarationKind: declaration.TypeDeclarationKind(),
 		Type:            declaration.TypeDeclarationType(),
 		// TODO: add access to TypeDeclaration and use declaration's access instead here
-		Access:         PrimitiveAccess(ast.AccessPublic),
+		Access:         PrimitiveAccess(ast.AccessAll),
 		IsConstant:     true,
 		ArgumentLabels: nil,
 		Pos:            declaration.TypeDeclarationPosition(),
@@ -321,7 +321,7 @@ func (a *VariableActivations) DeclareValue(declaration ValueDeclaration) (*Varia
 		kind:       declaration.ValueDeclarationKind(),
 		ty:         declaration.ValueDeclarationType(),
 		// TODO: add access to ValueDeclaration and use declaration's access instead here
-		access:         PrimitiveAccess(ast.AccessPublic),
+		access:         PrimitiveAccess(ast.AccessAll),
 		isConstant:     declaration.ValueDeclarationIsConstant(),
 		argumentLabels: declaration.ValueDeclarationArgumentLabels(),
 		pos:            variablePos,
@@ -363,7 +363,7 @@ func (a *VariableActivations) declareImplicitConstant(
 		variableDeclaration{
 			identifier:               identifier,
 			ty:                       ty,
-			access:                   PrimitiveAccess(ast.AccessPublic),
+			access:                   PrimitiveAccess(ast.AccessAll),
 			kind:                     kind,
 			isConstant:               true,
 			allowOuterScopeShadowing: false,

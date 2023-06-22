@@ -25,38 +25,28 @@ import (
 
 func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{}) {
 
-	leftType := checker.VisitExpression(swap.Left, nil)
-	rightType := checker.VisitExpression(swap.Right, nil)
+	// First visit the two expressions as if they were the target of the assignment.
+	leftTargetType := checker.checkSwapStatementExpression(swap.Left, common.OperandSideLeft)
+	rightTargetType := checker.checkSwapStatementExpression(swap.Right, common.OperandSideRight)
+
+	// Then re-visit the same expressions, this time treat them as the value-expr of the assignment.
+	// The 'expected type' of the two expression would be the types obtained from the previous visit, swapped.
+	leftValueType := checker.VisitExpression(swap.Left, rightTargetType)
+	rightValueType := checker.VisitExpression(swap.Right, leftTargetType)
 
 	checker.Elaboration.SetSwapStatementTypes(
 		swap,
 		SwapStatementTypes{
-			LeftType:  leftType,
-			RightType: rightType,
+			LeftType:  leftValueType,
+			RightType: rightValueType,
 		},
 	)
 
-	lhsValid := checker.checkSwapStatementExpression(swap.Left, leftType, common.OperandSideLeft)
-	rhsValid := checker.checkSwapStatementExpression(swap.Right, rightType, common.OperandSideRight)
-
-	// The types of both sides must be subtypes of each other,
-	// so that assignment can be performed in both directions.
-	// i.e: The two types have to be equal.
-	if lhsValid && rhsValid && !leftType.Equal(rightType) {
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: leftType,
-				ActualType:   rightType,
-				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, swap.Right),
-			},
-		)
-	}
-
-	if leftType.IsResourceType() {
+	if leftValueType.IsResourceType() {
 		checker.elaborateNestedResourceMoveExpression(swap.Left)
 	}
 
-	if rightType.IsResourceType() {
+	if rightValueType.IsResourceType() {
 		checker.elaborateNestedResourceMoveExpression(swap.Right)
 	}
 
@@ -65,9 +55,8 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 
 func (checker *Checker) checkSwapStatementExpression(
 	expression ast.Expression,
-	exprType Type,
 	opSide common.OperandSide,
-) bool {
+) Type {
 
 	// Expression in either side of the swap statement must be a target expression.
 	// (e.g. identifier expression, indexing expression, or member access expression)
@@ -78,13 +67,8 @@ func (checker *Checker) checkSwapStatementExpression(
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
 			},
 		)
-		return false
+		return InvalidType
 	}
 
-	if exprType.IsInvalidType() {
-		return false
-	}
-
-	checker.visitAssignmentValueType(expression)
-	return true
+	return checker.visitAssignmentValueType(expression)
 }

@@ -6628,7 +6628,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
                 let y = x.bar as String
 
                 struct Foo {
-                    pub var bar: String
+                    access(all) var bar: String
 
                     init() {
                         self.bar = "hello"

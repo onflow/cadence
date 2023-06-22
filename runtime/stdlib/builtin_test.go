@@ -91,7 +91,7 @@ func TestAssert(t *testing.T) {
 	t.Parallel()
 
 	inter := newInterpreter(t,
-		`pub let test = assert`,
+		`access(all) let test = assert`,
 		AssertFunction,
 	)
 
@@ -136,7 +136,7 @@ func TestPanic(t *testing.T) {
 	t.Parallel()
 
 	inter := newInterpreter(t,
-		`pub let test = panic`,
+		`access(all) let test = panic`,
 		PanicFunction,
 	)
 

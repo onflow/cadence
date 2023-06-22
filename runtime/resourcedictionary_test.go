@@ -32,17 +32,17 @@ import (
 )
 
 const resourceDictionaryContract = `
- pub contract Test {
+ access(all) contract Test {
 
-     pub resource R {
+     access(all) resource R {
 
-         pub var value: Int
+         access(all) var value: Int
 
          init(_ value: Int) {
              self.value = value
          }
 
-         pub fun increment() {
+         access(all) fun increment() {
              self.value = self.value + 1
          }
 
@@ -52,34 +52,38 @@ const resourceDictionaryContract = `
          }
      }
 
-     pub fun createR(_ value: Int): @R {
+     access(all) fun createR(_ value: Int): @R {
          return <-create R(value)
      }
 
-     pub resource C {
+     access(all) resource C {
 
-         access(Identity) var rs: @{String: R}
+         access(all) var rs: @{String: R}
 
          init() {
              self.rs <- {}
          }
 
-         pub fun remove(_ id: String): @R {
+         access(all) fun remove(_ id: String): @R {
              let r <- self.rs.remove(key: id) ?? panic("missing")
              return <-r
          }
 
-         pub fun insert(_ id: String, _ r: @R): @R? {
+         access(all) fun insert(_ id: String, _ r: @R): @R? {
              let old <- self.rs.insert(key: id, <-r)
              return <- old
          }
+
+		 access(all) fun forceInsert(_ id: String, _ r: @R) {
+			self.rs[id] <-! r
+		 }
 
          destroy() {
              destroy self.rs
          }
      }
 
-     pub fun createC(): @C {
+     access(all) fun createC(): @C {
          return <-create C()
      }
  }
@@ -166,9 +170,9 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
      transaction {
 
          prepare(signer: AuthAccount) {
-             let c = signer.borrow<auth(Insertable) &Test.C>(from: /storage/c)!
-             c.rs["a"] <-! Test.createR(1)
-             c.rs["b"] <-! Test.createR(2)
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
+             c.forceInsert("a", <- Test.createR(1))
+             c.forceInsert("b", <- Test.createR(2))
         }
      }
    `)
@@ -250,8 +254,8 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
          prepare(signer: AuthAccount) {
              let c <- signer.load<@Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
-             let existing <- c.rs["b"] <- Test.createR(4)
-             destroy existing
+			 destroy c.remove("b")
+			 c.forceInsert("b", <- Test.createR(4))
              log(c.rs["b"]?.value)
              signer.save(<-c, to: /storage/c)
          }
@@ -291,8 +295,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
          prepare(signer: AuthAccount) {
              let c <- signer.load<@Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
-             let existing <- c.rs["b"] <- nil
-             destroy existing
+			 destroy c.remove("b")
              log(c.rs["b"]?.value)
              signer.save(<-c, to: /storage/c)
          }
@@ -353,7 +356,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
              }
 
              let c2 <- Test.createC()
-             c2.rs["x"] <-! Test.createR(10)
+			 c2.forceInsert("x", <-Test.createR(10))
              signer.save(<-c2, to: /storage/c)
          }
      }
@@ -391,49 +394,57 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
-     pub contract Test {
+     access(all) contract Test {
 
-         pub resource R {
+         access(all) resource R {
 
-             pub var value: Int
+             access(all) var value: Int
 
              init(_ value: Int) {
                  self.value = value
              }
 
-             pub fun increment() {
+             access(all) fun increment() {
                  self.value = self.value + 1
              }
          }
 
-         pub fun createR(_ value: Int): @R {
+         access(all) fun createR(_ value: Int): @R {
              return <-create R(value)
          }
 
-         pub resource C2 {
+         access(all) resource C2 {
 
-             pub(set) var rs: @{String: R}
+             access(all) var rs: @{String: R}
 
              init() {
                  self.rs <- {}
              }
 
-             pub fun value(key: String): Int? {
+             access(all) fun value(key: String): Int? {
                  return self.rs[key]?.value
              }
+
+			 access(all) fun forceInsert(_ id: String, _ r: @R) {
+				self.rs[id] <-! r
+			 }
 
              destroy() {
                  destroy self.rs
              }
          }
 
-         pub fun createC2(): @C2 {
+         access(all) fun createC2(): @C2 {
              return <-create C2()
          }
 
-         pub resource C {
+         access(all) resource C {
 
-             pub(set) var c2s: @{String: C2}
+             access(all) var c2s: @{String: C2}
+
+			 access(all) fun forceInsert(_ id: String, _ c: @C2) {
+				self.c2s[id] <-! c
+			 }
 
              init() {
                  self.c2s <- {}
@@ -444,7 +455,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
              }
          }
 
-         pub fun createC(): @C {
+         access(all) fun createC(): @C {
              return <-create C()
          }
      }
@@ -526,9 +537,9 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
          prepare(signer: AuthAccount) {
              let c = signer.borrow<&Test.C>(from: /storage/c)!
              let c2 <- Test.createC2()
-             c2.rs["a"] <-! Test.createR(1)
-             c2.rs["b"] <-! Test.createR(2)
-             c.c2s["x"] <-! c2
+             c2.forceInsert("a", <- Test.createR(1))
+			 c2.forceInsert("b", <- Test.createR(2))
+			 c.forceInsert("x", <- c2)
          }
      }
    `)
@@ -583,28 +594,32 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	contract := []byte(`
-     pub contract Test {
+     access(all) contract Test {
 
-         pub resource R {
+         access(all) resource R {
 
-             pub var value: Int
+             access(all) var value: Int
 
              init(_ value: Int) {
                  self.value = value
              }
 
-             pub fun increment() {
+             access(all) fun increment() {
                  self.value = self.value + 1
              }
          }
 
-         pub fun createR(_ value: Int): @R {
+         access(all) fun createR(_ value: Int): @R {
              return <-create R(value)
          }
 
-         pub resource C {
+         access(all) resource C {
 
-             pub(set) var rs: @{String: R}
+             access(all) var rs: @{String: R}
+
+			 access(all) fun setRs(key s: String, r: @R) {
+				self.rs[s] <-! r
+			 }
 
              init() {
                  self.rs <- {}
@@ -615,7 +630,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
              }
          }
 
-         pub fun createC(): @C {
+         access(all) fun createC(): @C {
              return <-create C()
          }
      }
@@ -640,8 +655,8 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
           prepare(signer1: AuthAccount, signer2: AuthAccount) {
               let c <- Test.createC()
-              c.rs["a"] <-! Test.createR(1)
-              c.rs["b"] <-! Test.createR(2)
+              c.setRs(key: "a", r: <- Test.createR(1))
+			  c.setRs(key: "b", r: <- Test.createR(2))
               signer1.save(<-c, to: /storage/c)
           }
       }
@@ -714,7 +729,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
          prepare(signer1: AuthAccount, signer2: AuthAccount) {
              let c <- signer1.load<@Test.C>(from: /storage/c) ?? panic("missing C")
-             c.rs["x"] <-! Test.createR(42)
+             c.setRs(key: "x", r: <- Test.createR(42))
              signer2.save(<-c, to: /storage/c2)
          }
      }
@@ -751,8 +766,8 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
          prepare(signer: AuthAccount) {
              let c <- Test.createC()
-             c.rs["a"] <-! Test.createR(1)
-             c.rs["b"] <-! Test.createR(2)
+			 c.forceInsert("a", <- Test.createR(1))
+             c.forceInsert("b", <- Test.createR(2))
              signer.save(<-c, to: /storage/c)
          }
      }
@@ -880,8 +895,8 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 
          prepare(signer: AuthAccount) {
              let c <- Test.createC()
-             c.rs["a"] <-! Test.createR(1)
-             c.rs["b"] <-! Test.createR(2)
+             c.forceInsert("a", <- Test.createR(1))
+             c.forceInsert("b", <- Test.createR(2))
              signer.save(<-c, to: /storage/c)
          }
      }
@@ -994,8 +1009,8 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
          prepare(signer: AuthAccount) {
              let c <- Test.createC()
-             c.rs["a"] <-! Test.createR(1)
-             c.rs["b"] <-! Test.createR(2)
+			 c.forceInsert("a", <- Test.createR(1))
+             c.forceInsert("b", <- Test.createR(2))
              signer.save(<-c, to: /storage/c)
          }
      }
@@ -1306,11 +1321,11 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
-	  pub contract Test {
+	  access(all) contract Test {
 
-         pub resource R {}
+         access(all) resource R {}
 
-         pub fun createR(): @R {
+         access(all) fun createR(): @R {
              return <-create R()
          }
      }

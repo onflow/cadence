@@ -316,7 +316,7 @@ func (checker *Checker) declareParameters(
 
 		variable := &Variable{
 			Identifier:      identifier.Identifier,
-			Access:          PrimitiveAccess(ast.AccessPublic),
+			Access:          PrimitiveAccess(ast.AccessAll),
 			DeclarationKind: common.DeclarationKindParameter,
 			IsConstant:      true,
 			Type:            parameterType,

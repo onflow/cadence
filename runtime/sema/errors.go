@@ -2899,6 +2899,7 @@ func (e *InvalidAccessError) Error() string {
 
 type InvalidAssignmentAccessError struct {
 	Name              string
+	ContainerType     Type
 	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
@@ -2923,8 +2924,8 @@ func (e *InvalidAssignmentAccessError) Error() string {
 
 func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"consider making it publicly settable with `%s`",
-		ast.AccessPublicSettable.Keyword(),
+		"consider adding a setter function to %s",
+		e.ContainerType.QualifiedString(),
 	)
 }
 
@@ -4460,7 +4461,7 @@ func (e *InvalidAttachmentEntitlementError) Error() string {
 func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
 	switch access := e.AttachmentAccessModifier.(type) {
 	case PrimitiveAccess:
-		return "attachments declared with `pub` access do not support entitlements on their members"
+		return "attachments declared with `access(all)` access do not support entitlements on their members"
 	case EntitlementMapAccess:
 		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
 			e.InvalidEntitlement.QualifiedIdentifier(),
