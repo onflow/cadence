@@ -3212,7 +3212,7 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 	)
 }
 
-func TestStorageReadNoImplicitWrite(t *testing.T) {
+func TestRuntimeStorageReadNoImplicitWrite(t *testing.T) {
 
 	t.Parallel()
 
@@ -3235,9 +3235,7 @@ func TestStorageReadNoImplicitWrite(t *testing.T) {
 			Source: []byte((`
               transaction {
 			    prepare(signer: AuthAccount) {
-			        let ref = getAccount(0x2)
-			            .getCapability(/public/test)
-			            .borrow<&AnyStruct>()
+			        let ref = getAccount(0x2).capabilities.borrow<&AnyStruct>(/public/test)
                     assert(ref == nil)
 			    }
               }

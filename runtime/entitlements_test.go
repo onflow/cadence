@@ -31,7 +31,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
+func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -123,7 +123,7 @@ func TestAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 
 }
 
-func TestAccountEntitlementSaveAndLoadFail(t *testing.T) {
+func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -215,7 +215,7 @@ func TestAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
 
-func TestAccountEntitlementAttachmentMap(t *testing.T) {
+func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -322,7 +322,7 @@ func TestAccountEntitlementAttachmentMap(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestAccountExportEntitledRef(t *testing.T) {
+func TestRuntimeAccountExportEntitledRef(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -399,7 +399,7 @@ func TestAccountExportEntitledRef(t *testing.T) {
 	require.Equal(t, "A.0000000000000001.Test.R(uuid: 0)", value.String())
 }
 
-func TestAccountEntitlementNamingConflict(t *testing.T) {
+func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -502,7 +502,7 @@ func TestAccountEntitlementNamingConflict(t *testing.T) {
 	require.ErrorAs(t, errs[0], &accessError)
 }
 
-func TestAccountEntitlementCapabilityCasting(t *testing.T) {
+func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -601,7 +601,7 @@ func TestAccountEntitlementCapabilityCasting(t *testing.T) {
 	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
 
-func TestAccountEntitlementCapabilityDictionary(t *testing.T) {
+func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -711,7 +711,7 @@ func TestAccountEntitlementCapabilityDictionary(t *testing.T) {
 	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
 
-func TestAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
+func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)

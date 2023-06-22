@@ -1889,7 +1889,7 @@ func TestExportReferenceValue(t *testing.T) {
 		require.NoError(t, err)
 
 		script := `
-            access(all) un main(): &AnyStruct {
+            access(all) fun main(): &AnyStruct {
                 return getAccount(0x1).capabilities.borrow<&AnyStruct>(/public/test)!
             }
         `
