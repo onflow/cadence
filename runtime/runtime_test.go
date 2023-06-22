@@ -7967,14 +7967,14 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-      #allowAccountLinking
-
       access(all) fun main(address: Address): AnyStruct {
           let acct = getAuthAccount(address)
-          let p = /private/tmp
+          let path = /public/tmp
 
-          acct.linkAccount(p)
-          let capType = acct.getCapability<&AuthAccount>(p).borrow()!.getType()
+          let cap = acct.capabilities.account.issue<&AuthAccount>()
+          acct.capabilities.publish(cap, at: path)
+
+          let capType = acct.capabilities.borrow<&AuthAccount>(path)!.getType()
 
           return Type<AuthAccount>() == capType
       }

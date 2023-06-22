@@ -1132,7 +1132,6 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TODO: issue + save, get public + save
 func TestRuntimeStorageSaveIDCapability(t *testing.T) {
 
 	t.Parallel()
@@ -1152,76 +1151,66 @@ func TestRuntimeStorageSaveIDCapability(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// Store a capability
+	ty := &cadence.ReferenceType{
+		Authorization: cadence.UnauthorizedAccess,
+		Type:          cadence.IntType{},
+	}
 
-	for _, domain := range []common.PathDomain{
-		common.PathDomainPrivate,
-		common.PathDomainPublic,
-	} {
-
-		for typeDescription, ty := range map[string]cadence.Type{
-			"Untyped": nil,
-			"Typed": &cadence.ReferenceType{
-				Authorization: cadence.UnauthorizedAccess,
-				Type:          cadence.IntType{},
-			},
-		} {
-
-			t.Run(fmt.Sprintf("%s %s", domain.Identifier(), typeDescription), func(t *testing.T) {
-
-				storagePath := cadence.Path{
-					Domain: common.PathDomainStorage,
-					Identifier: fmt.Sprintf(
-						"test%s%s",
-						typeDescription,
-						domain.Identifier(),
-					),
-				}
-
-				context := Context{
-					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
-				}
-
-				var typeArgument string
-				if ty != nil {
-					typeArgument = fmt.Sprintf("<%s>", ty.ID())
-				}
-
-				err := runtime.ExecuteTransaction(
-					Script{
-						Source: []byte(fmt.Sprintf(
-							`
-                              transaction {
-                                  prepare(signer: AuthAccount) {
-                                      let cap = signer.getCapability%s(/%s/test)
-                                      signer.save(cap, to: %s)
-                                  }
-                              }
-                            `,
-							typeArgument,
-							domain.Identifier(),
-							storagePath,
-						)),
-					},
-					context,
-				)
-				require.NoError(t, err)
-
-				value, err := runtime.ReadStored(signer, storagePath, context)
-				require.NoError(t, err)
-
-				expected := cadence.NewIDCapability(
-					cadence.UInt64(1),
-					cadence.Address(signer),
-					ty,
-				)
-
-				actual := cadence.ValueWithCachedTypeID(value)
-				require.Equal(t, expected, actual)
-			})
+	var storagePathCounter int
+	newStoragePath := func() cadence.Path {
+		storagePathCounter++
+		return cadence.Path{
+			Domain: common.PathDomainStorage,
+			Identifier: fmt.Sprintf(
+				"test%d",
+				storagePathCounter,
+			),
 		}
 	}
+
+	storagePath1 := newStoragePath()
+	storagePath2 := newStoragePath()
+
+	context := Context{
+		Interface: runtimeInterface,
+		Location:  nextTransactionLocation(),
+	}
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(fmt.Sprintf(
+				`
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let cap = signer.capabilities.storage.issue<%[1]s>(/storage/test)!
+                          signer.capabilities.publish(cap, at: /public/test)
+                          signer.save(cap, to: %[2]s)
+
+                          let cap2 = signer.capabilities.get<%[1]s>(/public/test)!
+                          signer.save(cap2, to: %[3]s)
+                      }
+                  }
+                `,
+				ty.ID(),
+				storagePath1,
+				storagePath2,
+			)),
+		},
+		context,
+	)
+	require.NoError(t, err)
+
+	value, err := runtime.ReadStored(signer, storagePath1, context)
+	require.NoError(t, err)
+
+	expected := cadence.NewIDCapability(
+		cadence.UInt64(1),
+		cadence.Address(signer),
+		ty,
+	)
+
+	actual := cadence.ValueWithCachedTypeID(value)
+	require.Equal(t, expected, actual)
 }
 
 func TestRuntimeStorageReferenceCast(t *testing.T) {
@@ -2135,8 +2124,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   accountA.save(<-testResource, to: /storage/test)
 
                   // At this point the resource is in storage A
-                  accountA.link<&TestContract.TestResource>(/public/test, target: /storage/test)
-                  let ref2 = accountA.getCapability<&TestContract.TestResource>(/public/test).borrow()!
+                  let cap = accountA.capabilities.storage.issue<&TestContract.TestResource>(/storage/test)
+                  accountA.capabilities.publish(cap, at: /public/test)
+
+                  let ref2 = accountA.capabilities.borrow<&TestContract.TestResource>(/public/test)!
                   log(ref2.owner?.address)
 
                   let testResource2 <- accountA.load<@TestContract.TestResource>(from: /storage/test)!
@@ -2148,8 +2139,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
                   accountB.save(<-testResource2, to: /storage/test)
 
-                  accountB.link<&TestContract.TestResource>(/public/test, target: /storage/test)
-                  let ref4 = accountB.getCapability<&TestContract.TestResource>(/public/test).borrow()!
+                  let cap2 = accountB.capabilities.storage.issue<&TestContract.TestResource>(/storage/test)
+                  accountB.capabilities.publish(cap2, at: /public/test)
+
+                  let ref4 = accountB.capabilities.borrow<&TestContract.TestResource>(/public/test)!
 
                   // At this point the resource is in storage B
                   log(ref4.owner?.address)
@@ -2278,8 +2271,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   account.save(<-testResources, to: /storage/test)
 
                   // At this point the resource is in storage
-                  account.link<&[TestContract.TestResource]>(/public/test, target: /storage/test)
-                  let ref2 = account.getCapability<&[TestContract.TestResource]>(/public/test).borrow()!
+                  let cap = account.capabilities.storage.issue<&[TestContract.TestResource]>(/storage/test)
+                  account.capabilities.publish(cap, at: /public/test)
+
+                  let ref2 = account.capabilities.borrow<&[TestContract.TestResource]>(/public/test)!
                   let ref3 = &ref2[0] as &TestContract.TestResource
                   log(ref3.owner?.address)
               }
@@ -2414,8 +2409,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   account.save(<-nestingResource, to: /storage/test)
 
                   // At this point the nesting and nested resources are both in storage
-                  account.link<&TestContract.TestNestingResource>(/public/test, target: /storage/test)
-                  nestingResourceRef = account.getCapability<&TestContract.TestNestingResource>(/public/test).borrow()!
+                  let cap = account.capabilities.storage.issue<&TestContract.TestNestingResource>(/storage/test)
+                  account.capabilities.publish(cap, at: /public/test)
+
+                  nestingResourceRef = account.capabilities.borrow<&TestContract.TestNestingResource>(/public/test)!
                   nestedElementResourceRef = &nestingResourceRef.nestedResources[0] as &TestContract.TestNestedResource
 
                   log(nestingResourceRef.owner?.address)
@@ -2540,8 +2537,10 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   account.save(<-testResources, to: /storage/test)
 
                   // At this point the resource is in storage
-                  account.link<&[[TestContract.TestResource]]>(/public/test, target: /storage/test)
-                  let testResourcesRef = account.getCapability<&[[TestContract.TestResource]]>(/public/test).borrow()!
+                  let cap = account.capabilities.storage.issue<&[[TestContract.TestResource]]>(/storage/test)
+                  account.capabilities.publish(cap, at: /public/test)
+
+                  let testResourcesRef = account.capabilities.borrow<&[[TestContract.TestResource]]>(/public/test)!
                   ref = &testResourcesRef[0] as &[TestContract.TestResource]
                   log(ref[0].owner?.address)
               }
@@ -2661,9 +2660,11 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
                   account.save(<-testResources, to: /storage/test)
 
-                  // At this point the resource is in storage
-                  account.link<&[{Int: TestContract.TestResource}]>(/public/test, target: /storage/test)
-                  let testResourcesRef = account.getCapability<&[{Int: TestContract.TestResource}]>(/public/test).borrow()!
+                  let cap = account.capabilities.storage.issue<&[{Int: TestContract.TestResource}]>(/storage/test)
+                  account.capabilities.publish(cap, at: /public/test)
+
+                  let testResourcesRef = account.capabilities.borrow<&[{Int: TestContract.TestResource}]>(/public/test)!
+
                   ref = &testResourcesRef[0] as &{Int: TestContract.TestResource}
                   log(ref[0]?.owner?.address)
               }
@@ -3353,12 +3354,18 @@ func TestRuntimeStorageIteration(t *testing.T) {
                             signer.save(Test.Foo(), to: /storage/fifth)
                             signer.save("two", to: /storage/sixth)
 
-                            signer.link<&String>(/private/a, target:/storage/first)
-                            signer.link<&[String]>(/private/b, target:/storage/second)
-                            signer.link<&Test.Foo>(/private/c, target:/storage/third)
-                            signer.link<&Int>(/private/d, target:/storage/fourth)
-                            signer.link<&Test.Foo>(/private/e, target:/storage/fifth)
-                            signer.link<&String>(/private/f, target:/storage/sixth)
+                            let capA = signer.capabilities.storage.issue<&String>(/storage/first)
+                            signer.capabilities.publish(capA, at: /public/a)
+                            let capB = signer.capabilities.storage.issue<&[String]>(/storage/second)
+                            signer.capabilities.publish(capB, at: /public/b)
+                            let capC = signer.capabilities.storage.issue<&Test.Foo>(/storage/third)
+                            signer.capabilities.publish(capC, at: /public/c)
+                            let capD = signer.capabilities.storage.issue<&Int>(/storage/fourth)
+                            signer.capabilities.publish(capD, at: /public/d)
+                            let capE = signer.capabilities.storage.issue<&Test.Foo>(/storage/fifth)
+                            signer.capabilities.publish(capE, at: /public/e)
+                            let capF = signer.capabilities.storage.issue<&String>(/storage/sixth)
+                            signer.capabilities.publish(capF, at: /public/f)
                         }
                     }
                 `),
@@ -3382,8 +3389,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
                     transaction {
                         prepare(account: AuthAccount) {
                             var total = 0
-                            account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
-                                account.getCapability<&AnyStruct>(path).borrow()!
+                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                                account.capabilities.borrow<&AnyStruct>(path)!
                                 total = total + 1
                                 return true
                             })
@@ -3479,12 +3486,19 @@ func TestRuntimeStorageIteration(t *testing.T) {
                             signer.save(1, to: /storage/fourth)
                             signer.save(Test.Foo(), to: /storage/fifth)
                             signer.save("two", to: /storage/sixth)
-                            signer.link<&String>(/private/a, target:/storage/first)
-                            signer.link<&[String]>(/private/b, target:/storage/second)
-                            signer.link<&Test.Foo>(/private/c, target:/storage/third)
-                            signer.link<&Int>(/private/d, target:/storage/fourth)
-                            signer.link<&Test.Foo>(/private/e, target:/storage/fifth)
-                            signer.link<&String>(/private/f, target:/storage/sixth)
+
+                            let capA = signer.capabilities.storage.issue<&String>(/storage/first)
+                            signer.capabilities.publish(capA, at: /public/a)
+                            let capB = signer.capabilities.storage.issue<&[String]>(/storage/second)
+                            signer.capabilities.publish(capB, at: /public/b)
+                            let capC = signer.capabilities.storage.issue<&Test.Foo>(/storage/third)
+                            signer.capabilities.publish(capC, at: /public/c)
+                            let capD = signer.capabilities.storage.issue<&Int>(/storage/fourth)
+                            signer.capabilities.publish(capD, at: /public/d)
+                            let capE = signer.capabilities.storage.issue<&Test.Foo>(/storage/fifth)
+                            signer.capabilities.publish(capE, at: /public/e)
+                            let capF = signer.capabilities.storage.issue<&String>(/storage/sixth)
+                            signer.capabilities.publish(capF, at: /public/f)
                         }
                     }
                 `),
@@ -3508,8 +3522,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
                     transaction {
                         prepare(account: AuthAccount) {
                             var total = 0
-                            account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
-                                account.getCapability<&AnyStruct>(path).borrow()!
+                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                                account.capabilities.borrow<&AnyStruct>(path)!
                                 total = total + 1
                                 return true
                             })
@@ -3604,12 +3618,19 @@ func TestRuntimeStorageIteration(t *testing.T) {
                             signer.save(1, to: /storage/fourth)
                             signer.save(Test.Foo(), to: /storage/fifth)
                             signer.save("two", to: /storage/sixth)
-                            signer.link<&String>(/private/a, target:/storage/first)
-                            signer.link<&[String]>(/private/b, target:/storage/second)
-                            signer.link<&Test.Foo>(/private/c, target:/storage/third)
-                            signer.link<&Int>(/private/d, target:/storage/fourth)
-                            signer.link<&Test.Foo>(/private/e, target:/storage/fifth)
-                            signer.link<&String>(/private/f, target:/storage/sixth)
+
+                            let capA = signer.capabilities.storage.issue<&String>(/storage/first)
+                            signer.capabilities.publish(capA, at: /public/a)
+                            let capB = signer.capabilities.storage.issue<&[String]>(/storage/second)
+                            signer.capabilities.publish(capB, at: /public/b)
+                            let capC = signer.capabilities.storage.issue<&Test.Foo>(/storage/third)
+                            signer.capabilities.publish(capC, at: /public/c)
+                            let capD = signer.capabilities.storage.issue<&Int>(/storage/fourth)
+                            signer.capabilities.publish(capD, at: /public/d)
+                            let capE = signer.capabilities.storage.issue<&Test.Foo>(/storage/fifth)
+                            signer.capabilities.publish(capE, at: /public/e)
+                            let capF = signer.capabilities.storage.issue<&String>(/storage/sixth)
+                            signer.capabilities.publish(capF, at: /public/f)
                         }
                     }
                 `),
@@ -3645,8 +3666,8 @@ func TestRuntimeStorageIteration(t *testing.T) {
                     transaction {
                         prepare(account: AuthAccount) {
                             var total = 0
-                            account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
-                                account.getCapability<&AnyStruct>(path).borrow()!
+                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                                account.capabilities.borrow<&AnyStruct>(path)!
                                 total = total + 1
                                 return true
                             })
