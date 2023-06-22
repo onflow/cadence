@@ -448,7 +448,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct Test {
-                pub fun foo(): Int {
+                access(all) fun foo(): Int {
                     return 1
                 }
             }
@@ -530,7 +530,7 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct Test {
-                pub fun foo(): Int {
+                access(all) fun foo(): Int {
                     return 1
                 }
             }
@@ -858,5 +858,26 @@ func TestCheckMemberAccess(t *testing.T) {
 		errors := RequireCheckerErrors(t, err, 1)
 		typeMismatchError := &sema.TypeMismatchError{}
 		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("anyresource swap on reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource Foo {}
+
+            fun test() {
+                let dict: @{String: AnyResource} <- {"foo": <- create Foo(), "bar": <- create Foo()}
+                let dictRef = &dict as &{String: AnyResource}
+
+                dictRef["foo"] <-> dictRef["bar"]
+
+                destroy dict
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }

@@ -100,13 +100,13 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
           struct S1 {
-              pub fun getSecret(): Int {
+              access(all) fun getSecret(): Int {
                   return 0
               }
           }
 
           struct S2 {
-              priv fun getSecret(): Int {
+              access(self) fun getSecret(): Int {
                   return 42
               }
           }
@@ -135,13 +135,13 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
           struct S1 {
-              pub fun getSecret(): Int {
+              access(all) fun getSecret(): Int {
                   return 0
               }
           }
 
           struct S2 {
-              priv fun getSecret(): Int {
+              access(self) fun getSecret(): Int {
                   return 42
               }
           }
@@ -177,7 +177,7 @@ func TestInterpretContainerVariance(t *testing.T) {
          }
 
          struct S2 {
-             priv var value: Int
+             access(self) var value: Int
 
              init() {
                  self.value = 1
@@ -216,7 +216,7 @@ func TestInterpretContainerVariance(t *testing.T) {
          }
 
          struct S2 {
-             priv var value: Int
+             access(self) var value: Int
 
              init() {
                  self.value = 1
@@ -255,7 +255,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           struct S2 {
               // field is only publicly readable, not writeable
-              pub var value: Int
+              access(all) var value: Int
 
               init() {
                   self.value = 0
@@ -299,7 +299,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           struct S2 {
               // field is only publicly readable, not writeable
-              pub var value: Int
+              access(all) var value: Int
 
               init() {
                   self.value = 0
@@ -564,7 +564,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			true,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
+
+                access(all) fun setID(_ id: Int) {
+                    self.id = id
+                }
 
                 init() {
                     self.id = 1
@@ -579,7 +583,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 account.save(<-r, to: /storage/r)
 
                 // Update the reference
-                ref.id = 2
+                ref.setID(2)
             }`,
 			sema.Config{},
 			errorHandler(t),
@@ -602,7 +606,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			true,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 1
@@ -634,7 +638,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
+
+                access(all) fun setID(_ id: Int) {
+                    self.id = id
+                }
 
                 init() {
                     self.id = 1
@@ -651,7 +659,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let movedR <- target.remove(at: 0)
 
                 // Update the reference
-                ref.id = 2
+                ref.setID(2)
 
                 destroy movedR
             }
@@ -695,7 +703,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			t,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
+
+                access(all) fun setID(_ id: Int) {
+                    self.id = id
+                }
 
                 init() {
                     self.id = 1
@@ -710,7 +722,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let r2 <- r1
 
                 // Update the reference
-                ref.id = 2
+                ref.setID(2)
 
                 destroy r2
             }`,
@@ -732,7 +744,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
+
+                access(all) fun setID(_ id: Int) {
+                    self.id = id
+                }
 
                 init() {
                     self.id = 1
@@ -749,7 +765,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 target2.append(<- target1.remove(at: 0))
 
                 // Update the reference
-                ref.id = 2
+                ref.setID(2)
             }
         `)
 
@@ -812,7 +828,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
+
+                access(all) fun setID(_ id: Int) {
+                    self.id = id
+                }
 
                 init() {
                     self.id = 1
@@ -836,7 +856,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 target.append(<- movedR)
 
                 // Update the reference
-                ref.id = 2
+                ref.setID(2)
 
                 return target[1].id
             }
@@ -884,7 +904,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			true,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
+
+                access(all) fun setID(_ id: Int) {
+                    self.id = id
+                }
 
                 init() {
                     self.id = 1
@@ -899,7 +923,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
                 let r2 <- account.load<@R>(from: /storage/r)!
 
-                r1Ref.id = 2
+                r1Ref.setID(2)
                 destroy r2
             }`,
 			sema.Config{},
@@ -916,7 +940,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
 
                 init() {
                     self.id = 5
@@ -1023,10 +1047,10 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		inter := parseCheckAndInterpret(
 			t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let r <- create R()
                 let s = S()
-                s.b = &r as &R
+                s.setB(&r as &R)
 
                 let x = s.b!     // get reference from a struct field
                 let movedR <- r  // move the resource
@@ -1035,16 +1059,20 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 destroy movedR
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
                 }
             }
 
-            pub struct S {
-                pub(set) var b: &R?
+            access(all) struct S {
+                access(all) var b: &R?
+
+                access(all) fun setB(_ b: &R) {
+                    self.b = b
+                }
 
                 init() {
                     self.b = nil
@@ -1064,28 +1092,31 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		inter := parseCheckAndInterpret(
 			t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let r <- create R()
                 let s = S()
-                s.b = &r as &R
 
-                s.b = &r as &R   // assign reference to a struct field
+                s.setB(&r as &R)  // assign reference to a struct field
                 let movedR <- r  // move the resource
                 s.b!.a
 
                 destroy movedR
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
                 }
             }
 
-            pub struct S {
-                pub(set) var b: &R?
+            access(all) struct S {
+                access(all) var b: &R?
+
+                access(all) fun setB(_ b: &R) {
+                    self.b = b
+                }
 
                 init() {
                     self.b = nil
@@ -1106,7 +1137,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			t,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
+
+                access(all) fun setID(_ id: Int) {
+                    self.id = id
+                }
 
                 init() {
                     self.id = 1
@@ -1121,7 +1156,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let r <- array.remove(at: 0)
 
                 // Update the reference
-                ref.id = 2
+                ref.setID(2)
 
                 destroy r
                 destroy array
@@ -1141,7 +1176,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			t,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
+
+                access(all) fun setID(_ id: Int) {
+                    self.id = id
+                }
 
                 init() {
                     self.id = 1
@@ -1156,7 +1195,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let r <- dictionary.remove(key: 0)
 
                 // Update the reference
-                ref.id = 2
+                ref.setID(2)
 
                 destroy r
                 destroy dictionary
@@ -1193,7 +1232,11 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 			true,
 			`
             resource R {
-                pub(set) var id: Int
+                access(all) var id: Int
+
+                access(all) fun setID(_ id: Int) {
+                    self.id = id
+                }
 
                 init() {
                     self.id = 1
@@ -1207,7 +1250,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
                 destroy r
 
                 // Update the reference
-                ref.id = 2
+                ref.setID(2)
             }`,
 			sema.Config{},
 			errorHandler(t),
@@ -1225,26 +1268,30 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 		inter := parseCheckAndInterpret(
 			t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let r <- create R()
                 let s = S()
-                s.b = &r as &R
+                s.setB(&r as &R)
 
                 let x = s.b!     // get reference from a struct field
                 destroy r        // destroy the resource
                 x.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
                 }
             }
 
-            pub struct S {
-                pub(set) var b: &R?
+            access(all) struct S {
+                access(all) var b: &R?
+
+                access(all) fun setB(_ b: &R) {
+                    self.b = b
+                }
 
                 init() {
                     self.b = nil
@@ -1255,5 +1302,50 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+
 	})
+}
+
+func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      access(all) resource Foo {
+
+          access(all) let id: UInt8
+
+          init() {
+              self.id = 12
+          }
+
+          access(all) fun something() {}
+      }
+
+      fun returnSameRef(_ ref: &Foo): &Foo {
+          return ref
+      }
+
+      fun main() {
+          var foo <- create Foo()
+          var fooRef = &foo as &Foo
+
+          // Invocation should not un-track the reference
+          fooRef.something()
+
+          // just to trick the checker
+		  fooRef = returnSameRef(fooRef)
+
+          // Moving the resource should update the tracking
+          var newFoo <- foo
+
+      	  fooRef.id
+
+      	  destroy newFoo
+      }
+    `)
+
+	_, err := inter.Invoke("main")
+	require.Error(t, err)
+
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }

@@ -32,10 +32,10 @@ func TestDeployedContracts(t *testing.T) {
 	t.Parallel()
 
 	contractCode := `
-		pub contract Test {
-			pub struct A {}
-			pub resource B {}
-			pub event C()
+		access(all) contract Test {
+			access(all) struct A {}
+			access(all) resource B {}
+			access(all) event C()
 
 			init() {}
 		}

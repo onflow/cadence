@@ -651,19 +651,19 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 	t.Parallel()
 
 	code := `
-          pub contract interface Test {
+          access(all) contract interface Test {
 
-              pub struct interface NestedInterface {
-                  pub fun test(): Bool
+              access(all) struct interface NestedInterface {
+                  access(all) fun test(): Bool
               }
 
-              pub struct Nested: NestedInterface {}
+              access(all) struct Nested: NestedInterface {}
           }
 
-          pub contract TestImpl {
+          access(all) contract TestImpl {
 
-              pub struct Nested {
-                  pub fun test(): Bool {
+              access(all) struct Nested {
+                  access(all) fun test(): Bool {
                       return true
                   }
               }

@@ -41,16 +41,16 @@ func TestRuntimeSharedState(t *testing.T) {
 	signerAddress := common.MustBytesToAddress([]byte{0x1})
 
 	deploy1 := DeploymentTransaction("C1", []byte(`
-        pub contract C1 {
-            pub fun hello() {
+        access(all) contract C1 {
+            access(all) fun hello() {
                 log("Hello from C1!")
             }
         }
     `))
 
 	deploy2 := DeploymentTransaction("C2", []byte(`
-        pub contract C2 {
-            pub fun hello() {
+        access(all) contract C2 {
+            access(all) fun hello() {
                 log("Hello from C2!")
             }
         }

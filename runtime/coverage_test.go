@@ -172,7 +172,7 @@ func TestCoverageReportInspectProgram(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -199,7 +199,7 @@ func TestCoverageReportInspectProgramForExcludedLocation(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -258,7 +258,7 @@ func TestCoverageReportAddLineHit(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -301,7 +301,7 @@ func TestCoverageReportWithFlowLocation(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -347,7 +347,7 @@ func TestCoverageReportWithREPLLocation(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -393,7 +393,7 @@ func TestCoverageReportWithScriptLocation(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -439,7 +439,7 @@ func TestCoverageReportWithStringLocation(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -485,7 +485,7 @@ func TestCoverageReportWithIdentifierLocation(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -531,7 +531,7 @@ func TestCoverageReportWithTransactionLocation(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -577,7 +577,7 @@ func TestCoverageReportWithAddressLocation(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -626,7 +626,7 @@ func TestCoverageReportReset(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -723,7 +723,7 @@ func TestCoverageReportPercentage(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -773,7 +773,7 @@ func TestCoverageReportString(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -828,7 +828,7 @@ func TestCoverageReportDiff(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -893,17 +893,17 @@ func TestCoverageReportMerge(t *testing.T) {
 	t.Parallel()
 
 	integerTraitsScript := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -933,7 +933,7 @@ func TestCoverageReportMerge(t *testing.T) {
 	coverageReport.InspectProgram(location, program)
 
 	factorialScript := []byte(`
-	  pub fun factorial(_ n: Int): Int {
+	  access(all) fun factorial(_ n: Int): Int {
 	    pre {
 	      n >= 0:
 	        "factorial is only defined for integers greater than or equal to zero"
@@ -1203,17 +1203,17 @@ func TestRuntimeCoverage(t *testing.T) {
 	t.Parallel()
 
 	importedScript := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -1233,7 +1233,7 @@ func TestRuntimeCoverage(t *testing.T) {
 	    return "Enormous"
 	  }
 
-	  pub fun factorial(_ n: Int): Int {
+	  access(all) fun factorial(_ n: Int): Int {
 	    pre {
 	      n >= 0:
 	        "factorial is only defined for integers greater than or equal to zero"
@@ -1254,7 +1254,7 @@ func TestRuntimeCoverage(t *testing.T) {
 	script := []byte(`
 	  import "imported"
 
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 	    let testInputs: {Int: String} = {
 	      -1: "Negative",
 	      0: "Zero",
@@ -1377,17 +1377,17 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	t.Parallel()
 
 	importedScript := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -1411,7 +1411,7 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	script := []byte(`
 	  import "imported"
 
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 	    let testInputs: {Int: String} = {
 	      -1: "Negative",
 	      0: "Zero",
@@ -1513,17 +1513,17 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 	t.Parallel()
 
 	importedScript := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -1547,7 +1547,7 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 	script := []byte(`
 	  import "imported"
 
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 	    let testInputs: {Int: String} = {
 	      -1: "Negative",
 	      0: "Zero",
@@ -1641,6 +1641,211 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
+
+	assert.Equal(
+		t,
+		"Coverage: 100.0% of statements",
+		coverageReport.String(),
+	)
+}
+
+func TestRuntimeCoverageWithNoStatements(t *testing.T) {
+
+	t.Parallel()
+
+	importedScript := []byte(`
+	  access(all) contract FooContract {
+	    access(all) resource interface Receiver {
+	    }
+	  }
+	`)
+
+	script := []byte(`
+	  import "FooContract"
+	  access(all) fun main(): Int {
+		Type<@{FooContract.Receiver}>().identifier
+		return 42
+	  }
+	`)
+
+	coverageReport := NewCoverageReport()
+
+	scriptlocation := common.ScriptLocation{0x1b, 0x2c}
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("FooContract"):
+				return importedScript, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+	runtime := NewInterpreterRuntime(Config{
+		CoverageReport: coverageReport,
+	})
+	coverageReport.ExcludeLocation(scriptlocation)
+	value, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface:      runtimeInterface,
+			Location:       scriptlocation,
+			CoverageReport: coverageReport,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, cadence.NewInt(42), value)
+
+	_, err = json.Marshal(coverageReport)
+	require.NoError(t, err)
+
+	assert.Equal(
+		t,
+		"There are no statements to cover",
+		coverageReport.String(),
+	)
+
+	summary := coverageReport.Summary()
+
+	actual, err := json.Marshal(summary)
+	require.NoError(t, err)
+
+	expected := `
+	  {
+	    "coverage": "100.0%",
+	    "hits": 0,
+	    "locations": 0,
+	    "misses": 0,
+	    "statements": 0
+	  }
+	`
+	require.JSONEq(t, expected, string(actual))
+}
+
+func TestCoverageReportLCOVFormat(t *testing.T) {
+
+	t.Parallel()
+
+	integerTraits := []byte(`
+	  access(all) let specialNumbers: {Int: String} = {
+	    1729: "Harshad",
+	    8128: "Harmonic",
+	    41041: "Carmichael"
+	  }
+
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
+	    specialNumbers[n] = trait
+	  }
+
+	  access(all) fun getIntegerTrait(_ n: Int): String {
+	    if n < 0 {
+	      return "Negative"
+	    } else if n == 0 {
+	      return "Zero"
+	    } else if n < 10 {
+	      return "Small"
+	    } else if n < 100 {
+	      return "Big"
+	    } else if n < 1000 {
+	      return "Huge"
+	    }
+
+	    if specialNumbers.containsKey(n) {
+	      return specialNumbers[n]!
+	    }
+
+	    return "Enormous"
+	  }
+	`)
+
+	script := []byte(`
+	  import "IntegerTraits"
+
+	  access(all) fun main(): Int {
+	    let testInputs: {Int: String} = {
+	      -1: "Negative",
+	      0: "Zero",
+	      9: "Small",
+	      99: "Big",
+	      999: "Huge",
+	      1001: "Enormous",
+	      1729: "Harshad",
+	      8128: "Harmonic",
+	      41041: "Carmichael"
+	    }
+
+	    for input in testInputs.keys {
+	      let result = getIntegerTrait(input)
+	      assert(result == testInputs[input])
+	    }
+
+	    addSpecialNumber(78557, "Sierpinski")
+	    assert("Sierpinski" == getIntegerTrait(78557))
+
+	    return 42
+	  }
+	`)
+
+	coverageReport := NewCoverageReport()
+	scriptlocation := common.ScriptLocation{}
+	coverageReport.ExcludeLocation(scriptlocation)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("IntegerTraits"):
+				return integerTraits, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.CoverageReport = coverageReport
+
+	value, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface:      runtimeInterface,
+			Location:       scriptlocation,
+			CoverageReport: coverageReport,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, cadence.NewInt(42), value)
+
+	actual, err := coverageReport.MarshalLCOV()
+	require.NoError(t, err)
+
+	expected := `TN:
+SF:S.IntegerTraits
+DA:9,1
+DA:13,10
+DA:14,1
+DA:15,9
+DA:16,1
+DA:17,8
+DA:18,1
+DA:19,7
+DA:20,1
+DA:21,6
+DA:22,1
+DA:25,5
+DA:26,4
+DA:29,1
+LF:14
+LH:14
+end_of_record
+`
+	require.Equal(t, expected, string(actual))
 
 	assert.Equal(
 		t,

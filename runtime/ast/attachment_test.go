@@ -32,7 +32,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &AttachmentDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: NewIdentifier(
 			nil,
 			"Foo",
@@ -88,7 +88,7 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 		`
         {
             "Type": "AttachmentDeclaration",
-            "Access": "AccessPublic",
+            "Access": "AccessAll",
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6},
             "Identifier": {
@@ -155,7 +155,7 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 	t.Parallel()
 
 	decl := &AttachmentDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Identifier: NewIdentifier(
 			nil,
 			"Foo",
@@ -206,8 +206,8 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 	require.Equal(
 		t,
 		prettier.Concat{
-			prettier.Text("pub"),
-			prettier.Text(" "),
+			prettier.Text("access(all)"),
+			prettier.HardLine{},
 			prettier.Text("attachment"),
 			prettier.Text(" "),
 			prettier.Text("Foo"),
@@ -258,7 +258,14 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 		decl.Doc(),
 	)
 
-	require.Equal(t, "pub attachment Foo for Bar: Baz {\nrequire entitlement X\nrequire entitlement Y\n}", decl.String())
+	require.Equal(t,
+		`access(all)
+attachment Foo for Bar: Baz {
+require entitlement X
+require entitlement Y
+}`,
+		decl.String(),
+	)
 }
 
 func TestAttachExpressionMarshallJSON(t *testing.T) {

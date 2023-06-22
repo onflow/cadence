@@ -588,7 +588,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct Test {
-                pub fun foo(): Int {
+                access(all) fun foo(): Int {
                     return 1
                 }
             }
@@ -674,7 +674,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct Test {
-                pub fun foo(): Int {
+                access(all) fun foo(): Int {
                     return 1
                 }
             }
@@ -1033,6 +1033,29 @@ func TestInterpretMemberAccess(t *testing.T) {
                 var array = a!.getNestedMember()
 
                 destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("anystruct swap on reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo {
+                var array: [Int]
+                init() {
+                    self.array = []
+                }
+            }
+
+            fun test() {
+                let dict: {String: AnyStruct} = {"foo": Foo(), "bar": Foo()}
+                let dictRef = &dict as &{String: AnyStruct}
+
+                dictRef["foo"] <-> dictRef["bar"]
             }
         `)
 

@@ -39,9 +39,9 @@ func TestAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
-			pub entitlement Y
+		access(all) contract Test {
+			access(all) entitlement X
+			access(all) entitlement Y
 		}
 	`))
 
@@ -131,9 +131,9 @@ func TestAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
-			pub entitlement Y
+		access(all) contract Test {
+			access(all) entitlement X
+			access(all) entitlement Y
 		}
 	`))
 
@@ -223,21 +223,21 @@ func TestAccountEntitlementAttachmentMap(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
-			pub entitlement Y
+		access(all) contract Test {
+			access(all) entitlement X
+			access(all) entitlement Y
 
-			pub entitlement mapping M {
+			access(all) entitlement mapping M {
 				X -> Y
 			}
 
-			pub resource R {}
+			access(all) resource R {}
 			
 			access(M) attachment A for R {
 				access(Y) fun foo() {}
 			}
 
-			pub fun createRWithA(): @R {
+			access(all) fun createRWithA(): @R {
 				return <-attach A() to <-create R()
 			}
 		}
@@ -330,12 +330,12 @@ func TestAccountExportEntitledRef(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
+		access(all) contract Test {
+			access(all) entitlement X
 
-			pub resource R {}
+			access(all) resource R {}
 
-			pub fun createR(): @R {
+			access(all) fun createR(): @R {
 				return <-create R()
 			}
 		}
@@ -343,7 +343,7 @@ func TestAccountExportEntitledRef(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		pub fun main(): &Test.R { 
+		access(all) fun main(): &Test.R { 
 			let r <- Test.createR()
 			let authAccount = getAuthAccount(0x1)
 			authAccount.save(<-r, to: /storage/foo)
@@ -407,22 +407,22 @@ func TestAccountEntitlementNamingConflict(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub entitlement X
+		access(all) contract Test {
+			access(all) entitlement X
 
-			pub resource R {
+			access(all) resource R {
 				access(X) fun foo() {}
 			}
 
-			pub fun createR(): @R {
+			access(all) fun createR(): @R {
 				return <-create R()
 			}
 		}
 	`))
 
 	otherDeployTx := DeploymentTransaction("OtherTest", []byte(`
-		pub contract OtherTest {
-			pub entitlement X
+		access(all) contract OtherTest {
+			access(all) entitlement X
 		}
 	`))
 
@@ -430,7 +430,7 @@ func TestAccountEntitlementNamingConflict(t *testing.T) {
 		import Test from 0x1
 		import OtherTest from 0x1
 
-		pub fun main(){ 
+		access(all) fun main(){ 
 			let r <- Test.createR()
 			let ref = &r as auth(OtherTest.X) &Test.R
 			ref.foo()
@@ -500,4 +500,323 @@ func TestAccountEntitlementNamingConflict(t *testing.T) {
 
 	var accessError *sema.InvalidAccessError
 	require.ErrorAs(t, errs[0], &accessError)
+}
+
+func TestAccountEntitlementCapabilityCasting(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntimeWithAttachments()
+	accountCodes := map[Location][]byte{}
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+		access(all) contract Test {
+			access(all) entitlement X
+			access(all) entitlement Y
+
+			access(all) resource R {}
+
+			access(all) fun createR(): @R {
+				return <-create R()
+			}
+		}
+	`))
+
+	transaction1 := []byte(`
+		import Test from 0x1
+		transaction {
+			prepare(signer: AuthAccount) {
+				let r <- Test.createR()
+				signer.save(<-r, to: /storage/foo)
+				signer.link<auth(Test.X) &Test.R>(/public/foo, target: /storage/foo)
+			}
+		}
+	 `)
+
+	transaction2 := []byte(`
+		import Test from 0x1
+		transaction {
+			prepare(signer: AuthAccount) {
+				let capX = signer.getCapability<auth(Test.X) &Test.R>(/public/foo)
+				let upCap = capX as Capability<&Test.R>
+				let downCap = upCap as! Capability<auth(Test.X) &Test.R>
+			}
+		}
+	 `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log:     func(message string) {},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: transaction1,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: transaction2,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+}
+
+func TestAccountEntitlementCapabilityDictionary(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntimeWithAttachments()
+	accountCodes := map[Location][]byte{}
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+		access(all) contract Test {
+			access(all) entitlement X
+			access(all) entitlement Y
+
+			access(all) resource R {}
+
+			access(all) fun createR(): @R {
+				return <-create R()
+			}
+		}
+	`))
+
+	transaction1 := []byte(`
+		import Test from 0x1
+		transaction {
+			prepare(signer: AuthAccount) {
+				let r <- Test.createR()
+				signer.save(<-r, to: /storage/foo)
+				signer.link<auth(Test.X) &Test.R>(/public/foo, target: /storage/foo)
+
+				let r2 <- Test.createR()
+				signer.save(<-r2, to: /storage/bar)
+				signer.link<auth(Test.Y) &Test.R>(/public/bar, target: /storage/bar)
+			}
+		}
+	 `)
+
+	transaction2 := []byte(`
+		import Test from 0x1
+		transaction {
+			prepare(signer: AuthAccount) {
+				let capX = signer.getCapability<auth(Test.X) &Test.R>(/public/foo)
+				let capY = signer.getCapability<auth(Test.Y) &Test.R>(/public/bar)
+
+				let dict: {Type: Capability<&Test.R>} = {}
+				dict[capX.getType()] = capX
+				dict[capY.getType()] = capY
+
+				let newCapX = dict[capX.getType()]!
+				let ref = newCapX.borrow()!
+				let downCast = ref as! auth(Test.X) &Test.R
+			}
+		}
+	 `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log:     func(message string) {},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: transaction1,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: transaction2,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+}
+
+func TestAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntimeWithAttachments()
+	accountCodes := map[Location][]byte{}
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+		access(all) contract Test {
+			access(all) entitlement X
+			access(all) entitlement Y
+
+			access(all) resource R {}
+
+			access(all) fun createR(): @R {
+				return <-create R()
+			}
+		}
+	`))
+
+	transaction1 := []byte(`
+		import Test from 0x1
+		transaction {
+			prepare(signer: AuthAccount) {
+				let r <- Test.createR()
+				signer.save(<-r, to: /storage/foo)
+				signer.link<auth(Test.X) &Test.R>(/public/foo, target: /storage/foo)
+
+				let r2 <- Test.createR()
+				signer.save(<-r2, to: /storage/bar)
+				signer.link<auth(Test.Y) &Test.R>(/public/bar, target: /storage/bar)
+			}
+		}
+	 `)
+
+	transaction2 := []byte(`
+		import Test from 0x1
+		transaction {
+			prepare(signer: AuthAccount) {
+				let capX = signer.getCapability<auth(Test.X) &Test.R>(/public/foo)
+				let capY = signer.getCapability<auth(Test.Y) &Test.R>(/public/bar)
+
+				let dict: {Type: Capability} = {}
+				dict[capX.getType()] = capX
+				dict[capY.getType()] = capY
+
+				let newCapX = dict[capX.getType()]!
+				let ref = newCapX.borrow<auth(Test.X) &Test.R>()!
+				let downCast = ref as! auth(Test.X) &Test.R
+			}
+		}
+	 `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log:     func(message string) {},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: transaction1,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: transaction2,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	require.NoError(t, err)
 }

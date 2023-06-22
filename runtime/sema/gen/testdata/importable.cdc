@@ -1,1 +1,1 @@
-pub struct Test: Importable {}
+access(all) struct Test: Importable {}

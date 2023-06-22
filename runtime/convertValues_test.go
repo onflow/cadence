@@ -375,6 +375,11 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.NewWord128(42),
 		},
 		{
+			label:    "Word256",
+			value:    interpreter.NewUnmeteredWord256ValueFromUint64(42),
+			expected: cadence.NewWord256(42),
+		},
+		{
 			label:    "Fix64",
 			value:    interpreter.NewUnmeteredFix64Value(-123000000),
 			expected: cadence.Fix64(-123000000),
@@ -814,6 +819,11 @@ func TestImportValue(t *testing.T) {
 			expected: interpreter.NewUnmeteredWord128ValueFromUint64(42),
 		},
 		{
+			label:    "Word256",
+			value:    cadence.NewWord256(42),
+			expected: interpreter.NewUnmeteredWord256ValueFromUint64(42),
+		},
+		{
 			label:    "Fix64",
 			value:    cadence.Fix64(-123000000),
 			expected: interpreter.NewUnmeteredFix64Value(-123000000),
@@ -1087,6 +1097,11 @@ func TestImportRuntimeType(t *testing.T) {
 			label:    "Word128",
 			actual:   cadence.Word128Type{},
 			expected: interpreter.PrimitiveStaticTypeWord128,
+		},
+		{
+			label:    "Word256",
+			actual:   cadence.Word256Type{},
+			expected: interpreter.PrimitiveStaticTypeWord256,
 		},
 		{
 			label:    "Fix64",
@@ -1398,7 +1413,7 @@ func TestExportIntegerValuesFromScript(t *testing.T) {
 
 			script := fmt.Sprintf(
 				`
-                  pub fun main(): %s {
+                  access(all) fun main(): %s {
                       return 42
                   }
                 `,
@@ -1428,7 +1443,7 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 
 			script := fmt.Sprintf(
 				`
-                  pub fun main(): %s {
+                  access(all) fun main(): %s {
                       return %s
                   }
                 `,
@@ -1460,7 +1475,7 @@ func TestExportAddressValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub fun main(): Address {
+        access(all) fun main(): Address {
             return 0x42
         }
     `
@@ -1478,15 +1493,15 @@ func TestExportStructValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub struct Foo {
-            pub let bar: Int
+        access(all) struct Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): Foo {
+        access(all) fun main(): Foo {
             return Foo(bar: 42)
         }
     `
@@ -1498,8 +1513,11 @@ func TestExportStructValue(t *testing.T) {
 	}
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42)}).
-		WithType(fooStructType)
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewStruct([]cadence.Value{
+			cadence.NewInt(42),
+		}).WithType(fooStructType),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1509,25 +1527,26 @@ func TestExportResourceValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub resource Foo {
-            pub let bar: Int
+        access(all) resource Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): @Foo {
+        access(all) fun main(): @Foo {
             return <- create Foo(bar: 42)
         }
     `
 
 	actual := exportValueFromScript(t, script)
-	expected :=
+	expected := cadence.ValueWithCachedTypeID(
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUInt64(0),
 			cadence.NewInt(42),
-		}).WithType(newFooResourceType())
+		}).WithType(newFooResourceType()),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1537,47 +1556,52 @@ func TestExportResourceArrayValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub resource Foo {
-            pub let bar: Int
+        access(all) resource Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): @[Foo] {
+        access(all) fun main(): @[Foo] {
             return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)]
         }
     `
 
 	fooResourceType := newFooResourceType()
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewArray([]cadence.Value{
-		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(1),
-		}).WithType(fooResourceType),
-		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(2),
-		}).WithType(fooResourceType),
-	}).WithType(&cadence.VariableSizedArrayType{
-		ElementType: &cadence.ResourceType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "uuid",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "bar",
-					Type:       cadence.IntType{},
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewArray([]cadence.Value{
+			cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(1),
+			}).WithType(fooResourceType),
+			cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(2),
+			}).WithType(fooResourceType),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: &cadence.ResourceType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "uuid",
+						Type:       cadence.UInt64Type{},
+					},
+					{
+						Identifier: "bar",
+						Type:       cadence.IntType{},
+					},
 				},
 			},
-		},
-	})
+		}),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1587,15 +1611,15 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub resource Foo {
-            pub let bar: Int
+        access(all) resource Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): @{String: Foo} {
+        access(all) fun main(): @{String: Foo} {
             return <- {
                 "a": <- create Foo(bar: 1),
                 "b": <- create Foo(bar: 2)
@@ -1605,39 +1629,44 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewDictionary([]cadence.KeyValuePair{
-		{
-			Key: cadence.String("b"),
-			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(2),
-			}).WithType(fooResourceType),
-		},
-		{
-			Key: cadence.String("a"),
-			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(1),
-			}).WithType(fooResourceType),
-		},
-	}).WithType(&cadence.DictionaryType{
-		KeyType: cadence.StringType{},
-		ElementType: &cadence.ResourceType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "uuid",
-					Type:       cadence.UInt64Type{},
-				},
-				{
-					Identifier: "bar",
-					Type:       cadence.IntType{},
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key: cadence.String("b"),
+				Value: cadence.NewResource([]cadence.Value{
+					cadence.NewUInt64(0),
+					cadence.NewInt(2),
+				}).WithType(fooResourceType),
+			},
+			{
+				Key: cadence.String("a"),
+				Value: cadence.NewResource([]cadence.Value{
+					cadence.NewUInt64(0),
+					cadence.NewInt(1),
+				}).WithType(fooResourceType),
+			},
+		}).WithType(&cadence.DictionaryType{
+			KeyType: cadence.StringType{},
+			ElementType: &cadence.ResourceType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "uuid",
+						Type:       cadence.UInt64Type{},
+					},
+					{
+						Identifier: "bar",
+						Type:       cadence.IntType{},
+					},
 				},
 			},
-		},
-	})
+		}),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1677,16 +1706,16 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	}
 
 	script := `
-        pub resource Bar {
-            pub let x: Int
+        access(all) resource Bar {
+            access(all) let x: Int
 
             init(x: Int) {
                 self.x = x
             }
         }
 
-        pub resource Foo {
-            pub let bar: @Bar
+        access(all) resource Foo {
+            access(all) let bar: @Bar
 
             init(bar: @Bar) {
                 self.bar <- bar
@@ -1697,19 +1726,23 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
             }
         }
 
-        pub fun main(): @Foo {
+        access(all) fun main(): @Foo {
             return <- create Foo(bar: <- create Bar(x: 42))
         }
     `
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewResource([]cadence.Value{
-		cadence.NewUInt64(0),
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+	expected := cadence.ValueWithCachedTypeID(
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUInt64(0),
-			cadence.NewInt(42),
-		}).WithType(barResourceType),
-	}).WithType(fooResourceType)
+			cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(0),
+				cadence.NewInt(42),
+			}).WithType(barResourceType),
+		}).WithType(fooResourceType),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1719,9 +1752,9 @@ func TestExportEventValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub event Foo(bar: Int)
+        access(all) event Foo(bar: Int)
 
-        pub fun main() {
+        access(all) fun main() {
             emit Foo(bar: 42)
         }
     `
@@ -1796,7 +1829,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): &Int {
+            access(all) fun main(): &Int {
                 return &1 as &Int
             }
         `
@@ -1812,7 +1845,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): [&AnyStruct] {
+            access(all) fun main(): [&AnyStruct] {
                 let refs: [&AnyStruct] = []
                 refs.append(&refs as &AnyStruct)
                 return refs
@@ -1885,7 +1918,7 @@ func TestExportReferenceValue(t *testing.T) {
 		require.NoError(t, err)
 
 		script := `
-            pub fun main(): &AnyStruct {
+            access(all) fun main(): &AnyStruct {
                 return getAccount(0x1).getCapability(/public/test).borrow<&AnyStruct>()!
             }
         `
@@ -1911,7 +1944,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): &AnyStruct {
+            access(all) fun main(): &AnyStruct {
                 var acct = getAuthAccount(0x01)
 	            var v:[AnyStruct] = []
 	            acct.save(v, to: /storage/x)
@@ -1946,7 +1979,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): &AnyStruct {
+            access(all) fun main(): &AnyStruct {
                 var acct = getAuthAccount(0x01)
 	            var v:[AnyStruct] = []
 	            acct.save(v, to: /storage/x)
@@ -1988,7 +2021,7 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Type {
+            access(all) fun main(): Type {
                 return Type<Int>()
             }
         `
@@ -2006,9 +2039,9 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {}
+            access(all) struct S {}
 
-            pub fun main(): Type {
+            access(all) fun main(): Type {
                 return Type<S>()
             }
         `
@@ -2030,7 +2063,7 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Type {
+            access(all) fun main(): Type {
                 return CompositeType("PublicKey")!
             }
         `
@@ -2068,9 +2101,9 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		const code = `
-          pub struct interface SI {}
+          access(all) struct interface SI {}
 
-          pub struct S: SI {}
+          access(all) struct S: SI {}
 
         `
 		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
@@ -2446,9 +2479,9 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub struct Foo {
-            pub let answer: Int
-            pub let f: fun(): Void
+        access(all) struct Foo {
+            access(all) let answer: Int
+            access(all) let f: fun(): Void
 
             init() {
                 self.answer = 42
@@ -2456,7 +2489,7 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
             }
         }
 
-        pub fun main(): Foo {
+        access(all) fun main(): Foo {
             return Foo()
         }
     `
@@ -2478,15 +2511,20 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 		},
 	}
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{
-		cadence.NewInt(42),
-		cadence.Function{
-			FunctionType: &cadence.FunctionType{
-				ReturnType: cadence.VoidType{},
+	actual := cadence.ValueWithCachedTypeID(
+		exportValueFromScript(t, script),
+	)
+
+	expected := cadence.ValueWithCachedTypeID(
+		cadence.NewStruct([]cadence.Value{
+			cadence.NewInt(42),
+			cadence.Function{
+				FunctionType: &cadence.FunctionType{
+					ReturnType: cadence.VoidType{},
+				},
 			},
-		},
-	}).WithType(fooStructType)
+		}).WithType(fooStructType),
+	)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2573,44 +2611,55 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 	t.Parallel()
 
-	enumValue := cadence.Enum{
-		EnumType: &cadence.EnumType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Direction",
-			Fields: []cadence.Field{
-				{
-					Identifier: sema.EnumRawValueFieldName,
-					Type:       cadence.IntType{},
+	newEnumValue := func() cadence.Enum {
+		return cadence.Enum{
+			EnumType: &cadence.EnumType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Direction",
+				Fields: []cadence.Field{
+					{
+						Identifier: sema.EnumRawValueFieldName,
+						Type:       cadence.IntType{},
+					},
 				},
+				RawType: cadence.IntType{},
 			},
-			RawType: cadence.IntType{},
-		},
-		Fields: []cadence.Value{
-			cadence.NewInt(3),
-		},
+			Fields: []cadence.Value{
+				cadence.NewInt(3),
+			},
+		}
 	}
 
 	t.Run("test export", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
-            pub fun main(): Direction {
+            access(all) fun main(): Direction {
                 return Direction.RIGHT
             }
 
-            pub enum Direction: Int {
-                pub case UP
-                pub case DOWN
-                pub case LEFT
-                pub case RIGHT
+            access(all) enum Direction: Int {
+                access(all) case UP
+                access(all) case DOWN
+                access(all) case LEFT
+                access(all) case RIGHT
             }
         `
 
+		expected := newEnumValue()
 		actual := exportValueFromScript(t, script)
-		assert.Equal(t, enumValue, actual)
+
+		assert.Equal(t,
+			cadence.ValueWithCachedTypeID(expected),
+			cadence.ValueWithCachedTypeID(actual),
+		)
 	})
 
 	t.Run("test import", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
-            pub fun main(dir: Direction): Direction {
+            access(all) fun main(dir: Direction): Direction {
                 if !dir.isInstance(Type<Direction>()) {
                     panic("Not a Direction value")
                 }
@@ -2618,17 +2667,19 @@ func TestRuntimeEnumValue(t *testing.T) {
                 return dir
             }
 
-            pub enum Direction: Int {
-                pub case UP
-                pub case DOWN
-                pub case LEFT
-                pub case RIGHT
+            access(all) enum Direction: Int {
+                access(all) case UP
+                access(all) case DOWN
+                access(all) case LEFT
+                access(all) case RIGHT
             }
         `
 
-		actual, err := executeTestScript(t, script, enumValue)
+		expected := newEnumValue()
+		actual, err := executeTestScript(t, script, expected)
 		require.NoError(t, err)
-		assert.Equal(t, enumValue, actual)
+
+		assert.Equal(t, expected, actual)
 	})
 }
 
@@ -2834,6 +2885,11 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewWord128(42),
 		},
 		{
+			label:         "Word256",
+			typeSignature: "Word256",
+			exportedValue: cadence.NewWord256(42),
+		},
+		{
 			label:         "Fix64",
 			typeSignature: "Fix64",
 			exportedValue: cadence.Fix64(-123000000),
@@ -2892,7 +2948,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			}
 
 			script := fmt.Sprintf(
-				`pub fun main(arg: %[1]s)%[2]s {
+				`access(all) fun main(arg: %[1]s)%[2]s {
 
                     if !arg.isInstance(Type<%[1]s>()) {
                         panic("Not a %[1]s value")
@@ -3029,7 +3085,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 
 	script := fmt.Sprintf(
 		`
-          pub fun main(arg: %[1]s): %[1]s {
+          access(all) fun main(arg: %[1]s): %[1]s {
 
               if !arg.isInstance(Type<%[1]s>()) {
                   panic("Not a %[1]s value")
@@ -3038,17 +3094,17 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
               return arg
           }
 
-          pub struct Foo {
-              pub var a: String?
-              pub var b: {String: String}
-              pub var c: [String]
-              pub var d: [String; 2]
-              pub var e: Address
-              pub var f: Bool
-              pub var g: StoragePath
-              pub var h: PublicPath
-              pub var i: PrivatePath
-              pub var j: AnyStruct
+          access(all) struct Foo {
+              access(all) var a: String?
+              access(all) var b: {String: String}
+              access(all) var c: [String]
+              access(all) var d: [String; 2]
+              access(all) var e: Address
+              access(all) var f: Bool
+              access(all) var g: StoragePath
+              access(all) var h: PublicPath
+              access(all) var i: PrivatePath
+              access(all) var j: AnyStruct
 
               init() {
                   self.a = "Hello"
@@ -3151,7 +3207,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 
 	script := fmt.Sprintf(
 		`
-          pub fun main(arg: %[1]s): %[1]s {
+          access(all) fun main(arg: %[1]s): %[1]s {
 
               if !arg.isInstance(Type<%[1]s>()) {
                   panic("Not a %[1]s value")
@@ -3160,12 +3216,12 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
               return arg
           }
 
-          pub struct Foo {
-              pub var a: AnyStruct?
-              pub var b: {String: AnyStruct}
-              pub var c: [AnyStruct]
-              pub var d: [AnyStruct; 2]
-              pub var e: AnyStruct
+          access(all) struct Foo {
+              access(all) var a: AnyStruct?
+              access(all) var b: {String: AnyStruct}
+              access(all) var c: [AnyStruct]
+              access(all) var d: [AnyStruct; 2]
+              access(all) var e: AnyStruct
 
               init() {
                   self.a = "Hello"
@@ -3192,107 +3248,119 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 
 	// Struct with wrong field type
 
-	malformedStructType1 := &cadence.StructType{
-		Location:            common.ScriptLocation{},
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "a",
-				Type:       cadence.IntType{},
-			},
-		},
-	}
-
-	malformedStruct1 := cadence.Struct{
-		StructType: malformedStructType1,
-		Fields: []cadence.Value{
-			cadence.NewInt(3),
-		},
-	}
-
-	// Struct with wrong field name
-
-	malformedStruct2 := cadence.Struct{
-		StructType: &cadence.StructType{
+	newMalformedStructType1 := func() *cadence.StructType {
+		return &cadence.StructType{
 			Location:            common.ScriptLocation{},
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
-					Identifier: "nonExisting",
-					Type:       cadence.StringType{},
+					Identifier: "a",
+					Type:       cadence.IntType{},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.String("John"),
-		},
+		}
+	}
+
+	newMalformedStruct1 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: newMalformedStructType1(),
+			Fields: []cadence.Value{
+				cadence.NewInt(3),
+			},
+		}
+	}
+
+	// Struct with wrong field name
+
+	newMalformedStruct2 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "nonExisting",
+						Type:       cadence.StringType{},
+					},
+				},
+			},
+			Fields: []cadence.Value{
+				cadence.String("John"),
+			},
+		}
 	}
 
 	// Struct with nested malformed array value
-	malformedStruct3 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.VariableSizedArrayType{
-						ElementType: malformedStructType1,
+	newMalformedStruct3 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Bar",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type: &cadence.VariableSizedArrayType{
+							ElementType: newMalformedStructType1(),
+						},
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewArray([]cadence.Value{
-				malformedStruct1,
-			}),
-		},
+			Fields: []cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					newMalformedStruct1(),
+				}),
+			},
+		}
 	}
 
 	// Struct with nested malformed dictionary value
-	malformedStruct4 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Baz",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.DictionaryType{
-						KeyType:     cadence.StringType{},
-						ElementType: malformedStructType1,
+	newMalformedStruct4 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Baz",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type: &cadence.DictionaryType{
+							KeyType:     cadence.StringType{},
+							ElementType: newMalformedStructType1(),
+						},
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key:   cadence.String("foo"),
-					Value: malformedStruct1,
-				},
-			}),
-		},
+			Fields: []cadence.Value{
+				cadence.NewDictionary([]cadence.KeyValuePair{
+					{
+						Key:   cadence.String("foo"),
+						Value: newMalformedStruct1(),
+					},
+				}),
+			},
+		}
 	}
 
 	// Struct with nested array with mismatching element type
-	malformedStruct5 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.VariableSizedArrayType{
-						ElementType: malformedStructType1,
+	newMalformedStruct5 := func() cadence.Struct {
+		return cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            common.ScriptLocation{},
+				QualifiedIdentifier: "Bar",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type: &cadence.VariableSizedArrayType{
+							ElementType: newMalformedStructType1(),
+						},
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewArray([]cadence.Value{
-				cadence.String("mismatching value"),
-			}),
-		},
+			Fields: []cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.String("mismatching value"),
+				}),
+			},
+		}
 	}
 
 	type argumentPassingTest struct {
@@ -3307,38 +3375,38 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:                                    "Malformed Struct field type",
 			typeSignature:                            "Foo",
-			exportedValue:                            malformedStruct1,
+			exportedValue:                            newMalformedStruct1(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Struct field name",
 			typeSignature:                            "Foo",
-			exportedValue:                            malformedStruct2,
+			exportedValue:                            newMalformedStruct2(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed AnyStruct",
 			typeSignature:                            "AnyStruct",
-			exportedValue:                            malformedStruct1,
+			exportedValue:                            newMalformedStruct1(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed nested struct array",
 			typeSignature:                            "Bar",
-			exportedValue:                            malformedStruct3,
+			exportedValue:                            newMalformedStruct3(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed nested struct dictionary",
 			typeSignature:                            "Baz",
-			exportedValue:                            malformedStruct4,
+			exportedValue:                            newMalformedStruct4(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Variable-size array with malformed element",
 			typeSignature: "[Foo]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				malformedStruct1,
+				newMalformedStruct1(),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -3346,7 +3414,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			label:         "Constant-size array with malformed element",
 			typeSignature: "[Foo; 1]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				malformedStruct1,
+				newMalformedStruct1(),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -3381,13 +3449,13 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:                                    "Inner array with mismatching element",
 			typeSignature:                            "Bar",
-			exportedValue:                            malformedStruct5,
+			exportedValue:                            newMalformedStruct5(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Optional",
 			typeSignature:                            "Foo?",
-			exportedValue:                            cadence.NewOptional(malformedStruct1),
+			exportedValue:                            cadence.NewOptional(newMalformedStruct1()),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
@@ -3396,7 +3464,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("foo"),
-					Value: malformedStruct1,
+					Value: newMalformedStruct1(),
 				},
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
@@ -3410,7 +3478,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			t.Parallel()
 
 			script := fmt.Sprintf(
-				`pub fun main(arg: %[1]s): %[1]s {
+				`access(all) fun main(arg: %[1]s): %[1]s {
 
                     if !arg.isInstance(Type<%[1]s>()) {
                         panic("Not a %[1]s value")
@@ -3419,24 +3487,24 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
                     return arg
                 }
 
-                pub struct Foo {
-                    pub var a: String
+                access(all) struct Foo {
+                    access(all) var a: String
 
                     init() {
                         self.a = "Hello"
                     }
                 }
 
-                pub struct Bar {
-                    pub var a: [Foo]
+                access(all) struct Bar {
+                    access(all) var a: [Foo]
 
                     init() {
                         self.a = []
                     }
                 }
 
-                pub struct Baz {
-                    pub var a: {String: Foo}
+                access(all) struct Baz {
+                    access(all) var a: {String: Foo}
 
                     init() {
                         self.a = {}
@@ -3931,11 +3999,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		t.Parallel()
 
 		script :=
-			`pub fun main(arg: Foo) {
+			`access(all) fun main(arg: Foo) {
             }
 
-            pub struct Foo {
-                pub var a: AnyStruct
+            access(all) struct Foo {
+                access(all) var a: AnyStruct
 
                 init() {
                     self.a = nil
@@ -3982,7 +4050,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		t.Parallel()
 
 		script :=
-			`pub fun main(arg: {String: {String: String}}) {
+			`access(all) fun main(arg: {String: {String: String}}) {
             }
             `
 
@@ -4026,7 +4094,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		stringValue := cadence.String(nonUTF8String)
 
 		script := `
-            pub fun main(s: String) {
+            access(all) fun main(s: String) {
                 log(s)
             }
         `
@@ -4079,7 +4147,7 @@ func TestTypeValueImport(t *testing.T) {
 		typeValue := cadence.NewTypeValue(cadence.IntType{})
 
 		script := `
-            pub fun main(s: Type) {
+            access(all) fun main(s: Type) {
                 log(s.identifier)
             }
         `
@@ -4131,7 +4199,7 @@ func TestTypeValueImport(t *testing.T) {
 		})
 
 		script := `
-            pub fun main(s: Type) {
+            access(all) fun main(s: Type) {
             }
         `
 
@@ -4184,7 +4252,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<&Int>) {
+            access(all) fun main(s: Capability<&Int>) {
                 log(s)
             }
         `
@@ -4238,7 +4306,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<Int>) {
+            access(all) fun main(s: Capability<Int>) {
             }
         `
 
@@ -4285,7 +4353,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<&Int>) {
+            access(all) fun main(s: Capability<&Int>) {
             }
         `
 
@@ -4332,7 +4400,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<&Int>) {
+            access(all) fun main(s: Capability<&Int>) {
             }
         `
 
@@ -4386,7 +4454,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<S>) {
+            access(all) fun main(s: Capability<S>) {
             }
         `
 
@@ -4435,7 +4503,7 @@ func TestIDCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<&Int>) {
+            access(all) fun main(s: Capability<&Int>) {
             }
         `
 
@@ -4479,7 +4547,7 @@ func TestIDCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<Int>) {
+            access(all) fun main(s: Capability<Int>) {
             }
         `
 
@@ -4530,7 +4598,7 @@ func TestIDCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<S>) {
+            access(all) fun main(s: Capability<S>) {
             }
         `
 
@@ -4608,7 +4676,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 					t.Parallel()
 
 					script := `
-                        pub fun main(key: PublicKey) {
+                        access(all) fun main(key: PublicKey) {
                         }
                     `
 
@@ -4673,7 +4741,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(key: PublicKey): Bool {
+            access(all) fun main(key: PublicKey): Bool {
                 return key.verify(
                     signature: [],
                     signedData: [],
@@ -4732,7 +4800,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid raw public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4771,7 +4839,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid content in public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4813,7 +4881,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid sign algo", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4848,7 +4916,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid sign algo fields", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4887,7 +4955,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Extra field", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4978,7 +5046,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing raw public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): PublicKey {
+            access(all) fun main(key: PublicKey): PublicKey {
                 return key
             }
         `
@@ -5045,7 +5113,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing publicKey", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): [UInt8] {
+            access(all) fun main(key: PublicKey): [UInt8] {
                 return key.publicKey
             }
         `
@@ -5120,7 +5188,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing signatureAlgorithm", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): SignatureAlgorithm {
+            access(all) fun main(key: PublicKey): SignatureAlgorithm {
                 return key.signatureAlgorithm
             }
         `
@@ -5388,11 +5456,11 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 	t.Run("inner array", func(t *testing.T) {
 		script := `
-            pub fun main(arg: Foo) {
+            access(all) fun main(arg: Foo) {
             }
 
-            pub struct Foo {
-                pub var a: AnyStruct
+            access(all) struct Foo {
+                access(all) var a: AnyStruct
 
                 init() {
                     self.a = nil
@@ -5426,11 +5494,11 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 	t.Run("inner dictionary", func(t *testing.T) {
 		script := `
-            pub fun main(arg: Foo) {
+            access(all) fun main(arg: Foo) {
             }
 
-            pub struct Foo {
-                pub var a: AnyStruct
+            access(all) struct Foo {
+                access(all) var a: AnyStruct
 
                 init() {
                     self.a = nil
@@ -5494,12 +5562,12 @@ func TestNestedStructArgPassing(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(v: AnyStruct): UInt8 {
+            access(all) fun main(v: AnyStruct): UInt8 {
                 return (v as! Foo).bytes[0]
             }
 
-            pub struct Foo {
-                pub let bytes: [UInt8]
+            access(all) struct Foo {
+                access(all) let bytes: [UInt8]
 
                 init(_ bytes: [UInt8]) {
                     self.bytes = bytes
@@ -5566,10 +5634,10 @@ func TestNestedStructArgPassing(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(v: AnyStruct) {
+            access(all) fun main(v: AnyStruct) {
             }
 
-            pub struct interface Foo {
+            access(all) struct interface Foo {
             }
         `
 
@@ -5636,9 +5704,9 @@ func TestDestroyedResourceReferenceExport(t *testing.T) {
 	rt := newTestInterpreterRuntimeWithAttachments()
 
 	script := []byte(`
-        pub resource S {}
+        access(all) resource S {}
 
-        pub fun main(): &S  {
+        access(all) fun main(): &S  {
             var s <- create S()
             var ref = &s as &S
 
@@ -5650,7 +5718,7 @@ func TestDestroyedResourceReferenceExport(t *testing.T) {
             return ref2!
         }
 
-        pub fun getRef(_ ref: &S): &S  {
+        access(all) fun getRef(_ ref: &S): &S  {
             return ref
         }
 	 `)
