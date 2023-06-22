@@ -127,27 +127,6 @@ const TestTypeTestIntersectionWithoutTypeFieldDocString = `
 This is a test intersection type (without type) field.
 `
 
-const TestTypeTestIntersectionWithTypeFieldName = "testIntersectionWithType"
-
-var TestTypeTestIntersectionWithTypeFieldType = &IntersectionType{
-	Type:  FooType,
-	Types: []*InterfaceType{BarType, BazType},
-}
-
-const TestTypeTestIntersectionWithTypeFieldDocString = `
-This is a test intersection type (with type) field.
-`
-
-const TestTypeTestIntersectionWithoutTypesFieldName = "testIntersectionWithoutTypes"
-
-var TestTypeTestIntersectionWithoutTypesFieldType = &IntersectionType{
-	Type: FooType,
-}
-
-const TestTypeTestIntersectionWithoutTypesFieldDocString = `
-This is a test intersection type (without types) field.
-`
-
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
@@ -253,22 +232,6 @@ func init() {
 				TestTypeTestIntersectionWithoutTypeFieldName,
 				TestTypeTestIntersectionWithoutTypeFieldType,
 				TestTypeTestIntersectionWithoutTypeFieldDocString,
-			),
-			NewUnmeteredFieldMember(
-				t,
-				ast.AccessAll,
-				ast.VariableKindConstant,
-				TestTypeTestIntersectionWithTypeFieldName,
-				TestTypeTestIntersectionWithTypeFieldType,
-				TestTypeTestIntersectionWithTypeFieldDocString,
-			),
-			NewUnmeteredFieldMember(
-				t,
-				ast.AccessAll,
-				ast.VariableKindConstant,
-				TestTypeTestIntersectionWithoutTypesFieldName,
-				TestTypeTestIntersectionWithoutTypesFieldType,
-				TestTypeTestIntersectionWithoutTypesFieldDocString,
 			),
 		})
 	}

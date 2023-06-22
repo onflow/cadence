@@ -20,7 +20,6 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 var _ ast.TypeEqualityChecker = &TypeComparator{}
@@ -220,25 +219,6 @@ func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 		}
 	}
 	return true
-}
-
-func isAnyStructOrAnyResourceType(astType ast.Type) bool {
-	// If the intersection type is not stated, then it is either AnyStruct or AnyResource
-	if astType == nil {
-		return true
-	}
-
-	nominalType, ok := astType.(*ast.NominalType)
-	if !ok {
-		return false
-	}
-
-	switch nominalType.Identifier.Identifier {
-	case sema.AnyStructType.Name, sema.AnyResourceType.Name:
-		return true
-	default:
-		return false
-	}
 }
 
 func newTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismatchError {

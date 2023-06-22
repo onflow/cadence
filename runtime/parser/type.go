@@ -80,17 +80,6 @@ func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDen
 	typeLeftDenotations[tokenType] = leftDenotation
 }
 
-func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typeMetaLeftDenotationFunc) {
-	current := typeMetaLeftDenotations[tokenType]
-	if current != nil {
-		panic(errors.NewUnexpectedError(
-			"type meta left denotation for token %s already exists",
-			tokenType,
-		))
-	}
-	typeMetaLeftDenotations[tokenType] = metaLeftDenotation
-}
-
 type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) ast.Type
 type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
 

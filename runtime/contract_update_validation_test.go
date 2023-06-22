@@ -1469,7 +1469,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.b = TestStruct()
                 }
 
-                access(all) struct TestStruct:TestInterface {
+                access(all) struct TestStruct: TestInterface {
                     access(all) let a: Int
                     init() {
                         self.a = 123
@@ -1493,7 +1493,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.b = TestStruct()
                 }
 
-                access(all) struct TestStruct:TestInterface {
+                access(all) struct TestStruct: TestInterface {
                     access(all) let a: Int
                     init() {
                         self.a = 123
@@ -1514,7 +1514,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			"incompatible type annotations. expected `TestStruct`")
 
 		assert.Contains(t, err.Error(), "access(all) var b: TestStruct"+
-			"\n  |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^ "+
+			"\n  |                                    ^^^^^^^^^^ "+
 			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct`")
 	})
 

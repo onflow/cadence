@@ -3106,7 +3106,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									ParameterList: &ast.ParameterList{
 										Parameters: []*ast.Parameter{
-											&ast.Parameter{
+											{
 												TypeAnnotation: &ast.TypeAnnotation{
 													Type: &ast.NominalType{
 														Identifier: ast.Identifier{
@@ -4093,7 +4093,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 						},
 					},
 					RequiredEntitlements: []*ast.NominalType{
-						&ast.NominalType{
+						{
 							Identifier: ast.Identifier{
 								Identifier: "X",
 								Pos: ast.Position{
@@ -4103,7 +4103,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 								},
 							},
 						},
-						&ast.NominalType{
+						{
 							Identifier: ast.Identifier{
 								Identifier: "Y",
 								Pos: ast.Position{

@@ -31,7 +31,4 @@ access(all) struct Test {
 
     /// This is a test intersection type (without type) field.
     access(all) let testIntersectionWithoutType: {Bar, Baz}
-
-    /// This is a test intersection type (without types) field.
-    access(all) let testIntersectionWithoutTypes: Foo{}
 }
