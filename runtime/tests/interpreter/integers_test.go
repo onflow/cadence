@@ -57,6 +57,7 @@ var testIntegerTypesAndValues = map[string]interpreter.Value{
 	"Word32":  interpreter.NewUnmeteredWord32Value(50),
 	"Word64":  interpreter.NewUnmeteredWord64Value(50),
 	"Word128": interpreter.NewUnmeteredWord128ValueFromUint64(50),
+	"Word256": interpreter.NewUnmeteredWord256ValueFromUint64(50),
 }
 
 func init() {
@@ -127,6 +128,7 @@ func TestInterpretWordOverflowConversions(t *testing.T) {
 		"Word32":  sema.UInt32TypeMaxInt,
 		"Word64":  sema.UInt64TypeMaxInt,
 		"Word128": sema.UInt128TypeMaxIntBig,
+		"Word256": sema.UInt256TypeMaxIntBig,
 	}
 
 	for typeName, value := range words {
@@ -163,6 +165,7 @@ func TestInterpretWordUnderflowConversions(t *testing.T) {
 		"Word32":  sema.UInt32TypeMaxInt,
 		"Word64":  sema.UInt64TypeMaxInt,
 		"Word128": sema.Word128TypeMaxIntBig,
+		"Word256": sema.Word256TypeMaxIntBig,
 	}
 
 	for typeName, value := range words {
@@ -662,6 +665,11 @@ func TestInterpretIntegerConversion(t *testing.T) {
 			min:      interpreter.NewUnmeteredWord128ValueFromUint64(0),
 			max:      interpreter.NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
 		},
+		sema.Word256Type: {
+			fortyTwo: interpreter.NewUnmeteredWord256ValueFromUint64(42),
+			min:      interpreter.NewUnmeteredWord256ValueFromUint64(0),
+			max:      interpreter.NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+		},
 		sema.Int8Type: {
 			fortyTwo: interpreter.NewUnmeteredInt8Value(42),
 			min:      interpreter.NewUnmeteredInt8Value(math.MinInt8),
@@ -722,7 +730,8 @@ func TestInterpretIntegerConversion(t *testing.T) {
 						sema.Word16Type,
 						sema.Word32Type,
 						sema.Word64Type,
-						sema.Word128Type:
+						sema.Word128Type,
+						sema.Word256Type:
 					default:
 						t.Run("underflow", func(t *testing.T) {
 							test(t, sourceType, targetType, sourceValues.min, nil, interpreter.UnderflowError{})
@@ -748,7 +757,8 @@ func TestInterpretIntegerConversion(t *testing.T) {
 						sema.Word16Type,
 						sema.Word32Type,
 						sema.Word64Type,
-						sema.Word128Type:
+						sema.Word128Type,
+						sema.Word256Type:
 					default:
 						t.Run("overflow", func(t *testing.T) {
 							test(t, sourceType, targetType, sourceValues.max, nil, interpreter.OverflowError{})
@@ -847,6 +857,10 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 		sema.Word128Type: {
 			min: interpreter.NewUnmeteredWord128ValueFromUint64(0),
 			max: interpreter.NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+		},
+		sema.Word256Type: {
+			min: interpreter.NewUnmeteredWord256ValueFromUint64(0),
+			max: interpreter.NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
 		},
 		sema.Int8Type: {
 			min: interpreter.NewUnmeteredInt8Value(math.MinInt8),

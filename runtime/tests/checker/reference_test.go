@@ -1328,8 +1328,8 @@ func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		pub struct S {
-			pub let foo: Number
+		access(all) struct S {
+			access(all) let foo: Number
 			init() {
 				self.foo = 0
 			}
@@ -1349,8 +1349,8 @@ func TestCheckInvalidDictionaryAccessNonOptionalReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		pub struct S {
-			pub let foo: Number
+		access(all) struct S {
+			access(all) let foo: Number
 			init() {
 				self.foo = 0
 			}
@@ -1369,8 +1369,8 @@ func TestCheckArrayAccessReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		pub struct S {
-			pub let foo: Number
+		access(all) struct S {
+			access(all) let foo: Number
 			init() {
 				self.foo = 0
 			}
@@ -1444,15 +1444,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- create R()
                 let xRef = &x as &R
                 xRef.a
                 destroy x
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1470,15 +1470,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- create R()
                 let xRef = &x as &R
                 destroy x
                 xRef.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1498,15 +1498,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- [<-create R()]
                 let xRef = &x as &[R]
                 destroy x
                 xRef[0].a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1526,15 +1526,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- {1: <- create R()}
                 let xRef = &x as &{Int: R}
                 destroy x
                 xRef[1]?.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1554,19 +1554,19 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- create R()
                 let xRef = &x as &R
                 consume(<-x)
                 xRef.a
             }
 
-            pub fun consume(_ r: @AnyResource) {
+            access(all) fun consume(_ r: @AnyResource) {
                 destroy r
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1586,19 +1586,19 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- [<-create R()]
                 let xRef = &x as &[R]
                 consume(<-x)
                 xRef[0].a
             }
 
-            pub fun consume(_ r: @AnyResource) {
+            access(all) fun consume(_ r: @AnyResource) {
                 destroy r
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1618,19 +1618,19 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- {1: <- create R()}
                 let xRef = &x as &{Int: R}
                 consume(<-x)
                 xRef[1]?.a
             }
 
-            pub fun consume(_ r: @AnyResource) {
+            access(all) fun consume(_ r: @AnyResource) {
                 destroy r
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1650,7 +1650,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 var x <- create R()
                 var y <- create R()
                 let xRef = &x as &R
@@ -1660,8 +1660,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 xRef.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1681,7 +1681,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- create R()
                 let xRef = &x as &R
                 if true {
@@ -1698,8 +1698,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 }
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1719,7 +1719,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 authAccount.save(<-[<-create R()], to: /storage/a)
 
                 let collectionRef = authAccount.borrow<&[R]>(from: /storage/a)!
@@ -1728,11 +1728,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 let collection <- authAccount.load<@[R]>(from: /storage/a)!
                 authAccount.save(<- collection, to: /storage/b)
 
-                ref.a = 2
+                ref.setA(2)
             }
 
-            pub resource R {
-                pub(set) var a: Int
+            access(all) resource R {
+                access(all) var a: Int
+
+                access(all) fun setA(_ a: Int) {
+                    self.a = a
+                }
 
                 init() {
                     self.a = 5
@@ -1751,7 +1755,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let f = fun() {
                     let x <- create R()
                     let xRef = &x as &R
@@ -1762,8 +1766,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 f()
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1783,20 +1787,20 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                priv var x: @R
+            access(all) contract Test {
+                access(self) var x: @R
                 init() {
                     self.x <- create R()
                 }
 
-                pub fun test() {
+                access(all) fun test() {
                     let xRef = &self.x as &R
                     xRef.a
                 }
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1814,20 +1818,20 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                priv var x: @R
+            access(all) contract Test {
+                access(self) var x: @R
                 init() {
                     self.x <- create R()
                 }
 
-                pub fun test() {
+                access(all) fun test() {
                     let xRef = &Test.x as &R
                     xRef.a
                 }
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
                 init() {
                     self.a = 5
                 }
@@ -1844,7 +1848,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 var r: @{UInt64: {UInt64: [R]}} <- {}
                 let ref1 = (&r[0] as &{UInt64: [R]}?)!
                 let ref2 = (&ref1[0] as &[R]?)!
@@ -1854,8 +1858,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 destroy r
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -1873,7 +1877,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 var r: @{UInt64: {UInt64: [R]}} <- {}
                 let ref1 = (&r[0] as &{UInt64: [R]}?)!
                 let ref2 = (&ref1[0] as &[R]?)!
@@ -1882,8 +1886,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 ref3.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
                 init() {
                     self.a = 5
                 }
@@ -1902,15 +1906,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- create R()
                 let xRef = (&x as &R?)!
                 destroy x
                 xRef.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
                 init() {
                     self.a = 5
                 }
@@ -1929,15 +1933,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-                    pub contract Foo {
-                        pub let field: @AnyResource
+                    access(all) contract Foo {
+                        access(all) let field: @AnyResource
                         init() {
                             self.field <- create R()
                         }
                     }
 
-                    pub resource R {
-                        pub let a: Int
+                    access(all) resource R {
+                        access(all) let a: Int
                         init() {
                             self.a = 5
                         }
@@ -1955,7 +1959,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 			`
             import Foo from "imported"
 
-            pub fun test() {
+            access(all) fun test() {
                 let xRef = &Foo.field as &AnyResource
                 xRef
             }
@@ -1980,14 +1984,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
                 }
 
-                pub fun test() {
+                access(all) fun test() {
                     let xRef = &self as &R
                     xRef.a
                 }
@@ -2004,15 +2008,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub let a: @{UInt64: {UInt64: Test.R}}
+            access(all) contract Test {
+                access(all) let a: @{UInt64: {UInt64: Test.R}}
 
                 init() {
                     self.a <- {}
                 }
 
-                pub resource R {
-                    pub fun test() {
+                access(all) resource R {
+                    access(all) fun test() {
                         if let storage = &Test.a[0] as &{UInt64: Test.R}? {
                             let nftRef = (&storage[0] as &Test.R?)!
                             nftRef
@@ -2032,9 +2036,9 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub resource R {
-                    pub fun test () {
+            access(all) contract Test {
+                access(all) resource R {
+                    access(all) fun test () {
                         let sourceRefNFTs: {UInt64: &Test.R} = {}
                         let sourceNFTs: @[Test.R] <- []
 
@@ -2051,7 +2055,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                         destroy sourceNFTs
                     }
 
-                    pub fun bar(): Bool {
+                    access(all) fun bar(): Bool {
                         return true
                     }
                 }
@@ -2068,9 +2072,9 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract Test {
-                pub resource R {
-                    pub fun test(packList: &[Test.R]) {
+            access(all) contract Test {
+                access(all) resource R {
+                    access(all) fun test(packList: &[Test.R]) {
                         var i = 0;
                         while i < packList.length {
                             let pack = &packList[i] as &Test.R;
@@ -2095,7 +2099,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- create R()
                 let xRef = &x as &R
                 if true {
@@ -2108,8 +2112,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 destroy x
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2136,15 +2140,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x: @R? <- create R()
                 let ref = (&x as &R?) ?? nil
                 destroy x
                 ref!.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2165,7 +2169,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x: @R? <- create R()
                 let y: @R <- create R()
 
@@ -2175,8 +2179,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 destroy x
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2197,7 +2201,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x: @R? <- create R()
                 let y: @R <- create R()
 
@@ -2207,8 +2211,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 ref!.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2230,7 +2234,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x: @R? <- create R()
                 let y: @R <- create R()
                 let z: @R? <- create R()
@@ -2243,8 +2247,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 ref2!.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2267,7 +2271,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- create R()
                 var ref1: &R? = nil
                 ref1 = &x as &R
@@ -2276,8 +2280,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 ref1!.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2297,7 +2301,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x = S()
                 var ref1: &S? = nil
                 ref1 = &x as &S
@@ -2305,10 +2309,10 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 ref1!.a
             }
 
-            pub fun consume(_ s:S) {}
+            access(all) fun consume(_ s:S) {}
 
-            pub struct S {
-                pub let a: Int
+            access(all) struct S {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2326,7 +2330,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- create R()
                 let ref1 = &x as &R
                 let ref2 = ref1
@@ -2335,8 +2339,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 ref3.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2356,25 +2360,29 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let r <- create R()
                 let s = S()
 
-                s.b = &r as &R
+                s.setB(&r as &R)
                 destroy r
                 s.b!.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
                 }
             }
 
-            pub struct S {
-                pub(set) var b: &R?
+            access(all) struct S {
+                access(all) var b: &R?
+
+                access(all) fun setB(_ b: &R) {
+                    self.b = b
+                }
 
                 init() {
                     self.b = nil
@@ -2392,26 +2400,30 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let r <- create R()
                 let s = S()
-                s.b = &r as &R
+                s.setB(&r as &R)
 
                 let x = s.b!
                 destroy r
                 x.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
                 }
             }
 
-            pub struct S {
-                pub(set) var b: &R?
+            access(all) struct S {
+                access(all) var b: &R?
+
+                access(all) fun setB(_ b: &R) {
+                    self.b = b
+                }
 
                 init() {
                     self.b = nil
@@ -2429,15 +2441,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x: @R? <- create R()
                 let ref = true ? (&x as &R?) : nil
                 destroy x
                 ref!.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2458,7 +2470,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x: @R? <- create R()
                 let y: @R <- create R()
 
@@ -2468,8 +2480,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 destroy x
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2490,7 +2502,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x: @R? <- create R()
                 let y: @R <- create R()
 
@@ -2500,8 +2512,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 ref!.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2523,15 +2535,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun test() {
+            access(all) fun test() {
                 let x <- create R()
                 let xRef = &x as &R
                 destroy x
                 xRef.a
             }
 
-            pub resource R {
-                pub let a: Int
+            access(all) resource R {
+                access(all) let a: Int
 
                 init() {
                     self.a = 5
@@ -2554,7 +2566,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 			t,
 			prevInvalidationNote.Range.StartPos,
 			ast.Position{
-				Offset: 126,
+				Offset: 134,
 				Line:   5,
 				Column: 24,
 			})
@@ -2562,7 +2574,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 			t,
 			prevInvalidationNote.Range.EndPos,
 			ast.Position{
-				Offset: 126,
+				Offset: 134,
 				Line:   5,
 				Column: 24,
 			})
@@ -2756,4 +2768,41 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
 	})
+}
+
+func TestCheckResourceReferenceMethodInvocationAfterMove(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        resource Foo {
+
+            let id: UInt8
+
+            init() {
+                self.id = 12
+            }
+
+            access(all) fun something() {}
+        }
+
+        fun main() {
+            var foo <- create Foo()
+            var fooRef = &foo as &Foo
+
+            // Invocation should not un-track the reference
+            fooRef.something()
+
+            // Moving the resource should update the tracking
+            var newFoo <- foo
+
+        	fooRef.id
+
+        	destroy newFoo
+        }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+	assert.ErrorAs(t, errs[0], &invalidatedRefError)
 }

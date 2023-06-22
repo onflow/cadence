@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/k0kubun/pp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -33,6 +34,10 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 )
+
+func init() {
+	pp.ColoringEnabled = false
+}
 
 // TestLocation is used as the default location for programs in tests.
 const TestLocation = common.StringLocation("test")
@@ -70,8 +75,8 @@ func AssertEqualWithDiff(t *testing.T, expected, actual any) {
 					"expected: %s\n"+
 					"actual  : %s\n\n"+
 					"%s",
-				expected,
-				actual,
+				pp.Sprint(expected),
+				pp.Sprint(actual),
 				s.String(),
 			)
 		}

@@ -34,39 +34,39 @@ const realNonFungibleTokenContractInterface = `
 // The main NFT contract interface. Other NFT contracts will
 // import and implement this interface
 //
-pub contract interface NonFungibleToken {
+access(all) contract interface NonFungibleToken {
 
     // The total number of tokens of this type in existence
-    pub var totalSupply: UInt64
+    access(all) var totalSupply: UInt64
 
     // Event that emitted when the NFT contract is initialized
     //
-    pub event ContractInitialized()
+    access(all) event ContractInitialized()
 
     // Event that is emitted when a token is withdrawn,
     // indicating the owner of the collection that it was withdrawn from.
     //
     // If the collection is not in an account's storage, from will be nil.
     //
-    pub event Withdraw(id: UInt64, from: Address?)
+    access(all) event Withdraw(id: UInt64, from: Address?)
 
     // Event that emitted when a token is deposited to a collection.
     //
     // It indicates the owner of the collection that it was deposited to.
     //
-    pub event Deposit(id: UInt64, to: Address?)
+    access(all) event Deposit(id: UInt64, to: Address?)
 
     // Interface that the NFTs have to conform to
     //
-    pub resource interface INFT {
+    access(all) resource interface INFT {
         // The unique ID that each NFT has
-        pub let id: UInt64
+        access(all) let id: UInt64
     }
 
     // Requirement that all conforming NFT smart contracts have
     // to define a resource called NFT that conforms to INFT
-    pub resource NFT: INFT {
-        pub let id: UInt64
+    access(all) resource NFT: INFT {
+        access(all) let id: UInt64
     }
 
     // entitles references to withdraw:
@@ -75,7 +75,7 @@ pub contract interface NonFungibleToken {
 
     // Interface to mediate withdraws from the Collection
     //
-    pub resource interface Provider {
+    access(all) resource interface Provider {
         // withdraw removes an NFT from the collection and moves it to the caller
         access(Withdrawable) fun withdraw(withdrawID: UInt64): @NFT {
             post {
@@ -86,42 +86,42 @@ pub contract interface NonFungibleToken {
 
     // Interface to mediate deposits to the Collection
     //
-    pub resource interface Receiver {
+    access(all) resource interface Receiver {
 
         // deposit takes an NFT as an argument and adds it to the Collection
         //
-        pub fun deposit(token: @NFT)
+        access(all) fun deposit(token: @NFT)
     }
 
     // Interface that an account would commonly
     // publish for their collection
-    pub resource interface CollectionPublic {
-        pub fun deposit(token: @NFT)
-        pub fun getIDs(): [UInt64]
-        pub fun borrowNFT(id: UInt64): &NFT
+    access(all) resource interface CollectionPublic {
+        access(all) fun deposit(token: @NFT)
+        access(all) fun getIDs(): [UInt64]
+        access(all) fun borrowNFT(id: UInt64): &NFT
     }
 
     // Requirement for the the concrete resource type
     // to be declared in the implementing contract
     //
-    pub resource Collection: Provider, Receiver, CollectionPublic {
+    access(all) resource Collection: Provider, Receiver, CollectionPublic {
 
         // Dictionary to hold the NFTs in the Collection
-        pub var ownedNFTs: @{UInt64: NFT}
+        access(all) var ownedNFTs: @{UInt64: NFT}
 
         // withdraw removes an NFT from the collection and moves it to the caller
         access(Withdrawable) fun withdraw(withdrawID: UInt64): @NFT
 
         // deposit takes a NFT and adds it to the collections dictionary
         // and adds the ID to the id array
-        pub fun deposit(token: @NFT)
+        access(all) fun deposit(token: @NFT)
 
         // getIDs returns an array of the IDs that are in the collection
-        pub fun getIDs(): [UInt64]
+        access(all) fun getIDs(): [UInt64]
 
         // Returns a borrowed reference to an NFT in the collection
         // so that the caller can read data and call methods from it
-        pub fun borrowNFT(id: UInt64): &NFT {
+        access(all) fun borrowNFT(id: UInt64): &NFT {
             pre {
                 self.ownedNFTs[id] != nil: "NFT does not exist in the collection!"
             }
@@ -130,7 +130,7 @@ pub contract interface NonFungibleToken {
 
     // createEmptyCollection creates an empty Collection
     // and returns it to the caller so that they can own NFTs
-    pub fun createEmptyCollection(): @Collection {
+    access(all) fun createEmptyCollection(): @Collection {
         post {
             result.ownedNFTs.length == 0: "The created collection must be empty!"
         }
@@ -142,42 +142,42 @@ const topShotContract = `
 
 import NonFungibleToken from 0x1
 
-pub contract TopShot: NonFungibleToken {
+access(all) contract TopShot: NonFungibleToken {
 
     // -----------------------------------------------------------------------
     // TopShot contract Events
     // -----------------------------------------------------------------------
 
     // Emitted when the TopShot contract is created
-    pub event ContractInitialized()
+    access(all) event ContractInitialized()
 
     // Emitted when a new Play struct is created
-    pub event PlayCreated(id: UInt32, metadata: {String:String})
+    access(all) event PlayCreated(id: UInt32, metadata: {String:String})
     // Emitted when a new series has been triggered by an admin
-    pub event NewSeriesStarted(newCurrentSeries: UInt32)
+    access(all) event NewSeriesStarted(newCurrentSeries: UInt32)
 
     // Events for Set-Related actions
     //
     // Emitted when a new Set is created
-    pub event SetCreated(setID: UInt32, series: UInt32)
+    access(all) event SetCreated(setID: UInt32, series: UInt32)
     // Emitted when a new Play is added to a Set
-    pub event PlayAddedToSet(setID: UInt32, playID: UInt32)
+    access(all) event PlayAddedToSet(setID: UInt32, playID: UInt32)
     // Emitted when a Play is retired from a Set and cannot be used to mint
-    pub event PlayRetiredFromSet(setID: UInt32, playID: UInt32, numMoments: UInt32)
+    access(all) event PlayRetiredFromSet(setID: UInt32, playID: UInt32, numMoments: UInt32)
     // Emitted when a Set is locked, meaning Plays cannot be added
-    pub event SetLocked(setID: UInt32)
+    access(all) event SetLocked(setID: UInt32)
     // Emitted when a Moment is minted from a Set
-    pub event MomentMinted(momentID: UInt64, playID: UInt32, setID: UInt32, serialNumber: UInt32)
+    access(all) event MomentMinted(momentID: UInt64, playID: UInt32, setID: UInt32, serialNumber: UInt32)
 
     // Events for Collection-related actions
     //
     // Emitted when a moment is withdrawn from a Collection
-    pub event Withdraw(id: UInt64, from: Address?)
+    access(all) event Withdraw(id: UInt64, from: Address?)
     // Emitted when a moment is deposited into a Collection
-    pub event Deposit(id: UInt64, to: Address?)
+    access(all) event Deposit(id: UInt64, to: Address?)
 
     // Emitted when a Moment is destroyed
-    pub event MomentDestroyed(id: UInt64)
+    access(all) event MomentDestroyed(id: UInt64)
 
     // -----------------------------------------------------------------------
     // TopShot contract-level fields.
@@ -187,7 +187,7 @@ pub contract TopShot: NonFungibleToken {
     // Series that this Set belongs to.
     // Series is a concept that indicates a group of Sets through time.
     // Many Sets can exist at a time, but only one series.
-    pub var currentSeries: UInt32
+    access(all) var currentSeries: UInt32
 
     // Variable size dictionary of Play structs
     access(self) var playDatas: {UInt32: Play}
@@ -201,17 +201,17 @@ pub contract TopShot: NonFungibleToken {
     // The ID that is used to create Plays.
     // Every time a Play is created, playID is assigne 
     // to the new Play's ID and then is incremented by 1.
-    pub var nextPlayID: UInt32
+    access(all) var nextPlayID: UInt32
 
     // The ID that is used to create Sets. Every time a Set is created
     // setID is assigned to the new set's ID and then is incremented by 1.
-    pub var nextSetID: UInt32
+    access(all) var nextSetID: UInt32
 
     // The total number of Top shot Moment NFTs that have been created
     // Because NFTs can be destroyed, it doesn't necessarily mean that this
     // reflects the total number of NFTs in existence, just the number that
     // have been minted to date. Also used as global moment IDs for minting.
-    pub var totalSupply: UInt64
+    access(all) var totalSupply: UInt64
 
     // -----------------------------------------------------------------------
     // TopShot contract-level Composite Type definitions
@@ -231,16 +231,16 @@ pub contract TopShot: NonFungibleToken {
     // its metadata. The plays are publicly accessible, so anyone can
     // read the metadata associated with a specific play ID
     //
-    pub struct Play {
+    access(all) struct Play {
 
         // The unique ID for the Play
-        pub let playID: UInt32
+        access(all) let playID: UInt32
 
         // Stores all the metadata about the play as a string mapping
         // This is not the long term way NFT metadata will be stored. It's a temporary
         // construct while we figure out a better way to do metadata.
         //
-        pub let metadata: {String: String}
+        access(all) let metadata: {String: String}
 
         init(metadata: {String: String}) {
             pre {
@@ -266,19 +266,19 @@ pub contract TopShot: NonFungibleToken {
     // at the end of the contract. Only the admin has the ability
     // to modify any data in the private Set resource.
     //
-    pub struct SetData {
+    access(all) struct SetData {
 
         // Unique ID for the Set
-        pub let setID: UInt32
+        access(all) let setID: UInt32
 
         // Name of the Set
         // ex. "Times when the Toronto Raptors choked in the playoffs"
-        pub let name: String
+        access(all) let name: String
 
         // Series that this Set belongs to.
         // Series is a concept that indicates a group of Sets through time.
         // Many Sets can exist at a time, but only one series.
-        pub let series: UInt32
+        access(all) let series: UInt32
 
         init(name: String) {
             pre {
@@ -314,20 +314,20 @@ pub contract TopShot: NonFungibleToken {
     //
     // If retireAll() and lock() are called back-to-back,
     // the Set is closed off forever and nothing more can be done with it.
-    pub resource Set {
+    access(all) resource Set {
 
         // Unique ID for the set
-        pub let setID: UInt32
+        access(all) let setID: UInt32
 
         // Array of plays that are a part of this set.
         // When a play is added to the set, its ID gets appended here.
         // The ID does not get removed from this array when a Play is retired.
-        pub var plays: [UInt32]
+        access(all) var plays: [UInt32]
 
         // Map of Play IDs that Indicates if a Play in this Set can be minted.
         // When a Play is added to a Set, it is mapped to false (not retired).
         // When a Play is retired, this is set to true and cannot be changed.
-        pub var retired: {UInt32: Bool}
+        access(all) var retired: {UInt32: Bool}
 
         // Indicates if the Set is currently locked.
         // When a Set is created, it is unlocked
@@ -338,13 +338,13 @@ pub contract TopShot: NonFungibleToken {
         // If a Set is locked, Plays cannot be added, but
         // Moments can still be minted from Plays
         // that exist in the Set.
-        pub var locked: Bool
+        access(all) var locked: Bool
 
         // Mapping of Play IDs that indicates the number of Moments
         // that have been minted for specific Plays in this Set.
         // When a Moment is minted, this value is stored in the Moment to
         // show its place in the Set, eg. 13 of 60.
-        pub var numberMintedPerPlay: {UInt32: UInt32}
+        access(all) var numberMintedPerPlay: {UInt32: UInt32}
 
         init(name: String) {
             self.setID = TopShot.nextSetID
@@ -366,7 +366,7 @@ pub contract TopShot: NonFungibleToken {
         // The Set needs to be not locked
         // The Play can't have already been added to the Set
         //
-        pub fun addPlay(playID: UInt32) {
+        access(all) fun addPlay(playID: UInt32) {
             pre {
                 TopShot.playDatas[playID] != nil: "Cannot add the Play to Set: Play doesn't exist."
                 !self.locked: "Cannot add the play to the Set after the set has been locked."
@@ -390,7 +390,7 @@ pub contract TopShot: NonFungibleToken {
         // Parameters: playIDs: The IDs of the Plays that are being added
         //                      as an array
         //
-        pub fun addPlays(playIDs: [UInt32]) {
+        access(all) fun addPlays(playIDs: [UInt32]) {
             for play in playIDs {
                 self.addPlay(playID: play)
             }
@@ -403,7 +403,7 @@ pub contract TopShot: NonFungibleToken {
         // Pre-Conditions:
         // The Play is part of the Set and not retired (available for minting).
         //
-        pub fun retirePlay(playID: UInt32) {
+        access(all) fun retirePlay(playID: UInt32) {
             pre {
                 self.retired[playID] != nil: "Cannot retire the Play: Play doesn't exist in this set!"
             }
@@ -418,7 +418,7 @@ pub contract TopShot: NonFungibleToken {
         // retireAll retires all the plays in the Set
         // Afterwards, none of the retired Plays will be able to mint new Moments
         //
-        pub fun retireAll() {
+        access(all) fun retireAll() {
             for play in self.plays {
                 self.retirePlay(playID: play)
             }
@@ -428,7 +428,7 @@ pub contract TopShot: NonFungibleToken {
         //
         // Pre-Conditions:
         // The Set should not be locked
-        pub fun lock() {
+        access(all) fun lock() {
             if !self.locked {
                 self.locked = true
                 emit SetLocked(setID: self.setID)
@@ -444,7 +444,7 @@ pub contract TopShot: NonFungibleToken {
         //
         // Returns: The NFT that was minted
         //
-        pub fun mintMoment(playID: UInt32): @NFT {
+        access(all) fun mintMoment(playID: UInt32): @NFT {
             pre {
                 self.retired[playID] != nil: "Cannot mint the moment: This play doesn't exist."
                 !self.retired[playID]!: "Cannot mint the moment from this play: This play has been retired."
@@ -473,7 +473,7 @@ pub contract TopShot: NonFungibleToken {
         //
         // Returns: Collection object that contains all the Moments that were minted
         //
-        pub fun batchMintMoment(playID: UInt32, quantity: UInt64): @Collection {
+        access(all) fun batchMintMoment(playID: UInt32, quantity: UInt64): @Collection {
             let newCollection <- create Collection()
 
             var i: UInt64 = 0
@@ -486,17 +486,17 @@ pub contract TopShot: NonFungibleToken {
         }
     }
 
-    pub struct MomentData {
+    access(all) struct MomentData {
 
         // The ID of the Set that the Moment comes from
-        pub let setID: UInt32
+        access(all) let setID: UInt32
 
         // The ID of the Play that the Moment references
-        pub let playID: UInt32
+        access(all) let playID: UInt32
 
         // The place in the edition that this Moment was minted
         // Otherwise know as the serial number
-        pub let serialNumber: UInt32
+        access(all) let serialNumber: UInt32
 
         init(setID: UInt32, playID: UInt32, serialNumber: UInt32) {
             self.setID = setID
@@ -508,13 +508,13 @@ pub contract TopShot: NonFungibleToken {
 
     // The resource that represents the Moment NFTs
     //
-    pub resource NFT: NonFungibleToken.INFT {
+    access(all) resource NFT: NonFungibleToken.INFT {
 
         // Global unique moment ID
-        pub let id: UInt64
+        access(all) let id: UInt64
        
         // Struct of Moment metadata
-        pub let data: MomentData
+        access(all) let data: MomentData
 
         init(serialNumber: UInt32, playID: UInt32, setID: UInt32) {
             // Increment the global Moment IDs
@@ -539,7 +539,7 @@ pub contract TopShot: NonFungibleToken {
     // allows the owner to perform important functions to modify the 
     // various aspects of the Plays, Sets, and Moments
     //
-    pub resource Admin {
+    access(all) resource Admin {
 
         // createPlay creates a new Play struct 
         // and stores it in the Plays dictionary in the TopShot smart contract
@@ -550,7 +550,7 @@ pub contract TopShot: NonFungibleToken {
         //
         // Returns: the ID of the new Play object
         //
-        pub fun createPlay(metadata: {String: String}): UInt32 {
+        access(all) fun createPlay(metadata: {String: String}): UInt32 {
             // Create the new Play
             var newPlay = Play(metadata: metadata)
             let newID = newPlay.playID
@@ -566,7 +566,7 @@ pub contract TopShot: NonFungibleToken {
         //
         // Parameters: name: The name of the Set
         //
-        pub fun createSet(name: String) {
+        access(all) fun createSet(name: String) {
             // Create the new Set
             var newSet <- create Set(name: name)
 
@@ -583,7 +583,7 @@ pub contract TopShot: NonFungibleToken {
         // Returns: A reference to the Set with all of the fields
         // and methods exposed
         //
-        pub fun borrowSet(setID: UInt32): &Set {
+        access(all) fun borrowSet(setID: UInt32): &Set {
             pre {
                 TopShot.sets[setID] != nil: "Cannot borrow Set: The Set doesn't exist"
             }
@@ -599,7 +599,7 @@ pub contract TopShot: NonFungibleToken {
         //
         // Returns: The new series number
         //
-        pub fun startNewSeries(): UInt32 {
+        access(all) fun startNewSeries(): UInt32 {
             // End the current series and start a new one
             // by incrementing the TopShot series number
             TopShot.currentSeries = TopShot.currentSeries + UInt32(1)
@@ -611,7 +611,7 @@ pub contract TopShot: NonFungibleToken {
 
         // createNewAdmin creates a new Admin resource
         //
-        pub fun createNewAdmin(): @Admin {
+        access(all) fun createNewAdmin(): @Admin {
             return <-create Admin()
         }
     }
@@ -619,12 +619,12 @@ pub contract TopShot: NonFungibleToken {
     // This is the interface that users can cast their Moment Collection as
     // to allow others to deposit Moments into their Collection. It also allows for reading
     // the IDs of Moments in the Collection.
-    pub resource interface MomentCollectionPublic {
-        pub fun deposit(token: @NonFungibleToken.NFT)
-        pub fun batchDeposit(tokens: @NonFungibleToken.Collection)
-        pub fun getIDs(): [UInt64]
-        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
-        pub fun borrowMoment(id: UInt64): &TopShot.NFT? {
+    access(all) resource interface MomentCollectionPublic {
+        access(all) fun deposit(token: @NonFungibleToken.NFT)
+        access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection)
+        access(all) fun getIDs(): [UInt64]
+        access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
+        access(all) fun borrowMoment(id: UInt64): &TopShot.NFT? {
             // If the result isn't nil, the id of the returned reference
             // should be the same as the argument to the function
             post {
@@ -637,10 +637,10 @@ pub contract TopShot: NonFungibleToken {
     // Collection is a resource that every user who owns NFTs 
     // will store in their account to manage their NFTS
     //
-    pub resource Collection: MomentCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic { 
+    access(all) resource Collection: MomentCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic { 
         // Dictionary of Moment conforming tokens
         // NFT is a resource type with a UInt64 ID field
-        pub var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
+        access(all) var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
 
         init() {
             self.ownedNFTs <- {}
@@ -671,7 +671,7 @@ pub contract TopShot: NonFungibleToken {
         // Returns: @NonFungibleToken.Collection: A collection that contains
         //                                        the withdrawn moments
         //
-        pub fun batchWithdraw(ids: [UInt64]): @NonFungibleToken.Collection {
+        access(all) fun batchWithdraw(ids: [UInt64]): @NonFungibleToken.Collection {
             // Create a new empty Collection
             var batchCollection <- create Collection()
 
@@ -688,7 +688,7 @@ pub contract TopShot: NonFungibleToken {
         //
         // Parameters: token: the NFT to be deposited in the collection
         //
-        pub fun deposit(token: @NonFungibleToken.NFT) {
+        access(all) fun deposit(token: @NonFungibleToken.NFT) {
 
             // Cast the deposited token as a TopShot NFT to make sure
             // it is the correct type
@@ -712,7 +712,7 @@ pub contract TopShot: NonFungibleToken {
 
         // batchDeposit takes a Collection object as an argument
         // and deposits each contained NFT into this Collection
-        pub fun batchDeposit(tokens: @NonFungibleToken.Collection) {
+        access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection) {
 
             // Get an array of the IDs to be deposited
             let keys = tokens.getIDs()
@@ -727,7 +727,7 @@ pub contract TopShot: NonFungibleToken {
         }
 
         // getIDs returns an array of the IDs that are in the Collection
-        pub fun getIDs(): [UInt64] {
+        access(all) fun getIDs(): [UInt64] {
             return self.ownedNFTs.keys
         }
 
@@ -742,7 +742,7 @@ pub contract TopShot: NonFungibleToken {
         // not any topshot specific data. Please use borrowMoment to 
         // read Moment data.
         //
-        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
+        access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
             return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
         }
 
@@ -756,7 +756,7 @@ pub contract TopShot: NonFungibleToken {
         // Parameters: id: The ID of the NFT to get the reference for
         //
         // Returns: A reference to the NFT
-        pub fun borrowMoment(id: UInt64): &TopShot.NFT? {
+        access(all) fun borrowMoment(id: UInt64): &TopShot.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
                 return ref as! &TopShot.NFT
@@ -784,14 +784,14 @@ pub contract TopShot: NonFungibleToken {
     // Once they have a Collection in their storage, they are able to receive
     // Moments in transactions.
     //
-    pub fun createEmptyCollection(): @NonFungibleToken.Collection {
+    access(all) fun createEmptyCollection(): @NonFungibleToken.Collection {
         return <-create TopShot.Collection()
     }
 
     // getAllPlays returns all the plays in topshot
     //
     // Returns: An array of all the plays that have been created
-    pub fun getAllPlays(): [TopShot.Play] {
+    access(all) fun getAllPlays(): [TopShot.Play] {
         return TopShot.playDatas.values
     }
 
@@ -800,7 +800,7 @@ pub contract TopShot: NonFungibleToken {
     // Parameters: playID: The id of the Play that is being searched
     //
     // Returns: The metadata as a String to String mapping optional
-    pub fun getPlayMetaData(playID: UInt32): {String: String}? {
+    access(all) fun getPlayMetaData(playID: UInt32): {String: String}? {
         return self.playDatas[playID]?.metadata
     }
 
@@ -813,7 +813,7 @@ pub contract TopShot: NonFungibleToken {
     //             field: The field to search for
     //
     // Returns: The metadata field as a String Optional
-    pub fun getPlayMetaDataByField(playID: UInt32, field: String): String? {
+    access(all) fun getPlayMetaDataByField(playID: UInt32, field: String): String? {
         // Don't force a revert if the playID or field is invalid
         if let play = TopShot.playDatas[playID] {
             return play.metadata[field]
@@ -828,7 +828,7 @@ pub contract TopShot: NonFungibleToken {
     // Parameters: setID: The id of the Set that is being searched
     //
     // Returns: The name of the Set
-    pub fun getSetName(setID: UInt32): String? {
+    access(all) fun getSetName(setID: UInt32): String? {
         // Don't force a revert if the setID is invalid
         return TopShot.setDatas[setID]?.name
     }
@@ -839,7 +839,7 @@ pub contract TopShot: NonFungibleToken {
     // Parameters: setID: The id of the Set that is being searched
     //
     // Returns: The series that the Set belongs to
-    pub fun getSetSeries(setID: UInt32): UInt32? {
+    access(all) fun getSetSeries(setID: UInt32): UInt32? {
         // Don't force a revert if the setID is invalid
         return TopShot.setDatas[setID]?.series
     }
@@ -850,7 +850,7 @@ pub contract TopShot: NonFungibleToken {
     // Parameters: setName: The name of the Set that is being searched
     //
     // Returns: An array of the IDs of the Set if it exists, or nil if doesn't
-    pub fun getSetIDsByName(setName: String): [UInt32]? {
+    access(all) fun getSetIDsByName(setName: String): [UInt32]? {
         var setIDs: [UInt32] = []
 
         // Iterate through all the setDatas and search for the name
@@ -875,7 +875,7 @@ pub contract TopShot: NonFungibleToken {
     // Parameters: setID: The id of the Set that is being searched
     //
     // Returns: An array of Play IDs
-    pub fun getPlaysInSet(setID: UInt32): [UInt32]? {
+    access(all) fun getPlaysInSet(setID: UInt32): [UInt32]? {
         // Don't force a revert if the setID is invalid
         return TopShot.sets[setID]?.plays
     }
@@ -889,7 +889,7 @@ pub contract TopShot: NonFungibleToken {
     //             playID: The id of the Play that is being searched
     //
     // Returns: Boolean indicating if the edition is retired or not
-    pub fun isEditionRetired(setID: UInt32, playID: UInt32): Bool? {
+    access(all) fun isEditionRetired(setID: UInt32, playID: UInt32): Bool? {
         // Don't force a revert if the set or play ID is invalid
         // Remove the set from the dictionary to get its field
         if let setToRead <- TopShot.sets.remove(key: setID) {
@@ -917,7 +917,7 @@ pub contract TopShot: NonFungibleToken {
     // Parameters: setID: The id of the Set that is being searched
     //
     // Returns: Boolean indicating if the Set is locked or not
-    pub fun isSetLocked(setID: UInt32): Bool? {
+    access(all) fun isSetLocked(setID: UInt32): Bool? {
         // Don't force a revert if the setID is invalid
         return TopShot.sets[setID]?.locked
     }
@@ -930,7 +930,7 @@ pub contract TopShot: NonFungibleToken {
     //
     // Returns: The total number of Moments 
     //          that have been minted from an edition
-    pub fun getNumMomentsInEdition(setID: UInt32, playID: UInt32): UInt32? {
+    access(all) fun getNumMomentsInEdition(setID: UInt32, playID: UInt32): UInt32? {
         // Don't force a revert if the Set or play ID is invalid
         // Remove the Set from the dictionary to get its field
         if let setToRead <- TopShot.sets.remove(key: setID) {

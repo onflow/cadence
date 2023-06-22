@@ -51,29 +51,29 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			"Test",
 			// language=cadence
 			[]byte(`
-                  pub contract Test {
+                  access(all) contract Test {
 
-                      pub entitlement X
+                      access(all) entitlement X
 
-                      pub resource R {
+                      access(all) resource R {
 
-                          pub let id: Int
+                          access(all) let id: Int
 
                           init(id: Int) {
                               self.id = id
                           }
                       }
 
-                      pub resource S {}
+                      access(all) resource S {}
 
-                      pub fun createAndSaveR(id: Int, storagePath: StoragePath) {
+                      access(all) fun createAndSaveR(id: Int, storagePath: StoragePath) {
                           self.account.save(
                               <-create R(id: id),
                               to: storagePath
                           )
                       }
 
-                      pub fun createAndSaveS(storagePath: StoragePath) {
+                      access(all) fun createAndSaveS(storagePath: StoragePath) {
                           self.account.save(
                               <-create S(),
                               to: storagePath
@@ -85,7 +85,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       /// > Our version of quicksort is not the fastest possible,
                       /// > but it's one of the simplest.
                       ///
-                      pub fun quickSort(_ items: &[AnyStruct], isLess: fun(Int, Int): Bool) {
+                      access(all) fun quickSort(_ items: &[AnyStruct], isLess: fun(Int, Int): Bool) {
 
                           fun quickSortPart(leftIndex: Int, rightIndex: Int) {
 
@@ -2528,7 +2528,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controller2.tag == "")
 
                           // Act
-                          controller1.tag = "something"
+                          controller1.setTag("something")
 
                           // Assert
                           let controller3: &StorageCapabilityController =
@@ -3005,7 +3005,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controller2.tag == "")
 
                           // Act
-                          controller1.tag = "something"
+                          controller1.setTag("something")
 
                           // Assert
                           let controller3: &AccountCapabilityController =

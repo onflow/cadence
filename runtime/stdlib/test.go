@@ -116,7 +116,7 @@ func getNestedTypeConstructorValue(parent interpreter.Value, typeName string) *i
 	return constructor
 }
 
-func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
+func arrayValueToSlice(inter *interpreter.Interpreter, value interpreter.Value) ([]interpreter.Value, error) {
 	array, ok := value.(*interpreter.ArrayValue)
 	if !ok {
 		return nil, errors.NewDefaultUserError("value is not an array")
@@ -124,7 +124,7 @@ func arrayValueToSlice(value interpreter.Value) ([]interpreter.Value, error) {
 
 	result := make([]interpreter.Value, 0, array.Count())
 
-	array.Iterate(nil, func(element interpreter.Value) (resume bool) {
+	array.Iterate(inter, func(element interpreter.Value) (resume bool) {
 		result = append(result, element)
 		return true
 	})
@@ -185,7 +185,7 @@ func getConstructor(inter *interpreter.Interpreter, typeName string) *interprete
 	return resultStatusConstructor
 }
 
-func addressArrayValueToSlice(accountsValue interpreter.Value) []common.Address {
+func addressArrayValueToSlice(inter *interpreter.Interpreter, accountsValue interpreter.Value) []common.Address {
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -193,7 +193,7 @@ func addressArrayValueToSlice(accountsValue interpreter.Value) []common.Address 
 
 	addresses := make([]common.Address, 0)
 
-	accountsArray.Iterate(nil, func(element interpreter.Value) (resume bool) {
+	accountsArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
 		address, ok := element.(interpreter.AddressValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -220,7 +220,7 @@ func accountsArrayValueToSlice(
 
 	accounts := make([]*Account, 0)
 
-	accountsArray.Iterate(nil, func(element interpreter.Value) (resume bool) {
+	accountsArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
 		accountValue, ok := element.(interpreter.MemberAccessibleValue)
 		if !ok {
 			panic(errors.NewUnreachableError())

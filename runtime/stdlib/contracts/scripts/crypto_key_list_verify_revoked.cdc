@@ -1,6 +1,6 @@
 import Crypto from "Crypto"
 
-pub fun main(): Bool {
+access(self) fun main(): Bool {
     let keyList = Crypto.KeyList()
 
     let publicKey = PublicKey(
