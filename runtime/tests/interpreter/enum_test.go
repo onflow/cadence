@@ -226,8 +226,8 @@ func TestInterpretEnumInContract(t *testing.T) {
 		`
           contract C {
               enum E: UInt8 {
-                  pub case a
-                  pub case b
+                  access(all) case a
+                  access(all) case b
               }
 
               var e: E

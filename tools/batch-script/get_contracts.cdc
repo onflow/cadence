@@ -1,4 +1,4 @@
-pub fun main(addresses: [Address]): {Address: {String: String}} {
+access(self) fun main(addresses: [Address]): {Address: {String: String}} {
     let accountContracts: {Address: {String: String}} = {}
 
     for address in addresses {

@@ -193,7 +193,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("no arguments", func(t *testing.T) {
 		test(t, testCase{
 			contract: `
-              pub contract Test {}
+              access(all) contract Test {}
             `,
 			arguments: []argument{},
 			check:     expectSuccess,
@@ -203,7 +203,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("with argument", func(t *testing.T) {
 		test(t, testCase{
 			contract: `
-              pub contract Test {
+              access(all) contract Test {
                   init(_ x: Int) {}
               }
             `,
@@ -217,7 +217,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("with incorrect argument", func(t *testing.T) {
 		test(t, testCase{
 			contract: `
-              pub contract Test {
+              access(all) contract Test {
                   init(_ x: Int) {}
               }
             `,
@@ -229,8 +229,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					"error: invalid argument at index 0: expected type `Int`, got `Bool`\n"+
 					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n"+
 					"  |\n"+
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b0a202020202020202020202020202020202020696e6974285f20783a20496e7429207b7d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex(), true)\n"+
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b0a202020202020202020202020202020202020696e6974285f20783a20496e7429207b7d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex(), true)\n"+
+					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
 				2,
 			),
 		})
@@ -239,7 +239,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("additional argument", func(t *testing.T) {
 		test(t, testCase{
 			contract: `
-              pub contract Test {}
+              access(all) contract Test {}
             `,
 			arguments: []argument{
 				interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -249,8 +249,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					"error: invalid argument count, too many arguments: expected 0, got 1\n"+
 					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n"+
 					"  |\n"+
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b7d0a202020202020202020202020\".decodeHex(), 1)\n"+
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b7d0a202020202020202020202020\".decodeHex(), 1)\n"+
+					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
 				2,
 			),
 		})
@@ -259,7 +259,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("additional code which is invalid at top-level", func(t *testing.T) {
 		test(t, testCase{
 			contract: `
-              pub contract Test {}
+              access(all) contract Test {}
 
               fun testCase() {}
             `,
@@ -269,8 +269,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					"error: cannot deploy invalid contract\n"+
 					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n"+
 					"  |\n"+
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b7d0a0a202020202020202020202020202066756e2074657374436173652829207b7d0a202020202020202020202020\".decodeHex())\n"+
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
+					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b7d0a0a202020202020202020202020202066756e2074657374436173652829207b7d0a202020202020202020202020\".decodeHex())\n"+
+					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
 					"\n"+
 					"error: function declarations are not valid at the top-level\n"+
 					" --> 2a00000000000000.Test:4:18\n"+
@@ -315,8 +315,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("invalid contract, checking error", func(t *testing.T) {
 		test(t, testCase{
 			contract: `
-              pub contract Test {
-                  pub fun test() { X }
+              access(all) contract Test {
+                  access(all) fun test() { X }
               }
             `,
 			arguments: []argument{},
@@ -325,14 +325,14 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					"error: cannot deploy invalid contract\n"+
 					" --> 0000000000000000000000000000000000000000000000000000000000000000:5:22\n"+
 					"  |\n"+
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b0a2020202020202020202020202020202020207075622066756e20746573742829207b2058207d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex())\n"+
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
+					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202061636365737328616c6c2920636f6e74726163742054657374207b0a20202020202020202020202020202020202061636365737328616c6c292066756e20746573742829207b2058207d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex())\n"+
+					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
 					"\n"+
 					"error: cannot find variable in this scope: `X`\n"+
-					" --> 2a00000000000000.Test:3:35\n"+
+					" --> 2a00000000000000.Test:3:43\n"+
 					"  |\n"+
-					"3 |                   pub fun test() { X }\n"+
-					"  |                                    ^ not found in this scope\n",
+					"3 |                   access(all) fun test() { X }\n"+
+					"  |                                            ^ not found in this scope\n",
 				2,
 			),
 		})
@@ -341,7 +341,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	t.Run("Path subtype", func(t *testing.T) {
 		test(t, testCase{
 			contract: `
-              pub contract Test {
+              access(all) contract Test {
                   init(_ path: StoragePath) {}
               }
             `,

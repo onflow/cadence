@@ -1398,7 +1398,7 @@ func TestExportIntegerValuesFromScript(t *testing.T) {
 
 			script := fmt.Sprintf(
 				`
-                  pub fun main(): %s {
+                  access(all) fun main(): %s {
                       return 42
                   }
                 `,
@@ -1428,7 +1428,7 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 
 			script := fmt.Sprintf(
 				`
-                  pub fun main(): %s {
+                  access(all) fun main(): %s {
                       return %s
                   }
                 `,
@@ -1460,7 +1460,7 @@ func TestExportAddressValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub fun main(): Address {
+        access(all) fun main(): Address {
             return 0x42
         }
     `
@@ -1478,15 +1478,15 @@ func TestExportStructValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub struct Foo {
-            pub let bar: Int
+        access(all) struct Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): Foo {
+        access(all) fun main(): Foo {
             return Foo(bar: 42)
         }
     `
@@ -1509,15 +1509,15 @@ func TestExportResourceValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub resource Foo {
-            pub let bar: Int
+        access(all) resource Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): @Foo {
+        access(all) fun main(): @Foo {
             return <- create Foo(bar: 42)
         }
     `
@@ -1537,15 +1537,15 @@ func TestExportResourceArrayValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub resource Foo {
-            pub let bar: Int
+        access(all) resource Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): @[Foo] {
+        access(all) fun main(): @[Foo] {
             return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)]
         }
     `
@@ -1587,15 +1587,15 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub resource Foo {
-            pub let bar: Int
+        access(all) resource Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): @{String: Foo} {
+        access(all) fun main(): @{String: Foo} {
             return <- {
                 "a": <- create Foo(bar: 1),
                 "b": <- create Foo(bar: 2)
@@ -1677,16 +1677,16 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	}
 
 	script := `
-        pub resource Bar {
-            pub let x: Int
+        access(all) resource Bar {
+            access(all) let x: Int
 
             init(x: Int) {
                 self.x = x
             }
         }
 
-        pub resource Foo {
-            pub let bar: @Bar
+        access(all) resource Foo {
+            access(all) let bar: @Bar
 
             init(bar: @Bar) {
                 self.bar <- bar
@@ -1697,7 +1697,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
             }
         }
 
-        pub fun main(): @Foo {
+        access(all) fun main(): @Foo {
             return <- create Foo(bar: <- create Bar(x: 42))
         }
     `
@@ -1719,9 +1719,9 @@ func TestExportEventValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub event Foo(bar: Int)
+        access(all) event Foo(bar: Int)
 
-        pub fun main() {
+        access(all) fun main() {
             emit Foo(bar: 42)
         }
     `
@@ -1796,7 +1796,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): &Int {
+            access(all) fun main(): &Int {
                 return &1 as &Int
             }
         `
@@ -1812,7 +1812,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): [&AnyStruct] {
+            access(all) fun main(): [&AnyStruct] {
                 let refs: [&AnyStruct] = []
                 refs.append(&refs as &AnyStruct)
                 return refs
@@ -1885,7 +1885,7 @@ func TestExportReferenceValue(t *testing.T) {
 		require.NoError(t, err)
 
 		script := `
-            pub fun main(): &AnyStruct {
+            access(all) fun main(): &AnyStruct {
                 return getAccount(0x1).getCapability(/public/test).borrow<&AnyStruct>()!
             }
         `
@@ -1911,7 +1911,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): &AnyStruct {
+            access(all) fun main(): &AnyStruct {
                 var acct = getAuthAccount(0x01)
 	            var v:[AnyStruct] = []
 	            acct.save(v, to: /storage/x)
@@ -1946,7 +1946,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): &AnyStruct {
+            access(all) fun main(): &AnyStruct {
                 var acct = getAuthAccount(0x01)
 	            var v:[AnyStruct] = []
 	            acct.save(v, to: /storage/x)
@@ -1988,7 +1988,7 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Type {
+            access(all) fun main(): Type {
                 return Type<Int>()
             }
         `
@@ -2006,9 +2006,9 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {}
+            access(all) struct S {}
 
-            pub fun main(): Type {
+            access(all) fun main(): Type {
                 return Type<S>()
             }
         `
@@ -2030,7 +2030,7 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Type {
+            access(all) fun main(): Type {
                 return CompositeType("PublicKey")!
             }
         `
@@ -2068,9 +2068,9 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		const code = `
-          pub struct interface SI {}
+          access(all) struct interface SI {}
 
-          pub struct S: SI {}
+          access(all) struct S: SI {}
 
         `
 		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
@@ -2446,9 +2446,9 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        pub struct Foo {
-            pub let answer: Int
-            pub let f: fun(): Void
+        access(all) struct Foo {
+            access(all) let answer: Int
+            access(all) let f: fun(): Void
 
             init() {
                 self.answer = 42
@@ -2456,7 +2456,7 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
             }
         }
 
-        pub fun main(): Foo {
+        access(all) fun main(): Foo {
             return Foo()
         }
     `
@@ -2592,15 +2592,15 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 	t.Run("test export", func(t *testing.T) {
 		script := `
-            pub fun main(): Direction {
+            access(all) fun main(): Direction {
                 return Direction.RIGHT
             }
 
-            pub enum Direction: Int {
-                pub case UP
-                pub case DOWN
-                pub case LEFT
-                pub case RIGHT
+            access(all) enum Direction: Int {
+                access(all) case UP
+                access(all) case DOWN
+                access(all) case LEFT
+                access(all) case RIGHT
             }
         `
 
@@ -2610,7 +2610,7 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 	t.Run("test import", func(t *testing.T) {
 		script := `
-            pub fun main(dir: Direction): Direction {
+            access(all) fun main(dir: Direction): Direction {
                 if !dir.isInstance(Type<Direction>()) {
                     panic("Not a Direction value")
                 }
@@ -2618,11 +2618,11 @@ func TestRuntimeEnumValue(t *testing.T) {
                 return dir
             }
 
-            pub enum Direction: Int {
-                pub case UP
-                pub case DOWN
-                pub case LEFT
-                pub case RIGHT
+            access(all) enum Direction: Int {
+                access(all) case UP
+                access(all) case DOWN
+                access(all) case LEFT
+                access(all) case RIGHT
             }
         `
 
@@ -2892,7 +2892,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			}
 
 			script := fmt.Sprintf(
-				`pub fun main(arg: %[1]s)%[2]s {
+				`access(all) fun main(arg: %[1]s)%[2]s {
 
                     if !arg.isInstance(Type<%[1]s>()) {
                         panic("Not a %[1]s value")
@@ -3029,7 +3029,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 
 	script := fmt.Sprintf(
 		`
-          pub fun main(arg: %[1]s): %[1]s {
+          access(all) fun main(arg: %[1]s): %[1]s {
 
               if !arg.isInstance(Type<%[1]s>()) {
                   panic("Not a %[1]s value")
@@ -3038,17 +3038,17 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
               return arg
           }
 
-          pub struct Foo {
-              pub var a: String?
-              pub var b: {String: String}
-              pub var c: [String]
-              pub var d: [String; 2]
-              pub var e: Address
-              pub var f: Bool
-              pub var g: StoragePath
-              pub var h: PublicPath
-              pub var i: PrivatePath
-              pub var j: AnyStruct
+          access(all) struct Foo {
+              access(all) var a: String?
+              access(all) var b: {String: String}
+              access(all) var c: [String]
+              access(all) var d: [String; 2]
+              access(all) var e: Address
+              access(all) var f: Bool
+              access(all) var g: StoragePath
+              access(all) var h: PublicPath
+              access(all) var i: PrivatePath
+              access(all) var j: AnyStruct
 
               init() {
                   self.a = "Hello"
@@ -3151,7 +3151,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 
 	script := fmt.Sprintf(
 		`
-          pub fun main(arg: %[1]s): %[1]s {
+          access(all) fun main(arg: %[1]s): %[1]s {
 
               if !arg.isInstance(Type<%[1]s>()) {
                   panic("Not a %[1]s value")
@@ -3160,12 +3160,12 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
               return arg
           }
 
-          pub struct Foo {
-              pub var a: AnyStruct?
-              pub var b: {String: AnyStruct}
-              pub var c: [AnyStruct]
-              pub var d: [AnyStruct; 2]
-              pub var e: AnyStruct
+          access(all) struct Foo {
+              access(all) var a: AnyStruct?
+              access(all) var b: {String: AnyStruct}
+              access(all) var c: [AnyStruct]
+              access(all) var d: [AnyStruct; 2]
+              access(all) var e: AnyStruct
 
               init() {
                   self.a = "Hello"
@@ -3410,7 +3410,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			t.Parallel()
 
 			script := fmt.Sprintf(
-				`pub fun main(arg: %[1]s): %[1]s {
+				`access(all) fun main(arg: %[1]s): %[1]s {
 
                     if !arg.isInstance(Type<%[1]s>()) {
                         panic("Not a %[1]s value")
@@ -3419,24 +3419,24 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
                     return arg
                 }
 
-                pub struct Foo {
-                    pub var a: String
+                access(all) struct Foo {
+                    access(all) var a: String
 
                     init() {
                         self.a = "Hello"
                     }
                 }
 
-                pub struct Bar {
-                    pub var a: [Foo]
+                access(all) struct Bar {
+                    access(all) var a: [Foo]
 
                     init() {
                         self.a = []
                     }
                 }
 
-                pub struct Baz {
-                    pub var a: {String: Foo}
+                access(all) struct Baz {
+                    access(all) var a: {String: Foo}
 
                     init() {
                         self.a = {}
@@ -3931,11 +3931,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		t.Parallel()
 
 		script :=
-			`pub fun main(arg: Foo) {
+			`access(all) fun main(arg: Foo) {
             }
 
-            pub struct Foo {
-                pub var a: AnyStruct
+            access(all) struct Foo {
+                access(all) var a: AnyStruct
 
                 init() {
                     self.a = nil
@@ -3982,7 +3982,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		t.Parallel()
 
 		script :=
-			`pub fun main(arg: {String: {String: String}}) {
+			`access(all) fun main(arg: {String: {String: String}}) {
             }
             `
 
@@ -4026,7 +4026,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		stringValue := cadence.String(nonUTF8String)
 
 		script := `
-            pub fun main(s: String) {
+            access(all) fun main(s: String) {
                 log(s)
             }
         `
@@ -4079,7 +4079,7 @@ func TestTypeValueImport(t *testing.T) {
 		typeValue := cadence.NewTypeValue(cadence.IntType{})
 
 		script := `
-            pub fun main(s: Type) {
+            access(all) fun main(s: Type) {
                 log(s.identifier)
             }
         `
@@ -4131,7 +4131,7 @@ func TestTypeValueImport(t *testing.T) {
 		})
 
 		script := `
-            pub fun main(s: Type) {
+            access(all) fun main(s: Type) {
             }
         `
 
@@ -4184,7 +4184,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<&Int>) {
+            access(all) fun main(s: Capability<&Int>) {
                 log(s)
             }
         `
@@ -4238,7 +4238,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<Int>) {
+            access(all) fun main(s: Capability<Int>) {
             }
         `
 
@@ -4285,7 +4285,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<&Int>) {
+            access(all) fun main(s: Capability<&Int>) {
             }
         `
 
@@ -4332,7 +4332,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<&Int>) {
+            access(all) fun main(s: Capability<&Int>) {
             }
         `
 
@@ -4386,7 +4386,7 @@ func TestPathCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<S>) {
+            access(all) fun main(s: Capability<S>) {
             }
         `
 
@@ -4435,7 +4435,7 @@ func TestIDCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<&Int>) {
+            access(all) fun main(s: Capability<&Int>) {
             }
         `
 
@@ -4479,7 +4479,7 @@ func TestIDCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<Int>) {
+            access(all) fun main(s: Capability<Int>) {
             }
         `
 
@@ -4530,7 +4530,7 @@ func TestIDCapabilityValueImport(t *testing.T) {
 		)
 
 		script := `
-            pub fun main(s: Capability<S>) {
+            access(all) fun main(s: Capability<S>) {
             }
         `
 
@@ -4608,7 +4608,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 					t.Parallel()
 
 					script := `
-                        pub fun main(key: PublicKey) {
+                        access(all) fun main(key: PublicKey) {
                         }
                     `
 
@@ -4673,7 +4673,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(key: PublicKey): Bool {
+            access(all) fun main(key: PublicKey): Bool {
                 return key.verify(
                     signature: [],
                     signedData: [],
@@ -4732,7 +4732,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid raw public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4771,7 +4771,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid content in public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4813,7 +4813,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid sign algo", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4848,7 +4848,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid sign algo fields", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4887,7 +4887,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Extra field", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4978,7 +4978,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing raw public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): PublicKey {
+            access(all) fun main(key: PublicKey): PublicKey {
                 return key
             }
         `
@@ -5045,7 +5045,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing publicKey", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): [UInt8] {
+            access(all) fun main(key: PublicKey): [UInt8] {
                 return key.publicKey
             }
         `
@@ -5120,7 +5120,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing signatureAlgorithm", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): SignatureAlgorithm {
+            access(all) fun main(key: PublicKey): SignatureAlgorithm {
                 return key.signatureAlgorithm
             }
         `
@@ -5388,11 +5388,11 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 	t.Run("inner array", func(t *testing.T) {
 		script := `
-            pub fun main(arg: Foo) {
+            access(all) fun main(arg: Foo) {
             }
 
-            pub struct Foo {
-                pub var a: AnyStruct
+            access(all) struct Foo {
+                access(all) var a: AnyStruct
 
                 init() {
                     self.a = nil
@@ -5426,11 +5426,11 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 	t.Run("inner dictionary", func(t *testing.T) {
 		script := `
-            pub fun main(arg: Foo) {
+            access(all) fun main(arg: Foo) {
             }
 
-            pub struct Foo {
-                pub var a: AnyStruct
+            access(all) struct Foo {
+                access(all) var a: AnyStruct
 
                 init() {
                     self.a = nil
@@ -5494,12 +5494,12 @@ func TestNestedStructArgPassing(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(v: AnyStruct): UInt8 {
+            access(all) fun main(v: AnyStruct): UInt8 {
                 return (v as! Foo).bytes[0]
             }
 
-            pub struct Foo {
-                pub let bytes: [UInt8]
+            access(all) struct Foo {
+                access(all) let bytes: [UInt8]
 
                 init(_ bytes: [UInt8]) {
                     self.bytes = bytes
@@ -5566,10 +5566,10 @@ func TestNestedStructArgPassing(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(v: AnyStruct) {
+            access(all) fun main(v: AnyStruct) {
             }
 
-            pub struct interface Foo {
+            access(all) struct interface Foo {
             }
         `
 
@@ -5636,9 +5636,9 @@ func TestDestroyedResourceReferenceExport(t *testing.T) {
 	rt := newTestInterpreterRuntimeWithAttachments()
 
 	script := []byte(`
-        pub resource S {}
+        access(all) resource S {}
 
-        pub fun main(): &S  {
+        access(all) fun main(): &S  {
             var s <- create S()
             var ref = &s as &S
 
@@ -5650,7 +5650,7 @@ func TestDestroyedResourceReferenceExport(t *testing.T) {
             return ref2!
         }
 
-        pub fun getRef(_ ref: &S): &S  {
+        access(all) fun getRef(_ ref: &S): &S  {
             return ref
         }
 	 `)

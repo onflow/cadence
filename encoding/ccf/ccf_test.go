@@ -12900,7 +12900,7 @@ func TestDeployedEvents(t *testing.T) {
 }
 
 func newFlowFeesFeesDeductedEventType() *cadence.EventType {
-	// pub event FeesDeducted(amount: UFix64, inclusionEffort: UFix64, executionEffort: UFix64)
+	// access(all) event FeesDeducted(amount: UFix64, inclusionEffort: UFix64, executionEffort: UFix64)
 
 	address, _ := common.HexToAddress("f919ee77447b7497")
 	location := common.NewAddressLocation(nil, address, "FlowFees")
@@ -12944,7 +12944,7 @@ func createFlowFeesFeesDeductedEvent() cadence.Event {
 }
 
 func newFlowFeesTokensWithdrawnEventType() *cadence.EventType {
-	// pub event TokensWithdrawn(amount: UFix64)
+	// access(all) event TokensWithdrawn(amount: UFix64)
 
 	address, _ := common.HexToAddress("f919ee77447b7497")
 	location := common.NewAddressLocation(nil, address, "FlowFees")
@@ -12976,7 +12976,7 @@ func createFlowFeesTokensWithdrawnEvent() cadence.Event {
 }
 
 func newFlowTokenTokensDepositedEventType() *cadence.EventType {
-	// pub event TokensDeposited(amount: UFix64, to: Address?)
+	// access(all) event TokensDeposited(amount: UFix64, to: Address?)
 
 	address, _ := common.HexToAddress("1654653399040a61")
 	location := common.NewAddressLocation(nil, address, "FlowToken")
@@ -13034,7 +13034,7 @@ func createFlowTokenTokensDepositedEvent() cadence.Event {
 }
 
 func newFlowTokenTokensMintedEventType() *cadence.EventType {
-	// pub event TokensMinted(amount: UFix64)
+	// access(all) event TokensMinted(amount: UFix64)
 
 	address, _ := common.HexToAddress("1654653399040a61")
 	location := common.NewAddressLocation(nil, address, "FlowToken")
@@ -13066,7 +13066,7 @@ func createFlowTokenTokensMintedEvent() cadence.Event {
 }
 
 func newFlowTokenTokensWithdrawnEventType() *cadence.EventType {
-	// pub event TokensWithdrawn(amount: UFix64, from: Address?)
+	// access(all) event TokensWithdrawn(amount: UFix64, from: Address?)
 
 	address, _ := common.HexToAddress("1654653399040a61")
 	location := common.NewAddressLocation(nil, address, "FlowToken")
@@ -13108,7 +13108,7 @@ func createFlowTokenTokensWithdrawnEvent() cadence.Event {
 }
 
 func newFlowIDTableStakingDelegatorRewardsPaidEventType() *cadence.EventType {
-	// pub event DelegatorRewardsPaid(nodeID: String, delegatorID: UInt32, amount: UFix64)
+	// access(all) event DelegatorRewardsPaid(nodeID: String, delegatorID: UInt32, amount: UFix64)
 
 	address, _ := common.HexToAddress("8624b52f9ddcd04a")
 	location := common.NewAddressLocation(nil, address, "FlowIDTableStaking")
@@ -13152,7 +13152,7 @@ func createFlowIDTableStakingDelegatorRewardsPaidEvent() cadence.Event {
 }
 
 func newFlowIDTableStakingEpochTotalRewardsPaidEventType() *cadence.EventType {
-	// pub event EpochTotalRewardsPaid(total: UFix64, fromFees: UFix64, minted: UFix64, feesBurned: UFix64)
+	// access(all) event EpochTotalRewardsPaid(total: UFix64, fromFees: UFix64, minted: UFix64, feesBurned: UFix64)
 
 	address, _ := common.HexToAddress("8624b52f9ddcd04a")
 	location := common.NewAddressLocation(nil, address, "FlowIDTableStaking")
@@ -13202,7 +13202,7 @@ func createFlowIDTableStakingEpochTotalRewardsPaidEvent() cadence.Event {
 }
 
 func newFlowIDTableStakingNewWeeklyPayoutEventType() *cadence.EventType {
-	// pub event NewWeeklyPayout(newPayout: UFix64)
+	// access(all) event NewWeeklyPayout(newPayout: UFix64)
 
 	address, _ := common.HexToAddress("8624b52f9ddcd04a")
 	location := common.NewAddressLocation(nil, address, "FlowIDTableStaking")
@@ -13234,7 +13234,7 @@ func createFlowIDTableStakingNewWeeklyPayoutEvent() cadence.Event {
 }
 
 func newFlowIDTableStakingRewardsPaidEventType() *cadence.EventType {
-	// pub event RewardsPaid(nodeID: String, amount: UFix64)
+	// access(all) event RewardsPaid(nodeID: String, amount: UFix64)
 
 	address, _ := common.HexToAddress("8624b52f9ddcd04a")
 	location := common.NewAddressLocation(nil, address, "FlowIDTableStaking")

@@ -41,10 +41,7 @@ const (
 	KeywordIn          = "in"
 	KeywordEmit        = "emit"
 	KeywordAuth        = "auth"
-	KeywordPriv        = "priv"
-	KeywordPub         = "pub"
 	KeywordAccess      = "access"
-	KeywordSet         = "set"
 	KeywordAll         = "all"
 	KeywordSelf        = "self"
 	KeywordInit        = "init"
@@ -76,6 +73,8 @@ const (
 	KeywordRequire     = "require"
 	KeywordStatic      = "static"
 	KeywordNative      = "native"
+	KeywordPub         = "pub"
+	KeywordPriv        = "priv"
 	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 
@@ -99,10 +98,7 @@ var allKeywords = []string{
 	KeywordIn,
 	KeywordEmit,
 	KeywordAuth,
-	KeywordPriv,
-	KeywordPub,
 	KeywordAccess,
-	KeywordSet,
 	KeywordAll,
 	KeywordSelf,
 	KeywordInit,
@@ -138,7 +134,6 @@ var allKeywords = []string{
 var softKeywords = []string{
 	KeywordFrom,
 	KeywordAccount,
-	KeywordSet,
 	KeywordAll,
 	KeywordView,
 	keywordAttach,
