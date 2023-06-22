@@ -1,1 +1,1 @@
-pub struct Test: Equatable {}
+access(all) struct Test: Equatable {}

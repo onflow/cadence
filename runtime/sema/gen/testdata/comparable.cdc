@@ -1,1 +1,1 @@
-pub struct Test: Comparable {}
+access(all) struct Test: Comparable {}

@@ -137,10 +137,10 @@ func TestBlock_String(t *testing.T) {
 
 	require.Equal(
 		t,
-		"{\n"+
-			"    false\n"+
-			`    "test"`+"\n"+
-			"}",
+		`{
+    false
+    "test"
+}`,
 		block.String(),
 	)
 }

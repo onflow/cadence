@@ -1,1 +1,1 @@
-pub resource Test {}
+access(all) resource Test {}

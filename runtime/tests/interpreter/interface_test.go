@@ -275,7 +275,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
                 }
             }
 
-            pub fun main(): Int {
+            access(all) fun main(): Int {
                 let c = C()
                 return c.test()
             }
@@ -315,7 +315,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
                 }
             }
 
-            pub fun main(): Int {
+            access(all) fun main(): Int {
                 let c <- create C()
                 let x = c.test()
                 destroy c
@@ -338,11 +338,11 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct interface A {
-                pub fun test(): Int
+                access(all) fun test(): Int
             }
 
             struct interface B: A {
-                pub fun test(): Int
+                access(all) fun test(): Int
             }
 
             struct C: B {
@@ -351,7 +351,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
                 }
             }
 
-            pub fun main(): Int {
+            access(all) fun main(): Int {
                 let c = C()
                 return c.test()
             }
@@ -372,7 +372,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct interface A {
-                pub fun test(): Int {
+                access(all) fun test(): Int {
                     return 3
                 }
             }
@@ -381,7 +381,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
             struct C: B {}
 
-            pub fun main(): Int {
+            access(all) fun main(): Int {
                 let c = C()
                 return c.test()
             }
@@ -402,7 +402,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct interface A {
-                pub fun test(): Int {
+                access(all) fun test(): Int {
                     return 3
                 }
             }
@@ -413,7 +413,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
             struct D: B, C {}
 
-            pub fun main(): Int {
+            access(all) fun main(): Int {
                 let d = D()
                 return d.test()
             }
@@ -435,7 +435,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             contract interface A {
                 struct NestedA {
-                    pub fun test(): Int {
+                    access(all) fun test(): Int {
                         return 3
                     }
                 }
@@ -443,7 +443,7 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
             contract interface B {
                 struct NestedB {
-                    pub fun test(): String {
+                    access(all) fun test(): String {
                         return "three"
                     }
                 }
@@ -456,16 +456,16 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
 
                 struct NestedB {}
 
-                pub fun getNestedA(): NestedA {
+                access(all) fun getNestedA(): NestedA {
                     return NestedA()
                 }
 
-                pub fun getNestedB(): NestedB {
+                access(all) fun getNestedB(): NestedB {
                     return NestedB()
                 }
             }
 
-            pub fun main(): Int {
+            access(all) fun main(): Int {
                 return D.getNestedA().test()
             }`,
 
@@ -497,13 +497,13 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct interface A {
-                pub fun test(_ a: Int): Int {
+                access(all) fun test(_ a: Int): Int {
                     pre { a > 10 }
                 }
             }
 
             struct interface B: A {
-                pub fun test(_ a: Int): Int
+                access(all) fun test(_ a: Int): Int
             }
 
             struct C: B {
@@ -512,7 +512,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            pub fun main(_ a: Int): Int {
+            access(all) fun main(_ a: Int): Int {
                 let c = C()
                 return c.test(a)
             }
@@ -537,11 +537,11 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct interface A {
-                pub fun test(_ a: Int): Int
+                access(all) fun test(_ a: Int): Int
             }
 
             struct interface B: A {
-                pub fun test(_ a: Int): Int {
+                access(all) fun test(_ a: Int): Int {
                     pre { a > 10 }
                 }
             }
@@ -552,7 +552,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            pub fun main(_ a: Int): Int {
+            access(all) fun main(_ a: Int): Int {
                 let c = C()
                 return c.test(a)
             }
@@ -577,13 +577,13 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct interface A {
-                pub fun test(_ a: Int): Int {
+                access(all) fun test(_ a: Int): Int {
                     pre { a < 20 }
                 }
             }
 
             struct interface B: A {
-                pub fun test(_ a: Int): Int {
+                access(all) fun test(_ a: Int): Int {
                     pre { a > 10 }
                 }
             }
@@ -594,7 +594,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            pub fun main(_ a: Int): Int {
+            access(all) fun main(_ a: Int): Int {
                 let c = C()
                 return c.test(a)
             }
@@ -624,13 +624,13 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct interface A {
-                pub fun test(_ a: Int): Int {
+                access(all) fun test(_ a: Int): Int {
                     pre { a < 20 }
                 }
             }
 
             struct interface B {
-                pub fun test(_ a: Int): Int {
+                access(all) fun test(_ a: Int): Int {
                     pre { a > 10 }
                 }
             }
@@ -643,7 +643,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
                 }
             }
 
-            pub fun main(_ a: Int): Int {
+            access(all) fun main(_ a: Int): Int {
                 let d = D()
                 return d.test(a)
             }
@@ -712,47 +712,47 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             struct A: B {
-                pub fun test() {
+                access(all) fun test() {
                     pre { print("A") }
                 }
             }
 
             struct interface B: C, D {
-                pub fun test() {
+                access(all) fun test() {
                     pre { print("B") }
                 }
             }
 
             struct interface C: E, F {
-                pub fun test() {
+                access(all) fun test() {
                     pre { print("C") }
                 }
             }
 
             struct interface D: F {
-                pub fun test() {
+                access(all) fun test() {
                     pre { print("D") }
                 }
             }
 
             struct interface E {
-                pub fun test() {
+                access(all) fun test() {
                     pre { print("E") }
                 }
             }
 
             struct interface F {
-                pub fun test() {
+                access(all) fun test() {
                     pre { print("F") }
                 }
             }
 
-            pub view fun print(_ msg: String): Bool {
+            access(all) view fun print(_ msg: String): Bool {
                 log(msg)
                 return true
             }
 
-            pub fun main() {
+            access(all) fun main() {
                 let a = A()
                 a.test()
             }`,
@@ -820,47 +820,47 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             struct A: B {
-                pub fun test() {
+                access(all) fun test() {
                     post { print("A") }
                 }
             }
 
             struct interface B: C, D {
-                pub fun test() {
+                access(all) fun test() {
                     post { print("B") }
                 }
             }
 
             struct interface C: E, F {
-                pub fun test() {
+                access(all) fun test() {
                     post { print("C") }
                 }
             }
 
             struct interface D: F {
-                pub fun test() {
+                access(all) fun test() {
                     post { print("D") }
                 }
             }
 
             struct interface E {
-                pub fun test() {
+                access(all) fun test() {
                     post { print("E") }
                 }
             }
 
             struct interface F {
-                pub fun test() {
+                access(all) fun test() {
                     post { print("F") }
                 }
             }
 
-            pub view fun print(_ msg: String): Bool {
+            access(all) view fun print(_ msg: String): Bool {
                 log(msg)
                 return true
             }
 
-            pub fun main() {
+            access(all) fun main() {
                 let a = A()
                 a.test()
             }`,

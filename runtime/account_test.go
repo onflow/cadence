@@ -46,7 +46,7 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-        pub fun main(): AccountKey {
+        access(all) fun main(): AccountKey {
             let key = AccountKey(
                 PublicKey(
                     publicKey: "0102".decodeHex(),
@@ -87,7 +87,7 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-        pub fun main(): PublicAccount {
+        access(all) fun main(): PublicAccount {
             let acc = getAccount(0x02)
             return acc
           }
@@ -121,7 +121,7 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-        pub fun main(): AuthAccount {
+        access(all) fun main(): AuthAccount {
             let acc = getAuthAccount(0x02)
             return acc
           }
@@ -517,7 +517,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 	)
 
 	assert.EqualValues(t,
-		stdlib.AccountKeyAddedEventType.ID(),
+		stdlib.AccountKeyAddedFromPublicKeyEventType.ID(),
 		storage.events[1].Type().ID(),
 	)
 }
@@ -544,7 +544,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		testEnv := initTestEnv(accountKeyA, accountKeyB)
 		test := accountKeyTestCase{
 			code: `
-              pub fun main(): AccountKey? {
+              access(all) fun main(): AccountKey? {
                   let acc = getAccount(0x02)
                   return acc.keys.get(keyIndex: 0)
               }
@@ -581,7 +581,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-              pub fun main(): AccountKey? {
+              access(all) fun main(): AccountKey? {
                   let acc = getAccount(0x02)
                   return acc.keys.get(keyIndex: 1)
               }
@@ -617,7 +617,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-                pub fun main(): AccountKey? {
+                access(all) fun main(): AccountKey? {
                     let acc = getAccount(0x02)
                     return acc.keys.get(keyIndex: 4)
                 }
@@ -643,7 +643,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-              pub fun main(): AccountKey? {
+              access(all) fun main(): AccountKey? {
                   let acc = getAccount(0x02)
                   var keys: PublicAccount.Keys = acc.keys
                   return keys.get(keyIndex: 0)
@@ -679,7 +679,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-            pub fun main(): UInt64 {
+            access(all) fun main(): UInt64 {
                 return getAccount(0x02).keys.count
             }
             `,
@@ -699,7 +699,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
 		test := accountKeyTestCase{
 			code: `
-                pub fun main() {
+                access(all) fun main() {
                         getAccount(0x02).keys.forEach(fun(key: AccountKey): Bool {
                             log(key.keyIndex)
                             return true
@@ -738,7 +738,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-        pub fun main(): [HashAlgorithm?] {
+        access(all) fun main(): [HashAlgorithm?] {
             var key1: HashAlgorithm? = HashAlgorithm.SHA3_256
 
             var key2: HashAlgorithm? = HashAlgorithm(rawValue: 3)
@@ -810,7 +810,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-        pub fun main(): [SignatureAlgorithm?] {
+        access(all) fun main(): [SignatureAlgorithm?] {
             var key1: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_secp256k1
 
             var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 2)
@@ -1168,7 +1168,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): PublicKey {
+            access(all) fun main(): PublicKey {
                 let publicKey = PublicKey(
                     publicKey: "0102".decodeHex(),
                     signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1207,7 +1207,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Bool {
+            access(all) fun main(): Bool {
                 let publicKey =  PublicKey(
                     publicKey: "0102".decodeHex(),
                     signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1229,7 +1229,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		t.Parallel()
 
 		script := `
-          pub fun main(): PublicKey {
+          access(all) fun main(): PublicKey {
               let publicKey = PublicKey(
                   publicKey: "0102".decodeHex(),
                   signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1279,7 +1279,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		for index := range storage.keys {
 			script := fmt.Sprintf(
 				`
-                  pub fun main(): PublicKey {
+                  access(all) fun main(): PublicKey {
                       // Get a public key from host env
                       let acc = getAccount(0x02)
                       let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
@@ -1311,7 +1311,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Bool {
+            access(all) fun main(): Bool {
                 let publicKey =  PublicKey(
                     publicKey: "0102".decodeHex(),
                     signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1360,7 +1360,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
 		script := `
-            pub fun main(): Bool {
+            access(all) fun main(): Bool {
                 // Get a public key from host env
                 let acc = getAccount(0x02)
                 let publicKey = acc.keys.get(keyIndex: 0)!.publicKey
@@ -1400,7 +1400,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): PublicKey {
+            access(all) fun main(): PublicKey {
                 let publicKey =  PublicKey(
                     publicKey: "0102".decodeHex(),
                     signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1432,7 +1432,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): PublicKey {
+            access(all) fun main(): PublicKey {
                 let publicKey =  PublicKey(
                     publicKey: "0102".decodeHex(),
                     signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1461,7 +1461,7 @@ func TestRuntimePublicKey(t *testing.T) {
 		t.Parallel()
 
 		script := `
-          pub fun main(): PublicKey {
+          access(all) fun main(): PublicKey {
             let publicKey =  PublicKey(
                 publicKey: "0102".decodeHex(),
                 signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1624,9 +1624,9 @@ func TestAuthAccountContracts(t *testing.T) {
 		err := rt.ExecuteTransaction(
 			Script{
 				Source: DeploymentTransaction("HelloInterface", []byte(`
-                  pub contract interface HelloInterface {
+                  access(all) contract interface HelloInterface {
 
-                      pub fun hello(): String
+                      access(all) fun hello(): String
                   }
                 `)),
 			},
@@ -1643,9 +1643,9 @@ func TestAuthAccountContracts(t *testing.T) {
 				Source: DeploymentTransaction("Hello", []byte(`
                   import HelloInterface from 0x42
 
-                  pub contract Hello: HelloInterface {
+                  access(all) contract Hello: HelloInterface {
 
-                      pub fun hello(): String {
+                      access(all) fun hello(): String {
                           return "Hello!"
                       }
                   }
@@ -1717,9 +1717,9 @@ func TestAuthAccountContracts(t *testing.T) {
 		err := rt.ExecuteTransaction(
 			Script{
 				Source: DeploymentTransaction("HelloInterface", []byte(`
-                  pub contract interface HelloInterface {
+                  access(all) contract interface HelloInterface {
 
-                      pub fun hello(): String
+                      access(all) fun hello(): String
                   }
                 `)),
 			},
@@ -1734,9 +1734,9 @@ func TestAuthAccountContracts(t *testing.T) {
 		err = rt.ExecuteTransaction(
 			Script{
 				Source: DeploymentTransaction("Hello", []byte(`
-                  pub contract Hello {
+                  access(all) contract Hello {
 
-                      pub fun hello(): String {
+                      access(all) fun hello(): String {
                           return "Hello!"
                       }
                   }
@@ -1940,7 +1940,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main(): [AnyStruct] {
+            access(all) fun main(): [AnyStruct] {
                 let acc = getAccount(0x02)
                 let deployedContract = acc.contracts.get(name: "foo")
 
@@ -1998,7 +1998,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main() {
+            access(all) fun main() {
                 let acc = getAccount(0x02)
                 assert(acc.contracts.get(name: "foo") == nil)
             }
@@ -2036,7 +2036,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main(): [String] {
+            access(all) fun main(): [String] {
                 let acc = getAccount(0x02)
                 return acc.contracts.names
             }
@@ -2081,7 +2081,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main(): [String] {
+            access(all) fun main(): [String] {
                 let acc = getAccount(0x02)
                 acc.contracts.names[0] = "baz"
                 return acc.contracts.names
@@ -2117,7 +2117,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main(): [String] {
+            access(all) fun main(): [String] {
                 let acc = getAccount(0x02)
                 acc.contracts.names.append("baz")
                 return acc.contracts.names
@@ -2158,7 +2158,7 @@ func TestGetAuthAccount(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main(): UInt64 {
+            access(all) fun main(): UInt64 {
                 let acc = getAuthAccount(0x02)
                 return acc.storageUsed
             }
@@ -2190,7 +2190,7 @@ func TestGetAuthAccount(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main() {
+            access(all) fun main() {
                 let acc = getAuthAccount("")
             }
         `)
@@ -2218,7 +2218,7 @@ func TestGetAuthAccount(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main() {
+            access(all) fun main() {
                 let acc = getAuthAccount()
             }
         `)
@@ -2246,7 +2246,7 @@ func TestGetAuthAccount(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main() {
+            access(all) fun main() {
                 let acc = getAuthAccount(0x1, 0x2)
             }
         `)
@@ -2610,9 +2610,9 @@ func TestRuntimeAccountLink(t *testing.T) {
                       // should have no influence
                       #allowAccountLinking
 
-                      pub contract AccountLinker {
+                      access(all) contract AccountLinker {
 
-                          pub fun link(_ account: AuthAccount) {
+                          access(all) fun link(_ account: AuthAccount) {
                               account.linkAccount(/private/foo)
                           }
                       }
@@ -2702,9 +2702,9 @@ func TestRuntimeAccountLink(t *testing.T) {
 				Source: DeploymentTransaction(
 					"AccountLinker",
 					[]byte(`
-                      pub contract AccountLinker {
+                      access(all) contract AccountLinker {
 
-                          pub fun link(_ account: AuthAccount) {
+                          access(all) fun link(_ account: AuthAccount) {
                               account.linkAccount(/private/foo)
                           }
                       }
@@ -2812,9 +2812,9 @@ func TestRuntimeAccountLink(t *testing.T) {
 				Source: DeploymentTransaction(
 					"AccountLinker",
 					[]byte(`
-                      pub contract AccountLinker {
+                      access(all) contract AccountLinker {
 
-                          pub fun link(_ account: AuthAccount) {
+                          access(all) fun link(_ account: AuthAccount) {
                               account.linkAccount(/private/foo)
                           }
                       }
@@ -2836,7 +2836,7 @@ func TestRuntimeAccountLink(t *testing.T) {
 
           import AccountLinker from 0x1
 
-          pub fun main() {
+          access(all) fun main() {
               AccountLinker.link(getAuthAccount(0x1))
           }
         `)

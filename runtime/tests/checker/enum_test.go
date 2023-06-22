@@ -181,7 +181,7 @@ func TestCheckInvalidNonPublicEnumCase(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       enum E: Int {
-          priv case a
+          access(self) case a
       }
     `)
 
@@ -232,8 +232,8 @@ func TestCheckEnumInContract(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       contract C {
           enum E: UInt8 {
-              pub case a
-              pub case b
+              access(all) case a
+              access(all) case b
           }
 
           var e: E

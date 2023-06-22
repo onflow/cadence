@@ -73,7 +73,7 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFunctionMember(
 			FooBarType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			FooBarTypeBarFunctionName,
 			FooBarTypeBarFunctionType,
 			FooBarTypeBarFunctionDocString,
@@ -102,14 +102,14 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFunctionMember(
 			FooType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			FooTypeFooFunctionName,
 			FooTypeFooFunctionType,
 			FooTypeFooFunctionDocString,
 		),
 		NewUnmeteredFieldMember(
 			FooType,
-			ast.AccessPublic,
+			ast.AccessAll,
 			ast.VariableKindConstant,
 			FooTypeBarFieldName,
 			FooTypeBarFieldType,

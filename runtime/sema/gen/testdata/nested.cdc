@@ -1,12 +1,12 @@
 struct Foo {
     /// foo
-    pub fun foo()
+    access(all) fun foo()
 
     /// Bar
-    pub let bar: Foo.Bar
+    access(all) let bar: Foo.Bar
 
     struct Bar {
         /// bar
-        pub fun bar()
+        access(all) fun bar()
     }
 }

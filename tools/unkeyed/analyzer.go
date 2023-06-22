@@ -64,7 +64,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				continue
 			}
 
-
 			// check if the struct contains an unkeyed field
 			allKeyValue := true
 			var suggestedFixAvailable = len(cl.Elts) == strct.NumFields()

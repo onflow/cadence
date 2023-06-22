@@ -68,6 +68,7 @@ func NewAuthAccountValue(
 	var copyFunction *HostFunctionValue
 	var saveFunction *HostFunctionValue
 	var borrowFunction *HostFunctionValue
+	var checkFunction *HostFunctionValue
 	var linkFunction *HostFunctionValue
 	var linkAccountFunction *HostFunctionValue
 	var unlinkFunction *HostFunctionValue
@@ -183,6 +184,12 @@ func NewAuthAccountValue(
 				borrowFunction = inter.authAccountBorrowFunction(address)
 			}
 			return borrowFunction
+
+		case sema.AuthAccountTypeCheckFunctionName:
+			if checkFunction == nil {
+				checkFunction = inter.authAccountCheckFunction(address)
+			}
+			return checkFunction
 
 		case sema.AuthAccountTypeLinkFunctionName:
 			if linkFunction == nil {

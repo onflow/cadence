@@ -1624,6 +1624,14 @@ var (
 
 	Word128TypeAnnotation = NewTypeAnnotation(Word128Type)
 
+	// Word256Type represents the 256-bit unsigned integer type `Word256`
+	// which does NOT check for overflow and underflow
+	Word256Type = NewNumericType(Word256TypeName).
+			WithTag(Word256TypeTag).
+			WithIntRange(Word256TypeMinIntBig, Word256TypeMaxIntBig)
+
+	Word256TypeAnnotation = NewTypeAnnotation(Word256Type)
+
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName).
 			WithTag(FixedPointTypeTag).
@@ -1762,6 +1770,19 @@ var (
 		word128TypeMax := new(big.Int)
 		word128TypeMax.Sub(Word128TypeMaxIntPlusOneBig, big.NewInt(1))
 		return word128TypeMax
+	}()
+
+	// 1 << 256
+	Word256TypeMaxIntPlusOneBig = func() *big.Int {
+		word256TypeMaxPlusOne := big.NewInt(1)
+		word256TypeMaxPlusOne.Lsh(word256TypeMaxPlusOne, 256)
+		return word256TypeMaxPlusOne
+	}()
+	Word256TypeMinIntBig = new(big.Int)
+	Word256TypeMaxIntBig = func() *big.Int {
+		word256TypeMax := new(big.Int)
+		word256TypeMax.Sub(Word256TypeMaxIntPlusOneBig, big.NewInt(1))
+		return word256TypeMax
 	}()
 
 	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
@@ -3413,7 +3434,7 @@ func baseTypeVariable(name string, ty Type) *Variable {
 		Type:            ty,
 		DeclarationKind: common.DeclarationKindType,
 		IsConstant:      true,
-		Access:          PrimitiveAccess(ast.AccessPublic),
+		Access:          PrimitiveAccess(ast.AccessAll),
 	}
 }
 
@@ -3463,6 +3484,7 @@ var AllUnsignedIntegerTypes = []Type{
 	Word32Type,
 	Word64Type,
 	Word128Type,
+	Word256Type,
 }
 
 var AllIntegerTypes = append(
@@ -3644,7 +3666,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 		ArgumentLabels:  ty.ArgumentLabels(),
 		IsConstant:      true,
 		Type:            ty,
-		Access:          PrimitiveAccess(ast.AccessPublic),
+		Access:          PrimitiveAccess(ast.AccessAll),
 		DocString:       docString,
 	}
 }
@@ -5415,7 +5437,7 @@ func (*DictionaryType) isValueIndexableType() bool {
 	return true
 }
 
-func (t *DictionaryType) ElementType(_ bool) Type {
+func (t *DictionaryType) ElementType(isAssignment bool) Type {
 	return &OptionalType{Type: t.ValueType}
 }
 
@@ -5478,7 +5500,7 @@ var _ Type = &ReferenceType{}
 var _ ValueIndexableType = &ReferenceType{}
 var _ TypeIndexableType = &ReferenceType{}
 
-var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessPublic)
+var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessAll)
 
 func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorization Access) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
@@ -5972,7 +5994,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		case IntegerType, SignedIntegerType,
 			UIntType,
 			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
-			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type:
+			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type:
 
 			return true
 
