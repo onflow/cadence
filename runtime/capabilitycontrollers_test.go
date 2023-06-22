@@ -43,7 +43,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		accountCodes := map[Location][]byte{}
-		accountIDs := map[common.Address]uint64{}
 
 		deployTx := DeploymentTransaction(
 			"Test",
@@ -142,11 +141,6 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				code = accountCodes[location]
 				return code, nil
-			},
-			generateAccountID: func(address common.Address) (uint64, error) {
-				accountID := accountIDs[address] + 1
-				accountIDs[address] = accountID
-				return accountID, nil
 			},
 		}
 
