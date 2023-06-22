@@ -798,6 +798,25 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("array authorized reference, element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                let arrayRef = &array as auth(A) &[[Int]]
+
+                // Must return an unauthorized reference.
+                var x: &[Int] = arrayRef[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 	t.Run("array reference, element, in assignment", func(t *testing.T) {
 		t.Parallel()
 
@@ -887,6 +906,25 @@ func TestInterpretMemberAccess(t *testing.T) {
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
                 let dictRef = &dict as &{String: {String: Int}}
+                var x: &{String: Int}? = dictRef["one"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary authorized reference, value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+
+            fun test() {
+                let dict: {String: {String: Int} } = {"one": {"two": 2}}
+                let dictRef = &dict as auth(A) &{String: {String: Int}}
+
+                // Must return an unauthorized reference.
                 var x: &{String: Int}? = dictRef["one"]
             }
         `)
@@ -1018,6 +1056,34 @@ func TestInterpretMemberAccess(t *testing.T) {
                 let dictRef = &dict as &{String: AnyStruct}
 
                 dictRef["foo"] <-> dictRef["bar"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("entitlement map access on field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                A -> B
+            }
+
+            struct S {
+                access(M) let foo: [String]
+                init() {
+                    self.foo = []
+                }
+            }
+
+            fun test() {
+                let s = S()
+                let sRef = &s as auth(A) &S
+                var foo: auth(B) &[String] = sRef.foo
             }
         `)
 
