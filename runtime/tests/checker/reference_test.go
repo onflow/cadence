@@ -2775,15 +2775,15 @@ func TestCheckResourceReferenceMethodInvocationAfterMove(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-        pub resource Foo {
+        resource Foo {
 
-            pub let id: UInt8
+            let id: UInt8
 
             init() {
                 self.id = 12
             }
 
-            pub fun something() {}
+            access(all) fun something() {}
         }
 
         fun main() {

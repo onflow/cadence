@@ -2601,18 +2601,18 @@ func TestInterpretResourceFunctionInvocationAfterDestruction(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-        pub resource Vault {
-            pub fun foo(_ ignored: Bool) {}
+        access(all) resource Vault {
+            access(all) fun foo(_ ignored: Bool) {}
         }
 
-        pub resource Attacker {
-			pub var vault: @Vault
+        access(all) resource Attacker {
+			access(all) var vault: @Vault
 
 			init() {
 				self.vault <- create Vault()
 			}
 
-			pub fun shenanigans(): Bool {
+			access(all) fun shenanigans(): Bool {
 				var temp <- create Vault()
 				self.vault <-> temp
                 destroy temp
@@ -2624,7 +2624,7 @@ func TestInterpretResourceFunctionInvocationAfterDestruction(t *testing.T) {
 			}
 		}
 
-        pub fun main() {
+        access(all) fun main() {
             let a <- create Attacker()
             a.vault.foo(a.shenanigans())
             destroy a
@@ -2642,25 +2642,25 @@ func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-        pub resource Vault {
-            pub fun foo(_ ref: &Vault): &Vault {
+        access(all) resource Vault {
+            access(all) fun foo(_ ref: &Vault): &Vault {
                 return ref
             }
         }
 
-        pub resource Attacker {
-            pub var vault: @Vault
+        access(all) resource Attacker {
+            access(all) var vault: @Vault
 
             init() {
                 self.vault <- create Vault()
             }
 
-            pub fun shenanigans1(): &Vault {
+            access(all) fun shenanigans1(): &Vault {
                 // Create a reference in a nested call
                 return &self.vault as &Vault
             }
 
-            pub fun shenanigans2(_ ref: &Vault): &Vault {
+            access(all) fun shenanigans2(_ ref: &Vault): &Vault {
                 return ref
             }
 
@@ -2669,7 +2669,7 @@ func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {
             }
         }
 
-        pub fun main() {
+        access(all) fun main() {
             let a <- create Attacker()
 
             // A reference to receiver get created inside the nested call 'shenanigans1()'.
@@ -2697,20 +2697,20 @@ func TestInterpretResourceFunctionResourceFunctionValidity(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-        pub resource Vault {
-            pub fun foo(_ dummy: Bool): Bool {
+        access(all) resource Vault {
+            access(all) fun foo(_ dummy: Bool): Bool {
                 return dummy
             }
         }
 
-        pub resource Attacker {
-            pub var vault: @Vault
+        access(all) resource Attacker {
+            access(all) var vault: @Vault
 
             init() {
                 self.vault <- create Vault()
             }
 
-            pub fun shenanigans(_ n: Int): Bool {
+            access(all) fun shenanigans(_ n: Int): Bool {
                 if n > 0 {
                     return self.vault.foo(self.shenanigans(n - 1))
                 }
@@ -2722,7 +2722,7 @@ func TestInterpretResourceFunctionResourceFunctionValidity(t *testing.T) {
             }
         }
 
-        pub fun main() {
+        access(all) fun main() {
             let a <- create Attacker()
 
             a.vault.foo(a.shenanigans(10))
@@ -2740,13 +2740,17 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-        pub resource InnerResource {
-            pub var name: String
-            pub(set) var parent: &OuterResource?
+        access(all) resource InnerResource {
+            access(all) var name: String
+            access(all) var parent: &OuterResource?
 
             init(_ name: String) {
                 self.name = name
                 self.parent = nil
+            }
+
+            access(all) fun setParent(_ parent: &OuterResource) {
+                self.parent = parent
             }
 
             destroy() {
@@ -2754,19 +2758,19 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
             }
         }
 
-        pub resource OuterResource {
-            pub var inner1: @InnerResource
-            pub var inner2: @InnerResource
+        access(all) resource OuterResource {
+            access(all) var inner1: @InnerResource
+            access(all) var inner2: @InnerResource
 
             init() {
                 self.inner1 <- create InnerResource("inner1")
                 self.inner2 <- create InnerResource("inner2")
 
-                self.inner1.parent = &self as &OuterResource
-                self.inner2.parent = &self as &OuterResource
+                self.inner1.setParent(&self as &OuterResource)
+                self.inner2.setParent(&self as &OuterResource)
             }
 
-            pub fun shenanigans() {
+            access(all) fun shenanigans() {
                 self.inner1 <-> self.inner2
             }
 
@@ -2776,7 +2780,7 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
             }
         }
 
-        pub fun main() {
+        access(all) fun main() {
             let a <- create OuterResource()
             destroy a
         }`,

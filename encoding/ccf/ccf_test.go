@@ -9237,7 +9237,6 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagReferenceTypeValue,
 				// array, 2 elements follow
 				0x82,
-				// authorized
 				// nil
 				0xf6,
 				// tag
@@ -14646,7 +14645,7 @@ func TestCyclicReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub fun main(): AnyStruct {
+			access(all) fun main(): AnyStruct {
 				let refs: [&AnyStruct] = []
 				refs.append(&refs as &AnyStruct)
 				return refs
@@ -14660,12 +14659,14 @@ func TestCyclicReferenceValue(t *testing.T) {
 				nil,
 			}).WithType(&cadence.VariableSizedArrayType{
 				ElementType: &cadence.ReferenceType{
-					Type: cadence.AnyStructType{},
+					Authorization: cadence.Unauthorized{},
+					Type:          cadence.AnyStructType{},
 				},
 			}),
 		}).WithType(&cadence.VariableSizedArrayType{
 			ElementType: &cadence.ReferenceType{
-				Type: cadence.AnyStructType{},
+				Authorization: cadence.Unauthorized{},
+				Type:          cadence.AnyStructType{},
 			},
 		})
 
@@ -14693,8 +14694,8 @@ func TestCyclicReferenceValue(t *testing.T) {
 				0xd8, ccf.CBORTagReferenceType,
 				// array, 2 items follow
 				0x82,
-				// false
-				0xf4,
+				// nil
+				0xf6,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// AnyStruct type ID (39)
@@ -14713,8 +14714,8 @@ func TestCyclicReferenceValue(t *testing.T) {
 				0xd8, ccf.CBORTagReferenceType,
 				// array, 2 items follow
 				0x82,
-				// false
-				0xf4,
+				// nil
+				0xf6,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// AnyStruct type ID (39)

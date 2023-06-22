@@ -1654,15 +1654,15 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 	t.Parallel()
 
 	importedScript := []byte(`
-	  pub contract FooContract {
-	    pub resource interface Receiver {
+	  access(all) contract FooContract {
+	    access(all) resource interface Receiver {
 	    }
 	  }
 	`)
 
 	script := []byte(`
 	  import "FooContract"
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 		Type<@{FooContract.Receiver}>().identifier
 		return 42
 	  }
@@ -1731,17 +1731,17 @@ func TestCoverageReportLCOVFormat(t *testing.T) {
 	t.Parallel()
 
 	integerTraits := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -1765,7 +1765,7 @@ func TestCoverageReportLCOVFormat(t *testing.T) {
 	script := []byte(`
 	  import "IntegerTraits"
 
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 	    let testInputs: {Int: String} = {
 	      -1: "Negative",
 	      0: "Zero",

@@ -8118,32 +8118,32 @@ func TestRuntimeDestructorReentrancyPrevention(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-      pub resource Vault {
+      access(all) resource Vault {
           // Balance of a user's Vault
           // we use unsigned fixed point numbers for balances
           // because they can represent decimals and do not allow negative values
-          pub var balance: UFix64
+          access(all) var balance: UFix64
 
           init(balance: UFix64) {
               self.balance = balance
           }
 
-          pub fun withdraw(amount: UFix64): @Vault {
+          access(all) fun withdraw(amount: UFix64): @Vault {
               self.balance = self.balance - amount
               return <-create Vault(balance: amount)
           }
 
-          pub fun deposit(from: @Vault) {
+          access(all) fun deposit(from: @Vault) {
               self.balance = self.balance + from.balance
               destroy from
           }
       }
 
       // --- this code actually makes use of the vuln ---
-      pub resource InnerResource {
-          pub var victim: @Vault;
-          pub var here: Bool;
-          pub var parent: &OuterResource;
+      access(all) resource InnerResource {
+          access(all) var victim: @Vault;
+          access(all) var here: Bool;
+          access(all) var parent: &OuterResource;
           init(victim: @Vault, parent: &OuterResource) {
               self.victim <- victim;
               self.here = false;
@@ -8159,18 +8159,18 @@ func TestRuntimeDestructorReentrancyPrevention(t *testing.T) {
           }
       }
 
-      pub resource OuterResource {
-          pub var inner: @InnerResource?;
-          pub var collector: &Vault;
+      access(all) resource OuterResource {
+          access(all) var inner: @InnerResource?;
+          access(all) var collector: &Vault;
           init(victim: @Vault, collector: &Vault) {
               self.collector = collector;
               self.inner <- create InnerResource(victim: <- victim, parent: &self as &OuterResource);
           }
-          pub fun reenter() {
+          access(all) fun reenter() {
               let inner <- self.inner <- nil;
               destroy inner;
           }
-          pub fun collect(from: @Vault) {
+          access(all) fun collect(from: @Vault) {
               self.collector.deposit(from: <- from);
           }
 
@@ -8179,7 +8179,7 @@ func TestRuntimeDestructorReentrancyPrevention(t *testing.T) {
           }
       }
 
-      pub fun doubleBalanceOfVault(vault: @Vault): @Vault {
+      access(all) fun doubleBalanceOfVault(vault: @Vault): @Vault {
           var collector <- vault.withdraw(amount: 0.0);
           var r <- create OuterResource(victim: <- vault, collector: &collector as &Vault);
           destroy r;
@@ -8188,7 +8188,7 @@ func TestRuntimeDestructorReentrancyPrevention(t *testing.T) {
 
       // --- end of vuln code ---
 
-      pub fun main(): UFix64 {
+      access(all) fun main(): UFix64 {
               var v1 <- create Vault(balance: 1000.0);
               var v2 <- doubleBalanceOfVault(vault: <- v1);
               var v3 <- doubleBalanceOfVault(vault: <- v2);
@@ -8223,7 +8223,7 @@ func TestRuntimeFlowEventTypes(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main(): Type? {
+      access(all) fun main(): Type? {
           return CompositeType("flow.AccountContractAdded")
       }
     `)
@@ -8298,18 +8298,18 @@ func TestInvalidatedResourceUse(t *testing.T) {
 	attacker := []byte(fmt.Sprintf(`
 		import VictimContract from %s
 
-		pub contract AttackerContract {
+		access(all) contract AttackerContract {
 
-			pub resource AttackerResource {
-				pub var vault: @VictimContract.Vault
-				pub var firstCopy: @VictimContract.Vault
+			access(all) resource AttackerResource {
+				access(all) var vault: @VictimContract.Vault
+				access(all) var firstCopy: @VictimContract.Vault
 
 				init(vault: @VictimContract.Vault) {
 					self.vault <- vault
 					self.firstCopy <- self.vault.withdraw(amount: 0.0)
 				}
 
-				pub fun shenanigans(): UFix64{
+				access(all) fun shenanigans(): UFix64{
 					let fullBalance = self.vault.balance
 
 					var withdrawn <- self.vault.withdraw(amount: 0.0)
@@ -8323,7 +8323,7 @@ func TestInvalidatedResourceUse(t *testing.T) {
 					return fullBalance
 				}
 
-				pub fun fetchfirstCopy(): @VictimContract.Vault {
+				access(all) fun fetchfirstCopy(): @VictimContract.Vault {
 					var withdrawn <- self.firstCopy.withdraw(amount: 0.0)
 					self.firstCopy <-> withdrawn
 					return <- withdrawn
@@ -8335,7 +8335,7 @@ func TestInvalidatedResourceUse(t *testing.T) {
 				}
 			}
 
-			pub fun doubleBalanceOfVault(_ victim: @VictimContract.Vault): @VictimContract.Vault {
+			access(all) fun doubleBalanceOfVault(_ victim: @VictimContract.Vault): @VictimContract.Vault {
 				var r <- create AttackerResource(vault: <- victim)
 
 				// The magic happens during the execution of the following line of code
@@ -8349,7 +8349,7 @@ func TestInvalidatedResourceUse(t *testing.T) {
 				return <- secondCopy
 			}
 
-			pub fun attack() {
+			access(all) fun attack() {
 				var v1 <- VictimContract.faucet()
 				var v2<- AttackerContract.doubleBalanceOfVault(<- v1)
 				destroy v2
@@ -8359,30 +8359,30 @@ func TestInvalidatedResourceUse(t *testing.T) {
 	))
 
 	victim := []byte(`
-        pub contract VictimContract {
-            pub resource Vault {
+        access(all) contract VictimContract {
+            access(all) resource Vault {
 
                 // Balance of a user's Vault
                 // we use unsigned fixed point numbers for balances
                 // because they can represent decimals and do not allow negative values
-                pub var balance: UFix64
+                access(all) var balance: UFix64
 
                 init(balance: UFix64) {
                     self.balance = balance
                 }
 
-                pub fun withdraw(amount: UFix64): @Vault {
+                access(all) fun withdraw(amount: UFix64): @Vault {
                     self.balance = self.balance - amount
                     return <-create Vault(balance: amount)
                 }
 
-                pub fun deposit(from: @Vault) {
+                access(all) fun deposit(from: @Vault) {
                     self.balance = self.balance + from.balance
                     destroy from
                 }
             }
 
-            pub fun faucet(): @VictimContract.Vault {
+            access(all) fun faucet(): @VictimContract.Vault {
                 return <- create VictimContract.Vault(balance: 5.0)
             }
         }
@@ -8490,12 +8490,12 @@ func TestInvalidatedResourceUse2(t *testing.T) {
 	attacker := []byte(fmt.Sprintf(`
         import VictimContract from %s
 
-        pub contract AttackerContract {
+        access(all) contract AttackerContract {
 
-            pub resource InnerResource {
-                pub var name: String
-                pub var parent: &OuterResource?
-                pub var vault: @VictimContract.Vault?
+            access(all) resource InnerResource {
+                access(all) var name: String
+                access(all) var parent: &OuterResource?
+                access(all) var vault: @VictimContract.Vault?
 
                 init(_ name: String) {
                     self.name = name
@@ -8503,11 +8503,11 @@ func TestInvalidatedResourceUse2(t *testing.T) {
                     self.vault <- nil
                 }
 
-                pub fun setParent(_ parent: &OuterResource) {
+                access(all) fun setParent(_ parent: &OuterResource) {
                     self.parent = parent
                 }
 
-                pub fun setVault(_ vault: @VictimContract.Vault) {
+                access(all) fun setVault(_ vault: @VictimContract.Vault) {
                     self.vault <-! vault
                 }
 
@@ -8518,10 +8518,10 @@ func TestInvalidatedResourceUse2(t *testing.T) {
                 }
             }
 
-            pub resource OuterResource {
-                pub var inner1: @InnerResource
-                pub var inner2: @InnerResource
-                pub var collector: &VictimContract.Vault
+            access(all) resource OuterResource {
+                access(all) var inner1: @InnerResource
+                access(all) var inner2: @InnerResource
+                access(all) var collector: &VictimContract.Vault
 
                 init(_ victim: @VictimContract.Vault, _ collector: &VictimContract.Vault) {
                     self.collector = collector
@@ -8534,11 +8534,11 @@ func TestInvalidatedResourceUse2(t *testing.T) {
                     self.inner2.setParent(&self as &OuterResource)
                 }
 
-                pub fun shenanigans() {
+                access(all) fun shenanigans() {
                     self.inner1 <-> self.inner2
                 }
 
-                pub fun collect(_ from: @VictimContract.Vault) {
+                access(all) fun collect(_ from: @VictimContract.Vault) {
                     self.collector.deposit(from: <- from)
                 }
 
@@ -8549,14 +8549,14 @@ func TestInvalidatedResourceUse2(t *testing.T) {
                 }
             }
 
-            pub fun doubleBalanceOfVault(_ vault: @VictimContract.Vault): @VictimContract.Vault {
+            access(all) fun doubleBalanceOfVault(_ vault: @VictimContract.Vault): @VictimContract.Vault {
                 var collector <- vault.withdraw(amount: 0.0)
                 var outer <- create OuterResource(<- vault, &collector as &VictimContract.Vault)
                 destroy outer
                 return <- collector
             }
 
-            pub fun attack() {
+            access(all) fun attack() {
                 var v1 <- VictimContract.faucet()
                 var v2 <- AttackerContract.doubleBalanceOfVault(<- v1)
                 destroy v2
@@ -8566,30 +8566,30 @@ func TestInvalidatedResourceUse2(t *testing.T) {
 	))
 
 	victim := []byte(`
-        pub contract VictimContract {
-            pub resource Vault {
+        access(all) contract VictimContract {
+            access(all) resource Vault {
 
                 // Balance of a user's Vault
                 // we use unsigned fixed point numbers for balances
                 // because they can represent decimals and do not allow negative values
-                pub var balance: UFix64
+                access(all) var balance: UFix64
 
                 init(balance: UFix64) {
                     self.balance = balance
                 }
 
-                pub fun withdraw(amount: UFix64): @Vault {
+                access(all) fun withdraw(amount: UFix64): @Vault {
                     self.balance = self.balance - amount
                     return <-create Vault(balance: amount)
                 }
 
-                pub fun deposit(from: @Vault) {
+                access(all) fun deposit(from: @Vault) {
                     self.balance = self.balance + from.balance
                     destroy from
                 }
             }
 
-            pub fun faucet(): @VictimContract.Vault {
+            access(all) fun faucet(): @VictimContract.Vault {
                 return <- create VictimContract.Vault(balance: 5.0)
             }
         }

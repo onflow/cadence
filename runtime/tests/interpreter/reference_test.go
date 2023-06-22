@@ -1290,15 +1290,15 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      pub resource Foo {
+      access(all) resource Foo {
 
-          pub let id: UInt8
+          access(all) let id: UInt8
 
           init() {
               self.id = 12
           }
 
-          pub fun something() {}
+          access(all) fun something() {}
       }
 
       fun returnSameRef(_ ref: &Foo): &Foo {

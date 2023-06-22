@@ -199,8 +199,8 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			pub contract SimpleContract {
-				pub let v: Int
+			access(all) contract SimpleContract {
+				access(all) let v: Int
 				init(a: Int) {
 					self.v = a
 				}
@@ -228,7 +228,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			pub contract SimpleContract {
+			access(all) contract SimpleContract {
 				init() {}
 			}		
         `)

@@ -338,7 +338,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word256) {}
+            access(all) fun main(x: Word256) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)

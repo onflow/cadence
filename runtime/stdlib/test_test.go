@@ -679,7 +679,7 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all)  fun test() {
 		        Test.assertEqual("this string", "this string")
 		    }
 		`
@@ -697,7 +697,7 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all)  fun test() {
 		        Test.assertEqual(15, 21)
 		    }
 		`
@@ -721,7 +721,7 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all) fun test() {
 		        Test.assertEqual(true, 1)
 		    }
 		`
@@ -745,13 +745,13 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testEqual() {
+		    access(all) fun testEqual() {
 		        let expected = Address(0xf8d6e0586b0a20c7)
 		        let actual = Address(0xf8d6e0586b0a20c7)
 		        Test.assertEqual(expected, actual)
 		    }
 
-		    pub fun testNotEqual() {
+		    access(all) fun testNotEqual() {
 		        let expected = Address(0xf8d6e0586b0a20c7)
 		        let actual = Address(0xee82856bf20e2aa6)
 		        Test.assertEqual(expected, actual)
@@ -780,21 +780,21 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub struct Foo {
-		        pub let answer: Int
+		    access(all) struct Foo {
+		        access(all) let answer: Int
 
 		        init(answer: Int) {
 		            self.answer = answer
 		        }
 		    }
 
-		    pub fun testEqual() {
+		    access(all) fun testEqual() {
 		        let expected = Foo(answer: 42)
 		        let actual = Foo(answer: 42)
 		        Test.assertEqual(expected, actual)
 		    }
 
-		    pub fun testNotEqual() {
+		    access(all) fun testNotEqual() {
 		        let expected = Foo(answer: 42)
 		        let actual = Foo(answer: 420)
 		        Test.assertEqual(expected, actual)
@@ -823,13 +823,13 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testEqual() {
+		    access(all) fun testEqual() {
 		        let expected = [1, 2, 3]
 		        let actual = [1, 2, 3]
 		        Test.assertEqual(expected, actual)
 		    }
 
-		    pub fun testNotEqual() {
+		    access(all) fun testNotEqual() {
 		        let expected = [1, 2, 3]
 		        let actual = [1, 2]
 		        Test.assertEqual(expected, actual)
@@ -858,13 +858,13 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testEqual() {
+		    access(all) fun testEqual() {
 		        let expected = {1: true, 2: false, 3: true}
 		        let actual = {1: true, 2: false, 3: true}
 		        Test.assertEqual(expected, actual)
 		    }
 
-		    pub fun testNotEqual() {
+		    access(all) fun testNotEqual() {
 		        let expected = {1: true, 2: false}
 		        let actual = {1: true, 2: true}
 		        Test.assertEqual(expected, actual)
@@ -893,13 +893,13 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all) fun test() {
 		        let f1 <- create Foo()
 		        let f2 <- create Foo()
 		        Test.assertEqual(<-f1, <-f2)
 		    }
 
-		    pub resource Foo {}
+		    access(all) resource Foo {}
 		`
 
 		_, err := newTestContractInterpreter(t, script)
@@ -915,14 +915,14 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all) fun test() {
 		        let foo <- create Foo()
 		        let bar = Bar()
 		        Test.assertEqual(<-foo, bar)
 		    }
 
-		    pub resource Foo {}
-		    pub struct Bar {}
+		    access(all) resource Foo {}
+		    access(all) struct Bar {}
 		`
 
 		_, err := newTestContractInterpreter(t, script)
@@ -937,14 +937,14 @@ func TestAssertEqual(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test() {
+		    access(all) fun test() {
 		        let foo = Foo()
 		        let bar <- create Bar()
 		        Test.expect(foo, Test.equal(<-bar))
 		    }
 
-		    pub struct Foo {}
-		    pub resource Bar {}
+		    access(all) struct Foo {}
+		    access(all) resource Bar {}
 		`
 
 		_, err := newTestContractInterpreter(t, script)
@@ -1958,7 +1958,7 @@ func TestBlockchain(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): [AnyStruct] {
+		    access(all) fun test(): [AnyStruct] {
 		        var blockchain = Test.newEmulatorBlockchain()
 		        return blockchain.events()
 		    }
@@ -1994,7 +1994,7 @@ func TestBlockchain(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): [AnyStruct] {
+		    access(all) fun test(): [AnyStruct] {
 		        var blockchain = Test.newEmulatorBlockchain()
 
 		        // 'Foo' is not an event-type.
@@ -2004,7 +2004,7 @@ func TestBlockchain(t *testing.T) {
 		        return blockchain.eventsOfType(typ)
 		    }
 
-		    pub struct Foo {}
+		    access(all) struct Foo {}
 		`
 
 		eventsInvoked := false
