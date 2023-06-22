@@ -466,7 +466,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
         // Create a public capability to the stored Vault that only exposes
         // the balance field through the Balance interface
-        self.account.link<&DapperUtilityCoin.Vault{FungibleToken.Balance}>(
+        self.account.link<&DapperUtilityCoin.Vault>(
             /public/dapperUtilityCoinBalance,
             target: /storage/dapperUtilityCoinVault
         )
@@ -1538,12 +1538,12 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
           prepare(signer: AuthAccount) {
               signer.save(<-Test.createR(), to: /storage/r)
 
-              signer.link<&Test.R{Test.RI}>(
+              signer.link<&Test.R>(
                  /public/r,
                  target: /storage/r
               )
 
-              let ref = signer.getCapability<&Test.R{Test.RI}>(/public/r).borrow()!
+              let ref = signer.getCapability<&Test.R>(/public/r).borrow()!
 
               let casted = (ref as AnyStruct) as! &Test.R
           }
@@ -1637,12 +1637,12 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
           prepare(signer: AuthAccount) {
               signer.save(<-Test.createR(), to: /storage/r)
 
-              signer.link<&Test.R{Test.RI}>(
+              signer.link<&Test.R>(
                  /public/r,
                  target: /storage/r
               )
 
-              let ref = signer.getCapability<&Test.R{Test.RI}>(/public/r).borrow()!
+              let ref = signer.getCapability<&Test.R>(/public/r).borrow()!
 
               let casted = (ref as AnyStruct) as! auth(Test.E) &Test.R
           }

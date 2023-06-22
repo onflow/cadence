@@ -4956,8 +4956,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
 		// Inject a function that returns a storage reference value,
 		// which is borrowed as:
-		// - `&R{RI}` (unauthorized, if argument for parameter `authorized` == false)
-		// - `auth(E) &R{RI}` (authorized, if argument for parameter `authorized` == true)
+		// - `&{RI}` (unauthorized, if argument for parameter `authorized` == false)
+		// - `auth(E) &{RI}` (authorized, if argument for parameter `authorized` == true)
 
 		storageAddress := common.MustBytesToAddress([]byte{0x42})
 		storagePath := interpreter.PathValue{
