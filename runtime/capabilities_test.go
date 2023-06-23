@@ -111,63 +111,47 @@ func TestRuntimeCapability_borrow(t *testing.T) {
               }
 
               access(all)
-              fun saveAndPublish() {
+              fun setup() {
                   let r <- create R()
                   self.account.save(<-r, to: /storage/r)
 
                   let rCap = self.account.capabilities.storage.issue<&R>(/storage/r)
                   self.account.capabilities.publish(rCap, at: /public/r)
 
-                  let r2Cap = self.account.capabilities.storage.issue<&R2>(/storage/r)
-                  self.account.capabilities.publish(r2Cap, at: /public/r2)
+                  let rAsR2Cap = self.account.capabilities.storage.issue<&R2>(/storage/r)
+                  self.account.capabilities.publish(rAsR2Cap, at: /public/rAsR2)
+
+                  let rAsSCap = self.account.capabilities.storage.issue<&S>(/storage/r)
+                  self.account.capabilities.publish(rAsSCap, at: /public/rAsS)
 
                   let noCap = self.account.capabilities.storage.issue<&R>(/storage/nonExistent)
                   self.account.capabilities.publish(noCap, at: /public/nonExistent)
               }
 
               access(all)
-              fun foo(_ path: PublicPath): Int {
-                  return self.account.capabilities.borrow<&R>(path)!.foo
+              fun testBorrowR() {
+                  let ref = self.account.capabilities.get<&R>(/public/r)!.borrow()!
+                  assert(ref.foo == 42)
               }
 
               access(all)
-              fun single(): Int {
-                  return self.foo(/public/r)
+              fun testBorrowRAsR2() {
+                  assert(self.account.capabilities.get<&R2>(/public/rAsR2)!.borrow() == nil)
               }
 
               access(all)
-              fun singleAuth(): auth(X) &R? {
-                  return self.account.capabilities.borrow<auth(X) &R>(/public/r)
+              fun testBorrowRAsS() {
+                  assert(self.account.capabilities.get<&S>(/public/rAsS)!.borrow() == nil)
               }
 
               access(all)
-              fun singleR2(): &R2? {
-                  return self.account.capabilities.borrow<&R2>(/public/r)
+              fun testNonExistent() {
+                  assert(self.account.capabilities.get<&R>(/public/nonExistent)!.borrow() == nil)
               }
 
               access(all)
-              fun singleS(): &S? {
-                  return self.account.capabilities.borrow<&S>(/public/r)
-              }
-
-              access(all)
-              fun nonExistent(): Int {
-                  return self.foo(/public/nonExistent)
-              }
-
-              access(all)
-              fun singleTyped(): Int {
-                  return self.account.capabilities.borrow<&R>(/public/r)!.foo
-              }
-
-              access(all)
-              fun r2(): Int {
-                  return self.account.capabilities.borrow<&R2>(/public/r2)!.foo
-              }
-
-              access(all)
-              fun singleChangeAfterBorrow(): Int {
-                 let ref = self.account.capabilities.borrow<&R>(/public/r)!
+              fun testSwap(): Int {
+                 let ref = self.account.capabilities.get<&R>(/public/r)!.borrow()!
 
                  let r <- self.account.load<@R>(from: /storage/r)
                  destroy r
@@ -205,80 +189,34 @@ func TestRuntimeCapability_borrow(t *testing.T) {
 			)
 		}
 
-		// Run test scripts
+		// Run tests
 
-		// save
-
-		_, err = invoke("saveAndPublish")
+		_, err = invoke("setup")
 		require.NoError(t, err)
 
-		t.Run("single", func(t *testing.T) {
-
-			value, err := invoke("single")
+		t.Run("testBorrowR", func(t *testing.T) {
+			_, err := invoke("testBorrowR")
 			require.NoError(t, err)
-
-			require.Equal(
-				t,
-				cadence.NewInt(42),
-				value,
-			)
 		})
 
-		t.Run("single R2", func(t *testing.T) {
-
-			value, err := invoke("singleR2")
+		t.Run("testBorrowRAsR2", func(t *testing.T) {
+			_, err := invoke("testBorrowRAsR2")
 			require.NoError(t, err)
-
-			require.Equal(t, cadence.Optional{}, value)
 		})
 
-		t.Run("single S", func(t *testing.T) {
-
-			value, err := invoke("singleS")
+		t.Run("testBorrowRAsS", func(t *testing.T) {
+			_, err := invoke("testBorrowRAsS")
 			require.NoError(t, err)
-
-			require.Equal(t, cadence.Optional{}, value)
 		})
 
-		t.Run("single auth", func(t *testing.T) {
-
-			value, err := invoke("singleAuth")
+		t.Run("testNonExistent", func(t *testing.T) {
+			_, err := invoke("testNonExistent")
 			require.NoError(t, err)
-
-			require.Equal(t, cadence.Optional{}, value)
 		})
 
-		t.Run("nonExistent", func(t *testing.T) {
+		t.Run("testSwap", func(t *testing.T) {
 
-			_, err := invoke("nonExistent")
-			RequireError(t, err)
-
-			require.ErrorAs(t, err, &interpreter.ForceNilError{})
-		})
-
-		t.Run("singleTyped", func(t *testing.T) {
-
-			value, err := invoke("singleTyped")
-			require.NoError(t, err)
-
-			require.Equal(
-				t,
-				cadence.NewInt(42),
-				value,
-			)
-		})
-
-		t.Run("r2", func(t *testing.T) {
-
-			_, err := invoke("r2")
-			RequireError(t, err)
-
-			require.ErrorAs(t, err, &interpreter.ForceNilError{})
-		})
-
-		t.Run("single change after borrow", func(t *testing.T) {
-
-			_, err := invoke("singleChangeAfterBorrow")
+			_, err := invoke("testSwap")
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
@@ -300,110 +238,93 @@ func TestRuntimeCapability_borrow(t *testing.T) {
           contract Test {
 
               access(all)
-	          entitlement X
+              entitlement X
 
               access(all)
-	          struct S {
+              struct S {
 
                   access(all)
-	              let foo: Int
+                  let foo: Int
 
-	              init() {
-	                  self.foo = 42
-	              }
-	          }
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               access(all)
-	          struct S2 {
+              struct S2 {
 
                   access(all)
-	              let foo: Int
+                  let foo: Int
 
-	              init() {
-	                  self.foo = 42
-	              }
-	          }
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               access(all)
-	          resource R {
+              resource R {
 
                   access(all)
-	              let foo: Int
+                  let foo: Int
 
-	              init() {
-	                  self.foo = 42
-	              }
-	          }
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               access(all)
-	          fun saveAndPublish() {
-	              let s = S()
-	              self.account.save(s, to: /storage/s)
+              fun setup() {
+                  let s = S()
+                  self.account.save(s, to: /storage/s)
 
                   let sCap = self.account.capabilities.storage.issue<&S>(/storage/s)
                   self.account.capabilities.publish(sCap, at: /public/s)
 
-                  let s2Cap = self.account.capabilities.storage.issue<&S2>(/storage/s)
-                  self.account.capabilities.publish(s2Cap, at: /public/s2)
+                  let sAsS2Cap = self.account.capabilities.storage.issue<&S2>(/storage/s)
+                  self.account.capabilities.publish(sAsS2Cap, at: /public/sAsS2)
+
+                  let sAsRCap = self.account.capabilities.storage.issue<&R>(/storage/s)
+                  self.account.capabilities.publish(sAsRCap, at: /public/sAsR)
 
                   let noCap = self.account.capabilities.storage.issue<&S>(/storage/nonExistent)
                   self.account.capabilities.publish(noCap, at: /public/nonExistent)
-	          }
+              }
 
               access(all)
-	          fun foo(_ path: PublicPath): Int {
-	              return self.account.capabilities.borrow<&S>(path)!.foo
-	          }
+              fun testBorrowS() {
+                  let ref = self.account.capabilities.get<&S>(/public/s)!.borrow()!
+                  assert(ref.foo == 42)
+              }
 
               access(all)
-	          fun single(): Int {
-	              return self.foo(/public/s)
-	          }
+              fun testBorrowSAsS2() {
+                  assert(self.account.capabilities.get<&S2>(/public/sAsS2)!.borrow() == nil)
+              }
 
               access(all)
-	          fun singleAuth(): auth(X) &S? {
-	              return self.account.capabilities.borrow<auth(X) &S>(/public/s)
-	          }
+              fun testBorrowSAsR() {
+                  assert(self.account.capabilities.get<&R>(/public/sAsR)!.borrow() == nil)
+              }
 
               access(all)
-	          fun singleS2(): &S2? {
-	              return self.account.capabilities.borrow<&S2>(/public/s)
-	          }
+              fun testNonExistent() {
+                  assert(self.account.capabilities.get<&S>(/public/nonExistent)!.borrow() == nil)
+              }
 
               access(all)
-	          fun singleR(): &R? {
-	              return self.account.capabilities.borrow<&R>(/public/s)
-	          }
+              fun testSwap(): Int {
+                 let ref = self.account.capabilities.get<&S>(/public/s)!.borrow()!
 
-              access(all)
-	          fun nonExistent(): Int {
-	              return self.foo(/public/nonExistent)
-	          }
+                 self.account.load<S>(from: /storage/s)
 
-              access(all)
-	          fun singleTyped(): Int {
-	              return self.account.capabilities.borrow<&S>(/public/s)!.foo
-	          }
+                 let s2 = S2()
+                 self.account.save(s2, to: /storage/s)
 
-              access(all)
-	          fun s2(): Int {
-	              return self.account.capabilities.borrow<&S2>(/public/s2)!.foo
-	          }
-
-              access(all)
-	          fun singleChangeAfterBorrow(): Int {
-	              let ref = self.account.capabilities.borrow<&S>(/public/s)!
-
-	              // remove stored value
-	              self.account.load<S>(from: /storage/s)
-
-	              let s2 = S2()
-	              self.account.save(s2, to: /storage/s)
-
-	              return ref.foo
-	          }
+                 return ref.foo
+              }
           }
-	    `
+        `
 
 		contractLocation := common.NewAddressLocation(nil, address, "Test")
 
@@ -430,80 +351,34 @@ func TestRuntimeCapability_borrow(t *testing.T) {
 			)
 		}
 
-		// Run test scripts
+		// Run tests
 
-		// save
-
-		_, err = invoke("saveAndPublish")
+		_, err = invoke("setup")
 		require.NoError(t, err)
 
-		t.Run("single", func(t *testing.T) {
-
-			value, err := invoke("single")
+		t.Run("testBorrowS", func(t *testing.T) {
+			_, err := invoke("testBorrowS")
 			require.NoError(t, err)
-
-			require.Equal(
-				t,
-				cadence.NewInt(42),
-				value,
-			)
 		})
 
-		t.Run("single S2", func(t *testing.T) {
-
-			value, err := invoke("singleS2")
+		t.Run("testBorrowSAsS2", func(t *testing.T) {
+			_, err := invoke("testBorrowSAsS2")
 			require.NoError(t, err)
-
-			require.Equal(t, cadence.Optional{}, value)
 		})
 
-		t.Run("single R", func(t *testing.T) {
-
-			value, err := invoke("singleR")
+		t.Run("testBorrowSAsR", func(t *testing.T) {
+			_, err := invoke("testBorrowSAsR")
 			require.NoError(t, err)
-
-			require.Equal(t, cadence.Optional{}, value)
 		})
 
-		t.Run("single auth", func(t *testing.T) {
-
-			value, err := invoke("singleAuth")
+		t.Run("testNonExistent", func(t *testing.T) {
+			_, err := invoke("testNonExistent")
 			require.NoError(t, err)
-
-			require.Equal(t, cadence.Optional{}, value)
 		})
 
-		t.Run("nonExistent", func(t *testing.T) {
+		t.Run("testSwap", func(t *testing.T) {
 
-			_, err := invoke("nonExistent")
-			RequireError(t, err)
-
-			require.ErrorAs(t, err, &interpreter.ForceNilError{})
-		})
-
-		t.Run("singleTyped", func(t *testing.T) {
-
-			value, err := invoke("singleTyped")
-			require.NoError(t, err)
-
-			require.Equal(
-				t,
-				cadence.NewInt(42),
-				value,
-			)
-		})
-
-		t.Run("s2", func(t *testing.T) {
-
-			_, err := invoke("s2")
-			RequireError(t, err)
-
-			require.ErrorAs(t, err, &interpreter.ForceNilError{})
-		})
-
-		t.Run("single change after borrow", func(t *testing.T) {
-
-			_, err := invoke("singleChangeAfterBorrow")
+			_, err := invoke("testSwap")
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
@@ -535,13 +410,14 @@ func TestRuntimeCapability_borrow(t *testing.T) {
 	          }
 
               access(all)
-	          fun address(): Address {
-	              return self.cap.borrow<&AuthAccount>()!.address
+	          fun testBorrow() {
+                  let ref = self.cap.borrow<&AuthAccount>()!
+	              assert(ref.address == 0x1)
 	          }
 
               access(all)
-	          fun borrowAuth(): auth(X) &AuthAccount? {
-	              return self.cap.borrow<auth(X) &AuthAccount>()
+	          fun testBorrowAuth() {
+	              assert(self.cap.borrow<auth(X) &AuthAccount>() == nil)
 	          }
           }
 	    `
@@ -571,26 +447,16 @@ func TestRuntimeCapability_borrow(t *testing.T) {
 			)
 		}
 
-		// Run test scripts
+		// Run tests
 
 		t.Run("address", func(t *testing.T) {
-
-			value, err := invoke("address")
+			_, err := invoke("testBorrow")
 			require.NoError(t, err)
-
-			require.Equal(
-				t,
-				cadence.Address(address),
-				value,
-			)
 		})
 
 		t.Run("borrowAuth", func(t *testing.T) {
-
-			value, err := invoke("borrowAuth")
+			_, err := invoke("testBorrowAuth")
 			require.NoError(t, err)
-
-			require.Equal(t, cadence.Optional{}, value)
 		})
 	})
 }
