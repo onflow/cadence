@@ -1214,7 +1214,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							t,
 							inter,
 							expectedElements,
-							arrayElements(inter, yArray),
+							ArrayElements(inter, yArray),
 						)
 
 						zValue := inter.Globals.Get("z").GetValue()
@@ -1229,7 +1229,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							t,
 							inter,
 							expectedElements,
-							arrayElements(inter, innerArray),
+							ArrayElements(inter, innerArray),
 						)
 					})
 				}

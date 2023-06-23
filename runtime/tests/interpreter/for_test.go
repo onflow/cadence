@@ -164,7 +164,7 @@ func TestInterpretForStatementWithContinue(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(4),
 			interpreter.NewUnmeteredIntValueFromInt64(5),
 		},
-		arrayElements(inter, arrayValue),
+		ArrayElements(inter, arrayValue),
 	)
 }
 
@@ -291,6 +291,6 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(3),
 		},
-		arrayElements(inter, arrayValue),
+		ArrayElements(inter, arrayValue),
 	)
 }

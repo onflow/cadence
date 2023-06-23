@@ -222,3 +222,68 @@ func RequireError(t *testing.T, err error) {
 		_ = hasSecondaryError.SecondaryError()
 	}
 }
+
+func ArrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue) []interpreter.Value {
+	count := array.Count()
+	result := make([]interpreter.Value, count)
+	for i := 0; i < count; i++ {
+		result[i] = array.Get(inter, interpreter.EmptyLocationRange, i)
+	}
+	return result
+}
+
+func DictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.DictionaryValue) []interpreter.Value {
+	count := dict.Count() * 2
+	result := make([]interpreter.Value, count)
+	i := 0
+	dict.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
+		result[i*2] = key
+		result[i*2+1] = value
+		i++
+
+		return true
+	})
+	return result
+}
+
+type DictionaryEntry[K, V any] struct {
+	Key   K
+	Value V
+}
+
+// DictionaryEntries is similar to DictionaryKeyValues,
+// attempting to map untyped Values to concrete values using the provided morphisms.
+// If a conversion fails, then this function returns (nil, false).
+// Useful in contexts when Cadence values need to be extracted into their go counterparts.
+func DictionaryEntries[K, V any](
+	inter *interpreter.Interpreter,
+	dict *interpreter.DictionaryValue,
+	fromKey func(interpreter.Value) (K, bool),
+	fromVal func(interpreter.Value) (V, bool),
+) ([]DictionaryEntry[K, V], bool) {
+
+	count := dict.Count()
+	res := make([]DictionaryEntry[K, V], count)
+
+	iterStatus := true
+	idx := 0
+	dict.Iterate(inter, func(rawKey, rawValue interpreter.Value) (resume bool) {
+		key, ok := fromKey(rawKey)
+
+		if !ok {
+			iterStatus = false
+			return iterStatus
+		}
+
+		value, ok := fromVal(rawValue)
+		if !ok {
+			iterStatus = false
+			return iterStatus
+		}
+
+		res[idx] = DictionaryEntry[K, V]{key, value}
+		return iterStatus
+	})
+
+	return res, iterStatus
+}
