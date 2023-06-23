@@ -29,7 +29,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestRuntimeCapability_borrow(t *testing.T) {
+func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 	t.Parallel()
 
@@ -129,24 +129,69 @@ func TestRuntimeCapability_borrow(t *testing.T) {
               }
 
               access(all)
-              fun testBorrowR() {
-                  let ref = self.account.capabilities.get<&R>(/public/r)!.borrow()!
-                  assert(ref.foo == 42)
+              fun testR() {
+                  let cap = self.account.capabilities.get<&R>(/public/r)!
+
+                  assert(
+                      cap.check(),
+                      message: "check failed"
+                  )
+
+                  let ref = cap.borrow()
+                  assert(
+                      ref != nil,
+                      message: "borrow failed"
+                  )
+
+                  assert(
+                      ref?.foo == 42,
+                      message: "invalid foo"
+                  )
               }
 
               access(all)
-              fun testBorrowRAsR2() {
-                  assert(self.account.capabilities.get<&R2>(/public/rAsR2)!.borrow() == nil)
+              fun testRAsR2() {
+                  let cap = self.account.capabilities.get<&R2>(/public/rAsR2)!
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
               }
 
               access(all)
-              fun testBorrowRAsS() {
-                  assert(self.account.capabilities.get<&S>(/public/rAsS)!.borrow() == nil)
+              fun testRAsS() {
+                  let cap = self.account.capabilities.get<&S>(/public/rAsS)!
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
               }
 
               access(all)
               fun testNonExistent() {
-                  assert(self.account.capabilities.get<&R>(/public/nonExistent)!.borrow() == nil)
+                  let cap = self.account.capabilities.get<&R>(/public/nonExistent)!
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
               }
 
               access(all)
@@ -194,18 +239,18 @@ func TestRuntimeCapability_borrow(t *testing.T) {
 		_, err = invoke("setup")
 		require.NoError(t, err)
 
-		t.Run("testBorrowR", func(t *testing.T) {
-			_, err := invoke("testBorrowR")
+		t.Run("testR", func(t *testing.T) {
+			_, err := invoke("testR")
 			require.NoError(t, err)
 		})
 
-		t.Run("testBorrowRAsR2", func(t *testing.T) {
-			_, err := invoke("testBorrowRAsR2")
+		t.Run("testRAsR2", func(t *testing.T) {
+			_, err := invoke("testRAsR2")
 			require.NoError(t, err)
 		})
 
-		t.Run("testBorrowRAsS", func(t *testing.T) {
-			_, err := invoke("testBorrowRAsS")
+		t.Run("testRAsS", func(t *testing.T) {
+			_, err := invoke("testRAsS")
 			require.NoError(t, err)
 		})
 
@@ -292,24 +337,69 @@ func TestRuntimeCapability_borrow(t *testing.T) {
               }
 
               access(all)
-              fun testBorrowS() {
-                  let ref = self.account.capabilities.get<&S>(/public/s)!.borrow()!
-                  assert(ref.foo == 42)
+              fun testS() {
+                  let cap = self.account.capabilities.get<&S>(/public/s)!
+
+                  assert(
+                       cap.check(),
+                       message: "check failed"
+                  )
+
+                  let ref = cap.borrow()
+                  assert(
+                      ref != nil,
+                      message: "borrow failed"
+                  )
+
+                  assert(
+                      ref?.foo == 42,
+                      message: "invalid foo"
+                  )
               }
 
               access(all)
-              fun testBorrowSAsS2() {
-                  assert(self.account.capabilities.get<&S2>(/public/sAsS2)!.borrow() == nil)
+              fun testSAsS2() {
+                  let cap = self.account.capabilities.get<&S2>(/public/sAsS2)!
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
               }
 
               access(all)
-              fun testBorrowSAsR() {
-                  assert(self.account.capabilities.get<&R>(/public/sAsR)!.borrow() == nil)
+              fun testSAsR() {
+                  let cap = self.account.capabilities.get<&R>(/public/sAsR)!
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
               }
 
               access(all)
               fun testNonExistent() {
-                  assert(self.account.capabilities.get<&S>(/public/nonExistent)!.borrow() == nil)
+                  let cap = self.account.capabilities.get<&S>(/public/nonExistent)!
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
               }
 
               access(all)
@@ -356,18 +446,18 @@ func TestRuntimeCapability_borrow(t *testing.T) {
 		_, err = invoke("setup")
 		require.NoError(t, err)
 
-		t.Run("testBorrowS", func(t *testing.T) {
-			_, err := invoke("testBorrowS")
+		t.Run("testS", func(t *testing.T) {
+			_, err := invoke("testS")
 			require.NoError(t, err)
 		})
 
-		t.Run("testBorrowSAsS2", func(t *testing.T) {
-			_, err := invoke("testBorrowSAsS2")
+		t.Run("testSAsS2", func(t *testing.T) {
+			_, err := invoke("testSAsS2")
 			require.NoError(t, err)
 		})
 
-		t.Run("testBorrowSAsR", func(t *testing.T) {
-			_, err := invoke("testBorrowSAsR")
+		t.Run("testSAsR", func(t *testing.T) {
+			_, err := invoke("testSAsR")
 			require.NoError(t, err)
 		})
 
@@ -410,14 +500,36 @@ func TestRuntimeCapability_borrow(t *testing.T) {
 	          }
 
               access(all)
-	          fun testBorrow() {
-                  let ref = self.cap.borrow<&AuthAccount>()!
-	              assert(ref.address == 0x1)
+	          fun test() {
+
+                  assert(
+                      self.cap.check<&AuthAccount>(),
+                      message: "check failed"
+                  )
+
+                  let ref = self.cap.borrow<&AuthAccount>()
+                  assert(
+                      ref != nil,
+                      message: "borrow failed"
+                  )
+
+	              assert(
+                      ref?.address == 0x1,
+                      message: "invalid address"
+                  )
 	          }
 
               access(all)
-	          fun testBorrowAuth() {
-	              assert(self.cap.borrow<auth(X) &AuthAccount>() == nil)
+	          fun testAuth() {
+                  assert(
+                      !self.cap.check<auth(X) &AuthAccount>(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      self.cap.borrow<auth(X) &AuthAccount>() == nil,
+                      message: "invalid borrow"
+                  )
 	          }
           }
 	    `
@@ -449,13 +561,13 @@ func TestRuntimeCapability_borrow(t *testing.T) {
 
 		// Run tests
 
-		t.Run("address", func(t *testing.T) {
-			_, err := invoke("testBorrow")
+		t.Run("test", func(t *testing.T) {
+			_, err := invoke("test")
 			require.NoError(t, err)
 		})
 
-		t.Run("borrowAuth", func(t *testing.T) {
-			_, err := invoke("testBorrowAuth")
+		t.Run("testAuth", func(t *testing.T) {
+			_, err := invoke("testAuth")
 			require.NoError(t, err)
 		})
 	})
