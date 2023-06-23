@@ -288,9 +288,9 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
             self.balance = 0.0
           }
 
-		  access(all) fun setBalance(_ balance: UFix64) {
-			self.balance = balance
-		  }
+          access(all) fun setBalance(_ balance: UFix64) {
+            self.balance = balance
+          }
         }
         access(all) resource resourceConverter{
           access(all) fun convert(b: fake): AnyStruct {
@@ -1323,7 +1323,7 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
 
           access(all) resource R: RI {}
 
-		  access(all) entitlement E
+          access(all) entitlement E
 
           access(all) fun createR(): @R {
               return <-create R()
@@ -2990,10 +2990,10 @@ func TestRuntimeStorageReadNoImplicitWrite(t *testing.T) {
 		Script{
 			Source: []byte((`
               transaction {
-			    prepare(signer: AuthAccount) {
-			        let ref = getAccount(0x2).capabilities.borrow<&AnyStruct>(/public/test)
+                prepare(signer: AuthAccount) {
+                    let ref = getAccount(0x2).capabilities.borrow<&AnyStruct>(/public/test)
                     assert(ref == nil)
-			    }
+                }
               }
             `)),
 		},
@@ -3912,45 +3912,45 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		runtime, runtimeInterface := newRuntime()
 
 		const script = `
-	      access(all)
+          access(all)
           struct S {
               access(all)
-	          let value: Int
+              let value: Int
 
               init(value: Int) {
-	              self.value = value
-	          }
-	      }
+                  self.value = value
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main(): Int {
               let account = getAuthAccount(0x1)
               let pubAccount = getAccount(0x1)
 
-	          account.save(S(value: 2), to: /storage/foo)
-	          account.save("", to: /storage/bar)
-	          let capA = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.save(S(value: 2), to: /storage/foo)
+              account.save("", to: /storage/bar)
+              let capA = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capA, at: /public/a)
-	          let capB = account.capabilities.storage.issue<&String>(/storage/bar)
+              let capB = account.capabilities.storage.issue<&String>(/storage/bar)
               account.capabilities.publish(capB, at: /public/b)
-	          let capC = account.capabilities.storage.issue<&S>(/storage/foo)
+              let capC = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capC, at: /public/c)
-	          let capD = account.capabilities.storage.issue<&S>(/storage/foo)
+              let capD = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capD, at: /public/d)
-	          let capE = account.capabilities.storage.issue<&String>(/storage/bar)
+              let capE = account.capabilities.storage.issue<&String>(/storage/bar)
               account.capabilities.publish(capE, at: /public/e)
 
-	          var total = 0
-	          pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-	              if type == Type<Capability<&S>>() {
-	                  total = total + pubAccount.capabilities.borrow<&S>(path)!.value
-	              }
-	              return true
-	          })
+              var total = 0
+              pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                  if type == Type<Capability<&S>>() {
+                      total = total + pubAccount.capabilities.borrow<&S>(path)!.value
+                  }
+                  return true
+              })
 
-	          return total
-	      }
-	    `
+              return total
+          }
+        `
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -3978,40 +3978,40 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           access(all)
           struct S {
               access(all)
-	          let value: Int
+              let value: Int
 
               init(value: Int) {
-	              self.value = value
-	          }
-	      }
+                  self.value = value
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main(): Int {
               let account = getAuthAccount(0x1)
               let pubAccount = getAccount(0x1)
 
-	          account.save(S(value: 2), to: /storage/foo)
-	          account.save("", to: /storage/bar)
-	          let capA = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.save(S(value: 2), to: /storage/foo)
+              account.save("", to: /storage/bar)
+              let capA = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capA, at: /public/a)
-	          let capB = account.capabilities.storage.issue<&String>(/storage/bar)
+              let capB = account.capabilities.storage.issue<&String>(/storage/bar)
               account.capabilities.publish(capB, at: /public/b)
-	          let capC = account.capabilities.storage.issue<&S>(/storage/foo)
+              let capC = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capC, at: /public/c)
-	          let capD = account.capabilities.storage.issue<&S>(/storage/foo)
+              let capD = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capD, at: /public/d)
-	          let capE = account.capabilities.storage.issue<&String>(/storage/bar)
+              let capE = account.capabilities.storage.issue<&String>(/storage/bar)
               account.capabilities.publish(capE, at: /public/e)
 
-	          var total = 0
-	          pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-	              total = total + 1
-	              return true
-	          })
+              var total = 0
+              pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                  total = total + 1
+                  return true
+              })
 
-	          return total
-	      }
-	    `
+              return total
+          }
+        `
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -4038,42 +4038,42 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           access(all)
           struct S {
               access(all)
-	          let value: Int
+              let value: Int
 
               init(value: Int) {
-	              self.value = value
-	          }
-	      }
+                  self.value = value
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main(): Int {
               let account = getAuthAccount(0x1)
               let pubAccount = getAccount(0x1)
 
-	          account.save(S(value: 2), to: /storage/foo)
-	          account.save("", to: /storage/bar)
-	          let capA = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.save(S(value: 2), to: /storage/foo)
+              account.save("", to: /storage/bar)
+              let capA = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capA, at: /public/a)
-	          let capB = account.capabilities.storage.issue<&String>(/storage/bar)
+              let capB = account.capabilities.storage.issue<&String>(/storage/bar)
               account.capabilities.publish(capB, at: /public/b)
-	          let capC = account.capabilities.storage.issue<&S>(/storage/foo)
+              let capC = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capC, at: /public/c)
-	          let capD = account.capabilities.storage.issue<&S>(/storage/foo)
+              let capD = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capD, at: /public/d)
-	          let capE = account.capabilities.storage.issue<&String>(/storage/bar)
+              let capE = account.capabilities.storage.issue<&String>(/storage/bar)
               account.capabilities.publish(capE, at: /public/e)
 
-	          var total = 0
-	          account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-	              if type == Type<Capability<&S>>() {
-	                  total = total + account.capabilities.borrow<&S>(path)!.value
-	              }
-	              return true
-	          })
+              var total = 0
+              account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                  if type == Type<Capability<&S>>() {
+                      total = total + account.capabilities.borrow<&S>(path)!.value
+                  }
+                  return true
+              })
 
-	          return total
-	       }
-	    `
+              return total
+           }
+        `
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -4101,32 +4101,32 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           access(all)
           struct S {
               access(all)
-	          let value: Int
+              let value: Int
 
               init(value: Int) {
-	              self.value = value
-	          }
-	      }
+                  self.value = value
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main(): Int {
               let account = getAuthAccount(0x1)
               let pubAccount = getAccount(0x1)
 
-	          account.save(S(value: 2), to: /storage/foo)
-	          account.save("test", to: /storage/bar)
-	          let capA = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.save(S(value: 2), to: /storage/foo)
+              account.save("test", to: /storage/bar)
+              let capA = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(capA, at: /public/a)
 
-	          var total = 0
-	          account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
-	              total = total + 1
-	              return true
-	          })
+              var total = 0
+              account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+                  total = total + 1
+                  return true
+              })
 
-	          return total
-	      }
-	    `
+              return total
+          }
+        `
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -4153,34 +4153,34 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           access(all)
           struct S {
               access(all)
-	          let value: Int
+              let value: Int
 
               init(value: Int) {
-	              self.value = value
-	          }
-	      }
+                  self.value = value
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main(): Int {
               let account = getAuthAccount(0x1)
 
-	          account.save(S(value: 1), to: /storage/foo1)
-	          account.save(S(value: 2), to: /storage/foo2)
-	          account.save(S(value: 5), to: /storage/foo3)
-	          account.save("", to: /storage/bar1)
-	          account.save(4, to: /storage/bar2)
+              account.save(S(value: 1), to: /storage/foo1)
+              account.save(S(value: 2), to: /storage/foo2)
+              account.save(S(value: 5), to: /storage/foo3)
+              account.save("", to: /storage/bar1)
+              account.save(4, to: /storage/bar2)
 
-	          var total = 0
-	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-	              if type == Type<S>() {
-	                  total = total + account.borrow<&S>(from: path)!.value
-	              }
-	              return true
-	          })
+              var total = 0
+              account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  if type == Type<S>() {
+                      total = total + account.borrow<&S>(from: path)!.value
+                  }
+                  return true
+              })
 
-	          return total
-	      }
-	    `
+              return total
+          }
+        `
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -4207,30 +4207,30 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           access(all)
           struct S {
               access(all)
-	          let value: Int
+              let value: Int
 
               init(value: Int) {
-	              self.value = value
-	          }
-	      }
+                  self.value = value
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main(): Int {
               let account = getAuthAccount(0x1)
 
-	          var total = 0
-	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-	              total = total + 1
-	              return true
-	          })
+              var total = 0
+              account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  total = total + 1
+                  return true
+              })
 
-	          account.save(S(value: 1), to: /storage/foo1)
-	          account.save(S(value: 2), to: /storage/foo2)
-	          account.save(S(value: 5), to: /storage/foo3)
+              account.save(S(value: 1), to: /storage/foo1)
+              account.save(S(value: 2), to: /storage/foo2)
+              account.save(S(value: 5), to: /storage/foo3)
 
-	          return total
-	      }
-	    `
+              return total
+          }
+        `
 
 		nextScriptLocation := newScriptLocationGenerator()
 
@@ -4252,18 +4252,18 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		)
 
 		const script2 = `
-	       access(all)
+           access(all)
            fun main(): Int {
               let account = getAuthAccount(0x1)
 
-	          var total = 0
-	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-	              total = total + 1
-	              return true
-	          })
-	          return total
-	      }
-	    `
+              var total = 0
+              account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  total = total + 1
+                  return true
+              })
+              return total
+          }
+        `
 
 		result, err = runtime.ExecuteScript(
 			Script{
@@ -4290,45 +4290,45 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           access(all)
           struct S {
               access(all)
-	          var value: Int
+              var value: Int
 
               init(value: Int) {
-	              self.value = value
-	          }
+                  self.value = value
+              }
 
               access(all)
               fun increment() {
-	              self.value = self.value + 1
-	          }
-	      }
+                  self.value = self.value + 1
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main(): Int {
               let account = getAuthAccount(0x1)
 
-	          account.save(S(value: 1), to: /storage/foo1)
-	          account.save(S(value: 2), to: /storage/foo2)
-	          account.save(S(value: 5), to: /storage/foo3)
-	          account.save("", to: /storage/bar1)
-	          account.save(4, to: /storage/bar2)
+              account.save(S(value: 1), to: /storage/foo1)
+              account.save(S(value: 2), to: /storage/foo2)
+              account.save(S(value: 5), to: /storage/foo3)
+              account.save("", to: /storage/bar1)
+              account.save(4, to: /storage/bar2)
 
-	          var total = 0
-	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-	              if type == Type<S>() {
-	                  account.borrow<&S>(from: path)!.increment()
-	              }
-	              return true
-	          })
-	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-	              if type == Type<S>() {
-	                  total = total + account.borrow<&S>(from: path)!.value
-	              }
-	              return true
-	          })
+              var total = 0
+              account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  if type == Type<S>() {
+                      account.borrow<&S>(from: path)!.increment()
+                  }
+                  return true
+              })
+              account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  if type == Type<S>() {
+                      total = total + account.borrow<&S>(from: path)!.value
+                  }
+                  return true
+              })
 
-	          return total
-	      }
-	    `
+              return total
+          }
+        `
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -4355,43 +4355,43 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           access(all)
           struct S {
               access(all)
-	          var value: Int
+              var value: Int
 
               init(value: Int) {
-	              self.value = value
-	          }
+                  self.value = value
+              }
 
               access(all)
               fun increment() {
-	              self.value = self.value + 1
-	          }
-	      }
+                  self.value = self.value + 1
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main(): Int {
               let account = getAuthAccount(0x1)
 
-	          account.save(S(value: 1), to: /storage/foo1)
-	          account.save(S(value: 2), to: /storage/foo2)
-	          account.save(S(value: 5), to: /storage/foo3)
-	          account.save("qux", to: /storage/bar1)
-	          account.save(4, to: /storage/bar2)
+              account.save(S(value: 1), to: /storage/foo1)
+              account.save(S(value: 2), to: /storage/foo2)
+              account.save(S(value: 5), to: /storage/foo3)
+              account.save("qux", to: /storage/bar1)
+              account.save(4, to: /storage/bar2)
 
-	          var total = 0
-	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-	              if type == Type<S>() {
-	                  total = total + account.borrow<&S>(from: path)!.value
-	              }
-	              if type == Type<String>() {
-	                  let id = account.load<String>(from: path)!
-	                  account.save(S(value:3), to: StoragePath(identifier: id)!)
-	              }
-	              return true
-	          })
+              var total = 0
+              account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  if type == Type<S>() {
+                      total = total + account.borrow<&S>(from: path)!.value
+                  }
+                  if type == Type<String>() {
+                      let id = account.load<String>(from: path)!
+                      account.save(S(value:3), to: StoragePath(identifier: id)!)
+                  }
+                  return true
+              })
 
-	          return total
-	      }
-	    `
+              return total
+          }
+        `
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -4414,42 +4414,42 @@ func TestRuntimeStorageIteration2(t *testing.T) {
           access(all)
           struct S {
               access(all)
-	          var value: Int
+              var value: Int
 
               init(value: Int) {
-	              self.value = value
-	          }
+                  self.value = value
+              }
 
               access(all)
               fun increment() {
-	              self.value = self.value + 1
-	          }
-	      }
+                  self.value = self.value + 1
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main(): Int {
               let account = getAuthAccount(0x1)
 
-	          account.save(1, to: /storage/foo1)
-	          account.save(2, to: /storage/foo2)
-	          account.save(3, to: /storage/foo3)
-	          account.save(4, to: /storage/bar1)
-	          account.save(5, to: /storage/bar2)
+              account.save(1, to: /storage/foo1)
+              account.save(2, to: /storage/foo2)
+              account.save(3, to: /storage/foo3)
+              account.save(4, to: /storage/bar1)
+              account.save(5, to: /storage/bar2)
 
-	          var seen = 0
-	          var stuff: [&AnyStruct] = []
-	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
-	              if seen >= 3 {
-	                  return false
-	              }
-	              stuff.append(account.borrow<&AnyStruct>(from: path)!)
-	              seen = seen + 1
-	              return true
-	          })
+              var seen = 0
+              var stuff: [&AnyStruct] = []
+              account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  if seen >= 3 {
+                      return false
+                  }
+                  stuff.append(account.borrow<&AnyStruct>(from: path)!)
+                  seen = seen + 1
+                  return true
+              })
 
-	          return stuff.length
-	      }
-	    `
+              return stuff.length
+          }
+        `
 
 		result, err := runtime.ExecuteScript(
 			Script{
