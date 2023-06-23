@@ -3687,3 +3687,785 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestRuntimeStorageIteration2(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newRuntime := func() (testInterpreterRuntime, *testRuntimeInterface) {
+		runtime := newTestInterpreterRuntime()
+		accountCodes := map[common.Location][]byte{}
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+		return runtime, runtimeInterface
+	}
+
+	t.Run("paths field", func(t *testing.T) {
+
+		t.Parallel()
+
+		const testContract = `
+          access(all)
+          contract Test {
+              access(all)
+              fun saveStorage() {
+                  self.account.save(0, to:/storage/foo)
+              }
+
+              access(all)
+              fun saveOtherStorage() {
+                  self.account.save(0, to:/storage/bar)
+              }
+
+              access(all)
+              fun loadStorage() {
+                  self.account.load<Int>(from:/storage/foo)
+              }
+
+              access(all)
+              fun publish() {
+                  let cap = self.account.capabilities.storage.issue<&Int>(/storage/foo)
+                  self.account.capabilities.publish(cap, at: /public/foo)
+              }
+
+              access(all)
+              fun unpublish() {
+                  self.account.capabilities.unpublish(/public/foo)
+              }
+
+              access(all)
+              fun getStoragePaths(): [StoragePath] {
+                  return self.account.storagePaths
+              }
+
+              access(all)
+              fun getPublicPaths(): [PublicPath] {
+                  return getAccount(self.account.address).publicPaths
+              }
+          }
+        `
+
+		contractLocation := common.NewAddressLocation(nil, address, "Test")
+
+		deployTestContractTx := DeploymentTransaction("Test", []byte(testContract))
+
+		runtime, runtimeInterface := newRuntime()
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy contract
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTestContractTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		invoke := func(name string) (cadence.Value, error) {
+			return runtime.InvokeContractFunction(
+				contractLocation,
+				name,
+				nil,
+				nil,
+				Context{Interface: runtimeInterface},
+			)
+		}
+
+		t.Run("before any save", func(t *testing.T) {
+
+			value, err := invoke("getStoragePaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths := value.(cadence.Array).Values
+			require.Equal(t, 0, len(paths))
+
+			value, err = invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths = value.(cadence.Array).Values
+			require.Equal(t, 0, len(paths))
+		})
+
+		t.Run("storage save", func(t *testing.T) {
+			_, err := invoke("saveStorage")
+			require.NoError(t, err)
+
+			value, err := invoke("getStoragePaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths := value.(cadence.Array).Values
+			require.Equal(t, 1, len(paths))
+			expectedPath, err := cadence.NewPath(common.PathDomainStorage, "foo")
+			require.NoError(t, err)
+			require.Equal(t, expectedPath, paths[0])
+
+			value, err = invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths = value.(cadence.Array).Values
+			require.Equal(t, 0, len(paths))
+		})
+
+		t.Run("publish", func(t *testing.T) {
+			_, err := invoke("publish")
+			require.NoError(t, err)
+
+			value, err := invoke("getStoragePaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths := value.(cadence.Array).Values
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, cadence.MustNewPath(common.PathDomainStorage, "foo"), paths[0])
+
+			value, err = invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths = value.(cadence.Array).Values
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, cadence.MustNewPath(common.PathDomainPublic, "foo"), paths[0])
+		})
+
+		t.Run("save storage bar", func(t *testing.T) {
+			_, err := invoke("saveOtherStorage")
+			require.NoError(t, err)
+
+			value, err := invoke("getStoragePaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths := value.(cadence.Array).Values
+			require.Equal(t, 2, len(paths))
+			require.Equal(t, cadence.MustNewPath(common.PathDomainStorage, "bar"), paths[0])
+			require.Equal(t, cadence.MustNewPath(common.PathDomainStorage, "foo"), paths[1])
+
+			value, err = invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths = value.(cadence.Array).Values
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, cadence.MustNewPath(common.PathDomainPublic, "foo"), paths[0])
+		})
+
+		t.Run("load storage", func(t *testing.T) {
+			_, err := invoke("loadStorage")
+			require.NoError(t, err)
+
+			value, err := invoke("getStoragePaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths := value.(cadence.Array).Values
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, cadence.MustNewPath(common.PathDomainStorage, "bar"), paths[0])
+
+			value, err = invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths = value.(cadence.Array).Values
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, cadence.MustNewPath(common.PathDomainPublic, "foo"), paths[0])
+		})
+
+		t.Run("unpublish", func(t *testing.T) {
+			_, err := invoke("unpublish")
+			require.NoError(t, err)
+
+			value, err := invoke("getStoragePaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths := value.(cadence.Array).Values
+			require.Equal(t, 1, len(paths))
+			require.Equal(t, cadence.MustNewPath(common.PathDomainStorage, "bar"), paths[0])
+
+			value, err = invoke("getPublicPaths")
+			require.NoError(t, err)
+			require.IsType(t, cadence.Array{}, value)
+			paths = value.(cadence.Array).Values
+			require.Equal(t, 0, len(paths))
+		})
+	})
+
+	t.Run("forEachPublic PublicAccount", func(t *testing.T) {
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+	      access(all)
+          struct S {
+              access(all)
+	          let value: Int
+
+              init(value: Int) {
+	              self.value = value
+	          }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let account = getAuthAccount(0x1)
+              let pubAccount = getAccount(0x1)
+
+	          account.save(S(value: 2), to: /storage/foo)
+	          account.save("", to: /storage/bar)
+	          let capA = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capA, at: /public/a)
+	          let capB = account.capabilities.storage.issue<&String>(/storage/bar)
+              account.capabilities.publish(capB, at: /public/b)
+	          let capC = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capC, at: /public/c)
+	          let capD = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capD, at: /public/d)
+	          let capE = account.capabilities.storage.issue<&String>(/storage/bar)
+              account.capabilities.publish(capE, at: /public/e)
+
+	          var total = 0
+	          pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+	              if type == Type<Capability<&S>>() {
+	                  total = total + pubAccount.capabilities.borrow<&S>(path)!.value
+	              }
+	              return true
+	          })
+
+	          return total
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			cadence.NewInt(6),
+			result,
+		)
+	})
+
+	t.Run("forEachPublic PublicAccount number", func(t *testing.T) {
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          struct S {
+              access(all)
+	          let value: Int
+
+              init(value: Int) {
+	              self.value = value
+	          }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let account = getAuthAccount(0x1)
+              let pubAccount = getAccount(0x1)
+
+	          account.save(S(value: 2), to: /storage/foo)
+	          account.save("", to: /storage/bar)
+	          let capA = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capA, at: /public/a)
+	          let capB = account.capabilities.storage.issue<&String>(/storage/bar)
+              account.capabilities.publish(capB, at: /public/b)
+	          let capC = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capC, at: /public/c)
+	          let capD = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capD, at: /public/d)
+	          let capE = account.capabilities.storage.issue<&String>(/storage/bar)
+              account.capabilities.publish(capE, at: /public/e)
+
+	          var total = 0
+	          pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+	              total = total + 1
+	              return true
+	          })
+
+	          return total
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			cadence.NewInt(5),
+			result,
+		)
+	})
+
+	t.Run("forEachPublic AuthAccount", func(t *testing.T) {
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          struct S {
+              access(all)
+	          let value: Int
+
+              init(value: Int) {
+	              self.value = value
+	          }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let account = getAuthAccount(0x1)
+              let pubAccount = getAccount(0x1)
+
+	          account.save(S(value: 2), to: /storage/foo)
+	          account.save("", to: /storage/bar)
+	          let capA = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capA, at: /public/a)
+	          let capB = account.capabilities.storage.issue<&String>(/storage/bar)
+              account.capabilities.publish(capB, at: /public/b)
+	          let capC = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capC, at: /public/c)
+	          let capD = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capD, at: /public/d)
+	          let capE = account.capabilities.storage.issue<&String>(/storage/bar)
+              account.capabilities.publish(capE, at: /public/e)
+
+	          var total = 0
+	          account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+	              if type == Type<Capability<&S>>() {
+	                  total = total + account.capabilities.borrow<&S>(path)!.value
+	              }
+	              return true
+	          })
+
+	          return total
+	       }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			cadence.NewInt(6),
+			result,
+		)
+	})
+
+	t.Run("forEachPrivate", func(t *testing.T) {
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          struct S {
+              access(all)
+	          let value: Int
+
+              init(value: Int) {
+	              self.value = value
+	          }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let account = getAuthAccount(0x1)
+              let pubAccount = getAccount(0x1)
+
+	          account.save(S(value: 2), to: /storage/foo)
+	          account.save("test", to: /storage/bar)
+	          let capA = account.capabilities.storage.issue<&S>(/storage/foo)
+              account.capabilities.publish(capA, at: /public/a)
+
+	          var total = 0
+	          account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+	              total = total + 1
+	              return true
+	          })
+
+	          return total
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			cadence.NewInt(0),
+			result,
+		)
+	})
+
+	t.Run("forEachStored", func(t *testing.T) {
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          struct S {
+              access(all)
+	          let value: Int
+
+              init(value: Int) {
+	              self.value = value
+	          }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let account = getAuthAccount(0x1)
+
+	          account.save(S(value: 1), to: /storage/foo1)
+	          account.save(S(value: 2), to: /storage/foo2)
+	          account.save(S(value: 5), to: /storage/foo3)
+	          account.save("", to: /storage/bar1)
+	          account.save(4, to: /storage/bar2)
+
+	          var total = 0
+	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+	              if type == Type<S>() {
+	                  total = total + account.borrow<&S>(from: path)!.value
+	              }
+	              return true
+	          })
+
+	          return total
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			cadence.NewInt(8),
+			result,
+		)
+	})
+
+	t.Run("forEachStored after empty", func(t *testing.T) {
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          struct S {
+              access(all)
+	          let value: Int
+
+              init(value: Int) {
+	              self.value = value
+	          }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let account = getAuthAccount(0x1)
+
+	          var total = 0
+	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+	              total = total + 1
+	              return true
+	          })
+
+	          account.save(S(value: 1), to: /storage/foo1)
+	          account.save(S(value: 2), to: /storage/foo2)
+	          account.save(S(value: 5), to: /storage/foo3)
+
+	          return total
+	      }
+	    `
+
+		nextScriptLocation := newScriptLocationGenerator()
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			cadence.NewInt(0),
+			result,
+		)
+
+		const script2 = `
+	       access(all)
+           fun main(): Int {
+              let account = getAuthAccount(0x1)
+
+	          var total = 0
+	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+	              total = total + 1
+	              return true
+	          })
+	          return total
+	      }
+	    `
+
+		result, err = runtime.ExecuteScript(
+			Script{
+				Source: []byte(script2),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			cadence.NewInt(3),
+			result,
+		)
+	})
+
+	t.Run("forEachStored with update", func(t *testing.T) {
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          struct S {
+              access(all)
+	          var value: Int
+
+              init(value: Int) {
+	              self.value = value
+	          }
+
+              access(all)
+              fun increment() {
+	              self.value = self.value + 1
+	          }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let account = getAuthAccount(0x1)
+
+	          account.save(S(value: 1), to: /storage/foo1)
+	          account.save(S(value: 2), to: /storage/foo2)
+	          account.save(S(value: 5), to: /storage/foo3)
+	          account.save("", to: /storage/bar1)
+	          account.save(4, to: /storage/bar2)
+
+	          var total = 0
+	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+	              if type == Type<S>() {
+	                  account.borrow<&S>(from: path)!.increment()
+	              }
+	              return true
+	          })
+	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+	              if type == Type<S>() {
+	                  total = total + account.borrow<&S>(from: path)!.value
+	              }
+	              return true
+	          })
+
+	          return total
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			cadence.NewInt(11),
+			result,
+		)
+	})
+
+	t.Run("forEachStored with mutation", func(t *testing.T) {
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          struct S {
+              access(all)
+	          var value: Int
+
+              init(value: Int) {
+	              self.value = value
+	          }
+
+              access(all)
+              fun increment() {
+	              self.value = self.value + 1
+	          }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let account = getAuthAccount(0x1)
+
+	          account.save(S(value: 1), to: /storage/foo1)
+	          account.save(S(value: 2), to: /storage/foo2)
+	          account.save(S(value: 5), to: /storage/foo3)
+	          account.save("qux", to: /storage/bar1)
+	          account.save(4, to: /storage/bar2)
+
+	          var total = 0
+	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+	              if type == Type<S>() {
+	                  total = total + account.borrow<&S>(from: path)!.value
+	              }
+	              if type == Type<String>() {
+	                  let id = account.load<String>(from: path)!
+	                  account.save(S(value:3), to: StoragePath(identifier: id)!)
+	              }
+	              return true
+	          })
+
+	          return total
+	      }
+	    `
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+	})
+
+	t.Run("forEachStored with early termination", func(t *testing.T) {
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          struct S {
+              access(all)
+	          var value: Int
+
+              init(value: Int) {
+	              self.value = value
+	          }
+
+              access(all)
+              fun increment() {
+	              self.value = self.value + 1
+	          }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let account = getAuthAccount(0x1)
+
+	          account.save(1, to: /storage/foo1)
+	          account.save(2, to: /storage/foo2)
+	          account.save(3, to: /storage/foo3)
+	          account.save(4, to: /storage/bar1)
+	          account.save(5, to: /storage/bar2)
+
+	          var seen = 0
+	          var stuff: [&AnyStruct] = []
+	          account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+	              if seen >= 3 {
+	                  return false
+	              }
+	              stuff.append(account.borrow<&AnyStruct>(from: path)!)
+	              seen = seen + 1
+	              return true
+	          })
+
+	          return stuff.length
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(
+			t,
+			cadence.NewInt(3),
+			result,
+		)
+	})
+}
