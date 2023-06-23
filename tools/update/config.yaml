@@ -70,6 +70,7 @@ repos:
         - onflow/flow-go
         - onflow/flow-emulator
         - onflow/cadence-tools/lint
+        - onflow/flow-cli/flowkit
 
 - repo: onflow/flow-cli
   needsRelease: true
