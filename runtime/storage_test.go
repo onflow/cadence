@@ -4470,7 +4470,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 	})
 }
 
-func TestInterpretAccountIterationMutation(t *testing.T) {
+func TestRuntimeAccountIterationMutation(t *testing.T) {
 
 	t.Parallel()
 
