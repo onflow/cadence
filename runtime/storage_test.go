@@ -4469,3 +4469,574 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretAccountIterationMutation(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newRuntime := func() (testInterpreterRuntime, *testRuntimeInterface) {
+		runtime := newTestInterpreterRuntime()
+		accountCodes := map[common.Location][]byte{}
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+		return runtime, runtimeInterface
+	}
+
+	test := func(continueAfterMutation bool) {
+
+		t.Run(fmt.Sprintf("forEachStored, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+
+			runtime, runtimeInterface := newRuntime()
+
+			script := fmt.Sprintf(
+				`
+                  access(all)
+                  fun main() {
+                      let account = getAuthAccount(0x1)
+
+                      account.save(1, to: /storage/foo1)
+                      account.save(2, to: /storage/foo2)
+                      account.save(3, to: /storage/foo3)
+                      account.save("qux", to: /storage/foo4)
+
+                      account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                          if type == Type<String>() {
+                              account.save("bar", to: /storage/foo5)
+                              return %t
+                          }
+                          return true
+                      })
+                  }
+                `,
+				continueAfterMutation,
+			)
+
+			_, err := runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.ScriptLocation{},
+				},
+			)
+
+			if continueAfterMutation {
+				RequireError(t, err)
+
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("forEachPublic, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+
+			runtime, runtimeInterface := newRuntime()
+
+			script := fmt.Sprintf(
+				`
+                  access(all)
+                  fun main() {
+                      let account = getAuthAccount(0x1)
+
+                      account.save(1, to: /storage/foo1)
+                      account.save("", to: /storage/foo2)
+                      let capA = account.capabilities.storage.issue<&Int>(/storage/foo1)
+                      account.capabilities.publish(capA, at: /public/foo1)
+                      let capB = account.capabilities.storage.issue<&String>(/storage/foo2)
+                      account.capabilities.publish(capB, at: /public/foo2)
+
+                      account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                          if type == Type<Capability<&String>>() {
+                              account.save("bar", to: /storage/foo3)
+                              return %t
+                          }
+                          return true
+                      })
+                  }
+                `,
+				continueAfterMutation,
+			)
+
+			_, err := runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.ScriptLocation{},
+				},
+			)
+
+			if continueAfterMutation {
+				RequireError(t, err)
+
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("with function call, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+
+			runtime, runtimeInterface := newRuntime()
+
+			script := fmt.Sprintf(
+				`
+                  access(all)
+                  fun foo() {
+                      let account = getAuthAccount(0x1)
+
+                      account.save("bar", to: /storage/foo5)
+                  }
+
+                  access(all)
+                  fun main() {
+                      let account = getAuthAccount(0x1)
+
+                      account.save(1, to: /storage/foo1)
+                      account.save(2, to: /storage/foo2)
+                      account.save(3, to: /storage/foo3)
+                      account.save("qux", to: /storage/foo4)
+
+                      account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                          if type == Type<String>() {
+                              foo()
+                              return %t
+                          }
+                          return true
+                      })
+                  }
+                `,
+				continueAfterMutation,
+			)
+
+			_, err := runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.ScriptLocation{},
+				},
+			)
+
+			if continueAfterMutation {
+				RequireError(t, err)
+
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("with function call and nested iteration, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+
+			runtime, runtimeInterface := newRuntime()
+
+			script := fmt.Sprintf(
+				`
+                  access(all)
+                  fun foo() {
+                      let account = getAuthAccount(0x1)
+
+                      account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                          return true
+                      })
+                      account.save("bar", to: /storage/foo5)
+                  }
+
+                  access(all)
+                  fun main() {
+                      let account = getAuthAccount(0x1)
+
+                      account.save(1, to: /storage/foo1)
+                      account.save(2, to: /storage/foo2)
+                      account.save(3, to: /storage/foo3)
+                      account.save("qux", to: /storage/foo4)
+
+                      account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                          if type == Type<String>() {
+                              foo()
+                              return %t
+                          }
+                          return true
+                      })
+                  }
+                `,
+				continueAfterMutation,
+			)
+
+			_, err := runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.ScriptLocation{},
+				},
+			)
+
+			if continueAfterMutation {
+				RequireError(t, err)
+
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("load, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+
+			runtime, runtimeInterface := newRuntime()
+
+			script := fmt.Sprintf(
+				`
+                  access(all)
+                  fun main() {
+                      let account = getAuthAccount(0x1)
+
+                      account.save(1, to: /storage/foo1)
+                      account.save(2, to: /storage/foo2)
+                      account.save(3, to: /storage/foo3)
+                      account.save("qux", to: /storage/foo4)
+
+                      account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                          if type == Type<String>() {
+                              account.load<Int>(from: /storage/foo1)
+                              return %t
+                          }
+                          return true
+                      })
+                   }
+                `,
+				continueAfterMutation,
+			)
+
+			_, err := runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.ScriptLocation{},
+				},
+			)
+			if continueAfterMutation {
+				RequireError(t, err)
+
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("publish, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+
+			runtime, runtimeInterface := newRuntime()
+
+			script := fmt.Sprintf(
+				`
+                  access(all)
+                  fun main() {
+                      let account = getAuthAccount(0x1)
+
+                      account.save(1, to: /storage/foo1)
+                      account.save("", to: /storage/foo2)
+                      let capA = account.capabilities.storage.issue<&Int>(/storage/foo1)
+                      account.capabilities.publish(capA, at: /public/foo1)
+                      let capB = account.capabilities.storage.issue<&String>(/storage/foo2)
+                      account.capabilities.publish(capB, at: /public/foo2)
+
+                      account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                          if type == Type<Capability<&String>>() {
+                              account.capabilities.storage.issue<&Int>(/storage/foo1)
+                              return %t
+                          }
+                          return true
+                      })
+                  }
+                `,
+				continueAfterMutation,
+			)
+
+			_, err := runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.ScriptLocation{},
+				},
+			)
+			if continueAfterMutation {
+				RequireError(t, err)
+
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("unpublish, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+
+			runtime, runtimeInterface := newRuntime()
+
+			script := fmt.Sprintf(
+				`
+                  access(all)
+                  fun main() {
+                      let account = getAuthAccount(0x1)
+
+                      account.save(1, to: /storage/foo1)
+                      account.save("", to: /storage/foo2)
+                      let capA = account.capabilities.storage.issue<&Int>(/storage/foo1)
+                      account.capabilities.publish(capA, at: /public/foo1)
+                      let capB = account.capabilities.storage.issue<&String>(/storage/foo2)
+                      account.capabilities.publish(capB, at: /public/foo2)
+
+                      account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                          if type == Type<Capability<&String>>() {
+                              account.capabilities.unpublish(/public/foo1)
+                              return %t
+                          }
+                          return true
+                      })
+                  }
+                `,
+				continueAfterMutation,
+			)
+
+			_, err := runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.ScriptLocation{},
+				},
+			)
+			if continueAfterMutation {
+				RequireError(t, err)
+
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+
+		t.Run(fmt.Sprintf("with imported function call, continue: %t", continueAfterMutation), func(t *testing.T) {
+			t.Parallel()
+
+			runtime, runtimeInterface := newRuntime()
+
+			// Deploy contract
+
+			const testContract = `
+              access(all)
+              contract Test {
+
+                  access(all)
+                  fun foo() {
+                      self.account.save("bar", to: /storage/foo5)
+                  }
+              }
+            `
+
+			deployTestContractTx := DeploymentTransaction("Test", []byte(testContract))
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: deployTestContractTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.TransactionLocation{},
+				},
+			)
+			require.NoError(t, err)
+
+			// Run test script
+
+			script := fmt.Sprintf(`
+                  import Test from 0x1
+
+                  access(all)
+                  fun main() {
+                      let account = getAuthAccount(0x1)
+
+                      account.save(1, to: /storage/foo1)
+                      account.save(2, to: /storage/foo2)
+                      account.save(3, to: /storage/foo3)
+                      account.save("qux", to: /storage/foo4)
+
+                      account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                          if type == Type<String>() {
+                              Test.foo()
+                              return %t
+                          }
+                          return true
+                      })
+                  }
+                `,
+				continueAfterMutation,
+			)
+
+			_, err = runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  common.ScriptLocation{},
+				},
+			)
+			if continueAfterMutation {
+				RequireError(t, err)
+
+				require.ErrorAs(t, err, &interpreter.StorageMutatedDuringIterationError{})
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+
+	test(true)
+	test(false)
+
+	t.Run("state properly cleared on iteration end", func(t *testing.T) {
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          fun main() {
+              let account = getAuthAccount(0x1)
+
+              account.save(1, to: /storage/foo1)
+              account.save(2, to: /storage/foo2)
+              account.save(3, to: /storage/foo3)
+              account.save("qux", to: /storage/foo4)
+
+              account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  return true
+              })
+              account.save("bar", to: /storage/foo5)
+
+              account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                      return true
+                  })
+                  return true
+              })
+              account.save("baz", to: /storage/foo6)
+          }
+        `
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("non-lambda", func(t *testing.T) {
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          fun foo (path: StoragePath, type: Type): Bool {
+              return true
+	      }
+
+          access(all)
+          fun main() {
+              let account = getAuthAccount(0x1)
+
+	          account.forEachStored(foo)
+	      }
+        `
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("method", func(t *testing.T) {
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+	      access(all)
+	      struct S {
+
+	          access(all)
+	          fun foo(path: StoragePath, type: Type): Bool {
+	              return true
+	          }
+	      }
+
+	      access(all)
+          fun main() {
+
+              let account = getAuthAccount(0x1)
+	          let s = S()
+	          account.forEachStored(s.foo)
+	      }
+	    `
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+	})
+}
