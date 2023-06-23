@@ -137,6 +137,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                       message: "check failed"
                   )
 
+                  assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
                   let ref = cap.borrow()
                   assert(
                       ref != nil,
@@ -159,6 +164,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   )
 
                   assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
+                  assert(
                       cap.borrow() == nil,
                       message: "invalid borrow"
                   )
@@ -174,6 +184,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   )
 
                   assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
+                  assert(
                       cap.borrow() == nil,
                       message: "invalid borrow"
                   )
@@ -186,6 +201,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   assert(
                       !cap.check(),
                       message: "invalid check"
+                  )
+
+                  assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
                   )
 
                   assert(
@@ -345,6 +365,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                        message: "check failed"
                   )
 
+                  assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
                   let ref = cap.borrow()
                   assert(
                       ref != nil,
@@ -367,6 +392,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   )
 
                   assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
+                  assert(
                       cap.borrow() == nil,
                       message: "invalid borrow"
                   )
@@ -382,6 +412,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   )
 
                   assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
+                  assert(
                       cap.borrow() == nil,
                       message: "invalid borrow"
                   )
@@ -394,6 +429,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   assert(
                       !cap.check(),
                       message: "invalid check"
+                  )
+
+                  assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
                   )
 
                   assert(
@@ -496,15 +536,20 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               entitlement X
 
               init() {
-	              self.cap = self.account.capabilities.account.issue<&AuthAccount>()
-	          }
+                  self.cap = self.account.capabilities.account.issue<&AuthAccount>()
+              }
 
               access(all)
-	          fun test() {
+              fun test() {
 
                   assert(
                       self.cap.check<&AuthAccount>(),
                       message: "check failed"
+                  )
+
+                  assert(
+                      self.cap.address == 0x1,
+                      message: "invalid cap address"
                   )
 
                   let ref = self.cap.borrow<&AuthAccount>()
@@ -513,26 +558,31 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                       message: "borrow failed"
                   )
 
-	              assert(
+                  assert(
                       ref?.address == 0x1,
-                      message: "invalid address"
+                      message: "invalid ref address"
                   )
-	          }
+              }
 
               access(all)
-	          fun testAuth() {
+              fun testAuth() {
                   assert(
                       !self.cap.check<auth(X) &AuthAccount>(),
                       message: "invalid check"
                   )
 
                   assert(
+                      self.cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
+                  assert(
                       self.cap.borrow<auth(X) &AuthAccount>() == nil,
                       message: "invalid borrow"
                   )
-	          }
+              }
           }
-	    `
+        `
 
 		contractLocation := common.NewAddressLocation(nil, address, "Test")
 
