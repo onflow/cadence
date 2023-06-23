@@ -320,14 +320,13 @@ func (checker *Checker) visitIndexExpressionAssignment(
 
 	indexExprTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
 	indexedRefType, isReference := referenceType(indexExprTypes.IndexedType)
-	if isReference {
-		if !insertableEntitledAccess.PermitsAccess(indexedRefType.Authorization) {
-			checker.report(&UnauthorizedReferenceAssignmentError{
-				RequiredAccess: insertableEntitledAccess,
-				FoundAccess:    indexedRefType.Authorization,
-				Range:          ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
-			})
-		}
+
+	if isReference && !insertableEntitledAccess.PermitsAccess(indexedRefType.Authorization) {
+		checker.report(&UnauthorizedReferenceAssignmentError{
+			RequiredAccess: insertableEntitledAccess,
+			FoundAccess:    indexedRefType.Authorization,
+			Range:          ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
+		})
 	}
 
 	if elementType == nil {

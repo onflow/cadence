@@ -183,9 +183,9 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		script := `
 		access(all) resource Vault {
             access(all) var balance: UFix64
-            access(all) var dictRef: &{Bool: Vault};
+            access(all) var dictRef: auth(Mutable) &{Bool: Vault};
 
-            init(balance: UFix64, _ dictRef: &{Bool: Vault}) {
+            init(balance: UFix64, _ dictRef: auth(Mutable) &{Bool: Vault}) {
                 self.balance = balance
                 self.dictRef = dictRef;
             }
@@ -208,7 +208,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
         access(all) fun main(): UFix64 {
 
             let dict: @{Bool: Vault} <- { }
-            let dictRef = &dict as &{Bool: Vault};
+            let dictRef = &dict as auth(Mutable) &{Bool: Vault};
 
             var v1 <- create Vault(balance: 1000.0, dictRef); // This will be duplicated
             var v2 <- create Vault(balance: 1.0, dictRef); // This will be lost
@@ -305,7 +305,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		let acc = getAuthAccount(0x1)
 		acc.save(<-dict, to: /storage/foo)
 
-		let ref = acc.borrow<&{Int: R}>(from: /storage/foo)!
+		let ref = acc.borrow<auth(Mutable) &{Int: R}>(from: /storage/foo)!
 
 		ref.forEachKey(fun(i: Int): Bool {
 			var r4: @R? <- create R()

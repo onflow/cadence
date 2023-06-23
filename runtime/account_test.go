@@ -1480,7 +1480,7 @@ func TestRuntimePublicKey(t *testing.T) {
                 signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
             )
 
-            var publickeyRef = &publicKey.publicKey as &[UInt8]
+            var publickeyRef = &publicKey.publicKey as auth(Insertable) &[UInt8]
             publickeyRef[0] = 3
 
             return publicKey
@@ -1909,7 +1909,7 @@ func TestAuthAccountContracts(t *testing.T) {
 		script := []byte(`
             transaction {
                 prepare(signer: AuthAccount) {
-                    var namesRef = &signer.contracts.names as &[String]
+                    var namesRef = &signer.contracts.names as auth(Insertable) &[String]
                     namesRef[0] = "baz"
 
                     assert(signer.contracts.names[0] == "foo")

@@ -7019,7 +7019,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 		script := []byte(`
           access(all) fun main(): Capability {
               let dict: {Int: AuthAccount} = {}
-              let ref = &dict as &{Int: AnyStruct}
+              let ref = &dict as auth(Insertable) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
               return dict.values[0].getCapability(/private/xxx)
           }
@@ -7054,7 +7054,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 		script := []byte(`
           access(all) fun main(): Capability {
               let dict: {Int: AuthAccount} = {}
-              let ref = &dict as &{Int: AnyStruct}
+              let ref = &dict as auth(Insertable) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
               return dict.values[0].getCapability(/public/xxx)
           }
@@ -7089,7 +7089,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 		script := []byte(`
           access(all) fun main(): Capability {
               let dict: {Int: PublicAccount} = {}
-              let ref = &dict as &{Int: AnyStruct}
+              let ref = &dict as auth(Insertable) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
               return dict.values[0].getCapability(/public/xxx)
           }

@@ -1486,10 +1486,10 @@ func TestNilAssignmentToDictionary(t *testing.T) {
 }
 
 func TestCheckArrayFunctionEntitlements(t *testing.T) {
-
 	t.Parallel()
 
 	t.Run("inserting functions", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("mutable reference", func(t *testing.T) {
 			t.Parallel()
@@ -1571,6 +1571,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 	})
 
 	t.Run("removing functions", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("mutable reference", func(t *testing.T) {
 			t.Parallel()
@@ -1652,6 +1653,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 	})
 
 	t.Run("public functions", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("mutable reference", func(t *testing.T) {
 			t.Parallel()
@@ -1725,12 +1727,83 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			require.NoError(t, err)
 		})
 	})
+
+	t.Run("assignment", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutable) &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+		})
+
+		t.Run("insertable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insertable) &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("removable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Removable) &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+		})
+	})
 }
 
 func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 	t.Parallel()
 
 	t.Run("inserting functions", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("mutable reference", func(t *testing.T) {
 			t.Parallel()
@@ -1800,6 +1873,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 	})
 
 	t.Run("removing functions", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("mutable reference", func(t *testing.T) {
 			t.Parallel()
@@ -1869,6 +1943,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 	})
 
 	t.Run("public functions", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("mutable reference", func(t *testing.T) {
 			t.Parallel()
@@ -1936,6 +2011,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 	})
 
 	t.Run("assignment", func(t *testing.T) {
+		t.Parallel()
 
 		t.Run("mutable reference", func(t *testing.T) {
 			t.Parallel()
