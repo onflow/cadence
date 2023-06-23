@@ -108,7 +108,7 @@ func (checker *Checker) getReferenceType(typ Type) Type {
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
-	if !isReferenceType(parentType) {
+	if memberType == nil || !isReferenceType(parentType) {
 		return false
 	}
 

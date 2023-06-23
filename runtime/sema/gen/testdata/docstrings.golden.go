@@ -104,16 +104,17 @@ Look, I did it ` + "`again`" + `, wowie!!
 const DocstringsTypeName = "Docstrings"
 
 var DocstringsType = &SimpleType{
-	Name:          DocstringsTypeName,
-	QualifiedName: DocstringsTypeName,
-	TypeID:        DocstringsTypeName,
-	tag:           DocstringsTypeTag,
-	IsResource:    false,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    false,
+	Name:             DocstringsTypeName,
+	QualifiedName:    DocstringsTypeName,
+	TypeID:           DocstringsTypeName,
+	tag:              DocstringsTypeTag,
+	IsResource:       false,
+	Storable:         false,
+	Equatable:        false,
+	Comparable:       false,
+	Exportable:       false,
+	Importable:       false,
+	MemberAccessible: false,
 }
 
 func init() {

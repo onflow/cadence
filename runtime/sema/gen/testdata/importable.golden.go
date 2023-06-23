@@ -22,14 +22,15 @@ package sema
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
-	Name:          TestTypeName,
-	QualifiedName: TestTypeName,
-	TypeID:        TestTypeName,
-	tag:           TestTypeTag,
-	IsResource:    false,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    true,
+	Name:             TestTypeName,
+	QualifiedName:    TestTypeName,
+	TypeID:           TestTypeName,
+	tag:              TestTypeTag,
+	IsResource:       false,
+	Storable:         false,
+	Equatable:        false,
+	Comparable:       false,
+	Exportable:       false,
+	Importable:       true,
+	MemberAccessible: false,
 }

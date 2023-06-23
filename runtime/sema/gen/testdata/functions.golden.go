@@ -176,16 +176,17 @@ This is a function with 'view' modifier
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
-	Name:          TestTypeName,
-	QualifiedName: TestTypeName,
-	TypeID:        TestTypeName,
-	tag:           TestTypeTag,
-	IsResource:    false,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    false,
+	Name:             TestTypeName,
+	QualifiedName:    TestTypeName,
+	TypeID:           TestTypeName,
+	tag:              TestTypeTag,
+	IsResource:       false,
+	Storable:         false,
+	Equatable:        false,
+	Comparable:       false,
+	Exportable:       false,
+	Importable:       false,
+	MemberAccessible: false,
 }
 
 func init() {
