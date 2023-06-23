@@ -2071,6 +2071,14 @@ func NewPath(domain common.PathDomain, identifier string) (Path, error) {
 	}, nil
 }
 
+func MustNewPath(domain common.PathDomain, identifier string) Path {
+	path, err := NewPath(domain, identifier)
+	if err != nil {
+		panic(err)
+	}
+	return path
+}
+
 func NewMeteredPath(gauge common.MemoryGauge, domain common.PathDomain, identifier string) (Path, error) {
 	common.UseMemory(gauge, common.CadencePathValueMemoryUsage)
 	return NewPath(domain, identifier)
