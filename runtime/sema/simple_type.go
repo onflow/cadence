@@ -50,6 +50,7 @@ type SimpleType struct {
 	Comparable          bool
 	Storable            bool
 	IsResource          bool
+	MemberAccessible    bool
 }
 
 var _ Type = &SimpleType{}
@@ -104,6 +105,10 @@ func (t *SimpleType) IsExportable(_ map[*Member]bool) bool {
 
 func (t *SimpleType) IsImportable(_ map[*Member]bool) bool {
 	return t.Importable
+}
+
+func (t *SimpleType) IsMemberAccessible() bool {
+	return t.MemberAccessible
 }
 
 func (*SimpleType) TypeAnnotationState() TypeAnnotationState {

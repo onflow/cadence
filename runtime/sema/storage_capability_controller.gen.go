@@ -123,16 +123,17 @@ The path may be different or the same as the current path.
 const StorageCapabilityControllerTypeName = "StorageCapabilityController"
 
 var StorageCapabilityControllerType = &SimpleType{
-	Name:          StorageCapabilityControllerTypeName,
-	QualifiedName: StorageCapabilityControllerTypeName,
-	TypeID:        StorageCapabilityControllerTypeName,
-	tag:           StorageCapabilityControllerTypeTag,
-	IsResource:    false,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    false,
+	Name:             StorageCapabilityControllerTypeName,
+	QualifiedName:    StorageCapabilityControllerTypeName,
+	TypeID:           StorageCapabilityControllerTypeName,
+	tag:              StorageCapabilityControllerTypeTag,
+	IsResource:       false,
+	Storable:         false,
+	Equatable:        false,
+	Comparable:       false,
+	Exportable:       false,
+	Importable:       false,
+	MemberAccessible: true,
 }
 
 func init() {

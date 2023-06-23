@@ -1,4 +1,4 @@
-access(all) struct AccountCapabilityController {
+access(all) struct AccountCapabilityController: MemberAccessible {
 
     /// An arbitrary "tag" for the controller.
     /// For example, it could be used to describe the purpose of the capability.

@@ -1942,7 +1942,7 @@ func (checker *Checker) checkEntitlementMapAccess(
 			}
 		}
 	default:
-		if isContainerType(declarationType) {
+		if declarationType.IsMemberAccessible() {
 			return
 		}
 	}

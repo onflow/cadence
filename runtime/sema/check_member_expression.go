@@ -116,30 +116,13 @@ func shouldReturnReference(parentType, memberType Type) bool {
 		return false
 	}
 
-	return isContainerType(memberType)
+	return memberType.IsMemberAccessible()
 }
 
 func isReferenceType(typ Type) bool {
 	unwrappedType := UnwrapOptionalType(typ)
 	_, isReference := unwrappedType.(*ReferenceType)
 	return isReference
-}
-
-func isContainerType(typ Type) bool {
-	switch typ := typ.(type) {
-	case *CompositeType,
-		*DictionaryType,
-		ArrayType:
-		return true
-	case *OptionalType:
-		return isContainerType(typ.Type)
-	default:
-		switch typ {
-		case AnyStructType, AnyResourceType:
-			return true
-		}
-		return false
-	}
 }
 
 func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, resultingType Type, member *Member, isOptional bool) {
