@@ -64,13 +64,3 @@ func (checker *Checker) VisitPragmaDeclaration(declaration *ast.PragmaDeclaratio
 
 	return
 }
-
-func (checker *Checker) reportInvalidNonHeaderPragma(declaration *ast.PragmaDeclaration) {
-	checker.report(&InvalidPragmaError{
-		Message: "pragma must appear at top-level, before all other declarations",
-		Range: ast.NewRangeFromPositioned(
-			checker.memoryGauge,
-			declaration,
-		),
-	})
-}

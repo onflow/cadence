@@ -1364,12 +1364,6 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 		return nil, err
 	}
 
-	// Decode ID or path.
-	nextType, err = d.dec.NextType()
-	if err != nil {
-		return nil, err
-	}
-
 	// Decode ID.
 
 	id, err := d.decodeUInt64()

@@ -2346,10 +2346,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       transaction {
                           prepare(signer: AuthAccount) {
                               let storagePath = /storage/r
-							  let resourceID = 42
+                              let resourceID = 42
 
                               // Arrange
-							  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+                              Test.createAndSaveR(id: resourceID, storagePath: storagePath)
                               let issuedCap: Capability<&Test.R> =
                                   signer.capabilities.storage.issue<&Test.R>(storagePath)
                               assert(issuedCap.check())

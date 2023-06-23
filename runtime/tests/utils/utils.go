@@ -281,7 +281,10 @@ func DictionaryEntries[K, V any](
 			return iterStatus
 		}
 
-		res[idx] = DictionaryEntry[K, V]{key, value}
+		res[idx] = DictionaryEntry[K, V]{
+			Key:   key,
+			Value: value,
+		}
 		return iterStatus
 	})
 
