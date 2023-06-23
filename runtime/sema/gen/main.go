@@ -151,6 +151,7 @@ type typeDecl struct {
 	exportable         bool
 	comparable         bool
 	importable         bool
+	memberAccessible   bool
 	memberDeclarations []ast.Declaration
 	nestedTypes        []*typeDecl
 }
@@ -423,6 +424,15 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 
 		case "Importable":
 			typeDecl.importable = true
+
+		case "MemberAccessible":
+			if !canGenerateSimpleType {
+				panic(fmt.Errorf(
+					"composite types cannot be explicitly marked as member accessible: %s",
+					g.currentTypeID(),
+				))
+			}
+			typeDecl.memberAccessible = true
 		}
 	}
 
@@ -1158,6 +1168,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("Comparable", goBoolLit(ty.comparable)),
 		goKeyValue("Exportable", goBoolLit(ty.exportable)),
 		goKeyValue("Importable", goBoolLit(ty.importable)),
+		goKeyValue("MemberAccessible", goBoolLit(ty.memberAccessible)),
 	}
 
 	return &dst.UnaryExpr{

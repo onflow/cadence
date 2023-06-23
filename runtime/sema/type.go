@@ -135,6 +135,10 @@ type Type interface {
 	// IsComparable returns true if values of the type can be compared
 	IsComparable() bool
 
+	// IsMemberAccessible returns true if value of the type can have members values.
+	// Examples are composite types, restricted types, arrays, dictionaries, etc.
+	IsMemberAccessible() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	RewriteWithRestrictedTypes() (result Type, rewritten bool)
 
@@ -638,6 +642,10 @@ func (*OptionalType) IsComparable() bool {
 	return false
 }
 
+func (t *OptionalType) IsMemberAccessible() bool {
+	return t.Type.IsMemberAccessible()
+}
+
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -840,6 +848,10 @@ func (*GenericType) IsEquatable() bool {
 }
 
 func (*GenericType) IsComparable() bool {
+	return false
+}
+
+func (t *GenericType) IsMemberAccessible() bool {
 	return false
 }
 
@@ -1142,6 +1154,10 @@ func (t *NumericType) IsComparable() bool {
 	return !t.IsSuperType()
 }
 
+func (t *NumericType) IsMemberAccessible() bool {
+	return false
+}
+
 func (*NumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1340,6 +1356,10 @@ func (*FixedPointNumericType) IsEquatable() bool {
 
 func (t *FixedPointNumericType) IsComparable() bool {
 	return !t.IsSuperType()
+}
+
+func (t *FixedPointNumericType) IsMemberAccessible() bool {
+	return false
 }
 
 func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
@@ -2402,6 +2422,10 @@ func (t *VariableSizedType) IsComparable() bool {
 	return t.Type.IsComparable()
 }
 
+func (t *VariableSizedType) IsMemberAccessible() bool {
+	return true
+}
+
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -2550,6 +2574,10 @@ func (t *ConstantSizedType) IsEquatable() bool {
 
 func (t *ConstantSizedType) IsComparable() bool {
 	return t.Type.IsComparable()
+}
+
+func (t *ConstantSizedType) IsMemberAccessible() bool {
+	return true
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -3070,6 +3098,10 @@ func (*FunctionType) IsEquatable() bool {
 }
 
 func (*FunctionType) IsComparable() bool {
+	return false
+}
+
+func (*FunctionType) IsMemberAccessible() bool {
 	return false
 }
 
@@ -4244,8 +4276,12 @@ func (*CompositeType) IsComparable() bool {
 	return false
 }
 
-func (c *CompositeType) TypeAnnotationState() TypeAnnotationState {
-	if c.Kind == common.CompositeKindAttachment {
+func (*CompositeType) IsMemberAccessible() bool {
+	return true
+}
+
+func (t *CompositeType) TypeAnnotationState() TypeAnnotationState {
+	if t.Kind == common.CompositeKindAttachment {
 		return TypeAnnotationStateDirectAttachmentTypeAnnotation
 	}
 	return TypeAnnotationStateValid
@@ -4928,6 +4964,10 @@ func (*InterfaceType) IsComparable() bool {
 	return false
 }
 
+func (*InterfaceType) IsMemberAccessible() bool {
+	return true
+}
+
 func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -5143,6 +5183,10 @@ func (t *DictionaryType) IsEquatable() bool {
 
 func (*DictionaryType) IsComparable() bool {
 	return false
+}
+
+func (*DictionaryType) IsMemberAccessible() bool {
+	return true
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
@@ -5437,7 +5481,7 @@ func (*DictionaryType) isValueIndexableType() bool {
 	return true
 }
 
-func (t *DictionaryType) ElementType(isAssignment bool) Type {
+func (t *DictionaryType) ElementType(_ bool) Type {
 	return &OptionalType{Type: t.ValueType}
 }
 
@@ -5607,6 +5651,10 @@ func (*ReferenceType) IsEquatable() bool {
 }
 
 func (*ReferenceType) IsComparable() bool {
+	return false
+}
+
+func (*ReferenceType) IsMemberAccessible() bool {
 	return false
 }
 
@@ -5806,6 +5854,10 @@ func (*AddressType) IsEquatable() bool {
 }
 
 func (*AddressType) IsComparable() bool {
+	return false
+}
+
+func (*AddressType) IsMemberAccessible() bool {
 	return false
 }
 
@@ -6526,6 +6578,10 @@ func (*TransactionType) IsComparable() bool {
 	return false
 }
 
+func (*TransactionType) IsMemberAccessible() bool {
+	return false
+}
+
 func (*TransactionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6761,6 +6817,10 @@ func (*RestrictedType) IsEquatable() bool {
 
 func (t *RestrictedType) IsComparable() bool {
 	return false
+}
+
+func (*RestrictedType) IsMemberAccessible() bool {
+	return true
 }
 
 func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
@@ -7035,6 +7095,10 @@ func (*CapabilityType) IsEquatable() bool {
 }
 
 func (*CapabilityType) IsComparable() bool {
+	return false
+}
+
+func (*CapabilityType) IsMemberAccessible() bool {
 	return false
 }
 
@@ -7591,6 +7655,10 @@ func (*EntitlementType) IsResourceType() bool {
 	return false
 }
 
+func (*EntitlementType) IsMemberAccessible() bool {
+	return false
+}
+
 func (*EntitlementType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateDirectEntitlementTypeAnnotation
 }
@@ -7718,6 +7786,10 @@ func (*EntitlementMapType) IsComparable() bool {
 }
 
 func (*EntitlementMapType) IsResourceType() bool {
+	return false
+}
+
+func (*EntitlementMapType) IsMemberAccessible() bool {
 	return false
 }
 

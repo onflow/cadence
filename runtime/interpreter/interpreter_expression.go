@@ -245,10 +245,8 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 // e.g.2: Given T?, this returns (&T)?
 func (interpreter *Interpreter) getReferenceValue(value Value, semaType sema.Type) Value {
 	switch value.(type) {
-	case NilValue:
+	case NilValue, ReferenceValue:
 		// Reference to a nil, should return a nil.
-		return value
-	case ReferenceValue:
 		// If the value is already a reference then return the same reference.
 		return value
 	}

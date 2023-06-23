@@ -66,16 +66,17 @@ It is essentially the hash of the block
 const BlockTypeName = "Block"
 
 var BlockType = &SimpleType{
-	Name:          BlockTypeName,
-	QualifiedName: BlockTypeName,
-	TypeID:        BlockTypeName,
-	tag:           BlockTypeTag,
-	IsResource:    false,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    false,
+	Name:             BlockTypeName,
+	QualifiedName:    BlockTypeName,
+	TypeID:           BlockTypeName,
+	tag:              BlockTypeTag,
+	IsResource:       false,
+	Storable:         false,
+	Equatable:        false,
+	Comparable:       false,
+	Exportable:       false,
+	Importable:       false,
+	MemberAccessible: true,
 }
 
 func init() {
