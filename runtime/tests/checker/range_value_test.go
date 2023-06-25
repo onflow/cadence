@@ -34,7 +34,7 @@ type inclusiveRangeConstructionTest struct {
 	s, e, step int64
 }
 
-func TestInclusiveRangeConstruction(t *testing.T) {
+func TestInclusiveRangeConstructionValid(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -273,5 +273,93 @@ func TestInclusiveRangeConstruction(t *testing.T) {
 	for _, testCase := range validTestCases {
 		runValidCase(t, testCase, true)
 		runValidCase(t, testCase, false)
+	}
+}
+
+func TestInclusiveRangeConstructionInvalid(t *testing.T) {
+	// t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+	runInvalidCase := func(t *testing.T, label, code string, expectedErrorTypes []interface{}) {
+		t.Run(label, func(t *testing.T) {
+			// t.Parallel()
+
+			_, err := ParseAndCheckWithOptions(t, code,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						BaseValueActivation: baseValueActivation,
+					},
+				},
+			)
+
+			errs := RequireCheckerErrors(t, err, len(expectedErrorTypes))
+			for i, err := range expectedErrorTypes {
+				assert.IsType(t, err, errs[i])
+			}
+		})
+	}
+
+	for _, integerType := range sema.AllIntegerTypes {
+		// Only test leaf types
+		switch integerType {
+		case sema.IntegerType, sema.SignedIntegerType:
+			continue
+		}
+
+		typeString := integerType.String()
+
+		// Wrong type of arguments
+
+		// Any integer type name other than the integerType is sufficient.
+		// There is nothing special about the Int128 and Int256 types here.
+		differentTypeString := sema.Int128TypeName
+		if typeString == differentTypeString {
+			differentTypeString = sema.Int256TypeName
+		}
+
+		runInvalidCase(
+			t,
+			typeString,
+			fmt.Sprintf("let r = InclusiveRange(%s(1), %s(2))", typeString, differentTypeString),
+			[]interface{}{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}},
+		)
+		runInvalidCase(
+			t,
+			typeString,
+			fmt.Sprintf("let r = InclusiveRange(%s(1), %s(10), step: %s(2))", typeString, typeString, differentTypeString),
+			[]interface{}{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}},
+		)
+
+		// Not enough arguments
+		runInvalidCase(
+			t,
+			typeString,
+			fmt.Sprintf("let r = InclusiveRange(%s(1))", typeString),
+			[]interface{}{&sema.ArgumentCountError{}},
+		)
+
+		// Label for step not provided
+		runInvalidCase(
+			t,
+			typeString,
+			fmt.Sprintf("let r = InclusiveRange(%s(1), %s(0), %s(10))", typeString, typeString, typeString),
+			[]interface{}{&sema.MissingArgumentLabelError{}},
+		)
+
+		// Label for start and end provided
+		runInvalidCase(
+			t,
+			typeString,
+			fmt.Sprintf("let r = InclusiveRange(start: %s(1), %s(0))", typeString, typeString),
+			[]interface{}{&sema.IncorrectArgumentLabelError{}},
+		)
+		runInvalidCase(
+			t,
+			typeString,
+			fmt.Sprintf("let r = InclusiveRange(%s(1), end: %s(0))", typeString, typeString),
+			[]interface{}{&sema.IncorrectArgumentLabelError{}},
+		)
 	}
 }

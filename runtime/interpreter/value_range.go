@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// NewInclusiveRangeValue constructs a InclusiveRange value with the provided start, end with default value of step.
+// NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end with default value of step.
 func NewInclusiveRangeValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
@@ -42,6 +42,8 @@ func NewInclusiveRangeValue(
 
 	step := getValueForIntegerType(1, rangeType.ElementType)
 	if startComparable.Greater(interpreter, endInclusiveComparable, locationRange) {
+		// TODO: Disallow unsigned integers to have a negative step.
+
 		negatedStep, ok := step.Negate(interpreter, locationRange).(IntegerValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -53,7 +55,7 @@ func NewInclusiveRangeValue(
 	return NewInclusiveRangeValueWithStep(interpreter, locationRange, start, end, step, rangeType)
 }
 
-// NewInclusiveRangeValue constructs a InclusiveRange value with the provided start, end & step.
+// NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end & step.
 func NewInclusiveRangeValueWithStep(
 	interpreter *Interpreter,
 	locationRange LocationRange,
@@ -62,6 +64,8 @@ func NewInclusiveRangeValueWithStep(
 	step IntegerValue,
 	rangeType InclusiveRangeStaticType,
 ) *CompositeValue {
+
+	// TODO: Validate that if start > end, then the type is signed integer.
 
 	// Validate that the step is non-zero.
 	if step.Equal(interpreter, locationRange, getValueForIntegerType(0, rangeType.ElementType)) {
