@@ -108,7 +108,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	checker.checkUnusedExpressionResourceLoss(referencedType, referencedExpression)
 
-	checker.Elaboration.SetReferenceExpressionBorrowType(referenceExpression, rightType)
+	checker.Elaboration.SetReferenceExpressionBorrowType(referenceExpression, returnType)
 
 	return returnType
 }
