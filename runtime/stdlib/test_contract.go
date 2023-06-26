@@ -280,7 +280,14 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) interpreter.Func
 			)
 
 			if !result {
-				panic(AssertionError{})
+				message := fmt.Sprintf(
+					"given value is: %s",
+					value,
+				)
+				panic(AssertionError{
+					Message:       message,
+					LocationRange: invocation.LocationRange,
+				})
 			}
 
 			return interpreter.Void
