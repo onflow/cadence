@@ -876,23 +876,6 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		value := inter.Globals.Get("ref").GetValue()
 		require.IsType(t, interpreter.Nil, value)
 	})
-
-	t.Run("upcast to optional", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          let i: Int = 1
-          let ref = &i as &Int?
-        `)
-
-		value := inter.Globals.Get("ref").GetValue()
-		require.IsType(t, &interpreter.SomeValue{}, value)
-
-		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange)
-		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
-	})
 }
 
 func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {

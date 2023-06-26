@@ -8682,7 +8682,7 @@ func TestInterpretNonStorageReference(t *testing.T) {
                   <-create NFT(id: 2)
               ]
 
-              let nftRef = (&resources[1] as &NFT?)!
+              let nftRef = &resources[1] as &NFT
               let nftRef2 = nftRef
               nftRef2.id = 3
 
@@ -10399,38 +10399,46 @@ func TestInterpretOptionalReference(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
-		`
+	t.Run("present", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
           fun present(): &Int {
               let x: Int? = 1
               let y = &x as &Int?
               return y!
           }
+        `)
 
+		value, err := inter.Invoke("present")
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			&interpreter.EphemeralReferenceValue{
+				Value:        interpreter.NewUnmeteredIntValueFromInt64(1),
+				BorrowedType: sema.IntType,
+			},
+			value,
+		)
+
+	})
+
+	t.Run("absent", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
           fun absent(): &Int {
               let x: Int? = nil
               let y = &x as &Int?
               return y!
           }
-        `,
-	)
+        `)
 
-	value, err := inter.Invoke("present")
-	require.NoError(t, err)
-	require.Equal(
-		t,
-		&interpreter.EphemeralReferenceValue{
-			Value:        interpreter.NewUnmeteredIntValueFromInt64(1),
-			BorrowedType: sema.IntType,
-		},
-		value,
-	)
+		_, err := inter.Invoke("absent")
+		RequireError(t, err)
 
-	_, err = inter.Invoke("absent")
-	RequireError(t, err)
-
-	var forceNilError interpreter.ForceNilError
-	require.ErrorAs(t, err, &forceNilError)
+		var forceNilError interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
+	})
 }
 
 func TestInterpretCastingBoxing(t *testing.T) {
