@@ -2639,7 +2639,7 @@ func formatFunctionType(
 	return builder.String()
 }
 
-//
+// Arity
 
 type Arity struct {
 	Min int
