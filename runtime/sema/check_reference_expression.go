@@ -92,7 +92,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 		// If the reference type was a non-optional type,
 		// check that the referenced expression does not have an optional type
 
-		if _, ok := actualType.(*OptionalType); (ok && !isOpt) || (!ok && isOpt) {
+		if _, ok := actualType.(*OptionalType); ok != isOpt {
 			checker.report(&TypeMismatchError{
 				ExpectedType: expectedLeftType,
 				ActualType:   actualType,
