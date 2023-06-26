@@ -75,7 +75,8 @@ var testTypeAssertFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
-	RequiredArgumentCount: sema.RequiredArgumentCount(1),
+	// `message` parameter is optional
+	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
 var testTypeAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -195,7 +196,8 @@ var testTypeFailFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
-	RequiredArgumentCount: sema.RequiredArgumentCount(0),
+	// `message` parameter is optional
+	Arity: &sema.Arity{Min: 0, Max: 1},
 }
 
 var testTypeFailFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -910,7 +912,6 @@ func newTestTypeExpectFailureFunctionType() *sema.FunctionType {
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
 			sema.VoidType,
 		),
-		RequiredArgumentCount: sema.RequiredArgumentCount(2),
 	}
 }
 

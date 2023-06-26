@@ -1985,7 +1985,111 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				sema.VoidType,
 			),
-			RequiredArgumentCount: sema.RequiredArgumentCount(1),
+			Arity: &sema.Arity{Min: 1},
+		},
+		``,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			called = true
+
+			require.Len(t, invocation.ArgumentTypes, 3)
+			assert.IsType(t, sema.IntType, invocation.ArgumentTypes[0])
+			assert.IsType(t, sema.BoolType, invocation.ArgumentTypes[1])
+			assert.IsType(t, sema.StringType, invocation.ArgumentTypes[2])
+
+			require.Len(t, invocation.Arguments, 3)
+
+			inter := invocation.Interpreter
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				invocation.Arguments[0],
+			)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.TrueValue,
+				invocation.Arguments[1],
+			)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredStringValue("test"),
+				invocation.Arguments[2],
+			)
+
+			return interpreter.Void
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(testFunction)
+
+	checker, err := sema.NewChecker(
+		program,
+		TestLocation,
+		nil,
+		&sema.Config{
+			BaseValueActivation: baseValueActivation,
+			AccessCheckMode:     sema.AccessCheckModeStrict,
+		},
+	)
+	require.NoError(t, err)
+
+	err = checker.Check()
+	require.NoError(t, err)
+
+	storage := newUnmeteredInMemoryStorage()
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, testFunction)
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		&interpreter.Config{
+			Storage:        storage,
+			BaseActivation: baseActivation,
+		},
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	assert.True(t, called)
+}
+
+func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+      pub let nothing = test(1, true, "test")
+    `
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
+
+	require.NoError(t, err)
+
+	called := false
+
+	testFunction := stdlib.NewStandardLibraryFunction(
+		"test",
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.VoidType,
+			),
+			Arity: &sema.Arity{Min: 1, Max: 3},
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
