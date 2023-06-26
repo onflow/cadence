@@ -32,12 +32,6 @@ import (
 	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
-const (
-	// Top level CCF messages are CBOR tag (tag number: CBORTagTypeDefAndValue | CBORTagTypeAndValue, content: array of 2 elements).
-	// Minimum size is 5 bytes: top level tag number (2 bytes) + min size for array of 2 elements (3 bytes).
-	minTopLevelMsgSize = 5
-)
-
 // HasMsgPrefix returns true if the msg prefix (first few bytes)
 // matches currently implemented top-level CCF messages:
 // -  ccf-typedef-and-value-message
@@ -45,6 +39,11 @@ const (
 // WARNING: For simplicity and performance, this does not check
 // if msg is actually a CCF message, or well-formed, or valid.
 func HasMsgPrefix(msg []byte) bool {
+
+	// Top level CCF messages are CBOR tag (tag number: CBORTagTypeDefAndValue | CBORTagTypeAndValue, content: array of 2 elements).
+	// Minimum size is 5 bytes: top level tag number (2 bytes) + min size for array of 2 elements (3 bytes).
+	const minTopLevelMsgSize = 5
+
 	if len(msg) < minTopLevelMsgSize {
 		return false
 	}
@@ -62,7 +61,7 @@ func HasMsgPrefix(msg []byte) bool {
 	// - ccf-typedef-and-value-message
 	// - ccf-type-and-valu8e-message
 
-	return msg[0] == 0xd8 &&
+	return msg[0] == 0xd8 && // 0xd8 is major type 6, semantic tag
 		(msg[1] == CBORTagTypeDefAndValue || msg[1] == CBORTagTypeAndValue) &&
 		msg[2] == 0x82 // 0x82 is CBOR array head of 2 elements
 }
