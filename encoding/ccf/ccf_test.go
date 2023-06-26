@@ -11916,6 +11916,8 @@ func testEncode(t *testing.T, val cadence.Value, expectedCBOR []byte) (actualCBO
 }
 
 func testDecode(t *testing.T, actualCBOR []byte, expectedVal cadence.Value) {
+	require.True(t, ccf.HasMsgPrefix(actualCBOR))
+
 	decodedVal, err := deterministicDecMode.Decode(nil, actualCBOR)
 	require.NoError(t, err)
 	assert.Equal(
@@ -15605,4 +15607,33 @@ func TestInvalidDecodingOptions(t *testing.T) {
 	}
 	_, err = opts.DecMode()
 	require.Error(t, err)
+}
+
+func TestHasMsgPrefix(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		msg      []byte
+		expected bool
+	}
+
+	testCases := []testCase{
+		{name: "empty", msg: nil, expected: false},
+		{name: "too short", msg: []byte{0x00}, expected: false},
+		{name: "too short", msg: []byte{0x18, 0x18}, expected: false},
+		{name: "not CCF", msg: []byte{'a', 'b', 'c', 'd', 'e'}, expected: false},
+		{name: "not CCF", msg: []byte{0x1a, 0x00, 0x0f, 0x42, 0x40}, expected: false},
+		{name: "not CCF", msg: []byte{0xd8, 0x01, 0x82, 0x00, 0x00}, expected: false},
+		{name: "not implemented", msg: []byte{0xd8, ccf.CBORTagTypeDef, 0x82, 0x00, 0x00}, expected: false},
+		{name: "ccf-typedef-and-value-message", msg: []byte{0xd8, ccf.CBORTagTypeDefAndValue, 0x82, 0x00, 0x00}, expected: true},
+		{name: "ccf-type-and-value-message", msg: []byte{0xd8, ccf.CBORTagTypeAndValue, 0x82, 0xd8, ccf.CBORTagSimpleType, 0x18, 0x32, 0xf6}, expected: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, ccf.HasMsgPrefix(tc.msg))
+		})
+	}
 }
