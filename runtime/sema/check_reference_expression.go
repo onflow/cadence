@@ -78,23 +78,28 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	referencedExpression := referenceExpression.Expression
 
+	beforeErrors := len(checker.errors)
+
 	referencedType, actualType := checker.visitExpression(referencedExpression, expectedLeftType)
 
-	// If the reference type was an optional type,
-	// we proposed an optional type to the referenced expression.
-	//
-	// Check that it actually has an optional type
+	hasErrors := len(checker.errors) > beforeErrors
+	if !hasErrors {
+		// If the reference type was an optional type,
+		// we proposed an optional type to the referenced expression.
+		//
+		// Check that it actually has an optional type
 
-	// If the reference type was a non-optional type,
-	// check that the referenced expression does not have an optional type
+		// If the reference type was a non-optional type,
+		// check that the referenced expression does not have an optional type
 
-	if _, ok := actualType.(*OptionalType); (ok && !isOpt) || (!ok && isOpt) {
-		checker.report(&TypeMismatchError{
-			ExpectedType: expectedLeftType,
-			ActualType:   actualType,
-			Expression:   referencedExpression,
-			Range:        checker.expressionRange(referenceExpression),
-		})
+		if _, ok := actualType.(*OptionalType); (ok && !isOpt) || (!ok && isOpt) {
+			checker.report(&TypeMismatchError{
+				ExpectedType: expectedLeftType,
+				ActualType:   actualType,
+				Expression:   referencedExpression,
+				Range:        checker.expressionRange(referenceExpression),
+			})
+		}
 	}
 
 	if referenceType == nil {
