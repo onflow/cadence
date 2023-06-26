@@ -28,40 +28,47 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	// Check the result type and ensure it is a reference type
 
-	resultType := checker.ConvertType(referenceExpression.Type)
-	checker.checkInvalidInterfaceAsType(resultType, referenceExpression.Type)
+	rightType := checker.ConvertType(referenceExpression.Type)
+	checker.checkInvalidInterfaceAsType(rightType, referenceExpression.Type)
 
+	var isOpt bool
 	var referenceType *ReferenceType
-	var targetType, returnType Type
+	var expectedLeftType Type
+	var returnType Type
 
-	if !resultType.IsInvalidType() {
-		var ok bool
+	if !rightType.IsInvalidType() {
+
 		// Reference expressions may reference a value which has an optional type.
 		// For example, the result of indexing into a dictionary is an optional:
 		//
 		// let ints: {Int: String} = {0: "zero"}
 		// let ref: &T? = &ints[0] as &T?   // read as (&T)?
 		//
+		// In this case the reference expression's borrow type must be an optional type.
+		//
 		// In this case the reference expression's type is an optional type.
 		// Unwrap it one level to get the actual reference type
-		optType, optOk := resultType.(*OptionalType)
-		if optOk {
-			resultType = optType.Type
+
+		var optType *OptionalType
+		optType, isOpt = rightType.(*OptionalType)
+		if isOpt {
+			rightType = optType.Type
 		}
 
-		referenceType, ok = resultType.(*ReferenceType)
-		if !ok {
+		var isRef bool
+		referenceType, isRef = rightType.(*ReferenceType)
+		if !isRef {
 			checker.report(
 				&NonReferenceTypeReferenceError{
-					ActualType: resultType,
+					ActualType: rightType,
 					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, referenceExpression.Type),
 				},
 			)
 		} else {
-			targetType = referenceType.Type
+			expectedLeftType = referenceType.Type
 			returnType = referenceType
-			if optOk {
-				targetType = &OptionalType{Type: targetType}
+			if isOpt {
+				expectedLeftType = &OptionalType{Type: expectedLeftType}
 				returnType = &OptionalType{Type: returnType}
 			}
 		}
@@ -71,7 +78,24 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	referencedExpression := referenceExpression.Expression
 
-	referencedType := checker.VisitExpression(referencedExpression, targetType)
+	referencedType, actualType := checker.visitExpression(referencedExpression, expectedLeftType)
+
+	// If the reference type was an optional type,
+	// we proposed an optional type to the referenced expression.
+	//
+	// Check that it actually has an optional type
+
+	// If the reference type was a non-optional type,
+	// check that the referenced expression does not have an optional type
+
+	if _, ok := actualType.(*OptionalType); (ok && !isOpt) || (!ok && isOpt) {
+		checker.report(&TypeMismatchError{
+			ExpectedType: expectedLeftType,
+			ActualType:   actualType,
+			Expression:   referencedExpression,
+			Range:        checker.expressionRange(referenceExpression),
+		})
+	}
 
 	if referenceType == nil {
 		return InvalidType
@@ -79,7 +103,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	checker.checkUnusedExpressionResourceLoss(referencedType, referencedExpression)
 
-	checker.Elaboration.SetReferenceExpressionBorrowType(referenceExpression, returnType)
+	checker.Elaboration.SetReferenceExpressionBorrowType(referenceExpression, rightType)
 
 	return returnType
 }
