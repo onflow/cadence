@@ -2430,3 +2430,4 @@ func (checker *Checker) isAvailableMember(expressionType Type, identifier string
 
 	return true
 }
+

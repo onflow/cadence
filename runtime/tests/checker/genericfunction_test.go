@@ -66,10 +66,7 @@ func TestCheckGenericFunction(t *testing.T) {
 					variant,
 				),
 				&sema.FunctionType{
-					TypeParameters:        nil,
-					Parameters:            nil,
-					ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-					RequiredArgumentCount: nil,
+					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 				},
 			)
 
@@ -91,10 +88,7 @@ func TestCheckGenericFunction(t *testing.T) {
               let res = test<X>()
             `,
 			&sema.FunctionType{
-				TypeParameters:        nil,
-				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 			},
 		)
 
@@ -120,9 +114,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 			},
 		)
 
@@ -148,9 +140,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 			},
 		)
 
@@ -200,7 +190,6 @@ func TestCheckGenericFunction(t *testing.T) {
 					},
 				},
 				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
 			},
 		)
 
@@ -249,14 +238,13 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 			},
 		)
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 
@@ -288,8 +276,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 			},
 		)
 
@@ -328,7 +315,6 @@ func TestCheckGenericFunction(t *testing.T) {
 					},
 				},
 				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
 			},
 		)
 
@@ -372,8 +358,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 			},
 		)
 
@@ -431,8 +416,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 			},
 		)
 
@@ -459,13 +443,11 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: nil,
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					&sema.GenericType{
 						TypeParameter: typeParameter,
 					},
 				),
-				RequiredArgumentCount: nil,
 			},
 		)
 
@@ -491,13 +473,11 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: nil,
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					&sema.GenericType{
 						TypeParameter: typeParameter,
 					},
 				),
-				RequiredArgumentCount: nil,
 			},
 		)
 
@@ -556,7 +536,6 @@ func TestCheckGenericFunction(t *testing.T) {
 						TypeParameter: typeParameter,
 					},
 				),
-				RequiredArgumentCount: nil,
 			},
 		)
 
@@ -599,9 +578,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 			},
 		)
 
@@ -639,9 +616,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters:            nil,
 				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
 			},
 		)
 
@@ -678,8 +653,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-				RequiredArgumentCount: nil,
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
 			},
 		)
 
@@ -757,7 +731,6 @@ func TestCheckGenericFunction(t *testing.T) {
 								},
 							),
 						),
-						RequiredArgumentCount: nil,
 					},
 				)
 
@@ -865,7 +838,6 @@ func TestCheckGenericFunction(t *testing.T) {
 								},
 							),
 						),
-						RequiredArgumentCount: nil,
 					},
 				)
 
@@ -906,7 +878,6 @@ func TestCheckGenericFunctionIsInvalid(t *testing.T) {
 			},
 		},
 		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
-		RequiredArgumentCount: nil,
 	}
 
 	assert.False(t, genericFunctionType.IsInvalidType())
