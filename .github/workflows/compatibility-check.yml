@@ -61,7 +61,7 @@ jobs:
     needs: setup
     uses: ./.github/workflows/compatibility-check-template.yml
     with:
-      repo: ${{ inputs.repo }}
+      repo: ${{ needs.setup.outputs.repo }}
       base-branch: ${{ needs.setup.outputs.base }}
       current-branch: ${{ needs.setup.outputs.branch }}
       chain: flow-mainnet
