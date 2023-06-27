@@ -4,9 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       repo:
-        description: Repository
-        required: true
-        default: ${{ github.event.pull_request.head.repo.full_name || "onflow/cadence" }}
+        description: Repository (defaults to 'onflow/cadence')
       branch:
         description: 'Current branch/tag'
         required: true
@@ -36,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       # Map step output to the job output, so that next job can use these values.
+      repo: ${{ steps.setup.outputs.repo }}
       branch: ${{ steps.setup.outputs.branch }}
       base: ${{ steps.setup.outputs.base }}
     steps:
@@ -50,9 +49,11 @@ jobs:
         # Here there also is a limitation that we can't use the 'merge-branch' because it is not visible to 'go get'.
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "repo=`(echo "${{ github.event.pull_request.head.repo.full_name }}")`" >> $GITHUB_OUTPUT
             echo "branch=`(echo "${{ github.event.pull_request.head.sha }}")`" >> $GITHUB_OUTPUT
             echo "base=`(echo "${{ github.base_ref }}")`" >> $GITHUB_OUTPUT
           else
+            echo "repo=`(echo "${{ inputs.repo || 'onflow/cadence' }}")`" >> $GITHUB_OUTPUT
             echo "branch=`(echo "${{ inputs.branch }}")`" >> $GITHUB_OUTPUT
             echo "base=`(echo "${{ inputs.base }}")`" >> $GITHUB_OUTPUT
           fi
@@ -70,7 +71,7 @@ jobs:
     needs: setup
     uses: ./.github/workflows/compatibility-check-template.yml
     with:
-      repo: ${{ inputs.repo }}
+      repo: ${{ needs.setup.outputs.repo }}
       base-branch:  ${{ needs.setup.outputs.base }}
       current-branch: ${{ needs.setup.outputs.branch }}
       chain: flow-testnet
