@@ -25,8 +25,13 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 
 	defer func() {
 		// NOTE: check for resource loss before declaring the function
-		// as having definitely returned
-		checker.checkResourceLossForFunction()
+		// as having definitely returned.
+		//
+		// Check all variables declared *inside* of the function.
+		// The function activation's value activation depth is where the *function* is declared ("parent scope"),
+		// and two value activation scopes are defined for the function itself: for the parameters and the body.
+
+		checker.checkResourceLoss(functionActivation.ValueActivationDepth + 1)
 		functionActivation.ReturnInfo.MaybeReturned = true
 		functionActivation.ReturnInfo.DefinitelyReturned = true
 	}()
@@ -72,10 +77,4 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 	checker.checkResourceMoveOperation(statement.Expression, valueType)
 
 	return
-}
-
-func (checker *Checker) checkResourceLossForFunction() {
-	functionValueActivationDepth :=
-		checker.functionActivations.Current().ValueActivationDepth
-	checker.checkResourceLoss(functionValueActivationDepth)
 }
