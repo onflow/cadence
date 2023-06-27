@@ -3,6 +3,10 @@ name: BackwardCompatibilityCheckTemplate
 on:
   workflow_call:
     inputs:
+      repo:
+        required: true
+        type: string
+        default: onflow/cadence
       current-branch:
         required: true
         type: string
@@ -77,7 +81,7 @@ jobs:
       - name: Check contracts using ${{ inputs.current-branch }}
         working-directory: ./tools/compatibility-check
         run: |
-          GOPROXY=direct go get github.com/onflow/cadence@${{ inputs.current-branch }}
+          GOPROXY=direct go mod edit -replace github.com/onflow/cadence=github.com/${{ inputs.repo }}@${{ inputs.current-branch }}
           go mod tidy
           go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-new.txt
 
@@ -86,7 +90,7 @@ jobs:
       - name: Check contracts using ${{ inputs.base-branch }}
         working-directory: ./tools/compatibility-check
         run: |
-          GOPROXY=direct go get github.com/onflow/cadence@${{ inputs.base-branch }}
+          GOPROXY=direct go mod edit -replace github.com/onflow/cadence=github.com/${{ inputs.repo }}@${{ inputs.base-branch }}
           go mod tidy
           go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-old.txt
 
