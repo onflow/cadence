@@ -918,3 +918,54 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      struct S {
+         fun foo() {}
+      }
+
+      fun main() {
+        let y: AnyStruct? = nil
+        let z: AnyStruct = y
+        let ref = &z as auth &AnyStruct
+        let s = ref as! &S
+        s.foo()
+      }
+    `)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+}
+
+func TestInterpretReferenceToOptional(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun main(): AnyStruct {
+        let y: Int? = nil
+        let z: AnyStruct = y
+        return &z as auth &AnyStruct
+      }
+    `)
+
+	value, err := inter.Invoke("main")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		&interpreter.EphemeralReferenceValue{
+			Value:        interpreter.Nil,
+			BorrowedType: sema.AnyStructType,
+			Authorized:   true,
+		},
+		value,
+	)
+}
