@@ -23,7 +23,6 @@ jobs:
   benchmark:
     name: Performance regression check
     runs-on: ubuntu-latest
-    if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Set benchmark repetitions
         # reducing repetition will speed up execution,
