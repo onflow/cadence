@@ -27,7 +27,7 @@ jobs:
       - name: Set benchmark repetitions
         # reducing repetition will speed up execution,
         # but will be more inaccurate at detecting change
-        run: echo "::set-output name=benchmark_repetitions::7"
+        run: echo "benchmark_repetitions=7" >> "$GITHUB_OUTPUT"
         id: settings
 
       - name: Install dependencies
