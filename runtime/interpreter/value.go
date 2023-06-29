@@ -984,6 +984,10 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, nam
 				)
 			},
 		)
+
+	case sema.CharacterTypeUtf8FieldName:
+		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v)))
+		return ByteSliceToByteArrayValue(interpreter, []byte(v))
 	}
 	return nil
 }
