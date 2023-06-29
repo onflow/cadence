@@ -405,12 +405,15 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *test
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+      event Foo(x: Int)
+
       var x = 0
 
       fun test() {
           pre {
               x == 1
+              emit Foo(x: x)
           }
           post {
               x == before(x) + 1
@@ -418,8 +421,9 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *test
           x = x + 1
       }
     `)
+	require.NoError(t, err)
 
-	_, err := inter.Invoke("test")
+	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
 	var conditionErr interpreter.ConditionError
@@ -429,13 +433,18 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreTestCondition(t *test
 		ast.ConditionKindPre,
 		conditionErr.ConditionKind,
 	)
+
+	events := getEvents()
+	require.Len(t, events, 0)
 }
 
 func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
+      event Foo(x: Int)
+
       var x = 0
 
       fun test() {
@@ -444,12 +453,14 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *tes
           }
           post {
               x == before(x) + 2
+              emit Foo(x: x)
           }
           x = x + 1
       }
     `)
+	require.NoError(t, err)
 
-	_, err := inter.Invoke("test")
+	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
 	var conditionErr interpreter.ConditionError
@@ -459,6 +470,9 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostTestCondition(t *tes
 		ast.ConditionKindPost,
 		conditionErr.ConditionKind,
 	)
+
+	events := getEvents()
+	require.Len(t, events, 0)
 }
 
 func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.T) {

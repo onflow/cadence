@@ -133,6 +133,24 @@ func TestCheckInvalidFunctionConditionValueReference(t *testing.T) {
 	assert.Equal(t, "b", notDeclaredErr.Name)
 }
 
+func TestCheckInvalidFunctionPostEmitConditionBefore(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(x: Int) {
+          post {
+              emit before(x)
+          }
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	require.IsType(t, &sema.InvalidEmitConditionError{}, errs[0])
+	require.IsType(t, &sema.EmitNonEventError{}, errs[1])
+}
+
 func TestCheckInvalidFunctionNonBoolCondition(t *testing.T) {
 
 	t.Parallel()
