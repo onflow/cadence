@@ -32,7 +32,7 @@ import (
 	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
-// CBORDecMode
+// defaultCBORDecMode
 //
 // See https://github.com/fxamacker/cbor:
 // "For best performance, reuse EncMode and DecMode after creating them."
@@ -45,7 +45,7 @@ import (
 //	decoder into allocating very big data items (strings, arrays, maps, or even arbitrary precision numbers)
 //	or exhaust the stack depth by setting up deeply nested items. Decoders need to have appropriate resource
 //	management to mitigate these attacks."
-var CBORDecMode = func() cbor.DecMode {
+var defaultCBORDecMode = func() cbor.DecMode {
 	decMode, err := cbor.DecOptions{
 		IndefLength:      cbor.IndefLengthForbidden,
 		IntDec:           cbor.IntDecConvertNone,
@@ -67,14 +67,92 @@ type Decoder struct {
 	// CCF codec uses CBOR codec under the hood.
 	dec   *cbor.StreamDecoder
 	gauge common.MemoryGauge
+
+	// CCF decoding mode contains immutable CCF decoding options.
+	dm *decMode
+}
+
+type DecMode interface {
+	// Decode returns a Cadence value decoded from its CCF-encoded representation.
+	//
+	// This function returns an error if the bytes represent CCF that is malformed,
+	// invalid, or does not comply with requirements in the CCF specification.
+	Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error)
+
+	// NewDecoder initializes a Decoder that will decode CCF-encoded bytes from the
+	// given bytes.
+	NewDecoder(gauge common.MemoryGauge, b []byte) *Decoder
+}
+
+// EnforceSortMode specifies how the decoder should enforce sort order.
+type EnforceSortMode int
+
+const (
+	// EnforceSortNone means sort order is not enforced by the decoder.
+	EnforceSortNone EnforceSortMode = iota
+
+	// EnforceSortBytewiseLexical requires sort order to be bytewise lexicographic.
+	EnforceSortBytewiseLexical
+
+	maxEnforceSortMode
+)
+
+func (esm EnforceSortMode) valid() bool {
+	return esm < maxEnforceSortMode
+}
+
+// DecOptions specifies CCF decoding options which can be used to create immutable DecMode.
+type DecOptions struct {
+	// EnforceSortCompositeFields specifies how decoder should enforce sort order of compsite fields.
+	EnforceSortCompositeFields EnforceSortMode
+
+	// EnforceSortIntersectionTypes specifies how decoder should enforce sort order of restricted types.
+	EnforceSortIntersectionTypes EnforceSortMode
+
+	// CBORDecMode will default to defaultCBORDecMode if nil.  The decoding mode contains
+	// immutable decoding options (cbor.DecOptions) and is safe for concurrent use.
+	CBORDecMode cbor.DecMode
+}
+
+// EventsDecMode is CCF decoding mode for events which contains
+// immutable CCF decoding options.  It is safe for concurrent use.
+var EventsDecMode = &decMode{
+	enforceSortCompositeFields: EnforceSortNone,
+	enforceSortRestrictedTypes: EnforceSortNone,
+	cborDecMode:                defaultCBORDecMode,
+}
+
+type decMode struct {
+	enforceSortCompositeFields EnforceSortMode
+	enforceSortRestrictedTypes EnforceSortMode
+	cborDecMode                cbor.DecMode
+}
+
+// DecMode returns CCF decoding mode which contains immutable decoding options.
+// The returned DecMode is safe for concurrent use.
+func (opts DecOptions) DecMode() (DecMode, error) {
+	if !opts.EnforceSortCompositeFields.valid() {
+		return nil, fmt.Errorf("ccf: invalid EnforceSortCompositeFields %d", opts.EnforceSortCompositeFields)
+	}
+	if !opts.EnforceSortIntersectionTypes.valid() {
+		return nil, fmt.Errorf("ccf: invalid EnforceSortRestrictedTypes %d", opts.EnforceSortIntersectionTypes)
+	}
+	if opts.CBORDecMode == nil {
+		opts.CBORDecMode = defaultCBORDecMode
+	}
+	return &decMode{
+		enforceSortCompositeFields: opts.EnforceSortCompositeFields,
+		enforceSortRestrictedTypes: opts.EnforceSortIntersectionTypes,
+		cborDecMode:                opts.CBORDecMode,
+	}, nil
 }
 
 // Decode returns a Cadence value decoded from its CCF-encoded representation.
 //
 // This function returns an error if the bytes represent CCF that is malformed,
 // invalid, or does not comply with requirements in the CCF specification.
-func Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
-	dec := NewDecoder(gauge, b)
+func (dm *decMode) Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
+	dec := dm.NewDecoder(gauge, b)
 
 	v, err := dec.Decode()
 	if err != nil {
@@ -90,13 +168,30 @@ func Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
 
 // NewDecoder initializes a Decoder that will decode CCF-encoded bytes from the
 // given bytes.
-func NewDecoder(gauge common.MemoryGauge, b []byte) *Decoder {
+func (dm *decMode) NewDecoder(gauge common.MemoryGauge, b []byte) *Decoder {
 	// NOTE: encoded data is not copied by decoder.
 	// CCF codec uses CBOR codec under the hood.
 	return &Decoder{
-		dec:   CBORDecMode.NewByteStreamDecoder(b),
+		dec:   dm.cborDecMode.NewByteStreamDecoder(b),
 		gauge: gauge,
+		dm:    dm,
 	}
+}
+
+var defaultDecMode = &decMode{cborDecMode: defaultCBORDecMode}
+
+// Decode returns a Cadence value decoded from its CCF-encoded representation.
+//
+// This function returns an error if the bytes represent CCF that is malformed,
+// invalid, or does not comply with requirements in the CCF specification.
+func Decode(gauge common.MemoryGauge, b []byte) (cadence.Value, error) {
+	return defaultDecMode.Decode(gauge, b)
+}
+
+// NewDecoder initializes a Decoder that will decode CCF-encoded bytes from the
+// given bytes.
+func NewDecoder(gauge common.MemoryGauge, b []byte) *Decoder {
+	return defaultDecMode.NewDecoder(gauge, b)
 }
 
 // Decode reads CCF-encoded bytes and decodes them to a Cadence value.
@@ -266,6 +361,7 @@ func (d *Decoder) decodeTypeAndValue(types *cadenceTypeByCCFTypeID) (cadence.Val
 //	/ word32-value
 //	/ word64-value
 //	/ word128-value
+//	/ word256-value
 //	/ fix64-value
 //	/ ufix64-value
 func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
@@ -356,6 +452,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	case cadence.Word128Type:
 		return d.decodeWord128()
 
+	case cadence.Word256Type:
+		return d.decodeWord256()
+
 	case cadence.Fix64Type:
 		return d.decodeFix64()
 
@@ -415,13 +514,26 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 		return d.decodeValue(t.Type, types)
 
 	default:
-		err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
+		nt, err := d.dec.NextType()
 		if err != nil {
-			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", t.ID(), t, err.Error())
+			return nil, err
 		}
 
-		// Decode ccf-type-and-value-message.
-		return d.decodeTypeAndValue(types)
+		switch nt {
+		case cbor.NilType:
+			// Decode nil value (such as cyclic reference value).
+			err := d.dec.DecodeNil()
+			return nil, err
+
+		default:
+			err := decodeCBORTagWithKnownNumber(d.dec, CBORTagTypeAndValue)
+			if err != nil {
+				return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %s", t.ID(), t, err.Error())
+			}
+
+			// Decode ccf-type-and-value-message.
+			return d.decodeTypeAndValue(types)
+		}
 	}
 }
 
@@ -819,6 +931,23 @@ func (d *Decoder) decodeWord128() (cadence.Value, error) {
 	)
 }
 
+// decodeWord256 decodes word256-value as
+// language=CDDL
+// word256-value = bigint .ge 0
+func (d *Decoder) decodeWord256() (cadence.Value, error) {
+	// NewMeteredWord256FromBig checks if decoded big.Int is positive.
+	return cadence.NewMeteredWord256FromBig(
+		d.gauge,
+		func() *big.Int {
+			bigInt, err := d.dec.DecodeBigInt()
+			if err != nil {
+				panic(fmt.Errorf("failed to decode Word256: %s", err))
+			}
+			return bigInt
+		},
+	)
+}
+
 // decodeFix64 decodes fix64-value as
 // language=CDDL
 // fix64-value = (int .ge -9223372036854775808) .le 9223372036854775807
@@ -962,7 +1091,7 @@ func (d *Decoder) decodeDictionary(typ *cadence.DictionaryType, types *cadenceTy
 				previousKeyRawBytes = keyRawBytes
 
 				// decode key from raw bytes
-				keyDecoder := NewDecoder(d.gauge, keyRawBytes)
+				keyDecoder := d.dm.NewDecoder(d.gauge, keyRawBytes)
 				key, err := keyDecoder.decodeValue(typ.KeyType, types)
 				if err != nil {
 					return nil, err
@@ -1669,14 +1798,14 @@ func (d *Decoder) decodeCompositeTypeValue(
 	}
 
 	// Decode fields after type is resolved to handle recursive types.
-	dec := NewDecoder(d.gauge, compTypeValue.rawFields)
+	dec := d.dm.NewDecoder(d.gauge, compTypeValue.rawFields)
 	fields, err := dec.decodeCompositeFields(visited, dec.decodeTypeValue)
 	if err != nil {
 		return nil, err
 	}
 
 	// Decode initializers after type is resolved to handle recursive types.
-	dec = NewDecoder(d.gauge, compTypeValue.rawInitializers)
+	dec = d.dm.NewDecoder(d.gauge, compTypeValue.rawInitializers)
 	initializers, err := dec.decodeInitializerTypeValues(visited)
 	if err != nil {
 		return nil, err

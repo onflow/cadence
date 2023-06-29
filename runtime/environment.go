@@ -136,6 +136,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		AuthAccountHandler:                   e.newAuthAccountHandler(),
 		OnRecordTrace:                        e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
+		CompositeTypeHandler:                 e.newCompositeTypeHandler(),
 		TracingEnabled:                       e.config.TracingEnabled,
 		AtreeValueValidationEnabled:          e.config.AtreeValidationEnabled,
 		// NOTE: ignore e.config.AtreeValidationEnabled here,
@@ -860,6 +861,16 @@ func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLo
 				Interpreter: subInterpreter,
 			}
 		}
+	}
+}
+
+func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.CompositeTypeHandlerFunc {
+	return func(location common.Location, typeID common.TypeID) *sema.CompositeType {
+		if _, ok := location.(stdlib.FlowLocation); ok {
+			return stdlib.FlowEventTypes[typeID]
+		}
+
+		return nil
 	}
 }
 

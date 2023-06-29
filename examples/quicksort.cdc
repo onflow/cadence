@@ -4,7 +4,7 @@
 /// > Our version of quicksort is not the fastest possible,
 /// > but it's one of the simplest.
 ///
-access(self) fun quickSort(_ items: &[AnyStruct], isLess: ((Int, Int): Bool)) {
+access(all) fun quickSort(_ items: &[AnyStruct], isLess: ((Int, Int): Bool)) {
 
     fun quickSortPart(leftIndex: Int, rightIndex: Int) {
 
@@ -38,7 +38,7 @@ access(self) fun quickSort(_ items: &[AnyStruct], isLess: ((Int, Int): Bool)) {
     )
 }
 
-access(self) fun main() {
+access(all) fun main() {
     let items = [5, 3, 7, 6, 2, 9]
     quickSort(
         &items as &[AnyStruct],

@@ -667,6 +667,10 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   account.save(<-r, to: /storage/r)
               }
 
+			  fun checkR(): Bool {
+				  return account.check<@R>(from: /storage/r)
+			  }
+
               fun borrowR(): &R? {
                   return account.borrow<&R>(from: /storage/r)
               }
@@ -675,9 +679,17 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   return account.borrow<&R>(from: /storage/r)!.foo
               }
 
+			  fun checkR2(): Bool {
+				  return account.check<@R2>(from: /storage/r)
+			  }
+
               fun borrowR2(): &R2? {
                   return account.borrow<&R2>(from: /storage/r)
               }
+
+			  fun checkR2WithInvalidPath(): Bool {
+				  return account.check<@R2>(from: /storage/wrongpath)
+			  }
 
               fun changeAfterBorrow(): Int {
                  let ref = account.borrow<&R>(from: /storage/r)!
@@ -703,7 +715,15 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Run("borrow R ", func(t *testing.T) {
 
-			// first borrow
+			// first check & borrow
+			checkRes, err := inter.Invoke("checkR")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(true),
+				checkRes,
+			)
 
 			value, err := inter.Invoke("borrowR")
 			require.NoError(t, err)
@@ -734,7 +754,15 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			// TODO: should fail, i.e. return nil
 
-			// second borrow
+			// second check & borrow
+			checkRes, err = inter.Invoke("checkR")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(true),
+				checkRes,
+			)
 
 			value, err = inter.Invoke("borrowR")
 			require.NoError(t, err)
@@ -750,8 +778,16 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		})
 
 		t.Run("borrow R2", func(t *testing.T) {
+			checkRes, err := inter.Invoke("checkR2")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(false),
+				checkRes,
+			)
 
-			_, err := inter.Invoke("borrowR2")
+			_, err = inter.Invoke("borrowR2")
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
@@ -766,6 +802,17 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
+
+		t.Run("check R2 with wrong path", func(t *testing.T) {
+			checkRes, err := inter.Invoke("checkR2WithInvalidPath")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(false),
+				checkRes,
+			)
 		})
 	})
 
@@ -801,6 +848,10 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   account.save(s, to: /storage/s)
               }
 
+			  fun checkS(): Bool {
+				  return account.check<S>(from: /storage/s)
+			  }
+
               fun borrowS(): &S? {
                   return account.borrow<&S>(from: /storage/s)
               }
@@ -808,8 +859,12 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
               fun foo(): Int {
                   return account.borrow<&S>(from: /storage/s)!.foo
               }
-
-              fun borrowS2(): &S2? {
+			 
+			  fun checkS2(): Bool {
+				  return account.check<S2>(from: /storage/s)
+			  }
+             
+			  fun borrowS2(): &S2? {
                   return account.borrow<&S2>(from: /storage/s)
               }
 
@@ -844,7 +899,15 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Run("borrow S", func(t *testing.T) {
 
-			// first borrow
+			// first check & borrow
+			checkRes, err := inter.Invoke("checkS")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(true),
+				checkRes,
+			)
 
 			value, err := inter.Invoke("borrowS")
 			require.NoError(t, err)
@@ -875,7 +938,15 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			// TODO: should fail, i.e. return nil
 
-			// second borrow
+			// second check & borrow
+			checkRes, err = inter.Invoke("checkS")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(true),
+				checkRes,
+			)
 
 			value, err = inter.Invoke("borrowS")
 			require.NoError(t, err)
@@ -891,6 +962,14 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		})
 
 		t.Run("borrow S2", func(t *testing.T) {
+			checkRes, err := inter.Invoke("checkS2")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(false),
+				checkRes,
+			)
 
 			_, err = inter.Invoke("borrowS2")
 			RequireError(t, err)

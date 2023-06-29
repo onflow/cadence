@@ -73,6 +73,8 @@ const (
 	KeywordRequire     = "require"
 	KeywordStatic      = "static"
 	KeywordNative      = "native"
+	KeywordPub         = "pub"
+	KeywordPriv        = "priv"
 	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 

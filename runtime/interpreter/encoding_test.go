@@ -2615,6 +2615,134 @@ func TestEncodeDecodeWord128Value(t *testing.T) {
 	})
 }
 
+func TestEncodeDecodeWord256Value(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord256ValueFromUint64(0),
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 0
+					0x40,
+				},
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord256ValueFromUint64(42),
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 1
+					0x41,
+					0x2a,
+				},
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 32
+					0x58, 0x20,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+			},
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x2a,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 65
+					0x58, 0x41,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("RFC", func(t *testing.T) {
+
+		t.Parallel()
+
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord256ValueFromBigInt(rfcValue),
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 9
+					0x49,
+					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				},
+			},
+		)
+	})
+}
+
 func TestEncodeDecodeSomeValue(t *testing.T) {
 
 	t.Parallel()

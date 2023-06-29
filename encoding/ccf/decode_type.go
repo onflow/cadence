@@ -179,6 +179,9 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 	case TypeWord128:
 		return cadence.TheWord128Type, nil
 
+	case TypeWord256:
+		return cadence.TheWord256Type, nil
+
 	case TypeFix64:
 		return cadence.TheFix64Type, nil
 
@@ -265,6 +268,12 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 
 	case TypeVoid:
 		return cadence.TheVoidType, nil
+
+	case TypeAnyStructAttachmentType:
+		return cadence.TheAnyStructAttachmentType, nil
+
+	case TypeAnyResourceAttachmentType:
+		return cadence.TheAnyResourceAttachmentType, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported encoded simple type ID %d", simpleTypeID)
@@ -586,12 +595,14 @@ func (d *Decoder) decodeIntersectionType(
 			return nil, fmt.Errorf("found duplicate intersection type %s", intersectionTypeID)
 		}
 
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "intersection-type.types MUST be sorted by intersection's cadence-type-id"
-		//   "intersection-type-value.types MUST be sorted by intersection's cadence-type-id."
-		if !stringsAreSortedBytewise(previousIntersectionTypeID, intersectionTypeID) {
-			return nil, fmt.Errorf("intersection types are not sorted (%s, %s)", previousIntersectionTypeID, intersectionTypeID)
+		if d.dm.enforceSortRestrictedTypes == EnforceSortBytewiseLexical {
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "intersection-type.types MUST be sorted by intersection's cadence-type-id"
+			//   "intersection-type-value.types MUST be sorted by intersection's cadence-type-id."
+			if !stringsAreSortedBytewise(previousIntersectionTypeID, intersectionTypeID) {
+				return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousIntersectionTypeID, intersectionTypeID)
+			}
 		}
 
 		intersectionTypeIDs[intersectionTypeID] = struct{}{}

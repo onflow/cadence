@@ -517,7 +517,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 	)
 
 	assert.EqualValues(t,
-		stdlib.AccountKeyAddedEventType.ID(),
+		stdlib.AccountKeyAddedFromPublicKeyEventType.ID(),
 		storage.events[1].Type().ID(),
 	)
 }

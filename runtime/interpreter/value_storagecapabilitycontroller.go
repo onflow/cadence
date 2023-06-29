@@ -45,9 +45,9 @@ type StorageCapabilityControllerValue struct {
 	CapabilityID UInt64Value
 	TargetPath   PathValue
 
-	// Tag is locally cached result of GetTag, and not stored.
-	// It is populated when the field `Tag` is read.
-	Tag *StringValue
+	// tag is locally cached result of GetTag, and not stored.
+	// It is populated when the field `tag` is read.
+	tag *StringValue
 
 	// Injected functions.
 	// Tags are not stored directly inside the controller
@@ -58,7 +58,7 @@ type StorageCapabilityControllerValue struct {
 	TargetFunction   FunctionValue
 	RetargetFunction FunctionValue
 	DeleteFunction   FunctionValue
-	SetTagFunction   FunctionValue
+	setTagFunction   FunctionValue
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
@@ -220,16 +220,19 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	switch name {
 	case sema.StorageCapabilityControllerTypeTagFieldName:
-		if v.Tag == nil {
-			v.Tag = v.GetTag()
-			if v.Tag == nil {
-				v.Tag = EmptyString
+		if v.tag == nil {
+			v.tag = v.GetTag()
+			if v.tag == nil {
+				v.tag = EmptyString
 			}
 		}
-		return v.Tag
+		return v.tag
 
 	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
-		return v.SetTagFunction
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(inter)
+		}
+		return v.setTagFunction
 
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -308,5 +311,25 @@ func (v *StorageCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 		gauge,
 		sema.StorageCapabilityControllerTypeDeleteFunctionType,
 		panicHostFunction,
+	)
+}
+
+func (controller *StorageCapabilityControllerValue) newSetTagFunction(
+	inter *Interpreter,
+) *HostFunctionValue {
+	return NewHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeSetTagFunctionType,
+		func(invocation Invocation) Value {
+			newTagValue, ok := invocation.Arguments[0].(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			controller.tag = newTagValue
+			controller.SetTag(newTagValue)
+
+			return Void
+		},
 	)
 }
