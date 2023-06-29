@@ -242,7 +242,7 @@ func TestEncodeDecodeString(t *testing.T) {
 
 		t.Parallel()
 
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		expected := NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize+1)))
 
 		testEncodeDecode(t,
@@ -304,7 +304,7 @@ func TestEncodeDecodeStringAtreeValue(t *testing.T) {
 
 		t.Parallel()
 
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		expected := StringAtreeValue(strings.Repeat("x", int(maxInlineElementSize+1)))
 
 		testEncodeDecode(t,
@@ -661,7 +661,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		expected := NewUnmeteredIntValueFromInt64(1_000_000_000)
 
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
 			expected = expected.Mul(inter, expected, EmptyLocationRange).(IntValue)
 		}
@@ -1619,7 +1619,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		expected := NewUnmeteredUIntValueFromUint64(1_000_000_000)
 
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
 			expected = expected.Mul(inter, expected, EmptyLocationRange).(UIntValue)
 		}
@@ -2811,7 +2811,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		// It will not get inlined, but the outer value will
 
 		var str *StringValue
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		for i := uint64(0); i < maxInlineElementSize; i++ {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
@@ -2845,7 +2845,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		// Generate a string that has an encoding size just above the max inline element size
 
 		var str *StringValue
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		for i := uint64(0); i < maxInlineElementSize; i++ {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
@@ -3233,7 +3233,7 @@ func TestEncodeDecodePathValue(t *testing.T) {
 
 		t.Parallel()
 
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
 
 		expected := PathValue{
@@ -3333,7 +3333,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		t.Parallel()
 
 		// Generate an arbitrary, large static type
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
 		for i := uint64(0); i < maxInlineElementSize; i++ {
@@ -3516,7 +3516,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		t.Parallel()
 
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
 
 		expected := TypeValue{
@@ -4023,7 +4023,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		t.Parallel()
 
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
 
 		path := PathValue{
@@ -4229,7 +4229,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		t.Parallel()
 
 		// Generate an arbitrary, large static type
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
 		for i := uint64(0); i < maxInlineElementSize; i++ {
