@@ -1054,6 +1054,8 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 
 	// If a colon follows the expression, the expression was our label.
 	if p.current.Is(lexer.TokenColon) {
+		labelEndPos = p.current.EndPos
+
 		identifier, ok := expr.(*ast.IdentifierExpression)
 		if !ok {
 			return nil, p.syntaxError(
@@ -1063,7 +1065,6 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 		}
 		label = identifier.Identifier.Identifier
 		labelStartPos = expr.StartPosition()
-		labelEndPos = expr.EndPosition(p.memoryGauge)
 
 		// Skip the identifier
 		p.nextSemanticToken()
