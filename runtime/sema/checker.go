@@ -243,7 +243,9 @@ func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
 	scope := checker.CurrentPurityScope()
 	if scope.EnforcePurity {
 		checker.report(
-			&PurityError{Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation)},
+			&PurityError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation),
+			},
 		)
 	}
 }

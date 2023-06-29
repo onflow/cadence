@@ -809,10 +809,13 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	tests := map[int64]error{
-		0: interpreter.ConditionError{},
-		1: nil,
-		2: interpreter.ConditionError{},
+	tests := map[int64]struct {
+		err    error
+		events int
+	}{
+		0: {interpreter.ConditionError{}, 0},
+		1: {nil, 2},
+		2: {interpreter.ConditionError{}, 1},
 	}
 
 	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
@@ -823,7 +826,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			for value, expectedError := range tests {
+			for value, expectedResult := range tests {
 
 				t.Run(fmt.Sprint(value), func(t *testing.T) {
 
@@ -856,10 +859,13 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					checker, err := checker.ParseAndCheck(t,
 						fmt.Sprintf(
 							`
+                                 pub event Foo(x: Int)
+
 					             access(all) %[1]s interface Test {
 					                 init(x: Int) {
 					                     pre {
 					                         x > 0: "x must be positive"
+                                             emit Foo(x: x)
 					                     }
 					                 }
 					             }
@@ -868,6 +874,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					                 init(x: Int) {
 					                     pre {
 					                         x < 2: "x must be smaller than 2"
+                                             emit Foo(x: x)
 					                     }
 					                 }
 					             }
@@ -880,8 +887,10 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					)
 					require.NoError(t, err)
 
+					var events []testEvent
+
 					check := func(err error) {
-						if expectedError == nil {
+						if expectedResult.err == nil {
 							require.NoError(t, err)
 						} else {
 							require.IsType(t,
@@ -891,14 +900,29 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 							err = err.(interpreter.Error).Unwrap()
 
 							require.IsType(t,
-								expectedError,
+								expectedResult.err,
 								err,
 							)
 						}
+
+						require.Len(t, events, expectedResult.events)
 					}
 
 					uuidHandler := func() (uint64, error) {
 						return 0, nil
+					}
+
+					onEventEmitted := func(
+						_ *interpreter.Interpreter,
+						_ interpreter.LocationRange,
+						event *interpreter.CompositeValue,
+						eventType *sema.CompositeType,
+					) error {
+						events = append(events, testEvent{
+							event:     event,
+							eventType: eventType,
+						})
+						return nil
 					}
 
 					if compositeKind == common.CompositeKindContract {
@@ -921,7 +945,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 										sema.IntType,
 									},
 								),
-								UUIDHandler: uuidHandler,
+								UUIDHandler:    uuidHandler,
+								OnEventEmitted: onEventEmitted,
 							},
 						)
 						require.NoError(t, err)
@@ -938,8 +963,9 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 							interpreter.ProgramFromChecker(checker),
 							checker.Location,
 							&interpreter.Config{
-								Storage:     storage,
-								UUIDHandler: uuidHandler,
+								Storage:        storage,
+								UUIDHandler:    uuidHandler,
+								OnEventEmitted: onEventEmitted,
 							},
 						)
 						require.NoError(t, err)
@@ -960,16 +986,22 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 
 	t.Parallel()
 
+	var events []testEvent
+
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
+          event AlsoPre(x: Int)
 
           access(all) struct interface Also {
              access(all) fun test(x: Int) {
                  pre {
                      x >= 0: "x >= 0"
+                     emit AlsoPre(x: x)
                  }
              }
           }
+
+          event ReqPre(x: Int)
 
           access(all) contract interface Test {
 
@@ -977,10 +1009,13 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
                   access(all) fun test(x: Int) {
                       pre {
                           x >= 1: "x >= 1"
+                          emit ReqPre(x: x)
                       }
                   }
               }
           }
+
+          event ImplPre(x: Int)
 
           access(all) contract TestImpl: Test {
 
@@ -988,6 +1023,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
                   access(all) fun test(x: Int) {
                       pre {
                           x < 2: "x < 2"
+                          emit ImplPre(x: x)
                       }
                   }
               }
@@ -1000,12 +1036,26 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					eventType *sema.CompositeType,
+				) error {
+					events = append(events, testEvent{
+						event:     event,
+						eventType: eventType,
+					})
+					return nil
+				},
 			},
 		},
 	)
 	require.NoError(t, err)
 
 	t.Run("-1", func(t *testing.T) {
+		events = nil
+
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(-1))
 		RequireError(t, err)
 
@@ -1016,9 +1066,13 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 		//  before the type's conformances (`Also`)
 
 		assert.Equal(t, "x >= 1", conditionErr.Message)
+
+		require.Len(t, events, 0)
 	})
 
 	t.Run("0", func(t *testing.T) {
+		events = nil
+
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(0))
 		RequireError(t, err)
 
@@ -1026,9 +1080,13 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 		require.ErrorAs(t, err, &conditionErr)
 
 		assert.Equal(t, "x >= 1", conditionErr.Message)
+
+		require.Len(t, events, 0)
 	})
 
 	t.Run("1", func(t *testing.T) {
+		events = nil
+
 		value, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
 		require.NoError(t, err)
 
@@ -1036,9 +1094,13 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 			interpreter.Void,
 			value,
 		)
+
+		require.Len(t, events, 3)
 	})
 
 	t.Run("2", func(t *testing.T) {
+		events = nil
+
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(2))
 		require.IsType(t,
 			interpreter.Error{},
@@ -1050,6 +1112,8 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 			interpreter.ConditionError{},
 			interpreterErr.Err,
 		)
+
+		require.Len(t, events, 2)
 	})
 }
 
@@ -1057,37 +1121,54 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	newInterpreter := func(t *testing.T) (inter *interpreter.Interpreter, getEvents func() []testEvent) {
+		var err error
+		inter, getEvents, err = parseCheckAndInterpretWithEvents(t, `
 
-      resource interface RI {
+          event InitPre(x: Int)
+          event DestroyPre(x: Int)
 
-          x: Int
+          resource interface RI {
 
-          init(_ x: Int) {
-              pre { x > 1: "invalid init" }
+              x: Int
+
+              init(_ x: Int) {
+                  pre {
+                      x > 1: "invalid init"
+                      emit InitPre(x: x)
+                  }
+              }
+
+              destroy() {
+                  pre {
+                      self.x < 3: "invalid destroy"
+                      emit DestroyPre(x: self.x)
+                  }
+              }
           }
 
-          destroy() {
-              pre { self.x < 3: "invalid destroy" }
+          resource R: RI {
+
+              let x: Int
+
+              init(_ x: Int) {
+                  self.x = x
+              }
           }
-      }
 
-      resource R: RI {
-
-          let x: Int
-
-          init(_ x: Int) {
-              self.x = x
+          fun test(_ x: Int) {
+              let r <- create R(x)
+              destroy r
           }
-      }
-
-      fun test(_ x: Int) {
-          let r <- create R(x)
-          destroy r
-      }
-    `)
+        `)
+		require.NoError(t, err)
+		return
+	}
 
 	t.Run("1", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents := newInterpreter(t)
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
 		RequireError(t, err)
 
@@ -1104,14 +1185,24 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
 		conditionError := interpreterErr.Err.(interpreter.ConditionError)
 
 		assert.Equal(t, "invalid init", conditionError.Message)
+
+		require.Len(t, getEvents(), 0)
 	})
 
 	t.Run("2", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents := newInterpreter(t)
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(2))
 		require.NoError(t, err)
+
+		require.Len(t, getEvents(), 2)
 	})
 
 	t.Run("3", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents := newInterpreter(t)
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(3))
 		RequireError(t, err)
 
@@ -1128,6 +1219,8 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
 		conditionError := interpreterErr.Err.(interpreter.ConditionError)
 
 		assert.Equal(t, "invalid destroy", conditionError.Message)
+
+		require.Len(t, getEvents(), 1)
 	})
 }
 
@@ -1135,54 +1228,99 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
 
 	t.Parallel()
 
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-          access(all) contract interface CI {
+	newInterpreter := func(t *testing.T) (inter *interpreter.Interpreter, getEvents func() []testEvent) {
+		var events []testEvent
 
-              access(all) resource R {
+		var err error
+		inter, err = parseCheckAndInterpretWithOptions(t, `
+              access(all)
+              event InitPre(x: Int)
 
-                  access(all) x: Int
+              access(all)
+              event DestroyPre(x: Int)
 
-                  init(_ x: Int) {
-                      pre { x > 1: "invalid init" }
-                  }
+              access(all)
+              contract interface CI {
 
-                  destroy() {
-                      pre { self.x < 3: "invalid destroy" }
+                  access(all)
+                  resource R {
+
+                      access(all)
+                      x: Int
+
+                      init(_ x: Int) {
+                          pre {
+                              x > 1: "invalid init"
+                              emit InitPre(x: x)
+                          }
+                      }
+
+                      destroy() {
+                          pre {
+                              self.x < 3: "invalid destroy"
+                              emit DestroyPre(x: self.x)
+                          }
+                      }
                   }
               }
-          }
 
-          access(all) contract C: CI {
+              access(all)
+              contract C: CI {
 
-              access(all) resource R {
+                  access(all)
+                  resource R {
 
-                  access(all) let x: Int
+                      access(all)
+                      let x: Int
 
-                  init(_ x: Int) {
-                      self.x = x
+                      init(_ x: Int) {
+                          self.x = x
+                      }
+                  }
+
+                  access(all)
+                  fun test(_ x: Int) {
+                      let r <- create C.R(x)
+                      destroy r
                   }
               }
 
-              access(all) fun test(_ x: Int) {
-                  let r <- create C.R(x)
-                  destroy r
+              access(all)
+              fun test(_ x: Int) {
+                  C.test(x)
               }
-          }
-
-          fun test(_ x: Int) {
-              C.test(x)
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+            `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+					OnEventEmitted: func(
+						_ *interpreter.Interpreter,
+						_ interpreter.LocationRange,
+						event *interpreter.CompositeValue,
+						eventType *sema.CompositeType,
+					) error {
+						events = append(events, testEvent{
+							event:     event,
+							eventType: eventType,
+						})
+						return nil
+					},
+				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
+
+		getEvents = func() []testEvent {
+			return events
+		}
+
+		return
+	}
 
 	t.Run("1", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents := newInterpreter(t)
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(1))
 		RequireError(t, err)
 
@@ -1199,14 +1337,24 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
 		conditionError := interpreterErr.Err.(interpreter.ConditionError)
 
 		assert.Equal(t, "invalid init", conditionError.Message)
+
+		require.Len(t, getEvents(), 0)
 	})
 
 	t.Run("2", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents := newInterpreter(t)
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(2))
 		require.NoError(t, err)
+
+		require.Len(t, getEvents(), 2)
 	})
 
 	t.Run("3", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents := newInterpreter(t)
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(3))
 		RequireError(t, err)
 
@@ -1223,6 +1371,8 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
 		conditionError := interpreterErr.Err.(interpreter.ConditionError)
 
 		assert.Equal(t, "invalid destroy", conditionError.Message)
+
+		require.Len(t, getEvents(), 1)
 	})
 }
 
@@ -1230,128 +1380,179 @@ func TestInterpretFunctionPostConditionInInterface(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-      struct interface SI {
-          on: Bool
+	newInterpreter := func(t *testing.T) (inter *interpreter.Interpreter, getEvents func() []testEvent) {
+		var err error
+		inter, getEvents, err = parseCheckAndInterpretWithEvents(t, `
 
-          fun turnOn() {
-              post {
-                  self.on
+          event Status(on: Bool)
+
+          struct interface SI {
+              on: Bool
+
+              fun turnOn() {
+                  post {
+                      self.on
+                      emit Status(on: self.on)
+                  }
               }
           }
-      }
 
-      struct S: SI {
-          var on: Bool
+          struct S: SI {
+              var on: Bool
 
-          init() {
-              self.on = false
+              init() {
+                  self.on = false
+              }
+
+              fun turnOn() {
+                  self.on = true
+              }
           }
 
-          fun turnOn() {
-              self.on = true
+          struct S2: SI {
+              var on: Bool
+
+              init() {
+                  self.on = false
+              }
+
+              fun turnOn() {
+                  // incorrect
+              }
           }
-      }
 
-      struct S2: SI {
-          var on: Bool
-
-          init() {
-              self.on = false
+          fun test() {
+              S().turnOn()
           }
 
-          fun turnOn() {
-              // incorrect
+          fun test2() {
+              S2().turnOn()
           }
-      }
+        `)
+		require.NoError(t, err)
+		return
+	}
 
-      fun test() {
-          S().turnOn()
-      }
+	t.Run("test", func(t *testing.T) {
+		t.Parallel()
 
-      fun test2() {
-          S2().turnOn()
-      }
-    `)
+		inter, getEvents := newInterpreter(t)
 
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
 
-	_, err = inter.Invoke("test2")
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	interpreterErr := err.(interpreter.Error)
+		require.Len(t, getEvents(), 1)
+	})
 
-	require.IsType(t,
-		interpreter.ConditionError{},
-		interpreterErr.Err,
-	)
+	t.Run("test2", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents := newInterpreter(t)
+
+		_, err := inter.Invoke("test2")
+		require.IsType(t,
+			interpreter.Error{},
+			err,
+		)
+		interpreterErr := err.(interpreter.Error)
+
+		require.IsType(t,
+			interpreter.ConditionError{},
+			interpreterErr.Err,
+		)
+
+		require.Len(t, getEvents(), 0)
+	})
 }
 
 func TestInterpretFunctionPostConditionWithBeforeInInterface(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-      struct interface SI {
-          on: Bool
+	newInterpreter := func(t *testing.T) (inter *interpreter.Interpreter, getEvents func() []testEvent) {
+		var err error
+		inter, getEvents, err = parseCheckAndInterpretWithEvents(t, `
 
-          fun toggle() {
-              post {
-                  self.on != before(self.on)
+          event Status(on: Bool)
+
+          struct interface SI {
+              on: Bool
+
+              fun toggle() {
+                  post {
+                      self.on != before(self.on)
+                      emit Status(on: self.on)
+                  }
               }
           }
-      }
 
-      struct S: SI {
-          var on: Bool
+          struct S: SI {
+              var on: Bool
 
-          init() {
-              self.on = false
+              init() {
+                  self.on = false
+              }
+
+              fun toggle() {
+                  self.on = !self.on
+              }
           }
 
-          fun toggle() {
-              self.on = !self.on
+          struct S2: SI {
+              var on: Bool
+
+              init() {
+                  self.on = false
+              }
+
+              fun toggle() {
+                  // incorrect
+              }
           }
-      }
 
-      struct S2: SI {
-          var on: Bool
-
-          init() {
-              self.on = false
+          fun test() {
+              S().toggle()
           }
 
-          fun toggle() {
-              // incorrect
+          fun test2() {
+              S2().toggle()
           }
-      }
+        `)
 
-      fun test() {
-          S().toggle()
-      }
+		require.NoError(t, err)
+		return
+	}
 
-      fun test2() {
-          S2().toggle()
-      }
-    `)
+	t.Run("test", func(t *testing.T) {
+		t.Parallel()
 
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
+		inter, getEvents := newInterpreter(t)
 
-	_, err = inter.Invoke("test2")
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	interpreterErr := err.(interpreter.Error)
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
 
-	require.IsType(t,
-		interpreter.ConditionError{},
-		interpreterErr.Err,
-	)
+		require.Len(t, getEvents(), 1)
+	})
+
+	t.Run("test2", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents := newInterpreter(t)
+
+		_, err := inter.Invoke("test2")
+		require.IsType(t,
+			interpreter.Error{},
+			err,
+		)
+		interpreterErr := err.(interpreter.Error)
+
+		require.IsType(t,
+			interpreter.ConditionError{},
+			interpreterErr.Err,
+		)
+
+		require.Len(t, getEvents(), 0)
+	})
 }
 
 func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {

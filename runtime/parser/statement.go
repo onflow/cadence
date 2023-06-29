@@ -617,7 +617,7 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 //		| expression (':' expression )?
 func parseCondition(p *parser) (ast.Condition, error) {
 
-	if p.isToken(p.current, lexer.TokenIdentifier, keywordEmit) {
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordEmit) {
 		emitStatement, err := parseEmitStatement(p)
 		if err != nil {
 			return nil, err
