@@ -579,12 +579,8 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 		return nil, err
 	}
 
-	defer func() {
-		p.skipSpaceAndComments()
-		_, err = p.mustOne(lexer.TokenBraceClose)
-	}()
-
-	for {
+	var done bool
+	for !done {
 		p.skipSpaceAndComments()
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
@@ -592,7 +588,7 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 			continue
 
 		case lexer.TokenBraceClose, lexer.TokenEOF:
-			return
+			done = true
 
 		default:
 			var condition ast.Condition
@@ -604,6 +600,14 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 			conditions = append(conditions, condition)
 		}
 	}
+
+	p.skipSpaceAndComments()
+	_, err = p.mustOne(lexer.TokenBraceClose)
+	if err != nil {
+		return nil, err
+	}
+
+	return conditions, nil
 }
 
 // parseCondition parses a condition (pre/post)

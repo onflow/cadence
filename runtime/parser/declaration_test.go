@@ -6523,6 +6523,57 @@ func TestParseConditionMessage(t *testing.T) {
 	)
 }
 
+func TestParseInvalidEmitConditionNonInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("pre-condition", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+          fun test(n: Int) {
+              pre {
+                  emit Foo
+              }
+          }
+	    `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '('",
+					Pos:     ast.Position{Offset: 91, Line: 5, Column: 14},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("post-condition", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(`
+          fun test(n: Int) {
+              post {
+                  emit Foo
+              }
+          }
+        `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '('",
+					Pos:     ast.Position{Offset: 92, Line: 5, Column: 14},
+				},
+			},
+			errs,
+		)
+	})
+}
+
 func TestParseEmitAndTestCondition(t *testing.T) {
 
 	t.Parallel()
