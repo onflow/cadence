@@ -3456,6 +3456,8 @@ var AllUnsignedIntegerTypes = []Type{
 	Word256Type,
 }
 
+var AllUnsignedIntegerTypesSet = make(map[Type]struct{})
+
 var AllIntegerTypes = common.Concat(
 	AllUnsignedIntegerTypes,
 	AllSignedIntegerTypes,
@@ -3602,6 +3604,11 @@ func init() {
 				),
 			)
 		}
+	}
+
+	// Populate AllUnsignedIntegerTypesSet
+	for _, ty := range AllUnsignedIntegerTypes {
+		AllUnsignedIntegerTypesSet[ty] = struct{}{}
 	}
 }
 

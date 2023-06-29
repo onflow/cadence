@@ -40,9 +40,15 @@ func NewInclusiveRangeValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	step := getValueForIntegerType(1, rangeType.ElementType)
+	step := GetValueForIntegerType(1, rangeType.ElementType)
 	if startComparable.Greater(interpreter, endInclusiveComparable, locationRange) {
-		// TODO: Disallow unsigned integers to have a negative step.
+		elemSemaTy := interpreter.MustConvertStaticToSemaType(rangeType.ElementType)
+		if _, ok := sema.AllUnsignedIntegerTypesSet[elemSemaTy]; ok {
+			panic(InclusiveRangeConstructionError{
+				LocationRange: locationRange,
+				Message:       fmt.Sprintf("step value cannot be negative for unsigned integer type %s", elemSemaTy),
+			})
+		}
 
 		negatedStep, ok := step.Negate(interpreter, locationRange).(IntegerValue)
 		if !ok {
@@ -65,10 +71,8 @@ func NewInclusiveRangeValueWithStep(
 	rangeType InclusiveRangeStaticType,
 ) *CompositeValue {
 
-	// TODO: Validate that if start > end, then the type is signed integer.
-
 	// Validate that the step is non-zero.
-	if step.Equal(interpreter, locationRange, getValueForIntegerType(0, rangeType.ElementType)) {
+	if step.Equal(interpreter, locationRange, GetValueForIntegerType(0, rangeType.ElementType)) {
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
 			Message:       "step value cannot be zero",
@@ -79,8 +83,8 @@ func NewInclusiveRangeValueWithStep(
 	// If start < end, step must be > 0
 	// If start > end, step must be < 0
 	// If start == end, step doesn't matter.
-	if (start.Less(interpreter, end, locationRange) && step.Less(interpreter, getValueForIntegerType(0, rangeType.ElementType), locationRange)) ||
-		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, getValueForIntegerType(0, rangeType.ElementType), locationRange)) {
+	if (start.Less(interpreter, end, locationRange) && step.Less(interpreter, GetValueForIntegerType(0, rangeType.ElementType), locationRange)) ||
+		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, GetValueForIntegerType(0, rangeType.ElementType), locationRange)) {
 
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
@@ -173,7 +177,7 @@ func rangeContains(
 				panic(errors.NewUnreachableError())
 			}
 
-			result = diff.Mod(interpreter, step, locationRange).Equal(interpreter, locationRange, getValueForIntegerType(0, rangeType.ElementType))
+			result = diff.Mod(interpreter, step, locationRange).Equal(interpreter, locationRange, GetValueForIntegerType(0, rangeType.ElementType))
 		}
 	}
 
@@ -182,7 +186,7 @@ func rangeContains(
 
 // Get the provided int64 value in the required staticType.
 // Note: Assumes that the provided value fits within the constraints of the staticType.
-func getValueForIntegerType(value int64, staticType StaticType) IntegerValue {
+func GetValueForIntegerType(value int64, staticType StaticType) IntegerValue {
 	switch staticType {
 	case PrimitiveStaticTypeInt:
 		return NewUnmeteredIntValueFromInt64(value)
@@ -242,7 +246,7 @@ func getFieldAsIntegerValue(
 		rangeValue.GetField(
 			interpreter,
 			locationRange,
-			sema.InclusiveRangeTypeStartFieldName,
+			name,
 		),
 	)
 }

@@ -277,14 +277,14 @@ func TestInclusiveRangeConstructionValid(t *testing.T) {
 }
 
 func TestInclusiveRangeConstructionInvalid(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
 
 	runInvalidCase := func(t *testing.T, label, code string, expectedErrorTypes []interface{}) {
 		t.Run(label, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			_, err := ParseAndCheckWithOptions(t, code,
 				ParseAndCheckOptions{
