@@ -76,6 +76,23 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// SuggestedFix
+
+type HasSuggestedFixes interface {
+	SuggestFixes(code string) []SuggestedFix
+}
+
+type SuggestedFix struct {
+	Message   string
+	TextEdits []TextEdit
+}
+
+type TextEdit struct {
+	Replacement string
+	Insertion   string
+	ast.Range
+}
+
 // InvalidPragmaError
 
 type InvalidPragmaError struct {
