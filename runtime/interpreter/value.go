@@ -16925,20 +16925,15 @@ func (v *DictionaryValue) ContainsKey(
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
-	_, err := v.dictionary.Get(
+	exists, err := v.dictionary.Has(
 		valueComparator,
 		hashInputProvider,
 		keyValue,
 	)
 	if err != nil {
-		var keyNotFoundError *atree.KeyNotFoundError
-		if goerrors.As(err, &keyNotFoundError) {
-			return FalseValue
-		}
 		panic(errors.NewExternalError(err))
 	}
-
-	return TrueValue
+	return AsBoolValue(exists)
 }
 
 func (v *DictionaryValue) Get(
