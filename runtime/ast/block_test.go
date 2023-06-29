@@ -415,14 +415,20 @@ func TestFunctionBlock_Doc(t *testing.T) {
 						Value: "Pre failed",
 					},
 				},
+				&EmitCondition{
+					InvocationExpression: &InvocationExpression{
+						InvokedExpression: &IdentifierExpression{
+							Identifier: Identifier{
+								Identifier: "Foo",
+							},
+						},
+					},
+				},
 			},
 			PostConditions: &Conditions{
 				&TestCondition{
 					Test: &BoolExpression{
 						Value: true,
-					},
-					Message: &StringExpression{
-						Value: "Post failed",
 					},
 				},
 			},
@@ -455,6 +461,14 @@ func TestFunctionBlock_Doc(t *testing.T) {
 												},
 											},
 										},
+										prettier.HardLine{},
+										prettier.Concat{
+											prettier.Text("emit "),
+											prettier.Concat{
+												prettier.Text("Foo"),
+												prettier.Text("()"),
+											},
+										},
 									},
 								},
 								prettier.HardLine{},
@@ -470,16 +484,7 @@ func TestFunctionBlock_Doc(t *testing.T) {
 									Doc: prettier.Concat{
 										prettier.HardLine{},
 										prettier.Group{
-											Doc: prettier.Concat{
-												prettier.Text("true"),
-												prettier.Text(":"),
-												prettier.Indent{
-													Doc: prettier.Concat{
-														prettier.HardLine{},
-														prettier.Text("\"Post failed\""),
-													},
-												},
-											},
+											Doc: prettier.Text("true"),
 										},
 									},
 								},
