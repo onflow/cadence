@@ -1925,14 +1925,14 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 		})
 	}
 
-	storable, err := v.array.Get(uint64(index))
+	storedValue, err := v.array.Get(uint64(index))
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, locationRange)
 
 		panic(errors.NewExternalError(err))
 	}
 
-	return StoredValue(interpreter, storable, interpreter.Storage())
+	return MustConvertStoredValue(interpreter, storedValue)
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
@@ -15487,7 +15487,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		return builtin
 	}
 
-	storable, err := v.dictionary.Get(
+	storedValue, err := v.dictionary.Get(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
 		StringAtreeValue(name),
@@ -15498,8 +15498,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 			panic(errors.NewExternalError(err))
 		}
 	}
-	if storable != nil {
-		return StoredValue(interpreter, storable, config.Storage)
+	if storedValue != nil {
+		return MustConvertStoredValue(interpreter, storedValue)
 	}
 
 	if v.NestedVariables != nil {
@@ -15810,7 +15810,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 		v.checkInvalidatedResourceUse(locationRange)
 	}
 
-	storable, err := v.dictionary.Get(
+	storedValue, err := v.dictionary.Get(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
 		StringAtreeValue(name),
@@ -15823,7 +15823,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 		panic(errors.NewExternalError(err))
 	}
 
-	return StoredValue(interpreter, storable, v.dictionary.Storage)
+	return MustConvertStoredValue(interpreter, storedValue)
 }
 
 func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
@@ -16949,7 +16949,7 @@ func (v *DictionaryValue) Get(
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
-	storable, err := v.dictionary.Get(
+	storedValue, err := v.dictionary.Get(
 		valueComparator,
 		hashInputProvider,
 		keyValue,
@@ -16962,9 +16962,7 @@ func (v *DictionaryValue) Get(
 		panic(errors.NewExternalError(err))
 	}
 
-	storage := v.dictionary.Storage
-	value := StoredValue(interpreter, storable, storage)
-	return value, true
+	return MustConvertStoredValue(interpreter, storedValue), true
 }
 
 func (v *DictionaryValue) GetKey(interpreter *Interpreter, locationRange LocationRange, keyValue Value) Value {
