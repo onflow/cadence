@@ -153,3 +153,56 @@ func TestByteValueToByte(t *testing.T) {
 		}
 	})
 }
+
+func TestByteSliceToArrayValue(t *testing.T) {
+	t.Parallel()
+
+	t.Run("variable sized", func(t *testing.T) {
+		b := []byte{0, 1, 2}
+
+		inter := newTestInterpreter(t)
+
+		expectedType := VariableSizedStaticType{
+			Type: PrimitiveStaticTypeUInt8,
+		}
+
+		expected := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			expectedType,
+			common.ZeroAddress,
+			NewUnmeteredUInt8Value(0),
+			NewUnmeteredUInt8Value(1),
+			NewUnmeteredUInt8Value(2),
+		)
+
+		result := ByteSliceToByteArrayValue(inter, b)
+		require.Equal(t, expectedType, result.Type)
+		require.True(t, result.Equal(inter, EmptyLocationRange, expected))
+	})
+
+	t.Run("const sized", func(t *testing.T) {
+		b := []byte{0, 1, 2}
+
+		inter := newTestInterpreter(t)
+
+		expectedType := ConstantSizedStaticType{
+			Size: int64(len(b)),
+			Type: PrimitiveStaticTypeUInt8,
+		}
+
+		expected := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			expectedType,
+			common.ZeroAddress,
+			NewUnmeteredUInt8Value(0),
+			NewUnmeteredUInt8Value(1),
+			NewUnmeteredUInt8Value(2),
+		)
+
+		result := ByteSliceToConstantSizedByteArrayValue(inter, b)
+		require.Equal(t, expectedType, result.Type)
+		require.True(t, result.Equal(inter, EmptyLocationRange, expected))
+	})
+}

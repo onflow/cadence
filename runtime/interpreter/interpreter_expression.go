@@ -685,6 +685,9 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 	case sema.Word128Type:
 		// BigInt value is already metered at parser.
 		return NewUnmeteredWord128ValueFromBigInt(value)
+	case sema.Word256Type:
+		// BigInt value is already metered at parser.
+		return NewUnmeteredWord256ValueFromBigInt(value)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -930,6 +933,15 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		panic(errors.NewUnreachableError())
 	}
 
+	// Bound functions
+	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
+		self := *boundFunction.Self
+		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
+			storageID := resource.StorageID()
+			interpreter.trackReferencedResourceKindedValue(storageID, resource)
+		}
+	}
+
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
 
 	var argumentExpressions []ast.Expression
@@ -1148,7 +1160,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
 		// of that mapped access in the body of the function should be replaced with the computed output of the map
 		if _, isMapped := typ.Authorization.(sema.EntitlementMapAccess); isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
-			auth = *interpreter.SharedState.currentEntitlementMappedValue
+			auth = interpreter.SharedState.currentEntitlementMappedValue
 		} else {
 			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization)
 		}

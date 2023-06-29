@@ -95,6 +95,38 @@ access(all) contract Test {
         access(all) fun useConfiguration(_ configuration: Configuration) {
             self.backend.useConfiguration(configuration)
         }
+
+        /// Returns all the logs from the blockchain, up to the calling point.
+        ///
+        access(all) fun logs(): [String] {
+            return self.backend.logs()
+        }
+
+        /// Returns the service account of the blockchain. Can be used to sign
+        /// transactions with this account.
+        ///
+        access(all) fun serviceAccount(): Account {
+            return self.backend.serviceAccount()
+        }
+
+        /// Returns all events emitted from the blockchain.
+        ///
+        access(all) fun events(): [AnyStruct] {
+            return self.backend.events(nil)
+        }
+
+        /// Returns all events emitted from the blockchain,
+        /// filtered by type.
+        ///
+        access(all) fun eventsOfType(_ type: Type): [AnyStruct] {
+            return self.backend.events(type)
+        }
+
+        /// Resets the state of the blockchain.
+        ///
+        access(all) fun reset() {
+            self.backend.reset()
+        }
     }
 
     access(all) struct Matcher {
@@ -258,6 +290,24 @@ access(all) contract Test {
         /// Overrides any existing configuration.
         ///
         access(all) fun useConfiguration(_ configuration: Configuration)
+
+        /// Returns all the logs from the blockchain, up to the calling point.
+        ///
+        access(all) fun logs(): [String]
+
+        /// Returns the service account of the blockchain. Can be used to sign
+        /// transactions with this account.
+        ///
+        access(all) fun serviceAccount(): Account
+
+        /// Returns all events emitted from the blockchain, optionally filtered
+        /// by type.
+        ///
+        access(all) fun events(_ type: Type?): [AnyStruct]
+
+        /// Resets the state of the blockchain.
+        ///
+        access(all) fun reset()
     }
 
     /// Returns a new matcher that negates the test of the given matcher.

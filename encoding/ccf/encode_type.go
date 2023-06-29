@@ -399,34 +399,50 @@ func (e *Encoder) encodeIntersectionTypeWithRawTag(
 		return err
 	}
 
-	switch len(intersectionTypes) {
-	case 0:
-		// Short-circuit if there is no intersection.
-		return nil
-
-	case 1:
-		// Avoid overhead of sorting if there is only one intersection.
-		// Encode intersection type with given encodeTypeFn.
-		return encodeTypeFn(intersectionTypes[0], tids)
-
-	default:
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "intersection-type.types MUST be sorted by intersection's cadence-type-id"
-		//   "intersection-type-value.types MUST be sorted by intersection's cadence-type-id."
-		sorter := newBytewiseCadenceTypeSorter(intersectionTypes)
-
-		sort.Sort(sorter)
-
-		for _, index := range sorter.indexes {
-			// Encode intersection type with given encodeTypeFn.
-			err = encodeIntersectionTypeFn(intersectionTypes[index], tids)
+	switch e.em.sortIntersectionTypes {
+	case SortNone:
+		for _, res := range intersectionTypes {
+			// Encode restriction type with given encodeTypeFn.
+			err = encodeIntersectionTypeFn(res, tids)
 			if err != nil {
 				return err
 			}
 		}
-
 		return nil
+
+	case SortBytewiseLexical:
+		switch len(intersectionTypes) {
+		case 0:
+			// Short-circuit if there are no types.
+			return nil
+
+		case 1:
+			// Avoid overhead of sorting if there is only one type.
+			// Encode intersection type with given encodeTypeFn.
+			return encodeTypeFn(intersectionTypes[0], tids)
+
+		default:
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "intersection-type.types MUST be sorted by intersection's cadence-type-id"
+			//   "intersection-type-value.types MUST be sorted by intersection's cadence-type-id."
+			sorter := newBytewiseCadenceTypeSorter(intersectionTypes)
+
+			sort.Sort(sorter)
+
+			for _, index := range sorter.indexes {
+				// Encode intersection type with given encodeTypeFn.
+				err = encodeIntersectionTypeFn(intersectionTypes[index], tids)
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		}
+
+	default:
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for intersection types: %d", e.em.sortIntersectionTypes))
 	}
 }
 

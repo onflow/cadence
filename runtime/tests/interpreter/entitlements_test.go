@@ -623,11 +623,11 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			`
 			entitlement X
 
-			fun test(): Bool {
+			fun test(): Capability {
 				account.save(3, to: /storage/foo)
 				let capX = account.getCapability<auth(X) &Int>(/public/foo)
 				let upCap = capX as Capability
-				return upCap as? Capability<auth(X) &Int> == nil
+				return (upCap as? Capability<auth(X) &Int>)!
 			}
 			`,
 			sema.Config{})
@@ -638,7 +638,16 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.FalseValue,
+			interpreter.NewPathCapabilityValue(
+				nil,
+				address,
+				interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
 			value,
 		)
 	})
@@ -763,6 +772,37 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("ref constant array downcast no change", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t,
+			address,
+			true,
+			`
+			entitlement X
+
+			fun test(): Bool {
+				let arr: [auth(X) &Int; 2] = [&1, &2]
+				let upArr = arr as [auth(X) &Int; 2]
+				return upArr as? [auth(X) &Int; 2] == nil
+			}
+			`,
+			sema.Config{})
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
 			value,
 		)
 	})
@@ -2763,6 +2803,44 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 				[]common.TypeID{"S.test.X"},
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("empty output", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement A
+			entitlement B
+
+			entitlement mapping M {
+			    A -> B
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &AnyStruct {
+					let a: AnyStruct = "hello"
+					return &a as auth(M) &AnyStruct
+				}
+			}
+
+			fun test(): &AnyStruct {
+				let s = S()
+				let ref = &s as &S
+
+				// Must return an unauthorized ref
+				return ref.foo()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Equal(
+			t,
+			interpreter.UnauthorizedAccess,
+			value.(*interpreter.EphemeralReferenceValue).Authorization,
 		)
 	})
 }

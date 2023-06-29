@@ -2991,7 +2991,7 @@ func TestCheckInterfaceInheritance(t *testing.T) {
 			entitlement X
 
             struct interface Foo {
-                access(X) fun hello()
+                access(X) fun hello(): String
             }
 
             struct interface Bar: Foo {

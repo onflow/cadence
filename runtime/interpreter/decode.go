@@ -291,6 +291,9 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagWord128Value:
 			storable, err = d.decodeWord128()
 
+		case CBORTagWord256Value:
+			storable, err = d.decodeWord256()
+
 		// Fix*
 
 		case CBORTagFix64Value:
@@ -757,6 +760,28 @@ func (d StorableDecoder) decodeWord128() (Word128Value, error) {
 
 	// NOTE: already metered by `decodeBigInt`
 	return NewUnmeteredWord128ValueFromBigInt(bigInt), nil
+}
+
+func (d StorableDecoder) decodeWord256() (Word256Value, error) {
+	bigInt, err := d.decodeBigInt()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return Word256Value{}, errors.NewUnexpectedError("invalid Word256 encoding: %s", e.ActualType.String())
+		}
+		return Word256Value{}, err
+	}
+
+	if bigInt.Sign() < 0 {
+		return Word256Value{}, errors.NewUnexpectedError("invalid Word256: got %s, expected positive", bigInt)
+	}
+
+	max := sema.Word256TypeMaxIntBig
+	if bigInt.Cmp(max) > 0 {
+		return Word256Value{}, errors.NewUnexpectedError("invalid Word256: got %s, expected max %s", bigInt, max)
+	}
+
+	// NOTE: already metered by `decodeBigInt`
+	return NewUnmeteredWord256ValueFromBigInt(bigInt), nil
 }
 
 func (d StorableDecoder) decodeFix64() (Fix64Value, error) {

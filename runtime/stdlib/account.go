@@ -510,7 +510,7 @@ func newAccountKeysAddFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyAddedEventType,
+				AccountKeyAddedFromPublicKeyEventType,
 				[]interpreter.Value{
 					addressValue,
 					publicKeyValue,
@@ -782,7 +782,7 @@ func newAccountKeysRevokeFunction(
 
 			handler.EmitEvent(
 				inter,
-				AccountKeyRemovedEventType,
+				AccountKeyRemovedFromPublicKeyIndexEventType,
 				[]interpreter.Value{
 					addressValue,
 					indexValue,
@@ -1359,7 +1359,7 @@ func newAuthAccountContractsChangeFunction(
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(gauge, newCodeValue, locationRange)
+			code, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
 			if err != nil {
 				panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 			}
@@ -2082,7 +2082,7 @@ func NewHashAlgorithmFromValue(
 
 func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
 	codeHash := sha3.Sum256(code)
-	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
+	return interpreter.ByteSliceToConstantSizedByteArrayValue(inter, codeHash[:])
 }
 
 func newAuthAccountStorageCapabilitiesValue(
@@ -2615,21 +2615,6 @@ func getCapabilityController(
 			newStorageCapabilityControllerRetargetFunction(inter, address, controller)
 		controller.DeleteFunction =
 			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
-		controller.SetTagFunction = interpreter.NewHostFunctionValue(
-			inter,
-			sema.StorageCapabilityControllerTypeSetTagFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				newTagValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				controller.Tag = newTagValue
-				controller.SetTag(newTagValue)
-
-				return interpreter.Void
-			},
-		)
 
 	case *interpreter.AccountCapabilityControllerValue:
 		controller.GetTag =
@@ -2639,21 +2624,6 @@ func getCapabilityController(
 
 		controller.DeleteFunction =
 			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
-		controller.SetTagFunction = interpreter.NewHostFunctionValue(
-			inter,
-			sema.AccountCapabilityControllerTypeSetTagFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
-				newTagValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				controller.Tag = newTagValue
-				controller.SetTag(newTagValue)
-
-				return interpreter.Void
-			},
-		)
 	}
 
 	return controller

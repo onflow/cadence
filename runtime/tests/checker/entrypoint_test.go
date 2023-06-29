@@ -193,4 +193,50 @@ func TestEntryPointParameters(t *testing.T) {
 
 		require.Empty(t, parameters)
 	})
+
+	t.Run("contract with init params", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			access(all) contract SimpleContract {
+				access(all) let v: Int
+				init(a: Int) {
+					self.v = a
+				}
+			}		
+        `)
+
+		require.NoError(t, err)
+
+		parameters := checker.EntryPointParameters()
+
+		require.Equal(t,
+			[]sema.Parameter{
+				{
+					Label:          "",
+					Identifier:     "a",
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+				},
+			},
+			parameters,
+		)
+	})
+
+	t.Run("contract init empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			access(all) contract SimpleContract {
+				init() {}
+			}		
+        `)
+
+		require.NoError(t, err)
+
+		parameters := checker.EntryPointParameters()
+
+		require.Empty(t, parameters)
+	})
 }

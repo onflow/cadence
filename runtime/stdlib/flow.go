@@ -131,6 +131,8 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 
 // built-in event types
 
+var FlowEventTypes = map[common.TypeID]*sema.CompositeType{}
+
 func newFlowEventType(identifier string, parameters ...sema.Parameter) *sema.CompositeType {
 
 	eventType := &sema.CompositeType{
@@ -164,6 +166,8 @@ func newFlowEventType(identifier string, parameters ...sema.Parameter) *sema.Com
 		)
 	}
 
+	FlowEventTypes[eventType.ID()] = eventType
+
 	return eventType
 }
 
@@ -186,9 +190,18 @@ var AccountEventCodeHashParameter = sema.Parameter{
 	TypeAnnotation: HashTypeAnnotation,
 }
 
-var AccountEventPublicKeyParameter = sema.Parameter{
-	Identifier:     "publicKey",
-	TypeAnnotation: sema.ByteArrayTypeAnnotation,
+var AccountEventPublicKeyParameterAsCompositeType = sema.Parameter{
+	Identifier: "publicKey",
+	TypeAnnotation: sema.NewTypeAnnotation(
+		sema.PublicKeyType,
+	),
+}
+
+var AccountEventPublicKeyIndexParameter = sema.Parameter{
+	Identifier: "publicKey",
+	TypeAnnotation: sema.NewTypeAnnotation(
+		sema.IntType,
+	),
 }
 
 var AccountEventContractParameter = sema.Parameter{
@@ -201,16 +214,16 @@ var AccountCreatedEventType = newFlowEventType(
 	AccountEventAddressParameter,
 )
 
-var AccountKeyAddedEventType = newFlowEventType(
+var AccountKeyAddedFromPublicKeyEventType = newFlowEventType(
 	"AccountKeyAdded",
 	AccountEventAddressParameter,
-	AccountEventPublicKeyParameter,
+	AccountEventPublicKeyParameterAsCompositeType,
 )
 
-var AccountKeyRemovedEventType = newFlowEventType(
+var AccountKeyRemovedFromPublicKeyIndexEventType = newFlowEventType(
 	"AccountKeyRemoved",
 	AccountEventAddressParameter,
-	AccountEventPublicKeyParameter,
+	AccountEventPublicKeyIndexParameter,
 )
 
 var AccountContractAddedEventType = newFlowEventType(
