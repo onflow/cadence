@@ -3794,6 +3794,15 @@ func (t *CompositeType) ID() TypeID {
 	return t.cachedIdentifiers.TypeID
 }
 
+// clearCachedIdentifiers clears cachedIdentifiers.
+// This function currently is only used in tests.
+func (t *CompositeType) clearCachedIdentifiers() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	t.cachedIdentifiers = nil
+}
+
 func (t *CompositeType) initializeIdentifiers() {
 	t.cachedIdentifiersLock.Lock()
 	defer t.cachedIdentifiersLock.Unlock()
@@ -4380,6 +4389,15 @@ func (t *InterfaceType) checkIdentifiersCached() {
 	if t.NestedTypes != nil {
 		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
+}
+
+// clearCachedIdentifiers clears cachedIdentifiers.
+// This function currently is only used in tests.
+func (t *InterfaceType) clearCachedIdentifiers() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	t.cachedIdentifiers = nil
 }
 
 func (t *InterfaceType) GetCompositeKind() common.CompositeKind {

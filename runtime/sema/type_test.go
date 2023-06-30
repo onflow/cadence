@@ -690,7 +690,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 					cachedID := semaType.ID()
 
 					// clear cached identifiers for one level
-					semaType.cachedIdentifiers = nil
+					semaType.clearCachedIdentifiers()
 
 					recalculatedQualifiedID := semaType.QualifiedIdentifier()
 					recalculatedID := semaType.ID()
@@ -706,7 +706,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 					cachedID := semaType.ID()
 
 					// clear cached identifiers for one level
-					semaType.cachedIdentifiers = nil
+					semaType.clearCachedIdentifiers()
 
 					recalculatedQualifiedID := semaType.QualifiedIdentifier()
 					recalculatedID := semaType.ID()
