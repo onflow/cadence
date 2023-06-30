@@ -995,6 +995,7 @@ type NotDeclaredMemberError struct {
 var _ SemanticError = &NotDeclaredMemberError{}
 var _ errors.UserError = &NotDeclaredMemberError{}
 var _ errors.SecondaryError = &NotDeclaredMemberError{}
+var _ HasSuggestedFixes = &NotDeclaredMemberError{}
 
 func (*NotDeclaredMemberError) isSemanticError() {}
 
@@ -1008,18 +1009,54 @@ func (e *NotDeclaredMemberError) Error() string {
 	)
 }
 
+func (e *NotDeclaredMemberError) findOptionalMember() string {
+	optionalType, ok := e.Type.(*OptionalType)
+	if !ok {
+		return ""
+	}
+
+	members := optionalType.Type.GetMembers()
+	name := e.Name
+	_, ok = members[name]
+	if !ok {
+		return ""
+	}
+
+	return name
+}
+
 func (e *NotDeclaredMemberError) SecondaryError() string {
-	if optionalType, ok := e.Type.(*OptionalType); ok {
-		members := optionalType.Type.GetMembers()
-		name := e.Name
-		if _, ok := members[name]; ok {
-			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
-		}
+	if optionalMember := e.findOptionalMember(); optionalMember != "" {
+		return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", optionalMember)
 	}
 	if closestMember := e.findClosestMember(); closestMember != "" {
 		return fmt.Sprintf("did you mean `%s`?", closestMember)
 	}
 	return "unknown member"
+}
+
+func (e *NotDeclaredMemberError) SuggestFixes(_ string) []SuggestedFix {
+	optionalMember := e.findOptionalMember()
+	if optionalMember == "" {
+		return nil
+	}
+
+	accessPos := e.Expression.AccessPos
+
+	return []SuggestedFix{
+		{
+			Message: "use optional chaining",
+			TextEdits: []TextEdit{
+				{
+					Insertion: "?",
+					Range: ast.Range{
+						StartPos: accessPos,
+						EndPos:   accessPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // findClosestMember searches the names of the members on the accessed type,
