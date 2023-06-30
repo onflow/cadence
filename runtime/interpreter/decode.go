@@ -1863,7 +1863,12 @@ func (d TypeDecoder) decodeIntersectionStaticType() (StaticType, error) {
 		return nil, err
 	}
 
-	if t != cbor.NilType {
+	if t == cbor.NilType {
+		err = d.decoder.DecodeNil()
+		if err != nil {
+			return nil, err
+		}
+	} else {
 		// Decode intersection type at array index encodedIntersectionStaticTypeLegacyTypeFieldKey
 		legacyRestrictedType, err = d.DecodeStaticType()
 		if err != nil {
@@ -1871,11 +1876,6 @@ func (d TypeDecoder) decodeIntersectionStaticType() (StaticType, error) {
 				"invalid intersection static type key type encoding: %w",
 				err,
 			)
-		}
-	} else {
-		err = d.decoder.DecodeNil()
-		if err != nil {
-			return nil, err
 		}
 	}
 
