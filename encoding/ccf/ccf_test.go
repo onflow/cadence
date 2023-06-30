@@ -6805,6 +6805,11 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				0xd8, ccf.CBORTagIntersectionType,
 				// array, 2 items follow
 				0x82,
+				// type
+				// null
+				0xf6,
+				// array, 2 items follow
+				0x82,
 				// tag
 				0xd8, ccf.CBORTagTypeRef,
 				// bytes, 1 byte follows
@@ -7017,6 +7022,11 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				0xd8, ccf.CBORTagVarsizedArrayType,
 				// tag
 				0xd8, ccf.CBORTagIntersectionType,
+				// array, 2 items follow
+				0x82,
+				// type
+				// null
+				0xf6,
 				// array, 2 items follow
 				0x82,
 				// tag
@@ -9468,6 +9478,11 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagIntersectionTypeValue,
+				// array, 2 items follow
+				0x82,
+				// type
+				// null
+				0xf6,
 				// array, 0 element follows
 				0x80,
 			}
@@ -9499,6 +9514,11 @@ func TestEncodeType(t *testing.T) {
 			0x18, 0x29,
 			// tag
 			0xd8, ccf.CBORTagIntersectionTypeValue,
+			// array, 2 items follow
+			0x82,
+			// type
+			// null
+			0xf6,
 			// array, 0 element follows
 			0x80,
 		}
@@ -9538,6 +9558,11 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagIntersectionTypeValue,
+				// array, 2 items follow
+				0x82,
+				// type
+				// null
+				0xf6,
 				// array, 1 element follows
 				0x81,
 				// tag
@@ -9551,6 +9576,64 @@ func TestEncodeType(t *testing.T) {
 					Types: []cadence.Type{
 						cadence.StringType{},
 					},
+				},
+			},
+		)
+
+	})
+
+	t.Run("with legacy intersection type", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecodeEx(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
+						cadence.StringType{},
+					},
+					LegacyRestrictedType: cadence.IntType{},
+				},
+			},
+			[]byte{
+				// language=json, format=json-cdc
+				// {"type":"Type","value":{"staticType": { "kind": "Intersection", "typeID":"Int{String}", "type" : {"kind" : "Int"}, "types" : [ {"kind" : "String"} ]} } }
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 191([185(4), [185(1)]])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagIntersectionTypeValue,
+				// array, 2 items follow
+				0x82,
+				// type
+				// int type tag
+				0xd8,
+				// int type
+				0xb9, 0x04,
+				// array, 1 element follows
+				0x81,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// String type ID (1)
+				0x01,
+			},
+			// Expected decoded IntersectionType doesn't have type ID.
+			cadence.TypeValue{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
+						cadence.StringType{},
+					},
+					LegacyRestrictedType: cadence.IntType{},
 				},
 			},
 		)
@@ -9588,6 +9671,11 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagIntersectionTypeValue,
+				// array, 2 items follow
+				0x82,
+				// type
+				// null
+				0xf6,
 				// array, 2 element follows
 				0x82,
 				// tag
@@ -9659,6 +9747,11 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagIntersectionTypeValue,
+				// array, 2 items follow
+				0x82,
+				// type
+				// null
+				0xf6,
 				// 3 sorted types
 				// array, 3 element follows
 				0x83,
@@ -14296,6 +14389,11 @@ func TestDecodeInvalidData(t *testing.T) {
 				0xd8, ccf.CBORTagIntersectionTypeValue,
 				// array, 2 items follow
 				0x82,
+				// type
+				// null
+				0xf6,
+				// array, 2 items follow
+				0x82,
 				// tag
 				0xd8, ccf.CBORTagStructTypeValue,
 				// array, 5 items follow
@@ -14533,6 +14631,11 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 			0x66, 0x69, 0x65, 0x6c, 0x64,
 			// tag
 			0xd8, ccf.CBORTagIntersectionType,
+			// array, 2 items follow
+			0x82,
+			// type
+			// null
+			0xf6,
 			// array, 1 item follows
 			0x81,
 			// tag
@@ -14851,6 +14954,11 @@ func TestSortOptions(t *testing.T) {
 			0xd8, ccf.CBORTagIntersectionType,
 			// array, 2 items follow
 			0x82,
+			// type
+			// null
+			0xf6,
+			// array, 2 items follow
+			0x82,
 			// tag
 			0xd8, ccf.CBORTagTypeRef,
 			// bytes, 1 byte follows
@@ -15038,6 +15146,11 @@ func TestSortOptions(t *testing.T) {
 			0xd8, ccf.CBORTagVarsizedArrayType,
 			// tag
 			0xd8, ccf.CBORTagIntersectionType,
+			// array, 2 items follow
+			0x82,
+			// type
+			// null
+			0xf6,
 			// array, 2 items follow
 			0x82,
 			// tag
@@ -15229,6 +15342,11 @@ func TestSortOptions(t *testing.T) {
 			0xd8, ccf.CBORTagIntersectionType,
 			// array, 2 items follow
 			0x82,
+			// type
+			// null
+			0xf6,
+			// array, 2 items follow
+			0x82,
 			// tag
 			0xd8, ccf.CBORTagTypeRef,
 			// bytes, 1 byte follows
@@ -15416,6 +15534,11 @@ func TestSortOptions(t *testing.T) {
 			0xd8, ccf.CBORTagVarsizedArrayType,
 			// tag
 			0xd8, ccf.CBORTagIntersectionType,
+			// array, 2 items follow
+			0x82,
+			// type
+			// null
+			0xf6,
 			// array, 2 items follow
 			0x82,
 			// tag

@@ -553,12 +553,24 @@ func (d *Decoder) decodeIntersectionType(
 	decodeTypeFn decodeTypeFn,
 	decodeIntersectionTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
-	// types
+	// Decode array of length 2.
+	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	// element 0: type
+	legacyRestrictedType, err := d.decodeNullableTypeValue(types)
+	if err != nil {
+		return nil, err
+	}
+
+	// element 1: types
 	typeCount, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
 	}
-	if typeCount == 0 {
+	if typeCount == 0 && legacyRestrictedType == nil {
 		return nil, errors.New("unexpected empty intersection type")
 	}
 
@@ -602,14 +614,16 @@ func (d *Decoder) decodeIntersectionType(
 		intersectionTypes[i] = intersectedType
 	}
 
-	if len(intersectionTypes) == 0 {
+	if len(intersectionTypes) == 0 && legacyRestrictedType == nil {
 		return nil, errors.New("unexpected empty intersection type")
 	}
 
-	return cadence.NewMeteredIntersectionType(
+	intersectionType := cadence.NewMeteredIntersectionType(
 		d.gauge,
 		intersectionTypes,
-	), nil
+	)
+	intersectionType.LegacyRestrictedType = legacyRestrictedType
+	return intersectionType, nil
 }
 
 // decodeCCFTypeID decodes encoded id as

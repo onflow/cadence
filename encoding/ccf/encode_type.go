@@ -390,7 +390,28 @@ func (e *Encoder) encodeIntersectionTypeWithRawTag(
 		return err
 	}
 
-	// types as array.
+	// Encode array head of length 2.
+	err = e.enc.EncodeArrayHead(2)
+	if err != nil {
+		return err
+	}
+
+	// if this is a type in the old format, encode it in the old format
+	if typ.LegacyRestrictedType != nil {
+		// element 0: type with given encodeTypeFn
+		err = encodeTypeFn(typ.LegacyRestrictedType, tids)
+		if err != nil {
+			return err
+		}
+	} else {
+		// element 0: otherwise encode nil
+		err = e.enc.EncodeNil()
+		if err != nil {
+			return err
+		}
+	}
+
+	// element 1: types as array.
 
 	// Encode array head with number of types.
 	intersectionTypes := typ.Types
