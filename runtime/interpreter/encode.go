@@ -1559,12 +1559,25 @@ func (t DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
 	return t.ValueType.Encode(e)
 }
 
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// encodedIntersectionStaticTypeLegacyTypeFieldKey  uint64 = 0
+	// encodedIntersectionStaticTypeTypesFieldKey       uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedIntersectionStaticTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded intersection static type length during decoding.
+	encodedIntersectionStaticTypeLength = 2
+)
+
 // Encode encodes IntersectionStaticType as
 //
 //	cbor.Tag{
 //			Number: CBORTagIntersectionStaticType,
 //			Content: cborArray{
-//					encodedIntersectionStaticTypeTypesFieldKey: []any(v.Types),
+//					encodedIntersectionStaticTypeLegacyTypeFieldKey: StaticType(v.LegacyRestrictedType),
+//					encodedIntersectionStaticTypeTypesFieldKey:		[]any(v.Types),
 //			},
 //	}
 func (t *IntersectionStaticType) Encode(e *cbor.StreamEncoder) error {
@@ -1572,15 +1585,32 @@ func (t *IntersectionStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagIntersectionStaticType,
+		// array, 2 items follow
+		0x82,
 	})
 	if err != nil {
 		return err
 	}
+
+	if t.LegacyType != nil {
+		// Encode type at array index encodedIntersectionStaticTypeTypeFieldKey
+		err = t.LegacyType.Encode(e)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = e.EncodeNil()
+		if err != nil {
+			return err
+		}
+	}
+
 	// Encode types (as array) at array index encodedIntersectionStaticTypeTypesFieldKey
 	err = e.EncodeArrayHead(uint64(len(t.Types)))
 	if err != nil {
 		return err
 	}
+
 	for _, typ := range t.Types {
 		// Encode typ as array types element
 		err = typ.Encode(e)

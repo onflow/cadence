@@ -1833,6 +1833,52 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 }
 
 func (d TypeDecoder) decodeIntersectionStaticType() (StaticType, error) {
+	const expectedLength = encodedIntersectionStaticTypeLength
+
+	arraySize, err := d.decoder.DecodeArrayHead()
+
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, errors.NewUnexpectedError(
+				"invalid intersection static type encoding: expected [%d]any, got %s",
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+
+	if arraySize != expectedLength {
+		return nil, errors.NewUnexpectedError(
+			"invalid intersection static type encoding: expected [%d]any, got [%d]any",
+			expectedLength,
+			arraySize,
+		)
+	}
+
+	var legacyRestrictedType StaticType
+
+	t, err := d.decoder.NextType()
+	if err != nil {
+		return nil, err
+	}
+
+	if t != cbor.NilType {
+		// Decode intersection type at array index encodedIntersectionStaticTypeLegacyTypeFieldKey
+		legacyRestrictedType, err = d.DecodeStaticType()
+		if err != nil {
+			return nil, errors.NewUnexpectedError(
+				"invalid intersection static type key type encoding: %w",
+				err,
+			)
+		}
+	} else {
+		err = d.decoder.DecodeNil()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Decode intersected types at array index encodedIntersectionStaticTypeTypesFieldKey
 	intersectionSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
@@ -1884,10 +1930,13 @@ func (d TypeDecoder) decodeIntersectionStaticType() (StaticType, error) {
 		}
 	}
 
-	return NewIntersectionStaticType(
+	staticType := NewIntersectionStaticType(
 		d.memoryGauge,
 		intersections,
-	), nil
+	)
+	staticType.LegacyType = legacyRestrictedType
+
+	return staticType, nil
 }
 
 func (d TypeDecoder) decodeCapabilityStaticType() (StaticType, error) {

@@ -395,7 +395,8 @@ var NilStaticType = OptionalStaticType{
 // IntersectionStaticType
 
 type IntersectionStaticType struct {
-	Types []InterfaceStaticType
+	Types      []InterfaceStaticType
+	LegacyType StaticType
 }
 
 var _ StaticType = &IntersectionStaticType{}

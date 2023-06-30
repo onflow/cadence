@@ -4164,6 +4164,78 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 			0xd8, CBORTagIntersectionStaticType,
 			// array, length 2
 			0x82,
+			// nil
+			0xf6,
+			// array, length 2
+			0x82,
+			// tag
+			0xd8, CBORTagInterfaceStaticType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 2
+			0x62,
+			// I1
+			0x49, 0x31,
+			// tag
+			0xd8, CBORTagInterfaceStaticType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 2
+			0x62,
+			// I2
+			0x49, 0x32,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("legacy intersection", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := PathLinkValue{
+			TargetPath: publicPathValue,
+			Type: &IntersectionStaticType{
+				LegacyType: interpreter.PrimitiveStaticTypeInt,
+				Types: []InterfaceStaticType{
+					{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "I1",
+					},
+					{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "I2",
+					},
+				},
+			},
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagIntersectionStaticType,
+			// array, length 2
+			0x82,
+			// int type
+			0xd8, 0xd4, 0x18, 0x24,
+			// array, length 2
+			0x82,
 			// tag
 			0xd8, CBORTagInterfaceStaticType,
 			// array, 2 items follow
@@ -4863,6 +4935,10 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagIntersectionStaticType,
 			// array, length 2
 			0x82,
+			// nil
+			0xf6,
+			// array, length 2
+			0x82,
 			// tag
 			0xd8, CBORTagInterfaceStaticType,
 			// array, 2 items follow
@@ -5044,6 +5120,10 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			0xf6,
 			// tag
 			0xd8, CBORTagIntersectionStaticType,
+			// array, length 2
+			0x82,
+			// nil
+			0xf6,
 			// array, 1 item follows
 			0x81,
 			// tag
