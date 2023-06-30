@@ -5058,6 +5058,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			atree.Address(storageAddress),
 			true,
 			nil,
+			nil,
 		)
 
 		domain := storagePath.Domain.Identifier()
@@ -7919,7 +7920,14 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		r1, err := inter.Invoke("createR1")
 		require.NoError(t, err)
 
-		r1 = r1.Transfer(inter, interpreter.EmptyLocationRange, atree.Address{1}, false, nil)
+		r1 = r1.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address{1},
+			false,
+			nil,
+			nil,
+		)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
