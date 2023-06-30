@@ -100,6 +100,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 					atree.Address{},
 					false,
 					nil,
+					nil,
 				)
 			}
 		}
