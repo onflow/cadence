@@ -10401,7 +10401,7 @@ func TestInterpretArrayReverse(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
       let xs = [1, 2, 3, 100, 200]
-	  let ys = [100, 467, 297, 23]
+      let ys = [100, 467, 297, 23]
 
       fun reversexs() {
           return xs.reverse()
