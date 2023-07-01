@@ -10395,6 +10395,67 @@ func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
 	)
 }
 
+func TestInterpretArrayReverse(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let xs = [1, 2, 3, 100, 200]
+	  let ys = [100, 467, 297, 23]
+
+      fun reversexs() {
+          return xs.reverse()
+      }
+
+	  fun reverseys() {
+		return ys.reverse()
+	  }
+    `)
+
+	_, err := inter.Invoke("reversexs")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(200),
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+		),
+		inter.Globals.Get("xs").GetValue(),
+	)
+
+	_, err = inter.Invoke("reverseys")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(23),
+			interpreter.NewUnmeteredIntValueFromInt64(297),
+			interpreter.NewUnmeteredIntValueFromInt64(467),
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+		),
+		inter.Globals.Get("ys").GetValue(),
+	)
+}
+
 func TestInterpretOptionalReference(t *testing.T) {
 
 	t.Parallel()
