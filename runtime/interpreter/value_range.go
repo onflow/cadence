@@ -127,12 +127,14 @@ func NewInclusiveRangeValueWithStep(
 				rangeSemaType.MemberType,
 			),
 			func(invocation Invocation) Value {
+				needleInteger := convertAndAssertIntegerValue(invocation.Arguments[0])
+
 				return rangeContains(
 					rangeValue,
 					rangeType,
 					invocation.Interpreter,
 					invocation.LocationRange,
-					invocation.Arguments[0],
+					needleInteger,
 				)
 			},
 		),
@@ -150,21 +152,19 @@ func rangeContains(
 	rangeType InclusiveRangeStaticType,
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	needleValue Value,
+	needleValue IntegerValue,
 ) BoolValue {
 	start := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeStartFieldName)
 	endInclusive := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeEndFieldName)
 	step := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeStepFieldName)
 
-	needleInteger := convertAndAssertIntegerValue(needleValue)
-
 	var result bool
-	result = start.Equal(interpreter, locationRange, needleInteger) ||
-		endInclusive.Equal(interpreter, locationRange, needleInteger)
+	result = start.Equal(interpreter, locationRange, needleValue) ||
+		endInclusive.Equal(interpreter, locationRange, needleValue)
 
 	if !result {
-		greaterThanStart := needleInteger.Greater(interpreter, start, locationRange)
-		greaterThanEndInclusive := needleInteger.Greater(interpreter, endInclusive, locationRange)
+		greaterThanStart := needleValue.Greater(interpreter, start, locationRange)
+		greaterThanEndInclusive := needleValue.Greater(interpreter, endInclusive, locationRange)
 
 		if greaterThanStart == greaterThanEndInclusive {
 			// If needle is greater or smaller than both start & endInclusive, then it is outside the range.
@@ -172,7 +172,7 @@ func rangeContains(
 		} else {
 			// needle is in between start and endInclusive.
 			// start + k * step should be equal to needle i.e. (needle - start) mod step == 0.
-			diff, ok := needleInteger.Minus(interpreter, start, locationRange).(IntegerValue)
+			diff, ok := needleValue.Minus(interpreter, start, locationRange).(IntegerValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
