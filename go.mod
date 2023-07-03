@@ -8,7 +8,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.4.1-0.20230228173756-c0c9f774e40c
 	github.com/go-test/deep v1.1.0
 	github.com/leanovate/gopter v0.2.9
-	github.com/onflow/atree v0.6.1-0.20230629205511-5b7b45a566a9
+	github.com/onflow/atree v0.6.1-0.20230629202201-116c95986e54
 	github.com/rivo/uniseg v0.4.4
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/stretchr/testify v1.8.4

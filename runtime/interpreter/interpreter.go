@@ -239,7 +239,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+type ReferencedResourceKindedValues map[atree.ID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
 	Location     common.Location
@@ -5100,12 +5100,12 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 
 func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
 	if value, ok := value.(ReferenceTrackedResourceKindedValue); ok {
-		interpreter.trackReferencedResourceKindedValue(value.StorageID(), value)
+		interpreter.trackReferencedResourceKindedValue(value.ID(), value)
 	}
 }
 
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
-	id atree.StorageID,
+	id atree.ID,
 	value ReferenceTrackedResourceKindedValue,
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
@@ -5117,20 +5117,20 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 }
 
 func (interpreter *Interpreter) updateReferencedResource(
-	currentStorageID atree.StorageID,
-	newStorageID atree.StorageID,
+	currentID atree.ID,
+	newID atree.ID,
 	updateFunc func(value ReferenceTrackedResourceKindedValue),
 ) {
-	values := interpreter.SharedState.referencedResourceKindedValues[currentStorageID]
+	values := interpreter.SharedState.referencedResourceKindedValues[currentID]
 	if values == nil {
 		return
 	}
 	for value := range values { //nolint:maprange
 		updateFunc(value)
 	}
-	if newStorageID != currentStorageID {
-		interpreter.SharedState.referencedResourceKindedValues[newStorageID] = values
-		interpreter.SharedState.referencedResourceKindedValues[currentStorageID] = nil
+	if newID != currentID {
+		interpreter.SharedState.referencedResourceKindedValues[newID] = values
+		interpreter.SharedState.referencedResourceKindedValues[currentID] = nil
 	}
 }
 
@@ -5377,8 +5377,8 @@ func (interpreter *Interpreter) idCapabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, locationRange LocationRange) {
-	_, present := interpreter.SharedState.containerValueIteration[storageID]
+func (interpreter *Interpreter) validateMutation(id atree.ID, locationRange LocationRange) {
+	_, present := interpreter.SharedState.containerValueIteration[id]
 	if !present {
 		return
 	}
@@ -5387,32 +5387,32 @@ func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, loca
 	})
 }
 
-func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID, f func()) {
-	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
-	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
+func (interpreter *Interpreter) withMutationPrevention(id atree.ID, f func()) {
+	oldIteration, present := interpreter.SharedState.containerValueIteration[id]
+	interpreter.SharedState.containerValueIteration[id] = struct{}{}
 
 	f()
 
 	if !present {
-		delete(interpreter.SharedState.containerValueIteration, storageID)
+		delete(interpreter.SharedState.containerValueIteration, id)
 	} else {
-		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
+		interpreter.SharedState.containerValueIteration[id] = oldIteration
 	}
 }
 
 func (interpreter *Interpreter) withResourceDestruction(
-	storageID atree.StorageID,
+	id atree.ID,
 	locationRange LocationRange,
 	f func(),
 ) {
-	_, exists := interpreter.SharedState.destroyedResources[storageID]
+	_, exists := interpreter.SharedState.destroyedResources[id]
 	if exists {
 		panic(DestroyedResourceError{
 			LocationRange: locationRange,
 		})
 	}
 
-	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
+	interpreter.SharedState.destroyedResources[id] = struct{}{}
 
 	f()
 }
