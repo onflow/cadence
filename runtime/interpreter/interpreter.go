@@ -242,14 +242,15 @@ type Storage interface {
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
-	Location     common.Location
-	statement    ast.Statement
-	Program      *Program
-	SharedState  *SharedState
-	Globals      GlobalVariables
-	activations  *VariableActivations
-	Transactions []*HostFunctionValue
-	interpreted  bool
+	Location            common.Location
+	statement           ast.Statement
+	Program             *Program
+	SharedState         *SharedState
+	Globals             GlobalVariables
+	activations         *VariableActivations
+	Transactions        []*HostFunctionValue
+	interpreted         bool
+	cachedIntegerValues map[StaticType]map[int64]IntegerValue
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -286,9 +287,10 @@ func NewInterpreterWithSharedState(
 ) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
-		Program:     program,
-		Location:    location,
-		SharedState: sharedState,
+		Program:             program,
+		Location:            location,
+		SharedState:         sharedState,
+		cachedIntegerValues: make(map[StaticType]map[int64]IntegerValue),
 	}
 
 	// Register self
@@ -2351,6 +2353,75 @@ func (interpreter *Interpreter) WriteStored(
 ) (existed bool) {
 	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, true)
 	return accountStorage.WriteValue(interpreter, key, value)
+}
+
+// Get the provided int64 value in the required staticType.
+// Note: Assumes that the provided value fits within the constraints of the staticType.
+func (interpreter *Interpreter) GetValueForIntegerType(value int64, staticType StaticType) IntegerValue {
+	typedCache, typedOk := interpreter.cachedIntegerValues[staticType]
+	if typedOk {
+		val, ok := typedCache[value]
+		if ok {
+			return val
+		}
+	}
+
+	val := getValueForIntegerType(value, staticType)
+	if !typedOk {
+		interpreter.cachedIntegerValues[staticType] = make(map[int64]IntegerValue)
+	}
+	interpreter.cachedIntegerValues[staticType][value] = val
+	return val
+}
+
+func getValueForIntegerType(value int64, staticType StaticType) IntegerValue {
+	switch staticType {
+	case PrimitiveStaticTypeInt:
+		return NewUnmeteredIntValueFromInt64(value)
+	case PrimitiveStaticTypeInt8:
+		return NewUnmeteredInt8Value(int8(value))
+	case PrimitiveStaticTypeInt16:
+		return NewUnmeteredInt16Value(int16(value))
+	case PrimitiveStaticTypeInt32:
+		return NewUnmeteredInt32Value(int32(value))
+	case PrimitiveStaticTypeInt64:
+		return NewUnmeteredInt64Value(value)
+	case PrimitiveStaticTypeInt128:
+		return NewUnmeteredInt128ValueFromInt64(value)
+	case PrimitiveStaticTypeInt256:
+		return NewUnmeteredInt256ValueFromInt64(value)
+
+	case PrimitiveStaticTypeUInt:
+		return NewUnmeteredUIntValueFromUint64(uint64(value))
+	case PrimitiveStaticTypeUInt8:
+		return NewUnmeteredUInt8Value(uint8(value))
+	case PrimitiveStaticTypeUInt16:
+		return NewUnmeteredUInt16Value(uint16(value))
+	case PrimitiveStaticTypeUInt32:
+		return NewUnmeteredUInt32Value(uint32(value))
+	case PrimitiveStaticTypeUInt64:
+		return NewUnmeteredUInt64Value(uint64(value))
+	case PrimitiveStaticTypeUInt128:
+		return NewUnmeteredUInt128ValueFromUint64(uint64(value))
+	case PrimitiveStaticTypeUInt256:
+		return NewUnmeteredUInt256ValueFromUint64(uint64(value))
+
+	case PrimitiveStaticTypeWord8:
+		return NewUnmeteredWord8Value(uint8(value))
+	case PrimitiveStaticTypeWord16:
+		return NewUnmeteredWord16Value(uint16(value))
+	case PrimitiveStaticTypeWord32:
+		return NewUnmeteredWord32Value(uint32(value))
+	case PrimitiveStaticTypeWord64:
+		return NewUnmeteredWord64Value(uint64(value))
+	case PrimitiveStaticTypeWord128:
+		return NewUnmeteredWord128ValueFromUint64(uint64(value))
+	case PrimitiveStaticTypeWord256:
+		return NewUnmeteredWord256ValueFromUint64(uint64(value))
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 type fromStringFunctionValue struct {

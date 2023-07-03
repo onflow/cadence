@@ -40,7 +40,7 @@ func NewInclusiveRangeValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	step := GetValueForIntegerType(1, rangeType.ElementType)
+	step := interpreter.GetValueForIntegerType(1, rangeType.ElementType)
 	if startComparable.Greater(interpreter, endInclusiveComparable, locationRange) {
 		elemSemaTy := interpreter.MustConvertStaticToSemaType(rangeType.ElementType)
 		if _, ok := sema.AllUnsignedIntegerTypesSet[elemSemaTy]; ok {
@@ -72,7 +72,7 @@ func NewInclusiveRangeValueWithStep(
 ) *CompositeValue {
 
 	// Validate that the step is non-zero.
-	if step.Equal(interpreter, locationRange, GetValueForIntegerType(0, rangeType.ElementType)) {
+	if step.Equal(interpreter, locationRange, interpreter.GetValueForIntegerType(0, rangeType.ElementType)) {
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
 			Message:       "step value cannot be zero",
@@ -83,8 +83,8 @@ func NewInclusiveRangeValueWithStep(
 	// If start < end, step must be > 0
 	// If start > end, step must be < 0
 	// If start == end, step doesn't matter.
-	if (start.Less(interpreter, end, locationRange) && step.Less(interpreter, GetValueForIntegerType(0, rangeType.ElementType), locationRange)) ||
-		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, GetValueForIntegerType(0, rangeType.ElementType), locationRange)) {
+	if (start.Less(interpreter, end, locationRange) && step.Less(interpreter, interpreter.GetValueForIntegerType(0, rangeType.ElementType), locationRange)) ||
+		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, interpreter.GetValueForIntegerType(0, rangeType.ElementType), locationRange)) {
 
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
@@ -177,63 +177,11 @@ func rangeContains(
 				panic(errors.NewUnreachableError())
 			}
 
-			result = diff.Mod(interpreter, step, locationRange).Equal(interpreter, locationRange, GetValueForIntegerType(0, rangeType.ElementType))
+			result = diff.Mod(interpreter, step, locationRange).Equal(interpreter, locationRange, interpreter.GetValueForIntegerType(0, rangeType.ElementType))
 		}
 	}
 
 	return AsBoolValue(result)
-}
-
-// Get the provided int64 value in the required staticType.
-// Note: Assumes that the provided value fits within the constraints of the staticType.
-func GetValueForIntegerType(value int64, staticType StaticType) IntegerValue {
-	switch staticType {
-	case PrimitiveStaticTypeInt:
-		return NewUnmeteredIntValueFromInt64(value)
-	case PrimitiveStaticTypeInt8:
-		return NewUnmeteredInt8Value(int8(value))
-	case PrimitiveStaticTypeInt16:
-		return NewUnmeteredInt16Value(int16(value))
-	case PrimitiveStaticTypeInt32:
-		return NewUnmeteredInt32Value(int32(value))
-	case PrimitiveStaticTypeInt64:
-		return NewUnmeteredInt64Value(value)
-	case PrimitiveStaticTypeInt128:
-		return NewUnmeteredInt128ValueFromInt64(value)
-	case PrimitiveStaticTypeInt256:
-		return NewUnmeteredInt256ValueFromInt64(value)
-
-	case PrimitiveStaticTypeUInt:
-		return NewUnmeteredUIntValueFromUint64(uint64(value))
-	case PrimitiveStaticTypeUInt8:
-		return NewUnmeteredUInt8Value(uint8(value))
-	case PrimitiveStaticTypeUInt16:
-		return NewUnmeteredUInt16Value(uint16(value))
-	case PrimitiveStaticTypeUInt32:
-		return NewUnmeteredUInt32Value(uint32(value))
-	case PrimitiveStaticTypeUInt64:
-		return NewUnmeteredUInt64Value(uint64(value))
-	case PrimitiveStaticTypeUInt128:
-		return NewUnmeteredUInt128ValueFromUint64(uint64(value))
-	case PrimitiveStaticTypeUInt256:
-		return NewUnmeteredUInt256ValueFromUint64(uint64(value))
-
-	case PrimitiveStaticTypeWord8:
-		return NewUnmeteredWord8Value(uint8(value))
-	case PrimitiveStaticTypeWord16:
-		return NewUnmeteredWord16Value(uint16(value))
-	case PrimitiveStaticTypeWord32:
-		return NewUnmeteredWord32Value(uint32(value))
-	case PrimitiveStaticTypeWord64:
-		return NewUnmeteredWord64Value(uint64(value))
-	case PrimitiveStaticTypeWord128:
-		return NewUnmeteredWord128ValueFromUint64(uint64(value))
-	case PrimitiveStaticTypeWord256:
-		return NewUnmeteredWord256ValueFromUint64(uint64(value))
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
 }
 
 func getFieldAsIntegerValue(

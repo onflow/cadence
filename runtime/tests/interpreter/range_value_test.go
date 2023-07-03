@@ -415,17 +415,17 @@ func TestInclusiveRange(t *testing.T) {
 				expectedRangeValue = interpreter.NewInclusiveRangeValueWithStep(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.GetValueForIntegerType(testCase.s, elementType),
-					interpreter.GetValueForIntegerType(testCase.e, elementType),
-					interpreter.GetValueForIntegerType(testCase.step, elementType),
+					inter.GetValueForIntegerType(testCase.s, elementType),
+					inter.GetValueForIntegerType(testCase.e, elementType),
+					inter.GetValueForIntegerType(testCase.step, elementType),
 					rangeType,
 				)
 			} else {
 				expectedRangeValue = interpreter.NewInclusiveRangeValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.GetValueForIntegerType(testCase.s, elementType),
-					interpreter.GetValueForIntegerType(testCase.e, elementType),
+					inter.GetValueForIntegerType(testCase.s, elementType),
+					inter.GetValueForIntegerType(testCase.e, elementType),
 					rangeType,
 				)
 			}
