@@ -112,7 +112,7 @@ func NewInclusiveRangeValueWithStep(
 	rangeValue := NewCompositeValueWithStaticType(
 		interpreter,
 		locationRange,
-		sema.PublicKeyType.Location, // TODO: Figure out a location.
+		nil
 		rangeSemaType.QualifiedString(),
 		common.CompositeKindStructure,
 		fields,
