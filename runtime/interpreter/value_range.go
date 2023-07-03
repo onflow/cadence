@@ -112,7 +112,7 @@ func NewInclusiveRangeValueWithStep(
 	rangeValue := NewCompositeValueWithStaticType(
 		interpreter,
 		locationRange,
-		nil
+		nil,
 		rangeSemaType.QualifiedString(),
 		common.CompositeKindStructure,
 		fields,
