@@ -122,7 +122,7 @@ func isReferenceType(typ Type) bool {
 }
 
 func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, resultingType Type, member *Member, isOptional bool) {
-	memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
+	memberInfo, ok := checker.Elaboration.MemberExpressionMemberAccessInfo(expression)
 	if ok {
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
 	}
@@ -130,9 +130,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	returnReference := false
 
 	defer func() {
-		checker.Elaboration.SetMemberExpressionMemberInfo(
+		checker.Elaboration.SetMemberExpressionMemberAccessInfo(
 			expression,
-			MemberInfo{
+			MemberAccessInfo{
 				AccessedType:    accessedType,
 				ResultingType:   resultingType,
 				Member:          member,
