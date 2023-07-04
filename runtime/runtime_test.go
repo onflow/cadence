@@ -8639,7 +8639,7 @@ func TestInvalidatedResourceUse2(t *testing.T) {
 	require.ErrorAs(t, err, &destroyedResourceErr)
 }
 
-func TestRuntimeCrasher(t *testing.T) {
+func TestRuntimeInvalidRecursiveTransfer(t *testing.T) {
 
 	t.Parallel()
 
