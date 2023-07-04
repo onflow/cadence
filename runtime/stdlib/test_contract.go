@@ -133,7 +133,6 @@ var testTypeAssertEqualFunctionType = &sema.FunctionType{
 			),
 		},
 	},
-	RequiredArgumentCount: sema.RequiredArgumentCount(2),
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
