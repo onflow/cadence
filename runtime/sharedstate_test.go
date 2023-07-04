@@ -25,10 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -95,24 +93,7 @@ func TestRuntimeSharedState(t *testing.T) {
 			delete(accountCodes, location)
 			return nil
 		},
-		resolveLocation: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
-
-			// Resolve each identifier as an address location
-
-			for _, identifier := range identifiers {
-				result = append(result, sema.ResolvedLocation{
-					Location: common.AddressLocation{
-						Address: location.(common.AddressLocation).Address,
-						Name:    identifier.Identifier,
-					},
-					Identifiers: []ast.Identifier{
-						identifier,
-					},
-				})
-			}
-
-			return
-		},
+		resolveLocation: multipleIdentifierLocationResolver,
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
