@@ -8639,7 +8639,7 @@ func TestInvalidatedResourceUse2(t *testing.T) {
 	require.ErrorAs(t, err, &destroyedResourceErr)
 }
 
-func TestRuntimeInvalidRecursiveTransfer(t *testing.T) {
+func TestRuntimeInvalidRecursiveTransferViaVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
 
@@ -8668,6 +8668,113 @@ func TestRuntimeInvalidRecursiveTransfer(t *testing.T) {
                   var t <-  self.vaults[0] <- self.vaults    // here is the problem
                   destroy t
                   Test.account.save(<- self.x(), to: /storage/x42)
+              }
+          }
+
+          pub fun createHolder(_ vaults: @[AnyResource]): @Holder {
+              return <- create Holder(<-vaults)
+          }
+
+          pub resource Dummy {}
+
+          pub fun dummy(): @Dummy {
+              return <- create Dummy()
+          }
+      }
+    `)
+
+	tx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+              var holder <- Test.createHolder(<-[<-Test.dummy(), <-Test.dummy()])
+              destroy holder
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Test
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.RecursiveTransferError{})
+}
+
+func TestRuntimeInvalidRecursiveTransferViaFunctionArgument(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.AtreeValidationEnabled = false
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	contract := []byte(`
+      pub contract Test{
+
+          pub resource Holder {
+
+              pub var vaults: @[AnyResource]
+
+              init(_ vaults: @[AnyResource]) {
+                  self.vaults <- vaults
+              }
+
+              destroy() {
+                  self.vaults.append(<-self.vaults)
               }
           }
 
