@@ -981,9 +981,9 @@ type RecursiveTransferError struct {
 	LocationRange
 }
 
-var _ errors.InternalError = RecursiveTransferError{}
+var _ errors.UserError = RecursiveTransferError{}
 
-func (RecursiveTransferError) IsInternalError() {}
+func (RecursiveTransferError) IsUserError() {}
 
 func (RecursiveTransferError) Error() string {
 	return "recursive transfer of value"
