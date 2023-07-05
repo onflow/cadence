@@ -2387,7 +2387,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 			},
 		)
 
-	case "reverse":
+	case sema.ArrayTypeReverseFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
 			sema.ArrayReverseFunctionType,

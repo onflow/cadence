@@ -1714,6 +1714,8 @@ Returns the index of the first element matching the given object in the array, n
 Available if the array element type is not resource-kinded and equatable.
 `
 
+const ArrayTypeReverseFunctionName = "reverse"
+
 const arrayTypeReverseFunctionDocString = `
 Reverses the elements of the array.
 `
@@ -1869,7 +1871,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				)
 			},
 		},
-		"reverse": {
+		ArrayTypeReverseFunctionName: {
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 				return NewPublicFunctionMember(
