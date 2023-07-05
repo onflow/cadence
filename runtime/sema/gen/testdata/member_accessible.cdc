@@ -1,1 +1,1 @@
-access(all) struct Test: MemberAccessible {}
+access(all) struct Test: ContainFields {}

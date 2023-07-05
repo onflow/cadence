@@ -36,17 +36,17 @@ Returns this character as a String
 const CharacterTypeName = "Character"
 
 var CharacterType = &SimpleType{
-	Name:             CharacterTypeName,
-	QualifiedName:    CharacterTypeName,
-	TypeID:           CharacterTypeName,
-	tag:              CharacterTypeTag,
-	IsResource:       false,
-	Storable:         true,
-	Equatable:        true,
-	Comparable:       true,
-	Exportable:       true,
-	Importable:       true,
-	MemberAccessible: false,
+	Name:          CharacterTypeName,
+	QualifiedName: CharacterTypeName,
+	TypeID:        CharacterTypeName,
+	tag:           CharacterTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Equatable:     true,
+	Comparable:    true,
+	Exportable:    true,
+	Importable:    true,
+	ContainFields: false,
 }
 
 func init() {

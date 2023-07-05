@@ -1,4 +1,4 @@
-access(all) struct StorageCapabilityController: MemberAccessible {
+access(all) struct StorageCapabilityController: ContainFields {
 
     /// An arbitrary "tag" for the controller.
     /// For example, it could be used to describe the purpose of the capability.

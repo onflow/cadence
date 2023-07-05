@@ -91,17 +91,17 @@ Borrowing from the controlled capability or its copies will return nil.
 const AccountCapabilityControllerTypeName = "AccountCapabilityController"
 
 var AccountCapabilityControllerType = &SimpleType{
-	Name:             AccountCapabilityControllerTypeName,
-	QualifiedName:    AccountCapabilityControllerTypeName,
-	TypeID:           AccountCapabilityControllerTypeName,
-	tag:              AccountCapabilityControllerTypeTag,
-	IsResource:       false,
-	Storable:         false,
-	Equatable:        false,
-	Comparable:       false,
-	Exportable:       false,
-	Importable:       false,
-	MemberAccessible: true,
+	Name:          AccountCapabilityControllerTypeName,
+	QualifiedName: AccountCapabilityControllerTypeName,
+	TypeID:        AccountCapabilityControllerTypeName,
+	tag:           AccountCapabilityControllerTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Comparable:    false,
+	Exportable:    false,
+	Importable:    false,
+	ContainFields: true,
 }
 
 func init() {

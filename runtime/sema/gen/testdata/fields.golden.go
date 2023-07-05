@@ -151,17 +151,17 @@ This is a test restricted type (without restrictions) field.
 const TestTypeName = "Test"
 
 var TestType = &SimpleType{
-	Name:             TestTypeName,
-	QualifiedName:    TestTypeName,
-	TypeID:           TestTypeName,
-	tag:              TestTypeTag,
-	IsResource:       false,
-	Storable:         false,
-	Equatable:        false,
-	Comparable:       false,
-	Exportable:       false,
-	Importable:       false,
-	MemberAccessible: false,
+	Name:          TestTypeName,
+	QualifiedName: TestTypeName,
+	TypeID:        TestTypeName,
+	tag:           TestTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Comparable:    false,
+	Exportable:    false,
+	Importable:    false,
+	ContainFields: false,
 }
 
 func init() {

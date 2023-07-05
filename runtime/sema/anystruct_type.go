@@ -31,8 +31,8 @@ var AnyStructType = &SimpleType{
 	Comparable: false,
 	Exportable: true,
 	// The actual importability is checked at runtime
-	Importable:       true,
-	MemberAccessible: true,
+	Importable:    true,
+	ContainFields: true,
 }
 
 var AnyStructTypeAnnotation = NewTypeAnnotation(AnyStructType)

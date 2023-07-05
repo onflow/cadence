@@ -112,7 +112,7 @@ func shouldReturnReference(parentType, memberType Type) bool {
 		return false
 	}
 
-	return memberType.IsMemberAccessible()
+	return memberType.ContainFieldsOrElements()
 }
 
 func isReferenceType(typ Type) bool {

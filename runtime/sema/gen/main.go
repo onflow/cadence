@@ -425,10 +425,10 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		case "Importable":
 			typeDecl.importable = true
 
-		case "MemberAccessible":
+		case "ContainFields":
 			if !canGenerateSimpleType {
 				panic(fmt.Errorf(
-					"composite types cannot be explicitly marked as member accessible: %s",
+					"composite types cannot be explicitly marked as having fields: %s",
 					g.currentTypeID(),
 				))
 			}
@@ -1168,7 +1168,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("Comparable", goBoolLit(ty.comparable)),
 		goKeyValue("Exportable", goBoolLit(ty.exportable)),
 		goKeyValue("Importable", goBoolLit(ty.importable)),
-		goKeyValue("MemberAccessible", goBoolLit(ty.memberAccessible)),
+		goKeyValue("ContainFields", goBoolLit(ty.memberAccessible)),
 	}
 
 	return &dst.UnaryExpr{

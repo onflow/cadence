@@ -135,9 +135,26 @@ type Type interface {
 	// IsComparable returns true if values of the type can be compared
 	IsComparable() bool
 
-	// IsMemberAccessible returns true if value of the type can have members values.
-	// Examples are composite types, restricted types, arrays, dictionaries, etc.
-	IsMemberAccessible() bool
+	// ContainFieldsOrElements returns true if value of the type can have nested values (fields or elements).
+	// This notion is to indicate that a type can be used to access its nested values using
+	// either index-expression or member-expression. e.g. `foo.bar` or `foo[bar]`.
+	// This is used to determine if a field/element of this type should be returning a reference or not.
+	//
+	// Only a subset of types has this characteristic. e.g:
+	//  - Composites
+	//  - Interfaces
+	//  - Arrays (Variable/Constant sized)
+	//  - Dictionaries
+	//  - Restricted types
+	//  - Optionals of the above.
+	//  - Then there are also built-in simple types, like StorageCapabilityControllerType, BlockType, etc.
+	//    where the type is implemented as a simple type, but they also have fields.
+	//
+	// This is different from the existing  `ValueIndexableType` in the sense that it is also implemented by simple types
+	// but not all simple types are indexable.
+	// On the other-hand, some indexable types (e.g. String) shouldn't be treated/returned as references.
+	//
+	ContainFieldsOrElements() bool
 
 	TypeAnnotationState() TypeAnnotationState
 	RewriteWithRestrictedTypes() (result Type, rewritten bool)
@@ -642,8 +659,8 @@ func (*OptionalType) IsComparable() bool {
 	return false
 }
 
-func (t *OptionalType) IsMemberAccessible() bool {
-	return t.Type.IsMemberAccessible()
+func (t *OptionalType) ContainFieldsOrElements() bool {
+	return t.Type.ContainFieldsOrElements()
 }
 
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
@@ -851,7 +868,7 @@ func (*GenericType) IsComparable() bool {
 	return false
 }
 
-func (t *GenericType) IsMemberAccessible() bool {
+func (t *GenericType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -1154,7 +1171,7 @@ func (t *NumericType) IsComparable() bool {
 	return !t.IsSuperType()
 }
 
-func (t *NumericType) IsMemberAccessible() bool {
+func (t *NumericType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -1358,7 +1375,7 @@ func (t *FixedPointNumericType) IsComparable() bool {
 	return !t.IsSuperType()
 }
 
-func (t *FixedPointNumericType) IsMemberAccessible() bool {
+func (t *FixedPointNumericType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -2422,7 +2439,7 @@ func (t *VariableSizedType) IsComparable() bool {
 	return t.Type.IsComparable()
 }
 
-func (t *VariableSizedType) IsMemberAccessible() bool {
+func (t *VariableSizedType) ContainFieldsOrElements() bool {
 	return true
 }
 
@@ -2576,7 +2593,7 @@ func (t *ConstantSizedType) IsComparable() bool {
 	return t.Type.IsComparable()
 }
 
-func (t *ConstantSizedType) IsMemberAccessible() bool {
+func (t *ConstantSizedType) ContainFieldsOrElements() bool {
 	return true
 }
 
@@ -3101,7 +3118,7 @@ func (*FunctionType) IsComparable() bool {
 	return false
 }
 
-func (*FunctionType) IsMemberAccessible() bool {
+func (*FunctionType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -4276,7 +4293,7 @@ func (*CompositeType) IsComparable() bool {
 	return false
 }
 
-func (*CompositeType) IsMemberAccessible() bool {
+func (*CompositeType) ContainFieldsOrElements() bool {
 	return true
 }
 
@@ -4964,7 +4981,7 @@ func (*InterfaceType) IsComparable() bool {
 	return false
 }
 
-func (*InterfaceType) IsMemberAccessible() bool {
+func (*InterfaceType) ContainFieldsOrElements() bool {
 	return true
 }
 
@@ -5185,7 +5202,7 @@ func (*DictionaryType) IsComparable() bool {
 	return false
 }
 
-func (*DictionaryType) IsMemberAccessible() bool {
+func (*DictionaryType) ContainFieldsOrElements() bool {
 	return true
 }
 
@@ -5654,7 +5671,7 @@ func (*ReferenceType) IsComparable() bool {
 	return false
 }
 
-func (*ReferenceType) IsMemberAccessible() bool {
+func (*ReferenceType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -5857,7 +5874,7 @@ func (*AddressType) IsComparable() bool {
 	return false
 }
 
-func (*AddressType) IsMemberAccessible() bool {
+func (*AddressType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -6578,7 +6595,7 @@ func (*TransactionType) IsComparable() bool {
 	return false
 }
 
-func (*TransactionType) IsMemberAccessible() bool {
+func (*TransactionType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -6819,7 +6836,7 @@ func (t *RestrictedType) IsComparable() bool {
 	return false
 }
 
-func (*RestrictedType) IsMemberAccessible() bool {
+func (*RestrictedType) ContainFieldsOrElements() bool {
 	return true
 }
 
@@ -7098,7 +7115,7 @@ func (*CapabilityType) IsComparable() bool {
 	return false
 }
 
-func (*CapabilityType) IsMemberAccessible() bool {
+func (*CapabilityType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -7655,7 +7672,7 @@ func (*EntitlementType) IsResourceType() bool {
 	return false
 }
 
-func (*EntitlementType) IsMemberAccessible() bool {
+func (*EntitlementType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -7789,7 +7806,7 @@ func (*EntitlementMapType) IsResourceType() bool {
 	return false
 }
 
-func (*EntitlementMapType) IsMemberAccessible() bool {
+func (*EntitlementMapType) ContainFieldsOrElements() bool {
 	return false
 }
 
