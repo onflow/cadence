@@ -45,7 +45,7 @@ func (checker *Checker) VisitImportDeclaration(declaration *ast.ImportDeclaratio
 	})
 }
 
-func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) Type {
+func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) {
 	locationRange := ast.NewRange(
 		checker.memoryGauge,
 		declaration.LocationPos,
@@ -58,7 +58,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	resolvedLocations, err := checker.resolveLocation(identifiers, declaration.Location)
 	if err != nil {
 		checker.report(err)
-		return nil
+		return
 	}
 
 	// 1) If the import is just for an address (e.g. `import 0x01`) without specifying any contracts, AND
@@ -80,7 +80,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 						},
 					)
 
-					return nil
+					return
 				}
 			}
 		}
@@ -91,8 +91,6 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	for _, resolvedLocation := range resolvedLocations {
 		checker.importResolvedLocation(resolvedLocation, locationRange)
 	}
-
-	return nil
 }
 
 func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error) {
