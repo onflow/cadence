@@ -2205,7 +2205,7 @@ func (v *ArrayValue) Reverse(interpreter *Interpreter, locationRange LocationRan
 		v.Set(interpreter, locationRange, rightIndex, leftValue)
 	}
 
-	return VoidValue{}
+	return Void
 }
 
 func (v *ArrayValue) Contains(
