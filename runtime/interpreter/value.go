@@ -985,6 +985,10 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, nam
 				)
 			},
 		)
+
+	case sema.CharacterTypeUtf8FieldName:
+		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v)))
+		return ByteSliceToByteArrayValue(interpreter, []byte(v))
 	}
 	return nil
 }
@@ -17093,20 +17097,15 @@ func (v *DictionaryValue) ContainsKey(
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
-	_, err := v.dictionary.Get(
+	exists, err := v.dictionary.Has(
 		valueComparator,
 		hashInputProvider,
 		keyValue,
 	)
 	if err != nil {
-		var keyNotFoundError *atree.KeyNotFoundError
-		if goerrors.As(err, &keyNotFoundError) {
-			return FalseValue
-		}
 		panic(errors.NewExternalError(err))
 	}
-
-	return TrueValue
+	return AsBoolValue(exists)
 }
 
 func (v *DictionaryValue) Get(
