@@ -2921,11 +2921,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingAddFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2942,11 +2938,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2963,11 +2955,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2984,11 +2972,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingDivideFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
