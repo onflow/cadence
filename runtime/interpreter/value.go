@@ -2195,10 +2195,14 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, locationRange Location
 func (v *ArrayValue) Reverse(interpreter *Interpreter, locationRange LocationRange) VoidValue {
 	count := v.Count()
 
-	for i := 0; i < count/2; i++ {
-		tempValue := v.Get(interpreter, locationRange, i)
-		v.Set(interpreter, locationRange, i, v.Get(interpreter, locationRange, count-i-1))
-		v.Set(interpreter, locationRange, count-i-1, tempValue)
+	for leftIndex := 0; leftIndex < count/2; leftIndex++ {
+		rightIndex := count - leftIndex - 1
+
+		leftValue := v.Get(interpreter, locationRange, leftIndex)
+		rightValue := v.Get(interpreter, locationRange, rightIndex)
+		
+		v.Set(interpreter, locationRange, leftIndex, rightValue)
+		v.Set(interpreter, locationRange, rightIndex, leftValue)
 	}
 
 	return VoidValue{}
