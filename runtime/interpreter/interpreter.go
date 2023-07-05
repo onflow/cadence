@@ -5251,7 +5251,7 @@ func (interpreter *Interpreter) getMemberWithAuthMapping(self Value, locationRan
 		return nil
 	}
 	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
-	// on the runtime authorizations of the acccessing reference or composite
+	// on the runtime authorizations of the accessing reference or composite
 	memberAccess := interpreter.getAccessOfMember(self, identifier)
 	return interpreter.mapMemberValueAuthorization(self, memberAccess, result)
 }

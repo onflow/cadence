@@ -3079,4 +3079,66 @@ func TestInterpretIdentityMapping(t *testing.T) {
 		_, err := inter.Invoke("main")
 		assert.NoError(t, err)
 	})
+
+	t.Run("owned value, with entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            struct X {
+               access(A | B) var s: String
+
+               init() {
+                   self.s = "hello"
+               }
+
+               access(C) fun foo() {}
+            }
+
+            struct Y {
+
+                // Reference
+                access(Identity) var x1: auth(Identity) &X
+
+                // Optional reference
+                access(Identity) var x2: auth(Identity) &X?
+
+                // Function returning a reference
+                access(Identity) fun getX(): auth(Identity) &X {
+                    let x = X()
+                    return &x as auth(Identity) &X
+                }
+
+                // Function returning an optional reference
+                access(Identity) fun getOptionalX(): auth(Identity) &X? {
+                    let x: X? = X()
+                    return &x as auth(Identity) &X?
+                }
+
+                init() {
+                    let x = X()
+                    self.x1 = &x as auth(A, B, C) &X
+                    self.x2 = nil
+                }
+            }
+
+            fun main() {
+                let y = Y()
+
+                let ref1: auth(A, B, C) &X = y.x1
+
+                let ref2: auth(A, B, C) &X? = y.x2
+
+                let ref3: auth(A, B, C) &X = y.getX()
+
+                let ref4: auth(A, B, C) &X? = y.getOptionalX()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
 }
