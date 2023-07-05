@@ -2134,7 +2134,6 @@ func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 }
 
 var ArrayReverseFunctionType *FunctionType = &FunctionType{
-	Parameters:           []Parameter{},
 	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 }
 
