@@ -19,6 +19,10 @@
 package interpreter_test
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -84,4 +88,113 @@ func dictionaryEntries[K, V any](
 	})
 
 	return res, iterStatus
+}
+
+func TestInterpretArrayFunctionEntitlements(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("mutable reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let array: [String] = ["foo", "bar"]
+
+            fun test() {
+                var arrayRef = &array as auth(Mutable) &[String]
+
+                // Public functions
+                arrayRef.contains("hello")
+                arrayRef.firstIndex(of: "hello")
+                arrayRef.slice(from: 1, upTo: 1)
+                arrayRef.concat(["hello"])
+
+                // Insertable functions
+                arrayRef.append("baz")
+                arrayRef.appendAll(["baz"])
+                arrayRef.insert(at:0, "baz")
+
+                // Removable functions
+                arrayRef.remove(at: 1)
+                arrayRef.removeFirst()
+                arrayRef.removeLast()
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("non auth reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let array: [String] = ["foo", "bar"]
+
+            fun test() {
+                var arrayRef = &array as &[String]
+
+                // Public functions
+                arrayRef.contains("hello")
+                arrayRef.firstIndex(of: "hello")
+                arrayRef.slice(from: 1, upTo: 1)
+                arrayRef.concat(["hello"])
+            }
+	        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("insertable reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let array: [String] = ["foo", "bar"]
+
+            fun test() {
+                var arrayRef = &array as auth(Insertable) &[String]
+
+                // Public functions
+                arrayRef.contains("hello")
+                arrayRef.firstIndex(of: "hello")
+                arrayRef.slice(from: 1, upTo: 1)
+                arrayRef.concat(["hello"])
+
+                // Insertable functions
+                arrayRef.append("baz")
+                arrayRef.appendAll(["baz"])
+                arrayRef.insert(at:0, "baz")
+            }
+	        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("removable reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let array: [String] = ["foo", "bar", "baz"]
+
+            fun test() {
+                var arrayRef = &array as auth(Removable) &[String]
+
+                // Public functions
+                arrayRef.contains("hello")
+                arrayRef.firstIndex(of: "hello")
+                arrayRef.slice(from: 1, upTo: 1)
+                arrayRef.concat(["hello"])
+
+                // Removable functions
+                arrayRef.remove(at: 1)
+                arrayRef.removeFirst()
+                arrayRef.removeLast()
+            }
+	        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }

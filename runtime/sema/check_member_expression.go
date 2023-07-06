@@ -85,7 +85,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	// in an optional, if it is not already an optional value
 	if isOptional {
 		if _, ok := memberType.(*OptionalType); !ok {
-			memberType = &OptionalType{Type: memberType}
+			memberType = NewOptionalType(checker.memoryGauge, memberType)
 		}
 	}
 
@@ -97,22 +97,26 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getReferenceType(typ Type) Type {
+func (checker *Checker) getReferenceType(typ Type, substituteAuthorization bool, authorization Access) Type {
 	if optionalType, ok := typ.(*OptionalType); ok {
-		return &OptionalType{
-			Type: checker.getReferenceType(optionalType.Type),
-		}
+		innerType := checker.getReferenceType(optionalType.Type, substituteAuthorization, authorization)
+		return NewOptionalType(checker.memoryGauge, innerType)
 	}
 
-	return NewReferenceType(checker.memoryGauge, typ, UnauthorizedAccess)
+	auth := UnauthorizedAccess
+	if substituteAuthorization && authorization != nil {
+		auth = authorization
+	}
+
+	return NewReferenceType(checker.memoryGauge, typ, auth)
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
-	if !isReferenceType(parentType) {
+	if memberType == nil || !isReferenceType(parentType) {
 		return false
 	}
 
-	return isContainerType(memberType)
+	return memberType.ContainFieldsOrElements()
 }
 
 func isReferenceType(typ Type) bool {
@@ -121,25 +125,8 @@ func isReferenceType(typ Type) bool {
 	return isReference
 }
 
-func isContainerType(typ Type) bool {
-	switch typ := typ.(type) {
-	case *CompositeType,
-		*DictionaryType,
-		ArrayType:
-		return true
-	case *OptionalType:
-		return isContainerType(typ.Type)
-	default:
-		switch typ {
-		case AnyStructType, AnyResourceType:
-			return true
-		}
-		return false
-	}
-}
-
 func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, resultingType Type, member *Member, isOptional bool) {
-	memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
+	memberInfo, ok := checker.Elaboration.MemberExpressionMemberAccessInfo(expression)
 	if ok {
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
 	}
@@ -147,9 +134,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	returnReference := false
 
 	defer func() {
-		checker.Elaboration.SetMemberExpressionMemberInfo(
+		checker.Elaboration.SetMemberExpressionMemberAccessInfo(
 			expression,
-			MemberInfo{
+			MemberAccessInfo{
 				AccessedType:    accessedType,
 				ResultingType:   resultingType,
 				Member:          member,
@@ -218,24 +205,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		targetRange := ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression)
 		member = resolver.Resolve(checker.memoryGauge, identifier, targetRange, checker.report)
 		resultingType = member.TypeAnnotation.Type
-		if resolver.Mutating {
-			if targetExpression, ok := accessedExpression.(*ast.MemberExpression); ok {
-				// visitMember caches its result, so visiting the target expression again,
-				// after it had been previously visited to get the resolver,
-				// performs no computation
-				_, _, subMember, _ := checker.visitMember(targetExpression)
-				if subMember != nil && !checker.isMutatableMember(subMember) {
-					checker.report(
-						&ExternalMutationError{
-							Name:            subMember.Identifier.Identifier,
-							DeclarationKind: subMember.DeclarationKind,
-							Range:           ast.NewRangeFromPositioned(checker.memoryGauge, targetRange),
-							ContainerType:   subMember.ContainerType,
-						},
-					)
-				}
-			}
-		}
 	}
 
 	// Get the member from the accessed value based
@@ -301,16 +270,18 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 				},
 			)
 		}
-	} else {
 
-		if checker.PositionInfo != nil {
-			checker.PositionInfo.recordMemberOccurrence(
-				accessedType,
-				identifier,
-				identifierStartPosition,
-				identifierEndPosition,
-			)
-		}
+		return
+	}
+
+	if checker.PositionInfo != nil {
+		checker.PositionInfo.recordMemberOccurrence(
+			accessedType,
+			identifier,
+			identifierStartPosition,
+			identifierEndPosition,
+		)
+	}
 
 		// Check access and report if inaccessible
 		accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
@@ -326,53 +297,55 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			)
 		}
 
-		// the resulting authorization was mapped through an entitlement map, so we need to substitute this new authorization into the resulting type
-		// i.e. if the field was declared with `access(M) let x: auth(M) &T?`, and we computed that the output of the map would give entitlement `E`,
-		// we substitute this entitlement in for the "variable" `M` to produce `auth(E) &T?`, the access with which the type is actually produced.
-		// Equivalently, this can be thought of like generic instantiation.
-		substituteConcreteAuthorization := func(resultingType Type) Type {
-			switch ty := resultingType.(type) {
+	// the resulting authorization was mapped through an entitlement map, so we need to substitute this new authorization into the resulting type
+	// i.e. if the field was declared with `access(M) let x: auth(M) &T?`, and we computed that the output of the map would give entitlement `E`,
+	// we substitute this entitlement in for the "variable" `M` to produce `auth(E) &T?`, the access with which the type is actually produced.
+	// Equivalently, this can be thought of like generic instantiation.
+	substituteConcreteAuthorization := func(resultingType Type) Type {
+		switch ty := resultingType.(type) {
+		case *ReferenceType:
+			return NewReferenceType(checker.memoryGauge, ty.Type, resultingAuthorization)
+		case *OptionalType:
+			switch innerTy := ty.Type.(type) {
 			case *ReferenceType:
-				return NewReferenceType(checker.memoryGauge, ty.Type, resultingAuthorization)
-			case *OptionalType:
-				switch innerTy := ty.Type.(type) {
-				case *ReferenceType:
-					return NewOptionalType(checker.memoryGauge,
-						NewReferenceType(checker.memoryGauge, innerTy.Type, resultingAuthorization))
-				}
-			}
-			return resultingType
-		}
-		if !member.Access.Equal(resultingAuthorization) {
-			switch ty := resultingType.(type) {
-			case *FunctionType:
-				resultingType = NewSimpleFunctionType(
-					ty.Purity,
-					ty.Parameters,
-					NewTypeAnnotation(substituteConcreteAuthorization(ty.ReturnTypeAnnotation.Type)),
-				)
-			default:
-				resultingType = substituteConcreteAuthorization(resultingType)
+				return NewOptionalType(checker.memoryGauge,
+					NewReferenceType(checker.memoryGauge, innerTy.Type, resultingAuthorization))
 			}
 		}
+		return resultingType
+	}
 
-		// Check that the member access is not to a function of resource type
-		// outside of an invocation of it.
-		//
-		// This would result in a bound method for a resource, which is invalid.
+	shouldSubstituteAuthorization := !member.Access.Equal(resultingAuthorization)
 
-		if !checker.inAssignment &&
-			!checker.inInvocation &&
-			member.DeclarationKind == common.DeclarationKindFunction &&
-			!accessedType.IsInvalidType() &&
-			accessedType.IsResourceType() {
-
-			checker.report(
-				&ResourceMethodBindingError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
-				},
+	if shouldSubstituteAuthorization {
+		switch ty := resultingType.(type) {
+		case *FunctionType:
+			resultingType = NewSimpleFunctionType(
+				ty.Purity,
+				ty.Parameters,
+				NewTypeAnnotation(substituteConcreteAuthorization(ty.ReturnTypeAnnotation.Type)),
 			)
+		default:
+			resultingType = substituteConcreteAuthorization(resultingType)
 		}
+	}
+
+	// Check that the member access is not to a function of resource type
+	// outside of an invocation of it.
+	//
+	// This would result in a bound method for a resource, which is invalid.
+
+	if !checker.inAssignment &&
+		!checker.inInvocation &&
+		member.DeclarationKind == common.DeclarationKindFunction &&
+		!accessedType.IsInvalidType() &&
+		accessedType.IsResourceType() {
+
+		checker.report(
+			&ResourceMethodBindingError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+			},
+		)
 	}
 
 	// If the member,
@@ -389,8 +362,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	if accessedSelfMember == nil &&
 		shouldReturnReference(accessedType, resultingType) &&
 		member.DeclarationKind == common.DeclarationKindField {
+
 		// Get a reference to the type
-		resultingType = checker.getReferenceType(resultingType)
+		resultingType = checker.getReferenceType(resultingType, shouldSubstituteAuthorization, resultingAuthorization)
 		returnReference = true
 	}
 
@@ -516,13 +490,6 @@ func allSupportedEntitlements(typ Type) Access {
 func (checker *Checker) isWriteableMember(member *Member) bool {
 	return checker.Config.AccessCheckMode.IsWriteableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType]
-}
-
-// isMutatableMember returns true if the given member can be mutated
-// in the current location of the checker. Currently equivalent to
-// isWriteableMember above, but separate in case this changes
-func (checker *Checker) isMutatableMember(member *Member) bool {
-	return checker.isWriteableMember(member)
 }
 
 // containingContractKindedType returns the containing contract-kinded type

@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -798,6 +799,25 @@ func TestInterpretMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("array authorized reference, element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                let arrayRef = &array as auth(A) &[[Int]]
+
+                // Must return an unauthorized reference.
+                var x: &[Int] = arrayRef[0]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 	t.Run("array reference, element, in assignment", func(t *testing.T) {
 		t.Parallel()
 
@@ -887,6 +907,25 @@ func TestInterpretMemberAccess(t *testing.T) {
             fun test() {
                 let dict: {String: {String: Int} } = {"one": {"two": 2}}
                 let dictRef = &dict as &{String: {String: Int}}
+                var x: &{String: Int}? = dictRef["one"]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary authorized reference, value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+
+            fun test() {
+                let dict: {String: {String: Int} } = {"one": {"two": 2}}
+                let dictRef = &dict as auth(A) &{String: {String: Int}}
+
+                // Must return an unauthorized reference.
                 var x: &{String: Int}? = dictRef["one"]
             }
         `)
@@ -1023,5 +1062,87 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("entitlement map access on field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                A -> B
+            }
+
+            struct S {
+                access(M) let foo: [String]
+                init() {
+                    self.foo = []
+                }
+            }
+
+            fun test() {
+                let s = S()
+                let sRef = &s as auth(A) &S
+                var foo: auth(B) &[String] = sRef.foo
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("all member types", func(t *testing.T) {
+		t.Parallel()
+
+		test := func(tt *testing.T, typeName string) {
+			code := fmt.Sprintf(`
+                struct Foo {
+                    var a: %[1]s?
+
+                    init() {
+                        self.a = nil
+                    }
+                }
+
+                struct Bar {}
+
+                struct interface I {}
+
+                fun test() {
+                    let foo = Foo()
+                    let fooRef = &foo as &Foo
+                    var a: &%[1]s? = fooRef.a
+                }`,
+
+				typeName,
+			)
+
+			inter := parseCheckAndInterpret(t, code)
+
+			_, err := inter.Invoke("test")
+			require.NoError(t, err)
+		}
+
+		types := []string{
+			"Bar",
+			"{I}",
+			"[Int]",
+			"{Bool: String}",
+			"AnyStruct",
+			"Block",
+		}
+
+		// Test all built-in composite types
+		for i := interpreter.PrimitiveStaticTypeAuthAccount; i < interpreter.PrimitiveStaticType_Count; i++ {
+			semaType := i.SemaType()
+			types = append(types, semaType.QualifiedString())
+		}
+
+		for _, typeName := range types {
+			t.Run(typeName, func(t *testing.T) {
+				test(t, typeName)
+			})
+		}
 	})
 }

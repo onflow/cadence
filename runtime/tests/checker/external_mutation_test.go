@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -83,9 +84,7 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, destroyStatement),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -152,9 +151,7 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, destroyStatement),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -215,9 +212,7 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -276,9 +271,7 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -327,18 +320,15 @@ func TestCheckMutateContractIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			expectedErrors := 1
-			if access == ast.AccessContract {
-				expectedErrors++
-			}
+			expectError := access == ast.AccessContract
 
-			errs := RequireCheckerErrors(t, err, expectedErrors)
-			if expectedErrors > 1 {
+			if expectError {
+				errs := RequireCheckerErrors(t, err, 1)
 				var accessError *sema.InvalidAccessError
-				require.ErrorAs(t, errs[expectedErrors-2], &accessError)
+				require.ErrorAs(t, errs[0], &accessError)
+			} else {
+				require.NoError(t, err)
 			}
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[expectedErrors-1], &externalMutationError)
 		})
 	}
 
@@ -394,18 +384,15 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			expectedErrors := 1
-			if access == ast.AccessContract {
-				expectedErrors++
-			}
+			expectError := access == ast.AccessContract
 
-			errs := RequireCheckerErrors(t, err, expectedErrors)
-			if expectedErrors > 1 {
+			if expectError {
+				errs := RequireCheckerErrors(t, err, 1)
 				var accessError *sema.InvalidAccessError
-				require.ErrorAs(t, errs[expectedErrors-2], &accessError)
+				require.ErrorAs(t, errs[0], &accessError)
+			} else {
+				require.NoError(t, err)
 			}
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[expectedErrors-1], &externalMutationError)
 		})
 	}
 
@@ -458,9 +445,7 @@ func TestCheckContractStructInitIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -543,13 +528,7 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, member.Code, destroyStatement),
 			)
 
-			if member.Mutating {
-				errs := RequireCheckerErrors(t, err, 1)
-				var externalMutationError *sema.ExternalMutationError
-				require.ErrorAs(t, errs[0], &externalMutationError)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 		})
 	}
 
@@ -632,13 +611,7 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, member.Code, destroyStatement),
 			)
 
-			if member.Mutating {
-				errs := RequireCheckerErrors(t, err, 1)
-				var externalMutationError *sema.ExternalMutationError
-				require.ErrorAs(t, errs[0], &externalMutationError)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 		})
 	}
 
@@ -715,8 +688,7 @@ func TestCheckMutationThroughReference(t *testing.T) {
         `,
 		)
 		errs := RequireCheckerErrors(t, err, 1)
-		var externalMutationError *sema.ExternalMutationError
-		require.ErrorAs(t, errs[0], &externalMutationError)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 }
 
@@ -790,8 +762,6 @@ func TestCheckMutationThroughAccess(t *testing.T) {
             }
         `,
 		)
-		errs := RequireCheckerErrors(t, err, 1)
-		var externalMutationError *sema.ExternalMutationError
-		require.ErrorAs(t, errs[0], &externalMutationError)
+		require.NoError(t, err)
 	})
 }

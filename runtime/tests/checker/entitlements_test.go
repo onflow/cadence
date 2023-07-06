@@ -600,6 +600,18 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
+	t.Run("non-reference container field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) let foo: [String]
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("mismatched entitlement mapping", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -1321,6 +1333,18 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
+
+	t.Run("ref array field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			resource interface R {
+				access(M) let foo: [auth(M) &Int]
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
 }
 
 func TestCheckInvalidEntitlementAccess(t *testing.T) {
@@ -1538,20 +1562,6 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
-	})
-
-	t.Run("ref array field", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-			entitlement mapping M {}
-			resource interface R {
-				access(M) let foo: [auth(M) &Int]
-			}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("capability field", func(t *testing.T) {
@@ -4332,8 +4342,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+		assert.NoError(t, err)
 	})
 
 	t.Run("access(all) decl", func(t *testing.T) {
@@ -4911,8 +4920,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		assert.NoError(t, err)
 	})
 
 	t.Run("basic authorized", func(t *testing.T) {
@@ -4933,7 +4941,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 }
 

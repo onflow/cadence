@@ -25,7 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-type MemberInfo struct {
+type MemberAccessInfo struct {
 	AccessedType    Type
 	ResultingType   Type
 	Member          *Member
@@ -91,6 +91,7 @@ type SwapStatementTypes struct {
 type IndexExpressionTypes struct {
 	IndexedType     ValueIndexableType
 	IndexingType    Type
+	ResultType      Type
 	ReturnReference bool
 }
 
@@ -110,33 +111,33 @@ type ExpressionTypes struct {
 }
 
 type Elaboration struct {
-	fixedPointExpressionTypes        map[*ast.FixedPointExpression]Type
-	interfaceTypeDeclarations        map[*InterfaceType]*ast.InterfaceDeclaration
-	entitlementTypeDeclarations      map[*EntitlementType]*ast.EntitlementDeclaration
-	entitlementMapTypeDeclarations   map[*EntitlementMapType]*ast.EntitlementMappingDeclaration
-	swapStatementTypes               map[*ast.SwapStatement]SwapStatementTypes
-	assignmentStatementTypes         map[*ast.AssignmentStatement]AssignmentStatementTypes
-	compositeDeclarationTypes        map[ast.CompositeLikeDeclaration]*CompositeType
-	compositeTypeDeclarations        map[*CompositeType]ast.CompositeLikeDeclaration
-	interfaceDeclarationTypes        map[*ast.InterfaceDeclaration]*InterfaceType
-	entitlementDeclarationTypes      map[*ast.EntitlementDeclaration]*EntitlementType
-	entitlementMapDeclarationTypes   map[*ast.EntitlementMappingDeclaration]*EntitlementMapType
-	transactionDeclarationTypes      map[*ast.TransactionDeclaration]*TransactionType
-	constructorFunctionTypes         map[*ast.SpecialFunctionDeclaration]*FunctionType
-	functionExpressionFunctionTypes  map[*ast.FunctionExpression]*FunctionType
-	invocationExpressionTypes        map[*ast.InvocationExpression]InvocationExpressionTypes
-	castingExpressionTypes           map[*ast.CastingExpression]CastingExpressionTypes
-	lock                             *sync.RWMutex
-	binaryExpressionTypes            map[*ast.BinaryExpression]BinaryExpressionTypes
-	memberExpressionMemberInfos      map[*ast.MemberExpression]MemberInfo
-	memberExpressionExpectedTypes    map[*ast.MemberExpression]Type
-	arrayExpressionTypes             map[*ast.ArrayExpression]ArrayExpressionTypes
-	dictionaryExpressionTypes        map[*ast.DictionaryExpression]DictionaryExpressionTypes
-	integerExpressionTypes           map[*ast.IntegerExpression]Type
-	stringExpressionTypes            map[*ast.StringExpression]Type
-	returnStatementTypes             map[*ast.ReturnStatement]ReturnStatementTypes
-	functionDeclarationFunctionTypes map[*ast.FunctionDeclaration]*FunctionType
-	variableDeclarationTypes         map[*ast.VariableDeclaration]VariableDeclarationTypes
+	fixedPointExpressionTypes         map[*ast.FixedPointExpression]Type
+	interfaceTypeDeclarations         map[*InterfaceType]*ast.InterfaceDeclaration
+	entitlementTypeDeclarations       map[*EntitlementType]*ast.EntitlementDeclaration
+	entitlementMapTypeDeclarations    map[*EntitlementMapType]*ast.EntitlementMappingDeclaration
+	swapStatementTypes                map[*ast.SwapStatement]SwapStatementTypes
+	assignmentStatementTypes          map[*ast.AssignmentStatement]AssignmentStatementTypes
+	compositeDeclarationTypes         map[ast.CompositeLikeDeclaration]*CompositeType
+	compositeTypeDeclarations         map[*CompositeType]ast.CompositeLikeDeclaration
+	interfaceDeclarationTypes         map[*ast.InterfaceDeclaration]*InterfaceType
+	entitlementDeclarationTypes       map[*ast.EntitlementDeclaration]*EntitlementType
+	entitlementMapDeclarationTypes    map[*ast.EntitlementMappingDeclaration]*EntitlementMapType
+	transactionDeclarationTypes       map[*ast.TransactionDeclaration]*TransactionType
+	constructorFunctionTypes          map[*ast.SpecialFunctionDeclaration]*FunctionType
+	functionExpressionFunctionTypes   map[*ast.FunctionExpression]*FunctionType
+	invocationExpressionTypes         map[*ast.InvocationExpression]InvocationExpressionTypes
+	castingExpressionTypes            map[*ast.CastingExpression]CastingExpressionTypes
+	lock                              *sync.RWMutex
+	binaryExpressionTypes             map[*ast.BinaryExpression]BinaryExpressionTypes
+	memberExpressionMemberAccessInfos map[*ast.MemberExpression]MemberAccessInfo
+	memberExpressionExpectedTypes     map[*ast.MemberExpression]Type
+	arrayExpressionTypes              map[*ast.ArrayExpression]ArrayExpressionTypes
+	dictionaryExpressionTypes         map[*ast.DictionaryExpression]DictionaryExpressionTypes
+	integerExpressionTypes            map[*ast.IntegerExpression]Type
+	stringExpressionTypes             map[*ast.StringExpression]Type
+	returnStatementTypes              map[*ast.ReturnStatement]ReturnStatementTypes
+	functionDeclarationFunctionTypes  map[*ast.FunctionDeclaration]*FunctionType
+	variableDeclarationTypes          map[*ast.VariableDeclaration]VariableDeclarationTypes
 	// nestedResourceMoveExpressions indicates the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
@@ -637,20 +638,20 @@ func (e *Elaboration) SetIntegerExpressionType(expression *ast.IntegerExpression
 	e.integerExpressionTypes[expression] = actualType
 }
 
-func (e *Elaboration) MemberExpressionMemberInfo(expression *ast.MemberExpression) (memberInfo MemberInfo, ok bool) {
-	if e.memberExpressionMemberInfos == nil {
+func (e *Elaboration) MemberExpressionMemberAccessInfo(expression *ast.MemberExpression) (memberInfo MemberAccessInfo, ok bool) {
+	if e.memberExpressionMemberAccessInfos == nil {
 		ok = false
 		return
 	}
-	memberInfo, ok = e.memberExpressionMemberInfos[expression]
+	memberInfo, ok = e.memberExpressionMemberAccessInfos[expression]
 	return
 }
 
-func (e *Elaboration) SetMemberExpressionMemberInfo(expression *ast.MemberExpression, memberInfo MemberInfo) {
-	if e.memberExpressionMemberInfos == nil {
-		e.memberExpressionMemberInfos = map[*ast.MemberExpression]MemberInfo{}
+func (e *Elaboration) SetMemberExpressionMemberAccessInfo(expression *ast.MemberExpression, memberAccessInfo MemberAccessInfo) {
+	if e.memberExpressionMemberAccessInfos == nil {
+		e.memberExpressionMemberAccessInfos = map[*ast.MemberExpression]MemberAccessInfo{}
 	}
-	e.memberExpressionMemberInfos[expression] = memberInfo
+	e.memberExpressionMemberAccessInfos[expression] = memberAccessInfo
 }
 
 func (e *Elaboration) MemberExpressionExpectedType(expression *ast.MemberExpression) Type {
