@@ -4165,9 +4165,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
 	t.Run("basic, with entitlements", func(t *testing.T) {
@@ -4221,9 +4220,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
 	t.Run("in base, with entitlements", func(t *testing.T) {

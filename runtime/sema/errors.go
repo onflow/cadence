@@ -3927,40 +3927,6 @@ func (e *InvalidEntryPointTypeError) Error() string {
 	)
 }
 
-// ExternalMutationError
-
-type ExternalMutationError struct {
-	ContainerType Type
-	Name          string
-	ast.Range
-	DeclarationKind common.DeclarationKind
-}
-
-var _ SemanticError = &ExternalMutationError{}
-var _ errors.UserError = &ExternalMutationError{}
-var _ errors.SecondaryError = &ExternalMutationError{}
-
-func (*ExternalMutationError) isSemanticError() {}
-
-func (*ExternalMutationError) IsUserError() {}
-
-func (e *ExternalMutationError) Error() string {
-	return fmt.Sprintf(
-		"cannot mutate `%s`: %s is only mutable inside `%s`",
-		e.Name,
-		e.DeclarationKind.Name(),
-		e.ContainerType.QualifiedString(),
-	)
-}
-
-func (e *ExternalMutationError) SecondaryError() string {
-	return fmt.Sprintf(
-		"Consider adding a setter for `%s` to `%s`",
-		e.Name,
-		e.ContainerType.QualifiedString(),
-	)
-}
-
 type PurityError struct {
 	ast.Range
 }
