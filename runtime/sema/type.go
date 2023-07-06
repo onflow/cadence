@@ -3455,18 +3455,7 @@ func init() {
 	)
 
 	for _, ty := range types {
-		typeName := ty.String()
-
-		// Check that the type is not accidentally redeclared
-
-		if BaseTypeActivation.Find(typeName) != nil {
-			panic(errors.NewUnreachableError())
-		}
-
-		BaseTypeActivation.Set(
-			typeName,
-			baseTypeVariable(typeName, ty),
-		)
+		addToBaseActivation(ty)
 	}
 
 	// The AST contains empty type annotations, resolve them to Void
@@ -3474,6 +3463,21 @@ func init() {
 	BaseTypeActivation.Set(
 		"",
 		BaseTypeActivation.Find("Void"),
+	)
+}
+
+func addToBaseActivation(ty Type) {
+	typeName := ty.String()
+
+	// Check that the type is not accidentally redeclared
+
+	if BaseTypeActivation.Find(typeName) != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	BaseTypeActivation.Set(
+		typeName,
+		baseTypeVariable(typeName, ty),
 	)
 }
 
@@ -3553,6 +3557,8 @@ var AllNumberTypes = append(
 	NumberType,
 	SignedNumberType,
 )
+
+var BuiltinEntitlements = map[string]*EntitlementType{}
 
 const NumberTypeMinFieldName = "min"
 const NumberTypeMaxFieldName = "max"

@@ -5282,3 +5282,46 @@ func TestCheckAttachProvidedEntitlements(t *testing.T) {
 		require.Equal(t, errs[1].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "E")
 	})
 }
+
+func TestCheckBuiltinEntitlements(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("builtin", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                access(Mutable) fun foo() {}
+                access(Insertable) fun bar() {}
+                access(Removable) fun baz() {}
+            }
+
+            fun main() {
+                let s = S()
+                let mutableRef = &s as auth(Mutable) &S
+                let insertableRef = &s as auth(Insertable) &S
+                let removableRef = &s as auth(Removable) &S
+            }
+        `)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("redefine", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Mutable
+            entitlement Insertable
+            entitlement Removable
+        `)
+
+		errs := RequireCheckerErrors(t, err, 3)
+
+		require.IsType(t, &sema.RedeclarationError{}, errs[0])
+		require.IsType(t, &sema.RedeclarationError{}, errs[1])
+		require.IsType(t, &sema.RedeclarationError{}, errs[2])
+	})
+
+}
