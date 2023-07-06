@@ -2540,8 +2540,12 @@ func (v *ArrayValue) Equal(interpreter *Interpreter, locationRange LocationRange
 	return true
 }
 
-func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return atree.StorageIDStorable(v.StorageID()), nil
+func (v *ArrayValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
+	return v.array.Storable(storage, address, maxInlineSize)
 }
 
 func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
@@ -16006,12 +16010,16 @@ func (v *CompositeValue) IsStorable() bool {
 	return v.Location != nil
 }
 
-func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *CompositeValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
 	if !v.IsStorable() {
 		return NonStorable{Value: v}, nil
 	}
 
-	return atree.StorageIDStorable(v.StorageID()), nil
+	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
 func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
@@ -17517,8 +17525,12 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, locationRange Location
 	}
 }
 
-func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return atree.StorageIDStorable(v.StorageID()), nil
+func (v *DictionaryValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
+	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
