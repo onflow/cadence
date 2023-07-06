@@ -4979,9 +4979,20 @@ func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.Enti
 }
 
 func (interpreter *Interpreter) getEntitlementMapType(typeID common.TypeID) (*sema.EntitlementMapType, error) {
-	location, _, err := common.DecodeTypeID(interpreter, string(typeID))
+	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
 	if err != nil {
 		return nil, err
+	}
+
+	if location == nil {
+		ty := sema.BuiltinEntitlementMappings[qualifiedIdentifier]
+		if ty == nil {
+			return nil, TypeLoadingError{
+				TypeID: typeID,
+			}
+		}
+
+		return ty, nil
 	}
 
 	elaboration := interpreter.getElaboration(location)

@@ -3458,6 +3458,8 @@ func init() {
 		addToBaseActivation(ty)
 	}
 
+	addToBaseActivation(IdentityMappingType)
+
 	// The AST contains empty type annotations, resolve them to Void
 
 	BaseTypeActivation.Set(
@@ -3480,6 +3482,8 @@ func addToBaseActivation(ty Type) {
 		baseTypeVariable(typeName, ty),
 	)
 }
+
+var IdentityMappingType = NewEntitlementMapType(nil, nil, "Identity")
 
 func baseTypeVariable(name string, ty Type) *Variable {
 	return &Variable{
@@ -3559,6 +3563,10 @@ var AllNumberTypes = append(
 )
 
 var BuiltinEntitlements = map[string]*EntitlementType{}
+
+var BuiltinEntitlementMappings = map[string]*EntitlementMapType{
+	IdentityMappingType.QualifiedIdentifier(): IdentityMappingType,
+}
 
 const NumberTypeMinFieldName = "min"
 const NumberTypeMaxFieldName = "max"
