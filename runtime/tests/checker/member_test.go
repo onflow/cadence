@@ -19,11 +19,13 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -462,7 +464,7 @@ func TestCheckMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("composite reference, field", func(t *testing.T) {
+	t.Run("composite reference, array field", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -879,5 +881,55 @@ func TestCheckMemberAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("all member types", func(t *testing.T) {
+		t.Parallel()
+
+		test := func(tt *testing.T, typeName string) {
+			code := fmt.Sprintf(`
+                struct Foo {
+                    var a: %[1]s?
+
+                    init() {
+                        self.a = nil
+                    }
+                }
+
+                struct Bar {}
+
+                struct interface I {}
+
+                fun test() {
+                    let foo = Foo()
+                    let fooRef = &foo as &Foo
+                    var a: &%[1]s? = fooRef.a
+                }`,
+
+				typeName,
+			)
+
+			_, err := ParseAndCheck(t, code)
+			require.NoError(t, err)
+		}
+
+		types := []string{
+			"Bar",
+			"{I}",
+			"AnyStruct",
+			"Block",
+		}
+
+		// Test all built-in composite types
+		for i := interpreter.PrimitiveStaticTypeAuthAccount; i < interpreter.PrimitiveStaticType_Count; i++ {
+			semaType := i.SemaType()
+			types = append(types, semaType.QualifiedString())
+		}
+
+		for _, typeName := range types {
+			t.Run(typeName, func(t *testing.T) {
+				test(t, typeName)
+			})
+		}
 	})
 }

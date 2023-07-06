@@ -19,9 +19,11 @@
 package interpreter_test
 
 import (
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func arrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue) []interpreter.Value {
