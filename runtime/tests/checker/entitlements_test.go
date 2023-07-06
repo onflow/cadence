@@ -4342,8 +4342,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+		assert.NoError(t, err)
 	})
 
 	t.Run("access(all) decl", func(t *testing.T) {
@@ -4942,8 +4941,9 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 		require.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 }
 

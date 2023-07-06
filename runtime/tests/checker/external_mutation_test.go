@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -714,9 +715,11 @@ func TestCheckMutationThroughReference(t *testing.T) {
               }
         `,
 		)
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 		var externalMutationError *sema.ExternalMutationError
 		require.ErrorAs(t, errs[0], &externalMutationError)
+
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 }
 

@@ -649,7 +649,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target: &[R]) {
+            fun test(target: auth(Mutable) &[R]) {
                 target.append(<- create R())
 
                 // Take reference while in the account
@@ -679,7 +679,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutable"},
+				sema.Conjunction,
+			),
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -751,7 +755,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target1: &[R], target2: &[R]) {
+            fun test(target1: auth(Mutable) &[R], target2: auth(Mutable) &[R]) {
                 target1.append(<- create R())
 
                 // Take reference while in the account_1
@@ -779,7 +783,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutable"},
+				sema.Conjunction,
+			),
 			array1,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -798,7 +806,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutable"},
+				sema.Conjunction,
+			),
 			array2,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -827,7 +839,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target: &[R]): Int {
+            fun test(target: auth(Mutable) &[R]): Int {
                 target.append(<- create R())
 
                 // Take reference while in the account
@@ -864,7 +876,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutable"},
+				sema.Conjunction,
+			),
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -935,7 +951,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
             var ref2: &R? = nil
             var ref3: &R? = nil
 
-            fun setup(collection: &[R]) {
+            fun setup(collection: auth(Mutable) &[R]) {
                 collection.append(<- create R())
 
                 // Take reference while in the account
@@ -989,7 +1005,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutable"},
+				sema.Conjunction,
+			),
 			array,
 			&sema.VariableSizedType{
 				Type: rType,

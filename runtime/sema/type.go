@@ -1944,6 +1944,16 @@ It does not modify the original array.
 If either of the parameters are out of the bounds of the array, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail.
 `
 
+var insertableEntitledAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{InsertableEntitlement, MutableEntitlement},
+	Disjunction,
+)
+
+var removableEntitledAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{RemovableEntitlement, MutableEntitlement},
+	Disjunction,
+)
+
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
@@ -2048,9 +2058,10 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			Mutating: true,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 				elementType := arrayType.ElementType(false)
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					insertableEntitledAccess,
 					identifier,
 					ArrayAppendFunctionType(elementType),
 					arrayTypeAppendFunctionDocString,
@@ -2075,9 +2086,10 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					)
 				}
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					insertableEntitledAccess,
 					identifier,
 					ArrayAppendAllFunctionType(arrayType),
 					arrayTypeAppendAllFunctionDocString,
@@ -2146,9 +2158,10 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 				elementType := arrayType.ElementType(false)
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					insertableEntitledAccess,
 					identifier,
 					ArrayInsertFunctionType(elementType),
 					arrayTypeInsertFunctionDocString,
@@ -2163,9 +2176,10 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 				elementType := arrayType.ElementType(false)
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					removableEntitledAccess,
 					identifier,
 					ArrayRemoveFunctionType(elementType),
 					arrayTypeRemoveFunctionDocString,
@@ -2180,12 +2194,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 				elementType := arrayType.ElementType(false)
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					removableEntitledAccess,
 					identifier,
 					ArrayRemoveFirstFunctionType(elementType),
-
 					arrayTypeRemoveFirstFunctionDocString,
 				)
 			},
@@ -2198,9 +2212,10 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 				elementType := arrayType.ElementType(false)
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					removableEntitledAccess,
 					identifier,
 					ArrayRemoveLastFunctionType(elementType),
 					arrayTypeRemoveLastFunctionDocString,
@@ -5378,9 +5393,10 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				Kind:     common.DeclarationKindFunction,
 				Mutating: true,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
+					return NewFunctionMember(
 						memoryGauge,
 						t,
+						insertableEntitledAccess,
 						identifier,
 						DictionaryInsertFunctionType(t),
 						dictionaryTypeInsertFunctionDocString,
@@ -5391,9 +5407,10 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				Kind:     common.DeclarationKindFunction,
 				Mutating: true,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
+					return NewFunctionMember(
 						memoryGauge,
 						t,
+						removableEntitledAccess,
 						identifier,
 						DictionaryRemoveFunctionType(t),
 						dictionaryTypeRemoveFunctionDocString,

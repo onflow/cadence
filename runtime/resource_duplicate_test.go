@@ -67,10 +67,10 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 	
 	// --- this code actually makes use of the vuln ---
 	access(all) resource DummyResource {
-		access(all) var dictRef: &{Bool: AnyResource};
-		access(all) var arrRef: &[Vault];
+		access(all) var dictRef: auth(Mutable) &{Bool: AnyResource};
+		access(all) var arrRef: auth(Mutable) &[Vault];
 		access(all) var victim: @Vault;
-		init(dictRef: &{Bool: AnyResource}, arrRef: &[Vault], victim: @Vault) {
+		init(dictRef: auth(Mutable) &{Bool: AnyResource}, arrRef: auth(Mutable) &[Vault], victim: @Vault) {
 			self.dictRef = dictRef;
 			self.arrRef = arrRef;
 			self.victim <- victim;
@@ -85,8 +85,8 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 	access(all) fun duplicateResource(victim1: @Vault, victim2: @Vault): @[Vault]{
 		let arr : @[Vault] <- [];
 		let dict: @{Bool: DummyResource} <- { }
-		let ref = &dict as &{Bool: AnyResource};
-		let arrRef = &arr as &[Vault];
+		let ref = &dict as auth(Mutable) &{Bool: AnyResource};
+		let arrRef = &arr as auth(Mutable) &[Vault];
 	
 		var v1: @DummyResource? <- create DummyResource(dictRef: ref, arrRef: arrRef, victim: <- victim1);
 		dict[false] <-> v1;
@@ -372,9 +372,9 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		script := `
 		access(all) resource Vault {
             access(all) var balance: UFix64
-            access(all) var arrRef: &[Vault]
+            access(all) var arrRef: auth(Mutable) &[Vault]
 
-            init(balance: UFix64, _ arrRef: &[Vault]) {
+            init(balance: UFix64, _ arrRef: auth(Mutable) &[Vault]) {
                 self.balance = balance
                 self.arrRef = arrRef;
             }
@@ -397,7 +397,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
         access(all) fun main(): UFix64 {
 
             let arr: @[Vault] <- []
-            let arrRef = &arr as &[Vault];
+            let arrRef = &arr as auth(Mutable) &[Vault];
 
             var v1 <- create Vault(balance: 1000.0, arrRef); // This will be duplicated
             var v2 <- create Vault(balance: 1.0, arrRef); // This will be lost

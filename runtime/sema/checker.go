@@ -1904,10 +1904,11 @@ func (checker *Checker) checkEntitlementMapAccess(
 		return
 	}
 
-	// otherwise, mapped entitlements may only be used in structs and resources
+	// otherwise, mapped entitlements may only be used in structs, resources and attachments
 	if containerKind == nil ||
 		(*containerKind != common.CompositeKindResource &&
-			*containerKind != common.CompositeKindStructure) {
+			*containerKind != common.CompositeKindStructure &&
+			*containerKind != common.CompositeKindAttachment) {
 		checker.report(
 			&InvalidMappedEntitlementMemberError{
 				Pos: startPos,
