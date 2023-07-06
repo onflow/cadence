@@ -168,7 +168,12 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+
+		errs := checker.RequireCheckerErrors(t, checkerErr, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("simplified", func(t *testing.T) {
@@ -268,10 +273,11 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
 
-		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+		errs := checker.RequireCheckerErrors(t, checkerErr, 3)
 
-		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[0])
-
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[2])
 	})
 
 	t.Run("forEachKey", func(t *testing.T) {
@@ -355,7 +361,8 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("array", func(t *testing.T) {

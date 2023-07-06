@@ -170,9 +170,19 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 		import Test from 0x1
 		access(all) fun main(): &Test.A? { 
 			let r <- Test.makeRWithA()
-			let a = r[Test.A]
+			var a = r[Test.A]
+
+			// Life span of attachments (references) are validated statically.
+			// This indirection helps to trick the checker and causes to perform the validation at runtime,
+			// which is the intention of this test.
+			a = returnSameRef(a)
+
 			destroy r
 			return a
+		}
+
+		access(all) fun returnSameRef(_ ref: &Test.A?): &Test.A? {
+		    return ref
 		}
 	 `)
 

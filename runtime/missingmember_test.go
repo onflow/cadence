@@ -3542,18 +3542,18 @@ access(all) contract AuctionDutch {
 		access(all) let currentPrice: UFix64
 		access(all) let totalItems: Int
 		access(all) let acceptedBids: Int
-		access(all) let tickStatus: {UFix64:TickStatus}
-		access(all) let metadata: {String:String}
+		access(all) let tickStatus: &{UFix64:TickStatus}
+		access(all) let metadata: &{String:String}
 
-		init(status:String, currentPrice: UFix64, totalItems: Int, acceptedBids:Int,  startTime: UFix64, tickStatus: {UFix64:TickStatus}, metadata: {String:String}){
-			self.status=status
-			self.currentPrice=currentPrice
-			self.totalItems=totalItems
-			self.acceptedBids=acceptedBids
-			self.startTime=startTime
-			self.currentTime= 42.0 // Clock.time()
-			self.tickStatus=tickStatus
-			self.metadata=metadata
+		init(status:String, currentPrice: UFix64, totalItems: Int, acceptedBids:Int,  startTime: UFix64, tickStatus: &{UFix64:TickStatus}, metadata: &{String:String}){
+			self.status = status
+			self.currentPrice = currentPrice
+			self.totalItems = totalItems
+			self.acceptedBids = acceptedBids
+			self.startTime = startTime
+			self.currentTime = 42.0 // Clock.time()
+			self.tickStatus = tickStatus
+			self.metadata = metadata
 		}
 	}
 
@@ -3573,7 +3573,7 @@ access(all) contract AuctionDutch {
 		}
 
 		access(all) fun getStatus(_ id: UInt64) : AuctionDutchStatus{
-			let item= self.getAuction(id)
+			let item = self.getAuction(id)
 			let currentTime= 42.0 // Clock.time()
 
 			var status="Ongoing"
@@ -3586,13 +3586,15 @@ access(all) contract AuctionDutch {
 			}
 
 
-			return AuctionDutchStatus(status: status,
-			currentPrice: currentPrice,
-			totalItems: item.numberOfItems,
-			acceptedBids: item.winningBids.length,
-			startTime: item.startAt(),
-			tickStatus: item.auctionStatus,
-			metadata:item.metadata)
+			return AuctionDutchStatus(
+			    status: status,
+			    currentPrice: currentPrice,
+			    totalItems: item.numberOfItems,
+			    acceptedBids: item.winningBids.length,
+			    startTime: item.startAt(),
+			    tickStatus: item.auctionStatus,
+			    metadata:item.metadata,
+            )
 		}
 
 		access(all) fun getBids(_ id:UInt64) : Bids {

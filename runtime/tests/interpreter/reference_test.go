@@ -653,7 +653,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 target.append(<- create R())
 
                 // Take reference while in the account
-                let ref = &target[0] as &R
+                let ref = target[0]
 
                 // Move the resource out of the account onto the stack
                 let movedR <- target.remove(at: 0)
@@ -755,7 +755,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 target1.append(<- create R())
 
                 // Take reference while in the account_1
-                let ref = &target1[0] as &R
+                let ref = target1[0]
 
                 // Move the resource out of the account_1 into the account_2
                 target2.append(<- target1.remove(at: 0))
@@ -831,7 +831,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 target.append(<- create R())
 
                 // Take reference while in the account
-                let ref = &target[0] as &R
+                let ref = target[0]
 
                 // Move the resource out of the account onto the stack. This should invalidate the reference.
                 let movedR <- target.remove(at: 0)
@@ -939,7 +939,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 collection.append(<- create R())
 
                 // Take reference while in the account
-                ref1 = &collection[0] as &R
+                ref1 = collection[0]
 
                 // Move the resource out of the account onto the stack. This should invalidate ref1.
                 let movedR <- collection.remove(at: 0)
@@ -954,7 +954,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 collection.append(<- movedR)
 
                 // Take another reference
-                ref3 = &collection[1] as &R
+                ref3 = collection[1]
             }
 
             fun getRef1Id(): Int {

@@ -2526,7 +2526,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   // At this point the resource is in storage
                   account.link<&[TestContract.TestResource]>(/public/test, target: /storage/test)
                   let ref2 = account.getCapability<&[TestContract.TestResource]>(/public/test).borrow()!
-                  let ref3 = &ref2[0] as &TestContract.TestResource
+                  let ref3 = ref2[0]
                   log(ref3.owner?.address)
               }
           }
@@ -2662,7 +2662,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   // At this point the nesting and nested resources are both in storage
                   account.link<&TestContract.TestNestingResource>(/public/test, target: /storage/test)
                   nestingResourceRef = account.getCapability<&TestContract.TestNestingResource>(/public/test).borrow()!
-                  nestedElementResourceRef = &nestingResourceRef.nestedResources[0] as &TestContract.TestNestedResource
+                  nestedElementResourceRef = nestingResourceRef.nestedResources[0]
 
                   log(nestingResourceRef.owner?.address)
                   log(nestedElementResourceRef.owner?.address)
@@ -2788,7 +2788,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   // At this point the resource is in storage
                   account.link<&[[TestContract.TestResource]]>(/public/test, target: /storage/test)
                   let testResourcesRef = account.getCapability<&[[TestContract.TestResource]]>(/public/test).borrow()!
-                  ref = &testResourcesRef[0] as &[TestContract.TestResource]
+                  ref = testResourcesRef[0]
                   log(ref[0].owner?.address)
               }
           }
@@ -2910,7 +2910,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   // At this point the resource is in storage
                   account.link<&[{Int: TestContract.TestResource}]>(/public/test, target: /storage/test)
                   let testResourcesRef = account.getCapability<&[{Int: TestContract.TestResource}]>(/public/test).borrow()!
-                  ref = &testResourcesRef[0] as &{Int: TestContract.TestResource}
+                  ref = testResourcesRef[0]
                   log(ref[0]?.owner?.address)
               }
           }

@@ -83,30 +83,61 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 
 	// If the member access is optional chaining, only wrap the result value
 	// in an optional, if it is not already an optional value
-
 	if isOptional {
 		if _, ok := memberType.(*OptionalType); !ok {
-			return &OptionalType{Type: memberType}
+			memberType = &OptionalType{Type: memberType}
 		}
 	}
 
 	return memberType
 }
 
+// getReferenceType Returns a reference type to a given type.
+// Reference to an optional should return an optional reference.
+// This has to be done recursively for nested optionals.
+// e.g.1: Given type T, this method returns &T.
+// e.g.2: Given T?, this returns (&T)?
+func (checker *Checker) getReferenceType(typ Type) Type {
+	if optionalType, ok := typ.(*OptionalType); ok {
+		return &OptionalType{
+			Type: checker.getReferenceType(optionalType.Type),
+		}
+	}
+
+	return NewReferenceType(checker.memoryGauge, typ, UnauthorizedAccess)
+}
+
+func shouldReturnReference(parentType, memberType Type) bool {
+	if memberType == nil || !isReferenceType(parentType) {
+		return false
+	}
+
+	return memberType.ContainFieldsOrElements()
+}
+
+func isReferenceType(typ Type) bool {
+	unwrappedType := UnwrapOptionalType(typ)
+	_, isReference := unwrappedType.(*ReferenceType)
+	return isReference
+}
+
 func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, resultingType Type, member *Member, isOptional bool) {
-	memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
+	memberInfo, ok := checker.Elaboration.MemberExpressionMemberAccessInfo(expression)
 	if ok {
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
 	}
 
+	returnReference := false
+
 	defer func() {
-		checker.Elaboration.SetMemberExpressionMemberInfo(
+		checker.Elaboration.SetMemberExpressionMemberAccessInfo(
 			expression,
-			MemberInfo{
-				AccessedType:  accessedType,
-				ResultingType: resultingType,
-				Member:        member,
-				IsOptional:    isOptional,
+			MemberAccessInfo{
+				AccessedType:    accessedType,
+				ResultingType:   resultingType,
+				Member:          member,
+				IsOptional:      isOptional,
+				ReturnReference: returnReference,
 			},
 		)
 	}()
@@ -326,6 +357,26 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			)
 		}
 	}
+
+	// If the member,
+	//   1) is accessed via a reference, and
+	//   2) is container-typed,
+	// then the member type should also be a reference.
+
+	// Note: For attachments, `self` is always a reference.
+	// But we do not want to return a reference for `self.something`.
+	// Otherwise, things like `destroy self.something` would become invalid.
+	// Hence, special case `self`, and return a reference only if the member is not accessed via self.
+	// i.e: `accessedSelfMember == nil`
+
+	if accessedSelfMember == nil &&
+		shouldReturnReference(accessedType, resultingType) &&
+		member.DeclarationKind == common.DeclarationKindField {
+		// Get a reference to the type
+		resultingType = checker.getReferenceType(resultingType)
+		returnReference = true
+	}
+
 	return accessedType, resultingType, member, isOptional
 }
 
