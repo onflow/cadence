@@ -176,7 +176,6 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	memberType := memberAccessInfo.Member.TypeAnnotation.Type
 
 	return getterSetter{
 		target: target,
@@ -225,7 +224,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			// This is pre-computed at the checker.
 			if memberAccessInfo.ReturnReference {
 				// Get a reference to the value
-				resultValue = interpreter.getReferenceValue(resultValue, memberType)
+				resultValue = interpreter.getReferenceValue(resultValue, memberAccessInfo.ResultingType)
 			}
 
 			return resultValue
@@ -243,34 +242,38 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (interpreter *Interpreter) getReferenceValue(value Value, semaType sema.Type) Value {
-	switch value.(type) {
+func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.Type) Value {
+	switch value := value.(type) {
 	case NilValue, ReferenceValue:
 		// Reference to a nil, should return a nil.
 		// If the value is already a reference then return the same reference.
 		return value
-	}
-
-	optionalType, ok := semaType.(*sema.OptionalType)
-	if ok {
-		semaType = optionalType.Type
-
-		// Because the boxing happens further down the code, it is possible
-		// to have a concrete value (non-some) for a place where optional is expected.
-		// Therefore, always unwrap the type, but only unwrap if the value is `SomeValue`.
-		//
-		// However, checker guarantees that the wise-versa doesn't happen.
-		// i.e: There will never be a `SomeValue`, with type being a non-optional.
-
-		if optionalValue, ok := value.(*SomeValue); ok {
-			value = optionalValue.value
-		}
-		innerValue := interpreter.getReferenceValue(value, semaType)
+	case *SomeValue:
+		innerValue := interpreter.getReferenceValue(value.value, resultType)
 		return NewSomeValueNonCopying(interpreter, innerValue)
 	}
 
+	// `resultType` is always an [optional] reference.
+	// This is guaranteed by the checker.
+	referenceType, ok := sema.UnwrapOptionalType(resultType).(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	auth := interpreter.getEffectiveAuthorization(referenceType)
+
 	interpreter.maybeTrackReferencedResourceKindedValue(value)
-	return NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, semaType)
+	return NewEphemeralReferenceValue(interpreter, auth, value, referenceType.Type)
+}
+
+func (interpreter *Interpreter) getEffectiveAuthorization(referenceType *sema.ReferenceType) Authorization {
+	_, isMapped := referenceType.Authorization.(sema.EntitlementMapAccess)
+
+	if isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
+		return interpreter.SharedState.currentEntitlementMappedValue
+	}
+
+	return ConvertSemaAccesstoStaticAuthorization(interpreter, referenceType.Authorization)
 }
 
 func (interpreter *Interpreter) checkMemberAccess(
@@ -924,10 +927,10 @@ func (interpreter *Interpreter) maybeGetReference(
 ) Value {
 	indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
 	if indexExpressionTypes.ReturnReference {
-		elementType := indexExpressionTypes.IndexedType.ElementType(false)
+		expectedType := indexExpressionTypes.ResultType
 
 		// Get a reference to the value
-		memberValue = interpreter.getReferenceValue(memberValue, elementType)
+		memberValue = interpreter.getReferenceValue(memberValue, expectedType)
 	}
 
 	return memberValue
@@ -1224,15 +1227,9 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
 	makeReference := func(value Value, typ *sema.ReferenceType) *EphemeralReferenceValue {
-		var auth Authorization
-
 		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
 		// of that mapped access in the body of the function should be replaced with the computed output of the map
-		if _, isMapped := typ.Authorization.(sema.EntitlementMapAccess); isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
-			auth = interpreter.SharedState.currentEntitlementMappedValue
-		} else {
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization)
-		}
+		auth := interpreter.getEffectiveAuthorization(typ)
 
 		return NewEphemeralReferenceValue(
 			interpreter,

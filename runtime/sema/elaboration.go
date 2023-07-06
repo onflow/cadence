@@ -91,6 +91,7 @@ type SwapStatementTypes struct {
 type IndexExpressionTypes struct {
 	IndexedType     ValueIndexableType
 	IndexingType    Type
+	ResultType      Type
 	ReturnReference bool
 }
 
