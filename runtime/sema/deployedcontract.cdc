@@ -1,5 +1,5 @@
 
-access(all) struct DeployedContract: MemberAccessible {
+access(all) struct DeployedContract: ContainFields {
     /// The address of the account where the contract is deployed at.
     access(all) let address: Address
 

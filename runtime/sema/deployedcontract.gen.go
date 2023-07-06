@@ -74,17 +74,17 @@ then ` + "`.publicTypes()`" + ` will return an array equivalent to the expressio
 const DeployedContractTypeName = "DeployedContract"
 
 var DeployedContractType = &SimpleType{
-	Name:             DeployedContractTypeName,
-	QualifiedName:    DeployedContractTypeName,
-	TypeID:           DeployedContractTypeName,
-	tag:              DeployedContractTypeTag,
-	IsResource:       false,
-	Storable:         false,
-	Equatable:        false,
-	Comparable:       false,
-	Exportable:       false,
-	Importable:       false,
-	MemberAccessible: true,
+	Name:          DeployedContractTypeName,
+	QualifiedName: DeployedContractTypeName,
+	TypeID:        DeployedContractTypeName,
+	tag:           DeployedContractTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Comparable:    false,
+	Exportable:    false,
+	Importable:    false,
+	ContainFields: true,
 }
 
 func init() {

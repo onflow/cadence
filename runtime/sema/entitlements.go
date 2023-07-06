@@ -1,4 +1,3 @@
-// Code generated from testdata/simple-struct.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -19,18 +18,4 @@
 
 package sema
 
-const TestTypeName = "Test"
-
-var TestType = &SimpleType{
-	Name:          TestTypeName,
-	QualifiedName: TestTypeName,
-	TypeID:        TestTypeName,
-	tag:           TestTypeTag,
-	IsResource:    false,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    false,
-	ContainFields: false,
-}
+//go:generate go run ./gen entitlements.cdc entitlements.gen.go

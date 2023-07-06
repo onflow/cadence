@@ -1,5 +1,5 @@
 
-access(all) struct AuthAccount: MemberAccessible {
+access(all) struct AuthAccount {
 
     /// The address of the account.
     access(all) let address: Address

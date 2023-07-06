@@ -50,7 +50,7 @@ type SimpleType struct {
 	Comparable          bool
 	Storable            bool
 	IsResource          bool
-	MemberAccessible    bool
+	ContainFields       bool
 }
 
 var _ Type = &SimpleType{}
@@ -107,8 +107,8 @@ func (t *SimpleType) IsImportable(_ map[*Member]bool) bool {
 	return t.Importable
 }
 
-func (t *SimpleType) IsMemberAccessible() bool {
-	return t.MemberAccessible
+func (t *SimpleType) ContainFieldsOrElements() bool {
+	return t.ContainFields
 }
 
 func (*SimpleType) TypeAnnotationState() TypeAnnotationState {

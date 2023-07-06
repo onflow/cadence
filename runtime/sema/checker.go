@@ -1942,7 +1942,8 @@ func (checker *Checker) checkEntitlementMapAccess(
 			}
 		}
 	default:
-		if declarationType.IsMemberAccessible() {
+		// Also allow entitlement mappings for container-typed fields
+		if declarationType.ContainFieldsOrElements() {
 			return
 		}
 	}
