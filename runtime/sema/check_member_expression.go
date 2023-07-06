@@ -283,19 +283,19 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		)
 	}
 
-		// Check access and report if inaccessible
-		accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
-		isReadable, resultingAuthorization := checker.isReadableMember(accessedType, member, resultingType, accessRange)
-		if !isReadable {
-			checker.report(
-				&InvalidAccessError{
-					Name:              member.Identifier.Identifier,
-					RestrictingAccess: member.Access,
-					DeclarationKind:   member.DeclarationKind,
-					Range:             accessRange(),
-				},
-			)
-		}
+	// Check access and report if inaccessible
+	accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
+	isReadable, resultingAuthorization := checker.isReadableMember(accessedType, member, resultingType, accessRange)
+	if !isReadable {
+		checker.report(
+			&InvalidAccessError{
+				Name:              member.Identifier.Identifier,
+				RestrictingAccess: member.Access,
+				DeclarationKind:   member.DeclarationKind,
+				Range:             accessRange(),
+			},
+		)
+	}
 
 	// the resulting authorization was mapped through an entitlement map, so we need to substitute this new authorization into the resulting type
 	// i.e. if the field was declared with `access(M) let x: auth(M) &T?`, and we computed that the output of the map would give entitlement `E`,
@@ -451,7 +451,7 @@ func (checker *Checker) mapAccess(
 
 	default:
 		if mappedAccess.Type == IdentityMappingType {
-			access := allSupportedEntitlements(resultingType)
+			access := AllSupportedEntitlements(resultingType)
 			if access != nil {
 				return true, access
 			}
@@ -463,14 +463,14 @@ func (checker *Checker) mapAccess(
 	}
 }
 
-func allSupportedEntitlements(typ Type) Access {
+func AllSupportedEntitlements(typ Type) Access {
 	switch typ := typ.(type) {
 	case *ReferenceType:
-		return allSupportedEntitlements(typ.Type)
+		return AllSupportedEntitlements(typ.Type)
 	case *OptionalType:
-		return allSupportedEntitlements(typ.Type)
+		return AllSupportedEntitlements(typ.Type)
 	case *FunctionType:
-		return allSupportedEntitlements(typ.ReturnTypeAnnotation.Type)
+		return AllSupportedEntitlements(typ.ReturnTypeAnnotation.Type)
 	case EntitlementSupportingType:
 		supportedEntitlements := typ.SupportedEntitlements()
 		if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {

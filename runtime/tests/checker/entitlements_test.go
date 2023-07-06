@@ -5505,11 +5505,11 @@ func TestCheckIdentityMapping(t *testing.T) {
 
                 let ref1: auth(A, B, C) &X = y.x1
 
-                //let ref2: auth(A, B, C) &X? = y.x2
+                let ref2: auth(A, B, C) &X? = y.x2
 
-                //let ref3: auth(A, B, C) &X = y.getX()
+                let ref3: auth(A, B, C) &X = y.getX()
 
-                //let ref4: auth(A, B, C) &X? = y.getOptionalX()
+                let ref4: auth(A, B, C) &X? = y.getOptionalX()
             }
         `)
 

@@ -3090,11 +3090,9 @@ func TestInterpretIdentityMapping(t *testing.T) {
 
             struct X {
                access(A | B) var s: String
-
                init() {
                    self.s = "hello"
                }
-
                access(C) fun foo() {}
             }
 
