@@ -46,6 +46,7 @@ var CharacterType = &SimpleType{
 	Comparable:    true,
 	Exportable:    true,
 	Importable:    true,
+	ContainFields: false,
 }
 
 func init() {

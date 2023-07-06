@@ -108,11 +108,11 @@ func (checker *Checker) getReferenceType(typ Type) Type {
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
-	if !isReferenceType(parentType) {
+	if memberType == nil || !isReferenceType(parentType) {
 		return false
 	}
 
-	return isContainerType(memberType)
+	return memberType.ContainFieldsOrElements()
 }
 
 func isReferenceType(typ Type) bool {
@@ -121,25 +121,8 @@ func isReferenceType(typ Type) bool {
 	return isReference
 }
 
-func isContainerType(typ Type) bool {
-	switch typ := typ.(type) {
-	case *CompositeType,
-		*DictionaryType,
-		ArrayType:
-		return true
-	case *OptionalType:
-		return isContainerType(typ.Type)
-	default:
-		switch typ {
-		case AnyStructType, AnyResourceType:
-			return true
-		}
-		return false
-	}
-}
-
 func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, resultingType Type, member *Member, isOptional bool) {
-	memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfo(expression)
+	memberInfo, ok := checker.Elaboration.MemberExpressionMemberAccessInfo(expression)
 	if ok {
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
 	}
@@ -147,9 +130,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	returnReference := false
 
 	defer func() {
-		checker.Elaboration.SetMemberExpressionMemberInfo(
+		checker.Elaboration.SetMemberExpressionMemberAccessInfo(
 			expression,
-			MemberInfo{
+			MemberAccessInfo{
 				AccessedType:    accessedType,
 				ResultingType:   resultingType,
 				Member:          member,

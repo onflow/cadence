@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -1023,5 +1024,59 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("all member types", func(t *testing.T) {
+		t.Parallel()
+
+		test := func(tt *testing.T, typeName string) {
+			code := fmt.Sprintf(`
+                struct Foo {
+                    var a: %[1]s?
+
+                    init() {
+                        self.a = nil
+                    }
+                }
+
+                struct Bar {}
+
+                struct interface I {}
+
+                fun test() {
+                    let foo = Foo()
+                    let fooRef = &foo as &Foo
+                    var a: &%[1]s? = fooRef.a
+                }`,
+
+				typeName,
+			)
+
+			inter := parseCheckAndInterpret(t, code)
+
+			_, err := inter.Invoke("test")
+			require.NoError(t, err)
+		}
+
+		types := []string{
+			"Bar",
+			"{I}",
+			"[Int]",
+			"{Bool: String}",
+			"AnyStruct",
+			"Block",
+		}
+
+		// Test all built-in composite types
+		for i := interpreter.PrimitiveStaticTypeAuthAccount; i < interpreter.PrimitiveStaticType_Count; i++ {
+			semaType := i.SemaType()
+			types = append(types, semaType.QualifiedString())
+		}
+
+		for _, typeName := range types {
+			t.Run(typeName, func(t *testing.T) {
+				test(t, typeName)
+			})
+		}
 	})
 }
