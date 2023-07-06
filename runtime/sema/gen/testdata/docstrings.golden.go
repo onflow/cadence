@@ -114,6 +114,7 @@ var DocstringsType = &SimpleType{
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
+	ContainFields: false,
 }
 
 func init() {

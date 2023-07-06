@@ -135,6 +135,27 @@ type Type interface {
 	// IsComparable returns true if values of the type can be compared
 	IsComparable() bool
 
+	// ContainFieldsOrElements returns true if value of the type can have nested values (fields or elements).
+	// This notion is to indicate that a type can be used to access its nested values using
+	// either index-expression or member-expression. e.g. `foo.bar` or `foo[bar]`.
+	// This is used to determine if a field/element of this type should be returning a reference or not.
+	//
+	// Only a subset of types has this characteristic. e.g:
+	//  - Composites
+	//  - Interfaces
+	//  - Arrays (Variable/Constant sized)
+	//  - Dictionaries
+	//  - Restricted types
+	//  - Optionals of the above.
+	//  - Then there are also built-in simple types, like StorageCapabilityControllerType, BlockType, etc.
+	//    where the type is implemented as a simple type, but they also have fields.
+	//
+	// This is different from the existing  `ValueIndexableType` in the sense that it is also implemented by simple types
+	// but not all simple types are indexable.
+	// On the other-hand, some indexable types (e.g. String) shouldn't be treated/returned as references.
+	//
+	ContainFieldsOrElements() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	RewriteWithRestrictedTypes() (result Type, rewritten bool)
 
@@ -638,6 +659,10 @@ func (*OptionalType) IsComparable() bool {
 	return false
 }
 
+func (t *OptionalType) ContainFieldsOrElements() bool {
+	return t.Type.ContainFieldsOrElements()
+}
+
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -840,6 +865,10 @@ func (*GenericType) IsEquatable() bool {
 }
 
 func (*GenericType) IsComparable() bool {
+	return false
+}
+
+func (t *GenericType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -1142,6 +1171,10 @@ func (t *NumericType) IsComparable() bool {
 	return !t.IsSuperType()
 }
 
+func (t *NumericType) ContainFieldsOrElements() bool {
+	return false
+}
+
 func (*NumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1340,6 +1373,10 @@ func (*FixedPointNumericType) IsEquatable() bool {
 
 func (t *FixedPointNumericType) IsComparable() bool {
 	return !t.IsSuperType()
+}
+
+func (t *FixedPointNumericType) ContainFieldsOrElements() bool {
+	return false
 }
 
 func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
@@ -2417,6 +2454,10 @@ func (t *VariableSizedType) IsComparable() bool {
 	return t.Type.IsComparable()
 }
 
+func (t *VariableSizedType) ContainFieldsOrElements() bool {
+	return true
+}
+
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -2565,6 +2606,10 @@ func (t *ConstantSizedType) IsEquatable() bool {
 
 func (t *ConstantSizedType) IsComparable() bool {
 	return t.Type.IsComparable()
+}
+
+func (t *ConstantSizedType) ContainFieldsOrElements() bool {
+	return true
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -3085,6 +3130,10 @@ func (*FunctionType) IsEquatable() bool {
 }
 
 func (*FunctionType) IsComparable() bool {
+	return false
+}
+
+func (*FunctionType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -4273,8 +4322,12 @@ func (*CompositeType) IsComparable() bool {
 	return false
 }
 
-func (c *CompositeType) TypeAnnotationState() TypeAnnotationState {
-	if c.Kind == common.CompositeKindAttachment {
+func (*CompositeType) ContainFieldsOrElements() bool {
+	return true
+}
+
+func (t *CompositeType) TypeAnnotationState() TypeAnnotationState {
+	if t.Kind == common.CompositeKindAttachment {
 		return TypeAnnotationStateDirectAttachmentTypeAnnotation
 	}
 	return TypeAnnotationStateValid
@@ -4957,6 +5010,10 @@ func (*InterfaceType) IsComparable() bool {
 	return false
 }
 
+func (*InterfaceType) ContainFieldsOrElements() bool {
+	return true
+}
+
 func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -5172,6 +5229,10 @@ func (t *DictionaryType) IsEquatable() bool {
 
 func (*DictionaryType) IsComparable() bool {
 	return false
+}
+
+func (*DictionaryType) ContainFieldsOrElements() bool {
+	return true
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
@@ -5468,7 +5529,7 @@ func (*DictionaryType) isValueIndexableType() bool {
 	return true
 }
 
-func (t *DictionaryType) ElementType(isAssignment bool) Type {
+func (t *DictionaryType) ElementType(_ bool) Type {
 	return &OptionalType{Type: t.ValueType}
 }
 
@@ -5638,6 +5699,10 @@ func (*ReferenceType) IsEquatable() bool {
 }
 
 func (*ReferenceType) IsComparable() bool {
+	return false
+}
+
+func (*ReferenceType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -5837,6 +5902,10 @@ func (*AddressType) IsEquatable() bool {
 }
 
 func (*AddressType) IsComparable() bool {
+	return false
+}
+
+func (*AddressType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -6557,6 +6626,10 @@ func (*TransactionType) IsComparable() bool {
 	return false
 }
 
+func (*TransactionType) ContainFieldsOrElements() bool {
+	return false
+}
+
 func (*TransactionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6792,6 +6865,10 @@ func (*RestrictedType) IsEquatable() bool {
 
 func (t *RestrictedType) IsComparable() bool {
 	return false
+}
+
+func (*RestrictedType) ContainFieldsOrElements() bool {
+	return true
 }
 
 func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
@@ -7066,6 +7143,10 @@ func (*CapabilityType) IsEquatable() bool {
 }
 
 func (*CapabilityType) IsComparable() bool {
+	return false
+}
+
+func (*CapabilityType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -7622,6 +7703,10 @@ func (*EntitlementType) IsResourceType() bool {
 	return false
 }
 
+func (*EntitlementType) ContainFieldsOrElements() bool {
+	return false
+}
+
 func (*EntitlementType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateDirectEntitlementTypeAnnotation
 }
@@ -7749,6 +7834,10 @@ func (*EntitlementMapType) IsComparable() bool {
 }
 
 func (*EntitlementMapType) IsResourceType() bool {
+	return false
+}
+
+func (*EntitlementMapType) ContainFieldsOrElements() bool {
 	return false
 }
 

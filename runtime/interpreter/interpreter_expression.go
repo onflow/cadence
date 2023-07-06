@@ -172,7 +172,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 
 	isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression(memberExpression)
 
-	memberInfo, ok := interpreter.Program.Elaboration.MemberExpressionMemberInfo(memberExpression)
+	memberAccessInfo, ok := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -222,9 +222,9 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 
 			// Return a reference, if the member is accessed via a reference.
 			// This is pre-computed at the checker.
-			if memberInfo.ReturnReference {
+			if memberAccessInfo.ReturnReference {
 				// Get a reference to the value
-				resultValue = interpreter.getReferenceValue(resultValue, memberInfo.ResultingType)
+				resultValue = interpreter.getReferenceValue(resultValue, memberAccessInfo.ResultingType)
 			}
 
 			return resultValue
@@ -244,10 +244,8 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 // e.g.2: Given T?, this returns (&T)?
 func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.Type) Value {
 	switch value := value.(type) {
-	case NilValue:
+	case NilValue, ReferenceValue:
 		// Reference to a nil, should return a nil.
-		return value
-	case ReferenceValue:
 		// If the value is already a reference then return the same reference.
 		return value
 	case *SomeValue:
@@ -283,7 +281,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	target Value,
 	locationRange LocationRange,
 ) {
-	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberInfo(memberExpression)
+	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
 	switch expectedType := expectedType.(type) {
