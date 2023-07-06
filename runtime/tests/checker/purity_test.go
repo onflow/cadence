@@ -476,14 +476,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
             emit FooEvent()
         }
         `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 68, Line: 4, Column: 17},
-			EndPos:   ast.Position{Offset: 77, Line: 4, Column: 26},
-		})
+		require.NoError(t, err)
 	})
 
 	t.Run("external write", func(t *testing.T) {

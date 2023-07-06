@@ -789,7 +789,7 @@ func TestCheckInvalidFunctionPostConditionWithFunction(t *testing.T) {
 
           fun test() {
               post {
-                  emit Foo(x: (fun (): Int { return 2 })()) 
+                  emit Foo(x: (view fun (): Int { return 2 })())
               }
           }
         `)

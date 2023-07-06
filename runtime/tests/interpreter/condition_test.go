@@ -859,7 +859,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					checker, err := checker.ParseAndCheck(t,
 						fmt.Sprintf(
 							`
-                                 pub event Foo(x: Int)
+                                 access(all)
+                                 event Foo(x: Int)
 
 					             access(all) %[1]s interface Test {
 					                 init(x: Int) {
