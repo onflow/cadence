@@ -189,7 +189,7 @@ func (v *CapabilityValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.SlabID]struct{},
+	_ map[atree.ValueID]struct{},
 ) Value {
 	if remove {
 		v.DeepRemove(interpreter)

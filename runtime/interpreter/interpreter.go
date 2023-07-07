@@ -217,7 +217,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.SlabID]map[*EphemeralReferenceValue]struct{}
+type ReferencedResourceKindedValues map[atree.ValueID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
 	Location     common.Location
@@ -5172,13 +5172,13 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
 	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
 		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
-			interpreter.trackReferencedResourceKindedValue(value.SlabID(), referenceValue)
+			interpreter.trackReferencedResourceKindedValue(value.ValueID(), referenceValue)
 		}
 	}
 }
 
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
-	id atree.SlabID,
+id atree.ValueID,
 	value *EphemeralReferenceValue,
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
@@ -5196,7 +5196,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 		return
 	}
 
-	var slabID atree.SlabID
+	var valueID atree.ValueID
 
 	switch value := value.(type) {
 	case *CompositeValue:
@@ -5205,21 +5205,21 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 			// continue iteration
 			return true
 		})
-		slabID = value.SlabID()
+		valueID = value.ValueID()
 
 	case *DictionaryValue:
 		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
 			interpreter.invalidateReferencedResources(value)
 			return true
 		})
-		slabID = value.SlabID()
+		valueID = value.ValueID()
 
 	case *ArrayValue:
 		value.IterateLoaded(interpreter, func(element Value) (resume bool) {
 			interpreter.invalidateReferencedResources(element)
 			return true
 		})
-		slabID = value.SlabID()
+		valueID = value.ValueID()
 
 	case *SomeValue:
 		interpreter.invalidateReferencedResources(value.value)
@@ -5230,7 +5230,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 		return
 	}
 
-	values := interpreter.SharedState.referencedResourceKindedValues[slabID]
+	values := interpreter.SharedState.referencedResourceKindedValues[valueID]
 	if values == nil {
 		return
 	}
@@ -5243,7 +5243,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 	// So no need to track those stale resources anymore. We will not need to update/clear them again.
 	// Therefore, remove them from the mapping.
 	// This is only to allow GC. No impact to the behavior.
-	delete(interpreter.SharedState.referencedResourceKindedValues, slabID)
+	delete(interpreter.SharedState.referencedResourceKindedValues, valueID)
 }
 
 // startResourceTracking starts tracking the life-span of a resource.
@@ -5452,8 +5452,8 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) validateMutation(slabID atree.SlabID, locationRange LocationRange) {
-	_, present := interpreter.SharedState.containerValueIteration[slabID]
+func (interpreter *Interpreter) validateMutation(valueID atree.ValueID, locationRange LocationRange) {
+	_, present := interpreter.SharedState.containerValueIteration[valueID]
 	if !present {
 		return
 	}
@@ -5462,24 +5462,24 @@ func (interpreter *Interpreter) validateMutation(slabID atree.SlabID, locationRa
 	})
 }
 
-func (interpreter *Interpreter) withMutationPrevention(slabID atree.SlabID, f func()) {
-	oldIteration, present := interpreter.SharedState.containerValueIteration[slabID]
-	interpreter.SharedState.containerValueIteration[slabID] = struct{}{}
+func (interpreter *Interpreter) withMutationPrevention(valueID atree.ValueID, f func()) {
+	oldIteration, present := interpreter.SharedState.containerValueIteration[valueID]
+	interpreter.SharedState.containerValueIteration[valueID] = struct{}{}
 
 	f()
 
 	if !present {
-		delete(interpreter.SharedState.containerValueIteration, slabID)
+		delete(interpreter.SharedState.containerValueIteration, valueID)
 	} else {
-		interpreter.SharedState.containerValueIteration[slabID] = oldIteration
+		interpreter.SharedState.containerValueIteration[valueID] = oldIteration
 	}
 }
 
 func (interpreter *Interpreter) enforceNotResourceDestruction(
-	slabID atree.SlabID,
+	valueID atree.ValueID,
 	locationRange LocationRange,
 ) {
-	_, exists := interpreter.SharedState.destroyedResources[slabID]
+	_, exists := interpreter.SharedState.destroyedResources[valueID]
 	if exists {
 		panic(DestroyedResourceError{
 			LocationRange: locationRange,
@@ -5488,13 +5488,13 @@ func (interpreter *Interpreter) enforceNotResourceDestruction(
 }
 
 func (interpreter *Interpreter) withResourceDestruction(
-	slabID atree.SlabID,
+	valueID atree.ValueID,
 	locationRange LocationRange,
 	f func(),
 ) {
-	interpreter.enforceNotResourceDestruction(slabID, locationRange)
+	interpreter.enforceNotResourceDestruction(valueID, locationRange)
 
-	interpreter.SharedState.destroyedResources[slabID] = struct{}{}
+	interpreter.SharedState.destroyedResources[valueID] = struct{}{}
 
 	f()
 }
