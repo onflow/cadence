@@ -593,7 +593,7 @@ func (g *generator) VisitEntitlementMappingDeclaration(decl *ast.EntitlementMapp
 
 	entitlementMappingName := decl.Identifier.Identifier
 	typeVarName := typeVarName(entitlementMappingName)
-	typeVarDecl := entitlementMapTypeLiteral(entitlementMappingName)
+	typeVarDecl := entitlementMapTypeLiteral(entitlementMappingName, decl.Associations)
 
 	g.addDecls(
 		goVarDecl(
@@ -1716,33 +1716,60 @@ func entitlementTypeLiteral(name string) dst.Expr {
 	//	Identifier: "Foo",
 	//}
 
-	elements := []dst.Expr{
-		goKeyValue("Identifier", goStringLit(name)),
-	}
-
 	return &dst.UnaryExpr{
 		Op: token.AND,
 		X: &dst.CompositeLit{
 			Type: dst.NewIdent("EntitlementType"),
-			Elts: elements,
+			Elts: []dst.Expr{
+				goKeyValue("Identifier", goStringLit(name)),
+			},
 		},
 	}
 }
 
-func entitlementMapTypeLiteral(name string) dst.Expr {
+func entitlementMapTypeLiteral(name string, associations []*ast.EntitlementMapElement) dst.Expr {
 	// &sema.EntitlementMapType{
 	//	Identifier: "Foo",
-	//}
+	//	Relations: []EntitlementRelation{
+	//		{
+	//			Input: BarType,
+	//			Output: BazType,
+	//		},
+	//	}
+	// }
 
-	elements := []dst.Expr{
-		goKeyValue("Identifier", goStringLit(name)),
+	relationExprs := make([]dst.Expr, 0, len(associations))
+
+	for _, association := range associations {
+		relationExpr := &dst.CompositeLit{
+			Type: dst.NewIdent("EntitlementRelation"),
+			Elts: []dst.Expr{
+				goKeyValue("Input", typeExpr(association.Input, nil)),
+				goKeyValue("Output", typeExpr(association.Output, nil)),
+			},
+		}
+
+		relationExpr.Decorations().Before = dst.NewLine
+		relationExpr.Decorations().After = dst.NewLine
+
+		relationExprs = append(relationExprs, relationExpr)
+	}
+
+	relationsExpr := &dst.CompositeLit{
+		Type: &dst.ArrayType{
+			Elt: dst.NewIdent("EntitlementRelation"),
+		},
+		Elts: relationExprs,
 	}
 
 	return &dst.UnaryExpr{
 		Op: token.AND,
 		X: &dst.CompositeLit{
 			Type: dst.NewIdent("EntitlementMapType"),
-			Elts: elements,
+			Elts: []dst.Expr{
+				goKeyValue("Identifier", goStringLit(name)),
+				goKeyValue("Relations", relationsExpr),
+			},
 		},
 	}
 }

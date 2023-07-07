@@ -29,6 +29,12 @@ var BarType = &EntitlementType{
 
 var BazType = &EntitlementMapType{
 	Identifier: "Baz",
+	Relations: []EntitlementRelation{
+		EntitlementRelation{
+			Input:  FooType,
+			Output: BarType,
+		},
+	},
 }
 
 func init() {
