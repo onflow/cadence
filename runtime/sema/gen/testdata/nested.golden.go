@@ -38,29 +38,29 @@ foo
 
 const FooTypeBarFieldName = "bar"
 
-var FooTypeBarFieldType = FooBarType
+var FooTypeBarFieldType = Foo_BarType
 
 const FooTypeBarFieldDocString = `
 Bar
 `
 
-const FooBarTypeBarFunctionName = "bar"
+const Foo_BarTypeBarFunctionName = "bar"
 
-var FooBarTypeBarFunctionType = &FunctionType{
+var Foo_BarTypeBarFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		VoidType,
 	),
 }
 
-const FooBarTypeBarFunctionDocString = `
+const Foo_BarTypeBarFunctionDocString = `
 bar
 `
 
-const FooBarTypeName = "Bar"
+const Foo_BarTypeName = "Bar"
 
-var FooBarType = func() *CompositeType {
+var Foo_BarType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         FooBarTypeName,
+		Identifier:         Foo_BarTypeName,
 		Kind:               common.CompositeKindStructure,
 		importable:         false,
 		hasComputedMembers: true,
@@ -72,16 +72,16 @@ var FooBarType = func() *CompositeType {
 func init() {
 	var members = []*Member{
 		NewUnmeteredFunctionMember(
-			FooBarType,
-			ast.AccessAll,
-			FooBarTypeBarFunctionName,
-			FooBarTypeBarFunctionType,
-			FooBarTypeBarFunctionDocString,
+			Foo_BarType,
+			PrimitiveAccess(ast.AccessAll),
+			Foo_BarTypeBarFunctionName,
+			Foo_BarTypeBarFunctionType,
+			Foo_BarTypeBarFunctionDocString,
 		),
 	}
 
-	FooBarType.Members = MembersAsMap(members)
-	FooBarType.Fields = MembersFieldNames(members)
+	Foo_BarType.Members = MembersAsMap(members)
+	Foo_BarType.Fields = MembersFieldNames(members)
 }
 
 const FooTypeName = "Foo"
@@ -94,7 +94,7 @@ var FooType = func() *CompositeType {
 		hasComputedMembers: true,
 	}
 
-	t.SetNestedType(FooBarTypeName, FooBarType)
+	t.SetNestedType(Foo_BarTypeName, Foo_BarType)
 	return t
 }()
 
@@ -102,14 +102,14 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFunctionMember(
 			FooType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			FooTypeFooFunctionName,
 			FooTypeFooFunctionType,
 			FooTypeFooFunctionDocString,
 		),
 		NewUnmeteredFieldMember(
 			FooType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			FooTypeBarFieldName,
 			FooTypeBarFieldType,

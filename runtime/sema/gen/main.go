@@ -34,6 +34,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
 )
@@ -575,7 +576,7 @@ func (*generator) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) str
 
 func (g *generator) VisitEntitlementDeclaration(decl *ast.EntitlementDeclaration) (_ struct{}) {
 	entitlementName := decl.Identifier.Identifier
-	typeVarName := entitlementVarName(entitlementName)
+	typeVarName := typeVarName(entitlementName)
 	typeVarDecl := entitlementTypeLiteral(entitlementName)
 
 	g.addDecls(
@@ -591,7 +592,7 @@ func (g *generator) VisitEntitlementDeclaration(decl *ast.EntitlementDeclaration
 func (g *generator) VisitEntitlementMappingDeclaration(decl *ast.EntitlementMappingDeclaration) (_ struct{}) {
 
 	entitlementMappingName := decl.Identifier.Identifier
-	typeVarName := entitlementMappingVarName(entitlementMappingName)
+	typeVarName := typeVarName(entitlementMappingName)
 	typeVarDecl := entitlementMapTypeLiteral(entitlementMappingName)
 
 	g.addDecls(
@@ -664,9 +665,15 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 				},
 			}
 		default:
+			var fullIdentifier strings.Builder
+			fullIdentifier.WriteString(escapeTypeName(identifier))
+
 			for _, nestedIdentifier := range t.NestedIdentifiers {
-				identifier += nestedIdentifier.Identifier
+				fullIdentifier.WriteByte(typeNameSeparator)
+				fullIdentifier.WriteString(escapeTypeName(nestedIdentifier.Identifier))
 			}
+
+			identifier = fullIdentifier.String()
 		}
 
 		return typeVarIdent(identifier)
@@ -995,12 +1002,23 @@ func (*generator) VisitImportDeclaration(_ *ast.ImportDeclaration) struct{} {
 	panic("import declarations are not supported")
 }
 
+const typeNameSeparator = '_'
+
 func (g *generator) newFullTypeName(typeName string) string {
 	if len(g.typeStack) == 0 {
 		return typeName
 	}
 	parentFullTypeName := g.typeStack[len(g.typeStack)-1].fullTypeName
-	return parentFullTypeName + typeName
+	return fmt.Sprintf(
+		"%s%c%s",
+		escapeTypeName(parentFullTypeName),
+		typeNameSeparator,
+		escapeTypeName(typeName),
+	)
+}
+
+func escapeTypeName(typeName string) string {
+	return strings.ReplaceAll(typeName, string(typeNameSeparator), "__")
 }
 
 func (g *generator) currentTypeID() string {
@@ -1062,6 +1080,11 @@ func (g *generator) generateTypeInit(program *ast.Program) {
 		return
 	}
 
+	for _, stmt := range stmts {
+		stmt.Decorations().Before = dst.NewLine
+		stmt.Decorations().After = dst.NewLine
+	}
+
 	initDecl := &dst.FuncDecl{
 		Name: dst.NewIdent("init"),
 		Type: &dst.FuncType{},
@@ -1075,7 +1098,7 @@ func (g *generator) generateTypeInit(program *ast.Program) {
 
 func entitlementMapInitStatements(declaration *ast.EntitlementMappingDeclaration) []dst.Stmt {
 	const mapName = "BuiltinEntitlementMappings"
-	varName := entitlementMappingVarName(declaration.Identifier.Identifier)
+	varName := typeVarName(declaration.Identifier.Identifier)
 
 	mapUpdateStmt := &dst.AssignStmt{
 		Lhs: []dst.Expr{
@@ -1110,7 +1133,7 @@ func entitlementMapInitStatements(declaration *ast.EntitlementMappingDeclaration
 
 func entitlementInitStatements(declaration *ast.EntitlementDeclaration) []dst.Stmt {
 	const mapName = "BuiltinEntitlements"
-	varName := entitlementVarName(declaration.Identifier.Identifier)
+	varName := typeVarName(declaration.Identifier.Identifier)
 
 	mapUpdateStmt := &dst.AssignStmt{
 		Lhs: []dst.Expr{
@@ -1222,14 +1245,6 @@ func compositeKindExpr(compositeKind common.CompositeKind) *dst.Ident {
 
 func typeVarName(typeName string) string {
 	return fmt.Sprintf("%sType", typeName)
-}
-
-func entitlementVarName(typeName string) string {
-	return fmt.Sprintf("%sEntitlement", typeName)
-}
-
-func entitlementMappingVarName(typeName string) string {
-	return fmt.Sprintf("%sEntitlementMapping", typeName)
 }
 
 func typeVarIdent(typeName string) *dst.Ident {
@@ -1432,10 +1447,62 @@ func simpleType() *dst.StarExpr {
 	return &dst.StarExpr{X: dst.NewIdent("SimpleType")}
 }
 
-func accessIdent(access ast.Access) *dst.Ident {
-	return &dst.Ident{
-		Name: access.String(),
-		Path: "github.com/onflow/cadence/runtime/ast",
+func accessExpr(access ast.Access) dst.Expr {
+	switch access := access.(type) {
+	case ast.PrimitiveAccess:
+		return &dst.CallExpr{
+			Fun: dst.NewIdent("PrimitiveAccess"),
+			Args: []dst.Expr{
+				&dst.Ident{
+					Name: access.String(),
+					Path: "github.com/onflow/cadence/runtime/ast",
+				},
+			},
+		}
+
+	case ast.EntitlementAccess:
+		entitlements := access.EntitlementSet.Entitlements()
+
+		entitlementExprs := make([]dst.Expr, 0, len(entitlements))
+
+		for _, nominalType := range entitlements {
+			entitlementExpr := typeExpr(nominalType, nil)
+			entitlementExprs = append(entitlementExprs, entitlementExpr)
+		}
+
+		var setKind dst.Expr
+
+		switch access.EntitlementSet.Separator() {
+		case ast.Conjunction:
+			setKind = dst.NewIdent("Conjunction")
+		case ast.Disjunction:
+			setKind = dst.NewIdent("Disjunction")
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		args := []dst.Expr{
+			&dst.CompositeLit{
+				Type: &dst.ArrayType{
+					Elt: dst.NewIdent("Type"),
+				},
+				Elts: entitlementExprs,
+			},
+			setKind,
+		}
+
+		for _, arg := range args {
+			arg.Decorations().Before = dst.NewLine
+			arg.Decorations().After = dst.NewLine
+		}
+
+		return &dst.CallExpr{
+			Fun:  dst.NewIdent("newEntitlementAccess"),
+			Args: args,
+		}
+
+	default:
+		panic(fmt.Errorf("unsupported access: %#+v\n", access))
 	}
 }
 
@@ -1468,7 +1535,7 @@ func newDeclarationMember(
 	if fieldDeclaration, ok := declaration.(*ast.FieldDeclaration); ok {
 		args := []dst.Expr{
 			dst.NewIdent(containerTypeVariableIdentifier),
-			accessIdent(access),
+			accessExpr(access),
 			variableKindIdent(fieldDeclaration.VariableKind),
 			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(fieldTypeVarName(fullTypeName, declarationName)),
@@ -1493,7 +1560,7 @@ func newDeclarationMember(
 	if declarationKind == common.DeclarationKindFunction {
 		args := []dst.Expr{
 			dst.NewIdent(containerTypeVariableIdentifier),
-			accessIdent(access),
+			accessExpr(access),
 			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(functionTypeVarName(fullTypeName, declarationName)),
 			dst.NewIdent(functionDocStringVarName(fullTypeName, declarationName)),
