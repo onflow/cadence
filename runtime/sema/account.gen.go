@@ -1,4 +1,4 @@
-// Code generated from authaccount.cdc. DO NOT EDIT.
+// Code generated from account.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
