@@ -1631,7 +1631,12 @@ func TestTestExpect(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		assertionErr := &AssertionError{}
+		assert.ErrorAs(t, err, assertionErr)
+		assert.Equal(t, "given value is: \"this string\"", assertionErr.Message)
+		assert.Equal(t, "test", assertionErr.LocationRange.Location.String())
+		assert.Equal(t, 5, assertionErr.LocationRange.StartPosition().Line)
 	})
 
 	t.Run("different types", func(t *testing.T) {

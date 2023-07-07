@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -192,9 +193,12 @@ var BasicAccesses = []PrimitiveAccess{
 	AccessAll,
 }
 
-var AllAccesses = append(BasicAccesses[:],
-	AccessContract,
-	AccessAccount,
+var AllAccesses = common.Concat(
+	BasicAccesses,
+	[]PrimitiveAccess{
+		AccessContract,
+		AccessAccount,
+	},
 )
 
 func (a PrimitiveAccess) Keyword() string {
