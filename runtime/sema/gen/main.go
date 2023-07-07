@@ -588,9 +588,20 @@ func (g *generator) VisitEntitlementDeclaration(decl *ast.EntitlementDeclaration
 	return
 }
 
-func (*generator) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) struct{} {
-	// TODO
-	panic("entitlement declarations are not supported")
+func (g *generator) VisitEntitlementMappingDeclaration(decl *ast.EntitlementMappingDeclaration) (_ struct{}) {
+
+	entitlementMappingName := decl.Identifier.Identifier
+	typeVarName := entitlementMappingVarName(entitlementMappingName)
+	typeVarDecl := entitlementMapTypeLiteral(entitlementMappingName)
+
+	g.addDecls(
+		goVarDecl(
+			typeVarName,
+			typeVarDecl,
+		),
+	)
+
+	return
 }
 
 func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{}) {
@@ -1018,55 +1029,37 @@ func (g *generator) currentMemberID(memberName string) string {
 
 func (g *generator) generateTypeInit(program *ast.Program) {
 
-	// Currently this only generate registering of entitlements.
+	// Currently this only generate registering of entitlements and entitlement mappings.
 	// It is possible to extend this to register other types as well.
 	// So they are not needed to be manually added to the base activation.
+	//
+	// Generates the following:
+	//
+	//   func init() {
+	//       BuiltinEntitlements[FooEntitlement.Identifier] = FooEntitlement
+	//       addToBaseActivation(FooEntitlement)
+	//
+	//       ...
+	//
+	//       BuiltinEntitlements[BarEntitlementMapping.Identifier] = BarEntitlementMapping
+	//       addToBaseActivation(BarEntitlementMapping)
+	//
+	//       ...
+	//   }
+	//
 
-	/* Generates the following:
+	var stmts []dst.Stmt
 
-	   func init() {
-	       BuiltinEntitlements[Foo.Identifier] = Foo
-	       addToBaseActivation(Foo)
-	       ...
-	   }
-	*/
-
-	if len(program.EntitlementDeclarations()) == 0 {
-		return
+	for _, declaration := range program.EntitlementMappingDeclarations() {
+		stmts = append(stmts, entitlementMapInitStatements(declaration)...)
 	}
 
-	stmts := make([]dst.Stmt, 0)
-
 	for _, declaration := range program.EntitlementDeclarations() {
-		const entitlementsName = "BuiltinEntitlements"
-		varName := entitlementVarName(declaration.Identifier.Identifier)
+		stmts = append(stmts, entitlementInitStatements(declaration)...)
+	}
 
-		mapUpdateStmt := &dst.AssignStmt{
-			Lhs: []dst.Expr{
-				&dst.IndexExpr{
-					X: dst.NewIdent(entitlementsName),
-					Index: &dst.SelectorExpr{
-						X:   dst.NewIdent(varName),
-						Sel: dst.NewIdent("Identifier"),
-					},
-				},
-			},
-			Tok: token.ASSIGN,
-			Rhs: []dst.Expr{
-				dst.NewIdent(varName),
-			},
-		}
-
-		typeRegisterStmt := &dst.ExprStmt{
-			X: &dst.CallExpr{
-				Fun: dst.NewIdent("addToBaseActivation"),
-				Args: []dst.Expr{
-					dst.NewIdent(varName),
-				},
-			},
-		}
-
-		stmts = append(stmts, mapUpdateStmt, typeRegisterStmt)
+	if len(stmts) == 0 {
+		return
 	}
 
 	initDecl := &dst.FuncDecl{
@@ -1078,6 +1071,76 @@ func (g *generator) generateTypeInit(program *ast.Program) {
 	}
 
 	g.addDecls(initDecl)
+}
+
+func entitlementMapInitStatements(declaration *ast.EntitlementMappingDeclaration) []dst.Stmt {
+	const mapName = "BuiltinEntitlementMappings"
+	varName := entitlementMappingVarName(declaration.Identifier.Identifier)
+
+	mapUpdateStmt := &dst.AssignStmt{
+		Lhs: []dst.Expr{
+			&dst.IndexExpr{
+				X: dst.NewIdent(mapName),
+				Index: &dst.SelectorExpr{
+					X:   dst.NewIdent(varName),
+					Sel: dst.NewIdent("Identifier"),
+				},
+			},
+		},
+		Tok: token.ASSIGN,
+		Rhs: []dst.Expr{
+			dst.NewIdent(varName),
+		},
+	}
+
+	typeRegisterStmt := &dst.ExprStmt{
+		X: &dst.CallExpr{
+			Fun: dst.NewIdent("addToBaseActivation"),
+			Args: []dst.Expr{
+				dst.NewIdent(varName),
+			},
+		},
+	}
+
+	return []dst.Stmt{
+		mapUpdateStmt,
+		typeRegisterStmt,
+	}
+}
+
+func entitlementInitStatements(declaration *ast.EntitlementDeclaration) []dst.Stmt {
+	const mapName = "BuiltinEntitlements"
+	varName := entitlementVarName(declaration.Identifier.Identifier)
+
+	mapUpdateStmt := &dst.AssignStmt{
+		Lhs: []dst.Expr{
+			&dst.IndexExpr{
+				X: dst.NewIdent(mapName),
+				Index: &dst.SelectorExpr{
+					X:   dst.NewIdent(varName),
+					Sel: dst.NewIdent("Identifier"),
+				},
+			},
+		},
+		Tok: token.ASSIGN,
+		Rhs: []dst.Expr{
+			dst.NewIdent(varName),
+		},
+	}
+
+	typeRegisterStmt := &dst.ExprStmt{
+		X: &dst.CallExpr{
+			Fun: dst.NewIdent("addToBaseActivation"),
+			Args: []dst.Expr{
+				dst.NewIdent(varName),
+			},
+		},
+	}
+
+	return []dst.Stmt{
+		mapUpdateStmt,
+		typeRegisterStmt,
+	}
 }
 
 func goField(name string, ty dst.Expr) *dst.Field {
@@ -1163,6 +1226,10 @@ func typeVarName(typeName string) string {
 
 func entitlementVarName(typeName string) string {
 	return fmt.Sprintf("%sEntitlement", typeName)
+}
+
+func entitlementMappingVarName(typeName string) string {
+	return fmt.Sprintf("%sEntitlementMapping", typeName)
 }
 
 func typeVarIdent(typeName string) *dst.Ident {
@@ -1595,6 +1662,24 @@ func entitlementTypeLiteral(name string) dst.Expr {
 	}
 }
 
+func entitlementMapTypeLiteral(name string) dst.Expr {
+	// &sema.EntitlementMapType{
+	//	Identifier: "Foo",
+	//}
+
+	elements := []dst.Expr{
+		goKeyValue("Identifier", goStringLit(name)),
+	}
+
+	return &dst.UnaryExpr{
+		Op: token.AND,
+		X: &dst.CompositeLit{
+			Type: dst.NewIdent("EntitlementMapType"),
+			Elts: elements,
+		},
+	}
+}
+
 func parseCadenceFile(path string) *ast.Program {
 	program, code, err := parser.ParseProgramFromFile(nil, path, parserConfig)
 	if err != nil {
@@ -1609,7 +1694,7 @@ func parseCadenceFile(path string) *ast.Program {
 	return program
 }
 
-func gen(inPath string, outFile *os.File, registerTypes bool) {
+func gen(inPath string, outFile *os.File) {
 	program := parseCadenceFile(inPath)
 
 	var gen generator
@@ -1618,9 +1703,7 @@ func gen(inPath string, outFile *os.File, registerTypes bool) {
 		_ = ast.AcceptDeclaration[struct{}](declaration, &gen)
 	}
 
-	if registerTypes {
-		gen.generateTypeInit(program)
-	}
+	gen.generateTypeInit(program)
 
 	writeGoFile(inPath, outFile, gen.decls)
 }
@@ -1661,8 +1744,5 @@ func main() {
 	}
 	defer outFile.Close()
 
-	// Register generated test types in base activation.
-	const registerTypes = true
-
-	gen(inPath, outFile, registerTypes)
+	gen(inPath, outFile)
 }

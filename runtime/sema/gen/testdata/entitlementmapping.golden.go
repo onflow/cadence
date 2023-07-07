@@ -1,4 +1,4 @@
-// Code generated from testdata/entitlement.cdc. DO NOT EDIT.
+// Code generated from testdata/entitlementmapping.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -19,11 +19,11 @@
 
 package sema
 
-var FooEntitlement = &EntitlementType{
+var FooEntitlementMapping = &EntitlementMapType{
 	Identifier: "Foo",
 }
 
 func init() {
-	BuiltinEntitlements[FooEntitlement.Identifier] = FooEntitlement
-	addToBaseActivation(FooEntitlement)
+	BuiltinEntitlementMappings[FooEntitlementMapping.Identifier] = FooEntitlementMapping
+	addToBaseActivation(FooEntitlementMapping)
 }
