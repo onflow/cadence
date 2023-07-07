@@ -3444,8 +3444,7 @@ func init() {
 		CharacterType,
 		StringType,
 		TheAddressType,
-		AuthAccountType,
-		PublicAccountType,
+		AccountType,
 		PathType,
 		StoragePathType,
 		CapabilityPathType,
@@ -7856,8 +7855,7 @@ func init() {
 		PublicKeyType,
 		HashAlgorithmType,
 		SignatureAlgorithmType,
-		AuthAccountType,
-		PublicAccountType,
+		AccountType,
 	}
 
 	for len(compositeTypes) > 0 {

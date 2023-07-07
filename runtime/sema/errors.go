@@ -3165,8 +3165,8 @@ func (*InvalidTransactionPrepareParameterTypeError) IsUserError() {}
 
 func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 	return fmt.Sprintf(
-		"prepare parameter must be of type `%s`, not `%s`",
-		AuthAccountType,
+		"prepare parameter must be subtype of `%s`, not `%s`",
+		AccountReferenceType,
 		e.Type.QualifiedString(),
 	)
 }

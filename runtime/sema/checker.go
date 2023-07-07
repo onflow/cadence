@@ -2097,9 +2097,30 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 }
 
 const ResourceOwnerFieldName = "owner"
+
+var ResourceOwnerFieldType = &OptionalType{
+	Type: AccountReferenceType,
+}
+
 const ResourceUUIDFieldName = "uuid"
 
+var ResourceUUIDFieldType = UInt64Type
+
 const ContractAccountFieldName = "account"
+
+var ContractAccountFieldType = &ReferenceType{
+	Type: AccountType,
+	Authorization: NewEntitlementSetAccess(
+		[]*EntitlementType{
+			StorageType,
+			ContractsType,
+			KeysType,
+			InboxType,
+			CapabilitiesType,
+		},
+		Conjunction,
+	),
+}
 
 const contractAccountFieldDocString = `
 The account where the contract is deployed in
@@ -2165,12 +2186,12 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		case common.CompositeKindContract:
 
 			// All contracts have a predeclared member
-			// `access(self) let account: AuthAccount`,
+			// `access(self) let account: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account`,
 			// which is ignored in serialization
 
 			addPredeclaredMember(
 				ContractAccountFieldName,
-				AuthAccountType,
+				ContractAccountFieldType,
 				common.DeclarationKindField,
 				ast.AccessSelf,
 				true,
@@ -2181,14 +2202,12 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			// All resources have two predeclared fields:
 
-			// `access(all) let owner: PublicAccount?`,
+			// `access(all) let owner: &Account?`,
 			// ignored in serialization
 
 			addPredeclaredMember(
 				ResourceOwnerFieldName,
-				&OptionalType{
-					Type: PublicAccountType,
-				},
+				ResourceOwnerFieldType,
 				common.DeclarationKindField,
 				ast.AccessAll,
 				true,
@@ -2200,7 +2219,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			addPredeclaredMember(
 				ResourceUUIDFieldName,
-				UInt64Type,
+				ResourceUUIDFieldType,
 				common.DeclarationKindField,
 				ast.AccessAll,
 				false,
