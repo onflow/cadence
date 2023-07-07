@@ -18,7 +18,7 @@
 
 package sema
 
-//go:generate go run ./gen authaccount.cdc authaccount.gen.go
+//go:generate go run ./gen account.cdc account.gen.go
 
 var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
 

@@ -1,166 +1,163 @@
-
-access(all) struct AuthAccount {
+access(all)
+struct Account {
 
     /// The address of the account.
-    access(all) let address: Address
+    access(all)
+    let address: Address
 
     /// The FLOW balance of the default vault of this account.
-    access(all) let balance: UFix64
+    access(all)
+    let balance: UFix64
 
     /// The FLOW balance of the default vault of this account that is available to be moved.
-    access(all) let availableBalance: UFix64
+    access(all)
+    let availableBalance: UFix64
 
-    /// The current amount of storage used by the account in bytes.
-    access(all) let storageUsed: UInt64
-
-    /// The storage capacity of the account in bytes.
-    access(all) let storageCapacity: UInt64
+    /// The storage of the account.
+    access(AccountMapping)
+    let storage: Account.Storage
 
     /// The contracts deployed to the account.
-    access(all) let contracts: AuthAccount.Contracts
+    access(AccountMapping)
+    let contracts: Account.Contracts
 
     /// The keys assigned to the account.
-    access(all) let keys: AuthAccount.Keys
+    access(AccountMapping)
+    let keys: Account.Keys
 
     /// The inbox allows bootstrapping (sending and receiving) capabilities.
-    access(all) let inbox: AuthAccount.Inbox
+    access(AccountMapping)
+    let inbox: Account.Inbox
 
     /// The capabilities of the account.
-    access(all) let capabilities: AuthAccount.Capabilities
+    access(AccountMapping)
+    let capabilities: Account.Capabilities
 
-    /// All public paths of this account.
-    access(all) let publicPaths: [PublicPath]
+    access(all)
+    struct Storage {
+        /// The current amount of storage used by the account in bytes.
+        access(all)
+        let used: UInt64
 
-    /// All private paths of this account.
-    access(all) let privatePaths: [PrivatePath]
+        /// The storage capacity of the account in bytes.
+        access(all)
+        let capacity: UInt64
 
-    /// All storage paths of this account.
-    access(all) let storagePaths: [StoragePath]
+        /// All public paths of this account.
+        access(all)
+        let publicPaths: [PublicPath]
 
-    /// Saves the given object into the account's storage at the given path.
-    ///
-    /// Resources are moved into storage, and structures are copied.
-    ///
-    /// If there is already an object stored under the given path, the program aborts.
-    ///
-    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-    access(all) fun save<T: Storable>(_ value: T, to: StoragePath)
+        /// All storage paths of this account.
+        access(all)
+        let storagePaths: [StoragePath]
 
-    /// Reads the type of an object from the account's storage which is stored under the given path,
-    /// or nil if no object is stored under the given path.
-    ///
-    /// If there is an object stored, the type of the object is returned without modifying the stored object.
-    ///
-    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-    access(all) view fun type(at path: StoragePath): Type?
+        /// Saves the given object into the account's storage at the given path.
+        ///
+        /// Resources are moved into storage, and structures are copied.
+        ///
+        /// If there is already an object stored under the given path, the program aborts.
+        ///
+        /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+        access(SaveValue)
+        fun save<T: Storable>(_ value: T, to: StoragePath)
 
-    /// Loads an object from the account's storage which is stored under the given path,
-    /// or nil if no object is stored under the given path.
-    ///
-    /// If there is an object stored,
-    /// the stored resource or structure is moved out of storage and returned as an optional.
-    ///
-    /// When the function returns, the storage no longer contains an object under the given path.
-    ///
-    /// The given type must be a supertype of the type of the loaded object.
-    /// If it is not, the function panics.
-    ///
-    /// The given type must not necessarily be exactly the same as the type of the loaded object.
-    ///
-    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-    access(all) fun load<T: Storable>(from: StoragePath): T?
+        /// Reads the type of an object from the account's storage which is stored under the given path,
+        /// or nil if no object is stored under the given path.
+        ///
+        /// If there is an object stored, the type of the object is returned without modifying the stored object.
+        ///
+        /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+        access(all)
+        fun type(at path: StoragePath): Type?
 
-    /// Returns a copy of a structure stored in account storage under the given path,
-    /// without removing it from storage,
-    /// or nil if no object is stored under the given path.
-    ///
-    /// If there is a structure stored, it is copied.
-    /// The structure stays stored in storage after the function returns.
-    ///
-    /// The given type must be a supertype of the type of the copied structure.
-    /// If it is not, the function panics.
-    ///
-    /// The given type must not necessarily be exactly the same as the type of the copied structure.
-    ///
-    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-    access(all) fun copy<T: AnyStruct>(from: StoragePath): T?
+        /// Loads an object from the account's storage which is stored under the given path,
+        /// or nil if no object is stored under the given path.
+        ///
+        /// If there is an object stored,
+        /// the stored resource or structure is moved out of storage and returned as an optional.
+        ///
+        /// When the function returns, the storage no longer contains an object under the given path.
+        ///
+        /// The given type must be a supertype of the type of the loaded object.
+        /// If it is not, the function panics.
+        ///
+        /// The given type must not necessarily be exactly the same as the type of the loaded object.
+        ///
+        /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+        access(LoadValue)
+        fun load<T: Storable>(from: StoragePath): T?
 
-    /// Returns a reference to an object in storage without removing it from storage.
-    ///
-    /// If no object is stored under the given path, the function returns nil.
-    /// If there is an object stored, a reference is returned as an optional,
-    /// provided it can be borrowed using the given type.
-    /// If the stored object cannot be borrowed using the given type, the function panics.
-    ///
-    /// The given type must not necessarily be exactly the same as the type of the borrowed object.
-    ///
-    /// The path must be a storage path, i.e., only the domain `storage` is allowed
-    access(all) fun borrow<T: &Any>(from: StoragePath): T?
+        /// Returns a copy of a structure stored in account storage under the given path,
+        /// without removing it from storage,
+        /// or nil if no object is stored under the given path.
+        ///
+        /// If there is a structure stored, it is copied.
+        /// The structure stays stored in storage after the function returns.
+        ///
+        /// The given type must be a supertype of the type of the copied structure.
+        /// If it is not, the function panics.
+        ///
+        /// The given type must not necessarily be exactly the same as the type of the copied structure.
+        ///
+        /// The path must be a storage path, i.e., only the domain `storage` is allowed.
+        access(all)
+        fun copy<T: AnyStruct>(from: StoragePath): T?
 
-    /// Returns true if the object in account storage under the given path satisfies the given type,
-    /// i.e. could be borrowed using the given type.
-    ///
-    /// The given type must not necessarily be exactly the same as the type of the borrowed object.
-    ///
-    /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-    access(all) fun check<T: Any>(from: StoragePath): Bool
+        /// Returns a reference to an object in storage without removing it from storage.
+        ///
+        /// If no object is stored under the given path, the function returns nil.
+        /// If there is an object stored, a reference is returned as an optional,
+        /// provided it can be borrowed using the given type.
+        /// If the stored object cannot be borrowed using the given type, the function panics.
+        ///
+        /// The given type must not necessarily be exactly the same as the type of the borrowed object.
+        ///
+        /// The path must be a storage path, i.e., only the domain `storage` is allowed
+        access(BorrowValue)
+        fun borrow<T: &Any>(from: StoragePath): T?
 
-    /// Iterate over all the public paths of an account,
-    /// passing each path and type in turn to the provided callback function.
-    ///
-    /// The callback function takes two arguments:
-    ///   1. The path of the stored object
-    ///   2. The runtime type of that object
-    ///
-    /// Iteration is stopped early if the callback function returns `false`.
-    ///
-    /// The order of iteration is undefined.
-    ///
-    /// If an object is stored under a new public path,
-    /// or an existing object is removed from a public path,
-    /// then the callback must stop iteration by returning false.
-    /// Otherwise, iteration aborts.
-    ///
-    access(all) fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
+        /// Iterate over all the public paths of an account,
+        /// passing each path and type in turn to the provided callback function.
+        ///
+        /// The callback function takes two arguments:
+        ///   1. The path of the stored object
+        ///   2. The runtime type of that object
+        ///
+        /// Iteration is stopped early if the callback function returns `false`.
+        ///
+        /// The order of iteration is undefined.
+        ///
+        /// If an object is stored under a new public path,
+        /// or an existing object is removed from a public path,
+        /// then the callback must stop iteration by returning false.
+        /// Otherwise, iteration aborts.
+        ///
+        access(all)
+        fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
 
-    /// Iterate over all the private paths of an account,
-    /// passing each path and type in turn to the provided callback function.
-    ///
-    /// The callback function takes two arguments:
-    ///   1. The path of the stored object
-    ///   2. The runtime type of that object
-    ///
-    /// Iteration is stopped early if the callback function returns `false`.
-    ///
+        /// Iterate over all the stored paths of an account,
+        /// passing each path and type in turn to the provided callback function.
+        ///
+        /// The callback function takes two arguments:
+        ///   1. The path of the stored object
+        ///   2. The runtime type of that object
+        ///
+        /// Iteration is stopped early if the callback function returns `false`.
+        ///
+        /// If an object is stored under a new storage path,
+        /// or an existing object is removed from a storage path,
+        /// then the callback must stop iteration by returning false.
+        /// Otherwise, iteration aborts.
+        access(all)
+        fun forEachStored(_ function: fun (StoragePath, Type): Bool)
+    }
 
-    /// The order of iteration is undefined.
-    ///
-    /// If an object is stored under a new private path,
-    /// or an existing object is removed from a private path,
-    /// then the callback must stop iteration by returning false.
-    /// Otherwise, iteration aborts.
-    access(all) fun forEachPrivate(_ function: fun(PrivatePath, Type): Bool)
-
-    /// Iterate over all the stored paths of an account,
-    /// passing each path and type in turn to the provided callback function.
-    ///
-    /// The callback function takes two arguments:
-    ///   1. The path of the stored object
-    ///   2. The runtime type of that object
-    ///
-    /// Iteration is stopped early if the callback function returns `false`.
-    ///
-
-    /// If an object is stored under a new storage path,
-    /// or an existing object is removed from a storage path,
-    /// then the callback must stop iteration by returning false.
-    /// Otherwise, iteration aborts.
-    access(all) fun forEachStored(_ function: fun(StoragePath, Type): Bool)
-
-    access(all) struct Contracts {
+    access(all)
+    struct Contracts {
 
         /// The names of all contracts deployed in the account.
-        access(all) let names: [String]
+        access(all)
+        let names: [String]
 
         /// Adds the given contract to the account.
         ///
@@ -176,13 +173,12 @@ access(all) struct AuthAccount {
         /// or if the given name does not match the name of the contract/contract interface declaration in the code.
         ///
         /// Returns the deployed contract.
-        access(all) fun add(
+        access(AddContract)
+        fun add(
             name: String,
             code: [UInt8]
         ): DeployedContract
 
-        /// **Experimental**
-        ///
         /// Updates the code for the contract/contract interface in the account.
         ///
         /// The `code` parameter is the UTF-8 encoded representation of the source code.
@@ -197,33 +193,39 @@ access(all) struct AuthAccount {
         /// or if the given name does not match the name of the contract/contract interface declaration in the code.
         ///
         /// Returns the deployed contract for the updated contract.
-        access(all) fun update__experimental(name: String, code: [UInt8]): DeployedContract
+        access(UpdateContract)
+        fun update(name: String, code: [UInt8]): DeployedContract
 
         /// Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
         ///
         /// Returns nil if no contract/contract interface with the given name exists in the account.
-        access(all) fun get(name: String): DeployedContract?
+        access(all)
+        fun get(name: String): DeployedContract?
 
         /// Removes the contract/contract interface from the account which has the given name, if any.
         ///
         /// Returns the removed deployed contract, if any.
         ///
         /// Returns nil if no contract/contract interface with the given name exists in the account.
-        access(all) fun remove(name: String): DeployedContract?
+        access(RemoveContract)
+        fun remove(name: String): DeployedContract?
 
         /// Returns a reference of the given type to the contract with the given name in the account, if any.
         ///
         /// Returns nil if no contract with the given name exists in the account,
         /// or if the contract does not conform to the given type.
-        access(all) fun borrow<T: &Any>(name: String): T?
+        access(all)
+        fun borrow<T: &Any>(name: String): T?
     }
 
-    access(all) struct Keys {
+    access(all)
+    struct Keys {
 
         /// Adds a new key with the given hashing algorithm and a weight.
         ///
         /// Returns the added key.
-        access(all) fun add(
+        access(AddKey)
+        fun add(
             publicKey: PublicKey,
             hashAlgorithm: HashAlgorithm,
             weight: UFix64
@@ -232,12 +234,14 @@ access(all) struct AuthAccount {
         /// Returns the key at the given index, if it exists, or nil otherwise.
         ///
         /// Revoked keys are always returned, but they have `isRevoked` field set to true.
-        access(all) fun get(keyIndex: Int): AccountKey?
+        access(all)
+        fun get(keyIndex: Int): AccountKey?
 
         /// Marks the key at the given index revoked, but does not delete it.
         ///
         /// Returns the revoked key if it exists, or nil otherwise.
-        access(all) fun revoke(keyIndex: Int): AccountKey?
+        access(RevokeKey)
+        fun revoke(keyIndex: Int): AccountKey?
 
         /// Iterate over all unrevoked keys in this account,
         /// passing each key in turn to the provided function.
@@ -245,24 +249,29 @@ access(all) struct AuthAccount {
         /// Iteration is stopped early if the function returns `false`.
         ///
         /// The order of iteration is undefined.
-        access(all) fun forEach(_ function: fun(AccountKey): Bool)
+        access(all)
+        fun forEach(_ function: fun(AccountKey): Bool)
 
         /// The total number of unrevoked keys in this account.
-        access(all) let count: UInt64
+        access(all)
+        let count: UInt64
     }
 
-    access(all) struct Inbox {
+    access(all)
+    struct Inbox {
 
         /// Publishes a new Capability under the given name,
         /// to be claimed by the specified recipient.
-        access(all) fun publish(_ value: Capability, name: String, recipient: Address)
+        access(PublishInboxCapability)
+        fun publish(_ value: Capability, name: String, recipient: Address)
 
         /// Unpublishes a Capability previously published by this account.
         ///
         /// Returns `nil` if no Capability is published under the given name.
         ///
         /// Errors if the Capability under that name does not match the provided type.
-        access(all) fun unpublish<T: &Any>(_ name: String): Capability<T>?
+        access(UnpublishInboxCapability)
+        fun unpublish<T: &Any>(_ name: String): Capability<T>?
 
         /// Claims a Capability previously published by the specified provider.
         ///
@@ -270,50 +279,61 @@ access(all) struct AuthAccount {
         /// or if this account is not its intended recipient.
         ///
         /// Errors if the Capability under that name does not match the provided type.
-        access(all) fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
+        access(ClaimInboxCapability)
+        fun claim<T: &Any>(_ name: String, provider: Address): Capability<T>?
     }
 
-    access(all) struct Capabilities {
+    access(all)
+    struct Capabilities {
 
         /// The storage capabilities of the account.
-        access(all) let storage: AuthAccount.StorageCapabilities
+        access(CapabilitiesMapping)
+        let storage: &Account.StorageCapabilities
 
         /// The account capabilities of the account.
-        access(all) let account: AuthAccount.AccountCapabilities
+        access(CapabilitiesMapping)
+        let account: &Account.AccountCapabilities
 
         /// Returns the capability at the given public path.
         /// Returns nil if the capability does not exist,
         /// or if the given type is not a supertype of the capability's borrow type.
-        access(all) fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+        access(all)
+        fun get<T: &Any>(_ path: PublicPath): Capability<T>?
 
         /// Borrows the capability at the given public path.
         /// Returns nil if the capability does not exist, or cannot be borrowed using the given type.
         /// The function is equivalent to `get(path)?.borrow()`.
-        access(all) fun borrow<T: &Any>(_ path: PublicPath): T?
+        access(all)
+        fun borrow<T: &Any>(_ path: PublicPath): T?
 
         /// Publish the capability at the given public path.
         ///
         /// If there is already a capability published under the given path, the program aborts.
         ///
         /// The path must be a public path, i.e., only the domain `public` is allowed.
-        access(all) fun publish(_ capability: Capability, at: PublicPath)
+        access(PublishCapability)
+        fun publish(_ capability: Capability, at: PublicPath)
 
         /// Unpublish the capability published at the given path.
         ///
         /// Returns the capability if one was published at the path.
         /// Returns nil if no capability was published at the path.
-        access(all) fun unpublish(_ path: PublicPath): Capability?
+        access(UnpublishCapability)
+        fun unpublish(_ path: PublicPath): Capability?
     }
 
-    access(all) struct StorageCapabilities {
+    access(all)
+    struct StorageCapabilities {
 
         /// Get the storage capability controller for the capability with the specified ID.
         ///
         /// Returns nil if the ID does not reference an existing storage capability.
-        access(all) fun getController(byCapabilityID: UInt64): &StorageCapabilityController?
+        access(GetStorageCapabilityController)
+        fun getController(byCapabilityID: UInt64): &StorageCapabilityController?
 
         /// Get all storage capability controllers for capabilities that target this storage path
-        access(all) fun getControllers(forPath: StoragePath): [&StorageCapabilityController]
+        access(GetStorageCapabilityController)
+        fun getControllers(forPath: StoragePath): [&StorageCapabilityController]
 
         /// Iterate over all storage capability controllers for capabilities that target this storage path,
         /// passing a reference to each controller to the provided callback function.
@@ -325,20 +345,28 @@ access(all) struct AuthAccount {
         /// or a storage capability controller is retargeted from or to the path,
         /// then the callback must stop iteration by returning false.
         /// Otherwise, iteration aborts.
-        access(all) fun forEachController(forPath: StoragePath, _ function: fun(&StorageCapabilityController): Bool)
+        access(GetStorageCapabilityController)
+        fun forEachController(
+            forPath: StoragePath,
+            _ function: fun(&StorageCapabilityController): Bool
+        )
 
         /// Issue/create a new storage capability.
-        access(all) fun issue<T: &Any>(_ path: StoragePath): Capability<T>
+        access(IssueStorageCapabilityController)
+        fun issue<T: &Any>(_ path: StoragePath): Capability<T>
     }
 
-    access(all) struct AccountCapabilities {
+    access(all)
+    struct AccountCapabilities {
         /// Get capability controller for capability with the specified ID.
         ///
         /// Returns nil if the ID does not reference an existing account capability.
-        access(all) fun getController(byCapabilityID: UInt64): &AccountCapabilityController?
+        access(GetAccountCapabilityController)
+        fun getController(byCapabilityID: UInt64): &AccountCapabilityController?
 
         /// Get all capability controllers for all account capabilities.
-        access(all) fun getControllers(): [&AccountCapabilityController]
+        access(GetAccountCapabilityController)
+        fun getControllers(): [&AccountCapabilityController]
 
         /// Iterate over all account capability controllers for all account capabilities,
         /// passing a reference to each controller to the provided callback function.
@@ -349,9 +377,114 @@ access(all) struct AuthAccount {
         /// or an existing account capability controller for the account is deleted,
         /// then the callback must stop iteration by returning false.
         /// Otherwise, iteration aborts.
-        access(all) fun forEachController(_ function: fun(&AccountCapabilityController): Bool)
+        access(GetAccountCapabilityController)
+        fun forEachController(_ function: fun(&AccountCapabilityController): Bool)
 
         /// Issue/create a new account capability.
-        access(all) fun issue<T: &AuthAccount{}>(): Capability<T>
+        access(IssueAccountCapabilityController)
+        fun issue<T: &Account{}>(): Capability<T>
     }
+}
+
+/* Storage entitlements */
+
+entitlement Storage
+
+entitlement SaveValue
+entitlement LoadValue
+entitlement BorrowValue
+
+/* Contract entitlements */
+
+entitlement Contracts
+
+entitlement AddContract
+entitlement UpdateContract
+entitlement RemoveContract
+
+/* Key entitlements */
+
+entitlement Keys
+
+entitlement AddKey
+entitlement RevokeKey
+
+/* Inbox entitlements */
+
+entitlement Inbox
+
+entitlement PublishInbox
+entitlement UnpublishInbox
+entitlement ClaimInbox
+
+/* Capability entitlements */
+
+entitlement Capabilities
+
+entitlement StorageCapabilities
+entitlement AccountCapabilities
+
+/* Entitlement mappings */
+
+entitlement mapping AccountMapping {
+    // TODO: include Identity
+
+    SaveValue -> SaveValue
+    LoadValue -> LoadValue
+    BorrowValue -> BorrowValue
+
+    AddContract -> AddContract
+    UpdateContract -> UpdateContract
+    RemoveContract -> RemoveContract
+
+    AddKey -> AddKey
+    RevokeKey -> RevokeKey
+
+    PublishInbox -> PublishInbox
+    UnpublishInbox -> UnpublishInbox
+
+    StorageCapabilities -> StorageCapabilities
+    AccountCapabilities -> AccountCapabilities
+
+    GetStorageCapabilityController -> GetStorageCapabilityController
+    IssueStorageCapabilityController -> IssueStorageCapabilityController
+
+    GetAccountCapabilityController -> GetAccountCapabilityController
+    IssueAccountCapabilityController -> IssueAccountCapabilityController
+
+    // ---
+
+    Storage -> SaveValue
+    Storage -> LoadValue
+    Storage -> BorrowValue
+
+    Contracts -> AddContract
+    Contracts -> UpdateContract
+    Contracts -> RemoveContract
+
+    Keys -> AddKey
+    Keys -> RevokeKey
+
+    Inbox -> PublishInbox
+    Inbox -> UnpublishInbox
+    Inbox -> ClaimInbox
+
+    Capabilities -> StorageCapabilities
+    Capabilities -> AccountCapabilities
+}
+
+entitlement mapping CapabilitiesMapping {
+    // TODO: include Identity
+
+    GetStorageCapabilityController -> GetStorageCapabilityController
+    IssueStorageCapabilityController -> IssueStorageCapabilityController
+
+    GetAccountCapabilityController -> GetAccountCapabilityController
+    IssueAccountCapabilityController -> IssueAccountCapabilityController
+
+    StorageCapabilities -> GetStorageCapabilityController
+    StorageCapabilities -> IssueStorageCapabilityController
+
+    AccountCapabilities -> GetAccountCapabilityController
+    AccountCapabilities -> IssueAccountCapabilityController
 }
