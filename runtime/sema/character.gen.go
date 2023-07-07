@@ -54,7 +54,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				CharacterTypeToStringFunctionName,
 				CharacterTypeToStringFunctionType,
 				CharacterTypeToStringFunctionDocString,

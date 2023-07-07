@@ -4577,7 +4577,7 @@ func NewPublicFunctionMember(
 
 func NewUnmeteredFunctionMember(
 	containerType Type,
-	access ast.PrimitiveAccess,
+	access Access,
 	identifier string,
 	functionType *FunctionType,
 	docString string,
@@ -4585,7 +4585,7 @@ func NewUnmeteredFunctionMember(
 	return NewFunctionMember(
 		nil,
 		containerType,
-		PrimitiveAccess(access),
+		access,
 		identifier,
 		functionType,
 		docString,
@@ -4652,7 +4652,7 @@ func NewPublicConstantFieldMember(
 
 func NewUnmeteredFieldMember(
 	containerType Type,
-	access ast.PrimitiveAccess,
+	access Access,
 	variableKind ast.VariableKind,
 	identifier string,
 	fieldType Type,
@@ -4661,7 +4661,7 @@ func NewUnmeteredFieldMember(
 	return NewFieldMember(
 		nil,
 		containerType,
-		PrimitiveAccess(access),
+		access,
 		variableKind,
 		identifier,
 		fieldType,

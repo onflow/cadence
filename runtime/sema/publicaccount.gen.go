@@ -224,7 +224,7 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFieldMember(
 			PublicAccountContractsType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountContractsTypeNamesFieldName,
 			PublicAccountContractsTypeNamesFieldType,
@@ -232,14 +232,14 @@ func init() {
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountContractsType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			PublicAccountContractsTypeGetFunctionName,
 			PublicAccountContractsTypeGetFunctionType,
 			PublicAccountContractsTypeGetFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountContractsType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			PublicAccountContractsTypeBorrowFunctionName,
 			PublicAccountContractsTypeBorrowFunctionType,
 			PublicAccountContractsTypeBorrowFunctionDocString,
@@ -329,21 +329,21 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFunctionMember(
 			PublicAccountKeysType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			PublicAccountKeysTypeGetFunctionName,
 			PublicAccountKeysTypeGetFunctionType,
 			PublicAccountKeysTypeGetFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountKeysType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			PublicAccountKeysTypeForEachFunctionName,
 			PublicAccountKeysTypeForEachFunctionType,
 			PublicAccountKeysTypeForEachFunctionDocString,
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountKeysType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountKeysTypeCountFieldName,
 			PublicAccountKeysTypeCountFieldType,
@@ -446,14 +446,14 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFunctionMember(
 			PublicAccountCapabilitiesType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			PublicAccountCapabilitiesTypeGetFunctionName,
 			PublicAccountCapabilitiesTypeGetFunctionType,
 			PublicAccountCapabilitiesTypeGetFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountCapabilitiesType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			PublicAccountCapabilitiesTypeBorrowFunctionName,
 			PublicAccountCapabilitiesTypeBorrowFunctionType,
 			PublicAccountCapabilitiesTypeBorrowFunctionDocString,
@@ -484,7 +484,7 @@ func init() {
 	var members = []*Member{
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountTypeAddressFieldName,
 			PublicAccountTypeAddressFieldType,
@@ -492,7 +492,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountTypeBalanceFieldName,
 			PublicAccountTypeBalanceFieldType,
@@ -500,7 +500,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountTypeAvailableBalanceFieldName,
 			PublicAccountTypeAvailableBalanceFieldType,
@@ -508,7 +508,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountTypeStorageUsedFieldName,
 			PublicAccountTypeStorageUsedFieldType,
@@ -516,7 +516,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountTypeStorageCapacityFieldName,
 			PublicAccountTypeStorageCapacityFieldType,
@@ -524,7 +524,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountTypeContractsFieldName,
 			PublicAccountTypeContractsFieldType,
@@ -532,7 +532,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountTypeKeysFieldName,
 			PublicAccountTypeKeysFieldType,
@@ -540,7 +540,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountTypeCapabilitiesFieldName,
 			PublicAccountTypeCapabilitiesFieldType,
@@ -548,7 +548,7 @@ func init() {
 		),
 		NewUnmeteredFieldMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			PublicAccountTypePublicPathsFieldName,
 			PublicAccountTypePublicPathsFieldType,
@@ -556,7 +556,7 @@ func init() {
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountType,
-			ast.AccessAll,
+			PrimitiveAccess(ast.AccessAll),
 			PublicAccountTypeForEachPublicFunctionName,
 			PublicAccountTypeForEachPublicFunctionType,
 			PublicAccountTypeForEachPublicFunctionDocString,
