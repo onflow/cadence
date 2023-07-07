@@ -170,7 +170,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 	t.Run("deep remove", func(t *testing.T) {
 		copyOfTestMap.DeepRemove(inter)
-		err = storage.Remove(copyOfTestMap.StorageID())
+		err = storage.Remove(copyOfTestMap.SlabID())
 		require.NoError(t, err)
 
 		// deep removal should clean up everything
@@ -494,7 +494,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		require.Equal(t, entries.size(), movedDictionary.Count())
 
 		// Cleanup the slab of original dictionary.
-		err := storage.Remove(dictionary.StorageID())
+		err := storage.Remove(dictionary.SlabID())
 		require.NoError(t, err)
 
 		// Check the values
@@ -619,7 +619,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 
 	t.Run("deep removal", func(t *testing.T) {
 		copyOfTestArray.DeepRemove(inter)
-		err = storage.Remove(copyOfTestArray.StorageID())
+		err = storage.Remove(copyOfTestArray.SlabID())
 		require.NoError(t, err)
 
 		// deep removal should clean up everything
@@ -865,7 +865,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		require.Equal(t, len(elements), movedArray.Count())
 
 		// Cleanup the slab of original array.
-		err := storage.Remove(array.StorageID())
+		err := storage.Remove(array.SlabID())
 		require.NoError(t, err)
 
 		// Check the elements
@@ -964,7 +964,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 
 	t.Run("deep remove", func(t *testing.T) {
 		copyOfTestComposite.DeepRemove(inter)
-		err = storage.Remove(copyOfTestComposite.StorageID())
+		err = storage.Remove(copyOfTestComposite.SlabID())
 		require.NoError(t, err)
 
 		// deep removal should clean up everything
@@ -1020,7 +1020,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 		).(*interpreter.CompositeValue)
 
 		// Cleanup the slab of original composite.
-		err := storage.Remove(composite.StorageID())
+		err := storage.Remove(composite.SlabID())
 		require.NoError(t, err)
 
 		// Check the elements
@@ -1118,7 +1118,7 @@ func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (tota
 	require.NoError(t, err)
 
 	for id, slab := range slabs {
-		if id.Address == atree.AddressUndefined {
+		if id.HasTempAddress() {
 			continue
 		}
 

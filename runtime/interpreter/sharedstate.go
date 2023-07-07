@@ -43,8 +43,8 @@ type SharedState struct {
 	storageMutatedDuringIteration               bool
 	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool
-	containerValueIteration                     map[atree.StorageID]struct{}
-	destroyedResources                          map[atree.StorageID]struct{}
+	containerValueIteration                     map[atree.SlabID]struct{}
+	destroyedResources                          map[atree.SlabID]struct{}
 	currentEntitlementMappedValue               Authorization
 }
 
@@ -59,11 +59,11 @@ func NewSharedState(config *Config) *SharedState {
 		},
 		inStorageIteration:             false,
 		storageMutatedDuringIteration:  false,
-		referencedResourceKindedValues: map[atree.StorageID]map[*EphemeralReferenceValue]struct{}{},
+		referencedResourceKindedValues: map[atree.SlabID]map[*EphemeralReferenceValue]struct{}{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
 		CapabilityControllerIterations: map[AddressPath]int{},
-		containerValueIteration:        map[atree.StorageID]struct{}{},
-		destroyedResources:             map[atree.StorageID]struct{}{},
+		containerValueIteration:        map[atree.SlabID]struct{}{},
+		destroyedResources:             map[atree.SlabID]struct{}{},
 	}
 }
 

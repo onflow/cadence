@@ -50,10 +50,10 @@ func NewStorageMap(memoryGauge common.MemoryGauge, storage atree.SlabStorage, ad
 	}
 }
 
-func NewStorageMapWithRootID(storage atree.SlabStorage, storageID atree.StorageID) *StorageMap {
+func NewStorageMapWithRootID(storage atree.SlabStorage, slabID atree.SlabID) *StorageMap {
 	orderedMap, err := atree.NewMapWithRootID(
 		storage,
-		storageID,
+		slabID,
 		atree.NewDefaultDigesterBuilder(),
 	)
 	if err != nil {
@@ -186,8 +186,8 @@ func (s StorageMap) Iterator(gauge common.MemoryGauge) StorageMapIterator {
 	}
 }
 
-func (s StorageMap) StorageID() atree.StorageID {
-	return s.orderedMap.StorageID()
+func (s StorageMap) SlabID() atree.SlabID {
+	return s.orderedMap.SlabID()
 }
 
 func (s StorageMap) Count() uint64 {

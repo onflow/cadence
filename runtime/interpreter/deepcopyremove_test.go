@@ -92,7 +92,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	count := 0
 	for id := range storage.Slabs {
-		if id.Address != (atree.Address{}) {
+		if !id.HasTempAddress() {
 			count++
 		}
 	}

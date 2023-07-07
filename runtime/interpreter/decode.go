@@ -117,24 +117,24 @@ func decodeInt64(d StorableDecoder) (int64, error) {
 
 func DecodeStorable(
 	decoder *cbor.StreamDecoder,
-	slabStorageID atree.StorageID,
+	slabID atree.SlabID,
 	memoryGauge common.MemoryGauge,
 ) (
 	atree.Storable,
 	error,
 ) {
-	return NewStorableDecoder(decoder, slabStorageID, memoryGauge).decodeStorable()
+	return NewStorableDecoder(decoder, slabID, memoryGauge).decodeStorable()
 }
 
 func NewStorableDecoder(
 	decoder *cbor.StreamDecoder,
-	slabStorageID atree.StorageID,
+	slabID atree.SlabID,
 	memoryGauge common.MemoryGauge,
 ) StorableDecoder {
 	return StorableDecoder{
-		decoder:       decoder,
-		memoryGauge:   memoryGauge,
-		slabStorageID: slabStorageID,
+		decoder:     decoder,
+		memoryGauge: memoryGauge,
+		slabID:      slabID,
 		TypeDecoder: NewTypeDecoder(
 			decoder,
 			memoryGauge,
@@ -144,9 +144,9 @@ func NewStorableDecoder(
 
 type StorableDecoder struct {
 	TypeDecoder
-	memoryGauge   common.MemoryGauge
-	decoder       *cbor.StreamDecoder
-	slabStorageID atree.StorageID
+	memoryGauge common.MemoryGauge
+	decoder     *cbor.StreamDecoder
+	slabID      atree.SlabID
 }
 
 func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
@@ -200,8 +200,8 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 
 		switch num {
 
-		case atree.CBORTagStorageID:
-			return atree.DecodeStorageIDStorable(d.decoder)
+		case atree.CBORTagSlabID:
+			return atree.DecodeSlabIDStorable(d.decoder)
 
 		case CBORTagVoidValue:
 			err := d.decoder.Skip()

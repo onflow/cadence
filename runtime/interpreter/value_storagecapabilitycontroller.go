@@ -203,7 +203,7 @@ func (v *StorageCapabilityControllerValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.SlabID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
