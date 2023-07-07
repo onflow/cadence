@@ -135,6 +135,27 @@ type Type interface {
 	// IsComparable returns true if values of the type can be compared
 	IsComparable() bool
 
+	// ContainFieldsOrElements returns true if value of the type can have nested values (fields or elements).
+	// This notion is to indicate that a type can be used to access its nested values using
+	// either index-expression or member-expression. e.g. `foo.bar` or `foo[bar]`.
+	// This is used to determine if a field/element of this type should be returning a reference or not.
+	//
+	// Only a subset of types has this characteristic. e.g:
+	//  - Composites
+	//  - Interfaces
+	//  - Arrays (Variable/Constant sized)
+	//  - Dictionaries
+	//  - Restricted types
+	//  - Optionals of the above.
+	//  - Then there are also built-in simple types, like StorageCapabilityControllerType, BlockType, etc.
+	//    where the type is implemented as a simple type, but they also have fields.
+	//
+	// This is different from the existing  `ValueIndexableType` in the sense that it is also implemented by simple types
+	// but not all simple types are indexable.
+	// On the other-hand, some indexable types (e.g. String) shouldn't be treated/returned as references.
+	//
+	ContainFieldsOrElements() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	RewriteWithRestrictedTypes() (result Type, rewritten bool)
 
@@ -204,8 +225,7 @@ type MemberResolver struct {
 		targetRange ast.Range,
 		report func(error),
 	) *Member
-	Kind     common.DeclarationKind
-	Mutating bool
+	Kind common.DeclarationKind
 }
 
 // supertype of interfaces and composites
@@ -638,6 +658,10 @@ func (*OptionalType) IsComparable() bool {
 	return false
 }
 
+func (t *OptionalType) ContainFieldsOrElements() bool {
+	return t.Type.ContainFieldsOrElements()
+}
+
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -840,6 +864,10 @@ func (*GenericType) IsEquatable() bool {
 }
 
 func (*GenericType) IsComparable() bool {
+	return false
+}
+
+func (t *GenericType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -1142,6 +1170,10 @@ func (t *NumericType) IsComparable() bool {
 	return !t.IsSuperType()
 }
 
+func (t *NumericType) ContainFieldsOrElements() bool {
+	return false
+}
+
 func (*NumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1340,6 +1372,10 @@ func (*FixedPointNumericType) IsEquatable() bool {
 
 func (t *FixedPointNumericType) IsComparable() bool {
 	return !t.IsSuperType()
+}
+
+func (t *FixedPointNumericType) ContainFieldsOrElements() bool {
+	return false
 }
 
 func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
@@ -1907,6 +1943,16 @@ It does not modify the original array.
 If either of the parameters are out of the bounds of the array, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail.
 `
 
+var insertableEntitledAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{InsertableEntitlement, MutableEntitlement},
+	Disjunction,
+)
+
+var removableEntitledAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{RemovableEntitlement, MutableEntitlement},
+	Disjunction,
+)
+
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
@@ -2007,13 +2053,13 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 	if _, ok := arrayType.(*VariableSizedType); ok {
 
 		members["append"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 				elementType := arrayType.ElementType(false)
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					insertableEntitledAccess,
 					identifier,
 					ArrayAppendFunctionType(elementType),
 					arrayTypeAppendFunctionDocString,
@@ -2022,8 +2068,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["appendAll"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
@@ -2038,9 +2083,10 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					)
 				}
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					insertableEntitledAccess,
 					identifier,
 					ArrayAppendAllFunctionType(arrayType),
 					arrayTypeAppendAllFunctionDocString,
@@ -2103,15 +2149,15 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["insert"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					insertableEntitledAccess,
 					identifier,
 					ArrayInsertFunctionType(elementType),
 					arrayTypeInsertFunctionDocString,
@@ -2120,15 +2166,15 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["remove"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					removableEntitledAccess,
 					identifier,
 					ArrayRemoveFunctionType(elementType),
 					arrayTypeRemoveFunctionDocString,
@@ -2137,33 +2183,32 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 
 		members["removeFirst"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					removableEntitledAccess,
 					identifier,
 					ArrayRemoveFirstFunctionType(elementType),
-
 					arrayTypeRemoveFirstFunctionDocString,
 				)
 			},
 		}
 
 		members["removeLast"] = MemberResolver{
-			Kind:     common.DeclarationKindFunction,
-			Mutating: true,
+			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 
 				elementType := arrayType.ElementType(false)
 
-				return NewPublicFunctionMember(
+				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
+					removableEntitledAccess,
 					identifier,
 					ArrayRemoveLastFunctionType(elementType),
 					arrayTypeRemoveLastFunctionDocString,
@@ -2402,6 +2447,10 @@ func (t *VariableSizedType) IsComparable() bool {
 	return t.Type.IsComparable()
 }
 
+func (t *VariableSizedType) ContainFieldsOrElements() bool {
+	return true
+}
+
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -2550,6 +2599,10 @@ func (t *ConstantSizedType) IsEquatable() bool {
 
 func (t *ConstantSizedType) IsComparable() bool {
 	return t.Type.IsComparable()
+}
+
+func (t *ConstantSizedType) ContainFieldsOrElements() bool {
+	return true
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -3073,6 +3126,10 @@ func (*FunctionType) IsComparable() bool {
 	return false
 }
 
+func (*FunctionType) ContainFieldsOrElements() bool {
+	return false
+}
+
 func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 
 	for _, typeParameter := range t.TypeParameters {
@@ -3406,19 +3463,10 @@ func init() {
 	)
 
 	for _, ty := range types {
-		typeName := ty.String()
-
-		// Check that the type is not accidentally redeclared
-
-		if BaseTypeActivation.Find(typeName) != nil {
-			panic(errors.NewUnreachableError())
-		}
-
-		BaseTypeActivation.Set(
-			typeName,
-			baseTypeVariable(typeName, ty),
-		)
+		addToBaseActivation(ty)
 	}
+
+	addToBaseActivation(IdentityMappingType)
 
 	// The AST contains empty type annotations, resolve them to Void
 
@@ -3427,6 +3475,23 @@ func init() {
 		BaseTypeActivation.Find("Void"),
 	)
 }
+
+func addToBaseActivation(ty Type) {
+	typeName := ty.String()
+
+	// Check that the type is not accidentally redeclared
+
+	if BaseTypeActivation.Find(typeName) != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	BaseTypeActivation.Set(
+		typeName,
+		baseTypeVariable(typeName, ty),
+	)
+}
+
+var IdentityMappingType = NewEntitlementMapType(nil, nil, "Identity")
 
 func baseTypeVariable(name string, ty Type) *Variable {
 	return &Variable{
@@ -3504,6 +3569,12 @@ var AllNumberTypes = append(
 	NumberType,
 	SignedNumberType,
 )
+
+var BuiltinEntitlements = map[string]*EntitlementType{}
+
+var BuiltinEntitlementMappings = map[string]*EntitlementMapType{
+	IdentityMappingType.QualifiedIdentifier(): IdentityMappingType,
+}
 
 const NumberTypeMinFieldName = "min"
 const NumberTypeMaxFieldName = "max"
@@ -4244,8 +4315,12 @@ func (*CompositeType) IsComparable() bool {
 	return false
 }
 
-func (c *CompositeType) TypeAnnotationState() TypeAnnotationState {
-	if c.Kind == common.CompositeKindAttachment {
+func (*CompositeType) ContainFieldsOrElements() bool {
+	return true
+}
+
+func (t *CompositeType) TypeAnnotationState() TypeAnnotationState {
+	if t.Kind == common.CompositeKindAttachment {
 		return TypeAnnotationStateDirectAttachmentTypeAnnotation
 	}
 	return TypeAnnotationStateValid
@@ -4928,6 +5003,10 @@ func (*InterfaceType) IsComparable() bool {
 	return false
 }
 
+func (*InterfaceType) ContainFieldsOrElements() bool {
+	return true
+}
+
 func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -5145,6 +5224,10 @@ func (*DictionaryType) IsComparable() bool {
 	return false
 }
 
+func (*DictionaryType) ContainFieldsOrElements() bool {
+	return true
+}
+
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
 	keyTypeAnnotationState := t.KeyType.TypeAnnotationState()
 	if keyTypeAnnotationState != TypeAnnotationStateValid {
@@ -5300,12 +5383,12 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				},
 			},
 			"insert": {
-				Kind:     common.DeclarationKindFunction,
-				Mutating: true,
+				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
+					return NewFunctionMember(
 						memoryGauge,
 						t,
+						insertableEntitledAccess,
 						identifier,
 						DictionaryInsertFunctionType(t),
 						dictionaryTypeInsertFunctionDocString,
@@ -5313,12 +5396,12 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				},
 			},
 			"remove": {
-				Kind:     common.DeclarationKindFunction,
-				Mutating: true,
+				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicFunctionMember(
+					return NewFunctionMember(
 						memoryGauge,
 						t,
+						removableEntitledAccess,
 						identifier,
 						DictionaryRemoveFunctionType(t),
 						dictionaryTypeRemoveFunctionDocString,
@@ -5610,6 +5693,10 @@ func (*ReferenceType) IsComparable() bool {
 	return false
 }
 
+func (*ReferenceType) ContainFieldsOrElements() bool {
+	return false
+}
+
 func (r *ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	if r.Type.TypeAnnotationState() == TypeAnnotationStateDirectEntitlementTypeAnnotation {
 		return TypeAnnotationStateDirectEntitlementTypeAnnotation
@@ -5806,6 +5893,10 @@ func (*AddressType) IsEquatable() bool {
 }
 
 func (*AddressType) IsComparable() bool {
+	return false
+}
+
+func (*AddressType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -6526,6 +6617,10 @@ func (*TransactionType) IsComparable() bool {
 	return false
 }
 
+func (*TransactionType) ContainFieldsOrElements() bool {
+	return false
+}
+
 func (*TransactionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6761,6 +6856,10 @@ func (*RestrictedType) IsEquatable() bool {
 
 func (t *RestrictedType) IsComparable() bool {
 	return false
+}
+
+func (*RestrictedType) ContainFieldsOrElements() bool {
+	return true
 }
 
 func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
@@ -7035,6 +7134,10 @@ func (*CapabilityType) IsEquatable() bool {
 }
 
 func (*CapabilityType) IsComparable() bool {
+	return false
+}
+
+func (*CapabilityType) ContainFieldsOrElements() bool {
 	return false
 }
 
@@ -7591,6 +7694,10 @@ func (*EntitlementType) IsResourceType() bool {
 	return false
 }
 
+func (*EntitlementType) ContainFieldsOrElements() bool {
+	return false
+}
+
 func (*EntitlementType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateDirectEntitlementTypeAnnotation
 }
@@ -7718,6 +7825,10 @@ func (*EntitlementMapType) IsComparable() bool {
 }
 
 func (*EntitlementMapType) IsResourceType() bool {
+	return false
+}
+
+func (*EntitlementMapType) ContainFieldsOrElements() bool {
 	return false
 }
 

@@ -129,20 +129,22 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("access(all)"),
-					prettier.Text(" "),
-					prettier.Text("static"),
-					prettier.Text(" "),
-					prettier.Text("native"),
-					prettier.Text(" "),
-					prettier.Text("let"),
-					prettier.Text(" "),
-					prettier.Group{
-						Doc: prettier.Concat{
-							prettier.Text("xyz"),
-							prettier.Text(": "),
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("CD"),
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.Text("static"),
+						prettier.Text(" "),
+						prettier.Text("native"),
+						prettier.Text(" "),
+						prettier.Text("let"),
+						prettier.Text(" "),
+						prettier.Group{
+							Doc: prettier.Concat{
+								prettier.Text("xyz"),
+								prettier.Text(": "),
+								prettier.Concat{
+									prettier.Text("@"),
+									prettier.Text("CD"),
+								},
 							},
 						},
 					},
@@ -218,15 +220,13 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("access(all)"),
-					prettier.Text(" "),
-					prettier.Group{
-						Doc: prettier.Concat{
-							prettier.Text("xyz"),
-							prettier.Text(": "),
-							prettier.Concat{
-								prettier.Text("@"),
-								prettier.Text("CD"),
-							},
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.Text("xyz"),
+						prettier.Text(": "),
+						prettier.Concat{
+							prettier.Text("@"),
+							prettier.Text("CD"),
 						},
 					},
 				},
@@ -298,7 +298,8 @@ func TestFieldDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"access(all) let xyz: @CD",
+			`access(all)
+let xyz: @CD`,
 			decl.String(),
 		)
 	})
@@ -351,7 +352,8 @@ func TestFieldDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"access(all) xyz: @CD",
+			`access(all)
+xyz: @CD`,
 			decl.String(),
 		)
 
@@ -484,7 +486,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.Text(" "),
+				prettier.HardLine{},
 				prettier.Text("resource"),
 				prettier.Text(" "),
 				prettier.Text("AB"),
@@ -556,7 +558,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.Text(" "),
+				prettier.HardLine{},
 				prettier.Text("resource"),
 				prettier.Text(" "),
 				prettier.Text("AB"),
@@ -637,7 +639,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.Text(" "),
+				prettier.HardLine{},
 				prettier.Text("event"),
 				prettier.Text(" "),
 				prettier.Text("AB"),
@@ -694,7 +696,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.Text(" "),
+				prettier.HardLine{},
 				prettier.Text("enum"),
 				prettier.Text(" "),
 				prettier.Text("AB"),
@@ -763,7 +765,8 @@ func TestCompositeDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"access(all) resource AB: CD, EF {}",
+			`access(all)
+resource AB: CD, EF {}`,
 			decl.String(),
 		)
 	})
@@ -809,9 +812,10 @@ func TestCompositeDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"access(all) resource AB: CD, EF {\n"+
-				"    x: X\n"+
-				"}",
+			`access(all)
+resource AB: CD, EF {
+    x: X
+}`,
 			decl.String(),
 		)
 	})
@@ -850,7 +854,8 @@ func TestCompositeDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"access(all) event AB(e: E)",
+			`access(all)
+event AB(e: E)`,
 			decl.String(),
 		)
 	})
@@ -884,9 +889,10 @@ func TestCompositeDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			"access(all) enum AB: CD {\n"+
-				"    case x\n"+
-				"}",
+			`access(all)
+enum AB: CD {
+    case x
+}`,
 			decl.String(),
 		)
 	})

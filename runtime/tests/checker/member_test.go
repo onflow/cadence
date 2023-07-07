@@ -19,11 +19,13 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -416,5 +418,518 @@ func TestCheckMemberNotDeclaredSecondaryError(t *testing.T) {
 		var memberErr *sema.NotDeclaredMemberError
 		require.ErrorAs(t, errs[0], &memberErr)
 		assert.Equal(t, "unknown member", memberErr.SecondaryError())
+	})
+}
+
+func TestCheckMemberAccess(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("composite, field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var x: [Int]
+                init() {
+                    self.x = []
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                var x: [Int] = test.x
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite, function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                access(all) fun foo(): Int {
+                    return 1
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                var foo: (fun(): Int) = test.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, array field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var x: [Int]
+                init() {
+                    self.x = []
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: &[Int] = testRef.x
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, optional field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var x: [Int]?
+                init() {
+                    self.x = []
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: &[Int]? = testRef.x
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, primitive field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var x: Int
+                init() {
+                    self.x = 1
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: Int = testRef.x
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite reference, function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                access(all) fun foo(): Int {
+                    return 1
+                }
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var foo: (fun(): Int) = testRef.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array, element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                var x: [Int] = array[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                let arrayRef = &array as &[[Int]]
+                var x: &[Int] = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array authorized reference, element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+
+            fun test() {
+                let array: [[Int]] = [[1, 2]]
+                let arrayRef = &array as auth(A) &[[Int]]
+
+                // Must be a. err: returns an unauthorized reference.
+                var x: auth(A) &[Int] = arrayRef[0]
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("array reference, optional typed element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [[Int]?] = [[1, 2]]
+                let arrayRef = &array as &[[Int]?]
+                var x: &[Int]? = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array reference, primitive typed element", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let array: [Int] = [1, 2]
+                let arrayRef = &array as &[Int]
+                var x: Int = arrayRef[0]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary, value", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: {String: Int}} = {"one": {"two": 2}}
+                var x: {String: Int}? = dict["one"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, value", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: {String: Int} } = {"one": {"two": 2}}
+                let dictRef = &dict as &{String: {String: Int}}
+                var x: &{String: Int}? = dictRef["one"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary authorized reference, value", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+
+            fun test() {
+                let dict: {String: {String: Int} } = {"one": {"two": 2}}
+                let dictRef = &dict as auth(A) &{String: {String: Int}}
+
+                // Must be a. err: returns an unauthorized reference.
+                var x: auth(A) &{String: Int}? = dictRef["one"]
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("dictionary reference, optional typed value", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: {String: Int}?} = {"one": {"two": 2}}
+                let dictRef = &dict as &{String: {String: Int}?}
+                var x: (&{String: Int})?? = dictRef["one"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference, optional typed value, mismatch types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: {String: Int}?} = {"one": {"two": 2}}
+                let dictRef = &dict as &{String: {String: Int}?}
+
+                // Must return an optional reference, not a reference to an optional
+                var x: &({String: Int}??) = dictRef["one"]
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: Int} = {"one": 1}
+                let dictRef = &dict as &{String: Int}
+                var x: Int? = dictRef["one"]
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource reference, attachment", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            attachment A for R {}
+
+            fun test() {
+                let r <- create R()
+                let rRef = &r as &R
+
+                var a: &A? = rRef[A]
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("entitlement map access", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                A -> B
+            }
+
+            struct S {
+                access(M) let foo: [String]
+                init() {
+                    self.foo = []
+                }
+            }
+
+            fun test() {
+                let s = S()
+                let sRef = &s as auth(A) &S
+                var foo: auth(B) &[String] = sRef.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("entitlement map access nested", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+
+            entitlement mapping FooMapping {
+                A -> B
+            }
+            entitlement mapping BarMapping {
+                C -> D
+            }
+            struct Foo {
+                access(FooMapping) let bars: [Bar]
+                init() {
+                    self.bars = [Bar()]
+                }
+            }
+            struct Bar {
+                access(BarMapping) let baz: Baz
+                init() {
+                    self.baz = Baz()
+                }
+            }
+            struct Baz {
+                access(D) fun canOnlyCallOnAuthD() {}
+            }
+            fun test() {
+                let foo = Foo()
+                let fooRef = &foo as auth(A) &Foo
+
+                let bazRef: &Baz = fooRef.bars[0].baz
+
+                // Error: 'fooRef.bars[0].baz' returns an unauthorized reference
+                bazRef.canOnlyCallOnAuthD()
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidAccessError := &sema.InvalidAccessError{}
+		require.ErrorAs(t, errors[0], &invalidAccessError)
+	})
+
+	t.Run("entitlement map access nested", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            entitlement mapping FooMapping {
+                A -> B
+            }
+
+            entitlement mapping BarMapping {
+                B -> C
+            }
+
+            struct Foo {
+                access(FooMapping) let bars: [Bar]
+                init() {
+                    self.bars = [Bar()]
+                }
+            }
+
+            struct Bar {
+                access(BarMapping) let baz: Baz
+                init() {
+                    self.baz = Baz()
+                }
+            }
+
+            struct Baz {
+                access(C) fun canOnlyCallOnAuthC() {}
+            }
+
+            fun test() {
+                let foo = Foo()
+                let fooRef = &foo as auth(A) &Foo
+
+                let barArrayRef: auth(B) &[Bar] = fooRef.bars
+
+                // Must be a. err: returns an unauthorized reference.
+                let barRef: auth(B) &Bar = barArrayRef[0]
+
+                let bazRef: auth(C) &Baz = barRef.baz
+
+                bazRef.canOnlyCallOnAuthC()
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("anyresource swap on reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource Foo {}
+
+            fun test() {
+                let dict: @{String: AnyResource} <- {"foo": <- create Foo(), "bar": <- create Foo()}
+                let dictRef = &dict as &{String: AnyResource}
+
+                dictRef["foo"] <-> dictRef["bar"]
+
+                destroy dict
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("all member types", func(t *testing.T) {
+		t.Parallel()
+
+		test := func(tt *testing.T, typeName string) {
+			code := fmt.Sprintf(`
+                struct Foo {
+                    var a: %[1]s?
+
+                    init() {
+                        self.a = nil
+                    }
+                }
+
+                struct Bar {}
+
+                struct interface I {}
+
+                fun test() {
+                    let foo = Foo()
+                    let fooRef = &foo as &Foo
+                    var a: &%[1]s? = fooRef.a
+                }`,
+
+				typeName,
+			)
+
+			_, err := ParseAndCheck(t, code)
+			require.NoError(t, err)
+		}
+
+		types := []string{
+			"Bar",
+			"{I}",
+			"AnyStruct",
+			"Block",
+		}
+
+		// Test all built-in composite types
+		for i := interpreter.PrimitiveStaticTypeAuthAccount; i < interpreter.PrimitiveStaticType_Count; i++ {
+			semaType := i.SemaType()
+			types = append(types, semaType.QualifiedString())
+		}
+
+		for _, typeName := range types {
+			t.Run(typeName, func(t *testing.T) {
+				test(t, typeName)
+			})
+		}
 	})
 }

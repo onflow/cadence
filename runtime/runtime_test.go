@@ -2013,7 +2013,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
         prepare(signer: AuthAccount) {
           signer.save(<-createContainer(), to: /storage/container)
-          let cap = signer.capabilities.storage.issue<&Container>(/storage/container)
+          let cap = signer.capabilities.storage.issue<auth(Insertable) &Container>(/storage/container)
           signer.capabilities.publish(cap, at: /public/container)
         }
       }
@@ -2025,7 +2025,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.capabilities.borrow<&Container>(/public/container)!
+          let ref = publicAccount.capabilities.borrow<auth(Insertable) &Container>(/public/container)!
 
           let length = ref.values.length
           ref.appendValue(1)
@@ -2040,7 +2040,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.capabilities.borrow<&Container>(/public/container)!
+          let ref = publicAccount.capabilities.borrow<auth(Insertable) &Container>(/public/container)!
 
           let length = ref.values.length
           ref.appendValue(2)

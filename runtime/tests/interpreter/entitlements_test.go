@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -2699,5 +2700,136 @@ func TestInterpretEntitlementSetEquality(t *testing.T) {
 
 		require.False(t, one.Equal(two))
 		require.False(t, two.Equal(one))
+	})
+}
+
+func TestInterpretBuiltinEntitlements(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        struct S {
+            access(Mutable) fun foo() {}
+            access(Insertable) fun bar() {}
+            access(Removable) fun baz() {}
+        }
+
+        fun main() {
+            let s = S()
+            let mutableRef = &s as auth(Mutable) &S
+            let insertableRef = &s as auth(Insertable) &S
+            let removableRef = &s as auth(Removable) &S
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	assert.NoError(t, err)
+}
+
+func TestInterpretIdentityMapping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("owned value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                // OK: Must return an unauthorized ref
+                let resultRef1: &AnyStruct = s.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("unauthorized ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let ref = &s as &S
+
+                // OK: Must return an unauthorized ref
+                let resultRef1: &AnyStruct = ref.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic entitled ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let mutableRef = &s as auth(Mutable) &S
+                let ref1: auth(Mutable) &AnyStruct = mutableRef.foo()
+
+                let insertableRef = &s as auth(Insertable) &S
+                let ref2: auth(Insertable) &AnyStruct = insertableRef.foo()
+
+                let removableRef = &s as auth(Removable) &S
+                let ref3: auth(Removable) &AnyStruct = removableRef.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("entitlement set ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let ref1 = &s as auth(Insertable | Removable) &S
+                let resultRef1: auth(Insertable | Removable) &AnyStruct = ref1.foo()
+
+                let ref2 = &s as auth(Insertable, Removable) &S
+                let resultRef2: auth(Insertable, Removable) &AnyStruct = ref2.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
 	})
 }

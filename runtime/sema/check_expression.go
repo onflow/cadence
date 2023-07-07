@@ -316,11 +316,26 @@ func (checker *Checker) visitIndexExpression(
 
 		checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
+		// If the element,
+		//   1) is accessed via a reference, and
+		//   2) is container-typed,
+		// then the element type should also be a reference.
+		returnReference := false
+		if !isAssignment && shouldReturnReference(valueIndexedType, elementType) {
+			// For index expressions, element are un-authorized.
+			elementType = checker.getReferenceType(elementType, false, UnauthorizedAccess)
+
+			// Store the result in elaboration, so the interpreter can re-use this.
+			returnReference = true
+		}
+
 		checker.Elaboration.SetIndexExpressionTypes(
 			indexExpression,
 			IndexExpressionTypes{
-				IndexedType:  valueIndexedType,
-				IndexingType: indexingType,
+				IndexedType:     valueIndexedType,
+				IndexingType:    indexingType,
+				ResultType:      elementType,
+				ReturnReference: returnReference,
 			},
 		)
 

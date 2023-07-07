@@ -4388,7 +4388,22 @@ var AuthAccountReferenceStaticType = ReferenceStaticType{
 }
 
 func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.EntitlementType, error) {
-	location, _, _ := common.DecodeTypeID(interpreter, string(typeID))
+	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	if location == nil {
+		ty := sema.BuiltinEntitlements[qualifiedIdentifier]
+		if ty == nil {
+			return nil, TypeLoadingError{
+				TypeID: typeID,
+			}
+		}
+
+		return ty, nil
+	}
+
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return nil, TypeLoadingError{
@@ -4407,7 +4422,22 @@ func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.Enti
 }
 
 func (interpreter *Interpreter) getEntitlementMapType(typeID common.TypeID) (*sema.EntitlementMapType, error) {
-	location, _, _ := common.DecodeTypeID(interpreter, string(typeID))
+	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	if location == nil {
+		ty := sema.BuiltinEntitlementMappings[qualifiedIdentifier]
+		if ty == nil {
+			return nil, TypeLoadingError{
+				TypeID: typeID,
+			}
+		}
+
+		return ty, nil
+	}
+
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return nil, TypeLoadingError{

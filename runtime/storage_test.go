@@ -2275,7 +2275,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   account.capabilities.publish(cap, at: /public/test)
 
                   let ref2 = account.capabilities.borrow<&[TestContract.TestResource]>(/public/test)!
-                  let ref3 = &ref2[0] as &TestContract.TestResource
+                  let ref3 = ref2[0]
                   log(ref3.owner?.address)
               }
           }
@@ -2413,7 +2413,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   account.capabilities.publish(cap, at: /public/test)
 
                   nestingResourceRef = account.capabilities.borrow<&TestContract.TestNestingResource>(/public/test)!
-                  nestedElementResourceRef = &nestingResourceRef.nestedResources[0] as &TestContract.TestNestedResource
+                  nestedElementResourceRef = nestingResourceRef.nestedResources[0]
 
                   log(nestingResourceRef.owner?.address)
                   log(nestedElementResourceRef.owner?.address)
@@ -2541,7 +2541,7 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   account.capabilities.publish(cap, at: /public/test)
 
                   let testResourcesRef = account.capabilities.borrow<&[[TestContract.TestResource]]>(/public/test)!
-                  ref = &testResourcesRef[0] as &[TestContract.TestResource]
+                  ref = testResourcesRef[0]
                   log(ref[0].owner?.address)
               }
           }
@@ -2660,12 +2660,13 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
 
                   account.save(<-testResources, to: /storage/test)
 
+                  // At this point the resource is in storage
                   let cap = account.capabilities.storage.issue<&[{Int: TestContract.TestResource}]>(/storage/test)
                   account.capabilities.publish(cap, at: /public/test)
 
                   let testResourcesRef = account.capabilities.borrow<&[{Int: TestContract.TestResource}]>(/public/test)!
 
-                  ref = &testResourcesRef[0] as &{Int: TestContract.TestResource}
+                  ref = testResourcesRef[0]
                   log(ref[0]?.owner?.address)
               }
           }

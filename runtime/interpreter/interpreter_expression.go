@@ -144,7 +144,10 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 			if isNestedResourceMove {
 				return target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
 			} else {
-				return target.GetKey(interpreter, locationRange, transferredIndexingValue)
+				value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
+
+				// If the indexing value is a reference, then return a reference for the resulting value.
+				return interpreter.maybeGetReference(indexExpression, value)
 			}
 		},
 		set: func(value Value) {
@@ -168,6 +171,11 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	}
 
 	isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression(memberExpression)
+
+	memberAccessInfo, ok := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
 	return getterSetter{
 		target: target,
@@ -212,6 +220,13 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 				}
 			}
 
+			// Return a reference, if the member is accessed via a reference.
+			// This is pre-computed at the checker.
+			if memberAccessInfo.ReturnReference {
+				// Get a reference to the value
+				resultValue = interpreter.getReferenceValue(resultValue, memberAccessInfo.ResultingType)
+			}
+
 			return resultValue
 		},
 		set: func(value Value) {
@@ -222,12 +237,51 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	}
 }
 
+// getReferenceValue Returns a reference to a given value.
+// Reference to an optional should return an optional reference.
+// This has to be done recursively for nested optionals.
+// e.g.1: Given type T, this method returns &T.
+// e.g.2: Given T?, this returns (&T)?
+func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.Type) Value {
+	switch value := value.(type) {
+	case NilValue, ReferenceValue:
+		// Reference to a nil, should return a nil.
+		// If the value is already a reference then return the same reference.
+		return value
+	case *SomeValue:
+		innerValue := interpreter.getReferenceValue(value.value, resultType)
+		return NewSomeValueNonCopying(interpreter, innerValue)
+	}
+
+	// `resultType` is always an [optional] reference.
+	// This is guaranteed by the checker.
+	referenceType, ok := sema.UnwrapOptionalType(resultType).(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	auth := interpreter.getEffectiveAuthorization(referenceType)
+
+	interpreter.maybeTrackReferencedResourceKindedValue(value)
+	return NewEphemeralReferenceValue(interpreter, auth, value, referenceType.Type)
+}
+
+func (interpreter *Interpreter) getEffectiveAuthorization(referenceType *sema.ReferenceType) Authorization {
+	_, isMapped := referenceType.Authorization.(sema.EntitlementMapAccess)
+
+	if isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
+		return interpreter.SharedState.currentEntitlementMappedValue
+	}
+
+	return ConvertSemaAccesstoStaticAuthorization(interpreter, referenceType.Authorization)
+}
+
 func (interpreter *Interpreter) checkMemberAccess(
 	memberExpression *ast.MemberExpression,
 	target Value,
 	locationRange LocationRange,
 ) {
-	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberInfo(memberExpression)
+	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
 	switch expectedType := expectedType.(type) {
@@ -860,8 +914,26 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 			Location:    interpreter.Location,
 			HasPosition: expression,
 		}
-		return typedResult.GetKey(interpreter, locationRange, indexingValue)
+		value := typedResult.GetKey(interpreter, locationRange, indexingValue)
+
+		// If the indexing value is a reference, then return a reference for the resulting value.
+		return interpreter.maybeGetReference(expression, value)
 	}
+}
+
+func (interpreter *Interpreter) maybeGetReference(
+	expression *ast.IndexExpression,
+	memberValue Value,
+) Value {
+	indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
+	if indexExpressionTypes.ReturnReference {
+		expectedType := indexExpressionTypes.ResultType
+
+		// Get a reference to the value
+		memberValue = interpreter.getReferenceValue(memberValue, expectedType)
+	}
+
+	return memberValue
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) Value {
@@ -1155,15 +1227,9 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
 	makeReference := func(value Value, typ *sema.ReferenceType) *EphemeralReferenceValue {
-		var auth Authorization
-
 		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
 		// of that mapped access in the body of the function should be replaced with the computed output of the map
-		if _, isMapped := typ.Authorization.(sema.EntitlementMapAccess); isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
-			auth = interpreter.SharedState.currentEntitlementMappedValue
-		} else {
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization)
-		}
+		auth := interpreter.getEffectiveAuthorization(typ)
 
 		return NewEphemeralReferenceValue(
 			interpreter,

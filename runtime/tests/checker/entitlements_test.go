@@ -600,6 +600,18 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
+	t.Run("non-reference container field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			struct interface S {
+				access(M) let foo: [String]
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("mismatched entitlement mapping", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -1321,6 +1333,18 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
+
+	t.Run("ref array field", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+			entitlement mapping M {}
+			resource interface R {
+				access(M) let foo: [auth(M) &Int]
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
 }
 
 func TestCheckInvalidEntitlementAccess(t *testing.T) {
@@ -1538,20 +1562,6 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
-	})
-
-	t.Run("ref array field", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-			entitlement mapping M {}
-			resource interface R {
-				access(M) let foo: [auth(M) &Int]
-			}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("capability field", func(t *testing.T) {
@@ -4332,8 +4342,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+		assert.NoError(t, err)
 	})
 
 	t.Run("access(all) decl", func(t *testing.T) {
@@ -4911,8 +4920,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 			}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		assert.NoError(t, err)
 	})
 
 	t.Run("basic authorized", func(t *testing.T) {
@@ -4933,7 +4941,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 }
 
@@ -5280,5 +5288,170 @@ func TestCheckAttachProvidedEntitlements(t *testing.T) {
 
 		require.IsType(t, &sema.RequiredEntitlementNotProvidedError{}, errs[1])
 		require.Equal(t, errs[1].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "E")
+	})
+}
+
+func TestCheckBuiltinEntitlements(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("builtin", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                access(Mutable) fun foo() {}
+                access(Insertable) fun bar() {}
+                access(Removable) fun baz() {}
+            }
+
+            fun main() {
+                let s = S()
+                let mutableRef = &s as auth(Mutable) &S
+                let insertableRef = &s as auth(Insertable) &S
+                let removableRef = &s as auth(Removable) &S
+            }
+        `)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("redefine", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Mutable
+            entitlement Insertable
+            entitlement Removable
+        `)
+
+		errs := RequireCheckerErrors(t, err, 3)
+
+		require.IsType(t, &sema.RedeclarationError{}, errs[0])
+		require.IsType(t, &sema.RedeclarationError{}, errs[1])
+		require.IsType(t, &sema.RedeclarationError{}, errs[2])
+	})
+
+}
+
+func TestCheckIdentityMapping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("owned value", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                // OK
+                let resultRef1: &AnyStruct = s.foo()
+
+                // Error: Must return an unauthorized ref
+                let resultRef2: auth(Mutable) &AnyStruct = s.foo()
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+
+		require.IsType(t, &sema.ReferenceType{}, typeMismatchError.ActualType)
+		actualReference := typeMismatchError.ActualType.(*sema.ReferenceType)
+
+		require.IsType(t, sema.EntitlementSetAccess{}, actualReference.Authorization)
+		actualAuth := actualReference.Authorization.(sema.EntitlementSetAccess)
+
+		assert.Equal(t, 0, actualAuth.Entitlements.Len())
+	})
+
+	t.Run("unauthorized ref", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let ref = &s as &S
+
+                // OK
+                let resultRef1: &AnyStruct = ref.foo()
+
+                // Error: Must return an unauthorized ref
+                let resultRef2: auth(Mutable) &AnyStruct = ref.foo()
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("basic entitled ref", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let mutableRef = &s as auth(Mutable) &S
+                let ref1: auth(Mutable) &AnyStruct = mutableRef.foo()
+
+                let insertableRef = &s as auth(Insertable) &S
+                let ref2: auth(Insertable) &AnyStruct = insertableRef.foo()
+
+                let removableRef = &s as auth(Removable) &S
+                let ref3: auth(Removable) &AnyStruct = removableRef.foo()
+            }
+        `)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("entitlement set ref", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let ref1 = &s as auth(Insertable | Removable) &S
+                let resultRef1: auth(Insertable | Removable) &AnyStruct = ref1.foo()
+
+                let ref2 = &s as auth(Insertable, Removable) &S
+                let resultRef2: auth(Insertable, Removable) &AnyStruct = ref2.foo()
+            }
+        `)
+
+		assert.NoError(t, err)
 	})
 }
