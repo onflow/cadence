@@ -20,8 +20,10 @@ package sema
 
 //go:generate go run ./gen account.cdc account.gen.go
 
-var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
+var AccountTypeAnnotation = NewTypeAnnotation(AccountType)
+
+var AccountReferenceType = &ReferenceType{Type: AccountType}
 
 func init() {
-	AuthAccountContractsTypeAddFunctionType.RequiredArgumentCount = RequiredArgumentCount(2)
+	Account_ContractsTypeAddFunctionType.RequiredArgumentCount = RequiredArgumentCount(2)
 }
