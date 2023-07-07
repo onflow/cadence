@@ -121,7 +121,7 @@ type InMemoryStorage struct {
 var _ Storage = InMemoryStorage{}
 
 func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
-	decodeStorable := func(decoder *cbor.StreamDecoder, storableSlabStorageID atree.StorageID) (atree.Storable, error) {
+	decodeStorable := func(decoder *cbor.StreamDecoder, storableSlabStorageID atree.SlabID) (atree.Storable, error) {
 		return DecodeStorable(decoder, storableSlabStorageID, memoryGauge)
 	}
 
@@ -211,7 +211,7 @@ func StorableSize(storable atree.Storable) (uint32, error) {
 
 // maybeLargeImmutableStorable either returns the given immutable atree.Storable
 // if it can be stored inline inside its parent container,
-// or else stores it in a separate slab and returns an atree.StorageIDStorable.
+// or else stores it in a separate slab and returns an atree.SlabIDStorable.
 func maybeLargeImmutableStorable(
 	storable atree.Storable,
 	storage atree.SlabStorage,
@@ -226,20 +226,5 @@ func maybeLargeImmutableStorable(
 		return storable, nil
 	}
 
-	storageID, err := storage.GenerateStorageID(address)
-	if err != nil {
-		return nil, err
-	}
-
-	slab := &atree.StorableSlab{
-		StorageID: storageID,
-		Storable:  storable,
-	}
-
-	err = storage.Store(storageID, slab)
-	if err != nil {
-		return nil, err
-	}
-
-	return atree.StorageIDStorable(storageID), nil
+	return atree.NewStorableSlab(storage, address, storable)
 }

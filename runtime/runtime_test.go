@@ -51,11 +51,11 @@ import (
 )
 
 type testLedger struct {
-	storedValues         map[string][]byte
-	valueExists          func(owner, key []byte) (exists bool, err error)
-	getValue             func(owner, key []byte) (value []byte, err error)
-	setValue             func(owner, key, value []byte) (err error)
-	allocateStorageIndex func(owner []byte) (atree.StorageIndex, error)
+	storedValues      map[string][]byte
+	valueExists       func(owner, key []byte) (exists bool, err error)
+	getValue          func(owner, key []byte) (value []byte, err error)
+	setValue          func(owner, key, value []byte) (err error)
+	allocateSlabIndex func(owner []byte) (atree.SlabIndex, error)
 }
 
 var _ atree.Ledger = testLedger{}
@@ -72,8 +72,8 @@ func (s testLedger) ValueExists(owner, key []byte) (exists bool, err error) {
 	return s.valueExists(owner, key)
 }
 
-func (s testLedger) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	return s.allocateStorageIndex(owner)
+func (s testLedger) AllocateSlabIndex(owner []byte) (atree.SlabIndex, error) {
+	return s.allocateSlabIndex(owner)
 }
 
 func (s testLedger) Dump() {
@@ -117,7 +117,7 @@ func newTestLedger(
 			}
 			return nil
 		},
-		allocateStorageIndex: func(owner []byte) (result atree.StorageIndex, err error) {
+		allocateSlabIndex: func(owner []byte) (result atree.SlabIndex, err error) {
 			index := storageIndices[string(owner)] + 1
 			storageIndices[string(owner)] = index
 			binary.BigEndian.PutUint64(result[:], index)
@@ -327,11 +327,11 @@ func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
 	return i.storage.SetValue(owner, key, value)
 }
 
-func (i *testRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	if i.storage.allocateStorageIndex == nil {
+func (i *testRuntimeInterface) AllocateSlabIndex(owner []byte) (atree.SlabIndex, error) {
+	if i.storage.allocateSlabIndex == nil {
 		panic("must specify testRuntimeInterface.storage.allocateStorageIndex")
 	}
-	return i.storage.AllocateStorageIndex(owner)
+	return i.storage.AllocateSlabIndex(owner)
 }
 
 func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
