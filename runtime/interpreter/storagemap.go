@@ -82,7 +82,7 @@ func (s StorageMap) ValueExists(key StorageMapKey) bool {
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
 func (s StorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey) Value {
-	storable, err := s.orderedMap.Get(
+	storedValue, err := s.orderedMap.Get(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
 		key.AtreeValue(),
@@ -95,7 +95,7 @@ func (s StorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey) Value
 		panic(errors.NewExternalError(err))
 	}
 
-	return StoredValue(gauge, storable, s.orderedMap.Storage)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
 // WriteValue sets or removes a value in the storage map.
