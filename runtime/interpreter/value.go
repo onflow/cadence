@@ -2540,8 +2540,12 @@ func (v *ArrayValue) Equal(interpreter *Interpreter, locationRange LocationRange
 	return true
 }
 
-func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return atree.StorageIDStorable(v.StorageID()), nil
+func (v *ArrayValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
+	return v.array.Storable(storage, address, maxInlineSize)
 }
 
 func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
@@ -2583,11 +2587,10 @@ func (v *ArrayValue) Transfer(
 	}
 
 	currentStorageID := v.StorageID()
-	currentAddress := currentStorageID.Address
 
 	array := v.array
 
-	needsStoreTo := address != currentAddress
+	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -2694,7 +2697,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 
 	array, err := atree.NewArrayFromBatchData(
 		config.Storage,
-		v.StorageID().Address,
+		v.StorageAddress(),
 		v.array.Type(),
 		func() (atree.Value, error) {
 			value, err := iterator.Next()
@@ -2760,8 +2763,12 @@ func (v *ArrayValue) StorageID() atree.StorageID {
 	return v.array.StorageID()
 }
 
+func (v *ArrayValue) StorageAddress() atree.Address {
+	return v.array.Address()
+}
+
 func (v *ArrayValue) GetOwner() common.Address {
-	return common.Address(v.StorageID().Address)
+	return common.Address(v.StorageAddress())
 }
 
 func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
@@ -2773,7 +2780,7 @@ func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
 }
 
 func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
-	return address != v.StorageID().Address
+	return address != v.StorageAddress()
 }
 
 func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
@@ -2921,11 +2928,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingAddFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2942,11 +2945,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2963,11 +2962,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -2984,11 +2979,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.NumericTypeSaturatingDivideFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					typ,
-				),
-			},
+			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
@@ -15583,7 +15574,7 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange LocationRange) OptionalValue {
-	address := v.StorageID().Address
+	address := v.StorageAddress()
 
 	if address == (atree.Address{}) {
 		return NilOptionalValue
@@ -15695,7 +15686,7 @@ func (v *CompositeValue) SetMember(
 		}()
 	}
 
-	address := v.StorageID().Address
+	address := v.StorageAddress()
 
 	value = value.Transfer(
 		interpreter,
@@ -16022,16 +16013,20 @@ func (v *CompositeValue) IsStorable() bool {
 	return v.Location != nil
 }
 
-func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *CompositeValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
 	if !v.IsStorable() {
 		return NonStorable{Value: v}, nil
 	}
 
-	return atree.StorageIDStorable(v.StorageID()), nil
+	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
 func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
-	return address != v.StorageID().Address
+	return address != v.StorageAddress()
 }
 
 func (v *CompositeValue) IsResourceKinded(interpreter *Interpreter) bool {
@@ -16083,11 +16078,11 @@ func (v *CompositeValue) Transfer(
 	}
 
 	currentStorageID := v.StorageID()
-	currentAddress := currentStorageID.Address
+	currentAddress := v.StorageAddress()
 
 	dictionary := v.dictionary
 
-	needsStoreTo := address != currentAddress
+	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo && v.Kind == common.CompositeKindContract {
@@ -16250,7 +16245,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 
 	dictionary, err := atree.NewMapFromBatchData(
 		config.Storage,
-		v.StorageID().Address,
+		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
 		StringAtreeValueComparator,
@@ -16337,7 +16332,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 }
 
 func (v *CompositeValue) GetOwner() common.Address {
-	return common.Address(v.StorageID().Address)
+	return common.Address(v.StorageAddress())
 }
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
@@ -16358,6 +16353,10 @@ func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName
 
 func (v *CompositeValue) StorageID() atree.StorageID {
 	return v.dictionary.StorageID()
+}
+
+func (v *CompositeValue) StorageAddress() atree.Address {
+	return v.dictionary.Address()
 }
 
 func (v *CompositeValue) RemoveField(
@@ -17531,8 +17530,12 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, locationRange Location
 	}
 }
 
-func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return atree.StorageIDStorable(v.StorageID()), nil
+func (v *DictionaryValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
+	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
@@ -17577,11 +17580,10 @@ func (v *DictionaryValue) Transfer(
 	}
 
 	currentStorageID := v.StorageID()
-	currentAddress := currentStorageID.Address
 
 	dictionary := v.dictionary
 
-	needsStoreTo := address != currentAddress
+	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -17703,7 +17705,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 
 	dictionary, err := atree.NewMapFromBatchData(
 		config.Storage,
-		v.StorageID().Address,
+		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
 		valueComparator,
@@ -17781,11 +17783,15 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 }
 
 func (v *DictionaryValue) GetOwner() common.Address {
-	return common.Address(v.StorageID().Address)
+	return common.Address(v.StorageAddress())
 }
 
 func (v *DictionaryValue) StorageID() atree.StorageID {
 	return v.dictionary.StorageID()
+}
+
+func (v *DictionaryValue) StorageAddress() atree.Address {
+	return v.dictionary.Address()
 }
 
 func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryType {
@@ -17797,7 +17803,7 @@ func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryTyp
 }
 
 func (v *DictionaryValue) NeedsStoreTo(address atree.Address) bool {
-	return address != v.StorageID().Address
+	return address != v.StorageAddress()
 }
 
 func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {

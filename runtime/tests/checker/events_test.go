@@ -107,7 +107,8 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		validTypes := append(
+		validTypes := common.Concat(
+			sema.AllNumberTypes,
 			[]sema.Type{
 				sema.StringType,
 				sema.CharacterType,
@@ -120,7 +121,6 @@ func TestCheckEventDeclaration(t *testing.T) {
 				sema.PrivatePathType,
 				sema.CapabilityPathType,
 			},
-			sema.AllNumberTypes...,
 		)
 
 		tests := validTypes[:]
