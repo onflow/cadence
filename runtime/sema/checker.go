@@ -243,7 +243,9 @@ func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
 	scope := checker.CurrentPurityScope()
 	if scope.EnforcePurity {
 		checker.report(
-			&PurityError{Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation)},
+			&PurityError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation),
+			},
 		)
 	}
 }
@@ -2246,71 +2248,6 @@ func (checker *Checker) checkVariableMove(expression ast.Expression) {
 		if kind == common.CompositeKindContract {
 			reportInvalidMove(common.DeclarationKindContract)
 		}
-	}
-}
-
-func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) PostConditionsRewrite {
-
-	var beforeStatements []ast.Statement
-
-	var rewrittenPostConditions []*ast.Condition
-
-	count := len(postConditions)
-	if count > 0 {
-		rewrittenPostConditions = make([]*ast.Condition, count)
-
-		beforeExtractor := checker.beforeExtractor()
-
-		for i, postCondition := range postConditions {
-
-			// copy condition and set expression to rewritten one
-			newPostCondition := *postCondition
-
-			testExtraction := beforeExtractor.ExtractBefore(postCondition.Test)
-
-			extractedExpressions := testExtraction.ExtractedExpressions
-
-			newPostCondition.Test = testExtraction.RewrittenExpression
-
-			if postCondition.Message != nil {
-				messageExtraction := beforeExtractor.ExtractBefore(postCondition.Message)
-
-				newPostCondition.Message = messageExtraction.RewrittenExpression
-
-				extractedExpressions = append(
-					extractedExpressions,
-					messageExtraction.ExtractedExpressions...,
-				)
-			}
-
-			for _, extractedExpression := range extractedExpressions {
-				expression := extractedExpression.Expression
-				startPos := expression.StartPosition()
-
-				// NOTE: no need to check the before statements or update elaboration here:
-				// The before statements are visited/checked later
-				variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
-				variableDeclaration.StartPos = startPos
-				variableDeclaration.Identifier = extractedExpression.Identifier
-				variableDeclaration.Transfer = ast.NewTransfer(
-					checker.memoryGauge,
-					ast.TransferOperationCopy,
-					startPos,
-				)
-				variableDeclaration.Value = expression
-
-				beforeStatements = append(beforeStatements,
-					variableDeclaration,
-				)
-			}
-
-			rewrittenPostConditions[i] = &newPostCondition
-		}
-	}
-
-	return PostConditionsRewrite{
-		BeforeStatements:        beforeStatements,
-		RewrittenPostConditions: rewrittenPostConditions,
 	}
 }
 

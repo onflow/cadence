@@ -355,6 +355,8 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 		panic(errors.NewUnreachableError())
 	}
 
+	compositeKind := declaration.Kind()
+
 	// Activate new scope for nested declarations
 
 	checker.typeActivations.Enter()
@@ -389,10 +391,9 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	// NOTE: determine initializer parameter types while nested types are in scope,
 	// and after declaring nested types as the initializer may use nested type in parameters
 
-	interfaceType.InitializerParameters =
-		checker.initializerParameters(declaration.Members.Initializers())
-	interfaceType.InitializerPurity =
-		checker.initializerPurity(declaration.Members.Initializers())
+	initializers := declaration.Members.Initializers()
+	interfaceType.InitializerParameters = checker.initializerParameters(initializers)
+	interfaceType.InitializerPurity = checker.initializerPurity(compositeKind, initializers)
 
 	// Declare nested declarations' members
 

@@ -127,7 +127,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 			// Skip the `pre` keyword
 			p.next()
-			conditions, err := parseConditions(p, ast.ConditionKindPre)
+			conditions, err := parseConditions(p)
 			if err != nil {
 				return nil, err
 			}
@@ -168,7 +168,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				}
 				// Skip the `post` keyword
 				p.next()
-				conditions, err := parseConditions(p, ast.ConditionKindPost)
+				conditions, err := parseConditions(p)
 				if err != nil {
 					return nil, err
 				}
