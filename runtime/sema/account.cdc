@@ -288,11 +288,11 @@ struct Account {
 
         /// The storage capabilities of the account.
         access(CapabilitiesMapping)
-        let storage: &Account.StorageCapabilities
+        let storage: Account.StorageCapabilities
 
         /// The account capabilities of the account.
         access(CapabilitiesMapping)
-        let account: &Account.AccountCapabilities
+        let account: Account.AccountCapabilities
 
         /// Returns the capability at the given public path.
         /// Returns nil if the capability does not exist,
@@ -413,9 +413,9 @@ entitlement RevokeKey
 
 entitlement Inbox
 
-entitlement PublishInbox
-entitlement UnpublishInbox
-entitlement ClaimInbox
+entitlement PublishInboxCapability
+entitlement UnpublishInboxCapability
+entitlement ClaimInboxCapability
 
 /* Capability entitlements */
 
@@ -423,6 +423,15 @@ entitlement Capabilities
 
 entitlement StorageCapabilities
 entitlement AccountCapabilities
+
+entitlement PublishCapability
+entitlement UnpublishCapability
+
+entitlement GetStorageCapabilityController
+entitlement IssueStorageCapabilityController
+
+entitlement GetAccountCapabilityController
+entitlement IssueAccountCapabilityController
 
 /* Entitlement mappings */
 
@@ -440,8 +449,8 @@ entitlement mapping AccountMapping {
     AddKey -> AddKey
     RevokeKey -> RevokeKey
 
-    PublishInbox -> PublishInbox
-    UnpublishInbox -> UnpublishInbox
+    PublishInboxCapability -> PublishInboxCapability
+    UnpublishInboxCapability -> UnpublishInboxCapability
 
     StorageCapabilities -> StorageCapabilities
     AccountCapabilities -> AccountCapabilities
@@ -465,9 +474,9 @@ entitlement mapping AccountMapping {
     Keys -> AddKey
     Keys -> RevokeKey
 
-    Inbox -> PublishInbox
-    Inbox -> UnpublishInbox
-    Inbox -> ClaimInbox
+    Inbox -> PublishInboxCapability
+    Inbox -> UnpublishInboxCapability
+    Inbox -> ClaimInboxCapability
 
     Capabilities -> StorageCapabilities
     Capabilities -> AccountCapabilities
