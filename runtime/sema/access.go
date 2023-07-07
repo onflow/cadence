@@ -425,3 +425,43 @@ func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {
 	// only access(self) access is guaranteed to be less permissive than entitlement-based access, but cannot appear in interfaces
 	return ast.PrimitiveAccess(a) != ast.AccessSelf
 }
+
+func newEntitlementAccess(
+	entitlements []Type,
+	setKind EntitlementSetKind,
+) Access {
+
+	var setEntitlements []*EntitlementType
+	var mapEntitlement *EntitlementMapType
+
+	for i, entitlement := range entitlements {
+		switch entitlement := entitlement.(type) {
+		case *EntitlementType:
+			if i == 0 {
+				setEntitlements = append(setEntitlements, entitlement)
+			} else if len(setEntitlements) == 0 {
+				panic(errors.NewDefaultUserError("mixed entitlement types"))
+			}
+
+		case *EntitlementMapType:
+			if i == 0 {
+				mapEntitlement = entitlement
+			} else {
+				panic(errors.NewDefaultUserError("extra entitlement map type"))
+			}
+
+		default:
+			panic(errors.NewDefaultUserError("invalid entitlement type: %T", entitlement))
+		}
+	}
+
+	if mapEntitlement != nil {
+		return NewEntitlementMapAccess(mapEntitlement)
+	}
+
+	if len(setEntitlements) > 0 {
+		return NewEntitlementSetAccess(setEntitlements, setKind)
+	}
+
+	panic(errors.NewDefaultUserError("neither map entitlement nor set entitlements given"))
+}
