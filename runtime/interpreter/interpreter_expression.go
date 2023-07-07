@@ -937,8 +937,8 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
 		self := *boundFunction.Self
 		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
-			storageID := resource.StorageID()
-			interpreter.trackReferencedResourceKindedValue(storageID, resource)
+			slabID := resource.SlabID()
+			interpreter.trackReferencedResourceKindedValue(slabID, resource)
 		}
 	}
 
@@ -1290,7 +1290,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
-	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
+	interpreter.trackReferencedResourceKindedValue(base.SlabID(), base)
 
 	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(
 		attachExpression.Attachment,
@@ -1302,7 +1302,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	}
 
 	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+	interpreter.trackReferencedResourceKindedValue(attachment.SlabID(), attachment)
 
 	base = base.Transfer(
 		interpreter,

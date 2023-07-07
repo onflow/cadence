@@ -62,13 +62,13 @@ func withWritesToStorage(
 			Key:     fmt.Sprintf("%d", randomIndex),
 		}
 
-		var storageIndex atree.StorageIndex
-		binary.BigEndian.PutUint32(storageIndex[:], randomIndex)
+		var slabIndex atree.SlabIndex
+		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
 		if storage.newStorageMaps == nil {
-			storage.newStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]{}
+			storage.newStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
 		}
-		storage.newStorageMaps.Set(storageKey, storageIndex)
+		storage.newStorageMaps.Set(storageKey, slabIndex)
 	}
 
 	handler(storage, inter)

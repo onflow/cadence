@@ -217,7 +217,7 @@ func maybeDestroy(interpreter *Interpreter, locationRange LocationRange, value V
 type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
-	StorageID() atree.StorageID
+	SlabID() atree.SlabID
 }
 
 // ContractValue is the value of a contract.
@@ -1717,7 +1717,7 @@ func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (re
 	}
 
 	if v.IsResourceKinded(interpreter) {
-		interpreter.withMutationPrevention(v.StorageID(), iterate)
+		interpreter.withMutationPrevention(v.SlabID(), iterate)
 	} else {
 		iterate()
 	}
@@ -1784,10 +1784,10 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
-	storageID := v.StorageID()
+	slabID := v.SlabID()
 
 	interpreter.withResourceDestruction(
-		storageID,
+		slabID,
 		locationRange,
 		func() {
 			v.Walk(interpreter, func(element Value) {
@@ -1803,8 +1803,8 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 	}
 
 	interpreter.updateReferencedResource(
-		storageID,
-		storageID,
+		slabID,
+		slabID,
 		func(value ReferenceTrackedResourceKindedValue) {
 			arrayValue, ok := value.(*ArrayValue)
 			if !ok {
@@ -1948,7 +1948,7 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRang
 
 func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
 
-	interpreter.validateMutation(v.StorageID(), locationRange)
+	interpreter.validateMutation(v.SlabID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -2022,7 +2022,7 @@ func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReference
 
 func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRange, element Value) {
 
-	interpreter.validateMutation(v.StorageID(), locationRange)
+	interpreter.validateMutation(v.SlabID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
@@ -2070,7 +2070,7 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
 
-	interpreter.validateMutation(v.StorageID(), locationRange)
+	interpreter.validateMutation(v.SlabID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -2125,7 +2125,7 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationR
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
 
-	interpreter.validateMutation(v.StorageID(), locationRange)
+	interpreter.validateMutation(v.SlabID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -2586,7 +2586,7 @@ func (v *ArrayValue) Transfer(
 		}()
 	}
 
-	currentStorageID := v.StorageID()
+	currentSlabID := v.SlabID()
 
 	array := v.array
 
@@ -2655,11 +2655,11 @@ func (v *ArrayValue) Transfer(
 			res = v
 		}
 
-		newStorageID := array.StorageID()
+		newSlabID := array.SlabID()
 
 		interpreter.updateReferencedResource(
-			currentStorageID,
-			newStorageID,
+			currentSlabID,
+			newSlabID,
 			func(value ReferenceTrackedResourceKindedValue) {
 				arrayValue, ok := value.(*ArrayValue)
 				if !ok {
@@ -2759,8 +2759,8 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 	interpreter.maybeValidateAtreeValue(v.array)
 }
 
-func (v *ArrayValue) StorageID() atree.StorageID {
-	return v.array.StorageID()
+func (v *ArrayValue) SlabID() atree.SlabID {
+	return v.array.SlabID()
 }
 
 func (v *ArrayValue) StorageAddress() atree.Address {
@@ -15364,10 +15364,10 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
-	storageID := v.StorageID()
+	slabID := v.SlabID()
 
 	interpreter.withResourceDestruction(
-		storageID,
+		slabID,
 		locationRange,
 		func() {
 			// if this type has attachments, destroy all of them before invoking the destructor
@@ -15419,8 +15419,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	}
 
 	interpreter.updateReferencedResource(
-		storageID,
-		storageID,
+		slabID,
+		slabID,
 		func(value ReferenceTrackedResourceKindedValue) {
 			compositeValue, ok := value.(*CompositeValue)
 			if !ok {
@@ -16077,7 +16077,7 @@ func (v *CompositeValue) Transfer(
 		}()
 	}
 
-	currentStorageID := v.StorageID()
+	currentSlabID := v.SlabID()
 	currentAddress := v.StorageAddress()
 
 	dictionary := v.dictionary
@@ -16170,11 +16170,11 @@ func (v *CompositeValue) Transfer(
 			res = v
 		}
 
-		newStorageID := dictionary.StorageID()
+		newSlabID := dictionary.SlabID()
 
 		interpreter.updateReferencedResource(
-			currentStorageID,
-			newStorageID,
+			currentSlabID,
+			newSlabID,
 			func(value ReferenceTrackedResourceKindedValue) {
 				compositeValue, ok := value.(*CompositeValue)
 				if !ok {
@@ -16351,8 +16351,8 @@ func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName
 	}
 }
 
-func (v *CompositeValue) StorageID() atree.StorageID {
-	return v.dictionary.StorageID()
+func (v *CompositeValue) SlabID() atree.SlabID {
+	return v.dictionary.SlabID()
 }
 
 func (v *CompositeValue) StorageAddress() atree.Address {
@@ -16446,7 +16446,7 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 	// the base reference can only be borrowed with the declared type of the attachment's base
 	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
 
-	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
+	interpreter.trackReferencedResourceKindedValue(base.SlabID(), base)
 }
 
 func attachmentMemberName(ty sema.Type) string {
@@ -16476,7 +16476,7 @@ func attachmentBaseAndSelfValues(
 	base = v.getBaseValue(interpreter, locationRange)
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
-	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
+	interpreter.trackReferencedResourceKindedValue(v.SlabID(), v)
 	return
 }
 
@@ -16527,7 +16527,7 @@ func (v *CompositeValue) GetTypeKey(
 	attachment.setBaseValue(interpreter, v)
 
 	attachmentRef := NewEphemeralReferenceValue(interpreter, false, attachment, ty)
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+	interpreter.trackReferencedResourceKindedValue(attachment.SlabID(), attachment)
 
 	return NewSomeValueNonCopying(interpreter, attachmentRef)
 }
@@ -16736,7 +16736,7 @@ func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Va
 		}
 	}
 	if v.IsResourceKinded(interpreter) {
-		interpreter.withMutationPrevention(v.StorageID(), iterate)
+		interpreter.withMutationPrevention(v.SlabID(), iterate)
 	} else {
 		iterate()
 	}
@@ -16834,10 +16834,10 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	storageID := v.StorageID()
+	slabID := v.SlabID()
 
 	interpreter.withResourceDestruction(
-		storageID,
+		slabID,
 		locationRange,
 		func() {
 			v.Iterate(interpreter, func(key, value Value) (resume bool) {
@@ -16857,8 +16857,8 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 	}
 
 	interpreter.updateReferencedResource(
-		storageID,
-		storageID,
+		slabID,
+		slabID,
 		func(value ReferenceTrackedResourceKindedValue) {
 			dictionaryValue, ok := value.(*DictionaryValue)
 			if !ok {
@@ -16913,7 +16913,7 @@ func (v *DictionaryValue) ForEachKey(
 	}
 
 	if v.IsResourceKinded(interpreter) {
-		interpreter.withMutationPrevention(v.StorageID(), iterate)
+		interpreter.withMutationPrevention(v.SlabID(), iterate)
 	} else {
 		iterate()
 	}
@@ -16985,7 +16985,7 @@ func (v *DictionaryValue) SetKey(
 	keyValue Value,
 	value Value,
 ) {
-	interpreter.validateMutation(v.StorageID(), locationRange)
+	interpreter.validateMutation(v.SlabID(), locationRange)
 
 	config := interpreter.SharedState.Config
 
@@ -17269,7 +17269,7 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
-	interpreter.validateMutation(v.StorageID(), locationRange)
+	interpreter.validateMutation(v.SlabID(), locationRange)
 
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
@@ -17326,7 +17326,7 @@ func (v *DictionaryValue) Insert(
 	keyValue, value Value,
 ) OptionalValue {
 
-	interpreter.validateMutation(v.StorageID(), locationRange)
+	interpreter.validateMutation(v.SlabID(), locationRange)
 
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
@@ -17579,7 +17579,7 @@ func (v *DictionaryValue) Transfer(
 		}()
 	}
 
-	currentStorageID := v.StorageID()
+	currentSlabID := v.SlabID()
 
 	dictionary := v.dictionary
 
@@ -17663,11 +17663,11 @@ func (v *DictionaryValue) Transfer(
 			res = v
 		}
 
-		newStorageID := dictionary.StorageID()
+		newSlabID := dictionary.SlabID()
 
 		interpreter.updateReferencedResource(
-			currentStorageID,
-			newStorageID,
+			currentSlabID,
+			newSlabID,
 			func(value ReferenceTrackedResourceKindedValue) {
 				dictionaryValue, ok := value.(*DictionaryValue)
 				if !ok {
@@ -17786,8 +17786,8 @@ func (v *DictionaryValue) GetOwner() common.Address {
 	return common.Address(v.StorageAddress())
 }
 
-func (v *DictionaryValue) StorageID() atree.StorageID {
-	return v.dictionary.StorageID()
+func (v *DictionaryValue) SlabID() atree.SlabID {
+	return v.dictionary.SlabID()
 }
 
 func (v *DictionaryValue) StorageAddress() atree.Address {

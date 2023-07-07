@@ -7958,7 +7958,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		var permanentSlabs []atree.Slab
 
 		for _, slab := range storage.(interpreter.InMemoryStorage).Slabs {
-			if slab.ID().Address == (atree.Address{}) {
+			if slab.SlabID().HasTempAddress() {
 				continue
 			}
 
@@ -7968,8 +7968,8 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		require.Equal(t, 2, len(permanentSlabs))
 
 		sort.Slice(permanentSlabs, func(i, j int) bool {
-			a := permanentSlabs[i].ID()
-			b := permanentSlabs[j].ID()
+			a := permanentSlabs[i].SlabID()
+			b := permanentSlabs[j].SlabID()
 			return a.Compare(b) < 0
 		})
 
