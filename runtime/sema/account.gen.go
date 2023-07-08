@@ -274,6 +274,37 @@ The given type must not necessarily be exactly the same as the type of the copie
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed.
 `
 
+const Account_StorageTypeCheckFunctionName = "check"
+
+var Account_StorageTypeCheckFunctionTypeParameterT = &TypeParameter{
+	Name:      "T",
+	TypeBound: AnyType,
+}
+
+var Account_StorageTypeCheckFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		Account_StorageTypeCheckFunctionTypeParameterT,
+	},
+	Parameters: []Parameter{
+		{
+			Identifier:     "from",
+			TypeAnnotation: NewTypeAnnotation(StoragePathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
+
+const Account_StorageTypeCheckFunctionDocString = `
+Returns true if the object in account storage under the given path satisfies the given type,
+i.e. could be borrowed using the given type.
+
+The given type must not necessarily be exactly the same as the type of the     borrowed object.
+
+The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed.
+`
+
 const Account_StorageTypeBorrowFunctionName = "borrow"
 
 var Account_StorageTypeBorrowFunctionTypeParameterT = &TypeParameter{
@@ -484,6 +515,13 @@ func init() {
 			Account_StorageTypeCopyFunctionName,
 			Account_StorageTypeCopyFunctionType,
 			Account_StorageTypeCopyFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_StorageType,
+			PrimitiveAccess(ast.AccessAll),
+			Account_StorageTypeCheckFunctionName,
+			Account_StorageTypeCheckFunctionType,
+			Account_StorageTypeCheckFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			Account_StorageType,
