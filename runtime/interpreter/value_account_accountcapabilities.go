@@ -25,13 +25,13 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// AuthAccount.AccountCapabilities
+// Account.AccountCapabilities
 
-var authAccountAccountCapabilitiesTypeID = sema.AuthAccountAccountCapabilitiesType.ID()
-var authAccountAccountCapabilitiesStaticType StaticType = PrimitiveStaticTypeAuthAccountAccountCapabilities // unmetered
-var authAccountAccountCapabilitiesFieldNames []string = nil
+var account_AccountCapabilitiesTypeID = sema.Account_AccountCapabilitiesType.ID()
+var account_AccountCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccountAccountCapabilities // unmetered
+var account_AccountCapabilitiesFieldNames []string = nil
 
-func NewAuthAccountAccountCapabilitiesValue(
+func NewAccountAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	getControllerFunction FunctionValue,
@@ -41,27 +41,27 @@ func NewAuthAccountAccountCapabilitiesValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountAccountCapabilitiesTypeGetControllerFunctionName:     getControllerFunction,
-		sema.AuthAccountAccountCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
-		sema.AuthAccountAccountCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
-		sema.AuthAccountAccountCapabilitiesTypeIssueFunctionName:             issueFunction,
+		sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:     getControllerFunction,
+		sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
+		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
+		sema.Account_AccountCapabilitiesTypeIssueFunctionName:             issueFunction,
 	}
 
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AuthAccountAccountCapabilitiesStringMemoryUsage)
+			common.UseMemory(memoryGauge, common.AccountAccountCapabilitiesStringMemoryUsage)
 			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("AuthAccount.AccountCapabilities(%s)", addressStr)
+			str = fmt.Sprintf("Account.AccountCapabilities(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
 		gauge,
-		authAccountAccountCapabilitiesTypeID,
-		authAccountAccountCapabilitiesStaticType,
-		authAccountAccountCapabilitiesFieldNames,
+		account_AccountCapabilitiesTypeID,
+		account_AccountCapabilitiesStaticType,
+		account_AccountCapabilitiesFieldNames,
 		fields,
 		nil,
 		nil,

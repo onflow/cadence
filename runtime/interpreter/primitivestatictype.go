@@ -206,6 +206,19 @@ const (
 	PrimitiveStaticTypeAuthAccountAccountCapabilities
 	PrimitiveStaticTypeAuthAccountCapabilities
 	PrimitiveStaticTypePublicAccountCapabilities
+	_
+	_
+	_
+	_
+	_
+	PrimitiveStaticTypeAccount
+	PrimitiveStaticTypeAccountContracts
+	PrimitiveStaticTypeAccountKeys
+	PrimitiveStaticTypeAccountInbox
+	PrimitiveStaticTypeAccountStorageCapabilities
+	PrimitiveStaticTypeAccountAccountCapabilities
+	PrimitiveStaticTypeAccountCapabilities
+	PrimitiveStaticTypeAccountStorage
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -424,35 +437,53 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypeCapability:
 		return &sema.CapabilityType{}
 	case PrimitiveStaticTypeAuthAccount:
-		return sema.AuthAccountType
+		return nil
 	case PrimitiveStaticTypePublicAccount:
-		return sema.PublicAccountType
+		return nil
 	case PrimitiveStaticTypeDeployedContract:
 		return sema.DeployedContractType
 	case PrimitiveStaticTypeAuthAccountContracts:
-		return sema.AuthAccountContractsType
+		return nil
 	case PrimitiveStaticTypePublicAccountContracts:
-		return sema.PublicAccountContractsType
+		return nil
 	case PrimitiveStaticTypeAuthAccountKeys:
-		return sema.AuthAccountKeysType
+		return nil
 	case PrimitiveStaticTypePublicAccountKeys:
-		return sema.PublicAccountKeysType
+		return nil
 	case PrimitiveStaticTypeAccountKey:
 		return sema.AccountKeyType
 	case PrimitiveStaticTypeAuthAccountInbox:
-		return sema.AuthAccountInboxType
+		return nil
 	case PrimitiveStaticTypeStorageCapabilityController:
 		return sema.StorageCapabilityControllerType
 	case PrimitiveStaticTypeAccountCapabilityController:
 		return sema.AccountCapabilityControllerType
 	case PrimitiveStaticTypeAuthAccountStorageCapabilities:
-		return sema.AuthAccountStorageCapabilitiesType
+		return nil
 	case PrimitiveStaticTypeAuthAccountAccountCapabilities:
-		return sema.AuthAccountAccountCapabilitiesType
+		return nil
 	case PrimitiveStaticTypeAuthAccountCapabilities:
-		return sema.AuthAccountCapabilitiesType
+		return nil
 	case PrimitiveStaticTypePublicAccountCapabilities:
-		return sema.PublicAccountCapabilitiesType
+		return nil
+
+	case PrimitiveStaticTypeAccount:
+		return sema.AccountType
+	case PrimitiveStaticTypeAccountContracts:
+		return sema.Account_ContractsType
+	case PrimitiveStaticTypeAccountKeys:
+		return sema.Account_KeysType
+	case PrimitiveStaticTypeAccountInbox:
+		return sema.Account_InboxType
+	case PrimitiveStaticTypeAccountStorageCapabilities:
+		return sema.Account_StorageCapabilitiesType
+	case PrimitiveStaticTypeAccountAccountCapabilities:
+		return sema.Account_AccountCapabilitiesType
+	case PrimitiveStaticTypeAccountCapabilities:
+		return sema.AccountCapabilitiesType
+	case PrimitiveStaticTypeAccountStorage:
+		return sema.Account_StorageType
+
 	default:
 		panic(errors.NewUnexpectedError("missing case for %s", i))
 	}
@@ -569,38 +600,33 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeAnyStruct
 	case sema.AnyResourceType:
 		typ = PrimitiveStaticTypeAnyResource
-	case sema.AuthAccountType:
-		typ = PrimitiveStaticTypeAuthAccount
-	case sema.PublicAccountType:
-		typ = PrimitiveStaticTypePublicAccount
 	case sema.BlockType:
 		typ = PrimitiveStaticTypeBlock
 	case sema.DeployedContractType:
 		typ = PrimitiveStaticTypeDeployedContract
-	case sema.AuthAccountContractsType:
-		typ = PrimitiveStaticTypeAuthAccountContracts
-	case sema.PublicAccountContractsType:
-		typ = PrimitiveStaticTypePublicAccountContracts
-	case sema.AuthAccountKeysType:
-		typ = PrimitiveStaticTypeAuthAccountKeys
-	case sema.PublicAccountKeysType:
-		typ = PrimitiveStaticTypePublicAccountKeys
 	case sema.AccountKeyType:
 		typ = PrimitiveStaticTypeAccountKey
-	case sema.AuthAccountInboxType:
-		typ = PrimitiveStaticTypeAuthAccountInbox
 	case sema.StorageCapabilityControllerType:
 		typ = PrimitiveStaticTypeStorageCapabilityController
 	case sema.AccountCapabilityControllerType:
 		typ = PrimitiveStaticTypeAccountCapabilityController
-	case sema.AuthAccountStorageCapabilitiesType:
-		typ = PrimitiveStaticTypeAuthAccountStorageCapabilities
-	case sema.AuthAccountAccountCapabilitiesType:
-		typ = PrimitiveStaticTypeAuthAccountAccountCapabilities
-	case sema.AuthAccountCapabilitiesType:
-		typ = PrimitiveStaticTypeAuthAccountCapabilities
-	case sema.PublicAccountCapabilitiesType:
-		typ = PrimitiveStaticTypePublicAccountCapabilities
+
+	case sema.AccountType:
+		return PrimitiveStaticTypeAccount
+	case sema.Account_ContractsType:
+		return PrimitiveStaticTypeAccountContracts
+	case sema.Account_KeysType:
+		return PrimitiveStaticTypeAccountKeys
+	case sema.Account_InboxType:
+		return PrimitiveStaticTypeAccountInbox
+	case sema.Account_StorageCapabilitiesType:
+		return PrimitiveStaticTypeAccountStorageCapabilities
+	case sema.Account_AccountCapabilitiesType:
+		return PrimitiveStaticTypeAccountAccountCapabilities
+	case sema.AccountCapabilitiesType:
+		return PrimitiveStaticTypeAccountCapabilities
+	case sema.Account_StorageType:
+		return PrimitiveStaticTypeAccountStorage
 	}
 
 	switch t := t.(type) {

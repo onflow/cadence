@@ -69,10 +69,18 @@ func _() {
 	_ = x[PrimitiveStaticTypeAuthAccountAccountCapabilities-102]
 	_ = x[PrimitiveStaticTypeAuthAccountCapabilities-103]
 	_ = x[PrimitiveStaticTypePublicAccountCapabilities-104]
-	_ = x[PrimitiveStaticType_Count-105]
+	_ = x[PrimitiveStaticTypeAccount-110]
+	_ = x[PrimitiveStaticTypeAccountContracts-111]
+	_ = x[PrimitiveStaticTypeAccountKeys-112]
+	_ = x[PrimitiveStaticTypeAccountInbox-113]
+	_ = x[PrimitiveStaticTypeAccountStorageCapabilities-114]
+	_ = x[PrimitiveStaticTypeAccountAccountCapabilities-115]
+	_ = x[PrimitiveStaticTypeAccountCapabilities-116]
+	_ = x[PrimitiveStaticTypeAccountStorage-117]
+	_ = x[PrimitiveStaticType_Count-118]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Word128Word256Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilities_Count"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Word128Word256Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilitiesAccountAccountContractsAccountKeysAccountInboxAccountStorageCapabilitiesAccountAccountCapabilitiesAccountCapabilitiesAccountStorage_Count"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:   _PrimitiveStaticType_name[0:7],
@@ -136,7 +144,15 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	102: _PrimitiveStaticType_name[549:579],
 	103: _PrimitiveStaticType_name[579:602],
 	104: _PrimitiveStaticType_name[602:627],
-	105: _PrimitiveStaticType_name[627:633],
+	110: _PrimitiveStaticType_name[627:634],
+	111: _PrimitiveStaticType_name[634:650],
+	112: _PrimitiveStaticType_name[650:661],
+	113: _PrimitiveStaticType_name[661:673],
+	114: _PrimitiveStaticType_name[673:699],
+	115: _PrimitiveStaticType_name[699:725],
+	116: _PrimitiveStaticType_name[725:744],
+	117: _PrimitiveStaticType_name[744:758],
+	118: _PrimitiveStaticType_name[758:764],
 }
 
 func (i PrimitiveStaticType) String() string {

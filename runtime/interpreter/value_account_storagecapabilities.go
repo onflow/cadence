@@ -25,13 +25,13 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// AuthAccount.StorageCapabilities
+// Account.StorageCapabilities
 
-var authAccountStorageCapabilitiesTypeID = sema.AuthAccountStorageCapabilitiesType.ID()
-var authAccountStorageCapabilitiesStaticType StaticType = PrimitiveStaticTypeAuthAccountStorageCapabilities // unmetered
-var authAccountStorageCapabilitiesFieldNames []string = nil
+var account_StorageCapabilitiesTypeID = sema.Account_StorageCapabilitiesType.ID()
+var account_StorageCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccountStorageCapabilities // unmetered
+var account_StorageCapabilitiesFieldNames []string = nil
 
-func NewAuthAccountStorageCapabilitiesValue(
+func NewAccountStorageCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	getControllerFunction FunctionValue,
@@ -41,27 +41,27 @@ func NewAuthAccountStorageCapabilitiesValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountStorageCapabilitiesTypeGetControllerFunctionName:     getControllerFunction,
-		sema.AuthAccountStorageCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
-		sema.AuthAccountStorageCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
-		sema.AuthAccountStorageCapabilitiesTypeIssueFunctionName:             issueFunction,
+		sema.Account_StorageCapabilitiesTypeGetControllerFunctionName:     getControllerFunction,
+		sema.Account_StorageCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
+		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
+		sema.Account_StorageCapabilitiesTypeIssueFunctionName:             issueFunction,
 	}
 
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AuthAccountStorageCapabilitiesStringMemoryUsage)
+			common.UseMemory(memoryGauge, common.AccountStorageCapabilitiesStringMemoryUsage)
 			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("AuthAccount.StorageCapabilities(%s)", addressStr)
+			str = fmt.Sprintf("Account.StorageCapabilities(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
 		gauge,
-		authAccountStorageCapabilitiesTypeID,
-		authAccountStorageCapabilitiesStaticType,
-		authAccountStorageCapabilitiesFieldNames,
+		account_StorageCapabilitiesTypeID,
+		account_StorageCapabilitiesStaticType,
+		account_StorageCapabilitiesFieldNames,
 		fields,
 		nil,
 		nil,

@@ -25,13 +25,13 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// AuthAccount.Keys
+// Account.Keys
 
-var authAccountKeysTypeID = sema.AuthAccountKeysType.ID()
-var authAccountKeysStaticType StaticType = PrimitiveStaticTypeAuthAccountKeys
+var account_KeysTypeID = sema.Account_KeysType.ID()
+var account_KeysStaticType StaticType = PrimitiveStaticTypeAccountKeys
 
-// NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
-func NewAuthAccountKeysValue(
+// NewAccountKeysValue constructs an Account.Keys value.
+func NewAccountKeysValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	addFunction FunctionValue,
@@ -42,15 +42,15 @@ func NewAuthAccountKeysValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountKeysTypeAddFunctionName:     addFunction,
-		sema.AuthAccountKeysTypeGetFunctionName:     getFunction,
-		sema.AuthAccountKeysTypeRevokeFunctionName:  revokeFunction,
-		sema.AuthAccountKeysTypeForEachFunctionName: forEachFunction,
+		sema.Account_KeysTypeAddFunctionName:     addFunction,
+		sema.Account_KeysTypeGetFunctionName:     getFunction,
+		sema.Account_KeysTypeRevokeFunctionName:  revokeFunction,
+		sema.Account_KeysTypeForEachFunctionName: forEachFunction,
 	}
 
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
-		case sema.AuthAccountKeysTypeCountFieldName:
+		case sema.Account_KeysTypeCountFieldName:
 			return getKeysCount()
 		}
 		return nil
@@ -59,65 +59,17 @@ func NewAuthAccountKeysValue(
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AuthAccountKeysStringMemoryUsage)
+			common.UseMemory(memoryGauge, common.AccountKeysStringMemoryUsage)
 			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("AuthAccount.Keys(%s)", addressStr)
+			str = fmt.Sprintf("Account.Keys(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
 		gauge,
-		authAccountKeysTypeID,
-		authAccountKeysStaticType,
-		nil,
-		fields,
-		computeField,
-		nil,
-		stringer,
-	)
-}
-
-// PublicAccountKeys
-
-var publicAccountKeysTypeID = sema.PublicAccountKeysType.ID()
-var publicAccountKeysStaticType StaticType = PrimitiveStaticTypePublicAccountKeys
-
-// NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
-func NewPublicAccountKeysValue(
-	gauge common.MemoryGauge,
-	address AddressValue,
-	getFunction FunctionValue,
-	forEachFunction FunctionValue,
-	getKeysCount AccountKeysCountGetter,
-) Value {
-
-	fields := map[string]Value{
-		sema.PublicAccountKeysTypeGetFunctionName:     getFunction,
-		sema.PublicAccountKeysTypeForEachFunctionName: forEachFunction,
-	}
-
-	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
-		switch name {
-		case sema.PublicAccountKeysTypeCountFieldName:
-			return getKeysCount()
-		}
-		return nil
-	}
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.PublicAccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("PublicAccount.Keys(%s)", addressStr)
-		}
-		return str
-	}
-
-	return NewSimpleCompositeValue(
-		gauge,
-		publicAccountKeysTypeID,
-		publicAccountKeysStaticType,
+		account_KeysTypeID,
+		account_KeysStaticType,
 		nil,
 		fields,
 		computeField,

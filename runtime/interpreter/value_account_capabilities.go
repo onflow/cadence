@@ -25,12 +25,12 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// AuthAccount.Capabilities
+// Account.Capabilities
 
-var authAccountCapabilitiesTypeID = sema.AuthAccountCapabilitiesType.ID()
-var authAccountCapabilitiesStaticType StaticType = PrimitiveStaticTypeAuthAccountCapabilities
+var account_CapabilitiesTypeID = sema.AccountCapabilitiesType.ID()
+var account_CapabilitiesStaticType StaticType = PrimitiveStaticTypeAccountCapabilities
 
-func NewAuthAccountCapabilitiesValue(
+func NewAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	getFunction FunctionValue,
@@ -42,10 +42,10 @@ func NewAuthAccountCapabilitiesValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountCapabilitiesTypeGetFunctionName:       getFunction,
-		sema.AuthAccountCapabilitiesTypeBorrowFunctionName:    borrowFunction,
-		sema.AuthAccountCapabilitiesTypePublishFunctionName:   publishFunction,
-		sema.AuthAccountCapabilitiesTypeUnpublishFunctionName: unpublishFunction,
+		sema.Account_CapabilitiesTypeGetFunctionName:       getFunction,
+		sema.Account_CapabilitiesTypeBorrowFunctionName:    borrowFunction,
+		sema.Account_CapabilitiesTypePublishFunctionName:   publishFunction,
+		sema.Account_CapabilitiesTypeUnpublishFunctionName: unpublishFunction,
 	}
 
 	var storageCapabilities Value
@@ -53,13 +53,13 @@ func NewAuthAccountCapabilitiesValue(
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
-		case sema.AuthAccountCapabilitiesTypeStorageFieldName:
+		case sema.Account_CapabilitiesTypeStorageFieldName:
 			if storageCapabilities == nil {
 				storageCapabilities = storageCapabilitiesConstructor()
 			}
 			return storageCapabilities
 
-		case sema.AuthAccountCapabilitiesTypeAccountFieldName:
+		case sema.Account_CapabilitiesTypeAccountFieldName:
 			if accountCapabilities == nil {
 				accountCapabilities = accountCapabilitiesConstructor()
 			}
@@ -72,59 +72,20 @@ func NewAuthAccountCapabilitiesValue(
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AuthAccountCapabilitiesStringMemoryUsage)
+			common.UseMemory(memoryGauge, common.AccountCapabilitiesStringMemoryUsage)
 			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("AuthAccount.Capabilities(%s)", addressStr)
+			str = fmt.Sprintf("Account.Capabilities(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
 		gauge,
-		authAccountCapabilitiesTypeID,
-		authAccountCapabilitiesStaticType,
+		account_CapabilitiesTypeID,
+		account_CapabilitiesStaticType,
 		nil,
 		fields,
 		computeField,
-		nil,
-		stringer,
-	)
-}
-
-// PublicAccount.Capabilities
-
-var publicAccountCapabilitiesTypeID = sema.PublicAccountCapabilitiesType.ID()
-var publicAccountCapabilitiesStaticType StaticType = PrimitiveStaticTypePublicAccountCapabilities
-
-func NewPublicAccountCapabilitiesValue(
-	gauge common.MemoryGauge,
-	address AddressValue,
-	getFunction FunctionValue,
-	borrowFunction FunctionValue,
-) Value {
-
-	fields := map[string]Value{
-		sema.PublicAccountCapabilitiesTypeGetFunctionName:    getFunction,
-		sema.PublicAccountCapabilitiesTypeBorrowFunctionName: borrowFunction,
-	}
-
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.PublicAccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("PublicAccount.Capabilities(%s)", addressStr)
-		}
-		return str
-	}
-
-	return NewSimpleCompositeValue(
-		gauge,
-		publicAccountCapabilitiesTypeID,
-		publicAccountCapabilitiesStaticType,
-		nil,
-		fields,
-		nil,
 		nil,
 		stringer,
 	)

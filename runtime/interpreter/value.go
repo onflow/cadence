@@ -15580,7 +15580,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange Loca
 	ownerAccount := config.PublicAccountHandler(AddressValue(address))
 
 	// Owner must be of `PublicAccount` type.
-	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, locationRange)
+	interpreter.ExpectType(ownerAccount, sema.AccountReferenceType, locationRange)
 
 	return NewSomeValueNonCopying(interpreter, ownerAccount)
 }

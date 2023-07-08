@@ -25,15 +25,15 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// AuthAccount.Contracts
+// Account.Contracts
 
-var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
-var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts // unmetered
-var authAccountContractsFieldNames []string = nil
+var account_ContractsTypeID = sema.Account_ContractsType.ID()
+var account_ContractsStaticType StaticType = PrimitiveStaticTypeAccountContracts // unmetered
+var account_ContractsFieldNames []string = nil
 
 type ContractNamesGetter func(interpreter *Interpreter, locationRange LocationRange) *ArrayValue
 
-func NewAuthAccountContractsValue(
+func NewAccountContractsValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
 	addFunction FunctionValue,
@@ -45,11 +45,11 @@ func NewAuthAccountContractsValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountContractsTypeAddFunctionName:                  addFunction,
-		sema.AuthAccountContractsTypeGetFunctionName:                  getFunction,
-		sema.AuthAccountContractsTypeBorrowFunctionName:               borrowFunction,
-		sema.AuthAccountContractsTypeRemoveFunctionName:               removeFunction,
-		sema.AuthAccountContractsTypeUpdate__experimentalFunctionName: updateFunction,
+		sema.Account_ContractsTypeAddFunctionName:    addFunction,
+		sema.Account_ContractsTypeGetFunctionName:    getFunction,
+		sema.Account_ContractsTypeBorrowFunctionName: borrowFunction,
+		sema.Account_ContractsTypeRemoveFunctionName: removeFunction,
+		sema.Account_ContractsTypeUpdateFunctionName: updateFunction,
 	}
 
 	computeField := func(
@@ -58,7 +58,7 @@ func NewAuthAccountContractsValue(
 		locationRange LocationRange,
 	) Value {
 		switch name {
-		case sema.AuthAccountContractsTypeNamesFieldName:
+		case sema.Account_ContractsTypeNamesFieldName:
 			return namesGetter(interpreter, locationRange)
 		}
 		return nil
@@ -67,70 +67,18 @@ func NewAuthAccountContractsValue(
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AuthAccountContractsStringMemoryUsage)
+			common.UseMemory(memoryGauge, common.AccountContractsStringMemoryUsage)
 			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("AuthAccount.Contracts(%s)", addressStr)
+			str = fmt.Sprintf("Account.Contracts(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
 		gauge,
-		authAccountContractsTypeID,
-		authAccountContractsStaticType,
-		authAccountContractsFieldNames,
-		fields,
-		computeField,
-		nil,
-		stringer,
-	)
-}
-
-// PublicAccount.Contracts
-
-var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
-var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
-
-func NewPublicAccountContractsValue(
-	gauge common.MemoryGauge,
-	address AddressValue,
-	getFunction FunctionValue,
-	borrowFunction FunctionValue,
-	namesGetter ContractNamesGetter,
-) Value {
-
-	fields := map[string]Value{
-		sema.PublicAccountContractsTypeGetFunctionName:    getFunction,
-		sema.PublicAccountContractsTypeBorrowFunctionName: borrowFunction,
-	}
-
-	computeField := func(
-		name string,
-		interpreter *Interpreter,
-		locationRange LocationRange,
-	) Value {
-		switch name {
-		case sema.PublicAccountContractsTypeNamesFieldName:
-			return namesGetter(interpreter, locationRange)
-		}
-		return nil
-	}
-
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.PublicAccountContractsStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("PublicAccount.Contracts(%s)", addressStr)
-		}
-		return str
-	}
-
-	return NewSimpleCompositeValue(
-		gauge,
-		publicAccountContractsTypeID,
-		publicAccountContractsStaticType,
-		nil,
+		account_ContractsTypeID,
+		account_ContractsStaticType,
+		account_ContractsFieldNames,
 		fields,
 		computeField,
 		nil,

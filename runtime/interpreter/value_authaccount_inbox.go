@@ -25,13 +25,13 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// AuthAccount.Inbox
+// Account.Inbox
 
-var authAccountInboxTypeID = sema.AuthAccountInboxType.ID()
-var authAccountInboxStaticType StaticType = PrimitiveStaticTypeAuthAccountInbox
+var account_InboxTypeID = sema.Account_InboxType.ID()
+var account_InboxStaticType StaticType = PrimitiveStaticTypeAuthAccountInbox
 
-// NewAuthAccountInboxValue constructs a AuthAccount.Inbox value.
-func NewAuthAccountInboxValue(
+// NewAccountInboxValue constructs an Account.Inbox value.
+func NewAccountInboxValue(
 	gauge common.MemoryGauge,
 	addressValue AddressValue,
 	publishFunction FunctionValue,
@@ -40,25 +40,25 @@ func NewAuthAccountInboxValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountInboxTypePublishFunctionName:   publishFunction,
-		sema.AuthAccountInboxTypeUnpublishFunctionName: unpublishFunction,
-		sema.AuthAccountInboxTypeClaimFunctionName:     claimFunction,
+		sema.Account_InboxTypePublishFunctionName:   publishFunction,
+		sema.Account_InboxTypeUnpublishFunctionName: unpublishFunction,
+		sema.Account_InboxTypeClaimFunctionName:     claimFunction,
 	}
 
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AuthAccountInboxStringMemoryUsage)
+			common.UseMemory(memoryGauge, common.AccountInboxStringMemoryUsage)
 			addressStr := addressValue.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("AuthAccount.Inbox(%s)", addressStr)
+			str = fmt.Sprintf("Account.Inbox(%s)", addressStr)
 		}
 		return str
 	}
 
 	return NewSimpleCompositeValue(
 		gauge,
-		authAccountInboxTypeID,
-		authAccountInboxStaticType,
+		account_InboxTypeID,
+		account_InboxStaticType,
 		nil,
 		fields,
 		nil,

@@ -4108,7 +4108,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeSaveFunctionType,
+		sema.Account_StorageTypeSaveFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4167,7 +4167,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeTypeFunctionType,
+		sema.Account_StorageTypeTypeFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4213,8 +4213,8 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
-		// same as sema.AuthAccountTypeCopyFunctionType
-		sema.AuthAccountTypeLoadFunctionType,
+		// same as sema.Account_StorageTypeCopyFunctionType
+		sema.Account_StorageTypeLoadFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4292,7 +4292,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeBorrowFunctionType,
+		sema.Account_StorageTypeBorrowFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4345,7 +4345,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeCheckFunctionType,
+		sema.Account_StorageTypeCheckFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
