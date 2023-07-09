@@ -163,8 +163,7 @@ func rangeContains(
 	endInclusive := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeEndFieldName)
 	step := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeStepFieldName)
 
-	var result bool
-	result = start.Equal(interpreter, locationRange, needleValue) ||
+	result := start.Equal(interpreter, locationRange, needleValue) ||
 		endInclusive.Equal(interpreter, locationRange, needleValue)
 
 	if !result {
