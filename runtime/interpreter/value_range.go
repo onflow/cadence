@@ -88,7 +88,12 @@ func NewInclusiveRangeValueWithStep(
 
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
-			Message:       fmt.Sprintf("sequence is moving away from end: %s due to the value of step: %s and start: %s", end, step, start),
+			Message:       fmt.Sprintf(
+				"sequence is moving away from end: %s due to the value of step: %s and start: %s",
+				 end,
+				 step,
+				 start,
+			),
 		})
 	}
 
