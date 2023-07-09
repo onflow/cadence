@@ -182,7 +182,8 @@ func rangeContains(
 				panic(errors.NewUnreachableError())
 			}
 
-			result = diff.Mod(interpreter, step, locationRange).Equal(interpreter, locationRange, interpreter.GetValueForIntegerType(0, rangeType.ElementType))
+			zeroValue := interpreter.GetValueForIntegerType(0, rangeType.ElementType)
+			result = diff.Mod(interpreter, step, locationRange).Equal(interpreter, locationRange, zeroValue)
 		}
 	}
 
