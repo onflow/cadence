@@ -104,7 +104,14 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			return interpreter.NewInclusiveRangeValueWithStep(inter, locationRange, start, endInclusive, step, rangeStaticType)
+			return interpreter.NewInclusiveRangeValueWithStep(
+				inter,
+				locationRange,
+				start,
+				endInclusive,
+				step,
+				rangeStaticType,
+			)
 		} else {
 			return interpreter.NewInclusiveRangeValue(inter, locationRange, start, endInclusive, rangeStaticType)
 		}
