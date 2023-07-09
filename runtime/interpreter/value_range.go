@@ -166,24 +166,27 @@ func rangeContains(
 	result := start.Equal(interpreter, locationRange, needleValue) ||
 		endInclusive.Equal(interpreter, locationRange, needleValue)
 
-	if !result {
-		greaterThanStart := needleValue.Greater(interpreter, start, locationRange)
-		greaterThanEndInclusive := needleValue.Greater(interpreter, endInclusive, locationRange)
+	if result {
+		return TrueValue
+	}
 
-		if greaterThanStart == greaterThanEndInclusive {
-			// If needle is greater or smaller than both start & endInclusive, then it is outside the range.
-			result = false
-		} else {
-			// needle is in between start and endInclusive.
-			// start + k * step should be equal to needle i.e. (needle - start) mod step == 0.
-			diff, ok := needleValue.Minus(interpreter, start, locationRange).(IntegerValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+	greaterThanStart := needleValue.Greater(interpreter, start, locationRange)
+	greaterThanEndInclusive := needleValue.Greater(interpreter, endInclusive, locationRange)
 
-			zeroValue := interpreter.GetValueForIntegerType(0, rangeType.ElementType)
-			result = diff.Mod(interpreter, step, locationRange).Equal(interpreter, locationRange, zeroValue)
+	if greaterThanStart == greaterThanEndInclusive {
+		// If needle is greater or smaller than both start & endInclusive, then it is outside the range.
+		result = false
+	} else {
+		// needle is in between start and endInclusive.
+		// start + k * step should be equal to needle i.e. (needle - start) mod step == 0.
+		diff, ok := needleValue.Minus(interpreter, start, locationRange).(IntegerValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
 		}
+
+		zeroValue := interpreter.GetValueForIntegerType(0, rangeType.ElementType)
+		mod := diff.Mod(interpreter, step, locationRange)
+		result = mod.Equal(interpreter, locationRange, zeroValue)
 	}
 
 	return AsBoolValue(result)
