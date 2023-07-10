@@ -2272,11 +2272,10 @@ func (t *ReferenceType) Equal(other Type) bool {
 type IntersectionSet = map[Type]struct{}
 
 type IntersectionType struct {
-	typeID               string
-	Types                []Type
-	LegacyRestrictedType Type
-	intersectionSet      IntersectionSet
-	intersectionSetOnce  sync.Once
+	typeID              string
+	Types               []Type
+	intersectionSet     IntersectionSet
+	intersectionSetOnce sync.Once
 }
 
 func NewIntersectionType(
