@@ -464,13 +464,25 @@ func (checker *Checker) mapAccess(
 }
 
 func AllSupportedEntitlements(typ Type) Access {
+	return allSupportedEntitlements(typ, false)
+}
+
+func allSupportedEntitlements(typ Type, isInnerType bool) Access {
 	switch typ := typ.(type) {
 	case *ReferenceType:
-		return AllSupportedEntitlements(typ.Type)
+		return allSupportedEntitlements(typ.Type, true)
 	case *OptionalType:
-		return AllSupportedEntitlements(typ.Type)
+		return allSupportedEntitlements(typ.Type, true)
 	case *FunctionType:
-		return AllSupportedEntitlements(typ.ReturnTypeAnnotation.Type)
+		// Entitlements must be returned only for function definitions.
+		// Other than func-definitions, a member can be a function type in two ways:
+		//  1) Function-typed field - Mappings are not allowed on function typed fields
+		//  2) Function reference typed field - A function type inside a reference/optional-reference
+		//     (i.e: an inner function type) should not be considered for entitlements.
+		//
+		if !isInnerType {
+			return allSupportedEntitlements(typ.ReturnTypeAnnotation.Type, true)
+		}
 	case EntitlementSupportingType:
 		supportedEntitlements := typ.SupportedEntitlements()
 		if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
