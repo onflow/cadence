@@ -132,9 +132,9 @@ func TestCheckCastResourceType(t *testing.T) {
 
 	t.Parallel()
 
-	// Supertype: Restricted type
+	// Supertype: Intersection type
 
-	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -158,7 +158,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := RequireGlobalValue(t, checker.Elaboration, "r2")
 
 			require.IsType(t,
-				&sema.RestrictedType{},
+				&sema.IntersectionType{},
 				r2Type,
 			)
 		})
@@ -183,7 +183,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -207,7 +207,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := RequireGlobalValue(t, checker.Elaboration, "r2")
 
 			require.IsType(t,
-				&sema.RestrictedType{},
+				&sema.IntersectionType{},
 				r2Type,
 			)
 		})
@@ -232,7 +232,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: different resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -278,7 +278,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
+	t.Run("type -> intersection type: same resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -300,7 +300,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := RequireGlobalValue(t, checker.Elaboration, "r2")
 
 			require.IsType(t,
-				&sema.RestrictedType{},
+				&sema.IntersectionType{},
 				r2Type,
 			)
 		})
@@ -325,7 +325,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> restricted type: different resource", func(t *testing.T) {
+	t.Run("type -> intersection type: different resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -371,7 +371,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyResource -> conforming restricted type", func(t *testing.T) {
+	t.Run("AnyResource -> conforming intersection type", func(t *testing.T) {
 
 		const types = `
           resource interface RI {}
@@ -415,7 +415,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> conforming restricted type", func(t *testing.T) {
+	t.Run("intersection AnyResource -> conforming intersection type", func(t *testing.T) {
 
 		const types = `
           resource interface RI {}
@@ -459,7 +459,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> non-conforming restricted type", func(t *testing.T) {
+	t.Run("intersection AnyResource -> non-conforming intersection type", func(t *testing.T) {
 
 		const types = `
           resource interface RI {}
@@ -479,7 +479,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			errs := RequireCheckerErrors(t, err, 3)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+			assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 		})
 
@@ -501,16 +501,16 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 3)
 
-			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
+			assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[0])
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[2])
+			assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[2])
 
 		})
 	})
 
-	// Supertype: Resource (unrestricted)
+	// Supertype: Resource
 
-	t.Run("restricted type -> unrestricted type: same resource", func(t *testing.T) {
+	t.Run("intersection type -> type: same resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -557,7 +557,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
+	t.Run("intersection type -> type: different resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -603,7 +603,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> conforming resource", func(t *testing.T) {
+	t.Run("intersection AnyResource -> conforming resource", func(t *testing.T) {
 
 		const types = `
            resource interface RI {}
@@ -647,7 +647,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> non-conforming resource", func(t *testing.T) {
+	t.Run("intersection AnyResource -> non-conforming resource", func(t *testing.T) {
 
 		const types = `
            resource interface RI {}
@@ -692,7 +692,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyResource -> unrestricted type", func(t *testing.T) {
+	t.Run("AnyResource -> type", func(t *testing.T) {
 
 		const types = `
            resource interface RI {}
@@ -734,9 +734,9 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	// Supertype: restricted AnyResource
+	// Supertype: intersection AnyResource
 
-	t.Run("resource -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
+	t.Run("resource -> intersection AnyResource with non-conformance type", func(t *testing.T) {
 
 		const types = `
           resource interface RI {}
@@ -782,7 +782,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 	})
 
-	t.Run("resource -> restricted AnyResource with conformance restriction", func(t *testing.T) {
+	t.Run("resource -> intersection AnyResource with conformance type", func(t *testing.T) {
 
 		const types = `
           resource interface RI {}
@@ -822,7 +822,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
+	t.Run("intersection type -> intersection AnyResource with conformance in type", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -848,9 +848,9 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := RequireGlobalValue(t, checker.Elaboration, "r2")
 
 			require.IsType(t,
-				&sema.RestrictedType{
+				&sema.IntersectionType{
 					Type: sema.AnyResourceType,
-					Restrictions: []*sema.InterfaceType{
+					Types: []*sema.InterfaceType{
 						iType.(*sema.InterfaceType),
 					},
 				},
@@ -878,7 +878,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted AnyResource with conformance not in restriction", func(t *testing.T) {
+	t.Run("intersection type -> intersection AnyResource with conformance not in type", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -906,9 +906,9 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := RequireGlobalValue(t, checker.Elaboration, "r2")
 
 			require.IsType(t,
-				&sema.RestrictedType{
+				&sema.IntersectionType{
 					Type: sema.AnyResourceType,
-					Restrictions: []*sema.InterfaceType{
+					Types: []*sema.InterfaceType{
 						i2Type.(*sema.InterfaceType),
 					},
 				},
@@ -936,7 +936,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
+	t.Run("intersection type -> intersection AnyResource with non-conformance type", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -982,7 +982,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> restricted AnyResource: fewer restrictions", func(t *testing.T) {
+	t.Run("intersection AnyResource -> intersection AnyResource: fewer types", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -1024,7 +1024,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> restricted AnyResource: more restrictions", func(t *testing.T) {
+	t.Run("intersection AnyResource -> intersection AnyResource: more types", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -1068,7 +1068,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
+	t.Run("intersection AnyResource -> intersection AnyResource with non-conformance type", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -1112,7 +1112,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyResource -> restricted AnyResource", func(t *testing.T) {
+	t.Run("AnyResource -> intersection AnyResource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -1156,7 +1156,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 	// Supertype: AnyResource
 
-	t.Run("restricted type -> AnyResource", func(t *testing.T) {
+	t.Run("intersection type -> AnyResource", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -1198,7 +1198,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> AnyResource", func(t *testing.T) {
+	t.Run("intersection AnyResource -> AnyResource", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -1240,7 +1240,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> AnyResource", func(t *testing.T) {
+	t.Run("type -> AnyResource", func(t *testing.T) {
 
 		const types = `
            resource R {}
@@ -1282,9 +1282,9 @@ func TestCheckCastStructType(t *testing.T) {
 
 	t.Parallel()
 
-	// Supertype: Restricted type
+	// Supertype: Intersection type
 
-	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 		const types = `
           struct interface I1 {}
@@ -1308,7 +1308,7 @@ func TestCheckCastStructType(t *testing.T) {
 			s2Type := RequireGlobalValue(t, checker.Elaboration, "s2")
 
 			require.IsType(t,
-				&sema.RestrictedType{},
+				&sema.IntersectionType{},
 				s2Type,
 			)
 		})
@@ -1328,14 +1328,14 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.IsType(t,
 				&sema.OptionalType{
-					Type: &sema.RestrictedType{},
+					Type: &sema.IntersectionType{},
 				},
 				s2Type,
 			)
 		})
 	})
 
-	t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
 
 		const types = `
           struct interface I1 {}
@@ -1359,7 +1359,7 @@ func TestCheckCastStructType(t *testing.T) {
 			s2Type := RequireGlobalValue(t, checker.Elaboration, "s2")
 
 			require.IsType(t,
-				&sema.RestrictedType{},
+				&sema.IntersectionType{},
 				s2Type,
 			)
 		})
@@ -1377,7 +1377,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted type: different struct", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: different struct", func(t *testing.T) {
 
 		const types = `
           struct interface I {}
@@ -1416,7 +1416,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> restricted type: same struct", func(t *testing.T) {
+	t.Run("type -> intersection type: same struct", func(t *testing.T) {
 
 		const types = `
           struct interface I {}
@@ -1438,7 +1438,7 @@ func TestCheckCastStructType(t *testing.T) {
 			s2Type := RequireGlobalValue(t, checker.Elaboration, "s2")
 
 			require.IsType(t,
-				&sema.RestrictedType{},
+				&sema.IntersectionType{},
 				s2Type,
 			)
 		})
@@ -1456,7 +1456,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> restricted type: different struct", func(t *testing.T) {
+	t.Run("type -> intersection type: different struct", func(t *testing.T) {
 
 		const types = `
           struct interface I {}
@@ -1495,7 +1495,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyStruct -> conforming restricted type", func(t *testing.T) {
+	t.Run("AnyStruct -> conforming intersection type", func(t *testing.T) {
 
 		const types = `
           struct interface SI {}
@@ -1532,7 +1532,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyStruct -> conforming restricted type", func(t *testing.T) {
+	t.Run("intersection AnyStruct -> conforming intersection type", func(t *testing.T) {
 
 		const types = `
           struct interface SI {}
@@ -1569,7 +1569,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyStruct -> non-conforming restricted type", func(t *testing.T) {
+	t.Run("intersection AnyStruct -> non-conforming intersection type", func(t *testing.T) {
 
 		const types = `
           struct interface SI {}
@@ -1589,7 +1589,7 @@ func TestCheckCastStructType(t *testing.T) {
 			errs := RequireCheckerErrors(t, err, 3)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+			assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 		})
 
@@ -1605,13 +1605,13 @@ func TestCheckCastStructType(t *testing.T) {
 			errs := RequireCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+			assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 		})
 	})
 
-	// Supertype: Struct (unrestricted)
+	// Supertype: Struct
 
-	t.Run("restricted type -> unrestricted type: same struct", func(t *testing.T) {
+	t.Run("intersection type -> type: same struct", func(t *testing.T) {
 
 		const types = `
           struct interface I {}
@@ -1651,7 +1651,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> unrestricted type: different struct", func(t *testing.T) {
+	t.Run("intersection type -> type: different struct", func(t *testing.T) {
 
 		const types = `
           struct interface I {}
@@ -1690,7 +1690,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyStruct -> conforming struct", func(t *testing.T) {
+	t.Run("intersection AnyStruct -> conforming struct", func(t *testing.T) {
 
 		const types = `
            struct interface SI {}
@@ -1727,7 +1727,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyStruct -> non-conforming struct", func(t *testing.T) {
+	t.Run("intersection AnyStruct -> non-conforming struct", func(t *testing.T) {
 
 		const types = `
            struct interface SI {}
@@ -1765,7 +1765,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyStruct -> unrestricted type", func(t *testing.T) {
+	t.Run("AnyStruct -> type", func(t *testing.T) {
 
 		const types = `
            struct interface SI {}
@@ -1800,9 +1800,9 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	// Supertype: restricted AnyStruct
+	// Supertype: intersection AnyStruct
 
-	t.Run("struct -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+	t.Run("struct -> intersection AnyStruct with non-conformance type", func(t *testing.T) {
 
 		const types = `
           struct interface SI {}
@@ -1841,7 +1841,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 	})
 
-	t.Run("struct -> restricted AnyStruct with conformance restriction", func(t *testing.T) {
+	t.Run("struct -> intersection AnyStruct with conformance type", func(t *testing.T) {
 
 		const types = `
           struct interface SI {}
@@ -1874,7 +1874,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted AnyStruct with conformance in restriction", func(t *testing.T) {
+	t.Run("intersection type -> intersection AnyStruct with conformance in type", func(t *testing.T) {
 
 		const types = `
           struct interface I {}
@@ -1900,9 +1900,9 @@ func TestCheckCastStructType(t *testing.T) {
 			s2Type := RequireGlobalValue(t, checker.Elaboration, "s2")
 
 			require.IsType(t,
-				&sema.RestrictedType{
+				&sema.IntersectionType{
 					Type: sema.AnyStructType,
-					Restrictions: []*sema.InterfaceType{
+					Types: []*sema.InterfaceType{
 						iType.(*sema.InterfaceType),
 					},
 				},
@@ -1923,7 +1923,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted AnyStruct with conformance not in restriction", func(t *testing.T) {
+	t.Run("intersection type -> intersection AnyStruct with conformance not in type", func(t *testing.T) {
 
 		const types = `
           struct interface I1 {}
@@ -1951,9 +1951,9 @@ func TestCheckCastStructType(t *testing.T) {
 			s2Type := RequireGlobalValue(t, checker.Elaboration, "s2")
 
 			require.IsType(t,
-				&sema.RestrictedType{
+				&sema.IntersectionType{
 					Type: sema.AnyStructType,
-					Restrictions: []*sema.InterfaceType{
+					Types: []*sema.InterfaceType{
 						i2Type.(*sema.InterfaceType),
 					},
 				},
@@ -1974,7 +1974,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+	t.Run("intersection type -> intersection AnyStruct with non-conformance type", func(t *testing.T) {
 
 		const types = `
           struct interface I1 {}
@@ -2013,7 +2013,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyStruct -> restricted AnyStruct: fewer restrictions", func(t *testing.T) {
+	t.Run("intersection AnyStruct -> intersection AnyStruct: fewer types", func(t *testing.T) {
 
 		const types = `
           struct interface I1 {}
@@ -2048,7 +2048,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyStruct -> restricted AnyStruct: more restrictions", func(t *testing.T) {
+	t.Run("intersection AnyStruct -> intersection AnyStruct: more types", func(t *testing.T) {
 
 		const types = `
           struct interface I1 {}
@@ -2085,7 +2085,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyStruct -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+	t.Run("intersection AnyStruct -> intersection AnyStruct with non-conformance type", func(t *testing.T) {
 
 		const types = `
           struct interface I1 {}
@@ -2122,7 +2122,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyStruct -> restricted AnyStruct", func(t *testing.T) {
+	t.Run("AnyStruct -> intersection AnyStruct", func(t *testing.T) {
 
 		const types = `
           struct interface I {}
@@ -2159,7 +2159,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 	// Supertype: AnyStruct
 
-	t.Run("restricted type -> AnyStruct", func(t *testing.T) {
+	t.Run("intersection type -> AnyStruct", func(t *testing.T) {
 
 		const types = `
           struct interface I1 {}
@@ -2194,7 +2194,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyStruct -> AnyStruct", func(t *testing.T) {
+	t.Run("intersection AnyStruct -> AnyStruct", func(t *testing.T) {
 
 		const types = `
           struct interface I1 {}
@@ -2229,7 +2229,7 @@ func TestCheckCastStructType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> AnyStruct", func(t *testing.T) {
+	t.Run("type -> AnyStruct", func(t *testing.T) {
 
 		const types = `
            struct S {}
@@ -2449,9 +2449,9 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 	t.Parallel()
 
-	// Supertype: Restricted type
+	// Supertype: Intersection type
 
-	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 		const setup = `
           resource interface I1 {}
@@ -2488,7 +2488,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
 
 		const setup = `
           resource interface I1 {}
@@ -2525,7 +2525,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: different resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -2566,7 +2566,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
+	t.Run("type -> intersection type: same resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -2601,7 +2601,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> restricted type: different resource", func(t *testing.T) {
+	t.Run("type -> intersection type: different resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -2647,7 +2647,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 		sema.AnyType,
 	} {
 
-		t.Run(fmt.Sprintf("restricted %s -> conforming restricted type", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection %s -> conforming intersection type", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(`
                   resource interface RI {}
@@ -2688,7 +2688,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("%s -> conforming restricted type", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s -> conforming intersection type", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(`
                   resource interface RI {}
@@ -2727,7 +2727,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted %s -> non-conforming restricted type", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection %s -> non-conforming intersection type", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(`
                   resource interface RI {}
@@ -2752,7 +2752,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 				errs := RequireCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+				assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 			})
 
@@ -2767,14 +2767,14 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+				assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 			})
 		})
 	}
 
-	// Supertype: Resource (unrestricted)
+	// Supertype: Resource
 
-	t.Run("restricted type -> unrestricted type: same resource", func(t *testing.T) {
+	t.Run("intersection type -> type: same resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -2809,7 +2809,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
+	t.Run("intersection type -> type: different resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -2855,7 +2855,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 		sema.AnyType,
 	} {
 
-		t.Run(fmt.Sprintf("restricted %s -> conforming resource", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection %s -> conforming resource", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(
 				`
@@ -2897,7 +2897,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted %s -> non-conforming resource", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection %s -> non-conforming resource", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(
 				`
@@ -2940,7 +2940,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("%s -> unrestricted type", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s -> type", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(
 				`
@@ -2980,9 +2980,9 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			})
 		})
 
-		// Supertype: restricted AnyResource / Any
+		// Supertype: intersection AnyResource / Any
 
-		t.Run(fmt.Sprintf("resource -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("resource -> intersection %s with non-conformance type", ty), func(t *testing.T) {
 
 			const setup = `
               resource interface RI {}
@@ -3028,7 +3028,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("resource -> restricted %s with conformance restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("resource -> intersection %s with conformance type", ty), func(t *testing.T) {
 
 			const setup = `
               resource interface RI {}
@@ -3069,7 +3069,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted type -> restricted %s with conformance in restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection type -> intersection %s with conformance in type", ty), func(t *testing.T) {
 
 			const setup = `
               resource interface I {}
@@ -3110,7 +3110,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted type -> restricted %s with conformance not in restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection type -> intersection %s with conformance not in type", ty), func(t *testing.T) {
 
 			const setup = `
               resource interface I1 {}
@@ -3153,7 +3153,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted type -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection type -> intersection %s with non-conformance type", ty), func(t *testing.T) {
 
 			const setup = `
               resource interface I1 {}
@@ -3205,7 +3205,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			sema.AnyType,
 		} {
 
-			t.Run(fmt.Sprintf("restricted %s -> restricted %s: fewer restrictions", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("intersection %s -> intersection %s: fewer types", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -3260,7 +3260,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 				})
 			})
 
-			t.Run(fmt.Sprintf("restricted %s -> restricted %s: more restrictions", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("intersection %s -> intersection %s: more types", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -3308,7 +3308,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 				})
 			})
 
-			t.Run(fmt.Sprintf("restricted %s -> restricted %s with non-conformance restriction", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("intersection %s -> intersection %s with non-conformance type", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -3356,7 +3356,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 				})
 			})
 
-			t.Run(fmt.Sprintf("%s -> restricted %s", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s -> intersection %s", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -3405,7 +3405,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 		// Supertype: AnyResource / Any
 
-		t.Run(fmt.Sprintf("restricted type -> %s", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection type -> %s", ty), func(t *testing.T) {
 
 			const setup = `
               resource interface I1 {}
@@ -3452,7 +3452,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 			sema.AnyResourceType,
 			sema.AnyType,
 		} {
-			t.Run(fmt.Sprintf("restricted %s -> %s", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("intersection %s -> %s", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -3509,7 +3509,7 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 		}
 
-		t.Run(fmt.Sprintf("unrestricted type -> %s", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("type -> %s", ty), func(t *testing.T) {
 
 			const setup = `
               resource interface I1 {}
@@ -3558,9 +3558,9 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 	t.Parallel()
 
-	// Supertype: Restricted type
+	// Supertype: Intersection type
 
-	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 		const setup = `
           struct interface I1 {}
@@ -3597,7 +3597,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
 
 		const setup = `
           struct interface I1 {}
@@ -3634,7 +3634,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> restricted type: different struct", func(t *testing.T) {
+	t.Run("intersection type -> intersection type: different struct", func(t *testing.T) {
 
 		const setup = `
           struct interface I {}
@@ -3675,7 +3675,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> restricted type: same struct", func(t *testing.T) {
+	t.Run("type -> intersection type: same struct", func(t *testing.T) {
 
 		const setup = `
           struct interface I {}
@@ -3711,7 +3711,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted type -> restricted type: different struct", func(t *testing.T) {
+	t.Run("type -> intersection type: different struct", func(t *testing.T) {
 
 		const setup = `
           struct interface I {}
@@ -3756,7 +3756,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 		sema.AnyStructType,
 		sema.AnyType,
 	} {
-		t.Run(fmt.Sprintf("restricted %s -> conforming restricted type", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection %s -> conforming intersection type", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(
 				`
@@ -3798,7 +3798,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("%s -> conforming restricted type", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s -> conforming intersection type", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(
 				`
@@ -3838,7 +3838,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted %s -> non-conforming restricted type", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection %s -> non-conforming intersection type", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(
 				`
@@ -3864,7 +3864,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 				errs := RequireCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+				assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 			})
 
@@ -3879,14 +3879,14 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+				assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 			})
 		})
 	}
 
-	// Supertype: Struct (unrestricted)
+	// Supertype: Struct
 
-	t.Run("restricted type -> unrestricted type: same struct", func(t *testing.T) {
+	t.Run("intersection type -> type: same struct", func(t *testing.T) {
 
 		const setup = `
           struct interface I {}
@@ -3921,7 +3921,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type -> unrestricted type: different struct", func(t *testing.T) {
+	t.Run("intersection type -> type: different struct", func(t *testing.T) {
 
 		const setup = `
           struct interface I {}
@@ -3967,7 +3967,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 		sema.AnyType,
 	} {
 
-		t.Run(fmt.Sprintf("restricted %s -> conforming struct", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection %s -> conforming struct", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(
 				`
@@ -4009,7 +4009,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted %s -> non-conforming struct", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection %s -> non-conforming struct", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(
 				`
@@ -4052,7 +4052,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("%s -> unrestricted type", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s -> type", ty), func(t *testing.T) {
 
 			setup := fmt.Sprintf(
 				`
@@ -4092,9 +4092,9 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		// Supertype: restricted AnyStruct / Any
+		// Supertype: intersection AnyStruct / Any
 
-		t.Run(fmt.Sprintf("struct -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("struct -> intersection %s with non-conformance type", ty), func(t *testing.T) {
 
 			const setup = `
               struct interface SI {}
@@ -4140,7 +4140,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("struct -> restricted %s with conformance restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("struct -> intersection %s with conformance type", ty), func(t *testing.T) {
 
 			const setup = `
               struct interface SI {}
@@ -4181,7 +4181,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted type -> restricted %s with conformance in restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection type -> intersection %s with conformance in type", ty), func(t *testing.T) {
 
 			const setup = `
               struct interface I {}
@@ -4223,7 +4223,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted type -> restricted %s with conformance not in restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection type -> intersection %s with conformance not in type", ty), func(t *testing.T) {
 
 			const setup = `
               struct interface I1 {}
@@ -4267,7 +4267,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("restricted type -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection type -> intersection %s with non-conformance type", ty), func(t *testing.T) {
 
 			const setup = `
               struct interface I1 {}
@@ -4320,7 +4320,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			sema.AnyType,
 		} {
 
-			t.Run(fmt.Sprintf("restricted %s -> restricted %s: fewer restrictions", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("intersection %s -> intersection %s: fewer types", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -4376,7 +4376,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 				})
 			})
 
-			t.Run(fmt.Sprintf("restricted %s -> restricted %s: more restrictions", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("intersection %s -> intersection %s: more types", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -4425,7 +4425,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 				})
 			})
 
-			t.Run(fmt.Sprintf("restricted %s -> restricted %s with non-conformance restriction", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("intersection %s -> intersection %s with non-conformance type", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -4474,7 +4474,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 				})
 			})
 
-			t.Run(fmt.Sprintf("%s -> restricted %s", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s -> intersection %s", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -4523,7 +4523,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 			// Supertype: AnyStruct / Any
 
-			t.Run(fmt.Sprintf("restricted %s -> %s", ty, otherType), func(t *testing.T) {
+			t.Run(fmt.Sprintf("intersection %s -> %s", ty, otherType), func(t *testing.T) {
 
 				setup := fmt.Sprintf(
 					`
@@ -4571,7 +4571,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		}
 
-		t.Run(fmt.Sprintf("restricted type -> %s", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("intersection type -> %s", ty), func(t *testing.T) {
 
 			const setup = `
               struct interface I1 {}
@@ -4615,7 +4615,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 			})
 		})
 
-		t.Run(fmt.Sprintf("unrestricted type -> %s", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("type -> %s", ty), func(t *testing.T) {
 
 			const setup = `
               struct interface I1 {}
@@ -4672,9 +4672,9 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			// Supertype: Restricted type
+			// Supertype: Intersection type
 
-			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -4696,7 +4696,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -4718,7 +4718,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: different resource", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -4742,7 +4742,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 
-			t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
+			t.Run("type -> intersection type: same resource", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -4762,7 +4762,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("unrestricted type -> restricted type: different resource", func(t *testing.T) {
+			t.Run("type -> intersection type: different resource", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -4791,7 +4791,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 				sema.AnyType,
 			} {
 
-				t.Run(fmt.Sprintf("restricted %s -> conforming restricted type", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection %s -> conforming intersection type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -4818,7 +4818,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					}
 				})
 
-				t.Run(fmt.Sprintf("%s -> conforming restricted type", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("%s -> conforming intersection type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -4845,7 +4845,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					}
 				})
 
-				t.Run(fmt.Sprintf("restricted %s -> non-conforming restricted type", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection %s -> non-conforming intersection type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -4867,20 +4867,20 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						errs := RequireCheckerErrors(t, err, 3)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-						assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+						assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 					} else {
 						errs := RequireCheckerErrors(t, err, 2)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-						assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+						assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 					}
 				})
 			}
 
-			// Supertype: Resource (unrestricted)
+			// Supertype: Resource
 
-			t.Run("restricted type -> unrestricted type", func(t *testing.T) {
+			t.Run("intersection type -> type", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -4900,7 +4900,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
+			t.Run("intersection type -> type: different resource", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -4929,7 +4929,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 				sema.AnyType,
 			} {
 
-				t.Run(fmt.Sprintf("restricted %s -> conforming resource", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection %s -> conforming resource", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -4956,7 +4956,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					}
 				})
 
-				t.Run(fmt.Sprintf("restricted %s -> non-conforming resource", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection %s -> non-conforming resource", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -4986,7 +4986,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					}
 				})
 
-				t.Run(fmt.Sprintf("%s -> unrestricted type", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("%s -> type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5013,9 +5013,9 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					}
 				})
 
-				// Supertype: restricted AnyResource / Any
+				// Supertype: intersection AnyResource / Any
 
-				t.Run(fmt.Sprintf("resource -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("resource -> intersection %s with non-conformance type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5039,7 +5039,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
 
-				t.Run(fmt.Sprintf("resource -> restricted %s with conformance restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("resource -> intersection %s with conformance type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5060,7 +5060,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					require.NoError(t, err)
 				})
 
-				t.Run(fmt.Sprintf("restricted type -> restricted %s with conformance in restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection type -> intersection %s with conformance in type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5081,7 +5081,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					require.NoError(t, err)
 				})
 
-				t.Run(fmt.Sprintf("restricted type -> restricted %s with conformance not in restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection type -> intersection %s with conformance not in type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5104,7 +5104,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					require.NoError(t, err)
 				})
 
-				t.Run(fmt.Sprintf("restricted type -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection type -> intersection %s with non-conformance type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5135,7 +5135,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					sema.AnyType,
 				} {
 
-					t.Run(fmt.Sprintf("restricted %s -> restricted %s: fewer restrictions", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("intersection %s -> intersection %s: fewer types", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5172,7 +5172,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						require.NoError(t, err)
 					})
 
-					t.Run(fmt.Sprintf("restricted %s -> restricted %s: more restrictions", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("intersection %s -> intersection %s: more types", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5202,7 +5202,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						}
 					})
 
-					t.Run(fmt.Sprintf("restricted %s -> restricted %s with non-conformance restriction", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("intersection %s -> intersection %s with non-conformance type", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5232,7 +5232,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 						}
 					})
 
-					t.Run(fmt.Sprintf("%s -> restricted %s", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("%s -> intersection %s", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5262,7 +5262,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 					// Supertype: AnyResource / Any
 
-					t.Run(fmt.Sprintf("restricted %s -> %s", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("intersection %s -> %s", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5294,7 +5294,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 				}
 
-				t.Run(fmt.Sprintf("restricted type -> %s", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection type -> %s", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5317,7 +5317,7 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 					require.NoError(t, err)
 				})
 
-				t.Run(fmt.Sprintf("unrestricted type -> %s", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("type -> %s", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5355,9 +5355,9 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			// Supertype: Restricted type
+			// Supertype: Intersection type
 
-			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -5379,7 +5379,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -5401,7 +5401,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: different resource", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -5425,7 +5425,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 
-			t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
+			t.Run("type -> intersection type: same resource", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -5445,7 +5445,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("unrestricted type -> restricted type: different resource", func(t *testing.T) {
+			t.Run("type -> intersection type: different resource", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -5474,7 +5474,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 				sema.AnyType,
 			} {
 
-				t.Run(fmt.Sprintf("restricted %s -> conforming restricted type", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection %s -> conforming intersection type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5501,7 +5501,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					}
 				})
 
-				t.Run(fmt.Sprintf("%s -> conforming restricted type", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("%s -> conforming intersection type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5528,7 +5528,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					}
 				})
 
-				t.Run(fmt.Sprintf("restricted %s -> non-conforming restricted type", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection %s -> non-conforming intersection type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5550,21 +5550,21 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						errs := RequireCheckerErrors(t, err, 3)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-						assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+						assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 					} else {
 
 						errs := RequireCheckerErrors(t, err, 2)
 
 						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-						assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+						assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[1])
 					}
 				})
 			}
 
-			// Supertype: Resource (unrestricted)
+			// Supertype: Resource
 
-			t.Run("restricted type -> unrestricted type", func(t *testing.T) {
+			t.Run("intersection type -> type", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -5584,7 +5584,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
+			t.Run("intersection type -> type: different resource", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
@@ -5613,7 +5613,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 				sema.AnyType,
 			} {
 
-				t.Run(fmt.Sprintf("restricted %s -> conforming resource", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection %s -> conforming resource", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5640,7 +5640,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					}
 				})
 
-				t.Run(fmt.Sprintf("restricted %s -> non-conforming resource", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection %s -> non-conforming resource", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5670,7 +5670,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					}
 				})
 
-				t.Run(fmt.Sprintf("%s -> unrestricted type", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("%s -> type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5698,9 +5698,9 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 				})
 
-				// Supertype: restricted AnyStruct / Any
+				// Supertype: intersection AnyStruct / Any
 
-				t.Run(fmt.Sprintf("resource -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("resource -> intersection %s with non-conformance type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5724,7 +5724,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				})
 
-				t.Run(fmt.Sprintf("resource -> restricted %s with conformance restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("resource -> intersection %s with conformance type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5745,7 +5745,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					require.NoError(t, err)
 				})
 
-				t.Run(fmt.Sprintf("restricted type -> restricted %s with conformance in restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection type -> intersection %s with conformance in type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5766,7 +5766,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					require.NoError(t, err)
 				})
 
-				t.Run(fmt.Sprintf("restricted type -> restricted %s with conformance not in restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection type -> intersection %s with conformance not in type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5789,7 +5789,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					require.NoError(t, err)
 				})
 
-				t.Run(fmt.Sprintf("restricted type -> restricted %s with non-conformance restriction", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection type -> intersection %s with non-conformance type", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5819,7 +5819,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					sema.AnyType,
 				} {
 
-					t.Run(fmt.Sprintf("restricted %s -> restricted %s: fewer restrictions", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("intersection %s -> intersection %s: fewer types", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5856,7 +5856,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						require.NoError(t, err)
 					})
 
-					t.Run(fmt.Sprintf("restricted %s -> restricted %s: more restrictions", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("intersection %s -> intersection %s: more types", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5886,7 +5886,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						}
 					})
 
-					t.Run(fmt.Sprintf("restricted %s -> restricted %s with non-conformance restriction", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("intersection %s -> intersection %s with non-conformance type", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5916,7 +5916,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						}
 					})
 
-					t.Run(fmt.Sprintf("%s -> restricted %s", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("%s -> intersection %s", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5946,7 +5946,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 
 					// Supertype: AnyStruct / Any
 
-					t.Run(fmt.Sprintf("restricted %s -> %s", ty, otherType), func(t *testing.T) {
+					t.Run(fmt.Sprintf("intersection %s -> %s", ty, otherType), func(t *testing.T) {
 
 						_, err := ParseAndCheckWithAny(t,
 							fmt.Sprintf(
@@ -5971,7 +5971,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					})
 				}
 
-				t.Run(fmt.Sprintf("restricted type -> %s", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("intersection type -> %s", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(
@@ -5994,7 +5994,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 					require.NoError(t, err)
 				})
 
-				t.Run(fmt.Sprintf("unrestricted type -> %s", ty), func(t *testing.T) {
+				t.Run(fmt.Sprintf("type -> %s", ty), func(t *testing.T) {
 
 					_, err := ParseAndCheckWithAny(t,
 						fmt.Sprintf(

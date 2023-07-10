@@ -1968,9 +1968,9 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 			Parameters: []sema.Parameter{
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(
-						&sema.RestrictedType{
+						&sema.IntersectionType{
 							Type: sema.AnyStructType,
-							Restrictions: []*sema.InterfaceType{
+							Types: []*sema.InterfaceType{
 								iType,
 							},
 						},
@@ -1980,9 +1980,9 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				&sema.DictionaryType{
 					KeyType: sema.IntType,
-					ValueType: &sema.RestrictedType{
+					ValueType: &sema.IntersectionType{
 						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+						Types: []*sema.InterfaceType{
 							iType,
 						},
 					},
@@ -4175,7 +4175,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("restricted composite type subtyping", func(t *testing.T) {
+	t.Run("intersection composite type subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4196,7 +4196,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted anystruct type subtyping", func(t *testing.T) {
+	t.Run("intersection anystruct type subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4257,7 +4257,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attachment on restricted type", func(t *testing.T) {
+	t.Run("attachment on intersection type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4342,7 +4342,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted anystruct reference subtyping", func(t *testing.T) {
+	t.Run("intersection anystruct reference subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4371,7 +4371,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted composite type reference subtyping", func(t *testing.T) {
+	t.Run("intersection composite type reference subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4400,7 +4400,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("multi-restricted composite type reference subtyping", func(t *testing.T) {
+	t.Run("multi-intersection composite type reference subtyping", func(t *testing.T) {
 
 		t.Parallel()
 

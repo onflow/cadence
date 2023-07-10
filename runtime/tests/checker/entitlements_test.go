@@ -2890,7 +2890,7 @@ func TestCheckEntitlementTypeAnnotation(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
-	t.Run("restricted", func(t *testing.T) {
+	t.Run("intersection", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
 			entitlement E
@@ -2901,8 +2901,8 @@ func TestCheckEntitlementTypeAnnotation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidRestrictionTypeError{}, errs[0])
-		require.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[1])
+		require.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		require.IsType(t, &sema.InvalidIntersectionTypeError{}, errs[1])
 	})
 
 	t.Run("reference", func(t *testing.T) {
@@ -3101,7 +3101,7 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
-	t.Run("restricted", func(t *testing.T) {
+	t.Run("intersection", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
 			entitlement mapping E {}
@@ -3112,8 +3112,8 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidRestrictionTypeError{}, errs[0])
-		require.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[1])
+		require.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		require.IsType(t, &sema.InvalidIntersectionTypeError{}, errs[1])
 	})
 
 	t.Run("reference", func(t *testing.T) {
@@ -4408,7 +4408,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("basic owned restricted fully entitled", func(t *testing.T) {
+	t.Run("basic owned intersection fully entitled", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		entitlement X

@@ -2267,60 +2267,60 @@ func (t *ReferenceType) Equal(other Type) bool {
 		t.Type.Equal(otherType.Type)
 }
 
-// RestrictedType
+// IntersectionType
 
-type RestrictionSet = map[Type]struct{}
+type IntersectionSet = map[Type]struct{}
 
-type RestrictedType struct {
-	typeID             string
-	Type               Type
-	Restrictions       []Type
-	restrictionSet     RestrictionSet
-	restrictionSetOnce sync.Once
+type IntersectionType struct {
+	typeID              string
+	Type                Type
+	Types               []Type
+	intersectionSet     IntersectionSet
+	intersectionSetOnce sync.Once
 }
 
-func NewRestrictedType(
+func NewIntersectionType(
 	typ Type,
-	restrictions []Type,
-) *RestrictedType {
-	return &RestrictedType{
-		Type:         typ,
-		Restrictions: restrictions,
+	types []Type,
+) *IntersectionType {
+	return &IntersectionType{
+		Type:  typ,
+		Types: types,
 	}
 }
 
-func NewMeteredRestrictedType(
+func NewMeteredIntersectionType(
 	gauge common.MemoryGauge,
 	typ Type,
-	restrictions []Type,
-) *RestrictedType {
-	common.UseMemory(gauge, common.CadenceRestrictedTypeMemoryUsage)
-	return NewRestrictedType(typ, restrictions)
+	types []Type,
+) *IntersectionType {
+	common.UseMemory(gauge, common.CadenceIntersectionTypeMemoryUsage)
+	return NewIntersectionType(typ, types)
 }
 
-func (*RestrictedType) isType() {}
+func (*IntersectionType) isType() {}
 
-func (t *RestrictedType) ID() string {
+func (t *IntersectionType) ID() string {
 	if t.typeID == "" {
-		var restrictionStrings []string
-		restrictionCount := len(t.Restrictions)
-		if restrictionCount > 0 {
-			restrictionStrings = make([]string, 0, restrictionCount)
-			for _, restriction := range t.Restrictions {
-				restrictionStrings = append(restrictionStrings, restriction.ID())
+		var typeStrings []string
+		typeCount := len(t.Types)
+		if typeCount > 0 {
+			typeStrings = make([]string, 0, typeCount)
+			for _, typ := range t.Types {
+				typeStrings = append(typeStrings, typ.ID())
 			}
 		}
 		var typeString string
 		if t.Type != nil {
 			typeString = t.Type.ID()
 		}
-		t.typeID = sema.FormatRestrictedTypeID(typeString, restrictionStrings)
+		t.typeID = sema.FormatIntersectionTypeID(typeString, typeStrings)
 	}
 	return t.typeID
 }
 
-func (t *RestrictedType) Equal(other Type) bool {
-	otherType, ok := other.(*RestrictedType)
+func (t *IntersectionType) Equal(other Type) bool {
+	otherType, ok := other.(*IntersectionType)
 	if !ok {
 		return false
 	}
@@ -2335,15 +2335,15 @@ func (t *RestrictedType) Equal(other Type) bool {
 		return false
 	}
 
-	restrictionSet := t.RestrictionSet()
-	otherRestrictionSet := otherType.RestrictionSet()
+	intersectionSet := t.IntersectionSet()
+	otherIntersectionSet := otherType.IntersectionSet()
 
-	if len(restrictionSet) != len(otherRestrictionSet) {
+	if len(intersectionSet) != len(otherIntersectionSet) {
 		return false
 	}
 
-	for restriction := range restrictionSet { //nolint:maprange
-		_, ok := otherRestrictionSet[restriction]
+	for typ := range intersectionSet { //nolint:maprange
+		_, ok := otherIntersectionSet[typ]
 		if !ok {
 			return false
 		}
@@ -2352,18 +2352,18 @@ func (t *RestrictedType) Equal(other Type) bool {
 	return true
 }
 
-func (t *RestrictedType) initializeRestrictionSet() {
-	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = make(RestrictionSet, len(t.Restrictions))
-		for _, restriction := range t.Restrictions {
-			t.restrictionSet[restriction] = struct{}{}
+func (t *IntersectionType) initializeIntersectionSet() {
+	t.intersectionSetOnce.Do(func() {
+		t.intersectionSet = make(IntersectionSet, len(t.Types))
+		for _, typ := range t.Types {
+			t.intersectionSet[typ] = struct{}{}
 		}
 	})
 }
 
-func (t *RestrictedType) RestrictionSet() RestrictionSet {
-	t.initializeRestrictionSet()
-	return t.restrictionSet
+func (t *IntersectionType) IntersectionSet() IntersectionSet {
+	t.initializeIntersectionSet()
+	return t.intersectionSet
 }
 
 // BlockType
@@ -2799,9 +2799,9 @@ func TypeWithCachedTypeID(t Type) Type {
 			}
 		}
 
-	case *RestrictedType:
-		for _, restriction := range t.Restrictions {
-			TypeWithCachedTypeID(restriction)
+	case *IntersectionType:
+		for _, typ := range t.Types {
+			TypeWithCachedTypeID(typ)
 		}
 	}
 

@@ -16431,7 +16431,7 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 	var baseType sema.Type
 	switch ty := attachmentType.GetBaseType().(type) {
 	case *sema.InterfaceType:
-		baseType, _ = ty.RewriteWithRestrictedTypes()
+		baseType, _ = ty.RewriteWithIntersectionTypes()
 	default:
 		baseType = ty
 	}

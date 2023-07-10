@@ -92,37 +92,37 @@ func (c *TypeComparator) CheckDictionaryTypeEquality(expected *ast.DictionaryTyp
 	return expected.ValueType.CheckEqual(foundDictionaryType.ValueType, c)
 }
 
-func (c *TypeComparator) CheckRestrictedTypeEquality(expected *ast.RestrictedType, found ast.Type) error {
-	foundRestrictedType, ok := found.(*ast.RestrictedType)
+func (c *TypeComparator) CheckIntersectionTypeEquality(expected *ast.IntersectionType, found ast.Type) error {
+	foundIntersectionType, ok := found.(*ast.IntersectionType)
 	if !ok {
 		return newTypeMismatchError(expected, found)
 	}
 
 	if expected.Type == nil {
-		if !isAnyStructOrAnyResourceType(foundRestrictedType.Type) {
+		if !isAnyStructOrAnyResourceType(foundIntersectionType.Type) {
 			return newTypeMismatchError(expected, found)
 		}
-		// else go on to check type restrictions
-	} else if foundRestrictedType.Type == nil {
+		// else go on to check intersected types
+	} else if foundIntersectionType.Type == nil {
 		if !isAnyStructOrAnyResourceType(expected.Type) {
 			return newTypeMismatchError(expected, found)
 		}
-		// else go on to check type restrictions
+		// else go on to check intersected types
 	} else {
 		// both are not nil
-		err := expected.Type.CheckEqual(foundRestrictedType.Type, c)
+		err := expected.Type.CheckEqual(foundIntersectionType.Type, c)
 		if err != nil {
 			return newTypeMismatchError(expected, found)
 		}
 	}
 
-	if len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
+	if len(expected.Types) != len(foundIntersectionType.Types) {
 		return newTypeMismatchError(expected, found)
 	}
 
-	for index, expectedRestriction := range expected.Restrictions {
-		foundRestriction := foundRestrictedType.Restrictions[index]
-		err := expectedRestriction.CheckEqual(foundRestriction, c)
+	for index, expectedIntersectedType := range expected.Types {
+		foundType := foundIntersectionType.Types[index]
+		err := expectedIntersectedType.CheckEqual(foundType, c)
 		if err != nil {
 			return newTypeMismatchError(expected, found)
 		}
@@ -241,7 +241,7 @@ func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 }
 
 func isAnyStructOrAnyResourceType(astType ast.Type) bool {
-	// If the restricted type is not stated, then it is either AnyStruct or AnyResource
+	// If the intersection type is not stated, then it is either AnyStruct or AnyResource
 	if astType == nil {
 		return true
 	}

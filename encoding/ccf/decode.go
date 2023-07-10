@@ -140,8 +140,8 @@ type DecOptions struct {
 	// EnforceSortCompositeFields specifies how decoder should enforce sort order of compsite fields.
 	EnforceSortCompositeFields EnforceSortMode
 
-	// EnforceSortRestrictedTypes specifies how decoder should enforce sort order of restricted types.
-	EnforceSortRestrictedTypes EnforceSortMode
+	// EnforceSortIntersectionTypes specifies how decoder should enforce sort order of restricted types.
+	EnforceSortIntersectionTypes EnforceSortMode
 
 	// CBORDecMode will default to defaultCBORDecMode if nil.  The decoding mode contains
 	// immutable decoding options (cbor.DecOptions) and is safe for concurrent use.
@@ -168,15 +168,15 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	if !opts.EnforceSortCompositeFields.valid() {
 		return nil, fmt.Errorf("ccf: invalid EnforceSortCompositeFields %d", opts.EnforceSortCompositeFields)
 	}
-	if !opts.EnforceSortRestrictedTypes.valid() {
-		return nil, fmt.Errorf("ccf: invalid EnforceSortRestrictedTypes %d", opts.EnforceSortRestrictedTypes)
+	if !opts.EnforceSortIntersectionTypes.valid() {
+		return nil, fmt.Errorf("ccf: invalid EnforceSortRestrictedTypes %d", opts.EnforceSortIntersectionTypes)
 	}
 	if opts.CBORDecMode == nil {
 		opts.CBORDecMode = defaultCBORDecMode
 	}
 	return &decMode{
 		enforceSortCompositeFields: opts.EnforceSortCompositeFields,
-		enforceSortRestrictedTypes: opts.EnforceSortRestrictedTypes,
+		enforceSortRestrictedTypes: opts.EnforceSortIntersectionTypes,
 		cborDecMode:                opts.CBORDecMode,
 	}, nil
 }
@@ -1452,7 +1452,7 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 //	/ contract-interface-type-value
 //	/ function-type-value
 //	/ reference-type-value
-//	/ restricted-type-value
+//	/ intersection-type-value
 //	/ capability-type-value
 //	/ type-value-ref
 func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
@@ -1488,8 +1488,8 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 	case CBORTagReferenceTypeValue:
 		return d.decodeReferenceType(visited, d.decodeTypeValue)
 
-	case CBORTagRestrictedTypeValue:
-		return d.decodeRestrictedType(visited, d.decodeNullableTypeValue, d.decodeTypeValue)
+	case CBORTagIntersectionTypeValue:
+		return d.decodeIntersectionType(visited, d.decodeNullableTypeValue, d.decodeTypeValue)
 
 	case CBORTagFunctionTypeValue:
 		return d.decodeFunctionTypeValue(visited)

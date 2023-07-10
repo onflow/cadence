@@ -3424,64 +3424,64 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 	)
 }
 
-// InvalidRestrictedTypeError
+// InvalidIntersectionTypeError
 
-type InvalidRestrictedTypeError struct {
+type InvalidIntersectionTypeError struct {
 	Type Type
 	ast.Range
 }
 
-var _ SemanticError = &InvalidRestrictedTypeError{}
-var _ errors.UserError = &InvalidRestrictedTypeError{}
+var _ SemanticError = &InvalidIntersectionTypeError{}
+var _ errors.UserError = &InvalidIntersectionTypeError{}
 
-func (*InvalidRestrictedTypeError) isSemanticError() {}
+func (*InvalidIntersectionTypeError) isSemanticError() {}
 
-func (*InvalidRestrictedTypeError) IsUserError() {}
+func (*InvalidIntersectionTypeError) IsUserError() {}
 
-func (e *InvalidRestrictedTypeError) Error() string {
+func (e *InvalidIntersectionTypeError) Error() string {
 	return fmt.Sprintf(
 		"cannot restrict type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// InvalidRestrictionTypeError
+// InvalidIntersectedTypeError
 
-type InvalidRestrictionTypeError struct {
+type InvalidIntersectedTypeError struct {
 	Type Type
 	ast.Range
 }
 
-var _ SemanticError = &InvalidRestrictionTypeError{}
-var _ errors.UserError = &InvalidRestrictionTypeError{}
+var _ SemanticError = &InvalidIntersectedTypeError{}
+var _ errors.UserError = &InvalidIntersectedTypeError{}
 
-func (*InvalidRestrictionTypeError) isSemanticError() {}
+func (*InvalidIntersectedTypeError) isSemanticError() {}
 
-func (*InvalidRestrictionTypeError) IsUserError() {}
+func (*InvalidIntersectedTypeError) IsUserError() {}
 
-func (e *InvalidRestrictionTypeError) Error() string {
+func (e *InvalidIntersectedTypeError) Error() string {
 	return fmt.Sprintf(
 		"cannot restrict using non-resource/structure interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// RestrictionCompositeKindMismatchError
+// IntersectionCompositeKindMismatchError
 
-type RestrictionCompositeKindMismatchError struct {
+type IntersectionCompositeKindMismatchError struct {
 	CompositeKind         common.CompositeKind
 	PreviousCompositeKind common.CompositeKind
 	ast.Range
 }
 
-var _ SemanticError = &RestrictionCompositeKindMismatchError{}
-var _ errors.UserError = &RestrictionCompositeKindMismatchError{}
+var _ SemanticError = &IntersectionCompositeKindMismatchError{}
+var _ errors.UserError = &IntersectionCompositeKindMismatchError{}
 
-func (*RestrictionCompositeKindMismatchError) isSemanticError() {}
+func (*IntersectionCompositeKindMismatchError) isSemanticError() {}
 
-func (*RestrictionCompositeKindMismatchError) IsUserError() {}
+func (*IntersectionCompositeKindMismatchError) IsUserError() {}
 
-func (e *RestrictionCompositeKindMismatchError) Error() string {
+func (e *IntersectionCompositeKindMismatchError) Error() string {
 	return fmt.Sprintf(
 		"interface kind %s does not match previous interface kind %s",
 		e.CompositeKind,
@@ -3489,105 +3489,105 @@ func (e *RestrictionCompositeKindMismatchError) Error() string {
 	)
 }
 
-// InvalidRestrictionTypeDuplicateError
+// InvalidIntersectionTypeDuplicateError
 
-type InvalidRestrictionTypeDuplicateError struct {
+type InvalidIntersectionTypeDuplicateError struct {
 	Type *InterfaceType
 	ast.Range
 }
 
-var _ SemanticError = &InvalidRestrictionTypeDuplicateError{}
-var _ errors.UserError = &InvalidRestrictionTypeDuplicateError{}
+var _ SemanticError = &InvalidIntersectionTypeDuplicateError{}
+var _ errors.UserError = &InvalidIntersectionTypeDuplicateError{}
 
-func (*InvalidRestrictionTypeDuplicateError) isSemanticError() {}
+func (*InvalidIntersectionTypeDuplicateError) isSemanticError() {}
 
-func (*InvalidRestrictionTypeDuplicateError) IsUserError() {}
+func (*InvalidIntersectionTypeDuplicateError) IsUserError() {}
 
-func (e *InvalidRestrictionTypeDuplicateError) Error() string {
+func (e *InvalidIntersectionTypeDuplicateError) Error() string {
 	return fmt.Sprintf(
-		"duplicate restriction: `%s`",
+		"duplicate intersected type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// InvalidNonConformanceRestrictionError
+// InvalidNonConformanceIntersectionError
 
-type InvalidNonConformanceRestrictionError struct {
+type InvalidNonConformanceIntersectionError struct {
 	Type *InterfaceType
 	ast.Range
 }
 
-var _ SemanticError = &InvalidNonConformanceRestrictionError{}
-var _ errors.UserError = &InvalidNonConformanceRestrictionError{}
+var _ SemanticError = &InvalidNonConformanceIntersectionError{}
+var _ errors.UserError = &InvalidNonConformanceIntersectionError{}
 
-func (*InvalidNonConformanceRestrictionError) isSemanticError() {}
+func (*InvalidNonConformanceIntersectionError) isSemanticError() {}
 
-func (*InvalidNonConformanceRestrictionError) IsUserError() {}
+func (*InvalidNonConformanceIntersectionError) IsUserError() {}
 
-func (e *InvalidNonConformanceRestrictionError) Error() string {
+func (e *InvalidNonConformanceIntersectionError) Error() string {
 	return fmt.Sprintf(
-		"restricted type does not conform to restricting type: `%s`",
+		"intersection type does not conform to restricting type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// InvalidRestrictedTypeMemberAccessError
+// InvalidIntersectionTypeMemberAccessError
 
-type InvalidRestrictedTypeMemberAccessError struct {
+type InvalidIntersectionTypeMemberAccessError struct {
 	Name string
 	ast.Range
 }
 
-var _ SemanticError = &InvalidRestrictedTypeMemberAccessError{}
-var _ errors.UserError = &InvalidRestrictedTypeMemberAccessError{}
+var _ SemanticError = &InvalidIntersectionTypeMemberAccessError{}
+var _ errors.UserError = &InvalidIntersectionTypeMemberAccessError{}
 
-func (*InvalidRestrictedTypeMemberAccessError) isSemanticError() {}
+func (*InvalidIntersectionTypeMemberAccessError) isSemanticError() {}
 
-func (*InvalidRestrictedTypeMemberAccessError) IsUserError() {}
+func (*InvalidIntersectionTypeMemberAccessError) IsUserError() {}
 
-func (e *InvalidRestrictedTypeMemberAccessError) Error() string {
-	return fmt.Sprintf("member of restricted type is not accessible: %s", e.Name)
+func (e *InvalidIntersectionTypeMemberAccessError) Error() string {
+	return fmt.Sprintf("member of intersection type is not accessible: %s", e.Name)
 }
 
-// RestrictionMemberClashError
+// IntersectionMemberClashError
 
-type RestrictionMemberClashError struct {
+type IntersectionMemberClashError struct {
 	RedeclaringType       *InterfaceType
 	OriginalDeclaringType *InterfaceType
 	Name                  string
 	ast.Range
 }
 
-var _ SemanticError = &RestrictionMemberClashError{}
-var _ errors.UserError = &RestrictionMemberClashError{}
+var _ SemanticError = &IntersectionMemberClashError{}
+var _ errors.UserError = &IntersectionMemberClashError{}
 
-func (*RestrictionMemberClashError) isSemanticError() {}
+func (*IntersectionMemberClashError) isSemanticError() {}
 
-func (*RestrictionMemberClashError) IsUserError() {}
+func (*IntersectionMemberClashError) IsUserError() {}
 
-func (e *RestrictionMemberClashError) Error() string {
+func (e *IntersectionMemberClashError) Error() string {
 	return fmt.Sprintf(
-		"restriction has member clash with previous restriction `%s`: %s",
+		"intersected type has member clash with previous intersected type `%s`: %s",
 		e.OriginalDeclaringType.QualifiedString(),
 		e.Name,
 	)
 }
 
-// AmbiguousRestrictedTypeError
+// AmbiguousIntersectionTypeError
 
-type AmbiguousRestrictedTypeError struct {
+type AmbiguousIntersectionTypeError struct {
 	ast.Range
 }
 
-var _ SemanticError = &AmbiguousRestrictedTypeError{}
-var _ errors.UserError = &AmbiguousRestrictedTypeError{}
+var _ SemanticError = &AmbiguousIntersectionTypeError{}
+var _ errors.UserError = &AmbiguousIntersectionTypeError{}
 
-func (*AmbiguousRestrictedTypeError) isSemanticError() {}
+func (*AmbiguousIntersectionTypeError) isSemanticError() {}
 
-func (*AmbiguousRestrictedTypeError) IsUserError() {}
+func (*AmbiguousIntersectionTypeError) IsUserError() {}
 
-func (e *AmbiguousRestrictedTypeError) Error() string {
-	return "ambiguous restricted type"
+func (e *AmbiguousIntersectionTypeError) Error() string {
+	return "ambiguous intersection type"
 }
 
 // InvalidPathDomainError

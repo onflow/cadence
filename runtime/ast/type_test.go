@@ -1247,17 +1247,17 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 	)
 }
 
-func TestRestrictedType_Doc(t *testing.T) {
+func TestIntersectionType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &RestrictedType{
+	ty := &IntersectionType{
 		Type: &NominalType{
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
 		},
-		Restrictions: []*NominalType{
+		Types: []*NominalType{
 			{
 				Identifier: Identifier{
 					Identifier: "CD",
@@ -1295,17 +1295,17 @@ func TestRestrictedType_Doc(t *testing.T) {
 	)
 }
 
-func TestRestrictedType_String(t *testing.T) {
+func TestIntersectionType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &RestrictedType{
+	ty := &IntersectionType{
 		Type: &NominalType{
 			Identifier: Identifier{
 				Identifier: "AB",
 			},
 		},
-		Restrictions: []*NominalType{
+		Types: []*NominalType{
 			{
 				Identifier: Identifier{
 					Identifier: "CD",
@@ -1325,18 +1325,18 @@ func TestRestrictedType_String(t *testing.T) {
 	)
 }
 
-func TestRestrictedType_MarshalJSON(t *testing.T) {
+func TestIntersectionType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &RestrictedType{
+	ty := &IntersectionType{
 		Type: &NominalType{
 			Identifier: Identifier{
 				Identifier: "AB",
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 		},
-		Restrictions: []*NominalType{
+		Types: []*NominalType{
 			{
 				Identifier: Identifier{
 					Identifier: "CD",
@@ -1363,8 +1363,8 @@ func TestRestrictedType_MarshalJSON(t *testing.T) {
 		// language=json
 		`
         {
-            "Type": "RestrictedType",
-            "RestrictedType": {
+            "Type": "IntersectionType",
+            "IntersectionType": {
                 "Type": "NominalType",
                 "Identifier": {
                     "Identifier": "AB",
@@ -1374,7 +1374,7 @@ func TestRestrictedType_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
             },
-            "Restrictions": [
+            "Types": [
                 {
                     "Type": "NominalType",
                     "Identifier": {

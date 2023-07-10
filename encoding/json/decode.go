@@ -111,33 +111,33 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey           = "type"
-	kindKey           = "kind"
-	valueKey          = "value"
-	keyKey            = "key"
-	nameKey           = "name"
-	fieldsKey         = "fields"
-	initializersKey   = "initializers"
-	idKey             = "id"
-	targetPathKey     = "targetPath"
-	borrowTypeKey     = "borrowType"
-	domainKey         = "domain"
-	identifierKey     = "identifier"
-	staticTypeKey     = "staticType"
-	addressKey        = "address"
-	pathKey           = "path"
-	authorizationKey  = "authorization"
-	entitlementsKey   = "entitlements"
-	sizeKey           = "size"
-	typeIDKey         = "typeID"
-	restrictionsKey   = "restrictions"
-	labelKey          = "label"
-	parametersKey     = "parameters"
-	typeParametersKey = "typeParameters"
-	returnKey         = "return"
-	typeBoundKey      = "typeBound"
-	purityKey         = "purity"
-	functionTypeKey   = "functionType"
+	typeKey              = "type"
+	kindKey              = "kind"
+	valueKey             = "value"
+	keyKey               = "key"
+	nameKey              = "name"
+	fieldsKey            = "fields"
+	initializersKey      = "initializers"
+	idKey                = "id"
+	targetPathKey        = "targetPath"
+	borrowTypeKey        = "borrowType"
+	domainKey            = "domain"
+	identifierKey        = "identifier"
+	staticTypeKey        = "staticType"
+	addressKey           = "address"
+	pathKey              = "path"
+	authorizationKey     = "authorization"
+	entitlementsKey      = "entitlements"
+	sizeKey              = "size"
+	typeIDKey            = "typeID"
+	intersectionTypesKey = "types"
+	labelKey             = "label"
+	parametersKey        = "parameters"
+	typeParametersKey    = "typeParameters"
+	returnKey            = "return"
+	typeBoundKey         = "typeBound"
+	purityKey            = "purity"
+	functionTypeKey      = "functionType"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -1153,22 +1153,22 @@ func (d *Decoder) decodeNominalType(
 	return result
 }
 
-func (d *Decoder) decodeRestrictedType(
+func (d *Decoder) decodeIntersectionType(
 	typeValue any,
-	restrictionsValue []any,
+	intersectionValue []any,
 	results typeDecodingResults,
 ) cadence.Type {
 	typ := d.decodeType(typeValue, results)
 
-	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
-	for _, restriction := range restrictionsValue {
-		restrictions = append(restrictions, d.decodeType(restriction, results))
+	types := make([]cadence.Type, 0, len(intersectionValue))
+	for _, typ := range intersectionValue {
+		types = append(types, d.decodeType(typ, results))
 	}
 
-	return cadence.NewMeteredRestrictedType(
+	return cadence.NewMeteredIntersectionType(
 		d.gauge,
 		typ,
-		restrictions,
+		types,
 	)
 }
 
@@ -1204,12 +1204,12 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			purity = "impure"
 		}
 		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, purity, results)
-	case "Restriction":
-		restrictionsValue := obj.Get(restrictionsKey)
+	case "Intersection":
+		intersectionValue := obj.Get(intersectionTypesKey)
 		typeValue := obj.Get(typeKey)
-		return d.decodeRestrictedType(
+		return d.decodeIntersectionType(
 			typeValue,
-			toSlice(restrictionsValue),
+			toSlice(intersectionValue),
 			results,
 		)
 	case "Optional":

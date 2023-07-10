@@ -450,7 +450,7 @@ func TestCheckReferenceExpressionWithRdAnyResultType(t *testing.T) {
 	})
 }
 
-func TestCheckReferenceExpressionWithRestrictedAnyResultType(t *testing.T) {
+func TestCheckReferenceExpressionWithIntersectionAnyResultType(t *testing.T) {
 
 	t.Parallel()
 
@@ -1253,7 +1253,7 @@ func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[0])
+	assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 

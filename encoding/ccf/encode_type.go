@@ -37,7 +37,7 @@ type encodeTypeFn func(typ cadence.Type, tids ccfTypeIDByCadenceType) error
 //	/ constsized-array-type
 //	/ dict-type
 //	/ reference-type
-//	/ restricted-type
+//	/ intersection-type
 //	/ capability-type
 //	/ type-ref
 //
@@ -72,8 +72,8 @@ func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType
 	case *cadence.ReferenceType:
 		return e.encodeReferenceType(typ, tids)
 
-	case *cadence.RestrictedType:
-		return e.encodeRestrictedType(typ, tids)
+	case *cadence.IntersectionType:
+		return e.encodeIntersectionType(typ, tids)
 
 	case *cadence.CapabilityType:
 		return e.encodeCapabilityType(typ, tids)
@@ -355,18 +355,18 @@ func (e *Encoder) encodeReferenceTypeWithRawTag(
 	return encodeTypeFn(typ.Type, tids)
 }
 
-// encodeRestrictedType encodes cadence.RestrictedType as
+// encodeIntersectionType encodes cadence.IntersectionType as
 // language=CDDL
-// restricted-type =
+// intersection-type =
 //
-//	; cbor-tag-restricted-type
+//	; cbor-tag-intersection-type
 //	#6.143([
 //	  type: inline-type / nil,
-//	  restrictions: [* inline-type]
+//	  types: [* inline-type]
 //	])
-func (e *Encoder) encodeRestrictedType(typ *cadence.RestrictedType, tids ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagRestrictedType}
-	return e.encodeRestrictedTypeWithRawTag(
+func (e *Encoder) encodeIntersectionType(typ *cadence.IntersectionType, tids ccfTypeIDByCadenceType) error {
+	rawTagNum := []byte{0xd8, CBORTagIntersectionType}
+	return e.encodeIntersectionTypeWithRawTag(
 		typ,
 		tids,
 		e.encodeNullableInlineType,
@@ -375,13 +375,13 @@ func (e *Encoder) encodeRestrictedType(typ *cadence.RestrictedType, tids ccfType
 	)
 }
 
-// encodeRestrictedTypeWithRawTag encodes cadence.RestrictedType
+// encodeIntersectionTypeWithRawTag encodes cadence.IntersectionType
 // with given tag number and encode type function.
-func (e *Encoder) encodeRestrictedTypeWithRawTag(
-	typ *cadence.RestrictedType,
+func (e *Encoder) encodeIntersectionTypeWithRawTag(
+	typ *cadence.IntersectionType,
 	tids ccfTypeIDByCadenceType,
 	encodeTypeFn encodeTypeFn,
-	encodeRestrictionTypeFn encodeTypeFn,
+	encodeIntersectionTypeFn encodeTypeFn,
 	rawTagNumber []byte,
 ) error {
 	// Encode CBOR tag number.
@@ -402,20 +402,20 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 		return err
 	}
 
-	// element 1: restrictions as array.
+	// element 1: types as array.
 
-	// Encode array head with number of restrictions.
-	restrictions := typ.Restrictions
-	err = e.enc.EncodeArrayHead(uint64(len(restrictions)))
+	// Encode array head with number of types.
+	intersectionTypes := typ.Types
+	err = e.enc.EncodeArrayHead(uint64(len(intersectionTypes)))
 	if err != nil {
 		return err
 	}
 
-	switch e.em.sortRestrictedTypes {
+	switch e.em.sortIntersectionTypes {
 	case SortNone:
-		for _, res := range restrictions {
+		for _, res := range intersectionTypes {
 			// Encode restriction type with given encodeTypeFn.
-			err = encodeRestrictionTypeFn(res, tids)
+			err = encodeIntersectionTypeFn(res, tids)
 			if err != nil {
 				return err
 			}
@@ -423,28 +423,28 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 		return nil
 
 	case SortBytewiseLexical:
-		switch len(restrictions) {
+		switch len(intersectionTypes) {
 		case 0:
-			// Short-circuit if there is no restriction.
+			// Short-circuit if there are no types.
 			return nil
 
 		case 1:
-			// Avoid overhead of sorting if there is only one restriction.
-			// Encode restriction type with given encodeTypeFn.
-			return encodeTypeFn(restrictions[0], tids)
+			// Avoid overhead of sorting if there is only one type.
+			// Encode intersection type with given encodeTypeFn.
+			return encodeTypeFn(intersectionTypes[0], tids)
 
 		default:
 			// "Deterministic CCF Encoding Requirements" in CCF specs:
 			//
-			//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
-			//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
-			sorter := newBytewiseCadenceTypeSorter(restrictions)
+			//   "intersection-type.types MUST be sorted by intersection's cadence-type-id"
+			//   "intersection-type-value.types MUST be sorted by intersection's cadence-type-id."
+			sorter := newBytewiseCadenceTypeSorter(intersectionTypes)
 
 			sort.Sort(sorter)
 
 			for _, index := range sorter.indexes {
-				// Encode restriction type with given encodeTypeFn.
-				err = encodeRestrictionTypeFn(restrictions[index], tids)
+				// Encode intersection type with given encodeTypeFn.
+				err = encodeIntersectionTypeFn(intersectionTypes[index], tids)
 				if err != nil {
 					return err
 				}
@@ -454,7 +454,7 @@ func (e *Encoder) encodeRestrictedTypeWithRawTag(
 		}
 
 	default:
-		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for restricted types: %d", e.em.sortRestrictedTypes))
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for intersection types: %d", e.em.sortIntersectionTypes))
 	}
 }
 

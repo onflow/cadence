@@ -2529,7 +2529,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		)
 	})
 
-	t.Run("basic restricted access", func(t *testing.T) {
+	t.Run("basic intersection access", func(t *testing.T) {
 
 		t.Parallel()
 

@@ -1290,7 +1290,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                 // dictionary type
                 access(all) var f: {Int: String}
 
-                // restricted type
+                // intersection type
                 access(all) var g: {TestInterface}
 
                 // instantiation and reference types
@@ -1335,7 +1335,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                 // instantiation and reference types
                 access(all) var h:  Capability<&TestStruct>?
 
-                // restricted type
+                // intersection type
                 access(all) var g: {TestInterface}
 
                 // dictionary type
@@ -1386,14 +1386,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("Test restricted types", func(t *testing.T) {
+	t.Run("Test intersection types", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             access(all) contract Test {
 
-                // restricted type
+                // intersection type
                 access(all) var a: {TestInterface}
                 access(all) var b: {TestInterface}
                 access(all) var c: AnyStruct{TestInterface}
@@ -1452,14 +1452,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("Test invalid restricted types change", func(t *testing.T) {
+	t.Run("Test invalid intersection types change", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             access(all) contract Test {
 
-                // restricted type
+                // intersection type
                 access(all) var a: TestStruct{TestInterface}
                 access(all) var b: {TestInterface}
 

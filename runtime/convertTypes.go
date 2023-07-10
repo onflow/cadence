@@ -68,8 +68,8 @@ func ExportMeteredType(
 			return cadence.TheAddressType
 		case *sema.ReferenceType:
 			return exportReferenceType(gauge, t, results)
-		case *sema.RestrictedType:
-			return exportRestrictedType(gauge, t, results)
+		case *sema.IntersectionType:
+			return exportIntersectionType(gauge, t, results)
 		case *sema.CapabilityType:
 			return exportCapabilityType(gauge, t, results)
 		}
@@ -511,24 +511,24 @@ func exportReferenceType(
 	)
 }
 
-func exportRestrictedType(
+func exportIntersectionType(
 	gauge common.MemoryGauge,
-	t *sema.RestrictedType,
+	t *sema.IntersectionType,
 	results map[sema.TypeID]cadence.Type,
-) *cadence.RestrictedType {
+) *cadence.IntersectionType {
 
 	convertedType := ExportMeteredType(gauge, t.Type, results)
 
-	restrictions := make([]cadence.Type, len(t.Restrictions))
+	intersectionTypes := make([]cadence.Type, len(t.Types))
 
-	for i, restriction := range t.Restrictions {
-		restrictions[i] = ExportMeteredType(gauge, restriction, results)
+	for i, typ := range t.Types {
+		intersectionTypes[i] = ExportMeteredType(gauge, typ, results)
 	}
 
-	return cadence.NewMeteredRestrictedType(
+	return cadence.NewMeteredIntersectionType(
 		gauge,
 		convertedType,
-		restrictions,
+		intersectionTypes,
 	)
 }
 
@@ -688,19 +688,19 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			importAuthorization(memoryGauge, t.Authorization),
 			ImportType(memoryGauge, t.Type),
 		)
-	case *cadence.RestrictedType:
-		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))
-		for _, restriction := range t.Restrictions {
-			intf, ok := restriction.(cadence.InterfaceType)
+	case *cadence.IntersectionType:
+		types := make([]interpreter.InterfaceStaticType, 0, len(t.Types))
+		for _, typ := range t.Types {
+			intf, ok := typ.(cadence.InterfaceType)
 			if !ok {
 				panic(fmt.Sprintf("cannot export type of type %T", t))
 			}
-			restrictions = append(restrictions, importInterfaceType(memoryGauge, intf))
+			types = append(types, importInterfaceType(memoryGauge, intf))
 		}
-		return interpreter.NewRestrictedStaticType(
+		return interpreter.NewIntersectionStaticType(
 			memoryGauge,
 			ImportType(memoryGauge, t.Type),
-			restrictions,
+			types,
 		)
 	case cadence.BlockType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeBlock)

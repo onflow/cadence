@@ -747,7 +747,7 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 	})
 }
 
-func TestRestrictedStaticType_Equal(t *testing.T) {
+func TestIntersectionStaticType_Equal(t *testing.T) {
 
 	t.Parallel()
 
@@ -756,9 +756,9 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			(&RestrictedStaticType{
+			(&IntersectionStaticType{
 				Type: PrimitiveStaticTypeInt,
-				Restrictions: []InterfaceStaticType{
+				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
 						QualifiedIdentifier: "X",
@@ -769,9 +769,9 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 					},
 				},
 			}).Equal(
-				&RestrictedStaticType{
+				&IntersectionStaticType{
 					Type: PrimitiveStaticTypeInt,
-					Restrictions: []InterfaceStaticType{
+					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "Y",
@@ -786,31 +786,31 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 		)
 	})
 
-	t.Run("equal, no restrictions", func(t *testing.T) {
+	t.Run("equal, no intersections", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.True(t,
-			(&RestrictedStaticType{
-				Type:         PrimitiveStaticTypeInt,
-				Restrictions: []InterfaceStaticType{},
+			(&IntersectionStaticType{
+				Type:  PrimitiveStaticTypeInt,
+				Types: []InterfaceStaticType{},
 			}).Equal(
-				&RestrictedStaticType{
-					Type:         PrimitiveStaticTypeInt,
-					Restrictions: []InterfaceStaticType{},
+				&IntersectionStaticType{
+					Type:  PrimitiveStaticTypeInt,
+					Types: []InterfaceStaticType{},
 				},
 			),
 		)
 	})
 
-	t.Run("different restricted type", func(t *testing.T) {
+	t.Run("different intersection type", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			(&RestrictedStaticType{
+			(&IntersectionStaticType{
 				Type: PrimitiveStaticTypeString,
-				Restrictions: []InterfaceStaticType{
+				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
 						QualifiedIdentifier: "X",
@@ -821,9 +821,9 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 					},
 				},
 			}).Equal(
-				&RestrictedStaticType{
+				&IntersectionStaticType{
 					Type: PrimitiveStaticTypeInt,
-					Restrictions: []InterfaceStaticType{
+					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "Y",
@@ -838,14 +838,14 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 		)
 	})
 
-	t.Run("fewer restrictions", func(t *testing.T) {
+	t.Run("fewer intersections", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			(&RestrictedStaticType{
+			(&IntersectionStaticType{
 				Type: PrimitiveStaticTypeInt,
-				Restrictions: []InterfaceStaticType{
+				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
 						QualifiedIdentifier: "X",
@@ -856,9 +856,9 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 					},
 				},
 			}).Equal(
-				&RestrictedStaticType{
+				&IntersectionStaticType{
 					Type: PrimitiveStaticTypeInt,
-					Restrictions: []InterfaceStaticType{
+					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "Y",
@@ -869,23 +869,23 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 		)
 	})
 
-	t.Run("more restrictions", func(t *testing.T) {
+	t.Run("more intersections", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			(&RestrictedStaticType{
+			(&IntersectionStaticType{
 				Type: PrimitiveStaticTypeInt,
-				Restrictions: []InterfaceStaticType{
+				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
 						QualifiedIdentifier: "X",
 					},
 				},
 			}).Equal(
-				&RestrictedStaticType{
+				&IntersectionStaticType{
 					Type: PrimitiveStaticTypeInt,
-					Restrictions: []InterfaceStaticType{
+					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "Y",
@@ -900,14 +900,14 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 		)
 	})
 
-	t.Run("different restrictions", func(t *testing.T) {
+	t.Run("different intersections", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			(&RestrictedStaticType{
+			(&IntersectionStaticType{
 				Type: PrimitiveStaticTypeInt,
-				Restrictions: []InterfaceStaticType{
+				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
 						QualifiedIdentifier: "X",
@@ -918,9 +918,9 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 					},
 				},
 			}).Equal(
-				&RestrictedStaticType{
+				&IntersectionStaticType{
 					Type: PrimitiveStaticTypeInt,
-					Restrictions: []InterfaceStaticType{
+					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "X",
@@ -940,9 +940,9 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			(&RestrictedStaticType{
+			(&IntersectionStaticType{
 				Type: PrimitiveStaticTypeInt,
-				Restrictions: []InterfaceStaticType{
+				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
 						QualifiedIdentifier: "X",
@@ -1376,16 +1376,16 @@ func TestStaticTypeConversion(t *testing.T) {
 			},
 		},
 		{
-			name: "Restricted",
-			semaType: &sema.RestrictedType{
+			name: "Intersection",
+			semaType: &sema.IntersectionType{
 				Type: sema.IntType,
-				Restrictions: []*sema.InterfaceType{
+				Types: []*sema.InterfaceType{
 					testInterfaceSemaType,
 				},
 			},
-			staticType: &RestrictedStaticType{
+			staticType: &IntersectionStaticType{
 				Type: PrimitiveStaticTypeInt,
-				Restrictions: []InterfaceStaticType{
+				Types: []InterfaceStaticType{
 					testInterfaceStaticType,
 				},
 			},

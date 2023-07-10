@@ -1371,24 +1371,24 @@ func TestImportRuntimeType(t *testing.T) {
 			},
 		},
 		{
-			label: "RestrictedType",
-			actual: &cadence.RestrictedType{
+			label: "IntersectionType",
+			actual: &cadence.IntersectionType{
 				Type: &cadence.StructType{
 					Location:            TestLocation,
 					QualifiedIdentifier: "S",
 				},
-				Restrictions: []cadence.Type{
+				Types: []cadence.Type{
 					&cadence.StructInterfaceType{
 						Location:            TestLocation,
 						QualifiedIdentifier: "T",
 					}},
 			},
-			expected: &interpreter.RestrictedStaticType{
+			expected: &interpreter.IntersectionStaticType{
 				Type: interpreter.CompositeStaticType{
 					Location:            TestLocation,
 					QualifiedIdentifier: "S",
 				},
-				Restrictions: []interpreter.InterfaceStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						Location:            TestLocation,
 						QualifiedIdentifier: "T",
@@ -2096,7 +2096,7 @@ func TestExportTypeValue(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("with restricted static type", func(t *testing.T) {
+	t.Run("with intersection static type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2126,9 +2126,9 @@ func TestExportTypeValue(t *testing.T) {
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
 		ty := interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
+			Type: &interpreter.IntersectionStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
-				Restrictions: []interpreter.InterfaceStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						Location:            TestLocation,
 						QualifiedIdentifier: "SI",
@@ -2142,13 +2142,13 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
+				StaticType: &cadence.IntersectionType{
 					Type: &cadence.StructType{
 						QualifiedIdentifier: "S",
 						Location:            TestLocation,
 						Fields:              []cadence.Field{},
 					},
-					Restrictions: []cadence.Type{
+					Types: []cadence.Type{
 						&cadence.StructInterfaceType{
 							QualifiedIdentifier: "SI",
 							Location:            TestLocation,

@@ -181,11 +181,11 @@ type jsonReferenceType struct {
 	Authorization jsonAuthorization `json:"authorization"`
 }
 
-type jsonRestrictedType struct {
-	Kind         string      `json:"kind"`
-	TypeID       string      `json:"typeID"`
-	Type         jsonValue   `json:"type"`
-	Restrictions []jsonValue `json:"restrictions"`
+type jsonIntersectionType struct {
+	Kind   string      `json:"kind"`
+	TypeID string      `json:"typeID"`
+	Type   jsonValue   `json:"type"`
+	Types  []jsonValue `json:"types"`
 }
 
 type jsonTypeParameter struct {
@@ -955,16 +955,16 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Authorization: prepareAuthorization(typ.Authorization),
 			Type:          prepareType(typ.Type, results),
 		}
-	case *cadence.RestrictedType:
-		restrictions := make([]jsonValue, len(typ.Restrictions))
-		for i, restriction := range typ.Restrictions {
-			restrictions[i] = prepareType(restriction, results)
+	case *cadence.IntersectionType:
+		types := make([]jsonValue, len(typ.Types))
+		for i, typ := range typ.Types {
+			types[i] = prepareType(typ, results)
 		}
-		return jsonRestrictedType{
-			Kind:         "Restriction",
-			TypeID:       typ.ID(),
-			Type:         prepareType(typ.Type, results),
-			Restrictions: restrictions,
+		return jsonIntersectionType{
+			Kind:   "Intersection",
+			Type:   prepareType(typ.Type, results),
+			Types:  types,
+			TypeID: typ.ID(),
 		}
 	case *cadence.CapabilityType:
 		return jsonUnaryType{

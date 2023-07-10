@@ -503,11 +503,11 @@ func TestParseOptionalReferenceType(t *testing.T) {
 	})
 }
 
-func TestParseRestrictedType(t *testing.T) {
+func TestParseIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("with restricted type, no restrictions", func(t *testing.T) {
+	t.Run("with intersection type, no types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -515,14 +515,14 @@ func TestParseRestrictedType(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
+			&ast.IntersectionType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "T",
 						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 					},
 				},
-				Restrictions: nil,
+				Types: nil,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -532,7 +532,7 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("with restricted type, one restriction", func(t *testing.T) {
+	t.Run("with intersection type, one type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -540,14 +540,14 @@ func TestParseRestrictedType(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
+			&ast.IntersectionType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "T",
 						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 					},
 				},
-				Restrictions: []*ast.NominalType{
+				Types: []*ast.NominalType{
 					{
 						Identifier: ast.Identifier{
 							Identifier: "U",
@@ -564,7 +564,7 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("with restricted type, two restrictions", func(t *testing.T) {
+	t.Run("with intersection type, two types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -572,14 +572,14 @@ func TestParseRestrictedType(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
+			&ast.IntersectionType{
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "T",
 						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 					},
 				},
-				Restrictions: []*ast.NominalType{
+				Types: []*ast.NominalType{
 					{
 						Identifier: ast.Identifier{
 							Identifier: "U",
@@ -602,7 +602,7 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("without restricted type, no restrictions", func(t *testing.T) {
+	t.Run("without intersection type, no types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -610,7 +610,7 @@ func TestParseRestrictedType(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
+			&ast.IntersectionType{
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -620,7 +620,7 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("without restricted type, one restriction", func(t *testing.T) {
+	t.Run("without intersection type, one type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -628,8 +628,8 @@ func TestParseRestrictedType(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
-				Restrictions: []*ast.NominalType{
+			&ast.IntersectionType{
+				Types: []*ast.NominalType{
 					{
 						Identifier: ast.Identifier{
 							Identifier: "T",
@@ -646,7 +646,7 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid: without restricted type, missing type after comma", func(t *testing.T) {
+	t.Run("invalid: without intersection type, missing type after comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -662,8 +662,8 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
-				Restrictions: []*ast.NominalType{
+			&ast.IntersectionType{
+				Types: []*ast.NominalType{
 					{
 						Identifier: ast.Identifier{
 							Identifier: "T",
@@ -680,7 +680,7 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid: without restricted type, type without comma", func(t *testing.T) {
+	t.Run("invalid: without intersection type, type without comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -699,7 +699,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without restricted type, colon", func(t *testing.T) {
+	t.Run("invalid: without intersection type, colon", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -707,7 +707,7 @@ func TestParseRestrictedType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected colon in restricted type",
+					Message: "unexpected colon in intersection type",
 					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
@@ -718,7 +718,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, colon", func(t *testing.T) {
+	t.Run("invalid: with intersection type, colon", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -737,7 +737,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without restricted type, first is non-nominal", func(t *testing.T) {
+	t.Run("invalid: without intersection type, first is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -745,18 +745,18 @@ func TestParseRestrictedType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "non-nominal type in restriction list: [T]",
+					Message: "non-nominal type in intersection list: [T]",
 					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 			},
 			errs,
 		)
 
-		// TODO: return type with non-nominal restrictions
+		// TODO: return type with non-nominal types
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, first is non-nominal", func(t *testing.T) {
+	t.Run("invalid: with intersection type, first is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -775,7 +775,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without restricted type, second is non-nominal", func(t *testing.T) {
+	t.Run("invalid: without intersection type, second is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -783,7 +783,7 @@ func TestParseRestrictedType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "non-nominal type in restriction list: [U]",
+					Message: "non-nominal type in intersection list: [U]",
 					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
@@ -794,7 +794,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, second is non-nominal", func(t *testing.T) {
+	t.Run("invalid: with intersection type, second is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -813,7 +813,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without restricted type, missing end", func(t *testing.T) {
+	t.Run("invalid: without intersection type, missing end", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -831,7 +831,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, missing end", func(t *testing.T) {
+	t.Run("invalid: with intersection type, missing end", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -849,7 +849,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without restricted type, missing end after type", func(t *testing.T) {
+	t.Run("invalid: without intersection type, missing end after type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -867,7 +867,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, missing end after type", func(t *testing.T) {
+	t.Run("invalid: with intersection type, missing end after type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -885,7 +885,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without restricted type, missing end after comma", func(t *testing.T) {
+	t.Run("invalid: without intersection type, missing end after comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -903,7 +903,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, missing end after comma", func(t *testing.T) {
+	t.Run("invalid: with intersection type, missing end after comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -921,7 +921,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without restricted type, just comma", func(t *testing.T) {
+	t.Run("invalid: without intersection type, just comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -929,7 +929,7 @@ func TestParseRestrictedType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected comma in restricted type",
+					Message: "unexpected comma in intersection type",
 					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
@@ -939,7 +939,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, just comma", func(t *testing.T) {
+	t.Run("invalid: with intersection type, just comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2875,7 +2875,7 @@ func TestParseOptionalReference(t *testing.T) {
 	)
 }
 
-func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
+func TestParseIntersectionReferenceTypeWithBaseType(t *testing.T) {
 
 	t.Parallel()
 
@@ -2897,14 +2897,14 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.ReferenceType{
-						Type: &ast.RestrictedType{
+						Type: &ast.IntersectionType{
 							Type: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "R",
 									Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 								},
 							},
-							Restrictions: []*ast.NominalType{
+							Types: []*ast.NominalType{
 								{
 									Identifier: ast.Identifier{
 										Identifier: "I",
@@ -2941,7 +2941,7 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 	)
 }
 
-func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
+func TestParseIntersectionReferenceTypeWithoutBaseType(t *testing.T) {
 
 	t.Parallel()
 
@@ -2963,8 +2963,8 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.ReferenceType{
-						Type: &ast.RestrictedType{
-							Restrictions: []*ast.NominalType{
+						Type: &ast.IntersectionType{
+							Types: []*ast.NominalType{
 								{
 									Identifier: ast.Identifier{
 										Identifier: "I",
@@ -3001,7 +3001,7 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 	)
 }
 
-func TestParseOptionalRestrictedType(t *testing.T) {
+func TestParseOptionalIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
@@ -3023,14 +3023,14 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: true,
 					Type: &ast.OptionalType{
-						Type: &ast.RestrictedType{
+						Type: &ast.IntersectionType{
 							Type: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "R",
 									Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 								},
 							},
-							Restrictions: []*ast.NominalType{
+							Types: []*ast.NominalType{
 								{
 									Identifier: ast.Identifier{
 										Identifier: "I",
@@ -3067,7 +3067,7 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 	)
 }
 
-func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
+func TestParseOptionalIntersectionTypeOnlyTypes(t *testing.T) {
 
 	t.Parallel()
 
@@ -3089,8 +3089,8 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: true,
 					Type: &ast.OptionalType{
-						Type: &ast.RestrictedType{
-							Restrictions: []*ast.NominalType{
+						Type: &ast.IntersectionType{
+							Types: []*ast.NominalType{
 								{
 									Identifier: ast.Identifier{
 										Identifier: "I",

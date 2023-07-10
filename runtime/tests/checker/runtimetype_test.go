@@ -680,7 +680,7 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 	}
 }
 
-func TestCheckRestrictedTypeConstructor(t *testing.T) {
+func TestCheckIntersectionTypeConstructor(t *testing.T) {
 
 	t.Parallel()
 
@@ -692,7 +692,7 @@ func TestCheckRestrictedTypeConstructor(t *testing.T) {
 		{
 			name: "S{I1, I2}",
 			code: `
-              let result = RestrictedType(identifier: "S", restrictions: ["I1", "I2"])
+              let result = IntersectionType(identifier: "S", types: ["I1", "I2"])
             `,
 			expectedError: nil,
 		},
@@ -700,7 +700,7 @@ func TestCheckRestrictedTypeConstructor(t *testing.T) {
 			name: "S{}",
 			code: `
               struct S {}
-              let result = RestrictedType(identifier: "S", restrictions: [])
+              let result = IntersectionType(identifier: "S", types: [])
             `,
 			expectedError: nil,
 		},
@@ -708,56 +708,56 @@ func TestCheckRestrictedTypeConstructor(t *testing.T) {
 			name: "{S}",
 			code: `
               struct S {}
-              let result = RestrictedType(identifier: nil, restrictions: ["S"])
+              let result = IntersectionType(identifier: nil, types: ["S"])
             `,
 			expectedError: nil,
 		},
 		{
 			name: "type mismatch first arg",
 			code: `
-              let result = RestrictedType(identifier: 3, restrictions: ["I"])
+              let result = IntersectionType(identifier: 3, types: ["I"])
             `,
 			expectedError: &sema.TypeMismatchError{},
 		},
 		{
 			name: "type mismatch second arg",
 			code: `
-              let result = RestrictedType(identifier: "A", restrictions: [3])
+              let result = IntersectionType(identifier: "A", types: [3])
             `,
 			expectedError: &sema.TypeMismatchError{},
 		},
 		{
 			name: "too many args",
 			code: `
-              let result = RestrictedType(identifier: "A", restrictions: ["I1"], ["I2"])
+              let result = IntersectionType(identifier: "A", types: ["I1"], ["I2"])
             `,
 			expectedError: &sema.ArgumentCountError{},
 		},
 		{
 			name: "one arg",
 			code: `
-              let result = RestrictedType(identifier: "A")
+              let result = IntersectionType(identifier: "A")
             `,
 			expectedError: &sema.ArgumentCountError{},
 		},
 		{
 			name: "no args",
 			code: `
-              let result = RestrictedType()
+              let result = IntersectionType()
             `,
 			expectedError: &sema.ArgumentCountError{},
 		},
 		{
 			name: "missing first label",
 			code: `
-              let result = RestrictedType("S", restrictions: ["I1", "I2"])
+              let result = IntersectionType("S", types: ["I1", "I2"])
             `,
 			expectedError: &sema.MissingArgumentLabelError{},
 		},
 		{
 			name: "missing second label",
 			code: `
-              let result = RestrictedType(identifier: "S", ["I1", "I2"])
+              let result = IntersectionType(identifier: "S", ["I1", "I2"])
             `,
 			expectedError: &sema.MissingArgumentLabelError{},
 		},
