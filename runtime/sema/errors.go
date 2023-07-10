@@ -1115,6 +1115,23 @@ func (e *FunctionExpressionInConditionError) Error() string {
 	return "condition contains function"
 }
 
+// InvalidEmitConditionError
+
+type InvalidEmitConditionError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidEmitConditionError{}
+var _ errors.UserError = &InvalidEmitConditionError{}
+
+func (*InvalidEmitConditionError) isSemanticError() {}
+
+func (*InvalidEmitConditionError) IsUserError() {}
+
+func (e *InvalidEmitConditionError) Error() string {
+	return "invalid emit condition "
+}
+
 // MissingReturnValueError
 
 type MissingReturnValueError struct {

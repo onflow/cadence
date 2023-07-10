@@ -18,9 +18,12 @@
 
 package sema
 
-import "github.com/onflow/cadence/runtime/ast"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
+)
 
-func (checker *Checker) visitConditions(conditions []*ast.Condition) {
+func (checker *Checker) visitConditions(conditions []ast.Condition) {
 	// all condition blocks are `view`
 	checker.InNewPurityScope(true, func() {
 		// flag the checker to be inside a condition.
@@ -42,15 +45,155 @@ func (checker *Checker) visitConditions(conditions []*ast.Condition) {
 	})
 }
 
-func (checker *Checker) checkCondition(condition *ast.Condition) Type {
+func (checker *Checker) checkCondition(condition ast.Condition) {
 
-	// check test expression is boolean
-	checker.VisitExpression(condition.Test, BoolType)
+	switch condition := condition.(type) {
+	case *ast.TestCondition:
 
-	// check message expression results in a string
-	if condition.Message != nil {
-		checker.VisitExpression(condition.Message, StringType)
+		// check test expression is boolean
+		checker.VisitExpression(condition.Test, BoolType)
+
+		// check message expression results in a string
+		if condition.Message != nil {
+			checker.VisitExpression(condition.Message, StringType)
+		}
+
+	case *ast.EmitCondition:
+		checker.VisitEmitStatement((*ast.EmitStatement)(condition))
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (checker *Checker) rewritePostConditions(postConditions ast.Conditions) PostConditionsRewrite {
+
+	var beforeStatements []ast.Statement
+
+	var rewrittenPostConditions ast.Conditions
+	var allExtractedExpressions []ast.ExtractedExpression
+
+	count := len(postConditions)
+	if count > 0 {
+		rewrittenPostConditions = make([]ast.Condition, count)
+
+		for i, postCondition := range postConditions {
+
+			newPostCondition, extractedExpressions := checker.rewritePostCondition(postCondition)
+			rewrittenPostConditions[i] = newPostCondition
+			allExtractedExpressions = append(
+				allExtractedExpressions,
+				extractedExpressions...,
+			)
+		}
 	}
 
-	return nil
+	for _, extractedExpression := range allExtractedExpressions {
+		expression := extractedExpression.Expression
+		startPos := expression.StartPosition()
+
+		// NOTE: no need to check the before statements or update elaboration here:
+		// The before statements are visited/checked later
+		variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
+		variableDeclaration.StartPos = startPos
+		variableDeclaration.Identifier = extractedExpression.Identifier
+		variableDeclaration.Transfer = ast.NewTransfer(
+			checker.memoryGauge,
+			ast.TransferOperationCopy,
+			startPos,
+		)
+		variableDeclaration.Value = expression
+
+		beforeStatements = append(
+			beforeStatements,
+			variableDeclaration,
+		)
+	}
+
+	return PostConditionsRewrite{
+		BeforeStatements:        beforeStatements,
+		RewrittenPostConditions: rewrittenPostConditions,
+	}
+}
+
+func (checker *Checker) rewritePostCondition(
+	postCondition ast.Condition,
+) (
+	newPostCondition ast.Condition,
+	extractedExpressions []ast.ExtractedExpression,
+) {
+	switch postCondition := postCondition.(type) {
+	case *ast.TestCondition:
+		return checker.rewriteTestPostCondition(postCondition)
+
+	case *ast.EmitCondition:
+		return checker.rewriteEmitPostCondition(postCondition)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (checker *Checker) rewriteTestPostCondition(
+	postTestCondition *ast.TestCondition,
+) (
+	newPostCondition ast.Condition,
+	extractedExpressions []ast.ExtractedExpression,
+) {
+	// copy condition and set expression to rewritten one
+	newPostTestCondition := *postTestCondition
+
+	beforeExtractor := checker.beforeExtractor()
+
+	testExtraction := beforeExtractor.ExtractBefore(postTestCondition.Test)
+
+	extractedExpressions = testExtraction.ExtractedExpressions
+
+	newPostTestCondition.Test = testExtraction.RewrittenExpression
+
+	if postTestCondition.Message != nil {
+		messageExtraction := beforeExtractor.ExtractBefore(postTestCondition.Message)
+
+		newPostTestCondition.Message = messageExtraction.RewrittenExpression
+
+		extractedExpressions = append(
+			extractedExpressions,
+			messageExtraction.ExtractedExpressions...,
+		)
+	}
+
+	newPostCondition = &newPostTestCondition
+
+	return
+}
+
+func (checker *Checker) rewriteEmitPostCondition(
+	postEmitCondition *ast.EmitCondition,
+) (
+	newPostCondition ast.Condition,
+	extractedExpressions []ast.ExtractedExpression,
+) {
+	// copy condition and set argument expressions to rewritten ones
+	newPostEmitCondition := *postEmitCondition
+
+	beforeExtractor := checker.beforeExtractor()
+
+	invocationExtraction := beforeExtractor.ExtractBefore(postEmitCondition.InvocationExpression)
+
+	extractedExpressions = invocationExtraction.ExtractedExpressions
+
+	if rewrittenInvocationExpression, ok := invocationExtraction.RewrittenExpression.(*ast.InvocationExpression); ok {
+		newPostEmitCondition.InvocationExpression = rewrittenInvocationExpression
+	} else {
+		checker.report(&InvalidEmitConditionError{
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				postEmitCondition.InvocationExpression,
+			),
+		})
+	}
+
+	newPostCondition = &newPostEmitCondition
+
+	return
 }

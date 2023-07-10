@@ -186,6 +186,47 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	return inter, err
 }
 
+type testEvent struct {
+	event     *interpreter.CompositeValue
+	eventType *sema.CompositeType
+}
+
+func parseCheckAndInterpretWithEvents(t *testing.T, code string) (
+	inter *interpreter.Interpreter,
+	getEvents func() []testEvent,
+	err error,
+) {
+	var events []testEvent
+
+	inter, err = parseCheckAndInterpretWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					eventType *sema.CompositeType,
+				) error {
+					events = append(events, testEvent{
+						event:     event,
+						eventType: eventType,
+					})
+					return nil
+				},
+			},
+		},
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	getEvents = func() []testEvent {
+		return events
+	}
+	return inter, getEvents, nil
+}
+
 func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
 	return interpreter.NewInMemoryStorage(nil)
 }

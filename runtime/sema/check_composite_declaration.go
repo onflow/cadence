@@ -773,12 +773,14 @@ func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.Attach
 // `declareCompositeType` and exists in `checker.Elaboration.CompositeDeclarationTypes`.
 func (checker *Checker) declareCompositeLikeMembersAndValue(
 	declaration ast.CompositeLikeDeclaration,
-	kind ContainerKind,
+	containerKind ContainerKind,
 ) {
 	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
 	if compositeType == nil {
 		panic(errors.NewUnreachableError())
 	}
+
+	compositeKind := declaration.Kind()
 
 	members := declaration.DeclarationMembers()
 
@@ -795,14 +797,14 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		checker.enterValueScope()
 		defer checker.leaveValueScope(declaration.EndPosition, false)
 
-		checker.declareCompositeLikeNestedTypes(declaration, kind, false)
+		checker.declareCompositeLikeNestedTypes(declaration, containerKind, false)
 
 		// NOTE: determine initializer parameter types while nested types are in scope,
 		// and after declaring nested types as the initializer may use nested type in parameters
 
 		initializers := members.Initializers()
 		compositeType.ConstructorParameters = checker.initializerParameters(initializers)
-		compositeType.ConstructorPurity = checker.initializerPurity(initializers)
+		compositeType.ConstructorPurity = checker.initializerPurity(compositeKind, initializers)
 
 		// Declare nested declarations' members
 
@@ -824,7 +826,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		// }
 		// ```
 		declareNestedComposite := func(nestedCompositeDeclaration ast.CompositeLikeDeclaration) {
-			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, kind)
+			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, containerKind)
 
 			// Declare nested composites' values (constructor/instance) as members of the containing composite
 
@@ -944,7 +946,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		var fields []string
 		var origins map[string]*Origin
 
-		switch declaration.Kind() {
+		switch compositeKind {
 		case common.CompositeKindEvent:
 			// Event members are derived from the initializer's parameter list
 			members, fields, origins = checker.eventMembersAndOrigins(
@@ -964,7 +966,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 			members, fields, origins = checker.defaultMembersAndOrigins(
 				declaration.DeclarationMembers(),
 				compositeType,
-				kind,
+				containerKind,
 				declaration.DeclarationKind(),
 			)
 		}
@@ -1188,13 +1190,21 @@ func (checker *Checker) checkMemberStorability(members *StringMemberOrderedMap) 
 	})
 }
 
-func (checker *Checker) initializerPurity(initializers []*ast.SpecialFunctionDeclaration) FunctionPurity {
+func (checker *Checker) initializerPurity(
+	compositeKind common.CompositeKind,
+	initializers []*ast.SpecialFunctionDeclaration,
+) FunctionPurity {
+	if compositeKind == common.CompositeKindEvent {
+		return FunctionPurityView
+	}
+
 	// TODO: support multiple overloaded initializers
 	initializerCount := len(initializers)
 	if initializerCount > 0 {
 		firstInitializer := initializers[0]
 		return PurityFromAnnotation(firstInitializer.FunctionDeclaration.Purity)
 	}
+
 	// a composite with no initializer is view because it runs no code
 	return FunctionPurityView
 }

@@ -25,9 +25,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestRuntimeError(t *testing.T) {
@@ -434,20 +432,7 @@ func TestRuntimeError(t *testing.T) {
 		}
 
 		runtimeInterface := &testRuntimeInterface{
-			resolveLocation: func(identifiers []ast.Identifier, location Location) (result []sema.ResolvedLocation, err error) {
-				for _, identifier := range identifiers {
-					result = append(result, sema.ResolvedLocation{
-						Location: common.AddressLocation{
-							Address: location.(common.AddressLocation).Address,
-							Name:    identifier.Identifier,
-						},
-						Identifiers: []ast.Identifier{
-							identifier,
-						},
-					})
-				}
-				return
-			},
+			resolveLocation: multipleIdentifierLocationResolver,
 			getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 				code := codes[location]
 				return []byte(code), nil

@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -32,9 +33,11 @@ func TestCheckToString(t *testing.T) {
 
 	t.Parallel()
 
-	for _, numberOrAddressType := range append(
-		sema.AllNumberTypes[:],
-		sema.TheAddressType,
+	for _, numberOrAddressType := range common.Concat(
+		sema.AllNumberTypes,
+		[]sema.Type{
+			sema.TheAddressType,
+		},
 	) {
 
 		ty := numberOrAddressType

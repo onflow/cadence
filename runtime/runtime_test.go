@@ -6960,6 +6960,25 @@ func singleIdentifierLocationResolver(t testing.TB) func(identifiers []Identifie
 	}
 }
 
+func multipleIdentifierLocationResolver(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+	// Resolve each identifier as an address location
+
+	for _, identifier := range identifiers {
+		result = append(result, sema.ResolvedLocation{
+			Location: common.AddressLocation{
+				Address: location.(common.AddressLocation).Address,
+				Name:    identifier.Identifier,
+			},
+			Identifiers: []ast.Identifier{
+				identifier,
+			},
+		})
+	}
+
+	return
+}
+
 func TestRuntimeGetConfig(t *testing.T) {
 	t.Parallel()
 

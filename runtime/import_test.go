@@ -114,7 +114,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
 
-func TestCheckCyclicImports(t *testing.T) {
+func TestCheckCyclicImportsAfterUpdate(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
@@ -208,5 +208,199 @@ func TestCheckCyclicImports(t *testing.T) {
 	require.ErrorAs(t, importedProgramErr.Err, &nestedCheckerErr)
 
 	errs = checker.RequireCheckerErrors(t, nestedCheckerErr, 1)
+	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
+}
+
+func TestCheckCyclicImportAddress(t *testing.T) {
+
+	runtime := newTestInterpreterRuntime()
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	accountCodes := map[Location][]byte{}
+
+	signerAccount := contractsAddress
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) ([]byte, error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+			if len(identifiers) == 0 {
+				require.IsType(t, common.AddressLocation{}, location)
+				addressLocation := location.(common.AddressLocation)
+
+				require.Equal(t, contractsAddress, addressLocation.Address)
+
+				// `Foo` and `Bar` are already deployed at the address.
+				identifiers = append(
+					identifiers,
+					Identifier{
+						Identifier: "Foo",
+					},
+					Identifier{
+						Identifier: "Bar",
+					},
+				)
+			}
+
+			return multipleIdentifierLocationResolver(identifiers, location)
+		},
+		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
+		return json.Decode(runtimeInterface, b)
+	}
+
+	environment := NewBaseInterpreterEnvironment(Config{})
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deploy := func(name string, contract string, update bool) error {
+		var txSource = DeploymentTransaction
+		if update {
+			txSource = UpdateTransaction
+		}
+
+		return runtime.ExecuteTransaction(
+			Script{
+				Source: txSource(
+					name,
+					[]byte(contract),
+				),
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
+			},
+		)
+	}
+
+	const fooContract = `
+        access(all) contract Foo {}
+    `
+
+	const barContract = `
+        import Foo from 0x0000000000000001
+        access(all) contract Bar {}
+    `
+
+	const updatedFooContract = `
+        import 0x0000000000000001
+        access(all) contract Foo {}
+    `
+
+	err := deploy("Foo", fooContract, false)
+	require.NoError(t, err)
+
+	err = deploy("Bar", barContract, false)
+	require.NoError(t, err)
+
+	// Update `Foo` contract creating a cycle.
+	err = deploy("Foo", updatedFooContract, true)
+
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+	// Direct cycle, by importing `Foo` in `Foo`
+	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
+}
+
+func TestCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
+
+	runtime := newTestInterpreterRuntime()
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	accountCodes := map[Location][]byte{}
+
+	signerAccount := contractsAddress
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) ([]byte, error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+			if len(identifiers) == 0 {
+				require.IsType(t, common.AddressLocation{}, location)
+				addressLocation := location.(common.AddressLocation)
+
+				require.Equal(t, contractsAddress, addressLocation.Address)
+			}
+
+			// There are no contracts in the account, so the identifiers are empty.
+			return multipleIdentifierLocationResolver(identifiers, location)
+		},
+		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
+		return json.Decode(runtimeInterface, b)
+	}
+
+	environment := NewBaseInterpreterEnvironment(Config{})
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deploy := func(name string, contract string, update bool) error {
+		var txSource = DeploymentTransaction
+		if update {
+			txSource = UpdateTransaction
+		}
+
+		return runtime.ExecuteTransaction(
+			Script{
+				Source: txSource(
+					name,
+					[]byte(contract),
+				),
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    nextTransactionLocation(),
+				Environment: environment,
+			},
+		)
+	}
+
+	const fooContract = `
+        import 0x0000000000000001
+        access(all) contract Foo {}
+    `
+
+	err := deploy("Foo", fooContract, false)
+
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }

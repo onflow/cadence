@@ -501,23 +501,24 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 	t.Parallel()
 
 	code := `
-          access(all) contract interface Test {
 
-              access(all) struct interface NestedInterface {
-                  access(all) fun test(): Bool
-              }
+      contract interface Test {
 
-              access(all) struct Nested: NestedInterface {}
+          struct interface NestedInterface {
+              fun test(): Bool
           }
 
-          access(all) contract TestImpl {
+          struct Nested: NestedInterface {}
+      }
 
-              access(all) struct Nested {
-                  access(all) fun test(): Bool {
-                      return true
-                  }
+      contract TestImpl {
+
+          struct Nested {
+              fun test(): Bool {
+                  return true
               }
           }
+      }
 	`
 
 	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
@@ -528,7 +529,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 		common.StringLocation("test"),
 		nil,
 		&Config{
-			AccessCheckMode: AccessCheckModeStrict,
+			AccessCheckMode: AccessCheckModeNotSpecifiedUnrestricted,
 		},
 	)
 	require.NoError(t, err)
@@ -536,8 +537,10 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 	err = checker.Check()
 	require.NoError(t, err)
 
+	var typeIDs []common.TypeID
+
 	checker.typeActivations.ForEachVariableDeclaredInAndBelow(
-		0,
+		checker.valueActivations.Depth(),
 		func(_ string, value *Variable) {
 			typ := value.Type
 
@@ -560,13 +563,15 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 					cachedID := semaType.ID()
 
 					// clear cached identifiers for one level
-					semaType.cachedIdentifiers = nil
+					semaType.clearCachedIdentifiers()
 
 					recalculatedQualifiedID := semaType.QualifiedIdentifier()
 					recalculatedID := semaType.ID()
 
 					assert.Equal(t, recalculatedQualifiedID, cachedQualifiedID)
 					assert.Equal(t, recalculatedID, cachedID)
+
+					typeIDs = append(typeIDs, recalculatedID)
 
 					// Recursively check for nested types
 					checkNestedTypes(semaType.NestedTypes)
@@ -576,7 +581,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 					cachedID := semaType.ID()
 
 					// clear cached identifiers for one level
-					semaType.cachedIdentifiers = nil
+					semaType.clearCachedIdentifiers()
 
 					recalculatedQualifiedID := semaType.QualifiedIdentifier()
 					recalculatedID := semaType.ID()
@@ -584,13 +589,28 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 					assert.Equal(t, recalculatedQualifiedID, cachedQualifiedID)
 					assert.Equal(t, recalculatedID, cachedID)
 
+					typeIDs = append(typeIDs, recalculatedID)
+
 					// Recursively check for nested types
 					checkNestedTypes(semaType.NestedTypes)
 				}
 			}
 
 			checkIdentifiers(t, typ)
-		})
+		},
+	)
+
+	assert.Equal(t,
+		[]common.TypeID{
+			"S.test.Test",
+			"S.test.Test.NestedInterface",
+			"S.test.Test.Nested",
+			"S.test.TestImpl",
+			"S.test.TestImpl.Nested",
+		},
+		typeIDs,
+	)
+
 }
 
 func TestCommonSuperType(t *testing.T) {

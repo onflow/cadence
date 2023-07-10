@@ -761,7 +761,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 		return result.Value
 	}
 
-	interpreter.visitConditions(preConditions)
+	interpreter.visitConditions(preConditions, ast.ConditionKindPre)
 
 	var returnValue Value
 
@@ -786,7 +786,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 		)
 	}
 
-	interpreter.visitConditions(postConditions)
+	interpreter.visitConditions(postConditions, ast.ConditionKindPost)
 
 	return returnValue
 }
@@ -843,40 +843,56 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
 }
 
-func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
+func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
 	for _, condition := range conditions {
-		interpreter.visitCondition(condition)
+		interpreter.visitCondition(condition, kind)
 	}
 }
 
-func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
+func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast.ConditionKind) {
 
-	// Evaluate the condition as a statement, so we get position information in case of an error
+	switch condition := condition.(type) {
+	case *ast.TestCondition:
+		// Evaluate the condition as a statement, so we get position information in case of an error
+		statement := ast.NewExpressionStatement(interpreter, condition.Test)
 
-	statement := ast.NewExpressionStatement(interpreter, condition.Test)
+		result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-	result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+		value, ok := result.Value.(BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-	value, valueOk := result.Value.(BoolValue)
+		if value {
+			return
+		}
 
-	if ok && valueOk && bool(value) {
-		return
+		messageExpression := condition.Message
+		var message string
+		if messageExpression != nil {
+			messageValue := interpreter.evalExpression(messageExpression)
+			message = messageValue.(*StringValue).Str
+		}
+
+		panic(ConditionError{
+			ConditionKind: kind,
+			Message:       message,
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: statement,
+			},
+		})
+
+	case *ast.EmitCondition:
+		interpreter.evalStatement((*ast.EmitStatement)(condition))
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
-	var message string
-	if condition.Message != nil {
-		messageValue := interpreter.evalExpression(condition.Message)
-		message = messageValue.(*StringValue).Str
-	}
-
-	panic(ConditionError{
-		ConditionKind: condition.Kind,
-		Message:       message,
-		LocationRange: LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: condition.Test,
-		},
-	})
 }
 
 // declareVariable declares a variable in the latest scope
