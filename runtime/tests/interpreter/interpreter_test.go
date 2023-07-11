@@ -10507,7 +10507,7 @@ func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
 	)
 }
 
-func TestInterpretArrayReversed(t *testing.T) {
+func TestInterpretArrayReverse(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
@@ -10515,22 +10515,22 @@ func TestInterpretArrayReversed(t *testing.T) {
       let ys = [100, 467, 297, 23]
 	  let emptyVals: [Int] = []
       
-	  fun reversedxs(): [Int] {
-          return xs.reversed()
+	  fun reversexs(): [Int] {
+          return xs.reverse()
       }
 	  fun originalxs(): [Int] {
 		return xs
 	  }
 
-	  fun reversedys(): [Int] {
-		return ys.reversed()
+	  fun reverseys(): [Int] {
+		return ys.reverse()
 	  }
 	  fun originalys(): [Int] {
 		return ys
 	  }
 
 	  fun reverseempty(): [Int] {
-		return emptyVals.reversed()
+		return emptyVals.reverse()
 	  }
 	  fun originalempty(): [Int] {
 		return emptyVals
@@ -10546,8 +10546,8 @@ func TestInterpretArrayReversed(t *testing.T) {
 
 	  let sa = [TestStruct(1), TestStruct(2), TestStruct(3)]
 	  
-	  fun reversedsa(): [Int] {
-		let sa_rev = sa.reversed()
+	  fun reversesa(): [Int] {
+		let sa_rev = sa.reverse()
 		
 		let res: [Int] = [];
 		for s in sa_rev {
@@ -10606,7 +10606,7 @@ func TestInterpretArrayReversed(t *testing.T) {
 			common.ZeroAddress,
 		))
 
-	runValidCase(t, "reversedxs", "originalxs",
+	runValidCase(t, "reversexs", "originalxs",
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
@@ -10633,7 +10633,7 @@ func TestInterpretArrayReversed(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(200),
 		))
 
-	runValidCase(t, "reversedys", "originalys",
+	runValidCase(t, "reverseys", "originalys",
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
@@ -10658,7 +10658,7 @@ func TestInterpretArrayReversed(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(23),
 		))
 
-	runValidCase(t, "reversedsa", "originalsa",
+	runValidCase(t, "reversesa", "originalsa",
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,

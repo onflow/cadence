@@ -1078,28 +1078,28 @@ func TestCheckInvalidResourceFirstIndex(t *testing.T) {
 	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
-func TestCheckArrayReversed(t *testing.T) {
+func TestCheckArrayReverse(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
           let x = [1, 2, 3]
-          let y = x.reversed()
+          let y = x.reverse()
       }
     `)
 
 	require.NoError(t, err)
 }
 
-func TestCheckArrayReversedInvalidArgs(t *testing.T) {
+func TestCheckArrayReverseInvalidArgs(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
           let x = [1, 2, 3]
-          let y = x.reversed(100)
+          let y = x.reverse(100)
       }
     `)
 
@@ -1108,7 +1108,7 @@ func TestCheckArrayReversedInvalidArgs(t *testing.T) {
 	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
 }
 
-func TestCheckResourceArrayReversedInvalid(t *testing.T) {
+func TestCheckResourceArrayReverseInvalid(t *testing.T) {
 
 	t.Parallel()
 
@@ -1117,7 +1117,7 @@ func TestCheckResourceArrayReversedInvalid(t *testing.T) {
 
 		fun test(): @[X] {
 			let xs <- [<-create X()]
-			return <-xs.reversed()
+			return <-xs.reverse()
 		}
     `)
 

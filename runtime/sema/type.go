@@ -1788,10 +1788,11 @@ It does not modify the original array.
 If either of the parameters are out of the bounds of the array, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail.
 `
 
-const ArrayTypeReversedFunctionName = "reversed"
+const ArrayTypeReverseFunctionName = "reverse"
 
-const arrayTypeReversedFunctionDocString = `
+const arrayTypeReverseFunctionDocString = `
 Returns a new array with contents in the reversed order.
+Available if the array element type is not resource-kinded.
 `
 
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
@@ -1887,7 +1888,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				)
 			},
 		},
-		ArrayTypeReversedFunctionName: {
+		ArrayTypeReverseFunctionName: {
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
 				elementType := arrayType.ElementType(false)
@@ -1907,8 +1908,8 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					memoryGauge,
 					arrayType,
 					identifier,
-					ArrayReversedFunctionType(elementType),
-					arrayTypeReversedFunctionDocString,
+					ArrayReverseFunctionType(elementType),
+					arrayTypeReverseFunctionDocString,
 				)
 			},
 		},
@@ -2224,7 +2225,7 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 	}
 }
 
-func ArrayReversedFunctionType(elementType Type) *FunctionType {
+func ArrayReverseFunctionType(elementType Type) *FunctionType {
 	return &FunctionType{
 		Parameters: []Parameter{},
 		ReturnTypeAnnotation: NewTypeAnnotation(&VariableSizedType{

@@ -2430,14 +2430,14 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 			},
 		)
 
-	case sema.ArrayTypeReversedFunctionName:
+	case sema.ArrayTypeReverseFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			sema.ArrayReversedFunctionType(
+			sema.ArrayReverseFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
 			func(invocation Invocation) Value {
-				return v.Reversed(
+				return v.Reverse(
 					invocation.Interpreter,
 					invocation.LocationRange,
 				)
@@ -2914,7 +2914,7 @@ func (v *ArrayValue) Slice(
 	)
 }
 
-func (v *ArrayValue) Reversed(
+func (v *ArrayValue) Reverse(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 ) Value {
