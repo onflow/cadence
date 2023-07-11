@@ -1331,6 +1331,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		atree.Address{},
 		false,
 		nil,
+		nil,
 	).(*CompositeValue)
 
 	// we enforce this in the checker

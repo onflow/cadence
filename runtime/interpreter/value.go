@@ -133,6 +133,7 @@ type Value interface {
 		address atree.Address,
 		remove bool,
 		storable atree.Storable,
+		preventTransfer map[atree.StorageID]struct{},
 	) Value
 	DeepRemove(interpreter *Interpreter)
 	// Clone returns a new value that is equal to this value.
@@ -473,6 +474,7 @@ func (v TypeValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -592,6 +594,7 @@ func (v VoidValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -764,6 +767,7 @@ func (v BoolValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -937,6 +941,7 @@ func (v CharacterValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -1409,6 +1414,7 @@ func (v *StringValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -1584,6 +1590,7 @@ func NewArrayValue(
 				locationRange,
 				atree.Address(address),
 				true,
+				nil,
 				nil,
 			)
 
@@ -1881,6 +1888,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 				atree.Address{},
 				false,
 				nil,
+				nil,
 			)
 		},
 	)
@@ -1967,6 +1975,9 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 		v.array.Address(),
 		true,
 		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
 	)
 
 	existingStorable, err := v.array.Set(uint64(index), element)
@@ -2038,6 +2049,9 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 		v.array.Address(),
 		true,
 		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
 	)
 
 	err := v.array.Append(element)
@@ -2097,6 +2111,9 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 		v.array.Address(),
 		true,
 		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
 	)
 
 	err := v.array.Insert(uint64(index), element)
@@ -2150,6 +2167,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 		atree.Address{},
 		true,
 		storable,
+		nil,
 	)
 }
 
@@ -2548,6 +2566,7 @@ func (v *ArrayValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
 	common.UseMemory(interpreter, baseUsage)
@@ -2581,6 +2600,16 @@ func (v *ArrayValue) Transfer(
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
 
+	if preventTransfer == nil {
+		preventTransfer = map[atree.StorageID]struct{}{}
+	} else if _, ok := preventTransfer[currentStorageID]; ok {
+		panic(RecursiveTransferError{
+			LocationRange: locationRange,
+		})
+	}
+	preventTransfer[currentStorageID] = struct{}{}
+	defer delete(preventTransfer, currentStorageID)
+
 	array := v.array
 
 	needsStoreTo := address != currentAddress
@@ -2607,7 +2636,7 @@ func (v *ArrayValue) Transfer(
 				}
 
 				element := MustConvertStoredValue(interpreter, value).
-					Transfer(interpreter, locationRange, address, remove, nil)
+					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
 
 				return element, nil
 			},
@@ -2853,6 +2882,7 @@ func (v *ArrayValue) Slice(
 				locationRange,
 				atree.Address{},
 				false,
+				nil,
 				nil,
 			)
 		},
@@ -3560,6 +3590,7 @@ func (v IntValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -4147,6 +4178,7 @@ func (v Int8Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -4736,6 +4768,7 @@ func (v Int16Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -5325,6 +5358,7 @@ func (v Int32Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -5910,6 +5944,7 @@ func (v Int64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -6599,6 +6634,7 @@ func (v Int128Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -7285,6 +7321,7 @@ func (v Int256Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -7875,6 +7912,7 @@ func (v UIntValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -8424,6 +8462,7 @@ func (v UInt8Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -8936,6 +8975,7 @@ func (v UInt16Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -9449,6 +9489,7 @@ func (v UInt32Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -9989,6 +10030,7 @@ func (v UInt64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -10621,6 +10663,7 @@ func (v UInt128Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -11252,6 +11295,7 @@ func (v UInt256Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -11670,6 +11714,7 @@ func (v Word8Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -12089,6 +12134,7 @@ func (v Word16Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -12509,6 +12555,7 @@ func (v Word32Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -12953,6 +13000,7 @@ func (v Word64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -13505,6 +13553,7 @@ func (v Word128Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -14057,6 +14106,7 @@ func (v Word256Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -14597,6 +14647,7 @@ func (v Fix64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -15102,6 +15153,7 @@ func (v UFix64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -15658,6 +15710,7 @@ func (v *CompositeValue) RemoveMember(
 			atree.Address{},
 			true,
 			existingValueStorable,
+			nil,
 		)
 }
 
@@ -15699,6 +15752,9 @@ func (v *CompositeValue) SetMember(
 		address,
 		true,
 		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
 	)
 
 	existingStorable, err := v.dictionary.Set(
@@ -16045,6 +16101,7 @@ func (v *CompositeValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
@@ -16080,6 +16137,16 @@ func (v *CompositeValue) Transfer(
 
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
+
+	if preventTransfer == nil {
+		preventTransfer = map[atree.StorageID]struct{}{}
+	} else if _, ok := preventTransfer[currentStorageID]; ok {
+		panic(RecursiveTransferError{
+			LocationRange: locationRange,
+		})
+	}
+	preventTransfer[currentStorageID] = struct{}{}
+	defer delete(preventTransfer, currentStorageID)
 
 	dictionary := v.dictionary
 
@@ -16125,11 +16192,20 @@ func (v *CompositeValue) Transfer(
 				value := MustConvertStoredValue(interpreter, atreeValue)
 				// the base of an attachment is not stored in the atree, so in order to make the
 				// transfer happen properly, we set the base value here if this field is an attachment
-				if compositeValue, ok := value.(*CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
+				if compositeValue, ok := value.(*CompositeValue); ok &&
+					compositeValue.Kind == common.CompositeKindAttachment {
+
 					compositeValue.setBaseValue(interpreter, v)
 				}
 
-				value = value.Transfer(interpreter, locationRange, address, remove, nil)
+				value = value.Transfer(
+					interpreter,
+					locationRange,
+					address,
+					remove,
+					nil,
+					preventTransfer,
+				)
 
 				return atreeKey, value, nil
 			},
@@ -17119,7 +17195,14 @@ func (v *DictionaryValue) GetMember(
 				}
 
 				return MustConvertStoredValue(interpreter, key).
-					Transfer(interpreter, locationRange, atree.Address{}, false, nil)
+					Transfer(
+						interpreter,
+						locationRange,
+						atree.Address{},
+						false,
+						nil,
+						nil,
+					)
 			},
 		)
 
@@ -17146,7 +17229,14 @@ func (v *DictionaryValue) GetMember(
 				}
 
 				return MustConvertStoredValue(interpreter, value).
-					Transfer(interpreter, locationRange, atree.Address{}, false, nil)
+					Transfer(
+						interpreter,
+						locationRange,
+						atree.Address{},
+						false,
+						nil,
+						nil,
+					)
 			})
 
 	case "remove":
@@ -17311,6 +17401,7 @@ func (v *DictionaryValue) Remove(
 			atree.Address{},
 			true,
 			existingValueStorable,
+			nil,
 		)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -17343,12 +17434,17 @@ func (v *DictionaryValue) Insert(
 
 	address := v.dictionary.Address()
 
+	preventTransfer := map[atree.StorageID]struct{}{
+		v.StorageID(): {},
+	}
+
 	keyValue = keyValue.Transfer(
 		interpreter,
 		locationRange,
 		address,
 		true,
 		nil,
+		preventTransfer,
 	)
 
 	value = value.Transfer(
@@ -17357,6 +17453,7 @@ func (v *DictionaryValue) Insert(
 		address,
 		true,
 		nil,
+		preventTransfer,
 	)
 
 	valueComparator := newValueComparator(interpreter, locationRange)
@@ -17391,6 +17488,7 @@ func (v *DictionaryValue) Insert(
 		atree.Address{},
 		true,
 		existingValueStorable,
+		nil,
 	)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -17546,6 +17644,7 @@ func (v *DictionaryValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
 		v.dictionary.Count(),
@@ -17581,6 +17680,16 @@ func (v *DictionaryValue) Transfer(
 
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
+
+	if preventTransfer == nil {
+		preventTransfer = map[atree.StorageID]struct{}{}
+	} else if _, ok := preventTransfer[currentStorageID]; ok {
+		panic(RecursiveTransferError{
+			LocationRange: locationRange,
+		})
+	}
+	preventTransfer[currentStorageID] = struct{}{}
+	defer delete(preventTransfer, currentStorageID)
 
 	dictionary := v.dictionary
 
@@ -17619,10 +17728,10 @@ func (v *DictionaryValue) Transfer(
 				}
 
 				key := MustConvertStoredValue(interpreter, atreeKey).
-					Transfer(interpreter, locationRange, address, remove, nil)
+					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
 
 				value := MustConvertStoredValue(interpreter, atreeValue).
-					Transfer(interpreter, locationRange, address, remove, nil)
+					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
 
 				return key, value, nil
 			},
@@ -17951,6 +18060,7 @@ func (v NilValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -18232,6 +18342,7 @@ func (v *SomeValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 	config := interpreter.SharedState.Config
 
@@ -18246,7 +18357,14 @@ func (v *SomeValue) Transfer(
 
 	if needsStoreTo || !isResourceKinded {
 
-		innerValue = v.value.Transfer(interpreter, locationRange, address, remove, nil)
+		innerValue = v.value.Transfer(
+			interpreter,
+			locationRange,
+			address,
+			remove,
+			nil,
+			preventTransfer,
+		)
 
 		if remove {
 			interpreter.RemoveReferencedSlab(v.valueStorable)
@@ -18671,6 +18789,7 @@ func (v *StorageReferenceValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -19005,6 +19124,7 @@ func (v *EphemeralReferenceValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -19221,6 +19341,7 @@ func (v AddressValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -19506,6 +19627,7 @@ func (v PathValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -19723,6 +19845,7 @@ func (v *PathCapabilityValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		v.DeepRemove(interpreter)
@@ -19924,6 +20047,7 @@ func (v *IDCapabilityValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		v.DeepRemove(interpreter)
@@ -20072,6 +20196,7 @@ func (v PathLinkValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -20208,14 +20333,30 @@ func (v *PublishedValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 	// NB: if the inner value of a PublishedValue can be a resource,
 	// we must perform resource-related checks here as well
 
 	if v.NeedsStoreTo(address) {
 
-		innerValue := v.Value.Transfer(interpreter, locationRange, address, remove, nil).(CapabilityValue)
-		addressValue := v.Recipient.Transfer(interpreter, locationRange, address, remove, nil).(AddressValue)
+		innerValue := v.Value.Transfer(
+			interpreter,
+			locationRange,
+			address,
+			remove,
+			nil,
+			preventTransfer,
+		).(CapabilityValue)
+
+		addressValue := v.Recipient.Transfer(
+			interpreter,
+			locationRange,
+			address,
+			remove,
+			nil,
+			preventTransfer,
+		).(AddressValue)
 
 		if remove {
 			interpreter.RemoveReferencedSlab(storable)
@@ -20354,6 +20495,7 @@ func (v AccountLinkValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
