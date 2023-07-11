@@ -472,7 +472,7 @@ func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+			assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 
 		})
 	}

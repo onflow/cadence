@@ -18908,18 +18908,7 @@ func (v *EphemeralReferenceValue) ReferencedValue(
 	locationRange LocationRange,
 	_ bool,
 ) *Value {
-	// Just like for storage references, references to optionals are unwrapped,
-	// i.e. a reference to `nil` aborts when dereferenced.
-
-	switch referenced := v.Value.(type) {
-	case *SomeValue:
-		innerValue := referenced.InnerValue(interpreter, locationRange)
-		return &innerValue
-	case NilValue:
-		return nil
-	default:
-		return &v.Value
-	}
+	return &v.Value
 }
 
 func (v *EphemeralReferenceValue) MustReferencedValue(
