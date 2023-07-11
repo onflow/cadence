@@ -2429,6 +2429,20 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				)
 			},
 		)
+
+	case sema.ArrayTypeReversedFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayReversedFunctionType(
+				v.SemaType(interpreter).ElementType(false),
+			),
+			func(invocation Invocation) Value {
+				return v.Reversed(
+					invocation.Interpreter,
+					invocation.LocationRange,
+				)
+			},
+		)
 	}
 
 	return nil
@@ -2894,6 +2908,37 @@ func (v *ArrayValue) Slice(
 				atree.Address{},
 				false,
 				nil,
+				nil,
+			)
+		},
+	)
+}
+
+func (v *ArrayValue) Reversed(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+) Value {
+	count := v.Count()
+	idx := count - 1
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
+		common.ZeroAddress,
+		uint64(count),
+		func() Value {
+			if idx < 0 {
+				return nil
+			}
+
+			value := v.Get(interpreter, locationRange, idx)
+			idx--
+
+			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
 				nil,
 			)
 		},

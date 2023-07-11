@@ -10507,6 +10507,181 @@ func TestInterpretArrayFirstIndexDoesNotExist(t *testing.T) {
 	)
 }
 
+func TestInterpretArrayReversed(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let xs = [1, 2, 3, 100, 200]
+      let ys = [100, 467, 297, 23]
+	  let emptyVals: [Int] = []
+      
+	  fun reversedxs(): [Int] {
+          return xs.reversed()
+      }
+	  fun originalxs(): [Int] {
+		return xs
+	  }
+
+	  fun reversedys(): [Int] {
+		return ys.reversed()
+	  }
+	  fun originalys(): [Int] {
+		return ys
+	  }
+
+	  fun reverseempty(): [Int] {
+		return emptyVals.reversed()
+	  }
+	  fun originalempty(): [Int] {
+		return emptyVals
+	  }
+
+	  pub struct TestStruct {
+		pub var test: Int
+	  
+		init(_ t: Int) {
+		  self.test = t
+		}
+	  }
+
+	  let sa = [TestStruct(1), TestStruct(2), TestStruct(3)]
+	  
+	  fun reversedsa(): [Int] {
+		let sa_rev = sa.reversed()
+		
+		let res: [Int] = [];
+		for s in sa_rev {
+		  res.append(s.test)
+		}
+	  
+		return res
+	  }
+	  fun originalsa(): [Int] {		
+		let res: [Int] = [];
+		for s in sa {
+		  res.append(s.test)
+		}
+	  
+		return res
+	  }
+    `)
+
+	runValidCase := func(t *testing.T, reverseFuncName, originalFuncName string, reversedArray, originalArray *interpreter.ArrayValue) {
+		val, err := inter.Invoke(reverseFuncName)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			reversedArray,
+			val,
+		)
+
+		origVal, err := inter.Invoke(originalFuncName)
+		require.NoError(t, err)
+
+		// Original array remains unchanged
+		AssertValuesEqual(
+			t,
+			inter,
+			originalArray,
+			origVal,
+		)
+	}
+
+	runValidCase(t, "reverseempty", "originalempty",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+		), interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+		))
+
+	runValidCase(t, "reversedxs", "originalxs",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(200),
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+		), interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+			interpreter.NewUnmeteredIntValueFromInt64(200),
+		))
+
+	runValidCase(t, "reversedys", "originalys",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(23),
+			interpreter.NewUnmeteredIntValueFromInt64(297),
+			interpreter.NewUnmeteredIntValueFromInt64(467),
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+		), interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+			interpreter.NewUnmeteredIntValueFromInt64(467),
+			interpreter.NewUnmeteredIntValueFromInt64(297),
+			interpreter.NewUnmeteredIntValueFromInt64(23),
+		))
+
+	runValidCase(t, "reversedsa", "originalsa",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+		), interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+		))
+}
+
 func TestInterpretOptionalReference(t *testing.T) {
 
 	t.Parallel()
