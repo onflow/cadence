@@ -2639,10 +2639,38 @@ func formatFunctionType(
 	return builder.String()
 }
 
+// Arity
+
+type Arity struct {
+	Min int
+	Max int
+}
+
+func (arity *Arity) MinCount(parameterCount int) int {
+	minCount := parameterCount
+	if arity != nil {
+		minCount = arity.Min
+	}
+
+	return minCount
+}
+
+func (arity *Arity) MaxCount(parameterCount int) *int {
+	maxCount := parameterCount
+	if arity != nil {
+		if arity.Max < parameterCount {
+			return nil
+		}
+		maxCount = arity.Max
+	}
+
+	return &maxCount
+}
+
 // FunctionType
 type FunctionType struct {
 	ReturnTypeAnnotation     TypeAnnotation
-	RequiredArgumentCount    *int
+	Arity                    *Arity
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
@@ -2653,10 +2681,6 @@ type FunctionType struct {
 }
 
 var _ Type = &FunctionType{}
-
-func RequiredArgumentCount(count int) *int {
-	return &count
-}
 
 func (*FunctionType) IsType() {}
 
@@ -2978,10 +3002,10 @@ func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
 		}
 
 		return &FunctionType{
-			TypeParameters:        rewrittenTypeParameters,
-			Parameters:            rewrittenParameters,
-			ReturnTypeAnnotation:  NewTypeAnnotation(rewrittenReturnType),
-			RequiredArgumentCount: t.RequiredArgumentCount,
+			TypeParameters:       rewrittenTypeParameters,
+			Parameters:           rewrittenParameters,
+			ReturnTypeAnnotation: NewTypeAnnotation(rewrittenReturnType),
+			Arity:                t.Arity,
 		}, true
 	} else {
 		return t, false
@@ -3090,9 +3114,9 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 	}
 
 	return &FunctionType{
-		Parameters:            newParameters,
-		ReturnTypeAnnotation:  NewTypeAnnotation(newReturnType),
-		RequiredArgumentCount: t.RequiredArgumentCount,
+		Parameters:           newParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(newReturnType),
+		Arity:                t.Arity,
 	}
 
 }

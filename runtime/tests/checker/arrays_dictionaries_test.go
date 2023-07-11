@@ -963,7 +963,7 @@ func TestCheckInvalidArrayRemoveFirst(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+	assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
 }
 
 func TestCheckInvalidArrayRemoveFirstFromConstantSized(t *testing.T) {
