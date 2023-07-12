@@ -374,7 +374,7 @@ func (checker *Checker) checkInvocation(
 	returnType Type,
 ) {
 	parameterCount := len(functionType.Parameters)
-	requiredArgumentCount := functionType.RequiredArgumentCount
+	arity := functionType.Arity
 	typeParameterCount := len(functionType.TypeParameters)
 
 	// Check the type arguments and bind them to type parameters
@@ -421,7 +421,7 @@ func (checker *Checker) checkInvocation(
 	checker.checkInvocationArgumentCount(
 		argumentCount,
 		parameterCount,
-		requiredArgumentCount,
+		arity,
 		invocationExpression,
 	)
 
@@ -592,23 +592,28 @@ func (checker *Checker) checkInvocationRequiredArgument(
 func (checker *Checker) checkInvocationArgumentCount(
 	argumentCount int,
 	parameterCount int,
-	requiredArgumentCount *int,
+	arity *Arity,
 	pos ast.HasPosition,
 ) {
-
-	if argumentCount == parameterCount {
+	minCount := arity.MinCount(parameterCount)
+	if argumentCount < minCount {
+		checker.report(
+			&InsufficientArgumentsError{
+				MinCount:    minCount,
+				ActualCount: argumentCount,
+				Range:       ast.NewRangeFromPositioned(checker.memoryGauge, pos),
+			},
+		)
 		return
 	}
 
-	// TODO: improve
-	if requiredArgumentCount == nil ||
-		argumentCount < *requiredArgumentCount {
-
+	maxCount := arity.MaxCount(parameterCount)
+	if maxCount != nil && argumentCount > *maxCount {
 		checker.report(
-			&ArgumentCountError{
-				ParameterCount: parameterCount,
-				ArgumentCount:  argumentCount,
-				Range:          ast.NewRangeFromPositioned(checker.memoryGauge, pos),
+			&ExcessiveArgumentsError{
+				MaxCount:    *maxCount,
+				ActualCount: argumentCount,
+				Range:       ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
 	}
