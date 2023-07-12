@@ -322,3 +322,70 @@ func TestCheckAccountEventParameter(t *testing.T) {
 	})
 
 }
+
+func TestCheckDeclareEventInInterface(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("declare", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo()
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("declare and emit", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo()
+				fun foo() {
+					emit Foo()
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("declare and emit in pre-condition", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo()
+				fun foo() {
+					pre {
+						emit Foo()
+					}
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("declare and emit in post-condition", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo()
+				fun foo() {
+					post {
+						emit Foo()
+					}
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+}
