@@ -88,6 +88,15 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 
 	checker.declareInterfaceNestedTypes(declaration)
 
+	// Declare events
+
+	for _, nestedComposite := range declaration.Members.Composites() {
+		// events are declared in interfaces the same way they are in
+		if nestedComposite.Kind() == common.CompositeKindEvent {
+			checker.visitCompositeLikeDeclaration(nestedComposite, ContainerKindComposite)
+		}
+	}
+
 	checker.checkInitializers(
 		declaration.Members.Initializers(),
 		declaration.Members.Fields(),
@@ -103,14 +112,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	checker.checkSpecialFunctionDefaultImplementation(
 		declaration,
 		declaration.DeclarationKind().Name(),
-	)
-
-	checker.checkInterfaceFunctions(
-		declaration.Members.Functions(),
-		interfaceType,
-		declaration.DeclarationKind(),
-		&declaration.CompositeKind,
-		declaration.DeclarationDocString(),
 	)
 
 	fieldPositionGetter := func(name string) ast.Position {
@@ -149,7 +150,9 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		// Composite declarations nested in interface declarations are type requirements,
 		// i.e. they should be checked like interfaces
 
-		checker.visitCompositeLikeDeclaration(nestedComposite, kind)
+		if nestedComposite.Kind() != common.CompositeKindEvent {
+			checker.visitCompositeLikeDeclaration(nestedComposite, kind)
+		}
 	}
 
 	for _, nestedAttachments := range declaration.Members.Attachments() {

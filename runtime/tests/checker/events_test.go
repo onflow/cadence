@@ -345,9 +345,47 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
 			contract interface Test {
-				event Foo()
+				event Foo(x: String)
 				fun foo() {
-					emit Foo()
+					emit Foo(x: "")
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("declare and emit type mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo(x: String)
+				fun foo() {
+					pre {
+						emit Foo(x: 3)
+					}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("declare and emit qualified", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) contract interface Test {
+				access(all) event Foo()
+			}
+			access(all) contract C {
+				access(all) resource R {
+					access(all) fun emitEvent() {
+						emit Test.Foo()
+					}
 				}
 			}
         `)
