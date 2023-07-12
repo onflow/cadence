@@ -354,6 +354,24 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("emit non-declared event", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				fun foo() {
+					pre {
+						emit Foo()
+					}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
 	t.Run("declare and emit type mismatch", func(t *testing.T) {
 
 		t.Parallel()

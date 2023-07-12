@@ -407,7 +407,7 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	// Declare interfaces' and composites' members
 
 	for _, declaration := range program.InterfaceDeclarations() {
-		checker.declareInterfaceMembers(declaration)
+		checker.declareInterfaceMembersAndValue(declaration)
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {

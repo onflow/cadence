@@ -809,7 +809,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		// Declare nested declarations' members
 
 		for _, nestedInterfaceDeclaration := range members.Interfaces() {
-			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
+			checker.declareInterfaceMembersAndValue(nestedInterfaceDeclaration)
 		}
 
 		// If this composite declaration has nested composite declaration,
