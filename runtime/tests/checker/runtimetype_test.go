@@ -70,14 +70,14 @@ func TestCheckOptionalTypeConstructor(t *testing.T) {
 			code: `
               let result = OptionalType(Type<Int>(), Type<Int>())
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "too few args",
 			code: `
               let result = OptionalType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 	}
 
@@ -142,14 +142,14 @@ func TestCheckVariableSizedArrayTypeConstructor(t *testing.T) {
 			code: `
               let result = VariableSizedArrayType(Type<Int>(), Type<Int>())
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "too few args",
 			code: `
               let result = VariableSizedArrayType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 	}
 
@@ -221,21 +221,21 @@ func TestCheckConstantSizedArrayTypeConstructor(t *testing.T) {
 			code: `
               let result = ConstantSizedArrayType(type:Type<Int>(), size: 3, 4)
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "one arg",
 			code: `
               let result = ConstantSizedArrayType(type: Type<Int>())
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "no args",
 			code: `
               let result = ConstantSizedArrayType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "second label missing",
@@ -322,21 +322,21 @@ func TestCheckDictionaryTypeConstructor(t *testing.T) {
 			code: `
               let result = DictionaryType(key: Type<Int>(), value: Type<Int>(), 4)
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "one arg",
 			code: `
               let result = DictionaryType(key: Type<Int>())
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "no args",
 			code: `
               let result = DictionaryType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "first label missing",
@@ -400,14 +400,14 @@ func TestCheckCompositeTypeConstructor(t *testing.T) {
 			code: `
               let result = CompositeType("", 3)
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "no args",
 			code: `
               let result = CompositeType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 	}
 
@@ -457,14 +457,14 @@ func TestCheckInterfaceTypeConstructor(t *testing.T) {
 			code: `
               let result = InterfaceType("", 3)
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "no args",
 			code: `
               let result = InterfaceType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 	}
 
@@ -535,21 +535,21 @@ func TestCheckFunctionTypeConstructor(t *testing.T) {
 			code: `
               let result = FunctionType(parameters: [Type<String>(), Type<Int>()], return: Type<String>(), 4)
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "one arg",
 			code: `
               let result = FunctionType(parameters: [Type<String>(), Type<Int>()])
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "no args",
 			code: `
               let result = FunctionType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "first label missing",
@@ -628,21 +628,21 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 			code: `
               let result = ReferenceType(authorized: true, type: Type<String>(), Type<Int>())
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "one arg",
 			code: `
               let result = ReferenceType(authorized: true)
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "no args",
 			code: `
               let result = ReferenceType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "first label missing",
@@ -731,21 +731,21 @@ func TestCheckRestrictedTypeConstructor(t *testing.T) {
 			code: `
               let result = RestrictedType(identifier: "A", restrictions: ["I1"], ["I2"])
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "one arg",
 			code: `
               let result = RestrictedType(identifier: "A")
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "no args",
 			code: `
               let result = RestrictedType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "missing first label",
@@ -824,14 +824,14 @@ func TestCheckCapabilityTypeConstructor(t *testing.T) {
 			code: `
               let result = CapabilityType(Type<Int>(), Type<Int>())
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "too few args",
 			code: `
               let result = CapabilityType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 	}
 

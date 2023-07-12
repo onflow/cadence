@@ -8859,3 +8859,106 @@ func TestRuntimeInvalidRecursiveTransferViaFunctionArgument(t *testing.T) {
 
 	require.ErrorAs(t, err, &interpreter.RecursiveTransferError{})
 }
+
+func TestRuntimeOptionalReferenceAttack(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+      pub resource Vault {
+          pub var balance: UFix64
+
+          init(balance: UFix64) {
+              self.balance = balance
+          }
+
+          pub fun withdraw(amount: UFix64): @Vault {
+              self.balance = self.balance - amount
+              return <-create Vault(balance: amount)
+          }
+
+          pub fun deposit(from: @Vault) {
+              self.balance = self.balance + from.balance
+              destroy from
+          }
+      }
+
+      pub fun empty(): @Vault {
+          return <- create Vault(balance: 0.0)
+      }
+
+      pub fun giveme(): @Vault {
+          return <- create Vault(balance: 10.0)
+      }
+
+      pub fun main() {
+          var vault <- giveme() //get 10 token
+          var someDict:@{Int:Vault} <- {1:<-vault}
+          var r = (&someDict[1] as auth &AnyResource) as! &Vault
+          var double <- empty()
+          double.deposit(from: <- someDict.remove(key:1)!)
+          double.deposit(from: <- r.withdraw(amount:10.0))
+          log(double.balance) // 20
+          destroy double
+          destroy someDict
+      }
+    `
+
+	runtime := newTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	var events []cadence.Event
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(s string) {
+
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(nil, b)
+	}
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: [][]byte{},
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+
+	RequireError(t, err)
+
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
