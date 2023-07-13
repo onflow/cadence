@@ -1069,26 +1069,30 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("upcast to optional", func(t *testing.T) {
+	t.Run("optional reference to non-optional value", func(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		_, err := ParseAndCheck(t, `
           let i: Int = 1
           let ref = &i as &Int?
         `)
 
-		require.NoError(t, err)
-		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 
-		assert.Equal(t,
-			&sema.OptionalType{
-				Type: &sema.ReferenceType{
-					Type: sema.IntType,
-				},
-			},
-			refValueType,
-		)
+	t.Run("non-optional reference to optional value", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let opt: Int? = 1
+          let ref = &opt as &AnyStruct
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
 

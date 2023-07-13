@@ -428,31 +428,59 @@ func (e *NotCallableError) Error() string {
 	)
 }
 
-// ArgumentCountError
+// InsufficientArgumentsError
 
-type ArgumentCountError struct {
-	ParameterCount int
-	ArgumentCount  int
+type InsufficientArgumentsError struct {
+	MinCount    int
+	ActualCount int
 	ast.Range
 }
 
-var _ SemanticError = &ArgumentCountError{}
-var _ errors.UserError = &ArgumentCountError{}
-var _ errors.SecondaryError = &ArgumentCountError{}
+var _ SemanticError = &InsufficientArgumentsError{}
+var _ errors.UserError = &InsufficientArgumentsError{}
+var _ errors.SecondaryError = &InsufficientArgumentsError{}
 
-func (*ArgumentCountError) isSemanticError() {}
+func (*InsufficientArgumentsError) isSemanticError() {}
 
-func (*ArgumentCountError) IsUserError() {}
+func (*InsufficientArgumentsError) IsUserError() {}
 
-func (e *ArgumentCountError) Error() string {
-	return "incorrect number of arguments"
+func (e *InsufficientArgumentsError) Error() string {
+	return "too few arguments"
 }
 
-func (e *ArgumentCountError) SecondaryError() string {
+func (e *InsufficientArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected %d, got %d",
-		e.ParameterCount,
-		e.ArgumentCount,
+		"expected at least %d, got %d",
+		e.MinCount,
+		e.ActualCount,
+	)
+}
+
+// ExcessiveArgumentsError
+
+type ExcessiveArgumentsError struct {
+	MaxCount    int
+	ActualCount int
+	ast.Range
+}
+
+var _ SemanticError = &ExcessiveArgumentsError{}
+var _ errors.UserError = &ExcessiveArgumentsError{}
+var _ errors.SecondaryError = &ExcessiveArgumentsError{}
+
+func (*ExcessiveArgumentsError) isSemanticError() {}
+
+func (*ExcessiveArgumentsError) IsUserError() {}
+
+func (e *ExcessiveArgumentsError) Error() string {
+	return "too many arguments"
+}
+
+func (e *ExcessiveArgumentsError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected up to %d, got %d",
+		e.MaxCount,
+		e.ActualCount,
 	)
 }
 

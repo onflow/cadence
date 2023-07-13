@@ -1985,7 +1985,111 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				sema.VoidType,
 			),
-			RequiredArgumentCount: sema.RequiredArgumentCount(1),
+			Arity: &sema.Arity{Min: 1},
+		},
+		``,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			called = true
+
+			require.Len(t, invocation.ArgumentTypes, 3)
+			assert.IsType(t, sema.IntType, invocation.ArgumentTypes[0])
+			assert.IsType(t, sema.BoolType, invocation.ArgumentTypes[1])
+			assert.IsType(t, sema.StringType, invocation.ArgumentTypes[2])
+
+			require.Len(t, invocation.Arguments, 3)
+
+			inter := invocation.Interpreter
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				invocation.Arguments[0],
+			)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.TrueValue,
+				invocation.Arguments[1],
+			)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredStringValue("test"),
+				invocation.Arguments[2],
+			)
+
+			return interpreter.Void
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(testFunction)
+
+	checker, err := sema.NewChecker(
+		program,
+		TestLocation,
+		nil,
+		&sema.Config{
+			BaseValueActivation: baseValueActivation,
+			AccessCheckMode:     sema.AccessCheckModeStrict,
+		},
+	)
+	require.NoError(t, err)
+
+	err = checker.Check()
+	require.NoError(t, err)
+
+	storage := newUnmeteredInMemoryStorage()
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, testFunction)
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		&interpreter.Config{
+			Storage:        storage,
+			BaseActivation: baseActivation,
+		},
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	assert.True(t, called)
+}
+
+func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+      pub let nothing = test(1, true, "test")
+    `
+	program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
+
+	require.NoError(t, err)
+
+	called := false
+
+	testFunction := stdlib.NewStandardLibraryFunction(
+		"test",
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.VoidType,
+			),
+			Arity: &sema.Arity{Min: 1, Max: 3},
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -5058,6 +5162,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			atree.Address(storageAddress),
 			true,
 			nil,
+			nil,
 		)
 
 		domain := storagePath.Domain.Identifier()
@@ -7919,7 +8024,14 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		r1, err := inter.Invoke("createR1")
 		require.NoError(t, err)
 
-		r1 = r1.Transfer(inter, interpreter.EmptyLocationRange, atree.Address{1}, false, nil)
+		r1 = r1.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address{1},
+			false,
+			nil,
+			nil,
+		)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
 
@@ -8682,7 +8794,7 @@ func TestInterpretNonStorageReference(t *testing.T) {
                   <-create NFT(id: 2)
               ]
 
-              let nftRef = (&resources[1] as &NFT?)!
+              let nftRef = &resources[1] as &NFT
               let nftRef2 = nftRef
               nftRef2.id = 3
 
@@ -10399,38 +10511,46 @@ func TestInterpretOptionalReference(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t,
-		`
+	t.Run("present", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
           fun present(): &Int {
               let x: Int? = 1
               let y = &x as &Int?
               return y!
           }
+        `)
 
+		value, err := inter.Invoke("present")
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			&interpreter.EphemeralReferenceValue{
+				Value:        interpreter.NewUnmeteredIntValueFromInt64(1),
+				BorrowedType: sema.IntType,
+			},
+			value,
+		)
+
+	})
+
+	t.Run("absent", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
           fun absent(): &Int {
               let x: Int? = nil
               let y = &x as &Int?
               return y!
           }
-        `,
-	)
+        `)
 
-	value, err := inter.Invoke("present")
-	require.NoError(t, err)
-	require.Equal(
-		t,
-		&interpreter.EphemeralReferenceValue{
-			Value:        interpreter.NewUnmeteredIntValueFromInt64(1),
-			BorrowedType: sema.IntType,
-		},
-		value,
-	)
+		_, err := inter.Invoke("absent")
+		RequireError(t, err)
 
-	_, err = inter.Invoke("absent")
-	RequireError(t, err)
-
-	var forceNilError interpreter.ForceNilError
-	require.ErrorAs(t, err, &forceNilError)
+		var forceNilError interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
+	})
 }
 
 func TestInterpretCastingBoxing(t *testing.T) {
