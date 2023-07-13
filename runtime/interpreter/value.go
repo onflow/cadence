@@ -2210,6 +2210,22 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, locationRange Location
 	return NilOptionalValue
 }
 
+func (v *ArrayValue) Reverse(interpreter *Interpreter, locationRange LocationRange) Value {
+	count := v.Count()
+
+	for leftIndex := 0; leftIndex < count/2; leftIndex++ {
+		rightIndex := count - leftIndex - 1
+
+		leftValue := v.Get(interpreter, locationRange, leftIndex)
+		rightValue := v.Get(interpreter, locationRange, rightIndex)
+
+		v.Set(interpreter, locationRange, leftIndex, rightValue)
+		v.Set(interpreter, locationRange, rightIndex, leftValue)
+	}
+
+	return Void
+}
+
 func (v *ArrayValue) Contains(
 	interpreter *Interpreter,
 	locationRange LocationRange,
@@ -2385,6 +2401,18 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 					invocation.Interpreter,
 					invocation.LocationRange,
 					invocation.Arguments[0],
+				)
+			},
+		)
+
+	case sema.ArrayTypeReverseFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayReverseFunctionType,
+			func(invocation Invocation) Value {
+				return v.Reverse(
+					invocation.Interpreter,
+					invocation.LocationRange,
 				)
 			},
 		)

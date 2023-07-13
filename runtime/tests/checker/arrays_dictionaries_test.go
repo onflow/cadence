@@ -1078,6 +1078,36 @@ func TestCheckInvalidResourceFirstIndex(t *testing.T) {
 	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
+func TestCheckArrayReverse(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          let x = [1, 2, 3]
+          x.reverse()
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidArrayReverse(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          let x = [1, 2, 3]
+          x.reverse(100)
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+}
+
 func TestCheckArrayContains(t *testing.T) {
 
 	t.Parallel()
