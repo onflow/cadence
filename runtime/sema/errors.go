@@ -76,6 +76,23 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// SuggestedFix
+
+type HasSuggestedFixes interface {
+	SuggestFixes(code string) []SuggestedFix
+}
+
+type SuggestedFix struct {
+	Message   string
+	TextEdits []TextEdit
+}
+
+type TextEdit struct {
+	Replacement string
+	Insertion   string
+	ast.Range
+}
+
 // InvalidPragmaError
 
 type InvalidPragmaError struct {
@@ -478,6 +495,7 @@ type MissingArgumentLabelError struct {
 
 var _ SemanticError = &MissingArgumentLabelError{}
 var _ errors.UserError = &MissingArgumentLabelError{}
+var _ HasSuggestedFixes = &MissingArgumentLabelError{}
 
 func (*MissingArgumentLabelError) isSemanticError() {}
 
@@ -488,6 +506,23 @@ func (e *MissingArgumentLabelError) Error() string {
 		"missing argument label: `%s`",
 		e.ExpectedArgumentLabel,
 	)
+}
+
+func (e *MissingArgumentLabelError) SuggestFixes(_ string) []SuggestedFix {
+	return []SuggestedFix{
+		{
+			Message: "insert argument label",
+			TextEdits: []TextEdit{
+				{
+					Insertion: fmt.Sprintf("%s: ", e.ExpectedArgumentLabel),
+					Range: ast.NewUnmeteredRange(
+						e.StartPos,
+						e.StartPos,
+					),
+				},
+			},
+		},
+	}
 }
 
 // IncorrectArgumentLabelError
@@ -501,6 +536,7 @@ type IncorrectArgumentLabelError struct {
 var _ SemanticError = &IncorrectArgumentLabelError{}
 var _ errors.UserError = &IncorrectArgumentLabelError{}
 var _ errors.SecondaryError = &IncorrectArgumentLabelError{}
+var _ HasSuggestedFixes = &IncorrectArgumentLabelError{}
 
 func (*IncorrectArgumentLabelError) isSemanticError() {}
 
@@ -520,6 +556,50 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 		expected,
 		e.ActualArgumentLabel,
 	)
+}
+
+func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []SuggestedFix {
+	if len(e.ExpectedArgumentLabel) > 0 {
+		return []SuggestedFix{
+			{
+				Message: "replace argument label",
+				TextEdits: []TextEdit{
+					{
+						Replacement: fmt.Sprintf("%s:", e.ExpectedArgumentLabel),
+						Range:       e.Range,
+					},
+				},
+			},
+		}
+	} else {
+		endPos := e.Range.EndPos
+
+		var whitespaceSuffixLength int
+		for offset := endPos.Offset + 1; offset < len(code); offset++ {
+			if code[offset] == ' ' {
+				whitespaceSuffixLength++
+			} else {
+				break
+			}
+		}
+
+		adjustedEndPos := endPos.Shifted(nil, whitespaceSuffixLength)
+
+		return []SuggestedFix{
+			{
+				Message: "remove argument label",
+				TextEdits: []TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: e.Range.StartPos,
+							EndPos:   adjustedEndPos,
+						},
+					},
+				},
+			},
+		}
+	}
 }
 
 // InvalidUnaryOperandError
