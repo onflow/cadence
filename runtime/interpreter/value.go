@@ -18134,6 +18134,10 @@ func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value)) {
 }
 
 func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
+	if v.isDestroyed {
+		return nil
+	}
+
 	innerType := v.value.StaticType(inter)
 	if innerType == nil {
 		return nil

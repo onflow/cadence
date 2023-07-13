@@ -976,3 +976,23 @@ func TestInterpretReferenceToOptional(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        resource Foo {}
+
+        fun main(): AnyStruct {
+            let y: @Foo? <- create Foo()
+            let z: @AnyResource <- y
+            var ref = &z as &AnyResource
+
+            destroy z
+            return ref
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+}

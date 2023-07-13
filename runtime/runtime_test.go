@@ -8962,3 +8962,41 @@ func TestRuntimeOptionalReferenceAttack(t *testing.T) {
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
+
+func TestRuntimeReturnDestroyedOptional(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	script := []byte(`
+      pub resource Foo {}
+
+      pub fun main(): AnyStruct {
+          let y: @Foo? <- create Foo()
+          let z: @AnyResource <- y
+          var ref = &z as &AnyResource
+          destroy z
+          return ref
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+	}
+
+	// Test
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}
