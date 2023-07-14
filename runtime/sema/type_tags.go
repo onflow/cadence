@@ -927,24 +927,15 @@ func commonSuperTypeOfComposites(types []Type) Type {
 		}
 	}
 
-	var superType Type
-	if hasResources {
-		superType = AnyResourceType
-	} else {
-		superType = AnyStructType
-	}
-
 	if hasCommonInterface {
-		if len(commonInterfacesList) == 0 {
-			panic(errors.NewUnreachableError())
-		}
-
 		return &IntersectionType{
 			Types: commonInterfacesList,
 		}
+	} else if hasResources {
+		return AnyResourceType
+	} else {
+		return AnyStructType
 	}
-
-	return superType
 }
 
 func unwrapOptionals(types []Type) ([]Type, int) {

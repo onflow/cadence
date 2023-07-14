@@ -6175,12 +6175,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return true
 
 	case *IntersectionType:
-		// `Any` is never a subtype of a intersection type
-		switch subType {
-		case AnyResourceType, AnyStructType, AnyType:
-			return false
-		}
-
 		switch typedSubType := subType.(type) {
 		case *IntersectionType:
 
