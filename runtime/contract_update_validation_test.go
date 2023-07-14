@@ -835,7 +835,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const oldCode = `
             access(all) contract Test {
 
-                access(all) var x: AnyStruct{TestStruct}?
+                access(all) var x: {TestStruct}?
 
                 init() {
                     self.x = nil
@@ -851,7 +851,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const newCode = `
             access(all) contract Test {
 
-                access(all) var x: AnyStruct{TestStruct}?
+                access(all) var x: {TestStruct}?
 
                 init() {
                     self.x = nil
@@ -1396,8 +1396,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                 // intersection type
                 access(all) var a: {TestInterface}
                 access(all) var b: {TestInterface}
-                access(all) var c: AnyStruct{TestInterface}
-                access(all) var d: AnyStruct{TestInterface}
+                access(all) var c: {TestInterface}
+                access(all) var d: {TestInterface}
 
                 init() {
                     var count: Int = 567
@@ -1423,9 +1423,9 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const newCode = `
             access(all) contract Test {
                 access(all) var a: {TestInterface}
-                access(all) var b: AnyStruct{TestInterface}
+                access(all) var b: {TestInterface}
                 access(all) var c: {TestInterface}
-                access(all) var d: AnyStruct{TestInterface}
+                access(all) var d: {TestInterface}
 
                 init() {
                     var count: Int = 567
@@ -1460,7 +1460,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             access(all) contract Test {
 
                 // intersection type
-                access(all) var a: TestStruct{TestInterface}
+                access(all) var a: TestStruct
                 access(all) var b: {TestInterface}
 
                 init() {
@@ -1469,7 +1469,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.b = TestStruct()
                 }
 
-                access(all) struct TestStruct:TestInterface {
+                access(all) struct TestStruct: TestInterface {
                     access(all) let a: Int
                     init() {
                         self.a = 123
@@ -1485,7 +1485,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const newCode = `
             access(all) contract Test {
                 access(all) var a: {TestInterface}
-                access(all) var b: TestStruct{TestInterface}
+                access(all) var b: TestStruct
 
                 init() {
                     var count: Int = 567
@@ -1493,7 +1493,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
                     self.b = TestStruct()
                 }
 
-                access(all) struct TestStruct:TestInterface {
+                access(all) struct TestStruct: TestInterface {
                     access(all) let a: Int
                     init() {
                         self.a = 123
@@ -1511,11 +1511,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		assert.Contains(t, err.Error(), "access(all) var a: {TestInterface}"+
 			"\n  |                                    ^^^^^^^^^^^^^^^ "+
-			"incompatible type annotations. expected `TestStruct{TestInterface}`, found `{TestInterface}`")
+			"incompatible type annotations. expected `TestStruct`")
 
-		assert.Contains(t, err.Error(), "access(all) var b: TestStruct{TestInterface}"+
-			"\n  |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^ "+
-			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct{TestInterface}`")
+		assert.Contains(t, err.Error(), "access(all) var b: TestStruct"+
+			"\n  |                                    ^^^^^^^^^^ "+
+			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct`")
 	})
 
 	t.Run("enum valid", func(t *testing.T) {

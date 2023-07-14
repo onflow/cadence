@@ -2581,7 +2581,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           signer.save(<-createR(), to: /storage/r)
-          signer.link<&AnyResource{RI}>(/public/r, target: /storage/r)
+          signer.link<&{RI}>(/public/r, target: /storage/r)
         }
       }
     `)
@@ -2598,7 +2598,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
         prepare(signer: AuthAccount) {
           let ref = signer
               .getCapability(/public/r)
-              .borrow<&AnyResource{RI}>()!
+              .borrow<&{RI}>()!
           ref.x()
         }
       }
@@ -4165,7 +4165,7 @@ access(all) contract FungibleToken {
             }
         }
 
-        access(all) fun deposit(from: @AnyResource{Receiver}) {
+        access(all) fun deposit(from: @{Receiver}) {
             pre {
                 from.balance > 0:
                     "Deposit balance needs to be positive!"
@@ -4191,7 +4191,7 @@ access(all) contract FungibleToken {
         }
 
         // transfer combines withdraw and deposit into one function call
-        access(all) fun transfer(to: &AnyResource{Receiver}, amount: Int) {
+        access(all) fun transfer(to: &{Receiver}, amount: Int) {
             pre {
                 amount <= self.balance:
                     "Insufficient funds"
@@ -4203,7 +4203,7 @@ access(all) contract FungibleToken {
             to.deposit(from: <-self.withdraw(amount: amount))
         }
 
-        access(all) fun deposit(from: @AnyResource{Receiver}) {
+        access(all) fun deposit(from: @{Receiver}) {
             self.balance = self.balance + from.balance
             destroy from
         }
@@ -4218,7 +4218,7 @@ access(all) contract FungibleToken {
     }
 
     access(all) resource VaultMinter {
-        access(all) fun mintTokens(amount: Int, recipient: &AnyResource{Receiver}) {
+        access(all) fun mintTokens(amount: Int, recipient: &{Receiver}) {
             recipient.deposit(from: <-create Vault(balance: amount))
         }
     }
@@ -4253,7 +4253,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
           prepare(acct: AuthAccount) {
 
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
+              acct.link<&{FungibleToken.Receiver}>(
                   /public/receiver,
                   target: /storage/vault
               )
@@ -4277,7 +4277,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
               acct.save(<-vault, to: /storage/vault)
 
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
+              acct.link<&{FungibleToken.Receiver}>(
                   /public/receiver,
                   target: /storage/vault
               )
@@ -4387,7 +4387,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       transaction {
 
           prepare(acct: AuthAccount) {
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
+              acct.link<&{FungibleToken.Receiver}>(
                   /public/receiver,
                   target: /storage/vault
               )
@@ -4411,7 +4411,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
               acct.save(<-vault, to: /storage/vault)
 
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
+              acct.link<&{FungibleToken.Receiver}>(
                   /public/receiver,
                   target: /storage/vault
               )
@@ -4567,7 +4567,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
                   transaction {
                       prepare(signer: AuthAccount) {
-                          signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
+                          signer.borrow<&{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
                       }
                   }
                 `,

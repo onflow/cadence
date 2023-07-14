@@ -135,14 +135,6 @@ var IntersectionTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
-			Identifier: "identifier",
-			TypeAnnotation: NewTypeAnnotation(
-				&OptionalType{
-					Type: StringType,
-				},
-			),
-		},
-		{
 			Identifier: "types",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{

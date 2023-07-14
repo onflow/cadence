@@ -507,102 +507,56 @@ func TestParseIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("with intersection type, no types", func(t *testing.T) {
+	t.Run("with old prefix and no types", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("T{}")
-		require.Empty(t, errs)
+		_, errs := testParseType("T{}")
 
 		utils.AssertEqualWithDiff(t,
-			&ast.IntersectionType{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "T",
-						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
-					},
-				},
-				Types: nil,
-				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: '{'",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
-			result,
+			errs,
 		)
 	})
 
-	t.Run("with intersection type, one type", func(t *testing.T) {
+	t.Run("with old prefix and one type", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("T{U}")
-		require.Empty(t, errs)
-
+		_, errs := testParseType("T{U}")
 		utils.AssertEqualWithDiff(t,
-			&ast.IntersectionType{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "T",
-						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
-					},
-				},
-				Types: []*ast.NominalType{
-					{
-						Identifier: ast.Identifier{
-							Identifier: "U",
-							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
-						},
-					},
-				},
-				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: '{'",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
-			result,
+			errs,
 		)
 	})
 
-	t.Run("with intersection type, two types", func(t *testing.T) {
+	t.Run("with old prefix and two types", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("T{U , V }")
-		require.Empty(t, errs)
-
+		_, errs := testParseType("T{U , V }")
 		utils.AssertEqualWithDiff(t,
-			&ast.IntersectionType{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "T",
-						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
-					},
-				},
-				Types: []*ast.NominalType{
-					{
-						Identifier: ast.Identifier{
-							Identifier: "U",
-							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
-						},
-					},
-					{
-						Identifier: ast.Identifier{
-							Identifier: "V",
-							Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
-						},
-					},
-				},
-				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: '{'",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
-			result,
+			errs,
 		)
 	})
 
-	t.Run("without intersection type, no types", func(t *testing.T) {
+	t.Run("no types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -620,7 +574,7 @@ func TestParseIntersectionType(t *testing.T) {
 		)
 	})
 
-	t.Run("without intersection type, one type", func(t *testing.T) {
+	t.Run("one type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -646,7 +600,7 @@ func TestParseIntersectionType(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid: without intersection type, missing type after comma", func(t *testing.T) {
+	t.Run("invalid: missing type after comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -680,7 +634,7 @@ func TestParseIntersectionType(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid: without intersection type, type without comma", func(t *testing.T) {
+	t.Run("invalid: type without comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -699,7 +653,7 @@ func TestParseIntersectionType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without intersection type, colon", func(t *testing.T) {
+	t.Run("invalid: colon", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -718,16 +672,16 @@ func TestParseIntersectionType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with intersection type, colon", func(t *testing.T) {
+	t.Run("invalid: colon", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("T{U , V : W }")
+		result, errs := testParseType("{U , V : W }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: `unexpected token: got ':', expected ',' or '}'`,
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+					Message: `unexpected colon in intersection type`,
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -737,7 +691,7 @@ func TestParseIntersectionType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without intersection type, first is non-nominal", func(t *testing.T) {
+	t.Run("invalid: first is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -756,26 +710,7 @@ func TestParseIntersectionType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with intersection type, first is non-nominal", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{[U]}")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected non-nominal type: [U]",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
-				},
-			},
-			errs,
-		)
-
-		// TODO: return type
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without intersection type, second is non-nominal", func(t *testing.T) {
+	t.Run("invalid: second is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -794,26 +729,7 @@ func TestParseIntersectionType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with intersection type, second is non-nominal", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{U, [V]}")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected non-nominal type: [V]",
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
-				},
-			},
-			errs,
-		)
-
-		// TODO: return type
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without intersection type, missing end", func(t *testing.T) {
+	t.Run("invalid: missing end", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -831,25 +747,7 @@ func TestParseIntersectionType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with intersection type, missing end", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
-				},
-			},
-			errs,
-		)
-
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without intersection type, missing end after type", func(t *testing.T) {
+	t.Run("invalid: missing end after type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -867,25 +765,7 @@ func TestParseIntersectionType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with intersection type, missing end after type", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{U")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected '}'",
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
-				},
-			},
-			errs,
-		)
-
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without intersection type, missing end after comma", func(t *testing.T) {
+	t.Run("invalid: missing end after comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -903,25 +783,7 @@ func TestParseIntersectionType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with intersection type, missing end after comma", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{U,")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
-				},
-			},
-			errs,
-		)
-
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without intersection type, just comma", func(t *testing.T) {
+	t.Run("invalid: just comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -931,24 +793,6 @@ func TestParseIntersectionType(t *testing.T) {
 				&SyntaxError{
 					Message: "unexpected comma in intersection type",
 					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
-				},
-			},
-			errs,
-		)
-
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: with intersection type, just comma", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{,}")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected separator",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
 			errs,
@@ -2875,73 +2719,7 @@ func TestParseOptionalReference(t *testing.T) {
 	)
 }
 
-func TestParseIntersectionReferenceTypeWithBaseType(t *testing.T) {
-
-	t.Parallel()
-
-	const code = `
-       let x: &R{I} = 1
-	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
-
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				Access:     ast.AccessNotSpecified,
-				IsConstant: true,
-				Identifier: ast.Identifier{
-					Identifier: "x",
-					Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
-				},
-				TypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.ReferenceType{
-						Type: &ast.IntersectionType{
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "R",
-									Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-								},
-							},
-							Types: []*ast.NominalType{
-								{
-									Identifier: ast.Identifier{
-										Identifier: "I",
-										Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
-									},
-								},
-							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-								EndPos:   ast.Position{Offset: 19, Line: 2, Column: 18},
-							},
-						},
-						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
-				Value: &ast.IntegerExpression{
-					PositiveLiteral: []byte("1"),
-					Value:           big.NewInt(1),
-					Base:            10,
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
-						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-					},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 21, Line: 2, Column: 20},
-				},
-				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
-			},
-		},
-		result.Declarations(),
-	)
-}
-
-func TestParseIntersectionReferenceTypeWithoutBaseType(t *testing.T) {
+func TestParseIntersectionReferenceType(t *testing.T) {
 
 	t.Parallel()
 
@@ -3002,72 +2780,6 @@ func TestParseIntersectionReferenceTypeWithoutBaseType(t *testing.T) {
 }
 
 func TestParseOptionalIntersectionType(t *testing.T) {
-
-	t.Parallel()
-
-	const code = `
-       let x: @R{I}? = 1
-	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
-
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				Access:     ast.AccessNotSpecified,
-				IsConstant: true,
-				Identifier: ast.Identifier{
-					Identifier: "x",
-					Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
-				},
-				TypeAnnotation: &ast.TypeAnnotation{
-					IsResource: true,
-					Type: &ast.OptionalType{
-						Type: &ast.IntersectionType{
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "R",
-									Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-								},
-							},
-							Types: []*ast.NominalType{
-								{
-									Identifier: ast.Identifier{
-										Identifier: "I",
-										Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
-									},
-								},
-							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-								EndPos:   ast.Position{Offset: 19, Line: 2, Column: 18},
-							},
-						},
-						EndPos: ast.Position{Offset: 20, Line: 2, Column: 19},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
-				Value: &ast.IntegerExpression{
-					PositiveLiteral: []byte("1"),
-					Value:           big.NewInt(1),
-					Base:            10,
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
-						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
-					},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 22, Line: 2, Column: 21},
-				},
-				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
-			},
-		},
-		result.Declarations(),
-	)
-}
-
-func TestParseOptionalIntersectionTypeOnlyTypes(t *testing.T) {
 
 	t.Parallel()
 

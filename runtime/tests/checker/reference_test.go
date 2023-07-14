@@ -463,7 +463,7 @@ func TestCheckReferenceExpressionWithIntersectionAnyResultType(t *testing.T) {
           resource R: I {}
 
           let r <- create R()
-          let ref = &r as &AnyResource{I}
+          let ref = &r as &{I}
         `)
 
 		require.NoError(t, err)
@@ -478,7 +478,7 @@ func TestCheckReferenceExpressionWithIntersectionAnyResultType(t *testing.T) {
           struct S: I {}
 
           let s = S()
-          let ref = &s as &AnyStruct{I}
+          let ref = &s as &{I}
         `)
 
 		require.NoError(t, err)
@@ -944,7 +944,7 @@ func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
           fun test() {
               let r <- create R()
-              let ref = &r as &AnyResource{I}
+              let ref = &r as &{I}
               ref.foo()
               destroy r
           }
@@ -969,7 +969,7 @@ func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
           fun test() {
               let s = S()
-              let ref = &s as &AnyStruct{I}
+              let ref = &s as &{I}
               ref.foo()
           }
         `)
@@ -996,7 +996,7 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
           fun test() {
               let r <- create R()
-              let ref = &r as &AnyResource{I}
+              let ref = &r as &{I}
               ref.foo()
               destroy r
           }
@@ -1021,7 +1021,7 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
           fun test() {
               let s = S()
-              let ref = &s as &AnyStruct{I}
+              let ref = &s as &{I}
               ref.foo()
           }
         `)
@@ -1257,33 +1257,17 @@ func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
-func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      let y = &x as AnyResource{}
-    `)
-
-	errs := RequireCheckerErrors(t, err, 4)
-
-	assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
-	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[2])
-	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[3])
-}
-
 func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      let y = &x as AnyStruct{}
+      let y = &x as {}
     `)
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+	assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 

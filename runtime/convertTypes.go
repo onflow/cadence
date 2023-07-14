@@ -517,8 +517,6 @@ func exportIntersectionType(
 	results map[sema.TypeID]cadence.Type,
 ) *cadence.IntersectionType {
 
-	convertedType := ExportMeteredType(gauge, t.Type, results)
-
 	intersectionTypes := make([]cadence.Type, len(t.Types))
 
 	for i, typ := range t.Types {
@@ -527,7 +525,6 @@ func exportIntersectionType(
 
 	return cadence.NewMeteredIntersectionType(
 		gauge,
-		convertedType,
 		intersectionTypes,
 	)
 }
@@ -699,7 +696,6 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		}
 		return interpreter.NewIntersectionStaticType(
 			memoryGauge,
-			ImportType(memoryGauge, t.Type),
 			types,
 		)
 	case cadence.BlockType:

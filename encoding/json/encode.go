@@ -184,7 +184,6 @@ type jsonReferenceType struct {
 type jsonIntersectionType struct {
 	Kind   string      `json:"kind"`
 	TypeID string      `json:"typeID"`
-	Type   jsonValue   `json:"type"`
 	Types  []jsonValue `json:"types"`
 }
 
@@ -962,7 +961,6 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		}
 		return jsonIntersectionType{
 			Kind:   "Intersection",
-			Type:   prepareType(typ.Type, results),
 			Types:  types,
 			TypeID: typ.ID(),
 		}

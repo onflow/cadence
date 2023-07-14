@@ -395,21 +395,19 @@ var NilStaticType = OptionalStaticType{
 // IntersectionStaticType
 
 type IntersectionStaticType struct {
-	Type  StaticType
-	Types []InterfaceStaticType
+	Types      []InterfaceStaticType
+	LegacyType StaticType
 }
 
 var _ StaticType = &IntersectionStaticType{}
 
 func NewIntersectionStaticType(
 	memoryGauge common.MemoryGauge,
-	staticType StaticType,
 	types []InterfaceStaticType,
 ) *IntersectionStaticType {
 	common.UseMemory(memoryGauge, common.IntersectionStaticTypeMemoryUsage)
 
 	return &IntersectionStaticType{
-		Type:  staticType,
 		Types: types,
 	}
 }
@@ -436,7 +434,7 @@ func (t *IntersectionStaticType) String() string {
 		}
 	}
 
-	return fmt.Sprintf("%s{%s}", t.Type, strings.Join(types, ", "))
+	return fmt.Sprintf("{%s}", strings.Join(types, ", "))
 }
 
 func (t *IntersectionStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
@@ -453,9 +451,7 @@ func (t *IntersectionStaticType) MeteredString(memoryGauge common.MemoryGauge) s
 	l := len(types)*2 + 2
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 
-	typeStr := t.Type.MeteredString(memoryGauge)
-
-	return fmt.Sprintf("%s{%s}", typeStr, strings.Join(types, ", "))
+	return fmt.Sprintf("{%s}", strings.Join(types, ", "))
 }
 
 func (t *IntersectionStaticType) Equal(other StaticType) bool {
@@ -475,7 +471,7 @@ outer:
 		return false
 	}
 
-	return t.Type.Equal(otherIntersectionType.Type)
+	return true
 }
 
 // Authorization
@@ -765,7 +761,6 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 		return NewIntersectionStaticType(
 			memoryGauge,
-			ConvertSemaToStaticType(memoryGauge, t.Type),
 			intersectedTypess,
 		)
 
@@ -1004,21 +999,8 @@ func ConvertStaticToSemaType(
 			}
 		}
 
-		ty, err := ConvertStaticToSemaType(
-			memoryGauge,
-			t.Type,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
-		)
-		if err != nil {
-			return nil, err
-		}
-
 		return sema.NewIntersectionType(
 			memoryGauge,
-			ty,
 			intersectedTypes,
 		), nil
 

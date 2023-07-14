@@ -624,7 +624,6 @@ func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) erro
 // IntersectionType
 
 type IntersectionType struct {
-	Type  Type `json:"IntersectionType"`
 	Types []*NominalType
 	Range
 }
@@ -633,13 +632,11 @@ var _ Type = &IntersectionType{}
 
 func NewIntersectionType(
 	memoryGauge common.MemoryGauge,
-	typ Type,
 	types []*NominalType,
 	astRange Range,
 ) *IntersectionType {
 	common.UseMemory(memoryGauge, common.IntersectionTypeMemoryUsage)
 	return &IntersectionType{
-		Type:  typ,
 		Types: types,
 		Range: astRange,
 	}
@@ -675,9 +672,6 @@ func (t *IntersectionType) Doc() prettier.Doc {
 	}
 
 	var doc prettier.Concat
-	if t.Type != nil {
-		doc = append(doc, t.Type.Doc())
-	}
 
 	return append(doc,
 		prettier.Group{

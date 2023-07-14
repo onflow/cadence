@@ -4964,21 +4964,15 @@ func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 
 func (t *InterfaceType) RewriteWithIntersectionTypes() (Type, bool) {
 	switch t.CompositeKind {
-	case common.CompositeKindResource:
+	case common.CompositeKindResource, common.CompositeKindStructure:
 		return &IntersectionType{
-			Type:  AnyResourceType,
-			Types: []*InterfaceType{t},
-		}, true
-
-	case common.CompositeKindStructure:
-		return &IntersectionType{
-			Type:  AnyStructType,
 			Types: []*InterfaceType{t},
 		}, true
 
 	default:
 		return t, false
 	}
+
 }
 
 func (*InterfaceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
@@ -6181,120 +6175,21 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return true
 
 	case *IntersectionType:
+		switch typedSubType := subType.(type) {
+		case *IntersectionType:
 
-		intersectionSuperType := typedSuperType.Type
-		switch intersectionSuperType {
-		case AnyResourceType, AnyStructType, AnyType:
+			// A intersection type `{Us}` is a subtype of a intersection type `{Vs}` / `{Vs}` / `{Vs}`:
+			// when `Vs` is a subset of `Us`.
 
-			switch subType {
-			case AnyResourceType:
-				// `AnyResource` is a subtype of a intersection type
-				// - `AnyResource{Us}`: not statically;
-				// - `AnyStruct{Us}`: never.
-				// - `Any{Us}`: not statically;
+			return typedSuperType.EffectiveIntersectionSet().
+				IsSubsetOf(typedSubType.EffectiveIntersectionSet())
 
-				return false
+		case *CompositeType:
+			// A type `T` is a subtype of a intersection type `{Us}` / `{Us}` / `{Us}`:
+			// when `T` conforms to `Us`.
 
-			case AnyStructType:
-				// `AnyStruct` is a subtype of a intersection type
-				// - `AnyStruct{Us}`: not statically.
-				// - `AnyResource{Us}`: never;
-				// - `Any{Us}`: not statically.
-
-				return false
-
-			case AnyType:
-				// `Any` is a subtype of a intersection type
-				// - `Any{Us}: not statically.`
-				// - `AnyStruct{Us}`: never;
-				// - `AnyResource{Us}`: never;
-
-				return false
-			}
-
-			switch typedSubType := subType.(type) {
-			case *IntersectionType:
-
-				// A intersection type `T{Us}`
-				// is a subtype of a intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
-
-				intersectionSubtype := typedSubType.Type
-				switch intersectionSubtype {
-				case AnyResourceType, AnyStructType, AnyType:
-					// When `T == AnyResource || T == AnyStruct || T == Any`:
-					// if the intersection type of the subtype
-					// is a subtype of the intersection supertype,
-					// and `Vs` is a subset of `Us`.
-
-					return IsSubType(intersectionSubtype, intersectionSuperType) &&
-						typedSuperType.EffectiveIntersectionSet().
-							IsSubsetOf(typedSubType.EffectiveIntersectionSet())
-				}
-
-				if intersectionSubtype, ok := intersectionSubtype.(*CompositeType); ok {
-					// When `T != AnyResource && T != AnyStruct && T != Any`:
-					// if the intersection type of the subtype
-					// is a subtype of the intersection supertype,
-					// and `T` conforms to `Vs`.
-					// `Us` and `Vs` do *not* have to be subsets.
-
-					return IsSubType(intersectionSubtype, intersectionSuperType) &&
-						typedSuperType.EffectiveIntersectionSet().
-							IsSubsetOf(intersectionSubtype.EffectiveInterfaceConformanceSet())
-				}
-
-			case *CompositeType:
-				// A type `T`
-				// is a subtype of a intersection type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
-				// if `T` is a subtype of the intersection supertype,
-				// and `T` conforms to `Us`.
-
-				return IsSubType(typedSubType, typedSuperType.Type) &&
-					typedSuperType.EffectiveIntersectionSet().
-						IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
-			}
-
-		default:
-
-			switch typedSubType := subType.(type) {
-			case *IntersectionType:
-
-				// A intersection type `T{Us}`
-				// is a subtype of a intersection type `V{Ws}`:
-
-				switch typedSubType.Type {
-				case AnyResourceType, AnyStructType, AnyType:
-					// When `T == AnyResource || T == AnyStruct || T == Any`:
-					// not statically.
-					return false
-				}
-
-				if intersectionSubType, ok := typedSubType.Type.(*CompositeType); ok {
-					// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
-					//
-					// `Us` and `Ws` do *not* have to be subsets:
-					// The owner may freely restrict and unrestrict.
-
-					return intersectionSubType == typedSuperType.Type
-				}
-
-			case *CompositeType:
-				// A type `T`
-				// is a subtype of a intersection type `U{Vs}`: if `T <: U`.
-				//
-				// The owner may freely restrict.
-
-				return IsSubType(typedSubType, typedSuperType.Type)
-			}
-
-			switch subType {
-			case AnyResourceType, AnyStructType, AnyType:
-				// A type `T`
-				// is a subtype of a intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
-				// not statically.
-
-				return false
-			}
+			return typedSuperType.EffectiveIntersectionSet().
+				IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 		}
 
 	case *CompositeType:
@@ -6305,22 +6200,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		switch typedSubType := subType.(type) {
 		case *IntersectionType:
 
-			// A intersection type `T{Us}`
-			// is a subtype of a type `V`:
-
-			switch typedSubType.Type {
-			case AnyResourceType, AnyStructType, AnyType:
-				// When `T == AnyResource || T == AnyStruct || T == Any`: not statically.
-				return false
-			}
-
-			if intersectionSubType, ok := typedSubType.Type.(*CompositeType); ok {
-				// When `T != AnyResource && T != AnyStruct`: if `T == V`.
-				//
-				// The owner may freely unrestrict.
-
-				return intersectionSubType == typedSuperType
-			}
+			// A intersection type `{Us}` is never a subtype of a type `V`:
+			return false
 
 		case *CompositeType:
 			// The supertype composite type might be a type requirement.
@@ -6594,7 +6475,6 @@ func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 // IntersectionType
 
 type IntersectionType struct {
-	Type Type
 	// an internal set of field `Types`
 	effectiveIntersectionSet     *InterfaceSet
 	Types                        []*InterfaceType
@@ -6606,7 +6486,11 @@ type IntersectionType struct {
 
 var _ Type = &IntersectionType{}
 
-func NewIntersectionType(memoryGauge common.MemoryGauge, typ Type, types []*InterfaceType) *IntersectionType {
+func NewIntersectionType(memoryGauge common.MemoryGauge, types []*InterfaceType) *IntersectionType {
+	if len(types) == 0 {
+		panic(errors.NewUnreachableError())
+	}
+
 	common.UseMemory(memoryGauge, common.IntersectionSemaTypeMemoryUsage)
 
 	// Also meter the cost for the `effectiveIntersectionSet` here, since ordered maps are not separately metered.
@@ -6616,7 +6500,6 @@ func NewIntersectionType(memoryGauge common.MemoryGauge, typ Type, types []*Inte
 	common.UseMemory(memoryGauge, entriesUsage)
 
 	return &IntersectionType{
-		Type:  typ,
 		Types: types,
 	}
 }
@@ -6646,9 +6529,8 @@ func (t *IntersectionType) Tag() TypeTag {
 	return IntersectionTypeTag
 }
 
-func formatIntersectionType(separator string, typeString string, intersectionStrings []string) string {
+func formatIntersectionType(separator string, intersectionStrings []string) string {
 	var result strings.Builder
-	result.WriteString(typeString)
 	result.WriteByte('{')
 	for i, intersectionString := range intersectionStrings {
 		if i > 0 {
@@ -6661,8 +6543,8 @@ func formatIntersectionType(separator string, typeString string, intersectionStr
 	return result.String()
 }
 
-func FormatIntersectionTypeID(typeString string, intersectionStrings []string) string {
-	return formatIntersectionType("", typeString, intersectionStrings)
+func FormatIntersectionTypeID(intersectionStrings []string) string {
+	return formatIntersectionType("", intersectionStrings)
 }
 
 func (t *IntersectionType) string(separator string, typeFormatter func(Type) string) string {
@@ -6674,7 +6556,7 @@ func (t *IntersectionType) string(separator string, typeFormatter func(Type) str
 			intersectionStrings = append(intersectionStrings, typeFormatter(typ))
 		}
 	}
-	return formatIntersectionType(separator, typeFormatter(t.Type), intersectionStrings)
+	return formatIntersectionType(separator, intersectionStrings)
 }
 
 func (t *IntersectionType) String() string {
@@ -6703,10 +6585,6 @@ func (t *IntersectionType) Equal(other Type) bool {
 		return false
 	}
 
-	if !otherIntersectionType.Type.Equal(t.Type) {
-		return false
-	}
-
 	// Check that the set of types are equal; order does not matter
 
 	intersectionSet := t.EffectiveIntersectionSet()
@@ -6720,17 +6598,11 @@ func (t *IntersectionType) Equal(other Type) bool {
 }
 
 func (t *IntersectionType) IsResourceType() bool {
-	if t.Type == nil {
-		return false
-	}
-	return t.Type.IsResourceType()
+	// intersections are guaranteed to have all their interfaces be the same kind
+	return t.Types[0].IsResourceType()
 }
 
 func (t *IntersectionType) IsInvalidType() bool {
-	if t.Type != nil && t.Type.IsInvalidType() {
-		return true
-	}
-
 	for _, typ := range t.Types {
 		if typ.IsInvalidType() {
 			return true
@@ -6741,10 +6613,6 @@ func (t *IntersectionType) IsInvalidType() bool {
 }
 
 func (t *IntersectionType) IsStorable(results map[*Member]bool) bool {
-	if t.Type != nil && !t.Type.IsStorable(results) {
-		return false
-	}
-
 	for _, typ := range t.Types {
 		if !typ.IsStorable(results) {
 			return false
@@ -6755,10 +6623,6 @@ func (t *IntersectionType) IsStorable(results map[*Member]bool) bool {
 }
 
 func (t *IntersectionType) IsExportable(results map[*Member]bool) bool {
-	if t.Type != nil && !t.Type.IsExportable(results) {
-		return false
-	}
-
 	for _, typ := range t.Types {
 		if !typ.IsExportable(results) {
 			return false
@@ -6769,10 +6633,6 @@ func (t *IntersectionType) IsExportable(results map[*Member]bool) bool {
 }
 
 func (t *IntersectionType) IsImportable(results map[*Member]bool) bool {
-	if t.Type != nil && !t.Type.IsImportable(results) {
-		return false
-	}
-
 	for _, typ := range t.Types {
 		if !typ.IsImportable(results) {
 			return false
@@ -6815,11 +6675,8 @@ func (t *IntersectionType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeP
 		}
 	}
 
-	mappedType := t.Type.Map(gauge, typeParamMap, f)
-
 	return f(NewIntersectionType(
 		gauge,
-		mappedType,
 		intersectionTypes,
 	))
 }
@@ -6846,43 +6703,6 @@ func (t *IntersectionType) initializeMemberResolvers() {
 			}
 		}
 
-		// Also include members of the intersection type for convenience,
-		// to help check the rest of the program and improve the developer experience,
-		// *but* also report an error that this access is invalid when the entry is resolved.
-		//
-		// The intersection type may be `AnyResource`, in which case there are no members.
-
-		for name, loopResolver := range t.Type.GetMembers() { //nolint:maprange
-
-			if _, ok := memberResolvers[name]; ok {
-				continue
-			}
-
-			// NOTE: don't capture loop variable
-			resolver := loopResolver
-
-			memberResolvers[name] = MemberResolver{
-				Kind: resolver.Kind,
-				Resolve: func(
-					memoryGauge common.MemoryGauge,
-					identifier string,
-					targetRange ast.Range,
-					report func(error),
-				) *Member {
-					member := resolver.Resolve(memoryGauge, identifier, targetRange, report)
-
-					report(
-						&InvalidIntersectionTypeMemberAccessError{
-							Name:  identifier,
-							Range: targetRange,
-						},
-					)
-
-					return member
-				},
-			}
-		}
-
 		t.memberResolvers = memberResolvers
 	})
 }
@@ -6897,9 +6717,6 @@ func (t *IntersectionType) SupportedEntitlements() (set *EntitlementOrderedSet) 
 	t.EffectiveIntersectionSet().ForEach(func(it *InterfaceType) {
 		set.SetAll(it.SupportedEntitlements())
 	})
-	if supportingType, ok := t.Type.(EntitlementSupportingType); ok {
-		set.SetAll(supportingType.SupportedEntitlements())
-	}
 
 	t.supportedEntitlements = set
 	return set

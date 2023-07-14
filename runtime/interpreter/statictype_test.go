@@ -757,7 +757,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			(&IntersectionStaticType{
-				Type: PrimitiveStaticTypeInt,
 				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
@@ -770,7 +769,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 				},
 			}).Equal(
 				&IntersectionStaticType{
-					Type: PrimitiveStaticTypeInt,
 					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
@@ -792,47 +790,10 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			(&IntersectionStaticType{
-				Type:  PrimitiveStaticTypeInt,
 				Types: []InterfaceStaticType{},
 			}).Equal(
 				&IntersectionStaticType{
-					Type:  PrimitiveStaticTypeInt,
 					Types: []InterfaceStaticType{},
-				},
-			),
-		)
-	})
-
-	t.Run("different intersection type", func(t *testing.T) {
-
-		t.Parallel()
-
-		require.False(t,
-			(&IntersectionStaticType{
-				Type: PrimitiveStaticTypeString,
-				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
-				},
-			}).Equal(
-				&IntersectionStaticType{
-					Type: PrimitiveStaticTypeInt,
-					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
-					},
 				},
 			),
 		)
@@ -844,7 +805,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			(&IntersectionStaticType{
-				Type: PrimitiveStaticTypeInt,
 				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
@@ -857,7 +817,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 				},
 			}).Equal(
 				&IntersectionStaticType{
-					Type: PrimitiveStaticTypeInt,
 					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
@@ -875,7 +834,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			(&IntersectionStaticType{
-				Type: PrimitiveStaticTypeInt,
 				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
@@ -884,7 +842,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 				},
 			}).Equal(
 				&IntersectionStaticType{
-					Type: PrimitiveStaticTypeInt,
 					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
@@ -906,7 +863,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			(&IntersectionStaticType{
-				Type: PrimitiveStaticTypeInt,
 				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
@@ -919,7 +875,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 				},
 			}).Equal(
 				&IntersectionStaticType{
-					Type: PrimitiveStaticTypeInt,
 					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
@@ -941,7 +896,6 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			(&IntersectionStaticType{
-				Type: PrimitiveStaticTypeInt,
 				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
@@ -1378,13 +1332,11 @@ func TestStaticTypeConversion(t *testing.T) {
 		{
 			name: "Intersection",
 			semaType: &sema.IntersectionType{
-				Type: sema.IntType,
 				Types: []*sema.InterfaceType{
 					testInterfaceSemaType,
 				},
 			},
 			staticType: &IntersectionStaticType{
-				Type: PrimitiveStaticTypeInt,
 				Types: []InterfaceStaticType{
 					testInterfaceStaticType,
 				},

@@ -725,12 +725,6 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 
 	case *ast.IntersectionType:
 		var elements []dst.Expr
-		if t.Type != nil {
-			intersectionType := typeExpr(t.Type, typeParams)
-			elements = append(elements,
-				goKeyValue("Type", intersectionType),
-			)
-		}
 
 		if len(t.Types) > 0 {
 			intersectedTypes := make([]dst.Expr, 0, len(t.Types))

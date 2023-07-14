@@ -5239,7 +5239,7 @@ func TestCheckIntersectionAnyResourceType(t *testing.T) {
 
           resource R: RI {}
 
-          let ri: @AnyResource{RI} <- create R()
+          let ri: @{RI} <- create R()
         `)
 
 		require.NoError(t, err)
@@ -5251,7 +5251,7 @@ func TestCheckIntersectionAnyResourceType(t *testing.T) {
 
           resource R: RI {}
 
-          let ri: @[AnyResource{RI}] <- [<-create R()]
+          let ri: @[{RI}] <- [<-create R()]
         `)
 
 		require.NoError(t, err)

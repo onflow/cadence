@@ -36,10 +36,12 @@ func TestCheckIntersectionType(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             resource R {}
 
-            let r: @R{} <- create R()
+            let r: @{} <- create R()
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
 
 	t.Run("struct: no types", func(t *testing.T) {
@@ -49,10 +51,12 @@ func TestCheckIntersectionType(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             struct S {}
 
-            let r: S{} = S()
+            let r: {} = S()
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
 
 	t.Run("resource: one type", func(t *testing.T) {
@@ -66,7 +70,7 @@ func TestCheckIntersectionType(t *testing.T) {
 
             resource R: I1, I2 {}
 
-            let r: @R{I1} <- create R()
+            let r: @{I1} <- create R()
         `)
 
 		require.NoError(t, err)
@@ -83,7 +87,7 @@ func TestCheckIntersectionType(t *testing.T) {
 
             struct S: I1, I2 {}
 
-            let r: S{I1} = S()
+            let r: {I1} = S()
         `)
 
 		require.NoError(t, err)
@@ -97,10 +101,12 @@ func TestCheckIntersectionType(t *testing.T) {
             resource R {}
 
             let r <- create R()
-            let ref: &R{} = &r as &R
+            let ref: &{} = &r as &R
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
 
 	t.Run("reference to struct type", func(t *testing.T) {
@@ -111,10 +117,12 @@ func TestCheckIntersectionType(t *testing.T) {
             struct S {}
 
             let s = S()
-            let ref: &S{} = &s as &S
+            let ref: &{} = &s as &S
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
 
 	t.Run("resource: non-conformance type", func(t *testing.T) {
@@ -127,12 +135,12 @@ func TestCheckIntersectionType(t *testing.T) {
             // NOTE: R does not conform to I
             resource R {}
 
-            let r: @R{I} <- create R()
+            let r: @{I} <- create R()
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("struct: non-conformance type", func(t *testing.T) {
@@ -145,12 +153,12 @@ func TestCheckIntersectionType(t *testing.T) {
             // NOTE: S does not conform to I
             struct S {}
 
-            let s: S{I} = S()
+            let s: {I} = S()
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("resource: duplicate type", func(t *testing.T) {
@@ -163,7 +171,7 @@ func TestCheckIntersectionType(t *testing.T) {
             resource R: I {}
 
             // NOTE: I is duplicated
-            let r: @R{I, I} <- create R()
+            let r: @{I, I} <- create R()
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -181,7 +189,7 @@ func TestCheckIntersectionType(t *testing.T) {
             struct S: I {}
 
             // NOTE: I is duplicated
-            let s: S{I, I} = S()
+            let s: {I, I} = S()
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -189,7 +197,7 @@ func TestCheckIntersectionType(t *testing.T) {
 		assert.IsType(t, &sema.InvalidIntersectionTypeDuplicateError{}, errs[0])
 	})
 
-	t.Run("restricted resource, with structure interface type", func(t *testing.T) {
+	t.Run("intersection resource, with structure interface type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -198,7 +206,7 @@ func TestCheckIntersectionType(t *testing.T) {
 
             resource R: I {}
 
-            let r: @R{I} <- create R()
+            let r: {I} = create R()
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -206,7 +214,7 @@ func TestCheckIntersectionType(t *testing.T) {
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 	})
 
-	t.Run("restricted struct, with resource interface type", func(t *testing.T) {
+	t.Run("intersection struct, with resource interface type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -215,7 +223,7 @@ func TestCheckIntersectionType(t *testing.T) {
 
             struct S: I {}
 
-            let s: S{I} = S()
+            let s: @{I} <- S()
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -223,7 +231,7 @@ func TestCheckIntersectionType(t *testing.T) {
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 	})
 
-	t.Run("resource: non-concrete restricted type", func(t *testing.T) {
+	t.Run("intersection resource interface ", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -232,16 +240,15 @@ func TestCheckIntersectionType(t *testing.T) {
 
             resource R: I {}
 
-            let r: @[R]{I} <- [<-create R()]
+            let r: @{} <- create R()
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidIntersectionTypeError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
 
-	t.Run("struct: non-concrete restricted type", func(t *testing.T) {
+	t.Run("intersection struct interface", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -250,50 +257,15 @@ func TestCheckIntersectionType(t *testing.T) {
 
             struct S: I {}
 
-            let s: [S]{I} = [S()]
-        `)
-
-		errs := RequireCheckerErrors(t, err, 2)
-
-		assert.IsType(t, &sema.InvalidIntersectionTypeError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-	})
-
-	t.Run("restricted resource interface ", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            resource interface I {}
-
-            resource R: I {}
-
-            let r: @I{} <- create R()
+            let s: {} = S()
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidIntersectionTypeError{}, errs[0])
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
 
-	t.Run("restricted struct interface", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            struct interface I {}
-
-            struct S: I {}
-
-            let s: I{} = S()
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidIntersectionTypeError{}, errs[0])
-	})
-
-	t.Run("restricted type requirement", func(t *testing.T) {
+	t.Run("intersection type requirement", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -316,7 +288,7 @@ func TestCheckIntersectionType(t *testing.T) {
 
           fun test() {
               let r <- C.createR()
-              let r2: @CI.R{CI.RI} <- r
+              let r2: @{CI.RI} <- r
               destroy r2
           }
         `)
@@ -324,54 +296,9 @@ func TestCheckIntersectionType(t *testing.T) {
 	})
 }
 
-func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
+func TestCheckIntersectionTypeMemberAccess(t *testing.T) {
 
 	t.Parallel()
-
-	t.Run("no types: resource", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-            resource R {
-                let n: Int
-
-                init(n: Int) {
-                    self.n = n
-                }
-            }
-
-            fun test() {
-                let r: @R{} <- create R(n: 1)
-                r.n
-                destroy r
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidIntersectionTypeMemberAccessError{}, errs[0])
-	})
-
-	t.Run("no types: struct", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-            struct S {
-                let n: Int
-
-                init(n: Int) {
-                    self.n = n
-                }
-            }
-
-            fun test() {
-                let s: S{} = S(n: 1)
-                s.n
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidIntersectionTypeMemberAccessError{}, errs[0])
-	})
 
 	t.Run("type with member: resource", func(t *testing.T) {
 
@@ -390,7 +317,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
 
             fun test() {
-                let r: @R{I} <- create R(n: 1)
+                let r: @{I} <- create R(n: 1)
                 r.n
                 destroy r
             }
@@ -416,7 +343,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
 
             fun test() {
-                let s: S{I} = S(n: 1)
+                let s: {I} = S(n: 1)
                 s.n
             }
         `)
@@ -441,7 +368,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
 
             fun test() {
-                let r: @R{I} <- create R(n: 1)
+                let r: @{I} <- create R(n: 1)
                 r.n
                 destroy r
             }
@@ -449,7 +376,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidIntersectionTypeMemberAccessError{}, errs[0])
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
 
 	t.Run("type without member: struct", func(t *testing.T) {
@@ -469,14 +396,14 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
 
             fun test() {
-                let s: S{I} = S(n: 1)
+                let s: {I} = S(n: 1)
                 s.n
             }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidIntersectionTypeMemberAccessError{}, errs[0])
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
 
 	t.Run("types with clashing members: resource", func(t *testing.T) {
@@ -500,7 +427,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
 
             fun test() {
-                let r: @R{I1, I2} <- create R(n: 1)
+                let r: @{I1, I2} <- create R(n: 1)
                 r.n
                 destroy r
             }
@@ -533,7 +460,7 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
             }
 
             fun test() {
-                let s: S{I1, I2} = S(n: 1)
+                let s: {I1, I2} = S(n: 1)
                 s.n
             }
         `)
@@ -545,38 +472,42 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
 	})
 }
 
-func TestCheckRestrictedTypeSubtyping(t *testing.T) {
+func TestCheckIntersectionTypeSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("resource type to restricted type with same type, no type", func(t *testing.T) {
+	t.Run("resource type to intersection type with same type, no type", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource R {}
 
             fun test() {
-                let r: @R{} <- create R()
+                let r: @{} <- create R()
                 destroy r
             }
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
 
-	t.Run("struct type to restricted type with same type, no type", func(t *testing.T) {
+	t.Run("struct type to intersection type with same type, no type", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             struct S {}
 
-            let s: S{} = S()
+            let s: {} = S()
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
 
-	t.Run("resource type to restricted type with same type, one type", func(t *testing.T) {
+	t.Run("resource type to intersection type with same type, one type", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -587,7 +518,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
             resource R: I1, I2 {}
 
             fun test() {
-                let r: @R{I1} <- create R()
+                let r: @{I1} <- create R()
                 destroy r
             }
         `)
@@ -595,7 +526,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("struct type to restricted type with same type, one type", func(t *testing.T) {
+	t.Run("struct type to intersection type with same type, one type", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -605,13 +536,13 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 
             struct S: I1, I2 {}
 
-            let s: S{I1} = S()
+            let s: {I1} = S()
         `)
 
 		require.NoError(t, err)
 	})
 
-	t.Run("resource type to restricted type with different restricted type", func(t *testing.T) {
+	t.Run("resource type to intersection type with different intersection type", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -620,17 +551,17 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
             resource S {}
 
             fun test() {
-                let s: @S{} <- create R()
+                let s: @{} <- create R()
                 destroy s
             }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
 
-	t.Run("struct type to restricted type with different restricted type", func(t *testing.T) {
+	t.Run("struct type to intersection type with different intersection type", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -638,7 +569,107 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 
             struct S {}
 
-            let s: S{} = R()
+            let s: {} = R()
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
+	})
+
+	t.Run("intersection resource type to intersection type with same type, no types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                let r: @{} <- create R()
+                let r2: @{} <- r
+                destroy r2
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("intersection struct type to intersection type with same type, no types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {}
+
+            fun test() {
+                let s: {} = S()
+                let s2: {} = s
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("intersection resource type to intersection type with same type, 0 to 1 type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface I1 {}
+
+            resource interface I2 {}
+
+            resource R: I1, I2 {}
+
+            fun test() {
+                let r: @{} <- create R()
+                let r2: @{I1} <- r
+                destroy r2
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
+	})
+
+	t.Run("intersection struct type to intersection type with same type, 0 to 1 type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface I1 {}
+
+            struct interface I2 {}
+
+            struct S: I1, I2 {}
+
+            let s: {} = S()
+            let s2: {I1} = s
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
+	})
+
+	t.Run("intersection resource type to intersection type with same type, 1 to 2 types", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource interface I1 {}
+
+            resource interface I2 {}
+
+            resource R: I1, I2 {}
+
+            fun test() {
+                let r: @{I2} <- create R()
+                let r2: @{I1, I2} <- r
+                destroy r2
+            }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -646,95 +677,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("restricted resource type to restricted type with same type, no types", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            resource R {}
-
-            fun test() {
-                let r: @R{} <- create R()
-                let r2: @R{} <- r
-                destroy r2
-            }
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("restricted struct type to restricted type with same type, no types", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            struct S {}
-
-            fun test() {
-                let s: S{} = S()
-                let s2: S{} = s
-            }
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("restricted resource type to restricted type with same type, 0 to 1 type", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            resource interface I1 {}
-
-            resource interface I2 {}
-
-            resource R: I1, I2 {}
-
-            fun test() {
-                let r: @R{} <- create R()
-                let r2: @R{I1} <- r
-                destroy r2
-            }
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("restricted struct type to restricted type with same type, 0 to 1 type", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            struct interface I1 {}
-
-            struct interface I2 {}
-
-            struct S: I1, I2 {}
-
-            let s: S{} = S()
-            let s2: S{I1} = s
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("restricted resource type to restricted type with same type, 1 to 2 types", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            resource interface I1 {}
-
-            resource interface I2 {}
-
-            resource R: I1, I2 {}
-
-            fun test() {
-                let r: @R{I2} <- create R()
-                let r2: @R{I1, I2} <- r
-                destroy r2
-            }
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("restricted struct type to restricted type with same type, 1 to 2 types", func(t *testing.T) {
+	t.Run("intersection struct type to intersection type with same type, 1 to 2 types", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -745,14 +688,16 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 
             struct S: I1, I2 {}
 
-            let s: S{I2} = S()
-            let s2: S{I1, I2} = s
+            let s: {I2} = S()
+            let s2: {I1, I2} = s
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("restricted resource type to restricted type with same type, reordered types", func(t *testing.T) {
+	t.Run("intersection resource type to intersection type with same type, reordered types", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -763,8 +708,8 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
             resource R: I1, I2 {}
 
             fun test() {
-                let r: @R{I2, I1} <- create R()
-                let r2: @R{I1, I2} <- r
+                let r: @{I2, I1} <- create R()
+                let r2: @{I1, I2} <- r
                 destroy r2
             }
         `)
@@ -772,7 +717,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted struct type to restricted type with same type, reordered types", func(t *testing.T) {
+	t.Run("intersection struct type to intersection type with same type, reordered types", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -782,14 +727,14 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 
             struct S: I1, I2 {}
 
-            let s: S{I2, I1} = S()
-            let s2: S{I1, I2} = s
+            let s: {I2, I1} = S()
+            let s2: {I1, I2} = s
         `)
 
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted resource type to restricted type with same type, fewer types", func(t *testing.T) {
+	t.Run("intersection resource type to intersection type with same type, fewer types", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -800,8 +745,8 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
             resource R: I1, I2 {}
 
             fun test() {
-                let r: @R{I1, I2} <- create R()
-                let r2: @R{I2} <- r
+                let r: @{I1, I2} <- create R()
+                let r2: @{I2} <- r
                 destroy r2
             }
         `)
@@ -809,7 +754,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted struct type to restricted type with same type, fewer types", func(t *testing.T) {
+	t.Run("intersection struct type to intersection type with same type, fewer types", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -819,14 +764,14 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 
             struct S: I1, I2 {}
 
-            let s: S{I1, I2} = S()
-            let s2: S{I2} = s
+            let s: {I1, I2} = S()
+            let s2: {I2} = s
         `)
 
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted resource type to resource type", func(t *testing.T) {
+	t.Run("intersection resource type to resource type", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -837,16 +782,18 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
             resource R: I1, I2 {}
 
             fun test() {
-                let r: @R{I1} <- create R()
+                let r: @{I1} <- create R()
                 let r2: @R <- r
                 destroy r2
             }
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("restricted struct type to struct type", func(t *testing.T) {
+	t.Run("intersection struct type to struct type", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -856,15 +803,17 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 
             struct S: I1, I2 {}
 
-            let s: S{I1} = S()
+            let s: {I1} = S()
             let s2: S = s
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
 
-func TestCheckRestrictedTypeNoType(t *testing.T) {
+func TestCheckIntersectionTypeNoType(t *testing.T) {
 
 	t.Parallel()
 
@@ -924,8 +873,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.IntersectionType)
 
-		assert.IsType(t, sema.AnyResourceType, ty.Type)
-
 		require.Len(t, ty.Types, 1)
 		assert.Same(t,
 			RequireGlobalType(t, checker.Elaboration, "I1"),
@@ -949,8 +896,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.IntersectionType)
 
-		assert.IsType(t, sema.AnyStructType, ty.Type)
-
 		require.Len(t, ty.Types, 1)
 		assert.Same(t,
 			RequireGlobalType(t, checker.Elaboration, "I1"),
@@ -973,8 +918,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 		require.IsType(t, &sema.IntersectionType{}, rType)
 
 		ty := rType.(*sema.IntersectionType)
-
-		assert.IsType(t, sema.AnyResourceType, ty.Type)
 
 		require.Len(t, ty.Types, 2)
 		assert.Same(t,
@@ -1002,8 +945,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 		require.IsType(t, &sema.IntersectionType{}, rType)
 
 		ty := rType.(*sema.IntersectionType)
-
-		assert.IsType(t, sema.AnyStructType, ty.Type)
 
 		require.Len(t, ty.Types, 2)
 		assert.Same(t,
@@ -1049,8 +990,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.IntersectionType)
 
-		assert.IsType(t, sema.AnyResourceType, ty.Type)
-
 		require.Len(t, ty.Types, 1)
 		assert.Same(t,
 			RequireGlobalType(t, checker.Elaboration, "I1"),
@@ -1077,8 +1016,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.IntersectionType)
 
-		assert.IsType(t, sema.AnyStructType, ty.Type)
-
 		require.Len(t, ty.Types, 1)
 		assert.Same(t,
 			RequireGlobalType(t, checker.Elaboration, "I1"),
@@ -1104,8 +1041,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 		require.IsType(t, &sema.IntersectionType{}, rType)
 
 		ty := rType.(*sema.IntersectionType)
-
-		assert.IsType(t, sema.AnyResourceType, ty.Type)
 
 		require.Len(t, ty.Types, 2)
 		assert.Same(t,
@@ -1137,8 +1072,6 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.IntersectionType)
 
-		assert.IsType(t, sema.AnyStructType, ty.Type)
-
 		require.Len(t, ty.Types, 2)
 		assert.Same(t,
 			RequireGlobalType(t, checker.Elaboration, "I1"),
@@ -1151,7 +1084,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 	})
 }
 
-func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
+func TestCheckIntersectionTypeConformanceOrder(t *testing.T) {
 
 	t.Parallel()
 
@@ -1166,34 +1099,17 @@ func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
           contract C {
               resource interface RI {}
               resource R: RI {}
-              fun foo(): &R{RI} { panic("") }
+              fun foo(): &{RI} { panic("") }
           }
         `)
 
 		require.NoError(t, err)
 	})
 
-	t.Run("invalid", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheckWithPanic(t, `
-          contract C {
-              resource interface RI {}
-              resource R {}
-              fun foo(): &R{RI} { panic("") }
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidNonConformanceIntersectionError{}, errs[0])
-	})
-
 }
 
 // https://github.com/onflow/cadence/issues/326
-func TestCheckRestrictedConformance(t *testing.T) {
+func TestCheckIntersectionConformance(t *testing.T) {
 
 	t.Parallel()
 
@@ -1202,13 +1118,13 @@ func TestCheckRestrictedConformance(t *testing.T) {
       contract C {
 
           resource interface RI {
-              fun get(): &R{RI}
+              fun get(): &{RI}
           }
 
           resource R: RI {
 
-              fun get(): &R{RI} {
-                  return &self as &R{RI}
+              fun get(): &{RI} {
+                  return &self as &{RI}
               }
           }
       }

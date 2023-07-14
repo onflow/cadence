@@ -6661,7 +6661,6 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 		)
 
 		countSumIntersectionType := cadence.NewIntersectionType(
-			nil,
 			[]cadence.Type{
 				hasCountInterfaceType,
 				hasSumInterfaceType,
@@ -6688,7 +6687,6 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 		)
 
 		expectedCountSumIntersectionType := cadence.NewIntersectionType(
-			nil,
 			[]cadence.Type{
 				hasSumInterfaceType,
 				hasCountInterfaceType,
@@ -6807,11 +6805,6 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				0xd8, ccf.CBORTagIntersectionType,
 				// array, 2 items follow
 				0x82,
-				// type
-				// null
-				0xf6,
-				// array, 2 items follow
-				0x82,
 				// tag
 				0xd8, ccf.CBORTagTypeRef,
 				// bytes, 1 byte follows
@@ -6882,7 +6875,6 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 		)
 
 		countSumIntersectionType := cadence.NewIntersectionType(
-			statsType,
 			[]cadence.Type{
 				hasCountInterfaceType,
 				hasSumInterfaceType,
@@ -6909,7 +6901,6 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 		)
 
 		expectedCountSumIntersectionType := cadence.NewIntersectionType(
-			expectedStatsType,
 			[]cadence.Type{
 				hasSumInterfaceType,
 				hasCountInterfaceType,
@@ -7026,13 +7017,6 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 				0xd8, ccf.CBORTagVarsizedArrayType,
 				// tag
 				0xd8, ccf.CBORTagIntersectionType,
-				// array, 2 items follow
-				0x82,
-				// type
-				// tag
-				0xd8, ccf.CBORTagTypeRef,
-				// bytes, 0 byte follows
-				0x40,
 				// array, 2 items follow
 				0x82,
 				// tag
@@ -9465,13 +9449,7 @@ func TestEncodeType(t *testing.T) {
 	t.Run("with static nil intersection type", func(t *testing.T) {
 		t.Parallel()
 
-		testEncodeAndDecode(
-			t,
-			cadence.TypeValue{
-				StaticType: &cadence.IntersectionType{
-					Types: []cadence.Type{},
-				},
-			},
+		encodedData :=
 			[]byte{
 				// language=json, format=json-cdc
 				// {"value":{"staticType":{"kind":"Intersection","type":"","types":[]}},"type":"Type"}
@@ -9490,62 +9468,44 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagIntersectionTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// null
-				0xf6,
 				// array, 0 element follows
 				0x80,
-			},
-		)
+			}
+
+		_, err := ccf.Decode(nil, encodedData)
+		require.Error(t, err)
+		assert.Equal(t, "ccf: failed to decode: unexpected empty intersection type", err.Error())
+
 	})
 
 	t.Run("with static no intersection type", func(t *testing.T) {
 		t.Parallel()
 
-		testEncodeAndDecodeEx(
-			t,
-			cadence.TypeValue{
-				StaticType: &cadence.IntersectionType{
-					Types: []cadence.Type{},
-					Type:  cadence.IntType{},
-				},
-			},
-			[]byte{
-				// language=json, format=json-cdc
-				// {"value":{"staticType":{"kind":"Intersection","typeID":"Int{String}","type":{"kind":"Int"},"types":[]}},"type":"Type"}
-				//
-				// language=edn, format=ccf
-				// 130([137(41), 191([185(4), []])])
-				//
-				// language=cbor, format=ccf
-				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleType,
-				// Meta type ID (41)
-				0x18, 0x29,
-				// tag
-				0xd8, ccf.CBORTagIntersectionTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
-				// Int type ID (4)
-				0x04,
-				// array, 0 element follows
-				0x80,
-			},
-			// Expected decoded IntersectionType doesn't have type ID.
-			cadence.TypeValue{
-				StaticType: &cadence.IntersectionType{
-					Types: []cadence.Type{},
-					Type:  cadence.IntType{},
-				},
-			},
-		)
+		encodedData := []byte{
+			// language=json, format=json-cdc
+			// {"value":{"staticType":{"kind":"Intersection","typeID":"Int{String}","type":{"kind":"Int"},"types":[]}},"type":"Type"}
+			//
+			// language=edn, format=ccf
+			// 130([137(41), 191([185(4), []])])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 elements follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Meta type ID (41)
+			0x18, 0x29,
+			// tag
+			0xd8, ccf.CBORTagIntersectionTypeValue,
+			// array, 0 element follows
+			0x80,
+		}
+
+		_, err := ccf.Decode(nil, encodedData)
+		require.Error(t, err)
+		assert.Equal(t, "ccf: failed to decode: unexpected empty intersection type", err.Error())
 	})
 
 	t.Run("with static intersection type", func(t *testing.T) {
@@ -9558,7 +9518,6 @@ func TestEncodeType(t *testing.T) {
 					Types: []cadence.Type{
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 			[]byte{
@@ -9579,12 +9538,6 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagIntersectionTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
-				// Int type ID (4)
-				0x04,
 				// array, 1 element follows
 				0x81,
 				// tag
@@ -9598,7 +9551,6 @@ func TestEncodeType(t *testing.T) {
 					Types: []cadence.Type{
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 		)
@@ -9616,7 +9568,6 @@ func TestEncodeType(t *testing.T) {
 						cadence.NewAnyStructType(),
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 			[]byte{
@@ -9637,12 +9588,6 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagIntersectionTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
-				// Int type ID (4)
-				0x04,
 				// array, 2 element follows
 				0x82,
 				// tag
@@ -9661,7 +9606,6 @@ func TestEncodeType(t *testing.T) {
 						cadence.StringType{},
 						cadence.NewAnyStructType(),
 					},
-					Type: cadence.IntType{},
 				},
 			},
 		)
@@ -9675,7 +9619,6 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.IntersectionType{
-					Type: cadence.TheAnyStructType,
 					Types: []cadence.Type{
 						cadence.NewStructInterfaceType(
 							common.NewAddressLocation(nil, common.Address{0x01}, "TypeA"),
@@ -9716,12 +9659,6 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagIntersectionTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
-				// AnyStruct type ID (39)
-				0x18, 0x27,
 				// 3 sorted types
 				// array, 3 element follows
 				0x83,
@@ -9790,7 +9727,6 @@ func TestEncodeType(t *testing.T) {
 			// Expected decoded IntersectionType has sorted types and no type ID.
 			cadence.TypeValue{
 				StaticType: &cadence.IntersectionType{
-					Type: cadence.TheAnyStructType,
 					Types: []cadence.Type{
 						cadence.NewStructInterfaceType(
 							common.IdentifierLocation("LocationC"),
@@ -14439,7 +14375,7 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 		}
 
 		struct MiddleStruct {
-		    var field: AnyStruct{Interface}
+		    var field: {Interface}
 		}
 
 		struct interface Interface {}
@@ -14468,7 +14404,7 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 		[]cadence.Field{
 			{
 				Type: cadence.NewIntersectionType(
-					cadence.TheAnyStructType, []cadence.Type{interfaceType}),
+					[]cadence.Type{interfaceType}),
 				Identifier: "field",
 			},
 		},
@@ -14599,12 +14535,6 @@ func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 			0x66, 0x69, 0x65, 0x6c, 0x64,
 			// tag
 			0xd8, ccf.CBORTagIntersectionType,
-			// array, 2 item follows
-			0x82,
-			// tag
-			0xd8, ccf.CBORTagSimpleType,
-			// AnyStruct type ID (39)
-			0x18, 0x27,
 			// array, 1 item follows
 			0x81,
 			// tag
@@ -14781,7 +14711,6 @@ func TestSortOptions(t *testing.T) {
 	)
 
 	countSumIntersectionType := cadence.NewIntersectionType(
-		nil,
 		[]cadence.Type{
 			hasCountInterfaceType,
 			hasSumInterfaceType,
@@ -14809,7 +14738,6 @@ func TestSortOptions(t *testing.T) {
 		)
 
 		expectedCountSumIntersectionType := cadence.NewIntersectionType(
-			nil,
 			[]cadence.Type{
 				hasCountInterfaceType,
 				hasSumInterfaceType,
@@ -14925,11 +14853,6 @@ func TestSortOptions(t *testing.T) {
 			0xd8, ccf.CBORTagIntersectionType,
 			// array, 2 items follow
 			0x82,
-			// type
-			// null
-			0xf6,
-			// array, 2 items follow
-			0x82,
 			// tag
 			0xd8, ccf.CBORTagTypeRef,
 			// bytes, 1 byte follows
@@ -15004,7 +14927,6 @@ func TestSortOptions(t *testing.T) {
 		)
 
 		expectedCountSumIntersectionType := cadence.NewIntersectionType(
-			nil,
 			[]cadence.Type{
 				hasCountInterfaceType,
 				hasSumInterfaceType,
@@ -15120,11 +15042,6 @@ func TestSortOptions(t *testing.T) {
 			0xd8, ccf.CBORTagIntersectionType,
 			// array, 2 items follow
 			0x82,
-			// type
-			// null
-			0xf6,
-			// array, 2 items follow
-			0x82,
 			// tag
 			0xd8, ccf.CBORTagTypeRef,
 			// bytes, 1 byte follows
@@ -15199,7 +15116,6 @@ func TestSortOptions(t *testing.T) {
 		)
 
 		expectedCountSumIntersectionType := cadence.NewIntersectionType(
-			nil,
 			[]cadence.Type{
 				hasSumInterfaceType,
 				hasCountInterfaceType,
@@ -15315,11 +15231,6 @@ func TestSortOptions(t *testing.T) {
 			0xd8, ccf.CBORTagIntersectionType,
 			// array, 2 items follow
 			0x82,
-			// type
-			// null
-			0xf6,
-			// array, 2 items follow
-			0x82,
 			// tag
 			0xd8, ccf.CBORTagTypeRef,
 			// bytes, 1 byte follows
@@ -15394,7 +15305,6 @@ func TestSortOptions(t *testing.T) {
 		)
 
 		expectedCountSumIntersectionType := cadence.NewIntersectionType(
-			nil,
 			[]cadence.Type{
 				hasSumInterfaceType,
 				hasCountInterfaceType,
@@ -15508,11 +15418,6 @@ func TestSortOptions(t *testing.T) {
 			0xd8, ccf.CBORTagVarsizedArrayType,
 			// tag
 			0xd8, ccf.CBORTagIntersectionType,
-			// array, 2 items follow
-			0x82,
-			// type
-			// null
-			0xf6,
 			// array, 2 items follow
 			0x82,
 			// tag

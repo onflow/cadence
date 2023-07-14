@@ -232,7 +232,7 @@ access(all) contract FlowToken: FungibleToken {
        // Create a public capability to the stored Vault that only exposes
        // the deposit method through the Receiver interface
        //
-       adminAccount.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+       adminAccount.link<&FlowToken.Vault>(
            /public/flowTokenReceiver,
            target: /storage/flowTokenVault
        )
@@ -240,7 +240,7 @@ access(all) contract FlowToken: FungibleToken {
        // Create a public capability to the stored Vault that only exposes
        // the balance field through the Balance interface
        //
-       adminAccount.link<&FlowToken.Vault{FungibleToken.Balance}>(
+       adminAccount.link<&FlowToken.Vault>(
            /public/flowTokenBalance,
            target: /storage/flowTokenVault
        )
@@ -447,7 +447,7 @@ access(all) contract FBRC: FungibleToken {
        // Create a public capability to the stored Vault that only exposes
        // the deposit method through the Receiver interface
        //
-       self.account.link<&FBRC.Vault{FungibleToken.Receiver}>(
+       self.account.link<&FBRC.Vault>(
            self.CollectionReceiverPath,
            target: self.CollectionStoragePath
        )
@@ -455,7 +455,7 @@ access(all) contract FBRC: FungibleToken {
        // Create a public capability to the stored Vault that only exposes
        // the balance field through the Balance interface
        //
-       self.account.link<&FBRC.Vault{FungibleToken.Balance}>(
+       self.account.link<&FBRC.Vault>(
            self.CollectionBalancePath,
            target: self.CollectionStoragePath
        )
@@ -599,9 +599,9 @@ access(all) contract GarmentNFT: NonFungibleToken {
        access(all) let garment: Garment
 
        // Royalty capability which NFT will use
-       access(all) let royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>
+       access(all) let royaltyVault: Capability<&FBRC.Vault>
 
-       init(serialNumber: UInt32, garmentDataID: UInt32, royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>) {
+       init(serialNumber: UInt32, garmentDataID: UInt32, royaltyVault: Capability<&FBRC.Vault>) {
            GarmentNFT.totalSupply = GarmentNFT.totalSupply + 1 as UInt64
 
            self.id = GarmentNFT.totalSupply
@@ -659,7 +659,7 @@ access(all) contract GarmentNFT: NonFungibleToken {
        }
 
        // Mint the new Garment
-       access(all) fun mintNFT(garmentDataID: UInt32, royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>): @NFT {
+       access(all) fun mintNFT(garmentDataID: UInt32, royaltyVault: Capability<&FBRC.Vault>): @NFT {
            pre {
                royaltyVault.check():
                    "Royalty capability is invalid!"
@@ -681,7 +681,7 @@ access(all) contract GarmentNFT: NonFungibleToken {
            return <-newGarment
        }
 
-       access(all) fun batchMintNFT(garmentDataID: UInt32, royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>, quantity: UInt64): @Collection {
+       access(all) fun batchMintNFT(garmentDataID: UInt32, royaltyVault: Capability<&FBRC.Vault>, quantity: UInt64): @Collection {
            let newCollection <- create Collection()
 
            var i: UInt64 = 0
@@ -1063,9 +1063,9 @@ access(all) contract MaterialNFT: NonFungibleToken {
        access(all) let material: Material
 
        // Royalty capability which NFT will use
-       access(all) let royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>
+       access(all) let royaltyVault: Capability<&FBRC.Vault>
 
-       init(serialNumber: UInt32, materialDataID: UInt32, royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>) {
+       init(serialNumber: UInt32, materialDataID: UInt32, royaltyVault: Capability<&FBRC.Vault>) {
            MaterialNFT.totalSupply = MaterialNFT.totalSupply + 1 as UInt64
 
            self.id = MaterialNFT.totalSupply
@@ -1121,7 +1121,7 @@ access(all) contract MaterialNFT: NonFungibleToken {
        }
 
        // Mint the new Material
-       access(all) fun mintNFT(materialDataID: UInt32, royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>): @NFT {
+       access(all) fun mintNFT(materialDataID: UInt32, royaltyVault: Capability<&FBRC.Vault>): @NFT {
            pre {
                royaltyVault.check():
                    "Royalty capability is invalid!"
@@ -1143,7 +1143,7 @@ access(all) contract MaterialNFT: NonFungibleToken {
            return <-newMaterial
        }
 
-       access(all) fun batchMintNFT(materialDataID: UInt32, royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>, quantity: UInt64): @Collection {
+       access(all) fun batchMintNFT(materialDataID: UInt32, royaltyVault: Capability<&FBRC.Vault>, quantity: UInt64): @Collection {
            let newCollection <- create Collection()
 
            var i: UInt64 = 0
@@ -1550,7 +1550,7 @@ access(all) contract ItemNFT: NonFungibleToken {
        access(all) var name: String
 
        // Royalty capability which NFT will use
-       access(all) let royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>
+       access(all) let royaltyVault: Capability<&FBRC.Vault>
 
        // after you remove the garment and material from the item, the ItemNFT will be considered "dead".
        // accounts will be unable to deposit, withdraw or call functions of the nft.
@@ -1563,7 +1563,7 @@ access(all) contract ItemNFT: NonFungibleToken {
        access(self) var material: @MaterialNFT.NFT?
 
 
-       init(serialNumber: UInt32, name: String, itemDataID: UInt32, royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>, garment: @GarmentNFT.NFT, material: @MaterialNFT.NFT) {
+       init(serialNumber: UInt32, name: String, itemDataID: UInt32, royaltyVault: Capability<&FBRC.Vault>, garment: @GarmentNFT.NFT, material: @MaterialNFT.NFT) {
 
            ItemNFT.totalSupply = ItemNFT.totalSupply + 1 as UInt64
 
@@ -1652,7 +1652,7 @@ access(all) contract ItemNFT: NonFungibleToken {
 
    // mint the NFT, combining a garment and boot.
    // The itemData that is used to mint the Item is based on the garment and material' garmentDataID and materialDataID
-   access(all) fun mintNFT(name: String, royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>, garment: @GarmentNFT.NFT, material: @MaterialNFT.NFT): @NFT {
+   access(all) fun mintNFT(name: String, royaltyVault: Capability<&FBRC.Vault>, garment: @GarmentNFT.NFT, material: @MaterialNFT.NFT): @NFT {
        pre {
            royaltyVault.check():
                "Royalty capability is invalid!"
@@ -2127,20 +2127,20 @@ import FungibleToken from 0x9a0766d93b6608b7
 
 access(all) fun hasFBRC(_ address: Address): Bool {
    let receiver = getAccount(address)
-       .getCapability<&FBRC.Vault{FungibleToken.Receiver}>(FBRC.CollectionReceiverPath)
+       .getCapability<&FBRC.Vault>(FBRC.CollectionReceiverPath)
        .check()
    let balance = getAccount(address)
-       .getCapability<&FBRC.Vault{FungibleToken.Balance}>(FBRC.CollectionBalancePath)
+       .getCapability<&FBRC.Vault>(FBRC.CollectionBalancePath)
        .check()
    return receiver && balance
 }
 
 access(all) fun hasFlowToken(_ address: Address): Bool {
    let receiver = getAccount(address)
-       .getCapability<&FlowToken.Vault{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+       .getCapability<&FlowToken.Vault>(/public/flowTokenReceiver)
        .check()
    let balance = getAccount(address)
-       .getCapability<&FlowToken.Vault{FungibleToken.Balance}>(/public/flowTokenBalance)
+       .getCapability<&FlowToken.Vault>(/public/flowTokenBalance)
        .check()
    return receiver && balance
 }
@@ -2172,8 +2172,8 @@ transaction {
        }
        acct.unlink(FBRC.CollectionReceiverPath)
        acct.unlink(FBRC.CollectionBalancePath)
-       acct.link<&FBRC.Vault{FungibleToken.Receiver}>(FBRC.CollectionReceiverPath, target: FBRC.CollectionStoragePath)
-       acct.link<&FBRC.Vault{FungibleToken.Balance}>(FBRC.CollectionBalancePath, target: FBRC.CollectionStoragePath)
+       acct.link<&FBRC.Vault>(FBRC.CollectionReceiverPath, target: FBRC.CollectionStoragePath)
+       acct.link<&FBRC.Vault>(FBRC.CollectionBalancePath, target: FBRC.CollectionStoragePath)
        }
 
        if !hasFlowToken(acct.address) {
@@ -2182,8 +2182,8 @@ transaction {
        }
        acct.unlink(/public/flowTokenReceiver)
        acct.unlink(/public/flowTokenBalance)
-       acct.link<&FlowToken.Vault{FungibleToken.Receiver}>(/public/flowTokenReceiver, target: /storage/flowTokenVault)
-       acct.link<&FlowToken.Vault{FungibleToken.Balance}>(/public/flowTokenBalance, target: /storage/flowTokenVault)
+       acct.link<&FlowToken.Vault>(/public/flowTokenReceiver, target: /storage/flowTokenVault)
+       acct.link<&FlowToken.Vault>(/public/flowTokenBalance, target: /storage/flowTokenVault)
        }
 
        if !hasGarmentNFT(acct.address) {
@@ -2405,14 +2405,14 @@ transaction(recipientAddr: Address, garmentDataID: UInt32, royaltyVaultAddr: Add
 
     let adminRef: &GarmentNFT.Admin
 
-    let royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>
+    let royaltyVault: Capability<&FBRC.Vault>
 
     prepare(acct: AuthAccount) {
 
         self.adminRef = acct.borrow<&GarmentNFT.Admin>(from: GarmentNFT.AdminStoragePath)
             ?? panic("No admin resource in storage")
 
-        self.royaltyVault = getAccount(royaltyVaultAddr).getCapability<&FBRC.Vault{FungibleToken.Receiver}>(FBRC.CollectionReceiverPath)
+        self.royaltyVault = getAccount(royaltyVaultAddr).getCapability<&FBRC.Vault>(FBRC.CollectionReceiverPath)
     }
 
     execute {
@@ -2463,14 +2463,14 @@ transaction(recipientAddr: Address, materialDataID: UInt32, royaltyVaultAddr: Ad
 
     let adminRef: &MaterialNFT.Admin
 
-    let royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>
+    let royaltyVault: Capability<&FBRC.Vault>
 
     prepare(acct: AuthAccount) {
 
         self.adminRef = acct.borrow<&MaterialNFT.Admin>(from: MaterialNFT.AdminStoragePath)
             ?? panic("No admin resource in storage")
 
-        self.royaltyVault = getAccount(royaltyVaultAddr).getCapability<&FBRC.Vault{FungibleToken.Receiver}>(FBRC.CollectionReceiverPath)
+        self.royaltyVault = getAccount(royaltyVaultAddr).getCapability<&FBRC.Vault>(FBRC.CollectionReceiverPath)
     }
 
     execute {
@@ -2524,7 +2524,7 @@ transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, mat
 
      let garment: @NonFungibleToken.NFT
      let material: @NonFungibleToken.NFT
-     let royaltyVault: Capability<&FBRC.Vault{FungibleToken.Receiver}>
+     let royaltyVault: Capability<&FBRC.Vault>
 
      prepare(garmentAndMaterialAcct: AuthAccount) {
 
@@ -2540,7 +2540,7 @@ transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, mat
 
          self.material <- materialCollectionRef.withdraw(withdrawID: materialWithdrawID)
 
-         self.royaltyVault = getAccount(royaltyVaultAddr).getCapability<&FBRC.Vault{FungibleToken.Receiver}>(FBRC.CollectionReceiverPath)
+         self.royaltyVault = getAccount(royaltyVaultAddr).getCapability<&FBRC.Vault>(FBRC.CollectionReceiverPath)
 
      }
 
@@ -2969,7 +2969,7 @@ access(all) contract FlowToken: FungibleToken {
        // Create a public capability to the stored Vault that only exposes
        // the deposit method through the Receiver interface
        //
-       adminAccount.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+       adminAccount.link<&FlowToken.Vault>(
            /public/flowTokenReceiver,
            target: /storage/flowTokenVault
        )
@@ -2977,7 +2977,7 @@ access(all) contract FlowToken: FungibleToken {
        // Create a public capability to the stored Vault that only exposes
        // the balance field through the Balance interface
        //
-       adminAccount.link<&FlowToken.Vault{FungibleToken.Balance}>(
+       adminAccount.link<&FlowToken.Vault>(
            /public/flowTokenBalance,
            target: /storage/flowTokenVault
        )
@@ -3623,7 +3623,7 @@ access(all) contract AuctionDutch {
 			//the currentPrice is still higher then your bid, this is find we just add your bid to the correct tick bucket
 			if price > vault.balance {
 				let bidId =auction.addBid(vault: <- vault, nftCap:nftCap, vaultCap: vaultCap, time: time)
-				return <- create Bid(capability: AuctionDutch.account.getCapability<&Collection{Public}>(AuctionDutch.CollectionPublicPath), auctionId: id, bidId: bidId)
+				return <- create Bid(capability: AuctionDutch.account.getCapability<&Collection>(AuctionDutch.CollectionPublicPath), auctionId: id, bidId: bidId)
 			}
 
 			let tooMuchCash=vault.balance - price
@@ -3633,7 +3633,7 @@ access(all) contract AuctionDutch {
 			}
 
 			let bidId=auction.addBid(vault: <- vault, nftCap:nftCap, vaultCap: vaultCap, time: time)
-			return <- create Bid(capability: AuctionDutch.account.getCapability<&Collection{Public}>(AuctionDutch.CollectionPublicPath), auctionId: id, bidId: bidId)
+			return <- create Bid(capability: AuctionDutch.account.getCapability<&Collection>(AuctionDutch.CollectionPublicPath), auctionId: id, bidId: bidId)
 		}
 
 		access(all) fun tickOrFulfill(_ id:UInt64) {
@@ -3683,7 +3683,7 @@ access(all) contract AuctionDutch {
 
 	access(all) fun getBids(_ id: UInt64) : Bids {
 		let account = AuctionDutch.account
-		let cap=account.getCapability<&Collection{Public}>(self.CollectionPublicPath)
+		let cap=account.getCapability<&Collection>(self.CollectionPublicPath)
 		if let collection = cap.borrow() {
 			return collection.getBids(id)
 		}
@@ -3692,7 +3692,7 @@ access(all) contract AuctionDutch {
 
 	access(all) fun getAuctionDutch(_ id: UInt64) : AuctionDutchStatus? {
 		let account = AuctionDutch.account
-		let cap=account.getCapability<&Collection{Public}>(self.CollectionPublicPath)
+		let cap=account.getCapability<&Collection>(self.CollectionPublicPath)
 		if let collection = cap.borrow() {
 			return collection.getStatus(id)
 		}
@@ -3701,11 +3701,11 @@ access(all) contract AuctionDutch {
 
 	access(all) resource Bid {
 
-		access(all) let capability:Capability<&Collection{Public}>
+		access(all) let capability:Capability<&Collection>
 		access(all) let auctionId: UInt64
 		access(all) let bidId: UInt64
 
-		init(capability:Capability<&Collection{Public}>, auctionId: UInt64, bidId:UInt64) {
+		init(capability:Capability<&Collection>, auctionId: UInt64, bidId:UInt64) {
 			self.capability=capability
 			self.auctionId=auctionId
 			self.bidId=bidId
@@ -3770,7 +3770,7 @@ access(all) contract AuctionDutch {
 
 		access(all) fun bid(marketplace: Address, id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)  {
 
-			let dutchAuctionCap=getAccount(marketplace).getCapability<&AuctionDutch.Collection{AuctionDutch.Public}>(AuctionDutch.CollectionPublicPath)
+			let dutchAuctionCap=getAccount(marketplace).getCapability<&AuctionDutch.Collection>(AuctionDutch.CollectionPublicPath)
 			let bid <- dutchAuctionCap.borrow()!.bid(id: id, vault: <- vault, vaultCap: vaultCap, nftCap: nftCap)
 			self.bids[bid.uuid] <-! bid
 		}
@@ -3821,7 +3821,7 @@ access(all) contract AuctionDutch {
 		let account=self.account
 		let collection <- create Collection()
 		account.save(<-collection, to: AuctionDutch.CollectionStoragePath)
-		account.link<&Collection{Public}>(AuctionDutch.CollectionPublicPath, target: AuctionDutch.CollectionStoragePath)
+		account.link<&Collection>(AuctionDutch.CollectionPublicPath, target: AuctionDutch.CollectionStoragePath)
 
 	}
 }
@@ -3943,14 +3943,14 @@ transaction {
 
             // Create a public capability to the Vault that only exposes
             // the deposit function through the Receiver interface
-            signer.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+            signer.link<&FlowToken.Vault>(
                 /public/flowTokenReceiver,
                 target: /storage/flowTokenVault
             )
 
             // Create a public capability to the Vault that only exposes
             // the balance field through the Balance interface
-            signer.link<&FlowToken.Vault{FungibleToken.Balance}>(
+            signer.link<&FlowToken.Vault>(
                 /public/flowTokenBalance,
                 target: /storage/flowTokenVault
             )
@@ -4096,7 +4096,7 @@ transaction(recipient: Address, amount: UFix64) {
                 let nftCap = signer.getCapability<&{NonFungibleToken.Receiver}>(/public/doesNotExist)
 
                 let bid <- getAccount(0x99ca04281098b33d)
-                    .getCapability<&AuctionDutch.Collection{AuctionDutch.Public}>(AuctionDutch.CollectionPublicPath)
+                    .getCapability<&AuctionDutch.Collection>(AuctionDutch.CollectionPublicPath)
                     .borrow()!
                     .bid(
                        id: 0,
@@ -4314,7 +4314,7 @@ access(all) contract ExampleToken {
 
 		// Function that mints new tokens and deposits into an account's vault
 		// using their Receiver reference.
-        access(all) fun mintTokens(amount: UFix64, recipient: Capability<&AnyResource{Receiver}>) {
+        access(all) fun mintTokens(amount: UFix64, recipient: Capability<&{Receiver}>) {
             let recipientRef = recipient.borrow()
                 ?? panic("Could not borrow a receiver reference to the vault")
 
@@ -4536,7 +4536,7 @@ access(all) contract ExampleMarketplace {
     // that only exposes the methods that are supposed to be public
     //
     access(all) resource interface SalePublic {
-        access(all) fun purchase(tokenID: UInt64, recipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault)
+        access(all) fun purchase(tokenID: UInt64, recipient: Capability<&{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault)
         access(all) fun idPrice(tokenID: UInt64): UFix64?
         access(all) fun getIDs(): [UInt64]
     }
@@ -4557,10 +4557,10 @@ access(all) contract ExampleMarketplace {
         // The fungible token vault of the owner of this sale.
         // When someone buys a token, this resource can deposit
         // tokens into their account.
-        access(account) let ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>
+        access(account) let ownerVault: Capability<&{ExampleToken.Receiver}>
 
         init (ownerCollection: Capability<&ExampleNFT.Collection>, 
-              ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>) {
+              ownerVault: Capability<&{ExampleToken.Receiver}>) {
 
             pre {
                 // Check that the owner's collection capability is correct
@@ -4605,7 +4605,7 @@ access(all) contract ExampleMarketplace {
         }
 
         // purchase lets a user send tokens to purchase an NFT that is for sale
-        access(all) fun purchase(tokenID: UInt64, recipient: Capability<&AnyResource{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault) {
+        access(all) fun purchase(tokenID: UInt64, recipient: Capability<&{ExampleNFT.NFTReceiver}>, buyTokens: @ExampleToken.Vault) {
             pre {
                 self.prices[tokenID] != nil:
                     "No token matching this ID for sale!"
@@ -4653,7 +4653,7 @@ access(all) contract ExampleMarketplace {
 
     // createCollection returns a new collection resource to the caller
     access(all) fun createSaleCollection(ownerCollection: Capability<&ExampleNFT.Collection>, 
-                                 ownerVault: Capability<&AnyResource{ExampleToken.Receiver}>): @SaleCollection {
+                                 ownerVault: Capability<&{ExampleToken.Receiver}>): @SaleCollection {
         return <- create SaleCollection(ownerCollection: ownerCollection, ownerVault: ownerVault)
     }
 }
@@ -4740,7 +4740,7 @@ import ExampleNFT from 0x02
 transaction {
   prepare(acct: AuthAccount) {
     // Create a public Receiver capability to the Vault
-    acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>
+    acct.link<&ExampleToken.Vault>
              (/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
 
     log("Created Vault references")
@@ -4778,7 +4778,7 @@ transaction {
     acct.save<@ExampleToken.Vault>(<-vaultA, to: /storage/CadenceFungibleTokenTutorialVault)
 
     // Create a public Receiver capability to the Vault
-    let ReceiverRef = acct.link<&ExampleToken.Vault{ExampleToken.Receiver, ExampleToken.Balance}>(/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
+    let ReceiverRef = acct.link<&ExampleToken.Vault>(/public/CadenceFungibleTokenTutorialReceiver, target: /storage/CadenceFungibleTokenTutorialVault)
 
     log("Created a Vault and published a reference")
 
@@ -4815,8 +4815,8 @@ import ExampleNFT from 0x02
 transaction {
 
   // Public Vault Receiver References for both accounts
-  let acct1Capability: Capability<&AnyResource{ExampleToken.Receiver}>
-  let acct2Capability: Capability<&AnyResource{ExampleToken.Receiver}>
+  let acct1Capability: Capability<&{ExampleToken.Receiver}>
+  let acct2Capability: Capability<&{ExampleToken.Receiver}>
 
   // Private minter references for this account to mint tokens
   let minterRef: &ExampleToken.VaultMinter
@@ -4826,9 +4826,9 @@ transaction {
     let account2 = getAccount(0x02)
 
     // Retrieve public Vault Receiver references for both accounts
-    self.acct1Capability = acct.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
+    self.acct1Capability = acct.getCapability<&{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
 
-    self.acct2Capability = account2.getCapability<&AnyResource{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
+    self.acct2Capability = account2.getCapability<&{ExampleToken.Receiver}>(/public/CadenceFungibleTokenTutorialReceiver)
 
     // Get the stored Minter reference for account 0x01
     self.minterRef = acct.borrow<&ExampleToken.VaultMinter>(from: /storage/CadenceFungibleTokenTutorialMinter)
@@ -4877,7 +4877,7 @@ transaction {
         acct.save(<-sale, to: /storage/NFTSale)
 
         // Create a public capability to the sale so that others can call its methods
-        acct.link<&ExampleMarketplace.SaleCollection{ExampleMarketplace.SalePublic}>(/public/NFTSale, target: /storage/NFTSale)
+        acct.link<&ExampleMarketplace.SaleCollection>(/public/NFTSale, target: /storage/NFTSale)
 
         log("Sale Created for account 1. Selling NFT 1 for 10 tokens")
     }
@@ -4898,7 +4898,7 @@ transaction {
 
     // Capability to the buyer's NFT collection where they
     // will store the bought NFT
-    let collectionCapability: Capability<&AnyResource{ExampleNFT.NFTReceiver}>
+    let collectionCapability: Capability<&{ExampleNFT.NFTReceiver}>
 
     // Vault that will hold the tokens that will be used to
     // but the NFT
@@ -4907,7 +4907,7 @@ transaction {
     prepare(acct: AuthAccount) {
 
         // get the references to the buyer's fungible token Vault and NFT Collection Receiver
-        self.collectionCapability = acct.getCapability<&AnyResource{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath)
+        self.collectionCapability = acct.getCapability<&{ExampleNFT.NFTReceiver}>(ExampleNFT.CollectionPublicPath)
 
         let vaultRef = acct.borrow<&ExampleToken.Vault>(from: /storage/CadenceFungibleTokenTutorialVault)
             ?? panic("Could not borrow owner's vault reference")
@@ -4922,7 +4922,7 @@ transaction {
 
         // get the reference to the seller's sale
         let saleRef = seller.getCapability(/public/NFTSale)
-                            .borrow<&AnyResource{ExampleMarketplace.SalePublic}>()
+                            .borrow<&{ExampleMarketplace.SalePublic}>()
                             ?? panic("Could not borrow seller's sale reference")
 
         // purchase the NFT the the seller is selling, giving them the capability

@@ -3424,27 +3424,6 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 	)
 }
 
-// InvalidIntersectionTypeError
-
-type InvalidIntersectionTypeError struct {
-	Type Type
-	ast.Range
-}
-
-var _ SemanticError = &InvalidIntersectionTypeError{}
-var _ errors.UserError = &InvalidIntersectionTypeError{}
-
-func (*InvalidIntersectionTypeError) isSemanticError() {}
-
-func (*InvalidIntersectionTypeError) IsUserError() {}
-
-func (e *InvalidIntersectionTypeError) Error() string {
-	return fmt.Sprintf(
-		"cannot restrict type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
 // InvalidIntersectedTypeError
 
 type InvalidIntersectedTypeError struct {
@@ -3529,24 +3508,6 @@ func (e *InvalidNonConformanceIntersectionError) Error() string {
 		"intersection type does not conform to restricting type: `%s`",
 		e.Type.QualifiedString(),
 	)
-}
-
-// InvalidIntersectionTypeMemberAccessError
-
-type InvalidIntersectionTypeMemberAccessError struct {
-	Name string
-	ast.Range
-}
-
-var _ SemanticError = &InvalidIntersectionTypeMemberAccessError{}
-var _ errors.UserError = &InvalidIntersectionTypeMemberAccessError{}
-
-func (*InvalidIntersectionTypeMemberAccessError) isSemanticError() {}
-
-func (*InvalidIntersectionTypeMemberAccessError) IsUserError() {}
-
-func (e *InvalidIntersectionTypeMemberAccessError) Error() string {
-	return fmt.Sprintf("member of intersection type is not accessible: %s", e.Name)
 }
 
 // IntersectionMemberClashError

@@ -145,7 +145,7 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		return ct.traverseType(typ.Type)
 
 	case *cadence.IntersectionType:
-		check := ct.traverseType(typ.Type)
+		check := false
 		for _, typ := range typ.Types {
 			checkTyp := ct.traverseType(typ)
 			check = check || checkTyp
