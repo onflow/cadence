@@ -2434,7 +2434,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 		return NewHostFunctionValue(
 			interpreter,
 			sema.ArrayReverseFunctionType(
-				v.SemaType(interpreter).ElementType(false),
+				v.SemaType(interpreter),
 			),
 			func(invocation Invocation) Value {
 				return v.Reverse(
@@ -2939,6 +2939,7 @@ func (v *ArrayValue) Reverse(
 				locationRange,
 				atree.Address{},
 				false,
+				nil,
 				nil,
 			)
 		},

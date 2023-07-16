@@ -1908,7 +1908,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					memoryGauge,
 					arrayType,
 					identifier,
-					ArrayReverseFunctionType(elementType),
+					ArrayReverseFunctionType(arrayType),
 					arrayTypeReverseFunctionDocString,
 				)
 			},
@@ -2225,12 +2225,10 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 	}
 }
 
-func ArrayReverseFunctionType(elementType Type) *FunctionType {
+func ArrayReverseFunctionType(arrayType Type) *FunctionType {
 	return &FunctionType{
-		Parameters: []Parameter{},
-		ReturnTypeAnnotation: NewTypeAnnotation(&VariableSizedType{
-			Type: elementType,
-		}),
+		Parameters:           []Parameter{},
+		ReturnTypeAnnotation: NewTypeAnnotation(arrayType),
 	}
 }
 
