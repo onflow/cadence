@@ -10511,60 +10511,60 @@ func TestInterpretArrayReverse(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      let xs = [1, 2, 3, 100, 200]
-      let ys = [100, 467, 297, 23]
-	  let emptyVals: [Int] = []
-      
-	  fun reversexs(): [Int] {
-          return xs.reverse()
-      }
-	  fun originalxs(): [Int] {
-		return xs
-	  }
+		let xs = [1, 2, 3, 100, 200]
+		let ys = [100, 467, 297, 23]
+		let emptyVals: [Int] = []
 
-	  fun reverseys(): [Int] {
-		return ys.reverse()
-	  }
-	  fun originalys(): [Int] {
-		return ys
-	  }
-
-	  fun reverseempty(): [Int] {
-		return emptyVals.reverse()
-	  }
-	  fun originalempty(): [Int] {
-		return emptyVals
-	  }
-
-	  pub struct TestStruct {
-		pub var test: Int
-	  
-		init(_ t: Int) {
-		  self.test = t
+		fun reversexs(): [Int] {
+			return xs.reverse()
 		}
-	  }
+		fun originalxs(): [Int] {
+			return xs
+		}
 
-	  let sa = [TestStruct(1), TestStruct(2), TestStruct(3)]
-	  
-	  fun reversesa(): [Int] {
-		let sa_rev = sa.reverse()
+		fun reverseys(): [Int] {
+			return ys.reverse()
+		}
+		fun originalys(): [Int] {
+			return ys
+		}
+
+		fun reverseempty(): [Int] {
+			return emptyVals.reverse()
+		}
+		fun originalempty(): [Int] {
+			return emptyVals
+		}
+
+		pub struct TestStruct {
+			pub var test: Int
+
+			init(_ t: Int) {
+				self.test = t
+			}
+		}
+
+		let sa = [TestStruct(1), TestStruct(2), TestStruct(3)]
+
+		fun reversesa(): [Int] {
+			let sa_rev = sa.reverse()
+
+			let res: [Int] = [];
+			for s in sa_rev {
+				res.append(s.test)
+			}
+
+			return res
+		}
+		fun originalsa(): [Int] {		
+			let res: [Int] = [];
+			for s in sa {
+			res.append(s.test)
+			}
 		
-		let res: [Int] = [];
-		for s in sa_rev {
-		  res.append(s.test)
+			return res
 		}
-	  
-		return res
-	  }
-	  fun originalsa(): [Int] {		
-		let res: [Int] = [];
-		for s in sa {
-		  res.append(s.test)
-		}
-	  
-		return res
-	  }
-    `)
+	`)
 
 	runValidCase := func(t *testing.T, reverseFuncName, originalFuncName string, reversedArray, originalArray *interpreter.ArrayValue) {
 		val, err := inter.Invoke(reverseFuncName)
