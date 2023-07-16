@@ -2923,7 +2923,7 @@ func (v *ArrayValue) Reverse(
 
 	return NewArrayValueWithIterator(
 		interpreter,
-		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
+		v.Type,
 		common.ZeroAddress,
 		uint64(count),
 		func() Value {
