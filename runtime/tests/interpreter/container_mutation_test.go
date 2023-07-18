@@ -288,7 +288,7 @@ func TestArrayMutation(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
-                let namesRef = &names as &[AnyStruct]
+                let namesRef = &names as auth(Insertable) &[AnyStruct]
                 namesRef[0] = 5
             }
         `)
@@ -667,7 +667,7 @@ func TestDictionaryMutation(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let names: {String: AnyStruct} = {"foo": "bar"} as {String: String}
-                let namesRef = &names as &{String: AnyStruct}
+                let namesRef = &names as auth(Insertable) &{String: AnyStruct}
                 namesRef["foo"] = 5
             }
         `)

@@ -36,7 +36,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       fun test(): AnyStruct {
           let map: {String: AnyStruct} = {}
-          let mapRef = &map as &{String: AnyStruct}
+          let mapRef = &map as auth(Insertable) &{String: AnyStruct}
           mapRef["mapRef"] = mapRef
           return map
       }

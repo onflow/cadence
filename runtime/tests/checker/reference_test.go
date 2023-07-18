@@ -2742,14 +2742,19 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 4)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
-		assert.ErrorAs(t, errs[1], &invalidatedRefError)
+
+		unauthorizedReferenceAssignmentError := &sema.UnauthorizedReferenceAssignmentError{}
+		assert.ErrorAs(t, errs[1], &unauthorizedReferenceAssignmentError)
+
+		assert.ErrorAs(t, errs[2], &invalidatedRefError)
 
 		typeMismatchError := &sema.TypeMismatchError{}
-		assert.ErrorAs(t, errs[2], &typeMismatchError)
+		assert.ErrorAs(t, errs[3], &typeMismatchError)
+
 	})
 
 	t.Run("resource array, remove", func(t *testing.T) {
@@ -2790,9 +2795,12 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+
+		unauthorizedReferenceAssignmentError := &sema.UnauthorizedReferenceAssignmentError{}
+		assert.ErrorAs(t, errs[1], &unauthorizedReferenceAssignmentError)
 	})
 
 	t.Run("resource dictionary, remove", func(t *testing.T) {
