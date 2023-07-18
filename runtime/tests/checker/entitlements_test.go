@@ -5454,4 +5454,157 @@ func TestCheckIdentityMapping(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
+
+	t.Run("owned value, with entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            struct X {
+               access(A | B) var s: String
+
+               init() {
+                   self.s = "hello"
+               }
+
+               access(C) fun foo() {}
+            }
+
+            struct Y {
+
+                // Reference
+                access(Identity) var x1: auth(Identity) &X
+
+                // Optional reference
+                access(Identity) var x2: auth(Identity) &X?
+
+                // Function returning a reference
+                access(Identity) fun getX(): auth(Identity) &X {
+                    let x = X()
+                    return &x as auth(Identity) &X
+                }
+
+                // Function returning an optional reference
+                access(Identity) fun getOptionalX(): auth(Identity) &X? {
+                    let x: X? = X()
+                    return &x as auth(Identity) &X?
+                }
+
+                init() {
+                    let x = X()
+                    self.x1 = &x as auth(A, B, C) &X
+                    self.x2 = nil
+                }
+            }
+
+            fun main() {
+                let y = Y()
+
+                let ref1: auth(A, B, C) &X = y.x1
+
+                let ref2: auth(A, B, C) &X? = y.x2
+
+                let ref3: auth(A, B, C) &X = y.getX()
+
+                let ref4: auth(A, B, C) &X? = y.getOptionalX()
+            }
+        `)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("owned value, with entitlements, function typed field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            struct X {
+               access(A | B) var s: String
+
+               init() {
+                   self.s = "hello"
+               }
+
+               access(C) fun foo() {}
+            }
+
+            struct Y {
+
+                access(Identity) let fn: (fun (): X)
+
+                init() {
+                    self.fn = fun(): X {
+                        return X()
+                    }
+                }
+            }
+
+            fun main() {
+                let y = Y()
+                let v = y.fn()
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidMapping := &sema.InvalidMappedEntitlementMemberError{}
+		require.ErrorAs(t, errors[0], &invalidMapping)
+	})
+
+	t.Run("owned value, with entitlements, function ref typed field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            struct X {
+               access(A | B) var s: String
+
+               init() {
+                   self.s = "hello"
+               }
+
+               access(C) fun foo() {}
+            }
+
+            struct Y {
+
+                access(Identity) let fn: auth(Identity) &(fun (): X)?
+
+                init() {
+                    self.fn = nil
+                }
+            }
+
+            fun main() {
+                let y = Y()
+                let v: auth(A, B, C) &(fun (): X) = y.fn
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+
+		actualType := typeMismatchError.ActualType
+		require.IsType(t, &sema.OptionalType{}, actualType)
+		optionalType := actualType.(*sema.OptionalType)
+
+		require.IsType(t, &sema.ReferenceType{}, optionalType.Type)
+		referenceType := optionalType.Type.(*sema.ReferenceType)
+
+		require.IsType(t, sema.EntitlementSetAccess{}, referenceType.Authorization)
+		auth := referenceType.Authorization.(sema.EntitlementSetAccess)
+
+		// Entitlements of function return type `X` must NOT be
+		// available for the reference typed field.
+		require.Equal(t, 0, auth.Entitlements.Len())
+	})
 }

@@ -1943,7 +1943,8 @@ func (checker *Checker) checkEntitlementMapAccess(
 			}
 		}
 	default:
-		if isContainerType(declarationType) {
+		// Also allow entitlement mappings for container-typed fields
+		if declarationType.ContainFieldsOrElements() {
 			return
 		}
 	}

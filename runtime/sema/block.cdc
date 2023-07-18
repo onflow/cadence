@@ -1,5 +1,5 @@
 
-access(all) struct Block {
+access(all) struct Block: ContainFields {
 
     /// The height of the block.
     ///
