@@ -354,6 +354,24 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("declare and emit nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo(x: String)
+
+				resource interface R {
+					fun foo() {
+						emit Foo(x: "")
+					}
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
 	t.Run("emit non-declared event", func(t *testing.T) {
 
 		t.Parallel()
@@ -407,7 +425,9 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
 				}
 			}
         `)
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
 	t.Run("declare and emit in pre-condition", func(t *testing.T) {

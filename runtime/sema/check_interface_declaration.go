@@ -455,40 +455,6 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 			checker.declareAttachmentMembersAndValue(nestedAttachmentDeclaration, ContainerKindInterface)
 		}
 	})()
-
-	if compositeKind == common.CompositeKindContract {
-		checker.declareContractInterfaceValue(
-			declaration,
-			interfaceType,
-			eventMembers,
-		)
-	}
-}
-
-func (checker *Checker) declareContractInterfaceValue(
-	declaration *ast.InterfaceDeclaration,
-	interfaceType *InterfaceType,
-	eventMembers *StringMemberOrderedMap,
-) {
-
-	_, err := checker.valueActivations.declare(variableDeclaration{
-		identifier: declaration.Identifier.Identifier,
-		ty:         interfaceType,
-		docString:  declaration.DocString,
-		// NOTE: contracts are always public
-		access:     PrimitiveAccess(ast.AccessAll),
-		kind:       common.DeclarationKindContract,
-		pos:        declaration.Identifier.Pos,
-		isConstant: true,
-	})
-	checker.report(err)
-
-	eventMembers.Foreach(func(name string, declarationMember *Member) {
-		if interfaceType.Members.Contains(name) {
-			return
-		}
-		interfaceType.Members.Set(name, declarationMember)
-	})
 }
 
 func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDeclaration) *EntitlementType {
