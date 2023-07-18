@@ -4131,13 +4131,10 @@ func TestCheckInterfaceEventsInheritance(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		notDeclaredError := &sema.NotDeclaredError{}
 		require.ErrorAs(t, errs[0], &notDeclaredError)
-
-		conformanceError := &sema.ConformanceError{}
-		require.ErrorAs(t, errs[1], &conformanceError)
 	})
 
 	t.Run("inherited interface", func(t *testing.T) {
@@ -4161,13 +4158,10 @@ func TestCheckInterfaceEventsInheritance(t *testing.T) {
         `)
 
 		require.Error(t, err)
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		notDeclaredError := &sema.NotDeclaredError{}
 		require.ErrorAs(t, errs[0], &notDeclaredError)
-
-		conformanceError := &sema.ConformanceError{}
-		require.ErrorAs(t, errs[1], &conformanceError)
 	})
 }
 

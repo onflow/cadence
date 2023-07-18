@@ -28,9 +28,11 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestCheckInvalidEventTypeRequirementConformance(t *testing.T) {
+func TestCheckEventNonTypeRequirementConformance(t *testing.T) {
 
 	t.Parallel()
+
+	// events do not create type requirements
 
 	_, err := ParseAndCheck(t, `
       access(all) contract interface CI {
@@ -44,9 +46,7 @@ func TestCheckInvalidEventTypeRequirementConformance(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
-
-	require.IsType(t, &sema.ConformanceError{}, errs[0])
+	require.NoError(t, err)
 }
 
 func TestCheckTypeRequirementConformance(t *testing.T) {
