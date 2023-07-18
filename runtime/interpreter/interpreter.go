@@ -2246,7 +2246,11 @@ func (interpreter *Interpreter) declareInterface(
 		}
 
 		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
+			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
+				interpreter.declareNonEnumCompositeValue(nestedCompositeDeclaration, lexicalScope)
+			} else {
+				interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
+			}
 		}
 	})()
 
