@@ -7163,6 +7163,131 @@ func TestInterpretEmitEvent(t *testing.T) {
 	)
 }
 
+func TestInterpretEmitContractInterfaceEvent(t *testing.T) {
+
+	t.Parallel()
+
+	var actualEvents []interpreter.Value
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+		contract interface Test {
+			event Transfer(to: Int, from: Int)
+			event TransferAmount(to: Int, from: Int, amount: Int)
+
+			fun test() {
+				emit Transfer(to: 1, from: 2)
+				emit Transfer(to: 3, from: 4)
+				emit TransferAmount(to: 1, from: 2, amount: 100)
+			}
+		}
+		contract T: Test {}
+		fun test() {
+			T.test()
+		}
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					eventType *sema.CompositeType,
+				) error {
+					actualEvents = append(actualEvents, event)
+					return nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	transferEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
+	transferAmountEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
+
+	fields1 := []interpreter.CompositeField{
+		{
+			Name:  "to",
+			Value: interpreter.NewUnmeteredIntValueFromInt64(1),
+		},
+		{
+			Name:  "from",
+			Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+		},
+	}
+
+	fields2 := []interpreter.CompositeField{
+		{
+			Name:  "to",
+			Value: interpreter.NewUnmeteredIntValueFromInt64(3),
+		},
+		{
+			Name:  "from",
+			Value: interpreter.NewUnmeteredIntValueFromInt64(4),
+		},
+	}
+
+	fields3 := []interpreter.CompositeField{
+		{
+			Name:  "to",
+			Value: interpreter.NewUnmeteredIntValueFromInt64(1),
+		},
+		{
+			Name:  "from",
+			Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+		},
+		{
+			Name:  "amount",
+			Value: interpreter.NewUnmeteredIntValueFromInt64(100),
+		},
+	}
+
+	expectedEvents := []interpreter.Value{
+		interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			TestLocation,
+			TestLocation.QualifiedIdentifier(transferEventType.ID()),
+			common.CompositeKindEvent,
+			fields1,
+			common.ZeroAddress,
+		),
+		interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			TestLocation,
+			TestLocation.QualifiedIdentifier(transferEventType.ID()),
+			common.CompositeKindEvent,
+			fields2,
+			common.ZeroAddress,
+		),
+		interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			TestLocation,
+			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
+			common.CompositeKindEvent,
+			fields3,
+			common.ZeroAddress,
+		),
+	}
+
+	for _, event := range expectedEvents {
+		event.(*interpreter.CompositeValue).InitializeFunctions(inter)
+	}
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+
+		expectedEvents,
+		actualEvents,
+	)
+}
+
 type testValue struct {
 	value              interpreter.Value
 	ty                 sema.Type

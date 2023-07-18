@@ -464,4 +464,38 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("declare does not create a type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo()
+			}
+			contract Impl: Test {}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("impl with different type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo(y: Int)
+				fun emitEvent() {
+					emit Foo(y: 3)
+				}
+			}
+			contract Impl: Test {
+				event Foo(x: String)
+				fun emitEvent() {
+					emit Foo(x: "")
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
 }

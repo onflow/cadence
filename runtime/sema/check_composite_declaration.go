@@ -1459,10 +1459,10 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 	conformance.NestedTypes.Foreach(func(name string, typeRequirement Type) {
 
-		// Only nested composite declarations are type requirements of the interface
+		// Only non-event nested composite declarations are type requirements of the interface
 
 		requiredCompositeType, ok := typeRequirement.(*CompositeType)
-		if !ok {
+		if !ok || requiredCompositeType.Kind == common.CompositeKindEvent {
 			return
 		}
 
