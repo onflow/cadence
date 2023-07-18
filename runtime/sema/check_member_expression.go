@@ -285,7 +285,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 	// Check access and report if inaccessible
 	accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
-	isReadable, resultingAuthorization := checker.isReadableMember(accessedType, member, accessRange)
+	isReadable, resultingAuthorization := checker.isReadableMember(accessedType, member, resultingType, accessRange)
 	if !isReadable {
 		checker.report(
 			&InvalidAccessError{
@@ -373,33 +373,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 // isReadableMember returns true if the given member can be read from
 // in the current location of the checker, along with the authorzation with which the result can be used
-func (checker *Checker) isReadableMember(accessedType Type, member *Member, accessRange func() ast.Range) (bool, Access) {
-	var mapAccess func(EntitlementMapAccess, Type) (bool, Access)
-	mapAccess = func(mappedAccess EntitlementMapAccess, accessedType Type) (bool, Access) {
-		switch ty := accessedType.(type) {
-		case *ReferenceType:
-			// when accessing a member on a reference, the read is allowed, but the
-			// granted entitlements are based on the image through the map of the reference's entitlements
-			grantedAccess, err := mappedAccess.Image(ty.Authorization, accessRange)
-			if err != nil {
-				checker.report(err)
-				return false, member.Access
-			}
-			return true, grantedAccess
-		case *OptionalType:
-			return mapAccess(mappedAccess, ty.Type)
-		default:
-			// when accessing a member on a non-reference, the resulting mapped entitlement
-			// should be the entire codomain of the map
-			return true, mappedAccess.Codomain()
-		}
-	}
-
+func (checker *Checker) isReadableMember(accessedType Type, member *Member, resultingType Type, accessRange func() ast.Range) (bool, Access) {
 	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType] {
 
 		if mappedAccess, isMappedAccess := member.Access.(EntitlementMapAccess); isMappedAccess {
-			return mapAccess(mappedAccess, accessedType)
+			return checker.mapAccess(mappedAccess, accessedType, resultingType, accessRange)
 		}
 
 		return true, member.Access
@@ -443,10 +422,79 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, acce
 			return true, member.Access
 		}
 	case EntitlementMapAccess:
-		return mapAccess(access, accessedType)
+		return checker.mapAccess(access, accessedType, resultingType, accessRange)
 	}
 
 	return false, member.Access
+}
+
+func (checker *Checker) mapAccess(
+	mappedAccess EntitlementMapAccess,
+	accessedType Type,
+	resultingType Type,
+	accessRange func() ast.Range,
+) (bool, Access) {
+
+	switch ty := accessedType.(type) {
+	case *ReferenceType:
+		// when accessing a member on a reference, the read is allowed, but the
+		// granted entitlements are based on the image through the map of the reference's entitlements
+		grantedAccess, err := mappedAccess.Image(ty.Authorization, accessRange)
+		if err != nil {
+			checker.report(err)
+			return false, mappedAccess
+		}
+		return true, grantedAccess
+
+	case *OptionalType:
+		return checker.mapAccess(mappedAccess, ty.Type, resultingType, accessRange)
+
+	default:
+		if mappedAccess.Type == IdentityMappingType {
+			access := AllSupportedEntitlements(resultingType)
+			if access != nil {
+				return true, access
+			}
+		}
+
+		// when accessing a member on a non-reference, the resulting mapped entitlement
+		// should be the entire codomain of the map
+		return true, mappedAccess.Codomain()
+	}
+}
+
+func AllSupportedEntitlements(typ Type) Access {
+	return allSupportedEntitlements(typ, false)
+}
+
+func allSupportedEntitlements(typ Type, isInnerType bool) Access {
+	switch typ := typ.(type) {
+	case *ReferenceType:
+		return allSupportedEntitlements(typ.Type, true)
+	case *OptionalType:
+		return allSupportedEntitlements(typ.Type, true)
+	case *FunctionType:
+		// Entitlements must be returned only for function definitions.
+		// Other than func-definitions, a member can be a function type in two ways:
+		//  1) Function-typed field - Mappings are not allowed on function typed fields
+		//  2) Function reference typed field - A function type inside a reference/optional-reference
+		//     (i.e: an inner function type) should not be considered for entitlements.
+		//
+		if !isInnerType {
+			return allSupportedEntitlements(typ.ReturnTypeAnnotation.Type, true)
+		}
+	case EntitlementSupportingType:
+		supportedEntitlements := typ.SupportedEntitlements()
+		if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
+			access := EntitlementSetAccess{
+				SetKind:      Conjunction,
+				Entitlements: supportedEntitlements,
+			}
+			return access
+		}
+	}
+
+	return nil
 }
 
 // isWriteableMember returns true if the given member can be written to
