@@ -1797,6 +1797,44 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			assert.ErrorAs(t, errors[0], &invalidAccessError)
 		})
 	})
+
+	t.Run("swap", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutable) &[String]
+                    arrayRef[0] <-> arrayRef[1]
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef[0] <-> arrayRef[1]
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 2)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+	})
 }
 
 func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
@@ -2077,6 +2115,44 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 
 			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
 			assert.ErrorAs(t, errors[0], &invalidAccessError)
+		})
+	})
+
+	t.Run("swap", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: AnyStruct} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Mutable) &{String: AnyStruct}
+                    dictionaryRef["one"] <-> dictionaryRef["two"]
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as &{String: String}
+                    dictionaryRef["one"] <-> dictionaryRef["two"]
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 2)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
 		})
 	})
 }
