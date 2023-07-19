@@ -1418,6 +1418,7 @@ func (e *DuplicateConformanceError) Error() string {
 type MultipleInterfaceDefaultImplementationsError struct {
 	CompositeType *CompositeType
 	Member        *Member
+	ast.Range
 }
 
 var _ SemanticError = &MultipleInterfaceDefaultImplementationsError{}
@@ -1434,14 +1435,6 @@ func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
 		e.CompositeType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
-}
-
-func (e *MultipleInterfaceDefaultImplementationsError) StartPosition() ast.Position {
-	return e.Member.Identifier.StartPosition()
-}
-
-func (e *MultipleInterfaceDefaultImplementationsError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Member.Identifier.EndPosition(memoryGauge)
 }
 
 // SpecialFunctionDefaultImplementationError
@@ -1479,6 +1472,7 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 type DefaultFunctionConflictError struct {
 	CompositeType *CompositeType
 	Member        *Member
+	ast.Range
 }
 
 var _ SemanticError = &DefaultFunctionConflictError{}
@@ -1490,19 +1484,11 @@ func (*DefaultFunctionConflictError) IsUserError() {}
 
 func (e *DefaultFunctionConflictError) Error() string {
 	return fmt.Sprintf(
-		"%s `%s` has conflicting requirements for function `%s`",
+		"%s `%s` has conflicting requirements for function `%s` ",
 		e.CompositeType.Kind.Name(),
 		e.CompositeType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
-}
-
-func (e *DefaultFunctionConflictError) StartPosition() ast.Position {
-	return e.Member.Identifier.StartPosition()
-}
-
-func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Member.Identifier.EndPosition(memoryGauge)
 }
 
 // MissingConformanceError
