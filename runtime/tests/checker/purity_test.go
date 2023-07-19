@@ -314,6 +314,83 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("borrow", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.borrow<&Int>(from: /storage/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("check", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.check<Int>(from: /storage/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("getlinktarget", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.getLinkTarget(/public/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("getcap", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.getCapability<&Int>(/public/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("get contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.contracts.get(name: "")
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.contracts.borrow<&Int>(name: "")
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("get keys", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.keys.get(keyIndex: 0)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("save", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `

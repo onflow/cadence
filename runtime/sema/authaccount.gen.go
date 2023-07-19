@@ -289,6 +289,7 @@ var AuthAccountTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountTypeBorrowFunctionTypeParameterT,
 	},
@@ -328,6 +329,7 @@ var AuthAccountTypeCheckFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountTypeCheckFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountTypeCheckFunctionTypeParameterT,
 	},
@@ -453,6 +455,7 @@ var AuthAccountTypeGetCapabilityFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountTypeGetCapabilityFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountTypeGetCapabilityFunctionTypeParameterT,
 	},
@@ -482,6 +485,7 @@ Returns the capability at the given private or public path.
 const AuthAccountTypeGetLinkTargetFunctionName = "getLinkTarget"
 
 var AuthAccountTypeGetLinkTargetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -746,6 +750,7 @@ Returns the deployed contract for the updated contract.
 const AuthAccountContractsTypeGetFunctionName = "get"
 
 var AuthAccountContractsTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "name",
@@ -800,6 +805,7 @@ var AuthAccountContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountContractsTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountContractsTypeBorrowFunctionTypeParameterT,
 	},
@@ -920,6 +926,7 @@ Returns the added key.
 const AuthAccountKeysTypeGetFunctionName = "get"
 
 var AuthAccountKeysTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "keyIndex",
@@ -1243,6 +1250,7 @@ var AuthAccountCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountCapabilitiesTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountCapabilitiesTypeGetFunctionTypeParameterT,
 	},
@@ -1465,6 +1473,7 @@ func init() {
 const AuthAccountStorageCapabilitiesTypeGetControllerFunctionName = "getController"
 
 var AuthAccountStorageCapabilitiesTypeGetControllerFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "byCapabilityID",
@@ -1490,6 +1499,7 @@ Returns nil if the ID does not reference an existing storage capability.
 const AuthAccountStorageCapabilitiesTypeGetControllersFunctionName = "getControllers"
 
 var AuthAccountStorageCapabilitiesTypeGetControllersFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "forPath",
@@ -1641,6 +1651,7 @@ func init() {
 const AuthAccountAccountCapabilitiesTypeGetControllerFunctionName = "getController"
 
 var AuthAccountAccountCapabilitiesTypeGetControllerFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "byCapabilityID",
@@ -1666,6 +1677,7 @@ Returns nil if the ID does not reference an existing account capability.
 const AuthAccountAccountCapabilitiesTypeGetControllersFunctionName = "getControllers"
 
 var AuthAccountAccountCapabilitiesTypeGetControllersFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
 			Type: &ReferenceType{
