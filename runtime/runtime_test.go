@@ -8685,17 +8685,17 @@ func TestRuntimeInvalidRecursiveTransferViaVariableDeclaration(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	contract := []byte(`
-      pub contract Test{
+      access(all) contract Test{
 
-          pub resource Holder{
+          access(all) resource Holder{
 
-              pub var vaults: @[AnyResource]
+              access(all) var vaults: @[AnyResource]
 
               init(_ vaults: @[AnyResource]){
                   self.vaults <- vaults
               }
 
-              pub fun x(): @[AnyResource] {
+              access(all) fun x(): @[AnyResource] {
                   var x <- self.vaults <- [<-Test.dummy()]
                   return <-x
               }
@@ -8707,13 +8707,13 @@ func TestRuntimeInvalidRecursiveTransferViaVariableDeclaration(t *testing.T) {
               }
           }
 
-          pub fun createHolder(_ vaults: @[AnyResource]): @Holder {
+          access(all) fun createHolder(_ vaults: @[AnyResource]): @Holder {
               return <- create Holder(<-vaults)
           }
 
-          pub resource Dummy {}
+          access(all) resource Dummy {}
 
-          pub fun dummy(): @Dummy {
+          access(all) fun dummy(): @Dummy {
               return <- create Dummy()
           }
       }
@@ -8799,11 +8799,11 @@ func TestRuntimeInvalidRecursiveTransferViaFunctionArgument(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	contract := []byte(`
-      pub contract Test{
+      access(all) contract Test{
 
-          pub resource Holder {
+          access(all) resource Holder {
 
-              pub var vaults: @[AnyResource]
+              access(all) var vaults: @[AnyResource]
 
               init(_ vaults: @[AnyResource]) {
                   self.vaults <- vaults
@@ -8814,13 +8814,13 @@ func TestRuntimeInvalidRecursiveTransferViaFunctionArgument(t *testing.T) {
               }
           }
 
-          pub fun createHolder(_ vaults: @[AnyResource]): @Holder {
+          access(all) fun createHolder(_ vaults: @[AnyResource]): @Holder {
               return <- create Holder(<-vaults)
           }
 
-          pub resource Dummy {}
+          access(all) resource Dummy {}
 
-          pub fun dummy(): @Dummy {
+          access(all) fun dummy(): @Dummy {
               return <- create Dummy()
           }
       }
@@ -8901,36 +8901,36 @@ func TestRuntimeOptionalReferenceAttack(t *testing.T) {
 	t.Parallel()
 
 	script := `
-      pub resource Vault {
-          pub var balance: UFix64
+      access(all) resource Vault {
+          access(all) var balance: UFix64
 
           init(balance: UFix64) {
               self.balance = balance
           }
 
-          pub fun withdraw(amount: UFix64): @Vault {
+          access(all) fun withdraw(amount: UFix64): @Vault {
               self.balance = self.balance - amount
               return <-create Vault(balance: amount)
           }
 
-          pub fun deposit(from: @Vault) {
+          access(all) fun deposit(from: @Vault) {
               self.balance = self.balance + from.balance
               destroy from
           }
       }
 
-      pub fun empty(): @Vault {
+      access(all) fun empty(): @Vault {
           return <- create Vault(balance: 0.0)
       }
 
-      pub fun giveme(): @Vault {
+      access(all) fun giveme(): @Vault {
           return <- create Vault(balance: 10.0)
       }
 
-      pub fun main() {
+      access(all) fun main() {
           var vault <- giveme() //get 10 token
           var someDict:@{Int:Vault} <- {1:<-vault}
-          var r = (&someDict[1] as auth &AnyResource) as! &Vault
+          var r = (&someDict[1] as &AnyResource) as! &Vault
           var double <- empty()
           double.deposit(from: <- someDict.remove(key:1)!)
           double.deposit(from: <- r.withdraw(amount:10.0))
@@ -9006,13 +9006,18 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-      pub resource Foo {}
+      access(all) resource Foo {}
 
-      pub fun main(): AnyStruct {
+      access(all) fun main(): AnyStruct {
           let y: @Foo? <- create Foo()
           let z: @AnyResource <- y
           var ref = &z as &AnyResource
+          ref = returnSameRef(ref)
           destroy z
+          return ref
+      }
+
+      access(all) fun returnSameRef(_ ref: &AnyResource): &AnyResource {
           return ref
       }
     `)
@@ -9034,5 +9039,5 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
