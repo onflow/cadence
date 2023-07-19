@@ -83,7 +83,7 @@ access(all) struct AuthAccount {
     /// The given type must not necessarily be exactly the same as the type of the copied structure.
     ///
     /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-    access(all) fun copy<T: AnyStruct>(from: StoragePath): T?
+    access(all) view fun copy<T: AnyStruct>(from: StoragePath): T?
 
     /// Returns a reference to an object in storage without removing it from storage.
     ///

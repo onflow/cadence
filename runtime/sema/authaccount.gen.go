@@ -243,6 +243,7 @@ var AuthAccountTypeCopyFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountTypeCopyFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountTypeCopyFunctionTypeParameterT,
 	},

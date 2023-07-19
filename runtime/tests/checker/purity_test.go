@@ -303,6 +303,17 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		})
 	})
 
+	t.Run("copy", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.copy<Int>(from: /storage/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("save", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
