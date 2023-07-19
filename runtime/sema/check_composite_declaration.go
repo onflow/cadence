@@ -912,16 +912,16 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 							checker.report(
 								&MultipleInterfaceDefaultImplementationsError{
 									CompositeKindedType: nestedCompositeType,
-									Member:        member,
-									Range:         errorRange,
+									Member:              member,
+									Range:               errorRange,
 								},
 							)
 						} else {
 							checker.report(
 								&DefaultFunctionConflictError{
 									CompositeKindedType: nestedCompositeType,
-									Member:        member,
-									Range:         errorRange,
+									Member:              member,
+									Range:               errorRange,
 								},
 							)
 						}
@@ -1435,16 +1435,16 @@ func (checker *Checker) checkCompositeLikeConformance(
 						checker.report(
 							&MultipleInterfaceDefaultImplementationsError{
 								CompositeKindedType: compositeType,
-								Member:        interfaceMember,
-								Range:         errorRange,
+								Member:              interfaceMember,
+								Range:               errorRange,
 							},
 						)
 					} else {
 						checker.report(
 							&DefaultFunctionConflictError{
 								CompositeKindedType: compositeType,
-								Member:        interfaceMember,
-								Range:         errorRange,
+								Member:              interfaceMember,
+								Range:               errorRange,
 							},
 						)
 					}

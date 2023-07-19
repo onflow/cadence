@@ -319,7 +319,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 		"foo",
 		&sema.FunctionType{
 			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-			Arity: &sema.Arity{Max: -1},
+			Arity:                &sema.Arity{Max: -1},
 		},
 		"",
 		nil,

@@ -1624,7 +1624,7 @@ func (e CyclicConformanceError) Error() string {
 // MultipleInterfaceDefaultImplementationsError
 type MultipleInterfaceDefaultImplementationsError struct {
 	CompositeKindedType CompositeKindedType
-	Member        *Member
+	Member              *Member
 	ast.Range
 }
 

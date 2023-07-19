@@ -3242,11 +3242,11 @@ func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
 		}
 
 		return &FunctionType{
-			Purity:                t.Purity,
-			TypeParameters:        rewrittenTypeParameters,
-			Parameters:            rewrittenParameters,
-			ReturnTypeAnnotation:  NewTypeAnnotation(rewrittenReturnType),
-			Arity:                 t.Arity,
+			Purity:               t.Purity,
+			TypeParameters:       rewrittenTypeParameters,
+			Parameters:           rewrittenParameters,
+			ReturnTypeAnnotation: NewTypeAnnotation(rewrittenReturnType),
+			Arity:                t.Arity,
 		}, true
 	} else {
 		return t, false
@@ -3359,10 +3359,10 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 	}
 
 	return &FunctionType{
-		Purity:                t.Purity,
-		Parameters:            newParameters,
-		ReturnTypeAnnotation:  NewTypeAnnotation(newReturnType),
-		Arity:                 t.Arity,
+		Purity:               t.Purity,
+		Parameters:           newParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(newReturnType),
+		Arity:                t.Arity,
 	}
 
 }
