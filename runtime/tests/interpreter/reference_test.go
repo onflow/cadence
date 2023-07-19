@@ -113,7 +113,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: &S1} = {}
-              let dictRef = &dict as auth(Insertable) &{Int: &AnyStruct}
+              let dictRef = &dict as auth(Mutable) &{Int: &AnyStruct}
 
               let s2 = S2()
               dictRef[0] = &s2 as &AnyStruct
@@ -148,7 +148,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: S1} = {}
-              let dictRef = &dict as auth(Insertable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
 
               dictRef[0] = S2()
 
@@ -186,7 +186,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
          fun test(): Int {
              let dict: {Int: &S1} = {}
-             let dictRef = &dict as auth(Insertable) &{Int: &AnyStruct}
+             let dictRef = &dict as auth(Mutable) &{Int: &AnyStruct}
 
              let s2 = S2()
              dictRef[0] = &s2 as &AnyStruct
@@ -225,7 +225,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
          fun test(): Int {
              let dict: {Int: S1} = {}
-             let dictRef = &dict as auth(Insertable) &{Int: AnyStruct}
+             let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
 
              dictRef[0] = S2()
 
@@ -267,7 +267,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
               let s2 = S2()
 
-              let dictRef = &dict as auth(Insertable) &{Int: &AnyStruct}
+              let dictRef = &dict as auth(Mutable) &{Int: &AnyStruct}
               dictRef[0] = &s2 as &AnyStruct
 
               dict.values[0].value = 1
@@ -308,7 +308,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: S1} = {}
-              let dictRef = &dict as auth(Insertable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
 
               dictRef[0] = S2()
 
@@ -340,7 +340,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
               let s2 = S2()
 
-              let dictRef = &dict as auth(Insertable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
               dictRef[0] = s2
 
               let x = dict.values[0]
@@ -369,7 +369,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: fun(): Int} = {}
-              let dictRef = &dict as auth(Insertable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
 
               dictRef[0] = f2
 
@@ -393,7 +393,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: [UInt8]} = {}
-              let dictRef = &dict as auth(Insertable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
 
               dictRef[0] = "not an [UInt8] array, but a String"
 
@@ -417,7 +417,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: [UInt8]} = {}
-              let dictRef = &dict as auth(Insertable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
 
               dictRef[0] = "not an [UInt8] array, but a String"
 

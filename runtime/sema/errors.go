@@ -2932,7 +2932,7 @@ func (e *InvalidAssignmentAccessError) SecondaryError() string {
 // UnauthorizedReferenceAssignmentError
 
 type UnauthorizedReferenceAssignmentError struct {
-	RequiredAccess Access
+	RequiredAccess [2]Access
 	FoundAccess    Access
 	ast.Range
 }
@@ -2946,17 +2946,26 @@ func (*UnauthorizedReferenceAssignmentError) isSemanticError() {}
 func (*UnauthorizedReferenceAssignmentError) IsUserError() {}
 
 func (e *UnauthorizedReferenceAssignmentError) Error() string {
+	var foundAccess string
+	if e.FoundAccess == UnauthorizedAccess {
+		foundAccess = "non-auth"
+	} else {
+		foundAccess = fmt.Sprintf("(%s)", e.FoundAccess.Description())
+	}
+
 	return fmt.Sprintf(
-		"invalid assignment: can only assign to a reference with (%s) access, but found a (%s) reference",
-		e.RequiredAccess.Description(),
-		e.FoundAccess.Description(),
+		"invalid assignment: can only assign to a reference with (%s) or (%s) access, but found a %s reference",
+		e.RequiredAccess[0].Description(),
+		e.RequiredAccess[1].Description(),
+		foundAccess,
 	)
 }
 
 func (e *UnauthorizedReferenceAssignmentError) SecondaryError() string {
 	return fmt.Sprintf(
-		"consider taking a reference with `%s` access",
-		e.RequiredAccess.Description(),
+		"consider taking a reference with `%s` or `%s` access",
+		e.RequiredAccess[0].Description(),
+		e.RequiredAccess[1].Description(),
 	)
 }
 

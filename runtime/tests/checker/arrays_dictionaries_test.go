@@ -1762,6 +1762,12 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 
 			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
 			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a non-auth reference",
+			)
 		})
 
 		t.Run("insertable reference", func(t *testing.T) {
@@ -1776,7 +1782,16 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 }
 	        `)
 
-			require.NoError(t, err)
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a (Insertable) reference",
+			)
 		})
 
 		t.Run("removable reference", func(t *testing.T) {
@@ -1795,6 +1810,27 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 
 			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
 			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a (Removable) reference",
+			)
+		})
+
+		t.Run("insertable and removable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insertable, Removable) &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			require.NoError(t, err)
 		})
 	})
 
@@ -2082,9 +2118,39 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 
 			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
 			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a non-auth reference",
+			)
 		})
 
 		t.Run("insertable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Removable) &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a (Removable) reference",
+			)
+		})
+
+		t.Run("removable reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2096,25 +2162,31 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 }
 	        `)
 
-			require.NoError(t, err)
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a (Insertable) reference",
+			)
 		})
 
-		t.Run("removable reference", func(t *testing.T) {
+		t.Run("insertable and removable reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as &{String: String}
+                    var dictionaryRef = &dictionary as auth(Insertable, Removable) &{String: String}
                     dictionaryRef["three"] = "baz"
                 }
 	        `)
 
-			errors := RequireCheckerErrors(t, err, 1)
-
-			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
-			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			require.NoError(t, err)
 		})
 	})
 
