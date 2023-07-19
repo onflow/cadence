@@ -1117,14 +1117,15 @@ func TestCheckResourceArrayReverseInvalid(t *testing.T) {
 
 		fun test(): @[X] {
 			let xs <- [<-create X()]
-			return <-xs.reverse()
+			let revxs <-xs.reverse()
+			destroy xs
+			return <- revxs
 		}
     `)
 
-	errs := RequireCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckArrayContains(t *testing.T) {

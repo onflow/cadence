@@ -2927,12 +2927,12 @@ func (v *ArrayValue) Reverse(
 		common.ZeroAddress,
 		uint64(count),
 		func() Value {
-			if idx < 0 {
+			if index < 0 {
 				return nil
 			}
 
-			value := v.Get(interpreter, locationRange, idx)
-			idx--
+			value := v.Get(interpreter, locationRange, index)
+			index--
 
 			return value.Transfer(
 				interpreter,
