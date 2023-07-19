@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestRuntimeError(t *testing.T) {
@@ -605,6 +606,22 @@ func TestRuntimeDefaultFunctionConflictPrintingError(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "access(all) resource R: TestInterfaces.A, TestInterfaces.B {}")
+
+	var errType *sema.CheckerError
+	require.ErrorAs(t, err, &errType)
+
+	checkerErr := err.(Error).
+		Err.(interpreter.Error).
+		Err.(*stdlib.InvalidContractDeploymentError).
+		Err.(*ParsingCheckingError).
+		Err.(*sema.CheckerError)
+
+	var specificErrType *sema.DefaultFunctionConflictError
+	require.ErrorAs(t, checkerErr.Errors[0], &specificErrType)
+
+	errorRange := checkerErr.Errors[0].(*sema.DefaultFunctionConflictError).Range
+
+	require.Equal(t, errorRange.StartPos.Line, 4)
 }
 
 func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
@@ -718,4 +735,20 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "access(all) resource R: TestInterfaces.A, TestInterfaces.B {}")
+
+	var errType *sema.CheckerError
+	require.ErrorAs(t, err, &errType)
+
+	checkerErr := err.(Error).
+		Err.(interpreter.Error).
+		Err.(*stdlib.InvalidContractDeploymentError).
+		Err.(*ParsingCheckingError).
+		Err.(*sema.CheckerError)
+
+	var specificErrType *sema.MultipleInterfaceDefaultImplementationsError
+	require.ErrorAs(t, checkerErr.Errors[0], &specificErrType)
+
+	errorRange := checkerErr.Errors[0].(*sema.MultipleInterfaceDefaultImplementationsError).Range
+
+	require.Equal(t, errorRange.StartPos.Line, 4)
 }
