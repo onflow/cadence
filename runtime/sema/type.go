@@ -2225,7 +2225,7 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 	}
 }
 
-func ArrayReverseFunctionType(arrayType Type) *FunctionType {
+func ArrayReverseFunctionType(arrayType sema.ArrayType) *FunctionType {
 	return &FunctionType{
 		Parameters:           []Parameter{},
 		ReturnTypeAnnotation: NewTypeAnnotation(arrayType),
