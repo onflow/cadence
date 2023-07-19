@@ -267,7 +267,7 @@ func TestCheckInvalidFunctionPostConditionWithBeforeAndNoArgument(t *testing.T) 
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 
@@ -286,7 +286,7 @@ func TestCheckInvalidFunctionPostConditionWithBeforeAndNoArgument(t *testing.T) 
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 }

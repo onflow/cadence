@@ -76,6 +76,23 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// SuggestedFix
+
+type HasSuggestedFixes interface {
+	SuggestFixes(code string) []SuggestedFix
+}
+
+type SuggestedFix struct {
+	Message   string
+	TextEdits []TextEdit
+}
+
+type TextEdit struct {
+	Replacement string
+	Insertion   string
+	ast.Range
+}
+
 // InvalidPragmaError
 
 type InvalidPragmaError struct {
@@ -411,31 +428,59 @@ func (e *NotCallableError) Error() string {
 	)
 }
 
-// ArgumentCountError
+// InsufficientArgumentsError
 
-type ArgumentCountError struct {
-	ParameterCount int
-	ArgumentCount  int
+type InsufficientArgumentsError struct {
+	MinCount    int
+	ActualCount int
 	ast.Range
 }
 
-var _ SemanticError = &ArgumentCountError{}
-var _ errors.UserError = &ArgumentCountError{}
-var _ errors.SecondaryError = &ArgumentCountError{}
+var _ SemanticError = &InsufficientArgumentsError{}
+var _ errors.UserError = &InsufficientArgumentsError{}
+var _ errors.SecondaryError = &InsufficientArgumentsError{}
 
-func (*ArgumentCountError) isSemanticError() {}
+func (*InsufficientArgumentsError) isSemanticError() {}
 
-func (*ArgumentCountError) IsUserError() {}
+func (*InsufficientArgumentsError) IsUserError() {}
 
-func (e *ArgumentCountError) Error() string {
-	return "incorrect number of arguments"
+func (e *InsufficientArgumentsError) Error() string {
+	return "too few arguments"
 }
 
-func (e *ArgumentCountError) SecondaryError() string {
+func (e *InsufficientArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected %d, got %d",
-		e.ParameterCount,
-		e.ArgumentCount,
+		"expected at least %d, got %d",
+		e.MinCount,
+		e.ActualCount,
+	)
+}
+
+// ExcessiveArgumentsError
+
+type ExcessiveArgumentsError struct {
+	MaxCount    int
+	ActualCount int
+	ast.Range
+}
+
+var _ SemanticError = &ExcessiveArgumentsError{}
+var _ errors.UserError = &ExcessiveArgumentsError{}
+var _ errors.SecondaryError = &ExcessiveArgumentsError{}
+
+func (*ExcessiveArgumentsError) isSemanticError() {}
+
+func (*ExcessiveArgumentsError) IsUserError() {}
+
+func (e *ExcessiveArgumentsError) Error() string {
+	return "too many arguments"
+}
+
+func (e *ExcessiveArgumentsError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected up to %d, got %d",
+		e.MaxCount,
+		e.ActualCount,
 	)
 }
 
@@ -450,6 +495,7 @@ type MissingArgumentLabelError struct {
 
 var _ SemanticError = &MissingArgumentLabelError{}
 var _ errors.UserError = &MissingArgumentLabelError{}
+var _ HasSuggestedFixes = &MissingArgumentLabelError{}
 
 func (*MissingArgumentLabelError) isSemanticError() {}
 
@@ -460,6 +506,23 @@ func (e *MissingArgumentLabelError) Error() string {
 		"missing argument label: `%s`",
 		e.ExpectedArgumentLabel,
 	)
+}
+
+func (e *MissingArgumentLabelError) SuggestFixes(_ string) []SuggestedFix {
+	return []SuggestedFix{
+		{
+			Message: "insert argument label",
+			TextEdits: []TextEdit{
+				{
+					Insertion: fmt.Sprintf("%s: ", e.ExpectedArgumentLabel),
+					Range: ast.NewUnmeteredRange(
+						e.StartPos,
+						e.StartPos,
+					),
+				},
+			},
+		},
+	}
 }
 
 // IncorrectArgumentLabelError
@@ -473,6 +536,7 @@ type IncorrectArgumentLabelError struct {
 var _ SemanticError = &IncorrectArgumentLabelError{}
 var _ errors.UserError = &IncorrectArgumentLabelError{}
 var _ errors.SecondaryError = &IncorrectArgumentLabelError{}
+var _ HasSuggestedFixes = &IncorrectArgumentLabelError{}
 
 func (*IncorrectArgumentLabelError) isSemanticError() {}
 
@@ -492,6 +556,50 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 		expected,
 		e.ActualArgumentLabel,
 	)
+}
+
+func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []SuggestedFix {
+	if len(e.ExpectedArgumentLabel) > 0 {
+		return []SuggestedFix{
+			{
+				Message: "replace argument label",
+				TextEdits: []TextEdit{
+					{
+						Replacement: fmt.Sprintf("%s:", e.ExpectedArgumentLabel),
+						Range:       e.Range,
+					},
+				},
+			},
+		}
+	} else {
+		endPos := e.Range.EndPos
+
+		var whitespaceSuffixLength int
+		for offset := endPos.Offset + 1; offset < len(code); offset++ {
+			if code[offset] == ' ' {
+				whitespaceSuffixLength++
+			} else {
+				break
+			}
+		}
+
+		adjustedEndPos := endPos.Shifted(nil, whitespaceSuffixLength)
+
+		return []SuggestedFix{
+			{
+				Message: "remove argument label",
+				TextEdits: []TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: e.Range.StartPos,
+							EndPos:   adjustedEndPos,
+						},
+					},
+				},
+			},
+		}
+	}
 }
 
 // InvalidUnaryOperandError
@@ -915,6 +1023,7 @@ type NotDeclaredMemberError struct {
 var _ SemanticError = &NotDeclaredMemberError{}
 var _ errors.UserError = &NotDeclaredMemberError{}
 var _ errors.SecondaryError = &NotDeclaredMemberError{}
+var _ HasSuggestedFixes = &NotDeclaredMemberError{}
 
 func (*NotDeclaredMemberError) isSemanticError() {}
 
@@ -928,18 +1037,54 @@ func (e *NotDeclaredMemberError) Error() string {
 	)
 }
 
+func (e *NotDeclaredMemberError) findOptionalMember() string {
+	optionalType, ok := e.Type.(*OptionalType)
+	if !ok {
+		return ""
+	}
+
+	members := optionalType.Type.GetMembers()
+	name := e.Name
+	_, ok = members[name]
+	if !ok {
+		return ""
+	}
+
+	return name
+}
+
 func (e *NotDeclaredMemberError) SecondaryError() string {
-	if optionalType, ok := e.Type.(*OptionalType); ok {
-		members := optionalType.Type.GetMembers()
-		name := e.Name
-		if _, ok := members[name]; ok {
-			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
-		}
+	if optionalMember := e.findOptionalMember(); optionalMember != "" {
+		return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", optionalMember)
 	}
 	if closestMember := e.findClosestMember(); closestMember != "" {
 		return fmt.Sprintf("did you mean `%s`?", closestMember)
 	}
 	return "unknown member"
+}
+
+func (e *NotDeclaredMemberError) SuggestFixes(_ string) []SuggestedFix {
+	optionalMember := e.findOptionalMember()
+	if optionalMember == "" {
+		return nil
+	}
+
+	accessPos := e.Expression.AccessPos
+
+	return []SuggestedFix{
+		{
+			Message: "use optional chaining",
+			TextEdits: []TextEdit{
+				{
+					Insertion: "?",
+					Range: ast.Range{
+						StartPos: accessPos,
+						EndPos:   accessPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // findClosestMember searches the names of the members on the accessed type,
@@ -1479,7 +1624,8 @@ func (e CyclicConformanceError) Error() string {
 // MultipleInterfaceDefaultImplementationsError
 type MultipleInterfaceDefaultImplementationsError struct {
 	CompositeKindedType CompositeKindedType
-	Member              *Member
+	Member        *Member
+	ast.Range
 }
 
 var _ SemanticError = &MultipleInterfaceDefaultImplementationsError{}
@@ -1496,14 +1642,6 @@ func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
 		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
-}
-
-func (e *MultipleInterfaceDefaultImplementationsError) StartPosition() ast.Position {
-	return e.Member.Identifier.StartPosition()
-}
-
-func (e *MultipleInterfaceDefaultImplementationsError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Member.Identifier.EndPosition(memoryGauge)
 }
 
 // SpecialFunctionDefaultImplementationError
@@ -1541,6 +1679,7 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 type DefaultFunctionConflictError struct {
 	CompositeKindedType CompositeKindedType
 	Member              *Member
+	ast.Range
 }
 
 var _ SemanticError = &DefaultFunctionConflictError{}
@@ -1557,14 +1696,6 @@ func (e *DefaultFunctionConflictError) Error() string {
 		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
-}
-
-func (e *DefaultFunctionConflictError) StartPosition() ast.Position {
-	return e.Member.Identifier.StartPosition()
-}
-
-func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Member.Identifier.EndPosition(memoryGauge)
 }
 
 // InterfaceMemberConflictError

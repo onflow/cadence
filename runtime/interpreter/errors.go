@@ -989,3 +989,16 @@ func (AccountLinkingForbiddenError) IsUserError() {}
 func (e AccountLinkingForbiddenError) Error() string {
 	return "account linking is not allowed"
 }
+
+// RecursiveTransferError
+type RecursiveTransferError struct {
+	LocationRange
+}
+
+var _ errors.UserError = RecursiveTransferError{}
+
+func (RecursiveTransferError) IsUserError() {}
+
+func (RecursiveTransferError) Error() string {
+	return "recursive transfer of value"
+}

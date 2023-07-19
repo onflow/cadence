@@ -65,7 +65,14 @@ func NewPublicKeyValue(
 
 	publicKeyValue.ComputedFields = map[string]ComputedField{
 		sema.PublicKeyTypePublicKeyFieldName: func(interpreter *Interpreter, locationRange LocationRange) Value {
-			return publicKey.Transfer(interpreter, locationRange, atree.Address{}, false, nil)
+			return publicKey.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
 		},
 	}
 	publicKeyValue.Functions = map[string]FunctionValue{

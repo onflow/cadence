@@ -8422,7 +8422,7 @@ func TestInterpretASTMetering(t *testing.T) {
                 k()                                      // identifier, invocation
                 var l = c ? 1 : 2                        // conditional, identifier, integer x2
                 var m = d as AnyStruct                   // casting, identifier
-                var n = &d as &AnyStruct                 // reference, casting, identifier
+                var n = &d as &AnyStruct?                // reference, casting, identifier
                 var o = d!                               // force, identifier
                 var p = /public/somepath                 // path
             }

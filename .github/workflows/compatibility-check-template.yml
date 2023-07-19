@@ -113,6 +113,5 @@ jobs:
       # Check Diff
 
       - name: Check diff
-        working-directory: ./tools/compatibility-check
         run: |
-          go run ./cmd/check_diff/main.go ../../tmp/output-old.txt ../../tmp/output-new.txt
+          diff -u --color ./tmp/output-old.txt ./tmp/output-new.txt

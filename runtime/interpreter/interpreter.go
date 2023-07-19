@@ -423,12 +423,15 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	if argumentCount != parameterCount {
 
-		// if the function has defined optional parameters,
-		// then the provided arguments must be equal to or greater than
-		// the number of required parameters.
-		if functionType.RequiredArgumentCount == nil ||
-			argumentCount < *functionType.RequiredArgumentCount {
+		if argumentCount < functionType.Arity.MinCount(parameterCount) {
+			return nil, ArgumentCountError{
+				ParameterCount: parameterCount,
+				ArgumentCount:  argumentCount,
+			}
+		}
 
+		maxCount := functionType.Arity.MaxCount(parameterCount)
+		if maxCount != nil && argumentCount > *maxCount {
 			return nil, ArgumentCountError{
 				ParameterCount: parameterCount,
 				ArgumentCount:  argumentCount,
@@ -1755,6 +1758,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		locationRange,
 		atree.Address{},
 		false,
+		nil,
 		nil,
 	)
 
@@ -4160,6 +4164,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				atree.Address(address),
 				true,
 				nil,
+				nil,
 			)
 
 			// Write new value
@@ -4282,6 +4287,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				locationRange,
 				atree.Address{},
 				false,
+				nil,
 				nil,
 			)
 

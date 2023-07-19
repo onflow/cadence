@@ -3982,11 +3982,10 @@ func TestCheckInvalidResourceDictionaryKeysForeach(t *testing.T) {
         }
     `)
 
-	errs := RequireCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 	assert.IsType(t, &sema.InvalidResourceDictionaryMemberError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 func TestCheckInvalidResourceLossAfterMoveThroughDictionaryIndexing(t *testing.T) {
@@ -9446,4 +9445,60 @@ func TestCheckConditionalResourceCreationAndReturn(t *testing.T) {
     `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckResourceWithFunction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without return statement", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          fun test() {
+              let x: @AnyResource? <- nil
+
+              fun () {}
+
+              destroy x
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("with return statement", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          fun test() {
+              let x: @AnyResource? <- nil
+
+              fun (): Bool {
+                  return true
+              }
+
+              destroy x
+          }
+        `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          let x: @AnyResource? <- nil
+
+          fun () {
+              destroy x
+          }
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }

@@ -25,7 +25,7 @@ var AuthAccountTypeLinkAccountFunctionTypePathParameterTypeAnnotation = AuthAcco
 var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
 
 func init() {
-	AuthAccountContractsTypeAddFunctionType.RequiredArgumentCount = RequiredArgumentCount(2)
+	AuthAccountContractsTypeAddFunctionType.Arity = &Arity{Min: 2}
 	AuthAccountTypeGetCapabilityFunctionTypeParameterT.Optional = true
 	PublicAccountTypeGetCapabilityFunctionTypeParameterT.Optional = true
 }
