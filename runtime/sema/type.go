@@ -913,9 +913,10 @@ const numericTypeSaturatingDivideFunctionDocString = `
 self / other, saturating at the numeric bounds instead of overflowing.
 `
 
-func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
+var SaturatingArithmeticTypeFunctionTypes = map[Type]*FunctionType{}
 
-	arithmeticFunctionType := &FunctionType{
+func registerSaturatingArithmeticType(t Type) {
+	SaturatingArithmeticTypeFunctionTypes[t] = &FunctionType{
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -925,13 +926,21 @@ func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[st
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(t),
 	}
+}
+
+func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
 
 	addArithmeticFunction := func(name string, docString string) {
 		members[name] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
-					memoryGauge, t, name, arithmeticFunctionType, docString)
+					memoryGauge,
+					t,
+					name,
+					SaturatingArithmeticTypeFunctionTypes[t],
+					docString,
+				)
 			},
 		}
 	}
@@ -965,20 +974,24 @@ func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[st
 	}
 }
 
+type SaturatingArithmeticSupport struct {
+	Add      bool
+	Subtract bool
+	Multiply bool
+	Divide   bool
+}
+
 // NumericType represent all the types in the integer range
 // and non-fractional ranged types.
 type NumericType struct {
-	minInt                     *big.Int
-	maxInt                     *big.Int
-	memberResolvers            map[string]MemberResolver
-	name                       string
-	tag                        TypeTag
-	memberResolversOnce        sync.Once
-	supportsSaturatingAdd      bool
-	supportsSaturatingSubtract bool
-	supportsSaturatingMultiply bool
-	supportsSaturatingDivide   bool
-	isSuperType                bool
+	minInt               *big.Int
+	maxInt               *big.Int
+	memberResolvers      map[string]MemberResolver
+	name                 string
+	tag                  TypeTag
+	memberResolversOnce  sync.Once
+	saturatingArithmetic SaturatingArithmeticSupport
+	isSuperType          bool
 }
 
 var _ Type = &NumericType{}
@@ -1004,40 +1017,28 @@ func (t *NumericType) WithIntRange(min *big.Int, max *big.Int) *NumericType {
 	return t
 }
 
-func (t *NumericType) WithSaturatingAdd() *NumericType {
-	t.supportsSaturatingAdd = true
-	return t
-}
+func (t *NumericType) WithSaturatingFunctions(saturatingArithmetic SaturatingArithmeticSupport) *NumericType {
+	t.saturatingArithmetic = saturatingArithmetic
 
-func (t *NumericType) WithSaturatingSubtract() *NumericType {
-	t.supportsSaturatingSubtract = true
-	return t
-}
+	registerSaturatingArithmeticType(t)
 
-func (t *NumericType) WithSaturatingMultiply() *NumericType {
-	t.supportsSaturatingMultiply = true
-	return t
-}
-
-func (t *NumericType) WithSaturatingDivide() *NumericType {
-	t.supportsSaturatingDivide = true
 	return t
 }
 
 func (t *NumericType) SupportsSaturatingAdd() bool {
-	return t.supportsSaturatingAdd
+	return t.saturatingArithmetic.Add
 }
 
 func (t *NumericType) SupportsSaturatingSubtract() bool {
-	return t.supportsSaturatingSubtract
+	return t.saturatingArithmetic.Subtract
 }
 
 func (t *NumericType) SupportsSaturatingMultiply() bool {
-	return t.supportsSaturatingMultiply
+	return t.saturatingArithmetic.Multiply
 }
 
 func (t *NumericType) SupportsSaturatingDivide() bool {
-	return t.supportsSaturatingDivide
+	return t.saturatingArithmetic.Divide
 }
 
 func (*NumericType) IsType() {}
@@ -1143,20 +1144,17 @@ func (t *NumericType) IsSuperType() bool {
 
 // FixedPointNumericType represents all the types in the fixed-point range.
 type FixedPointNumericType struct {
-	maxFractional              *big.Int
-	minFractional              *big.Int
-	memberResolvers            map[string]MemberResolver
-	minInt                     *big.Int
-	maxInt                     *big.Int
-	name                       string
-	tag                        TypeTag
-	scale                      uint
-	memberResolversOnce        sync.Once
-	supportsSaturatingAdd      bool
-	supportsSaturatingDivide   bool
-	supportsSaturatingMultiply bool
-	supportsSaturatingSubtract bool
-	isSuperType                bool
+	maxFractional        *big.Int
+	minFractional        *big.Int
+	memberResolvers      map[string]MemberResolver
+	minInt               *big.Int
+	maxInt               *big.Int
+	name                 string
+	tag                  TypeTag
+	scale                uint
+	memberResolversOnce  sync.Once
+	saturatingArithmetic SaturatingArithmeticSupport
+	isSuperType          bool
 }
 
 var _ Type = &FixedPointNumericType{}
@@ -1200,40 +1198,28 @@ func (t *FixedPointNumericType) WithScale(scale uint) *FixedPointNumericType {
 	return t
 }
 
-func (t *FixedPointNumericType) WithSaturatingAdd() *FixedPointNumericType {
-	t.supportsSaturatingAdd = true
-	return t
-}
+func (t *FixedPointNumericType) WithSaturatingFunctions(saturatingArithmetic SaturatingArithmeticSupport) *FixedPointNumericType {
+	t.saturatingArithmetic = saturatingArithmetic
 
-func (t *FixedPointNumericType) WithSaturatingSubtract() *FixedPointNumericType {
-	t.supportsSaturatingSubtract = true
-	return t
-}
+	registerSaturatingArithmeticType(t)
 
-func (t *FixedPointNumericType) WithSaturatingMultiply() *FixedPointNumericType {
-	t.supportsSaturatingMultiply = true
-	return t
-}
-
-func (t *FixedPointNumericType) WithSaturatingDivide() *FixedPointNumericType {
-	t.supportsSaturatingDivide = true
 	return t
 }
 
 func (t *FixedPointNumericType) SupportsSaturatingAdd() bool {
-	return t.supportsSaturatingAdd
+	return t.saturatingArithmetic.Add
 }
 
 func (t *FixedPointNumericType) SupportsSaturatingSubtract() bool {
-	return t.supportsSaturatingSubtract
+	return t.saturatingArithmetic.Subtract
 }
 
 func (t *FixedPointNumericType) SupportsSaturatingMultiply() bool {
-	return t.supportsSaturatingMultiply
+	return t.saturatingArithmetic.Multiply
 }
 
 func (t *FixedPointNumericType) SupportsSaturatingDivide() bool {
-	return t.supportsSaturatingDivide
+	return t.saturatingArithmetic.Divide
 }
 
 func (*FixedPointNumericType) IsType() {}
@@ -1381,115 +1367,141 @@ var (
 	Int8Type = NewNumericType(Int8TypeName).
 			WithTag(Int8TypeTag).
 			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply().
-			WithSaturatingDivide()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+			Divide:   true,
+		})
 
 	// Int16Type represents the 16-bit signed integer type `Int16`
 	Int16Type = NewNumericType(Int16TypeName).
 			WithTag(Int16TypeTag).
 			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply().
-			WithSaturatingDivide()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+			Divide:   true,
+		})
 
 	// Int32Type represents the 32-bit signed integer type `Int32`
 	Int32Type = NewNumericType(Int32TypeName).
 			WithTag(Int32TypeTag).
 			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply().
-			WithSaturatingDivide()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+			Divide:   true,
+		})
 
 	// Int64Type represents the 64-bit signed integer type `Int64`
 	Int64Type = NewNumericType(Int64TypeName).
 			WithTag(Int64TypeTag).
 			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply().
-			WithSaturatingDivide()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+			Divide:   true,
+		})
 
 	// Int128Type represents the 128-bit signed integer type `Int128`
 	Int128Type = NewNumericType(Int128TypeName).
 			WithTag(Int128TypeTag).
 			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply().
-			WithSaturatingDivide()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+			Divide:   true,
+		})
 
 	// Int256Type represents the 256-bit signed integer type `Int256`
 	Int256Type = NewNumericType(Int256TypeName).
 			WithTag(Int256TypeTag).
 			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply().
-			WithSaturatingDivide()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+			Divide:   true,
+		})
 
 	// UIntType represents the arbitrary-precision unsigned integer type `UInt`
 	UIntType = NewNumericType(UIntTypeName).
 			WithTag(UIntTypeTag).
 			WithIntRange(UIntTypeMin, nil).
-			WithSaturatingSubtract()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Subtract: true,
+		})
 
 	// UInt8Type represents the 8-bit unsigned integer type `UInt8`
 	// which checks for overflow and underflow
 	UInt8Type = NewNumericType(UInt8TypeName).
 			WithTag(UInt8TypeTag).
 			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+		})
 
 	// UInt16Type represents the 16-bit unsigned integer type `UInt16`
 	// which checks for overflow and underflow
 	UInt16Type = NewNumericType(UInt16TypeName).
 			WithTag(UInt16TypeTag).
 			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+		})
 
 	// UInt32Type represents the 32-bit unsigned integer type `UInt32`
 	// which checks for overflow and underflow
 	UInt32Type = NewNumericType(UInt32TypeName).
 			WithTag(UInt32TypeTag).
 			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+		})
 
 	// UInt64Type represents the 64-bit unsigned integer type `UInt64`
 	// which checks for overflow and underflow
 	UInt64Type = NewNumericType(UInt64TypeName).
 			WithTag(UInt64TypeTag).
 			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+		})
 
 	// UInt128Type represents the 128-bit unsigned integer type `UInt128`
 	// which checks for overflow and underflow
 	UInt128Type = NewNumericType(UInt128TypeName).
 			WithTag(UInt128TypeTag).
 			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+		})
 
 	// UInt256Type represents the 256-bit unsigned integer type `UInt256`
 	// which checks for overflow and underflow
 	UInt256Type = NewNumericType(UInt256TypeName).
 			WithTag(UInt256TypeTag).
 			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+		})
 
 	// Word8Type represents the 8-bit unsigned integer type `Word8`
 	// which does NOT check for overflow and underflow
@@ -1544,10 +1556,12 @@ var (
 			WithIntRange(Fix64TypeMinIntBig, Fix64TypeMaxIntBig).
 			WithFractionalRange(Fix64TypeMinFractionalBig, Fix64TypeMaxFractionalBig).
 			WithScale(Fix64Scale).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply().
-			WithSaturatingDivide()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+			Divide:   true,
+		})
 
 	// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 	// which has a scale of 1E9, and checks for overflow and underflow
@@ -1556,9 +1570,11 @@ var (
 			WithIntRange(UFix64TypeMinIntBig, UFix64TypeMaxIntBig).
 			WithFractionalRange(UFix64TypeMinFractionalBig, UFix64TypeMaxFractionalBig).
 			WithScale(Fix64Scale).
-			WithSaturatingAdd().
-			WithSaturatingSubtract().
-			WithSaturatingMultiply()
+			WithSaturatingFunctions(SaturatingArithmeticSupport{
+			Add:      true,
+			Subtract: true,
+			Multiply: true,
+		})
 )
 
 // Numeric type ranges
@@ -1772,6 +1788,13 @@ It does not modify the original array.
 If either of the parameters are out of the bounds of the array, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail.
 `
 
+const ArrayTypeReverseFunctionName = "reverse"
+
+const arrayTypeReverseFunctionDocString = `
+Returns a new array with contents in the reversed order.
+Available if the array element type is not resource-kinded.
+`
+
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
@@ -1862,6 +1885,31 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					ArrayFirstIndexFunctionType(elementType),
 					arrayTypeFirstIndexFunctionDocString,
+				)
+			},
+		},
+		ArrayTypeReverseFunctionName: {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+				elementType := arrayType.ElementType(false)
+
+				// It is impossible for a resource to be present in two arrays.
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayReverseFunctionType(arrayType),
+					arrayTypeReverseFunctionDocString,
 				)
 			},
 		},
@@ -2174,6 +2222,13 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 		ReturnTypeAnnotation: NewTypeAnnotation(&VariableSizedType{
 			Type: elementType,
 		}),
+	}
+}
+
+func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
+	return &FunctionType{
+		Parameters:           []Parameter{},
+		ReturnTypeAnnotation: NewTypeAnnotation(arrayType),
 	}
 }
 
@@ -2639,10 +2694,38 @@ func formatFunctionType(
 	return builder.String()
 }
 
+// Arity
+
+type Arity struct {
+	Min int
+	Max int
+}
+
+func (arity *Arity) MinCount(parameterCount int) int {
+	minCount := parameterCount
+	if arity != nil {
+		minCount = arity.Min
+	}
+
+	return minCount
+}
+
+func (arity *Arity) MaxCount(parameterCount int) *int {
+	maxCount := parameterCount
+	if arity != nil {
+		if arity.Max < parameterCount {
+			return nil
+		}
+		maxCount = arity.Max
+	}
+
+	return &maxCount
+}
+
 // FunctionType
 type FunctionType struct {
 	ReturnTypeAnnotation     TypeAnnotation
-	RequiredArgumentCount    *int
+	Arity                    *Arity
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
@@ -2653,10 +2736,6 @@ type FunctionType struct {
 }
 
 var _ Type = &FunctionType{}
-
-func RequiredArgumentCount(count int) *int {
-	return &count
-}
 
 func (*FunctionType) IsType() {}
 
@@ -2978,10 +3057,10 @@ func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
 		}
 
 		return &FunctionType{
-			TypeParameters:        rewrittenTypeParameters,
-			Parameters:            rewrittenParameters,
-			ReturnTypeAnnotation:  NewTypeAnnotation(rewrittenReturnType),
-			RequiredArgumentCount: t.RequiredArgumentCount,
+			TypeParameters:       rewrittenTypeParameters,
+			Parameters:           rewrittenParameters,
+			ReturnTypeAnnotation: NewTypeAnnotation(rewrittenReturnType),
+			Arity:                t.Arity,
 		}, true
 	} else {
 		return t, false
@@ -3090,9 +3169,9 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 	}
 
 	return &FunctionType{
-		Parameters:            newParameters,
-		ReturnTypeAnnotation:  NewTypeAnnotation(newReturnType),
-		RequiredArgumentCount: t.RequiredArgumentCount,
+		Parameters:           newParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(newReturnType),
+		Arity:                t.Arity,
 	}
 
 }
@@ -3124,37 +3203,37 @@ var BaseTypeActivation = NewVariableActivation(nil)
 
 func init() {
 
-	types := AllNumberTypes[:]
-
-	types = append(
-		types,
-		MetaType,
-		VoidType,
-		AnyStructType,
-		AnyStructAttachmentType,
-		AnyResourceType,
-		AnyResourceAttachmentType,
-		NeverType,
-		BoolType,
-		CharacterType,
-		StringType,
-		TheAddressType,
-		AuthAccountType,
-		PublicAccountType,
-		PathType,
-		StoragePathType,
-		CapabilityPathType,
-		PrivatePathType,
-		PublicPathType,
-		&CapabilityType{},
-		DeployedContractType,
-		BlockType,
-		AccountKeyType,
-		PublicKeyType,
-		SignatureAlgorithmType,
-		HashAlgorithmType,
-		StorageCapabilityControllerType,
-		AccountCapabilityControllerType,
+	types := common.Concat(
+		AllNumberTypes,
+		[]Type{
+			MetaType,
+			VoidType,
+			AnyStructType,
+			AnyStructAttachmentType,
+			AnyResourceType,
+			AnyResourceAttachmentType,
+			NeverType,
+			BoolType,
+			CharacterType,
+			StringType,
+			TheAddressType,
+			AuthAccountType,
+			PublicAccountType,
+			PathType,
+			StoragePathType,
+			CapabilityPathType,
+			PrivatePathType,
+			PublicPathType,
+			&CapabilityType{},
+			DeployedContractType,
+			BlockType,
+			AccountKeyType,
+			PublicKeyType,
+			SignatureAlgorithmType,
+			HashAlgorithmType,
+			StorageCapabilityControllerType,
+			AccountCapabilityControllerType,
+		},
 	)
 
 	for _, ty := range types {
@@ -3202,13 +3281,13 @@ var AllUnsignedFixedPointTypes = []Type{
 	UFix64Type,
 }
 
-var AllFixedPointTypes = append(
-	append(
-		AllUnsignedFixedPointTypes[:],
-		AllSignedFixedPointTypes...,
-	),
-	FixedPointType,
-	SignedFixedPointType,
+var AllFixedPointTypes = common.Concat(
+	AllUnsignedFixedPointTypes,
+	AllSignedFixedPointTypes,
+	[]Type{
+		FixedPointType,
+		SignedFixedPointType,
+	},
 )
 
 var AllSignedIntegerTypes = []Type{
@@ -3239,22 +3318,22 @@ var AllUnsignedIntegerTypes = []Type{
 	Word256Type,
 }
 
-var AllIntegerTypes = append(
-	append(
-		AllUnsignedIntegerTypes[:],
-		AllSignedIntegerTypes...,
-	),
-	IntegerType,
-	SignedIntegerType,
+var AllIntegerTypes = common.Concat(
+	AllUnsignedIntegerTypes,
+	AllSignedIntegerTypes,
+	[]Type{
+		IntegerType,
+		SignedIntegerType,
+	},
 )
 
-var AllNumberTypes = append(
-	append(
-		AllIntegerTypes[:],
-		AllFixedPointTypes...,
-	),
-	NumberType,
-	SignedNumberType,
+var AllNumberTypes = common.Concat(
+	AllIntegerTypes,
+	AllFixedPointTypes,
+	[]Type{
+		NumberType,
+		SignedNumberType,
+	},
 )
 
 const NumberTypeMinFieldName = "min"
@@ -3792,6 +3871,15 @@ func (t *CompositeType) QualifiedIdentifier() string {
 func (t *CompositeType) ID() TypeID {
 	t.initializeIdentifiers()
 	return t.cachedIdentifiers.TypeID
+}
+
+// clearCachedIdentifiers clears cachedIdentifiers.
+// This function currently is only used in tests.
+func (t *CompositeType) clearCachedIdentifiers() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	t.cachedIdentifiers = nil
 }
 
 func (t *CompositeType) initializeIdentifiers() {
@@ -4380,6 +4468,15 @@ func (t *InterfaceType) checkIdentifiersCached() {
 	if t.NestedTypes != nil {
 		t.NestedTypes.Foreach(checkIdentifiersCached)
 	}
+}
+
+// clearCachedIdentifiers clears cachedIdentifiers.
+// This function currently is only used in tests.
+func (t *InterfaceType) clearCachedIdentifiers() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	t.cachedIdentifiers = nil
 }
 
 func (t *InterfaceType) GetCompositeKind() common.CompositeKind {

@@ -1,84 +1,97 @@
 import Test
 
-pub var blockchain = Test.newEmulatorBlockchain()
-pub var account = blockchain.createAccount()
+access(all) let blockchain = Test.newEmulatorBlockchain()
+access(all) let account = blockchain.createAccount()
 
-pub fun setup() {
+access(all)
+fun setup() {
     blockchain.useConfiguration(Test.Configuration({
         "Crypto": account.address
     }))
 
-    var crypto = Test.readFile("crypto.cdc")
-    var err = blockchain.deployContract(
+    let crypto = Test.readFile("crypto.cdc")
+    let err = blockchain.deployContract(
         name: "Crypto",
         code: crypto,
         account: account,
         arguments: []
     )
 
-    Test.assert(err == nil)
+    Test.expect(err, Test.beNil())
 }
 
-pub fun testCryptoHash() {
+access(all)
+fun testCryptoHash() {
     let returnedValue = executeScript("./scripts/crypto_hash.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testCryptoHashWithTag() {
+access(all)
+fun testCryptoHashWithTag() {
     let returnedValue = executeScript("./scripts/crypto_hash_with_tag.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testAddKeyToKeyList() {
+access(all)
+fun testAddKeyToKeyList() {
     let returnedValue = executeScript("./scripts/crypto_key_list_add.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testGetKeyFromList() {
+access(all)
+fun testGetKeyFromList() {
     let returnedValue = executeScript("./scripts/crypto_get_key_from_list.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testRevokeKeyFromList() {
+access(all)
+fun testRevokeKeyFromList() {
     let returnedValue = executeScript("./scripts/crypto_revoke_key_from_list.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testKeyListVerify() {
+access(all)
+fun testKeyListVerify() {
     let returnedValue = executeScript("./scripts/crypto_key_list_verify.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testKeyListVerifyInsufficientWeights() {
+access(all)
+fun testKeyListVerifyInsufficientWeights() {
     let returnedValue = executeScript("./scripts/crypto_key_list_verify_insufficient_weights.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testKeyListVerifyWithRevokedKey() {
+access(all)
+fun testKeyListVerifyWithRevokedKey() {
     let returnedValue = executeScript("./scripts/crypto_key_list_verify_revoked.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testKeyListVerifyWithMissingSignature() {
+access(all)
+fun testKeyListVerifyWithMissingSignature() {
     let returnedValue = executeScript("./scripts/crypto_key_list_verify_missing_signature.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testKeyListVerifyDuplicateSignature() {
+access(all)
+fun testKeyListVerifyDuplicateSignature() {
     let returnedValue = executeScript("./scripts/crypto_key_list_verify_duplicate_signature.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-pub fun testKeyListVerifyInvalidSignature() {
+access(all)
+fun testKeyListVerifyInvalidSignature() {
     let returnedValue = executeScript("./scripts/crypto_key_list_verify_invalid_signature.cdc")
-    Test.assert(returnedValue, message: "found: false")
+    Test.assertEqual(true, returnedValue)
 }
 
-priv fun executeScript(_ scriptPath: String): Bool {
-    var script = Test.readFile(scriptPath)
-    let value = blockchain.executeScript(script, [])
+access(self)
+fun executeScript(_ scriptPath: String): Bool {
+    let script = Test.readFile(scriptPath)
+    let scriptResult = blockchain.executeScript(script, [])
 
-    Test.assert(value.status == Test.ResultStatus.succeeded)
+    Test.expect(scriptResult, Test.beSucceeded())
 
-    return value.returnValue! as! Bool
+    return scriptResult.returnValue! as! Bool
 }

@@ -1155,6 +1155,12 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
+	// There are four potential cases:
+	// 1) Target type is optional, actual value is also optional (nil/SomeValue)
+	// 2) Target type is optional, actual value is non-optional
+	// 3) Target type is non-optional, actual value is optional (SomeValue)
+	// 4) Target type is non-optional, actual value is non-optional
+
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
 		innerBorrowType, ok := typ.Type.(*sema.ReferenceType)
@@ -1165,6 +1171,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 		switch result := result.(type) {
 		case *SomeValue:
+			// Case (1):
 			// References to optionals are transformed into optional references,
 			// so move the *SomeValue out to the reference itself
 
@@ -1190,6 +1197,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			return Nil
 
 		default:
+			// Case (2):
 			// If the referenced value is non-optional,
 			// but the target type is optional,
 			// then box the reference properly
@@ -1212,8 +1220,21 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		}
 
 	case *sema.ReferenceType:
+		// Case (3): target type is non-optional, actual value is optional.
+		// Unwrap the optional and add it to reference tracking.
+		if someValue, ok := result.(*SomeValue); ok {
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: referenceExpression.Expression,
+			}
+			innerValue := someValue.InnerValue(interpreter, locationRange)
+			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
+		}
+
+		// Case (4): target type is non-optional, actual value is also non-optional
 		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
 	}
+
 	panic(errors.NewUnreachableError())
 }
 
@@ -1309,6 +1330,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		locationRange,
 		atree.Address{},
 		false,
+		nil,
 		nil,
 	).(*CompositeValue)
 

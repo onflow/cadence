@@ -26,12 +26,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var allIntegerTypesAndAddressType = append(
-	sema.AllIntegerTypes[:],
-	sema.TheAddressType,
+var allIntegerTypesAndAddressType = common.Concat(
+	sema.AllIntegerTypes,
+	[]sema.Type{
+		sema.TheAddressType,
+	},
 )
 
 func TestCheckIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T) {
@@ -472,7 +475,7 @@ func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
 
 			errs := RequireCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+			assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 
 		})
 	}
