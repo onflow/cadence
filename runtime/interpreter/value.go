@@ -2919,7 +2919,7 @@ func (v *ArrayValue) Reverse(
 	locationRange LocationRange,
 ) Value {
 	count := v.Count()
-	idx := count - 1
+	index := count - 1
 
 	return NewArrayValueWithIterator(
 		interpreter,
