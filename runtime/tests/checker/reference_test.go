@@ -1370,57 +1370,6 @@ func TestCheckArrayAccessReference(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("valid", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-
-          contract interface CI {
-              struct S {}
-          }
-
-          contract C: CI {
-              struct S {}
-          }
-
-          let s = C.S()
-
-          let refS: &CI.S = &s as &C.S
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("invalid", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-
-          contract interface CI {
-              struct S {}
-          }
-
-          contract C {
-              struct S {}
-          }
-
-          let s = C.S()
-
-          let refS: &CI.S = &s as &C.S
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	})
-}
-
 func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 	t.Parallel()

@@ -196,7 +196,7 @@ type CompositeTypeCode struct {
 type FunctionWrapper = func(inner FunctionValue) FunctionValue
 
 // WrapperCode contains the "prepared" / "callable" "code"
-// for inherited types (interfaces and type requirements).
+// for inherited types.
 //
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
@@ -208,11 +208,10 @@ type WrapperCode struct {
 }
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
-// of all composite types, interface types, and type requirements.
+// of all composite types and interface types.
 type TypeCodes struct {
-	CompositeCodes       map[sema.TypeID]CompositeTypeCode
-	InterfaceCodes       map[sema.TypeID]WrapperCode
-	TypeRequirementCodes map[sema.TypeID]WrapperCode
+	CompositeCodes map[sema.TypeID]CompositeTypeCode
+	InterfaceCodes map[sema.TypeID]WrapperCode
 }
 
 func (c TypeCodes) Merge(codes TypeCodes) {
@@ -226,10 +225,6 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 
 	for typeID, code := range codes.InterfaceCodes { //nolint:maprange
 		c.InterfaceCodes[typeID] = code
-	}
-
-	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprange
-		c.TypeRequirementCodes[typeID] = code
 	}
 }
 
@@ -1191,24 +1186,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	}
 
-	// NOTE: First the conditions of the type requirements are evaluated,
-	//  then the conditions of this composite's conformances
-	//
-	// Because the conditions are wrappers, they have to be applied
-	// in reverse order: first the conformances, then the type requirements;
-	// each conformances and type requirements in reverse order as well.
-
 	conformances := compositeType.EffectiveInterfaceConformances()
 	for i := len(conformances) - 1; i >= 0; i-- {
 		conformance := conformances[i].InterfaceType
 		wrapFunctions(interpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
-	}
-
-	typeRequirements := compositeType.TypeRequirements()
-
-	for i := len(typeRequirements) - 1; i >= 0; i-- {
-		typeRequirement := typeRequirements[i]
-		wrapFunctions(interpreter.SharedState.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
 	interpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
@@ -2253,7 +2234,8 @@ func (interpreter *Interpreter) declareInterface(
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
 				interpreter.declareNonEnumCompositeValue(nestedCompositeDeclaration, lexicalScope)
 			} else {
-				interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
+				// this should be statically prevented in the checker
+				panic(errors.NewUnreachableError())
 			}
 		}
 	})()
@@ -2271,46 +2253,6 @@ func (interpreter *Interpreter) declareInterface(
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.SharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
-		InitializerFunctionWrapper: initializerFunctionWrapper,
-		DestructorFunctionWrapper:  destructorFunctionWrapper,
-		FunctionWrappers:           functionWrappers,
-		Functions:                  defaultFunctions,
-	}
-}
-
-func (interpreter *Interpreter) declareTypeRequirement(
-	declaration *ast.CompositeDeclaration,
-	lexicalScope *VariableActivation,
-) {
-	// Evaluate nested declarations in a new scope, so values
-	// of nested declarations won't be visible after the containing declaration
-
-	(func() {
-		interpreter.activations.PushNewWithCurrent()
-		defer interpreter.activations.Pop()
-
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
-			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
-		}
-
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
-		}
-	})()
-
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
-	typeID := compositeType.ID()
-
-	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(
-		declaration.Members,
-		compositeType.ConstructorParameters,
-		lexicalScope,
-	)
-	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
-	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
-	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
-
-	interpreter.SharedState.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,

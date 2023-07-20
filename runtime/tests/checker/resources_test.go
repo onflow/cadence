@@ -4680,29 +4680,6 @@ func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
-
-	t.Run("contract interface resource to contract to resource", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-          contract interface CI {
-              resource R {}
-          }
-
-          contract C: CI {
-              resource R {}
-          }
-
-          fun test(r: @CI.R) {
-              if let r2 <- r as? @C.R {
-                  destroy r2
-              }
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-	})
 }
 
 func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {

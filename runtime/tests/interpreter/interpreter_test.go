@@ -10765,41 +10765,4 @@ func TestInterpretConditionsWrapperFunctionType(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
-
-	t.Run("type requirement", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, err := parseCheckAndInterpretWithOptions(t,
-			`
-              contract interface CI {
-                  struct S {
-                      fun test(x: Int) {
-                          pre { true }
-                      }
-                  }
-              }
-
-              contract C: CI {
-                  struct S {
-                      fun test(x: Int) {}
-                  }
-              }
-
-              fun test(): fun (Int): Void {
-                  let s = C.S()
-                  return s.test
-              }
-            `,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				},
-			},
-		)
-		require.NoError(t, err)
-
-		_, err = inter.Invoke("test")
-		require.NoError(t, err)
-	})
 }

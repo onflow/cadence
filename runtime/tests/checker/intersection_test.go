@@ -264,36 +264,6 @@ func TestCheckIntersectionType(t *testing.T) {
 
 		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
-
-	t.Run("intersection type requirement", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-	      contract interface CI {
-	          resource interface RI {}
-
-	          resource R: RI {}
-
-	          fun createR(): @R
-	      }
-
-          contract C: CI {
-	          resource R: CI.RI {}
-
-	          fun createR(): @R {
-	              return <- create R()
-	          }
-	      }
-
-          fun test() {
-              let r <- C.createR()
-              let r2: @{CI.RI} <- r
-              destroy r2
-          }
-        `)
-		require.NoError(t, err)
-	})
 }
 
 func TestCheckIntersectionTypeMemberAccess(t *testing.T) {

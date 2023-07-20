@@ -1441,16 +1441,15 @@ type InitializerMismatch struct {
 	InterfaceParameters []Parameter
 }
 type ConformanceError struct {
-	CompositeDeclaration           ast.CompositeLikeDeclaration
-	CompositeType                  *CompositeType
-	InterfaceType                  *InterfaceType
-	NestedInterfaceType            *InterfaceType
-	InitializerMismatch            *InitializerMismatch
-	MissingMembers                 []*Member
-	MemberMismatches               []MemberMismatch
-	MissingNestedCompositeTypes    []*CompositeType
-	Pos                            ast.Position
-	InterfaceTypeIsTypeRequirement bool
+	CompositeDeclaration        ast.CompositeLikeDeclaration
+	CompositeType               *CompositeType
+	InterfaceType               *InterfaceType
+	NestedInterfaceType         *InterfaceType
+	InitializerMismatch         *InitializerMismatch
+	MissingMembers              []*Member
+	MemberMismatches            []MemberMismatch
+	MissingNestedCompositeTypes []*CompositeType
+	Pos                         ast.Position
 }
 
 var _ SemanticError = &ConformanceError{}
@@ -1462,19 +1461,11 @@ func (*ConformanceError) isSemanticError() {}
 func (*ConformanceError) IsUserError() {}
 
 func (e *ConformanceError) Error() string {
-	var interfaceDescription string
-	if e.InterfaceTypeIsTypeRequirement {
-		interfaceDescription = "type requirement"
-	} else {
-		interfaceDescription = "interface"
-	}
-
 	return fmt.Sprintf(
-		"%s `%s` does not conform to %s %s `%s`",
+		"%s `%s` does not conform to %s interface `%s`",
 		e.CompositeType.Kind.Name(),
 		e.CompositeType.QualifiedString(),
 		e.InterfaceType.CompositeKind.Name(),
-		interfaceDescription,
 		e.InterfaceType.QualifiedString(),
 	)
 }
@@ -1540,14 +1531,6 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 		})
 	}
 
-	if e.NestedInterfaceType != e.InterfaceType {
-		compositeIdentifierRange := ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.DeclarationIdentifier())
-		notes = append(notes, &NestedConformanceMismatchNote{
-			nestedInterfaceType: e.NestedInterfaceType,
-			Range:               compositeIdentifierRange,
-		})
-	}
-
 	return
 }
 
@@ -1559,20 +1542,6 @@ type MemberMismatchNote struct {
 
 func (n MemberMismatchNote) Message() string {
 	return "mismatch here"
-}
-
-// NestedConformanceMismatchNote
-
-type NestedConformanceMismatchNote struct {
-	nestedInterfaceType *InterfaceType
-	ast.Range
-}
-
-func (n NestedConformanceMismatchNote) Message() string {
-	return fmt.Sprintf(
-		"does not conform to nested interface requirement `%s`",
-		n.nestedInterfaceType,
-	)
 }
 
 // DuplicateConformanceError

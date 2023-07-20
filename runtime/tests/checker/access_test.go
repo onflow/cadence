@@ -2134,38 +2134,6 @@ func TestCheckRestrictiveAccessModifier(t *testing.T) {
 
 		t.Run(access.Keyword(), func(t *testing.T) {
 
-			t.Run("type requirement", func(t *testing.T) {
-
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                          access(all) contract interface CI {
-
-                              access(all) resource R {
-
-                                  %[1]s var x: Int
-                              }
-                          }
-
-                          access(all) contract C: CI {
-
-                              access(all) resource R {
-
-                                  %[1]s var x: Int
-
-                                  init () {
-                                      self.x = 0
-                                  }
-                              }
-                          }
-                        `,
-						access.Keyword(),
-					),
-				)
-
-				require.NoError(t, err)
-			})
-
 			t.Run("interface", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
@@ -2209,26 +2177,6 @@ func TestCheckInvalidRestrictiveAccessModifier(t *testing.T) {
 		}
 
 		t.Run(access.Keyword(), func(t *testing.T) {
-
-			t.Run("type requirement", func(t *testing.T) {
-
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                          access(all) contract interface CI {
-
-                              access(all) resource R {
-
-                                  %[1]s var x: Int
-                              }
-                          }
-                        `,
-						access.Keyword(),
-					),
-				)
-
-				expectInvalidAccessModifierError(t, err)
-			})
 
 			t.Run("interface", func(t *testing.T) {
 

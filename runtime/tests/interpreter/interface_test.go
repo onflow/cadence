@@ -65,47 +65,6 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 		)
 	})
 
-	t.Run("type requirement", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, err := parseCheckAndInterpretWithOptions(t, `
-
-              contract interface IA {
-
-                  struct X {
-                      fun test(): Int {
-                          return 42
-                      }
-                  }
-              }
-
-              contract Test: IA {
-                  struct X {
-                  }
-              }
-
-              fun main(): Int {
-                  return Test.X().test()
-              }
-            `,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				},
-			},
-		)
-		require.NoError(t, err)
-
-		value, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t,
-			interpreter.NewUnmeteredIntValueFromInt64(42),
-			value,
-		)
-	})
-
 	t.Run("interface variable", func(t *testing.T) {
 
 		t.Parallel()
@@ -188,52 +147,6 @@ func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
               return Test().test()
           }
         `)
-
-		value, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t,
-			interpreter.NewUnmeteredIntValueFromInt64(42),
-			value,
-		)
-	})
-
-	t.Run("type requirement", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, err := parseCheckAndInterpretWithOptions(t,
-			`
-              contract interface IA {
-
-                  struct X {
-                      fun test(): Int {
-                          return 41
-                     }
-                  }
-              }
-
-              contract Test: IA {
-
-                  struct X {
-                      fun test(): Int {
-                          return 42
-                      }
-                  }
-              }
-
-              fun main(): Int {
-                  return Test.X().test()
-              }
-            `,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				},
-			},
-		)
-
-		require.NoError(t, err)
 
 		value, err := inter.Invoke("main")
 		require.NoError(t, err)
@@ -418,64 +331,6 @@ func TestInterpretInterfaceInheritance(t *testing.T) {
                 return d.test()
             }
         `)
-
-		value, err := inter.Invoke("main")
-		require.NoError(t, err)
-
-		assert.Equal(t,
-			interpreter.NewUnmeteredIntValueFromInt64(3),
-			value,
-		)
-	})
-
-	t.Run("type requirement", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, err := parseCheckAndInterpretWithOptions(t, `
-            contract interface A {
-                struct NestedA {
-                    access(all) fun test(): Int {
-                        return 3
-                    }
-                }
-            }
-
-            contract interface B {
-                struct NestedB {
-                    access(all) fun test(): String {
-                        return "three"
-                    }
-                }
-            }
-
-            contract interface C: A, B {}
-
-            contract D: C {
-                struct NestedA {}
-
-                struct NestedB {}
-
-                access(all) fun getNestedA(): NestedA {
-                    return NestedA()
-                }
-
-                access(all) fun getNestedB(): NestedB {
-                    return NestedB()
-                }
-            }
-
-            access(all) fun main(): Int {
-                return D.getNestedA().test()
-            }`,
-
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				},
-			},
-		)
-		require.NoError(t, err)
 
 		value, err := inter.Invoke("main")
 		require.NoError(t, err)
@@ -881,5 +736,92 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		// The post-condition of the concrete type is executed first, before the interfaces.
 		// The post-conditions of the interfaces are executed after that, with the reversed depth-first pre-order.
 		assert.Equal(t, []string{"A", "D", "F", "E", "C", "B"}, logs)
+	})
+
+	t.Run("nested resource interface unrelated", func(t *testing.T) {
+
+		t.Parallel()
+
+		logFunctionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityView,
+			[]sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.AnyStructTypeAnnotation,
+				},
+			},
+			sema.VoidTypeAnnotation,
+		)
+
+		var logs []string
+		valueDeclaration := stdlib.NewStandardLibraryFunction(
+			"log",
+			logFunctionType,
+			"",
+			func(invocation interpreter.Invocation) interpreter.Value {
+				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
+				logs = append(logs, msg)
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(valueDeclaration)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, valueDeclaration)
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            contract interface A {
+                struct interface Nested {
+                    access(all) fun test(): Int {
+                        post { print("A") }
+                    }
+                }
+            }
+
+            contract interface B: A {
+                struct interface Nested {
+                    access(all) fun test(): String {
+                        post { print("B") }
+                    }
+                }
+            }
+            
+            contract C {
+                struct Nested: B.Nested {
+                    fun test(): String {
+                        return "C"
+                    }
+                }
+            }
+
+            access(all) view fun print(_ msg: String): Bool {
+                log(msg)
+                return true
+            }
+
+            access(all) fun main() {
+                let n = C.Nested()
+                n.test()
+            }
+        `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation:       baseActivation,
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		// A.Nested and B.Nested are two distinct separate functions
+		assert.Equal(t, []string{"B"}, logs)
 	})
 }

@@ -156,21 +156,26 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
-		// Non-event composite declarations nested in interface declarations are type requirements,
-		// i.e. they should be checked like interfaces
-
+		// only event types may be declared in interfaces
 		if nestedComposite.Kind() != common.CompositeKindEvent {
-			checker.visitCompositeLikeDeclaration(nestedComposite, kind)
+			checker.report(&InvalidNestedDeclarationError{
+				NestedDeclarationKind:    nestedComposite.DeclarationKind(),
+				ContainerDeclarationKind: declaration.DeclarationKind(),
+				Range:                    declaration.Range,
+			})
 		} else {
-			// events should be checked like composites, as they are not type requirements
-			checker.visitCompositeLikeDeclaration(nestedComposite, ContainerKindComposite)
+			// events should be checked like composites
+			checker.visitCompositeLikeDeclaration(nestedComposite)
 		}
 	}
 
-	for _, nestedAttachments := range declaration.Members.Attachments() {
-		// Attachment declarations nested in interface declarations are type requirements,
-		// i.e. they should be checked like interfaces
-		checker.visitAttachmentDeclaration(nestedAttachments, kind)
+	for _, nestedAttachment := range declaration.Members.Attachments() {
+		// only event types may be declared in interfaces
+		checker.report(&InvalidNestedDeclarationError{
+			NestedDeclarationKind:    nestedAttachment.DeclarationKind(),
+			ContainerDeclarationKind: declaration.DeclarationKind(),
+			Range:                    declaration.Range,
+		})
 	}
 
 	return
@@ -446,13 +451,7 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
 				declareNestedEvent(nestedCompositeDeclaration)
-			} else {
-				checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
 			}
-		}
-
-		for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
-			checker.declareAttachmentMembersAndValue(nestedAttachmentDeclaration, ContainerKindInterface)
 		}
 	})()
 }
@@ -636,55 +635,6 @@ func (checker *Checker) checkInterfaceConformance(
 		// Add to the inherited members list, only if it's not a duplicated, to avoid redundant errors.
 		if !isDuplicate {
 			inheritedMembers[name] = conformanceMember
-		}
-	})
-
-	// Check for nested type conflicts
-
-	reportTypeConflictError := func(typeName string, typ CompositeKindedType, otherType Type) {
-		otherCompositeType, ok := otherType.(CompositeKindedType)
-		if !ok {
-			return
-		}
-
-		_, isInterface := typ.(*InterfaceType)
-		_, isOtherTypeInterface := otherCompositeType.(*InterfaceType)
-
-		checker.report(&InterfaceMemberConflictError{
-			InterfaceType:            interfaceType,
-			ConflictingInterfaceType: conformance,
-			MemberName:               typeName,
-			MemberKind:               typ.GetCompositeKind().DeclarationKind(isInterface),
-			ConflictingMemberKind:    otherCompositeType.GetCompositeKind().DeclarationKind(isOtherTypeInterface),
-			Range: ast.NewRangeFromPositioned(
-				checker.memoryGauge,
-				interfaceDeclaration.Identifier,
-			),
-		})
-	}
-
-	conformance.NestedTypes.Foreach(func(name string, typeRequirement Type) {
-		compositeType, ok := typeRequirement.(CompositeKindedType)
-		if !ok {
-			return
-		}
-
-		// Check if the type definitions coming from other conformances have conflicts.
-		if inheritedType, ok := inheritedNestedTypes[name]; ok {
-			inheritedCompositeType, ok := inheritedType.(CompositeKindedType)
-			if !ok {
-				return
-			}
-
-			reportTypeConflictError(name, compositeType, inheritedCompositeType)
-		}
-
-		inheritedNestedTypes[name] = typeRequirement
-
-		// Check if the type definitions coming from the current declaration have conflicts.
-		nestedType, ok := interfaceType.NestedTypes.Get(name)
-		if ok {
-			reportTypeConflictError(name, compositeType, nestedType)
 		}
 	})
 }
