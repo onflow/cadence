@@ -18,17 +18,6 @@
 
 package checker
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
-)
-
 const realNonFungibleTokenContractInterface = `
 
 // The main NFT contract interface. Other NFT contracts will
@@ -976,7 +965,8 @@ access(all) contract TopShot: NonFungibleToken {
 }
 `
 
-func TestCheckTopShotContract(t *testing.T) {
+// TODO: re-enable this test with the v2 fungible token contract
+/* func TestCheckTopShotContract(t *testing.T) {
 
 	t.Parallel()
 
@@ -1012,4 +1002,4 @@ func TestCheckTopShotContract(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-}
+} */

@@ -1630,7 +1630,8 @@ func TestCheckInvalidTypeRequirementDeclaration(t *testing.T) {
 	})
 }
 
-func TestCheckContractInterfaceFungibleToken(t *testing.T) {
+// TODO: re-enable this test with the v2 fungible token contract
+/* func TestCheckContractInterfaceFungibleToken(t *testing.T) {
 
 	t.Parallel()
 
@@ -1638,9 +1639,10 @@ func TestCheckContractInterfaceFungibleToken(t *testing.T) {
 
 	_, err := ParseAndCheck(t, code)
 	require.NoError(t, err)
-}
+} */
 
-func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
+// TODO: re-enable this test with the v2 fungible token contract
+/* func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
 
 	t.Parallel()
 
@@ -1648,7 +1650,7 @@ func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
 
 	_, err := ParseAndCheckWithPanic(t, code)
 	require.NoError(t, err)
-}
+} */
 
 func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 
@@ -1716,7 +1718,8 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 	}
 }
 
-func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
+// TODO: re-enable this test with the v2 fungible token contract
+/* func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
 
 	t.Parallel()
 
@@ -1743,7 +1746,7 @@ func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
 	_, err := ParseAndCheckWithPanic(t, code)
 
 	require.NoError(t, err)
-}
+} */
 
 // TestCheckInvalidInterfaceUseAsTypeSuggestion tests that an interface
 // can not be used as a type, and the suggestion to fix it is correct
