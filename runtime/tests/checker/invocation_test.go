@@ -47,7 +47,7 @@ func TestCheckInvalidFunctionCallWithTooFewArguments(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+	assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 }
 
 func TestCheckFunctionCallWithArgumentLabel(t *testing.T) {
@@ -175,8 +175,7 @@ func TestCheckInvalidFunctionCallWithTooManyArguments(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
-
+	assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
 	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
 }
 
@@ -320,11 +319,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 		"foo",
 		&sema.FunctionType{
 			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-			RequiredArgumentCount: func() *int {
-				// NOTE: important to check *all* arguments are optional
-				var count = 0
-				return &count
-			}(),
+			Arity:                &sema.Arity{Max: -1},
 		},
 		"",
 		nil,

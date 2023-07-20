@@ -791,9 +791,9 @@ func TestParseArgumentList(t *testing.T) {
 						Column: 4,
 					},
 					LabelEndPos: &ast.Position{
-						Offset: 4,
+						Offset: 5,
 						Line:   1,
-						Column: 4,
+						Column: 5,
 					},
 					Expression: &ast.BoolExpression{
 						Value: true,

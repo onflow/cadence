@@ -1919,6 +1919,13 @@ It does not modify the original array.
 If either of the parameters are out of the bounds of the array, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail.
 `
 
+const ArrayTypeReverseFunctionName = "reverse"
+
+const arrayTypeReverseFunctionDocString = `
+Returns a new array with contents in the reversed order.
+Available if the array element type is not resource-kinded.
+`
+
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
@@ -2009,6 +2016,31 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					ArrayFirstIndexFunctionType(elementType),
 					arrayTypeFirstIndexFunctionDocString,
+				)
+			},
+		},
+		ArrayTypeReverseFunctionName: {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+				elementType := arrayType.ElementType(false)
+
+				// It is impossible for a resource to be present in two arrays.
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayReverseFunctionType(arrayType),
+					arrayTypeReverseFunctionDocString,
 				)
 			},
 		},
@@ -2322,6 +2354,13 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 			Type: elementType,
 		}),
 	)
+}
+
+func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
+	return &FunctionType{
+		Parameters:           []Parameter{},
+		ReturnTypeAnnotation: NewTypeAnnotation(arrayType),
+	}
 }
 
 // VariableSizedType is a variable sized array type
@@ -2800,6 +2839,34 @@ func formatFunctionType(
 	return builder.String()
 }
 
+// Arity
+
+type Arity struct {
+	Min int
+	Max int
+}
+
+func (arity *Arity) MinCount(parameterCount int) int {
+	minCount := parameterCount
+	if arity != nil {
+		minCount = arity.Min
+	}
+
+	return minCount
+}
+
+func (arity *Arity) MaxCount(parameterCount int) *int {
+	maxCount := parameterCount
+	if arity != nil {
+		if arity.Max < parameterCount {
+			return nil
+		}
+		maxCount = arity.Max
+	}
+
+	return &maxCount
+}
+
 type FunctionPurity int
 
 const (
@@ -2819,7 +2886,7 @@ func (p FunctionPurity) String() string {
 type FunctionType struct {
 	Purity                   FunctionPurity
 	ReturnTypeAnnotation     TypeAnnotation
-	RequiredArgumentCount    *int
+	Arity                    *Arity
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
@@ -2842,10 +2909,6 @@ func NewSimpleFunctionType(
 }
 
 var _ Type = &FunctionType{}
-
-func RequiredArgumentCount(count int) *int {
-	return &count
-}
 
 func (*FunctionType) IsType() {}
 
@@ -3179,11 +3242,11 @@ func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
 		}
 
 		return &FunctionType{
-			Purity:                t.Purity,
-			TypeParameters:        rewrittenTypeParameters,
-			Parameters:            rewrittenParameters,
-			ReturnTypeAnnotation:  NewTypeAnnotation(rewrittenReturnType),
-			RequiredArgumentCount: t.RequiredArgumentCount,
+			Purity:               t.Purity,
+			TypeParameters:       rewrittenTypeParameters,
+			Parameters:           rewrittenParameters,
+			ReturnTypeAnnotation: NewTypeAnnotation(rewrittenReturnType),
+			Arity:                t.Arity,
 		}, true
 	} else {
 		return t, false
@@ -3296,10 +3359,10 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 	}
 
 	return &FunctionType{
-		Purity:                t.Purity,
-		Parameters:            newParameters,
-		ReturnTypeAnnotation:  NewTypeAnnotation(newReturnType),
-		RequiredArgumentCount: t.RequiredArgumentCount,
+		Purity:               t.Purity,
+		Parameters:           newParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(newReturnType),
+		Arity:                t.Arity,
 	}
 
 }

@@ -2237,7 +2237,7 @@ func TestGetAuthAccount(t *testing.T) {
 
 		errs := checker.RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 	})
 
 	t.Run("too many args", func(t *testing.T) {
@@ -2264,7 +2264,7 @@ func TestGetAuthAccount(t *testing.T) {
 		)
 		errs := checker.RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+		assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
 	})
 
 	t.Run("transaction", func(t *testing.T) {

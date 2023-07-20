@@ -906,11 +906,14 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 					}
 
 					if _, ok := inheritedMembers.Get(memberName); ok {
+						errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, declaration.DeclarationIdentifier())
+
 						if member.HasImplementation {
 							checker.report(
 								&MultipleInterfaceDefaultImplementationsError{
 									CompositeKindedType: nestedCompositeType,
 									Member:              member,
+									Range:               errorRange,
 								},
 							)
 						} else {
@@ -918,6 +921,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 								&DefaultFunctionConflictError{
 									CompositeKindedType: nestedCompositeType,
 									Member:              member,
+									Range:               errorRange,
 								},
 							)
 						}
@@ -1426,11 +1430,13 @@ func (checker *Checker) checkCompositeLikeConformance(
 			if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
 
 				if _, ok := inheritedMembers[name]; ok {
+					errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.DeclarationIdentifier())
 					if interfaceMember.HasImplementation {
 						checker.report(
 							&MultipleInterfaceDefaultImplementationsError{
 								CompositeKindedType: compositeType,
 								Member:              interfaceMember,
+								Range:               errorRange,
 							},
 						)
 					} else {
@@ -1438,6 +1444,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 							&DefaultFunctionConflictError{
 								CompositeKindedType: compositeType,
 								Member:              interfaceMember,
+								Range:               errorRange,
 							},
 						)
 					}

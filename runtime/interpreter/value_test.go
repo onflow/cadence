@@ -175,6 +175,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		atree.Address(newOwner),
 		false,
 		nil,
+		nil,
 	)
 	array = arrayCopy.(*ArrayValue)
 
@@ -568,6 +569,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		atree.Address{},
 		false,
 		nil,
+		nil,
 	)
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
@@ -870,6 +872,7 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		EmptyLocationRange,
 		atree.Address{},
 		false,
+		nil,
 		nil,
 	).(*CompositeValue)
 

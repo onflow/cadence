@@ -244,7 +244,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
 	})
 
@@ -443,7 +443,6 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: nil,
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					&sema.GenericType{
 						TypeParameter: typeParameter,
@@ -474,7 +473,6 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: nil,
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(
 					&sema.GenericType{
 						TypeParameter: typeParameter,

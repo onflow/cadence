@@ -21,17 +21,12 @@ package analysis
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
-type SuggestedFix struct {
-	Message   string
-	TextEdits []TextEdit
-}
+type SuggestedFix = sema.SuggestedFix
 
-type TextEdit struct {
-	Replacement string
-	ast.Range
-}
+type TextEdit = sema.TextEdit
 
 type Diagnostic struct {
 	Location         common.Location
@@ -40,4 +35,8 @@ type Diagnostic struct {
 	SecondaryMessage string
 	SuggestedFixes   []SuggestedFix
 	ast.Range
+}
+
+func (d Diagnostic) SuggestFixes(_ string) []SuggestedFix {
+	return d.SuggestedFixes
 }

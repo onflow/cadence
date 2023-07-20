@@ -25,7 +25,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestRuntimeError(t *testing.T) {
@@ -477,4 +481,260 @@ func TestRuntimeError(t *testing.T) {
 		)
 
 	})
+}
+
+func TestRuntimeDefaultFunctionConflictPrintingError(t *testing.T) {
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	makeDeployTransaction := func(name, code string) []byte {
+		return []byte(fmt.Sprintf(
+			`
+              transaction {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  acct.contracts.add(name: "%s", code: "%s".decodeHex())
+                }
+              }
+            `,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
+	contractInterfaceCode := `
+      access(all) contract TestInterfaces {
+
+          access(all) resource interface A {
+              access(all) fun foo() {
+                  let x = 3
+              }
+          }
+
+		  access(all) resource interface B {
+			access(all) fun foo() 
+		}
+      }
+    `
+
+	contractCode := `
+      import TestInterfaces from 0x2
+      access(all) contract TestContract {
+          access(all) resource R: TestInterfaces.A, TestInterfaces.B {}
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // filling lots of space
+		  // filling lots of space
+		  // filling lots of space
+      }
+    `
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	var nextAccount byte = 0x2
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		createAccount: func(payer Address) (address Address, err error) {
+			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
+			nextAccount++
+			return result.ToAddress(), nil
+		},
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{0x1}}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deployTransaction := makeDeployTransaction("TestInterfaces", contractInterfaceCode)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	deployTransaction = makeDeployTransaction("TestContract", contractCode)
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "access(all) resource R: TestInterfaces.A, TestInterfaces.B {}")
+
+	var errType *sema.CheckerError
+	require.ErrorAs(t, err, &errType)
+
+	checkerErr := err.(Error).
+		Err.(interpreter.Error).
+		Err.(*stdlib.InvalidContractDeploymentError).
+		Err.(*ParsingCheckingError).
+		Err.(*sema.CheckerError)
+
+	var specificErrType *sema.DefaultFunctionConflictError
+	require.ErrorAs(t, checkerErr.Errors[0], &specificErrType)
+
+	errorRange := checkerErr.Errors[0].(*sema.DefaultFunctionConflictError).Range
+
+	require.Equal(t, errorRange.StartPos.Line, 4)
+}
+
+func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	makeDeployTransaction := func(name, code string) []byte {
+		return []byte(fmt.Sprintf(
+			`
+              transaction {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  acct.contracts.add(name: "%s", code: "%s".decodeHex())
+                }
+              }
+            `,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
+	contractInterfaceCode := `
+      access(all) contract TestInterfaces {
+
+          access(all) resource interface A {
+              access(all) fun foo() {
+                  let x = 3
+              }
+          }
+
+		  access(all) resource interface B {
+			access(all) fun foo() {
+				let x = 4
+			}
+		}
+      }
+    `
+
+	contractCode := `
+      import TestInterfaces from 0x2
+      access(all) contract TestContract {
+          access(all) resource R: TestInterfaces.A, TestInterfaces.B {}
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // filling lots of space
+		  // filling lots of space
+		  // filling lots of space
+      }
+    `
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	var nextAccount byte = 0x2
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		createAccount: func(payer Address) (address Address, err error) {
+			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
+			nextAccount++
+			return result.ToAddress(), nil
+		},
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{0x1}}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deployTransaction := makeDeployTransaction("TestInterfaces", contractInterfaceCode)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	deployTransaction = makeDeployTransaction("TestContract", contractCode)
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "access(all) resource R: TestInterfaces.A, TestInterfaces.B {}")
+
+	var errType *sema.CheckerError
+	require.ErrorAs(t, err, &errType)
+
+	checkerErr := err.(Error).
+		Err.(interpreter.Error).
+		Err.(*stdlib.InvalidContractDeploymentError).
+		Err.(*ParsingCheckingError).
+		Err.(*sema.CheckerError)
+
+	var specificErrType *sema.MultipleInterfaceDefaultImplementationsError
+	require.ErrorAs(t, checkerErr.Errors[0], &specificErrType)
+
+	errorRange := checkerErr.Errors[0].(*sema.MultipleInterfaceDefaultImplementationsError).Range
+
+	require.Equal(t, errorRange.StartPos.Line, 4)
 }

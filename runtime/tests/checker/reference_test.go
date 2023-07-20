@@ -1198,27 +1198,30 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("upcast to optional", func(t *testing.T) {
+	t.Run("optional reference to non-optional value", func(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		_, err := ParseAndCheck(t, `
           let i: Int = 1
           let ref = &i as &Int?
         `)
 
-		require.NoError(t, err)
-		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 
-		assert.Equal(t,
-			&sema.OptionalType{
-				Type: &sema.ReferenceType{
-					Type:          sema.IntType,
-					Authorization: sema.UnauthorizedAccess,
-				},
-			},
-			refValueType,
-		)
+	t.Run("non-optional reference to optional value", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let opt: Int? = 1
+          let ref = &opt as &AnyStruct
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
 
@@ -1906,9 +1909,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 2)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
+
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 
 	t.Run("contract field ref", func(t *testing.T) {
@@ -2173,10 +2180,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 2)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 
 	t.Run("nil coalescing both sides", func(t *testing.T) {
@@ -2205,11 +2215,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 3)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 		assert.ErrorAs(t, errors[1], &invalidatedRefError)
+		assert.ErrorAs(t, errors[2], &invalidatedRefError)
 	})
 
 	t.Run("nil coalescing nested", func(t *testing.T) {
@@ -2241,12 +2254,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 3)
+		errors := RequireCheckerErrors(t, err, 4)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 		assert.ErrorAs(t, errors[2], &invalidatedRefError)
+		assert.ErrorAs(t, errors[3], &invalidatedRefError)
 	})
 
 	t.Run("ref assignment", func(t *testing.T) {
@@ -2474,10 +2490,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 2)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 
 	t.Run("conditional expr both sides", func(t *testing.T) {
@@ -2506,11 +2525,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 3)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 		assert.ErrorAs(t, errors[1], &invalidatedRefError)
+		assert.ErrorAs(t, errors[2], &invalidatedRefError)
 	})
 
 	t.Run("error notes", func(t *testing.T) {
