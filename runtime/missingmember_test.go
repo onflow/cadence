@@ -94,7 +94,7 @@ access(all) contract FlowToken: FungibleToken {
    // out of thin air. A special Minter resource needs to be defined to mint
    // new tokens.
    //
-   access(all) resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+   access(all) resource Vault: FungibleToken.Vault {
 
        // holds the balance of a users tokens
        access(all) var balance: UFix64
@@ -113,7 +113,7 @@ access(all) contract FlowToken: FungibleToken {
        // created Vault to the context that called so it can be deposited
        // elsewhere.
        //
-       access(all) fun withdraw(amount: UFix64): @FungibleToken.Vault {
+       access(all) fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
            self.balance = self.balance - amount
            emit TokensWithdrawn(amount: amount, from: self.owner?.address)
            return <-create Vault(balance: amount)
@@ -126,7 +126,7 @@ access(all) contract FlowToken: FungibleToken {
        // It is allowed to destroy the sent Vault because the Vault
        // was a temporary holder of the tokens. The Vault's balance has
        // been consumed and therefore can be destroyed.
-       access(all) fun deposit(from: @FungibleToken.Vault) {
+       access(all) fun deposit(from: @{FungibleToken.Vault}) {
            let vault <- from as! @FlowToken.Vault
            self.balance = self.balance + vault.balance
            emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
@@ -146,7 +146,7 @@ access(all) contract FlowToken: FungibleToken {
    // and store the returned Vault in their storage in order to allow their
    // account to be able to receive deposits of this token type.
    //
-   access(all) fun createEmptyVault(): @FungibleToken.Vault {
+   access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
        return <-create Vault(balance: 0.0)
    }
 
@@ -213,7 +213,7 @@ access(all) contract FlowToken: FungibleToken {
        // Note: the burned tokens are automatically subtracted from the
        // total supply in the Vault destructor.
        //
-       access(all) fun burnTokens(from: @FungibleToken.Vault) {
+       access(all) fun burnTokens(from: @{FungibleToken.Vault}) {
            let vault <- from as! @FlowToken.Vault
            let amount = vault.balance
            destroy vault
@@ -304,7 +304,7 @@ access(all) contract FBRC: FungibleToken {
    // out of thin air. A special Minter resource needs to be defined to mint
    // new tokens.
    //
-   access(all) resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+   access(all) resource Vault: FungibleToken.Vault {
 
        // holds the balance of a users tokens
        access(all) var balance: UFix64
@@ -323,7 +323,7 @@ access(all) contract FBRC: FungibleToken {
        // created Vault to the context that called so it can be deposited
        // elsewhere.
        //
-       access(all) fun withdraw(amount: UFix64): @FungibleToken.Vault {
+       access(all) fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
            self.balance = self.balance - amount
            emit TokensWithdrawn(amount: amount, from: self.owner?.address)
            return <-create Vault(balance: amount)
@@ -336,7 +336,7 @@ access(all) contract FBRC: FungibleToken {
        // It is allowed to destroy the sent Vault because the Vault
        // was a temporary holder of the tokens. The Vault's balance has
        // been consumed and therefore can be destroyed.
-       access(all) fun deposit(from: @FungibleToken.Vault) {
+       access(all) fun deposit(from: @{FungibleToken.Vault}) {
            let vault <- from as! @FBRC.Vault
            self.balance = self.balance + vault.balance
            emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
@@ -356,7 +356,7 @@ access(all) contract FBRC: FungibleToken {
    // and store the returned Vault in their storage in order to allow their
    // account to be able to receive deposits of this token type.
    //
-   access(all) fun createEmptyVault(): @FungibleToken.Vault {
+   access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
        return <-create Vault(balance: 0.0)
    }
 
@@ -423,7 +423,7 @@ access(all) contract FBRC: FungibleToken {
        // Note: the burned tokens are automatically subtracted from the
        // total supply in the Vault destructor.
        //
-       access(all) fun burnTokens(from: @FungibleToken.Vault) {
+       access(all) fun burnTokens(from: @{FungibleToken.Vault}) {
            let vault <- from as! @FBRC.Vault
            let amount = vault.balance
            destroy vault
@@ -590,7 +590,7 @@ access(all) contract GarmentNFT: NonFungibleToken {
 
    // The resource that represents the Garment NFTs
    //
-   access(all) resource NFT: NonFungibleToken.INFT {
+   access(all) resource NFT: NonFungibleToken.NFT {
 
        // Global unique Garment ID
        access(all) let id: UInt64
@@ -718,10 +718,10 @@ access(all) contract GarmentNFT: NonFungibleToken {
    // to allow others to deposit into their Collection. It also allows for reading
    // the IDs of Garment in the Collection.
    access(all) resource interface GarmentCollectionPublic {
-       access(all) fun deposit(token: @NonFungibleToken.NFT)
-       access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection)
+       access(all) fun deposit(token: @{NonFungibleToken.NFT})
+       access(all) fun batchDeposit(tokens: @{NonFungibleToken.Collection})
        access(all) fun getIDs(): [UInt64]
-       access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
+       access(all) fun borrowNFT(id: UInt64): &{NonFungibleToken.NFT}
        access(all) fun borrowGarment(id: UInt64): &GarmentNFT.NFT? {
            // If the result isn't nil, the id of the returned reference
            // should be the same as the argument to the function
@@ -735,10 +735,10 @@ access(all) contract GarmentNFT: NonFungibleToken {
    // Collection is a resource that every user who owns NFTs
    // will store in their account to manage their NFTS
    //
-   access(all) resource Collection: GarmentCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
+   access(all) resource Collection: GarmentCollectionPublic, NonFungibleToken.Collection {
        // Dictionary of Garment conforming tokens
        // NFT is a resource type with a UInt64 ID field
-       access(all) var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
+       access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
 
        init() {
            self.ownedNFTs <- {}
@@ -749,8 +749,8 @@ access(all) contract GarmentNFT: NonFungibleToken {
        // Parameters: withdrawID: The ID of the NFT
        // that is to be removed from the Collection
        //
-       // returns: @NonFungibleToken.NFT the token that was withdrawn
-       access(all) fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+       // returns: @{NonFungibleToken.NFT} the token that was withdrawn
+       access(all) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
            // Remove the nft from the Collection
            let token <- self.ownedNFTs.remove(key: withdrawID)
                ?? panic("Cannot withdraw: Garment does not exist in the collection")
@@ -765,10 +765,10 @@ access(all) contract GarmentNFT: NonFungibleToken {
        //
        // Parameters: ids: An array of IDs to withdraw
        //
-       // Returns: @NonFungibleToken.Collection: A collection that contains
+       // Returns: @{NonFungibleToken.Collection}: A collection that contains
        //                                        the withdrawn Garment
        //
-       access(all) fun batchWithdraw(ids: [UInt64]): @NonFungibleToken.Collection {
+       access(all) fun batchWithdraw(ids: [UInt64]): @{NonFungibleToken.Collection} {
            // Create a new empty Collection
            var batchCollection <- create Collection()
 
@@ -785,7 +785,7 @@ access(all) contract GarmentNFT: NonFungibleToken {
        //
        // Parameters: token: the NFT to be deposited in the collection
        //
-       access(all) fun deposit(token: @NonFungibleToken.NFT) {
+       access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
            // Cast the deposited token as NFT to make sure
            // it is the correct type
            let token <- token as! @GarmentNFT.NFT
@@ -808,7 +808,7 @@ access(all) contract GarmentNFT: NonFungibleToken {
 
        // batchDeposit takes a Collection object as an argument
        // and deposits each contained NFT into this Collection
-       access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection) {
+       access(all) fun batchDeposit(tokens: @{NonFungibleToken.Collection}) {
            // Get an array of the IDs to be deposited
            let keys = tokens.getIDs()
 
@@ -837,8 +837,8 @@ access(all) contract GarmentNFT: NonFungibleToken {
        // not an specific data. Please use borrowGarment to
        // read Garment data.
        //
-       access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-           return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
+       access(all) fun borrowNFT(id: UInt64): &{NonFungibleToken.NFT} {
+           return (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?)!
        }
 
        // Parameters: id: The ID of the NFT to get the reference for
@@ -846,7 +846,7 @@ access(all) contract GarmentNFT: NonFungibleToken {
        // Returns: A reference to the NFT
        access(all) fun borrowGarment(id: UInt64): &GarmentNFT.NFT? {
            if self.ownedNFTs[id] != nil {
-               let ref = &self.ownedNFTs[id] as &NonFungibleToken.NFT?
+               let ref = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
                return ref as! &GarmentNFT.NFT?
            } else {
                return nil
@@ -870,7 +870,7 @@ access(all) contract GarmentNFT: NonFungibleToken {
    // Once they have a Collection in their storage, they are able to receive
    // Garment in transactions.
    //
-   access(all) fun createEmptyCollection(): @NonFungibleToken.Collection {
+   access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
        return <-create GarmentNFT.Collection()
    }
 
@@ -1054,7 +1054,7 @@ access(all) contract MaterialNFT: NonFungibleToken {
 
    // The resource that represents the Material NFTs
    //
-   access(all) resource NFT: NonFungibleToken.INFT {
+   access(all) resource NFT: NonFungibleToken.NFT {
 
        // Global unique Material ID
        access(all) let id: UInt64
@@ -1180,10 +1180,10 @@ access(all) contract MaterialNFT: NonFungibleToken {
    // to allow others to deposit into their Collection. It also allows for reading
    // the IDs of Material in the Collection.
    access(all) resource interface MaterialCollectionPublic {
-       access(all) fun deposit(token: @NonFungibleToken.NFT)
-       access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection)
+       access(all) fun deposit(token: @{NonFungibleToken.NFT})
+       access(all) fun batchDeposit(tokens: @{NonFungibleToken.Collection})
        access(all) fun getIDs(): [UInt64]
-       access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
+       access(all) fun borrowNFT(id: UInt64): &{NonFungibleToken.NFT}
        access(all) fun borrowMaterial(id: UInt64): &MaterialNFT.NFT? {
            // If the result isn't nil, the id of the returned reference
            // should be the same as the argument to the function
@@ -1197,10 +1197,10 @@ access(all) contract MaterialNFT: NonFungibleToken {
    // Collection is a resource that every user who owns NFTs
    // will store in their account to manage their NFTS
    //
-   access(all) resource Collection: MaterialCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
+   access(all) resource Collection: MaterialCollectionPublic, NonFungibleToken.Collection {
        // Dictionary of Material conforming tokens
        // NFT is a resource type with a UInt64 ID field
-       access(all) var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
+       access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
 
        init() {
            self.ownedNFTs <- {}
@@ -1211,8 +1211,8 @@ access(all) contract MaterialNFT: NonFungibleToken {
        // Parameters: withdrawID: The ID of the NFT
        // that is to be removed from the Collection
        //
-       // returns: @NonFungibleToken.NFT the token that was withdrawn
-       access(all) fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+       // returns: @{NonFungibleToken.NFT} the token that was withdrawn
+       access(all) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
            // Remove the nft from the Collection
            let token <- self.ownedNFTs.remove(key: withdrawID)
                ?? panic("Cannot withdraw: Material does not exist in the collection")
@@ -1227,10 +1227,10 @@ access(all) contract MaterialNFT: NonFungibleToken {
        //
        // Parameters: ids: An array of IDs to withdraw
        //
-       // Returns: @NonFungibleToken.Collection: A collection that contains
+       // Returns: @{NonFungibleToken.Collection}: A collection that contains
        //                                        the withdrawn Material
        //
-       access(all) fun batchWithdraw(ids: [UInt64]): @NonFungibleToken.Collection {
+       access(all) fun batchWithdraw(ids: [UInt64]): @{NonFungibleToken.Collection} {
            // Create a new empty Collection
            var batchCollection <- create Collection()
 
@@ -1247,7 +1247,7 @@ access(all) contract MaterialNFT: NonFungibleToken {
        //
        // Parameters: token: the NFT to be deposited in the collection
        //
-       access(all) fun deposit(token: @NonFungibleToken.NFT) {
+       access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
            // Cast the deposited token as NFT to make sure
            // it is the correct type
            let token <- token as! @MaterialNFT.NFT
@@ -1270,7 +1270,7 @@ access(all) contract MaterialNFT: NonFungibleToken {
 
        // batchDeposit takes a Collection object as an argument
        // and deposits each contained NFT into this Collection
-       access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection) {
+       access(all) fun batchDeposit(tokens: @{NonFungibleToken.Collection}) {
            // Get an array of the IDs to be deposited
            let keys = tokens.getIDs()
 
@@ -1299,8 +1299,8 @@ access(all) contract MaterialNFT: NonFungibleToken {
        // not an specific data. Please use borrowMaterial to
        // read Material data.
        //
-       access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-           return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
+       access(all) fun borrowNFT(id: UInt64): &{NonFungibleToken.NFT} {
+           return (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?)!
        }
 
        // Parameters: id: The ID of the NFT to get the reference for
@@ -1308,7 +1308,7 @@ access(all) contract MaterialNFT: NonFungibleToken {
        // Returns: A reference to the NFT
        access(all) fun borrowMaterial(id: UInt64): &MaterialNFT.NFT? {
            if self.ownedNFTs[id] != nil {
-               let ref = (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
+               let ref = (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?)!
                return ref as! &MaterialNFT.NFT
            } else {
                return nil
@@ -1332,7 +1332,7 @@ access(all) contract MaterialNFT: NonFungibleToken {
    // Once they have a Collection in their storage, they are able to receive
    // Material in transactions.
    //
-   access(all) fun createEmptyCollection(): @NonFungibleToken.Collection {
+   access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
        return <-create MaterialNFT.Collection()
    }
 
@@ -1538,7 +1538,7 @@ access(all) contract ItemNFT: NonFungibleToken {
 
    // The resource that represents the Item NFTs
    //
-   access(all) resource NFT: NonFungibleToken.INFT {
+   access(all) resource NFT: NonFungibleToken.NFT {
 
        // Global unique Item ID
        access(all) let id: UInt64
@@ -1611,8 +1611,8 @@ access(all) contract ItemNFT: NonFungibleToken {
            let materialRecipient = materialCap.borrow()!
            let garment <- garmentOptional!
            let material <- materialOptional!
-           let garmentNFT <- garment as! @NonFungibleToken.NFT
-           let materialNFT <- material as! @NonFungibleToken.NFT
+           let garmentNFT <- garment as! @{NonFungibleToken.NFT}
+           let materialNFT <- material as! @{NonFungibleToken.NFT}
            garmentRecipient.deposit(token: <- garmentNFT)
            materialRecipient.deposit(token: <- materialNFT)
            ItemNFT.numberMintedPerItem[self.item.itemDataID] = ItemNFT.numberMintedPerItem[self.item.itemDataID]! - 1 as UInt32
@@ -1689,10 +1689,10 @@ access(all) contract ItemNFT: NonFungibleToken {
    // to allow others to deposit Items into their Collection. It also allows for reading
    // the IDs of Items in the Collection.
    access(all) resource interface ItemCollectionPublic {
-       access(all) fun deposit(token: @NonFungibleToken.NFT)
-       access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection)
+       access(all) fun deposit(token: @{NonFungibleToken.NFT})
+       access(all) fun batchDeposit(tokens: @{NonFungibleToken.Collection})
        access(all) fun getIDs(): [UInt64]
-       access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
+       access(all) fun borrowNFT(id: UInt64): &{NonFungibleToken.NFT}
        access(all) fun borrowItem(id: UInt64): &ItemNFT.NFT? {
            // If the result isn't nil, the id of the returned reference
            // should be the same as the argument to the function
@@ -1706,10 +1706,10 @@ access(all) contract ItemNFT: NonFungibleToken {
    // Collection is a resource that every user who owns NFTs
    // will store in their account to manage their NFTS
    //
-   access(all) resource Collection: ItemCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
+   access(all) resource Collection: ItemCollectionPublic, NonFungibleToken.Collection {
        // Dictionary of Item conforming tokens
        // NFT is a resource type with a UInt64 ID field
-       access(all) var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
+       access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
 
        init() {
            self.ownedNFTs <- {}
@@ -1720,8 +1720,8 @@ access(all) contract ItemNFT: NonFungibleToken {
        // Parameters: withdrawID: The ID of the NFT
        // that is to be removed from the Collection
        //
-       // returns: @NonFungibleToken.NFT the token that was withdrawn
-       access(all) fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+       // returns: @{NonFungibleToken.NFT} the token that was withdrawn
+       access(all) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
            // Remove the nft from the Collection
            let token <- self.ownedNFTs.remove(key: withdrawID)
                ?? panic("Cannot withdraw: Item does not exist in the collection")
@@ -1736,10 +1736,10 @@ access(all) contract ItemNFT: NonFungibleToken {
        //
        // Parameters: ids: An array of IDs to withdraw
        //
-       // Returns: @NonFungibleToken.Collection: A collection that contains
+       // Returns: @{NonFungibleToken.Collection}: A collection that contains
        //                                        the withdrawn Items
        //
-       access(all) fun batchWithdraw(ids: [UInt64]): @NonFungibleToken.Collection {
+       access(all) fun batchWithdraw(ids: [UInt64]): @{NonFungibleToken.Collection} {
            // Create a new empty Collection
            var batchCollection <- create Collection()
 
@@ -1756,7 +1756,7 @@ access(all) contract ItemNFT: NonFungibleToken {
        //
        // Parameters: token: the NFT to be deposited in the collection
        //
-       access(all) fun deposit(token: @NonFungibleToken.NFT) {
+       access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
            //todo: someFunction that transfers royalty
            // Cast the deposited token as  NFT to make sure
            // it is the correct type
@@ -1780,7 +1780,7 @@ access(all) contract ItemNFT: NonFungibleToken {
 
        // batchDeposit takes a Collection object as an argument
        // and deposits each contained NFT into this Collection
-       access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection) {
+       access(all) fun batchDeposit(tokens: @{NonFungibleToken.Collection}) {
            // Get an array of the IDs to be deposited
            let keys = tokens.getIDs()
 
@@ -1809,8 +1809,8 @@ access(all) contract ItemNFT: NonFungibleToken {
        // not an specific data. Please use borrowItem to
        // read Item data.
        //
-       access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-           return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
+       access(all) fun borrowNFT(id: UInt64): &{NonFungibleToken.NFT} {
+           return (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?)!
        }
 
        // Parameters: id: The ID of the NFT to get the reference for
@@ -1818,7 +1818,7 @@ access(all) contract ItemNFT: NonFungibleToken {
        // Returns: A reference to the NFT
        access(all) fun borrowItem(id: UInt64): &ItemNFT.NFT? {
            if self.ownedNFTs[id] != nil {
-               let ref = (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
+               let ref = (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?)!
                return ref as! &ItemNFT.NFT
            } else {
                return nil
@@ -1924,7 +1924,7 @@ access(all) contract ItemNFT: NonFungibleToken {
    // Once they have a Collection in their storage, they are able to receive
    // Items in transactions.
    //
-   access(all) fun createEmptyCollection(): @NonFungibleToken.Collection {
+   access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
        return <-create ItemNFT.Collection()
    }
 
@@ -2018,11 +2018,11 @@ access(all) contract ItemNFT: NonFungibleToken {
 		common.AddressLocation{
 			Address: ftAddress,
 			Name:    "FungibleToken",
-		}: []byte(realFungibleTokenContractInterface),
+		}: []byte(modifiedFungibleTokenContractInterface),
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}: []byte(realNonFungibleTokenInterface),
+		}: []byte(modifiedNonFungibleTokenInterface),
 	}
 
 	var events []cadence.Event
@@ -2522,8 +2522,8 @@ import FungibleToken from 0x9a0766d93b6608b7
 
 transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, materialWithdrawID: UInt64, royaltyVaultAddr: Address) {
 
-     let garment: @NonFungibleToken.NFT
-     let material: @NonFungibleToken.NFT
+     let garment: @{NonFungibleToken.NFT}
+     let material: @{NonFungibleToken.NFT}
      let royaltyVault: Capability<&FBRC.Vault>
 
      prepare(garmentAndMaterialAcct: AuthAccount) {
@@ -2831,7 +2831,7 @@ access(all) contract FlowToken: FungibleToken {
    // out of thin air. A special Minter resource needs to be defined to mint
    // new tokens.
    //
-   access(all) resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+   access(all) resource Vault: FungibleToken.Vault {
 
        // holds the balance of a users tokens
        access(all) var balance: UFix64
@@ -2850,7 +2850,7 @@ access(all) contract FlowToken: FungibleToken {
        // created Vault to the context that called so it can be deposited
        // elsewhere.
        //
-       access(all) fun withdraw(amount: UFix64): @FungibleToken.Vault {
+       access(all) fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
            self.balance = self.balance - amount
            emit TokensWithdrawn(amount: amount, from: self.owner?.address)
            return <-create Vault(balance: amount)
@@ -2863,7 +2863,7 @@ access(all) contract FlowToken: FungibleToken {
        // It is allowed to destroy the sent Vault because the Vault
        // was a temporary holder of the tokens. The Vault's balance has
        // been consumed and therefore can be destroyed.
-       access(all) fun deposit(from: @FungibleToken.Vault) {
+       access(all) fun deposit(from: @{FungibleToken.Vault}) {
            let vault <- from as! @FlowToken.Vault
            self.balance = self.balance + vault.balance
            emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
@@ -2883,7 +2883,7 @@ access(all) contract FlowToken: FungibleToken {
    // and store the returned Vault in their storage in order to allow their
    // account to be able to receive deposits of this token type.
    //
-   access(all) fun createEmptyVault(): @FungibleToken.Vault {
+   access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
        return <-create Vault(balance: 0.0)
    }
 
@@ -2950,7 +2950,7 @@ access(all) contract FlowToken: FungibleToken {
        // Note: the burned tokens are automatically subtracted from the
        // total supply in the Vault destructor.
        //
-       access(all) fun burnTokens(from: @FungibleToken.Vault) {
+       access(all) fun burnTokens(from: @{FungibleToken.Vault}) {
            let vault <- from as! @FlowToken.Vault
            let amount = vault.balance
            destroy vault
@@ -3045,14 +3045,14 @@ access(all) contract AuctionDutch {
 
 	access(all) struct BidInfo {
 		access(contract) let id: UInt64
-		access(contract) let vaultCap: Capability<&{FungibleToken.Receiver}>
+		access(contract) let vaultCap: Capability<&{FungibleToken.Vault}>
 		access(contract) let nftCap: Capability<&{NonFungibleToken.Receiver}>
 		access(contract) var time: UFix64
 		access(contract) var balance: UFix64
 		access(contract) var winning: Bool
 
 
-		init(id: UInt64, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Receiver}>, time: UFix64, balance: UFix64) {
+		init(id: UInt64, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Vault}>, time: UFix64, balance: UFix64) {
 			self.id=id
 			self.nftCap= nftCap
 			self.vaultCap=vaultCap
@@ -3100,7 +3100,7 @@ access(all) contract AuctionDutch {
 	}
 
 	access(all) resource Auction {
-		access(contract) let nfts: @{UInt64:NonFungibleToken.NFT}
+		access(contract) let nfts: @{UInt64:{NonFungibleToken.NFT}}
 
 		access(contract) let metadata: {String:String}
 
@@ -3135,7 +3135,7 @@ access(all) contract AuctionDutch {
 		access(contract) var winningBid: UFix64?
 
 
-		init(nfts: @{UInt64 : NonFungibleToken.NFT},
+		init(nfts: @{UInt64 : {NonFungibleToken.NFT}},
 		metadata: {String: String},
 		ownerVaultCap: Capability<&{FungibleToken.Receiver}>,
 		ownerNFTCap: Capability<&{NonFungibleToken.Receiver}>,
@@ -3499,7 +3499,7 @@ access(all) contract AuctionDutch {
 			//emit event
 		}
 
-		access(all) fun addBid(vault: @FlowToken.Vault, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Receiver}>, time: UFix64) : UInt64{
+		access(all) fun addBid(vault: @FlowToken.Vault, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Vault}>, time: UFix64) : UInt64{
 
 			let bidId=self.totalBids
 
@@ -3530,7 +3530,7 @@ access(all) contract AuctionDutch {
 		access(all) fun getBids(_ id: UInt64) : Bids
 		//these methods are only allowed to be called from within this contract, but we want to call them on another users resource
 		access(contract) fun getAuction(_ id:UInt64) : &Auction
-		access(all) fun bid(id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid
+		access(all) fun bid(id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Vault}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid
 	}
 
 
@@ -3611,7 +3611,7 @@ access(all) contract AuctionDutch {
 			return (&self.auctions[id] as &Auction?)!
 		}
 
-		access(all) fun bid(id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid{
+		access(all) fun bid(id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Vault}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid{
 			//TODO: pre id should exist
 
 			let time= 42.0 // Clock.time()
@@ -3651,7 +3651,7 @@ access(all) contract AuctionDutch {
 		}
 
 
-		access(all) fun createAuction( nfts: @{UInt64: NonFungibleToken.NFT}, metadata: {String: String}, startAt: UFix64, startPrice: UFix64, floorPrice: UFix64, decreasePriceFactor: UFix64, decreasePriceAmount: UFix64, tickDuration: UFix64, ownerVaultCap: Capability<&{FungibleToken.Receiver}>, ownerNFTCap: Capability<&{NonFungibleToken.Receiver}>, royaltyVaultCap: Capability<&{FungibleToken.Receiver}>, royaltyPercentage: UFix64) {
+		access(all) fun createAuction( nfts: @{UInt64: {NonFungibleToken.NFT}}, metadata: {String: String}, startAt: UFix64, startPrice: UFix64, floorPrice: UFix64, decreasePriceFactor: UFix64, decreasePriceAmount: UFix64, tickDuration: UFix64, ownerVaultCap: Capability<&{FungibleToken.Receiver}>, ownerNFTCap: Capability<&{NonFungibleToken.Receiver}>, royaltyVaultCap: Capability<&{FungibleToken.Receiver}>, royaltyPercentage: UFix64) {
 
 			let ticks: [Tick] = [Tick(price: startPrice, startedAt: startAt)]
 			var currentPrice=startPrice
@@ -3745,7 +3745,7 @@ access(all) contract AuctionDutch {
 	}
 
 	access(all) resource interface BidCollectionPublic {
-		access(all) fun bid(marketplace: Address, id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)
+		access(all) fun bid(marketplace: Address, id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Vault}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)
 		access(all) fun getIds() :[UInt64]
 		access(all) fun getReport(_ id: UInt64) : ExcessFlowReport
 
@@ -3768,7 +3768,7 @@ access(all) contract AuctionDutch {
 			return ExcessFlowReport(id:id, report: bid.getBidInfo(), excessAmount: bid.getExcessBalance())
 		}
 
-		access(all) fun bid(marketplace: Address, id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)  {
+		access(all) fun bid(marketplace: Address, id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Vault}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)  {
 
 			let dutchAuctionCap=getAccount(marketplace).getCapability<&AuctionDutch.Collection>(AuctionDutch.CollectionPublicPath)
 			let bid <- dutchAuctionCap.borrow()!.bid(id: id, vault: <- vault, vaultCap: vaultCap, nftCap: nftCap)
@@ -3786,7 +3786,7 @@ access(all) contract AuctionDutch {
 			destroy <- self.bids.remove(key: bid.uuid)
 		}
 
-		access(all) fun increaseBid(_ id: UInt64, vault: @FungibleToken.Vault) {
+		access(all) fun increaseBid(_ id: UInt64, vault: @{FungibleToken.Vault}) {
 			let vault <- vault as! @FlowToken.Vault
 			let bid = self.getBid(id)
 			bid.increaseBid(vault: <- vault)
@@ -3830,11 +3830,11 @@ access(all) contract AuctionDutch {
 		common.AddressLocation{
 			Address: ftAddress,
 			Name:    "FungibleToken",
-		}: []byte(realFungibleTokenContractInterface),
+		}: []byte(modifiedFungibleTokenContractInterface),
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}: []byte(realNonFungibleTokenInterface),
+		}: []byte(modifiedNonFungibleTokenInterface),
 	}
 
 	var events []cadence.Event
@@ -3968,7 +3968,7 @@ import FlowToken from 0x7e60df042a9c0868
 
 transaction(recipient: Address, amount: UFix64) {
     let tokenAdmin: &FlowToken.Administrator
-    let tokenReceiver: &{FungibleToken.Receiver}
+    let tokenReceiver: &{FungibleToken.Vault}
 
     prepare(signer: AuthAccount) {
         self.tokenAdmin = signer
@@ -3977,7 +3977,7 @@ transaction(recipient: Address, amount: UFix64) {
 
         self.tokenReceiver = getAccount(recipient)
             .getCapability(/public/flowTokenReceiver)
-            .borrow<&{FungibleToken.Receiver}>()
+            .borrow<&{FungibleToken.Vault}>()
             ?? panic("Unable to borrow receiver reference")
     }
 
@@ -4092,7 +4092,7 @@ transaction(recipient: Address, amount: UFix64) {
                 let vault <- signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)!
                     .withdraw(amount: 4.0)
 
-                let vaultCap = signer.getCapability<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                let vaultCap = signer.getCapability<&{FungibleToken.Vault}>(/public/flowTokenReceiver)
                 let nftCap = signer.getCapability<&{NonFungibleToken.Receiver}>(/public/doesNotExist)
 
                 let bid <- getAccount(0x99ca04281098b33d)

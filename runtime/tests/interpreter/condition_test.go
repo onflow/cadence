@@ -1279,8 +1279,8 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 			fmt.Sprintf(
 				`
                    contract interface CI {
-                       struct X {
-                            fun use(_ x: X) {
+                       struct interface X {
+                            fun use(_ x: {X}) {
                                 pre {
                                     %s
                                 }
@@ -1289,14 +1289,14 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
                    }
 
                    contract C1: CI {
-                       struct X {
-                           fun use(_ x: CI.X) {}
+                       struct X: CI.X {
+                           fun use(_ x: {CI.X}) {}
                        }
                    }
 
                    contract C2: CI {
-                       struct X {
-                           fun use(_ x: CI.X) {}
+                       struct X: CI.X {
+                           fun use(_ x: {CI.X}) {}
                        }
                    }
 

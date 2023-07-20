@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-const realFungibleTokenContractInterface = `
+const modifiedFungibleTokenContractInterface = `
 /// FungibleToken
 ///
 /// The interface that fungible token contracts implement.
@@ -89,7 +89,7 @@ access(all) contract interface FungibleToken {
         /// capability that allows all users to access the provider
         /// resource through a reference.
         ///
-        access(all) fun withdraw(amount: UFix64): @Vault {
+        access(all) fun withdraw(amount: UFix64): @{Vault} {
             post {
                 // 'result' refers to the return value
                 result.balance == amount:
@@ -112,7 +112,7 @@ access(all) contract interface FungibleToken {
 
         /// deposit takes a Vault and deposits it into the implementing resource type
         ///
-        access(all) fun deposit(from: @Vault)
+        access(all) fun deposit(from: @{Vault})
     }
 
     /// Balance
@@ -139,7 +139,7 @@ access(all) contract interface FungibleToken {
     ///
     /// The resource that contains the functions to send and receive tokens.
     ///
-    access(all) resource Vault: Provider, Receiver, Balance {
+    access(all) resource interface Vault: Provider, Receiver, Balance {
 
         // The declaration of a concrete type in a contract interface means that
         // every Fungible Token contract that implements the FungibleToken interface
@@ -158,7 +158,7 @@ access(all) contract interface FungibleToken {
         /// withdraw subtracts 'amount' from the Vault's balance
         /// and returns a new Vault with the subtracted balance
         ///
-        access(all) fun withdraw(amount: UFix64): @Vault {
+        access(all) fun withdraw(amount: UFix64): @{Vault} {
             pre {
                 self.balance >= amount:
                     "Amount withdrawn must be less than or equal than the balance of the Vault"
@@ -174,7 +174,7 @@ access(all) contract interface FungibleToken {
 
         /// deposit takes a Vault and adds its balance to the balance of this Vault
         ///
-        access(all) fun deposit(from: @Vault) {
+        access(all) fun deposit(from: @{Vault}) {
             post {
                 self.balance == before(self.balance) + before(from.balance):
                     "New Vault balance must be the sum of the previous balance and the deposited Vault"
@@ -184,7 +184,7 @@ access(all) contract interface FungibleToken {
 
     /// createEmptyVault allows any user to create a new Vault that has a zero balance
     ///
-    access(all) fun createEmptyVault(): @Vault {
+    access(all) fun createEmptyVault(): @{Vault} {
         post {
             result.balance == 0.0: "The newly created Vault must have zero balance"
         }
@@ -192,7 +192,7 @@ access(all) contract interface FungibleToken {
 }
 `
 
-const realFlowContract = `
+const modifiedFlowContract = `
 import FungibleToken from 0x1
 
 access(all) contract FlowToken: FungibleToken {
@@ -233,7 +233,7 @@ access(all) contract FlowToken: FungibleToken {
     // out of thin air. A special Minter resource needs to be defined to mint
     // new tokens.
     //
-    access(all) resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+    access(all) resource Vault: FungibleToken.Vault {
 
         // holds the balance of a users tokens
         access(all) var balance: UFix64
@@ -252,7 +252,7 @@ access(all) contract FlowToken: FungibleToken {
         // created Vault to the context that called so it can be deposited
         // elsewhere.
         //
-        access(all) fun withdraw(amount: UFix64): @FungibleToken.Vault {
+        access(all) fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
             self.balance = self.balance - amount
             emit TokensWithdrawn(amount: amount, from: self.owner?.address)
             return <-create Vault(balance: amount)
@@ -265,7 +265,7 @@ access(all) contract FlowToken: FungibleToken {
         // It is allowed to destroy the sent Vault because the Vault
         // was a temporary holder of the tokens. The Vault's balance has
         // been consumed and therefore can be destroyed.
-        access(all) fun deposit(from: @FungibleToken.Vault) {
+        access(all) fun deposit(from: @{FungibleToken.Vault}) {
             let vault <- from as! @FlowToken.Vault
             self.balance = self.balance + vault.balance
             emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
@@ -285,7 +285,7 @@ access(all) contract FlowToken: FungibleToken {
     // and store the returned Vault in their storage in order to allow their
     // account to be able to receive deposits of this token type.
     //
-    access(all) fun createEmptyVault(): @FungibleToken.Vault {
+    access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
         return <-create Vault(balance: 0.0)
     }
 
@@ -352,7 +352,7 @@ access(all) contract FlowToken: FungibleToken {
         // Note: the burned tokens are automatically subtracted from the
         // total supply in the Vault destructor.
         //
-        access(all) fun burnTokens(from: @FungibleToken.Vault) {
+        access(all) fun burnTokens(from: @{FungibleToken.Vault}) {
             let vault <- from as! @FlowToken.Vault
             let amount = vault.balance
             destroy vault
@@ -460,7 +460,7 @@ import FlowToken from 0x1
 transaction(amount: UFix64, to: Address) {
 
     // The Vault resource that holds the tokens that are being transferred
-    let sentVault: @FungibleToken.Vault
+    let sentVault: @{FungibleToken.Vault}
 
     prepare(signer: AuthAccount) {
 
@@ -550,7 +550,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		Script{
 			Source: utils.DeploymentTransaction(
 				"FungibleToken",
-				[]byte(realFungibleTokenContractInterface),
+				[]byte(modifiedFungibleTokenContractInterface),
 			),
 		},
 		Context{
@@ -574,7 +574,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
                       }
                   }
                 `,
-				hex.EncodeToString([]byte(realFlowContract)),
+				hex.EncodeToString([]byte(modifiedFlowContract)),
 			)),
 		},
 		Context{

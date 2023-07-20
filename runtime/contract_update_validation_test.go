@@ -1750,21 +1750,6 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertContractRemovalError(t, err, "Test")
 	})
 
-	t.Run("Remove contract interface with enum", func(t *testing.T) {
-
-		const code = `
-    	    	    access(all) contract interface Test {
-    	    	        access(all) enum TestEnum: Int {
-    	    	        }
-    	    	    }
-    	    	`
-
-		err := testDeployAndRemove(t, "Test", code)
-		RequireError(t, err)
-
-		assertContractRemovalError(t, err, "Test")
-	})
-
 	t.Run("Remove contract without enum", func(t *testing.T) {
 
 		t.Parallel()

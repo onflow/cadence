@@ -40,7 +40,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
-	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -8337,7 +8336,8 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 	)
 }
 
-func TestInterpretFungibleTokenContract(t *testing.T) {
+// TODO: re-enable this test with the v2 fungible token contract
+/* func TestInterpretFungibleTokenContract(t *testing.T) {
 
 	t.Parallel()
 
@@ -8406,7 +8406,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 		),
 		value,
 	)
-}
+} */
 
 func TestInterpretContractAccountFieldUse(t *testing.T) {
 

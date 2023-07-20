@@ -280,7 +280,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 
 	signingAddress := common.MustBytesToAddress(addressString)
 
-	deployFTContractTx := DeploymentTransaction("FungibleToken", []byte(realFungibleTokenContractInterface))
+	deployFTContractTx := DeploymentTransaction("FungibleToken", []byte(modifiedFungibleTokenContractInterface))
 
 	const ducContract = `
       import FungibleToken from 0xaad3e26e406987c2
@@ -323,7 +323,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
     // out of thin air. A special Minter resource needs to be defined to mint
     // new tokens.
     //
-    access(all) resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+    access(all) resource Vault: FungibleToken.Vault {
 
         // holds the balance of a users tokens
         access(all) var balance: UFix64
@@ -342,7 +342,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
         // created Vault to the context that called so it can be deposited
         // elsewhere.
         //
-        access(all) fun withdraw(amount: UFix64): @FungibleToken.Vault {
+        access(all) fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
             self.balance = self.balance - amount
             emit TokensWithdrawn(amount: amount, from: self.owner?.address)
             return <-create Vault(balance: amount)
@@ -355,7 +355,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
         // It is allowed to destroy the sent Vault because the Vault
         // was a temporary holder of the tokens. The Vault's balance has
         // been consumed and therefore can be destroyed.
-        access(all) fun deposit(from: @FungibleToken.Vault) {
+        access(all) fun deposit(from: @{FungibleToken.Vault}) {
             let vault <- from as! @DapperUtilityCoin.Vault
             self.balance = self.balance + vault.balance
             emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
@@ -375,7 +375,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
     // and store the returned Vault in their storage in order to allow their
     // account to be able to receive deposits of this token type.
     //
-    access(all) fun createEmptyVault(): @FungibleToken.Vault {
+    access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
         return <-create Vault(balance: 0.0)
     }
 
@@ -442,7 +442,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
         // Note: the burned tokens are automatically subtracted from the
         // total supply in the Vault destructor.
         //
-        access(all) fun burnTokens(from: @FungibleToken.Vault) {
+        access(all) fun burnTokens(from: @{FungibleToken.Vault}) {
             let vault <- from as! @DapperUtilityCoin.Vault
             let amount = vault.balance
             destroy vault
@@ -750,7 +750,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}: realNonFungibleTokenInterface,
+		}: modifiedNonFungibleTokenInterface,
 	}
 
 	events := make([]cadence.Event, 0)
@@ -837,7 +837,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}: realNonFungibleTokenInterface,
+		}: modifiedNonFungibleTokenInterface,
 	}
 
 	deployTx := DeploymentTransaction("TopShot", []byte(realTopShotContract))
@@ -973,7 +973,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
       import TopShot from 0x0b2a3299cc857e29
 
       transaction(momentIDs: [UInt64]) {
-          let transferTokens: @NonFungibleToken.Collection
+          let transferTokens: @{NonFungibleToken.Collection}
 
           prepare(acct: AuthAccount) {
               let ref = acct.borrow<&TopShot.Collection>(from: /storage/MomentCollection)!

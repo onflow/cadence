@@ -18,7 +18,7 @@
 
 package runtime
 
-const realNonFungibleTokenInterface = `
+const modifiedNonFungibleTokenInterface = `
 
 access(all) contract interface NonFungibleToken {
 
@@ -49,7 +49,7 @@ access(all) contract interface NonFungibleToken {
 
     // Requirement that all conforming NFT smart contracts have
     // to define a resource called NFT that conforms to INFT
-    access(all) resource NFT: INFT {
+    access(all) resource interface NFT: INFT {
         access(all) let id: UInt64
     }
 
@@ -57,7 +57,7 @@ access(all) contract interface NonFungibleToken {
     //
     access(all) resource interface Provider {
         // withdraw removes an NFT from the collection and moves it to the caller
-        access(all) fun withdraw(withdrawID: UInt64): @NFT {
+        access(all) fun withdraw(withdrawID: UInt64): @{NFT} {
             post {
                 result.id == withdrawID: "The ID of the withdrawn token must be the same as the requested ID"
             }
@@ -70,38 +70,38 @@ access(all) contract interface NonFungibleToken {
 
         // deposit takes an NFT as an argument and adds it to the Collection
         //
-        access(all) fun deposit(token: @NFT)
+        access(all) fun deposit(token: @{NFT})
     }
 
     // Interface that an account would commonly
     // publish for their collection
     access(all) resource interface CollectionPublic {
-        access(all) fun deposit(token: @NFT)
+        access(all) fun deposit(token: @{NFT})
         access(all) fun getIDs(): [UInt64]
-        access(all) fun borrowNFT(id: UInt64): &NFT
+        access(all) fun borrowNFT(id: UInt64): &{NFT}
     }
 
     // Requirement for the the concrete resource type
     // to be declared in the implementing contract
     //
-    access(all) resource Collection: Provider, Receiver, CollectionPublic {
+    access(all) resource interface Collection: Provider, Receiver, CollectionPublic {
 
         // Dictionary to hold the NFTs in the Collection
-        access(all) var ownedNFTs: @{UInt64: NFT}
+        access(all) var ownedNFTs: @{UInt64: {NFT}}
 
         // withdraw removes an NFT from the collection and moves it to the caller
-        access(all) fun withdraw(withdrawID: UInt64): @NFT
+        access(all) fun withdraw(withdrawID: UInt64): @{NFT}
 
         // deposit takes a NFT and adds it to the collections dictionary
         // and adds the ID to the id array
-        access(all) fun deposit(token: @NFT)
+        access(all) fun deposit(token: @{NFT})
 
         // getIDs returns an array of the IDs that are in the collection
         access(all) fun getIDs(): [UInt64]
 
         // Returns a borrowed reference to an NFT in the collection
         // so that the caller can read data and call methods from it
-        access(all) fun borrowNFT(id: UInt64): &NFT {
+        access(all) fun borrowNFT(id: UInt64): &{NFT} {
             pre {
                 self.ownedNFTs[id] != nil: "NFT does not exist in the collection!"
             }
@@ -110,7 +110,7 @@ access(all) contract interface NonFungibleToken {
 
     // createEmptyCollection creates an empty Collection
     // and returns it to the caller so that they can own NFTs
-    access(all) fun createEmptyCollection(): @Collection {
+    access(all) fun createEmptyCollection(): @{Collection} {
         post {
             result.ownedNFTs.length == 0: "The created collection must be empty!"
         }
@@ -488,7 +488,7 @@ access(all) contract TopShot: NonFungibleToken {
 
     // The resource that represents the Moment NFTs
     //
-    access(all) resource NFT: NonFungibleToken.INFT {
+    access(all) resource NFT: NonFungibleToken.NFT {
 
         // global unique moment ID
         access(all) let id: UInt64
@@ -593,10 +593,10 @@ access(all) contract TopShot: NonFungibleToken {
     // This is the interface that users can cast their moment Collection as
     // to allow others to deposit moments into their collection
     access(all) resource interface MomentCollectionPublic {
-        access(all) fun deposit(token: @NonFungibleToken.NFT)
-        access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection)
+        access(all) fun deposit(token: @{NonFungibleToken.NFT})
+        access(all) fun batchDeposit(tokens: @{NonFungibleToken.Collection})
         access(all) fun getIDs(): [UInt64]
-        access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
+        access(all) fun borrowNFT(id: UInt64): &{NonFungibleToken.NFT}
         access(all) fun borrowMoment(id: UInt64): &TopShot.NFT? {
             // If the result isn't nil, the id of the returned reference
             // should be the same as the argument to the function
@@ -610,17 +610,17 @@ access(all) contract TopShot: NonFungibleToken {
     // Collection is a resource that every user who owns NFTs
     // will store in their account to manage their NFTS
     //
-    access(all) resource Collection: MomentCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
+    access(all) resource Collection: MomentCollectionPublic, NonFungibleToken.Collection {
         // Dictionary of Moment conforming tokens
         // NFT is a resource type with a UInt64 ID field
-        access(all) var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
+        access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
 
         init() {
             self.ownedNFTs <- {}
         }
 
         // withdraw removes an Moment from the collection and moves it to the caller
-        access(all) fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+        access(all) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
             let token <- self.ownedNFTs.remove(key: withdrawID)
                 ?? panic("Cannot withdraw: Moment does not exist in the collection")
 
@@ -630,7 +630,7 @@ access(all) contract TopShot: NonFungibleToken {
         }
 
         // batchWithdraw withdraws multiple tokens and returns them as a Collection
-        access(all) fun batchWithdraw(ids: [UInt64]): @NonFungibleToken.Collection {
+        access(all) fun batchWithdraw(ids: [UInt64]): @{NonFungibleToken.Collection} {
             var batchCollection <- create Collection()
 
             // iterate through the ids and withdraw them from the collection
@@ -641,7 +641,7 @@ access(all) contract TopShot: NonFungibleToken {
         }
 
         // deposit takes a Moment and adds it to the collections dictionary
-        access(all) fun deposit(token: @NonFungibleToken.NFT) {
+        access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
             let token <- token as! @TopShot.NFT
 
             let id = token.id
@@ -657,7 +657,7 @@ access(all) contract TopShot: NonFungibleToken {
 
         // batchDeposit takes a Collection object as an argument
         // and deposits each contained NFT into this collection
-        access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection) {
+        access(all) fun batchDeposit(tokens: @{NonFungibleToken.Collection}) {
             let keys = tokens.getIDs()
 
             // iterate through the keys in the collection and deposit each one
@@ -678,8 +678,8 @@ access(all) contract TopShot: NonFungibleToken {
         // Parameters: id: The ID of the NFT to get the reference for
         //
         // Returns: A reference to the NFT
-        access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-            return (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
+        access(all) fun borrowNFT(id: UInt64): &{NonFungibleToken.NFT} {
+            return (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?)!
         }
 
         // borrowMoment Returns a borrowed reference to a Moment in the collection
@@ -694,7 +694,7 @@ access(all) contract TopShot: NonFungibleToken {
         // Returns: A reference to the NFT
         access(all) fun borrowMoment(id: UInt64): &TopShot.NFT? {
             if self.ownedNFTs[id] != nil {
-                let ref = (&self.ownedNFTs[id] as &NonFungibleToken.NFT?)!
+                let ref = (&self.ownedNFTs[id] as &{NonFungibleToken.NFT}?)!
                 return ref as! &TopShot.NFT
             } else {
                 return nil
@@ -720,7 +720,7 @@ access(all) contract TopShot: NonFungibleToken {
     // Once they have a Collection in their storage, they are able to receive
     // Moments in transactions
     //
-    access(all) fun createEmptyCollection(): @NonFungibleToken.Collection {
+    access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
         return <-create TopShot.Collection()
     }
 
@@ -941,7 +941,7 @@ access(all) contract TopShotShardedCollection {
 
         // withdraw removes a Moment from one of the Collections 
         // and moves it to the caller
-        access(all) fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+        access(all) fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
             post {
                 result.id == withdrawID: "The ID of the withdrawn NFT is incorrect"
             }
@@ -960,7 +960,7 @@ access(all) contract TopShotShardedCollection {
         //
         // Returns: @NonFungibleToken.Collection a Collection containing the moments
         //          that were withdrawn
-        access(all) fun batchWithdraw(ids: [UInt64]): @NonFungibleToken.Collection {
+        access(all) fun batchWithdraw(ids: [UInt64]): @{NonFungibleToken.Collection} {
             var batchCollection <- TopShot.createEmptyCollection()
             
             // Iterate through the ids and withdraw them from the Collection
@@ -971,7 +971,7 @@ access(all) contract TopShotShardedCollection {
         }
 
         // deposit takes a Moment and adds it to the Collections dictionary
-        access(all) fun deposit(token: @NonFungibleToken.NFT) {
+        access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
 
             // Find the bucket this corresponds to
             let bucket = token.id % self.numBuckets
@@ -988,7 +988,7 @@ access(all) contract TopShotShardedCollection {
 
         // batchDeposit takes a Collection object as an argument
         // and deposits each contained NFT into this Collection
-        access(all) fun batchDeposit(tokens: @NonFungibleToken.Collection) {
+        access(all) fun batchDeposit(tokens: @{NonFungibleToken.Collection}) {
             let keys = tokens.getIDs()
 
             // Iterate through the keys in the Collection and deposit each one
@@ -1013,7 +1013,7 @@ access(all) contract TopShotShardedCollection {
 
         // borrowNFT Returns a borrowed reference to a Moment in the Collection
         // so that the caller can read data and call methods from it
-        access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
+        access(all) fun borrowNFT(id: UInt64): &{NonFungibleToken.NFT} {
             post {
                 result.id == id: "The ID of the reference is incorrect"
             }

@@ -508,12 +508,12 @@ func TestIdentifierCacheUpdate(t *testing.T) {
               fun test(): Bool
           }
 
-          struct Nested: NestedInterface {}
+          struct interface Nested: NestedInterface {}
       }
 
       contract TestImpl {
 
-          struct Nested {
+          struct Nested: Test.Nested {
               fun test(): Bool {
                   return true
               }
