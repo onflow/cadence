@@ -847,7 +847,7 @@ func TestCheckInvalidResourceFieldWithMissingResourceAnnotation(t *testing.T) {
 
 			annotationType := "Test"
 			if isInterface {
-				annotationType = "AnyResource{Test}"
+				annotationType = "{Test}"
 			}
 
 			_, err := ParseAndCheck(t,

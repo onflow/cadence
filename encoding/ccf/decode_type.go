@@ -553,22 +553,13 @@ func (d *Decoder) decodeIntersectionType(
 	decodeTypeFn decodeTypeFn,
 	decodeIntersectionTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
-	// Decode array of length 2.
-	err := decodeCBORArrayWithKnownSize(d.dec, 2)
-	if err != nil {
-		return nil, err
-	}
-
-	// element 0: type
-	typ, err := decodeTypeFn(types)
-	if err != nil {
-		return nil, err
-	}
-
-	// element 1: types
+	// types
 	typeCount, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
+	}
+	if typeCount == 0 {
+		return nil, errors.New("unexpected empty intersection type")
 	}
 
 	intersectionTypeIDs := make(map[string]struct{}, typeCount)
@@ -611,9 +602,12 @@ func (d *Decoder) decodeIntersectionType(
 		intersectionTypes[i] = intersectedType
 	}
 
+	if len(intersectionTypes) == 0 {
+		return nil, errors.New("unexpected empty intersection type")
+	}
+
 	return cadence.NewMeteredIntersectionType(
 		d.gauge,
-		typ,
 		intersectionTypes,
 	), nil
 }

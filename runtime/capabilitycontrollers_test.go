@@ -554,8 +554,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount{}> =
-                                          signer.capabilities.account.issue<&AuthAccount{}>()
+                                      let issuedCap: Capability<&AuthAccount> =
+                                          signer.capabilities.account.issue<&AuthAccount>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
@@ -1643,9 +1643,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.storage.issue<&Test.R>(storagePath1)
                           let issuedCap2: Capability<&Test.R> =
                               signer.capabilities.storage.issue<&Test.R>(storagePath1)
-                          let issuedCap3: Capability<&Test.R{}> =
-                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
-                          let issuedCap4: Capability<&Test.R{}> =
+                          let issuedCap3: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
+                          let issuedCap4: Capability<&Test.R> =
                               signer.capabilities.storage.issue<&Test.R>(storagePath2)
 
                           // Assert
@@ -1730,8 +1730,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.storage.issue<&Test.R>(storagePath1)
                           let issuedCap2: Capability<&Test.R> =
                               signer.capabilities.storage.issue<&Test.R>(storagePath1)
-                          let issuedCap3: Capability<&Test.R{}> =
-                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                          let issuedCap3: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
                           let issuedCap4: Capability<&Test.R> =
                               signer.capabilities.storage.issue<&Test.R>(storagePath2)
 
@@ -1755,7 +1755,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controller2!.target() == storagePath1)
 
                           assert(controller3!.capabilityID == 3)
-                          assert(controller3!.borrowType == Type<&Test.R{}>())
+                          assert(controller3!.borrowType == Type<&Test.R>())
                           assert(controller3!.target() == storagePath1)
 
                           assert(controller4!.capabilityID == 4)
@@ -1787,8 +1787,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.storage.issue<&Test.R>(storagePath1)
                           let issuedCap2: Capability<&Test.R> =
                               signer.capabilities.storage.issue<&Test.R>(storagePath1)
-                          let issuedCap3: Capability<&Test.R{}> =
-                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                          let issuedCap3: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
                           let issuedCap4: Capability<&Test.R> =
                               signer.capabilities.storage.issue<&Test.R>(storagePath2)
 
@@ -1872,8 +1872,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.storage.issue<&Test.R>(storagePath1)
                           let issuedCap2: Capability<&Test.R> =
                               signer.capabilities.storage.issue<&Test.R>(storagePath1)
-                          let issuedCap3: Capability<&Test.R{}> =
-                              signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                          let issuedCap3: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath1)
                           let issuedCap4: Capability<&Test.R> =
                               signer.capabilities.storage.issue<&Test.R>(storagePath2)
 
@@ -2117,8 +2117,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.account.issue<&AuthAccount>()
                           let issuedCap2: Capability<&AuthAccount> =
                               signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount{}> =
-                              signer.capabilities.account.issue<&AuthAccount{}>()
+                          let issuedCap3: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
 
                           // Assert
                           assert(issuedCap1.id == 1)
@@ -2196,8 +2196,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.account.issue<&AuthAccount>()
                           let issuedCap2: Capability<&AuthAccount> =
                               signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount{}> =
-                              signer.capabilities.account.issue<&AuthAccount{}>()
+                          let issuedCap3: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
 
                           // Act
                           let controller1: &AccountCapabilityController? =
@@ -2215,7 +2215,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controller2!.borrowType == Type<&AuthAccount>())
 
                           assert(controller3!.capabilityID == 3)
-                          assert(controller3!.borrowType == Type<&AuthAccount{}>())
+                          assert(controller3!.borrowType == Type<&AuthAccount>())
                       }
                   }
                 `,
@@ -2240,8 +2240,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.account.issue<&AuthAccount>()
                           let issuedCap2: Capability<&AuthAccount> =
                               signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount{}> =
-                              signer.capabilities.account.issue<&AuthAccount{}>()
+                          let issuedCap3: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
 
                           // Act
                           let controllers: [&AccountCapabilityController] =
@@ -2313,8 +2313,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               signer.capabilities.account.issue<&AuthAccount>()
                           let issuedCap2: Capability<&AuthAccount> =
                               signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount{}> =
-                              signer.capabilities.account.issue<&AuthAccount{}>()
+                          let issuedCap3: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
 
                           // Act
                           let controllers: [&AccountCapabilityController] = []
@@ -2572,8 +2572,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               let controller2: &StorageCapabilityController? =
                                   signer.capabilities.storage.getController(byCapabilityID: issuedCap2.id)
 
-                              let issuedCap3: Capability<&Test.R{}> =
-                                  signer.capabilities.storage.issue<&Test.R{}>(storagePath1)
+                              let issuedCap3: Capability<&Test.R> =
+                                  signer.capabilities.storage.issue<&Test.R>(storagePath1)
                               let controller3: &StorageCapabilityController? =
                                   signer.capabilities.storage.getController(byCapabilityID: issuedCap3.id)
 

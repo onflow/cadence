@@ -371,7 +371,7 @@ access(all) contract FlowToken: FungibleToken {
         // Create a public capability to the stored Vault that only exposes
         // the 'deposit' method through the 'Receiver' interface
         //
-        adminAccount.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+        adminAccount.link<&FlowToken.Vault>(
             /public/flowTokenReceiver,
             target: /storage/flowTokenVault
         )
@@ -379,7 +379,7 @@ access(all) contract FlowToken: FungibleToken {
         // Create a public capability to the stored Vault that only exposes
         // the 'balance' field through the 'Balance' interface
         //
-        adminAccount.link<&FlowToken.Vault{FungibleToken.Balance}>(
+        adminAccount.link<&FlowToken.Vault>(
             /public/flowTokenBalance,
             target: /storage/flowTokenVault
         )
@@ -407,14 +407,14 @@ transaction {
 
             // Create a public capability to the Vault that only exposes
             // the deposit function through the Receiver interface
-            signer.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+            signer.link<&FlowToken.Vault>(
                 /public/flowTokenReceiver,
                 target: /storage/flowTokenVault
             )
 
             // Create a public capability to the Vault that only exposes
             // the balance field through the Balance interface
-            signer.link<&FlowToken.Vault{FungibleToken.Balance}>(
+            signer.link<&FlowToken.Vault>(
                 /public/flowTokenBalance,
                 target: /storage/flowTokenVault
             )
@@ -494,7 +494,7 @@ access(all) fun main(account: Address): UFix64 {
 
     let vaultRef = getAccount(account)
         .getCapability(/public/flowTokenBalance)
-        .borrow<&FlowToken.Vault{FungibleToken.Balance}>()
+        .borrow<&FlowToken.Vault>()
         ?? panic("Could not borrow Balance reference to the Vault")
 
     return vaultRef.balance

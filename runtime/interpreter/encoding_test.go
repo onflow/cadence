@@ -4146,11 +4146,6 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
 			Type: &IntersectionStaticType{
-				Type: NewCompositeStaticTypeComputeTypeID(
-					nil,
-					utils.TestLocation,
-					"S",
-				),
 				Types: []InterfaceStaticType{
 					{
 						Location:            utils.TestLocation,
@@ -4167,10 +4162,14 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 		encoded := assemble(
 			// tag
 			0xd8, CBORTagIntersectionStaticType,
-			// array, 2 items follow
+			// array, length 2
+			0x82,
+			// nil
+			0xf6,
+			// array, length 2
 			0x82,
 			// tag
-			0xd8, CBORTagCompositeStaticType,
+			0xd8, CBORTagInterfaceStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
@@ -4179,10 +4178,62 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 			0x64,
 			// t, e, s, t
 			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 1
-			0x61,
-			// S
-			0x53,
+			// UTF-8 string, length 2
+			0x62,
+			// I1
+			0x49, 0x31,
+			// tag
+			0xd8, CBORTagInterfaceStaticType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 2
+			0x62,
+			// I2
+			0x49, 0x32,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("legacy intersection", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := PathLinkValue{
+			TargetPath: publicPathValue,
+			Type: &IntersectionStaticType{
+				LegacyType: interpreter.PrimitiveStaticTypeInt,
+				Types: []InterfaceStaticType{
+					{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "I1",
+					},
+					{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "I2",
+					},
+				},
+			},
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagIntersectionStaticType,
+			// array, length 2
+			0x82,
+			// int type
+			0xd8, 0xd4, 0x18, 0x24,
 			// array, length 2
 			0x82,
 			// tag
@@ -4854,11 +4905,6 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
-					Type: NewCompositeStaticTypeComputeTypeID(
-						nil,
-						utils.TestLocation,
-						"S",
-					),
 					Types: []InterfaceStaticType{
 						{
 							Location:            utils.TestLocation,
@@ -4887,22 +4933,10 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			0xf6,
 			// tag
 			0xd8, CBORTagIntersectionStaticType,
-			// array, 2 items follow
+			// array, length 2
 			0x82,
-			// tag
-			0xd8, CBORTagCompositeStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 1
-			0x61,
-			// S
-			0x53,
+			// nil
+			0xf6,
 			// array, length 2
 			0x82,
 			// tag
@@ -5055,14 +5089,19 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		)
 	})
 
-	t.Run("unauthorized reference, intersection AuthAccount", func(t *testing.T) {
+	t.Run("unauthorized reference, intersection I1", func(t *testing.T) {
 
 		t.Parallel()
 
 		value := &AccountCapabilityControllerValue{
 			BorrowType: ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
-					Type: PrimitiveStaticTypeAuthAccount,
+					Types: []interpreter.InterfaceStaticType{
+						{
+							Location:            utils.TestLocation,
+							QualifiedIdentifier: "SimpleInterface",
+						},
+					},
 				},
 				Authorization: UnauthorizedAccess,
 			},
@@ -5081,14 +5120,26 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			0xf6,
 			// tag
 			0xd8, CBORTagIntersectionStaticType,
+			// array, length 2
+			0x82,
+			// nil
+			0xf6,
+			// array, 1 item follows
+			0x81,
+			// tag
+			0xd8, CBORTagInterfaceStaticType,
 			// array, 2 items follow
 			0x82,
 			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			// unsigned 90
-			0x18, 0x5a,
-			// array, length 0
-			0x80,
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 22
+			0x6F,
+			// SimpleInterface
+			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
 		)
 
 		testEncodeDecode(t,

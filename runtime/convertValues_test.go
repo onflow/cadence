@@ -1373,10 +1373,6 @@ func TestImportRuntimeType(t *testing.T) {
 		{
 			label: "IntersectionType",
 			actual: &cadence.IntersectionType{
-				Type: &cadence.StructType{
-					Location:            TestLocation,
-					QualifiedIdentifier: "S",
-				},
 				Types: []cadence.Type{
 					&cadence.StructInterfaceType{
 						Location:            TestLocation,
@@ -1384,10 +1380,6 @@ func TestImportRuntimeType(t *testing.T) {
 					}},
 			},
 			expected: &interpreter.IntersectionStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            TestLocation,
-					QualifiedIdentifier: "S",
-				},
 				Types: []interpreter.InterfaceStaticType{
 					{
 						Location:            TestLocation,
@@ -2127,7 +2119,6 @@ func TestExportTypeValue(t *testing.T) {
 
 		ty := interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 				Types: []interpreter.InterfaceStaticType{
 					{
 						Location:            TestLocation,
@@ -2143,11 +2134,6 @@ func TestExportTypeValue(t *testing.T) {
 		assert.Equal(t,
 			cadence.TypeValue{
 				StaticType: &cadence.IntersectionType{
-					Type: &cadence.StructType{
-						QualifiedIdentifier: "S",
-						Location:            TestLocation,
-						Fields:              []cadence.Field{},
-					},
 					Types: []cadence.Type{
 						&cadence.StructInterfaceType{
 							QualifiedIdentifier: "SI",

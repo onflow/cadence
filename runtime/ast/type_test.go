@@ -1252,11 +1252,6 @@ func TestIntersectionType_Doc(t *testing.T) {
 	t.Parallel()
 
 	ty := &IntersectionType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
 		Types: []*NominalType{
 			{
 				Identifier: Identifier{
@@ -1273,7 +1268,6 @@ func TestIntersectionType_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Concat{
-			prettier.Text("AB"),
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("{"),
@@ -1300,11 +1294,6 @@ func TestIntersectionType_String(t *testing.T) {
 	t.Parallel()
 
 	ty := &IntersectionType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
 		Types: []*NominalType{
 			{
 				Identifier: Identifier{
@@ -1320,7 +1309,7 @@ func TestIntersectionType_String(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"AB{CD, EF}",
+		"{CD, EF}",
 		ty.String(),
 	)
 }
@@ -1330,12 +1319,6 @@ func TestIntersectionType_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	ty := &IntersectionType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-				Pos:        Position{Offset: 1, Line: 2, Column: 3},
-			},
-		},
 		Types: []*NominalType{
 			{
 				Identifier: Identifier{
@@ -1364,16 +1347,6 @@ func TestIntersectionType_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "IntersectionType",
-            "IntersectionType": {
-                "Type": "NominalType",
-                "Identifier": {
-                    "Identifier": "AB",
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                    "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
-                },
-                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
-            },
             "Types": [
                 {
                     "Type": "NominalType",

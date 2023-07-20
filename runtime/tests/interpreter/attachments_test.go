@@ -1346,8 +1346,8 @@ func TestInterpretAttachmentStorage(t *testing.T) {
                 let r <- create R()
                 let r2 <- attach A() to <-r
                 authAccount.save(<-r2, to: /storage/foo)
-                authAccount.link<&R{I}>(/public/foo, target: /storage/foo)
-                let cap = pubAccount.getCapability<&R{I}>(/public/foo)!
+                authAccount.link<&{I}>(/public/foo, target: /storage/foo)
+                let cap = pubAccount.getCapability<&{I}>(/public/foo)!
                 let i = cap.borrow()![A]?.foo()!
                 return i
             }

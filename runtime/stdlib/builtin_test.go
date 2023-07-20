@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/tests/checker"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -86,9 +87,80 @@ func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibr
 	return inter
 }
 
-func TestAssert(t *testing.T) {
+func TestCheckAssert(t *testing.T) {
 
 	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(AssertFunction)
+
+	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
+		return checker.ParseAndCheckWithOptions(t,
+			code,
+			checker.ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+			},
+		)
+	}
+
+	t.Run("too few arguments", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert()`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.InsufficientArgumentsError{})
+	})
+
+	t.Run("invalid first argument", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(1)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.TypeMismatchError{})
+	})
+
+	t.Run("no message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true)`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("with message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true, message: "foo")`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true, message: 1)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.TypeMismatchError{})
+	})
+
+	t.Run("missing argument label for message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true, "")`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.MissingArgumentLabelError{})
+	})
+
+	t.Run("too many arguments", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true, message: "foo", true)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.ExcessiveArgumentsError{})
+	})
+}
+
+func TestInterpretAssert(t *testing.T) {
 
 	inter := newInterpreter(t,
 		`access(all) let test = assert`,
@@ -131,7 +203,58 @@ func TestAssert(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestPanic(t *testing.T) {
+func TestCheckPanic(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(PanicFunction)
+
+	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
+		return checker.ParseAndCheckWithOptions(t,
+			code,
+			checker.ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+			},
+		)
+	}
+
+	t.Run("too few arguments", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = panic()`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.InsufficientArgumentsError{})
+	})
+
+	t.Run("message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = panic("test")`)
+
+		require.NoError(t, err)
+
+	})
+
+	t.Run("invalid message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = panic(true)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.TypeMismatchError{})
+	})
+
+	t.Run("too many arguments", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = panic("test", 1)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.ExcessiveArgumentsError{})
+	})
+}
+
+func TestInterpretPanic(t *testing.T) {
 
 	t.Parallel()
 

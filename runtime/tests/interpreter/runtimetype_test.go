@@ -575,31 +575,23 @@ func TestInterpretIntersectionType(t *testing.T) {
         access(all) let foo : Int
       }
 
-      let a = IntersectionType(identifier: "S.test.A", types: ["S.test.R"])!
-      let b = IntersectionType(identifier: "S.test.B", types: ["S.test.S"])!
+      let a = IntersectionType(types: ["S.test.R"])!
+      let b = IntersectionType(types: ["S.test.S"])!
 
-      let c = IntersectionType(identifier: "S.test.B", types: ["S.test.R"])
-      let d = IntersectionType(identifier: "S.test.A", types: ["S.test.S"])
-      let e = IntersectionType(identifier: "S.test.B", types: ["S.test.S2"])
+	  let c = IntersectionType(types: [])
 
-      let f = IntersectionType(identifier: "S.test.B", types: ["X"])
-      let g = IntersectionType(identifier: "S.test.N", types: ["S.test.S2"])
+      let f = IntersectionType(types: ["X"])
 
-      let h = Type<@A{R}>()
-      let i = Type<B{S}>()
+      let h = Type<@{R}>()
+      let i = Type<{S}>()
 
-      let j = IntersectionType(identifier: nil, types: ["S.test.R"])!
-      let k = IntersectionType(identifier: nil, types: ["S.test.S"])!
+      let j = IntersectionType(types: ["S.test.R", "S.test.S" ])
+      let k = IntersectionType(types: ["S.test.S", "S.test.S2"])!
     `)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "A",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.A",
-				},
 				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "R",
@@ -612,13 +604,13 @@ func TestInterpretIntersectionType(t *testing.T) {
 	)
 
 	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("c").GetValue(),
+	)
+
+	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "B",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.B",
-				},
 				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "S",
@@ -631,27 +623,20 @@ func TestInterpretIntersectionType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.TypeValue{
-			Type: &interpreter.IntersectionStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyResource,
-				Types: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-					},
-				},
-			},
-		},
+		interpreter.Nil,
 		inter.Globals.Get("j").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "S",
+						Location:            utils.TestLocation,
+					},
+					{
+						QualifiedIdentifier: "S2",
 						Location:            utils.TestLocation,
 					},
 				},
@@ -662,27 +647,7 @@ func TestInterpretIntersectionType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("e").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
 		inter.Globals.Get("f").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("g").GetValue(),
 	)
 
 	assert.Equal(t,

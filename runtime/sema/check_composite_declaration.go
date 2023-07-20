@@ -906,11 +906,14 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 					}
 
 					if _, ok := inheritedMembers.Get(memberName); ok {
+						errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, declaration.DeclarationIdentifier())
+
 						if member.HasImplementation {
 							checker.report(
 								&MultipleInterfaceDefaultImplementationsError{
 									CompositeKindedType: nestedCompositeType,
 									Member:              member,
+									Range:               errorRange,
 								},
 							)
 						} else {
@@ -918,6 +921,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 								&DefaultFunctionConflictError{
 									CompositeKindedType: nestedCompositeType,
 									Member:              member,
+									Range:               errorRange,
 								},
 							)
 						}
@@ -1426,11 +1430,13 @@ func (checker *Checker) checkCompositeLikeConformance(
 			if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
 
 				if _, ok := inheritedMembers[name]; ok {
+					errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.DeclarationIdentifier())
 					if interfaceMember.HasImplementation {
 						checker.report(
 							&MultipleInterfaceDefaultImplementationsError{
 								CompositeKindedType: compositeType,
 								Member:              interfaceMember,
+								Range:               errorRange,
 							},
 						)
 					} else {
@@ -1438,6 +1444,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 							&DefaultFunctionConflictError{
 								CompositeKindedType: compositeType,
 								Member:              interfaceMember,
+								Range:               errorRange,
 							},
 						)
 					}
@@ -2443,13 +2450,9 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 
 func (checker *Checker) declareBaseValue(baseType Type, attachmentType *CompositeType, superDocString string) {
 	if typedBaseType, ok := baseType.(*InterfaceType); ok {
-		intersectionType := AnyStructType
-		if baseType.IsResourceType() {
-			intersectionType = AnyResourceType
-		}
 		// we can't actually have a value of an interface type I, so instead we create a value of {I}
 		// to be referenced by `base`
-		baseType = NewIntersectionType(checker.memoryGauge, intersectionType, []*InterfaceType{typedBaseType})
+		baseType = NewIntersectionType(checker.memoryGauge, []*InterfaceType{typedBaseType})
 	}
 	// the `base` value in an attachment function has the set of entitlements defined by the required entitlements specified in the attachment's declaration
 	// -------------------------------

@@ -423,12 +423,15 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	if argumentCount != parameterCount {
 
-		// if the function has defined optional parameters,
-		// then the provided arguments must be equal to or greater than
-		// the number of required parameters.
-		if functionType.RequiredArgumentCount == nil ||
-			argumentCount < *functionType.RequiredArgumentCount {
+		if argumentCount < functionType.Arity.MinCount(parameterCount) {
+			return nil, ArgumentCountError{
+				ParameterCount: parameterCount,
+				ArgumentCount:  argumentCount,
+			}
+		}
 
+		maxCount := functionType.Arity.MaxCount(parameterCount)
+		if maxCount != nil && argumentCount > *maxCount {
 			return nil, ArgumentCountError{
 				ParameterCount: parameterCount,
 				ArgumentCount:  argumentCount,
@@ -1755,6 +1758,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		locationRange,
 		atree.Address{},
 		false,
+		nil,
 		nil,
 	)
 
@@ -3613,7 +3617,7 @@ func functionTypeFunction(invocation Invocation) Value {
 }
 
 func intersectionTypeFunction(invocation Invocation) Value {
-	intersectionIDs, ok := invocation.Arguments[1].(*ArrayValue)
+	intersectionIDs, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -3656,26 +3660,9 @@ func intersectionTypeFunction(invocation Invocation) Value {
 		}
 	}
 
-	var semaType sema.Type
-	var err error
-
-	switch typeID := invocation.Arguments[0].(type) {
-	case NilValue:
-		semaType = nil
-	case *SomeValue:
-		innerValue := typeID.InnerValue(invocation.Interpreter, invocation.LocationRange)
-		semaType, err = lookupComposite(invocation.Interpreter, innerValue.(*StringValue).Str)
-		if err != nil {
-			return Nil
-		}
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
 	var invalidIntersectionType bool
-	ty := sema.CheckIntersectionType(
+	sema.CheckIntersectionType(
 		invocation.Interpreter,
-		semaType,
 		semaIntersections,
 		func(_ func(*ast.IntersectionType) error) {
 			invalidIntersectionType = true
@@ -3694,7 +3681,6 @@ func intersectionTypeFunction(invocation Invocation) Value {
 			invocation.Interpreter,
 			NewIntersectionStaticType(
 				invocation.Interpreter,
-				ConvertSemaToStaticType(invocation.Interpreter, ty),
 				staticIntersections,
 			),
 		),
@@ -4182,6 +4168,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				atree.Address(address),
 				true,
 				nil,
+				nil,
 			)
 
 			// Write new value
@@ -4304,6 +4291,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				locationRange,
 				atree.Address{},
 				false,
+				nil,
 				nil,
 			)
 

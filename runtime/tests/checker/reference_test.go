@@ -463,7 +463,7 @@ func TestCheckReferenceExpressionWithIntersectionAnyResultType(t *testing.T) {
           resource R: I {}
 
           let r <- create R()
-          let ref = &r as &AnyResource{I}
+          let ref = &r as &{I}
         `)
 
 		require.NoError(t, err)
@@ -478,7 +478,7 @@ func TestCheckReferenceExpressionWithIntersectionAnyResultType(t *testing.T) {
           struct S: I {}
 
           let s = S()
-          let ref = &s as &AnyStruct{I}
+          let ref = &s as &{I}
         `)
 
 		require.NoError(t, err)
@@ -944,7 +944,7 @@ func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
           fun test() {
               let r <- create R()
-              let ref = &r as &AnyResource{I}
+              let ref = &r as &{I}
               ref.foo()
               destroy r
           }
@@ -969,7 +969,7 @@ func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
           fun test() {
               let s = S()
-              let ref = &s as &AnyStruct{I}
+              let ref = &s as &{I}
               ref.foo()
           }
         `)
@@ -996,7 +996,7 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
           fun test() {
               let r <- create R()
-              let ref = &r as &AnyResource{I}
+              let ref = &r as &{I}
               ref.foo()
               destroy r
           }
@@ -1021,7 +1021,7 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
           fun test() {
               let s = S()
-              let ref = &s as &AnyStruct{I}
+              let ref = &s as &{I}
               ref.foo()
           }
         `)
@@ -1198,27 +1198,30 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("upcast to optional", func(t *testing.T) {
+	t.Run("optional reference to non-optional value", func(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		_, err := ParseAndCheck(t, `
           let i: Int = 1
           let ref = &i as &Int?
         `)
 
-		require.NoError(t, err)
-		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 
-		assert.Equal(t,
-			&sema.OptionalType{
-				Type: &sema.ReferenceType{
-					Type:          sema.IntType,
-					Authorization: sema.UnauthorizedAccess,
-				},
-			},
-			refValueType,
-		)
+	t.Run("non-optional reference to optional value", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let opt: Int? = 1
+          let ref = &opt as &AnyStruct
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
 
@@ -1257,33 +1260,17 @@ func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
-func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      let y = &x as AnyResource{}
-    `)
-
-	errs := RequireCheckerErrors(t, err, 4)
-
-	assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
-	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[2])
-	assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[3])
-}
-
 func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      let y = &x as AnyStruct{}
+      let y = &x as {}
     `)
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+	assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
@@ -1922,9 +1909,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 2)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
+
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 
 	t.Run("contract field ref", func(t *testing.T) {
@@ -2189,10 +2180,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 2)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 
 	t.Run("nil coalescing both sides", func(t *testing.T) {
@@ -2221,11 +2215,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 3)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 		assert.ErrorAs(t, errors[1], &invalidatedRefError)
+		assert.ErrorAs(t, errors[2], &invalidatedRefError)
 	})
 
 	t.Run("nil coalescing nested", func(t *testing.T) {
@@ -2257,12 +2254,15 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 3)
+		errors := RequireCheckerErrors(t, err, 4)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 		assert.ErrorAs(t, errors[2], &invalidatedRefError)
+		assert.ErrorAs(t, errors[3], &invalidatedRefError)
 	})
 
 	t.Run("ref assignment", func(t *testing.T) {
@@ -2490,10 +2490,13 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 1)
+		errors := RequireCheckerErrors(t, err, 2)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+		assert.ErrorAs(t, errors[1], &invalidatedRefError)
 	})
 
 	t.Run("conditional expr both sides", func(t *testing.T) {
@@ -2522,11 +2525,14 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             `,
 		)
 
-		errors := RequireCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 3)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errors[0], &typeMismatchError)
 
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
-		assert.ErrorAs(t, errors[0], &invalidatedRefError)
 		assert.ErrorAs(t, errors[1], &invalidatedRefError)
+		assert.ErrorAs(t, errors[2], &invalidatedRefError)
 	})
 
 	t.Run("error notes", func(t *testing.T) {

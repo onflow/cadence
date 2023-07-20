@@ -430,22 +430,9 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 
 				checker, err := ParseAndCheck(t, code)
 
-				// NOTE: type mismatch is only tested when both kinds are not contracts
-				// (which can not be passed by value)
+				errs := RequireCheckerErrors(t, err, 1)
 
-				if firstKind != common.CompositeKindContract &&
-					secondKind != common.CompositeKindContract {
-
-					errs := RequireCheckerErrors(t, err, 2)
-
-					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-
-				} else {
-					errs := RequireCheckerErrors(t, err, 1)
-
-					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-				}
+				assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 
 				require.NotNil(t, checker)
 
@@ -1969,7 +1956,6 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(
 						&sema.IntersectionType{
-							Type: sema.AnyStructType,
 							Types: []*sema.InterfaceType{
 								iType,
 							},
@@ -1981,7 +1967,6 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 				&sema.DictionaryType{
 					KeyType: sema.IntType,
 					ValueType: &sema.IntersectionType{
-						Type: sema.AnyStructType,
 						Types: []*sema.InterfaceType{
 							iType,
 						},
@@ -4169,28 +4154,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("intersection composite type subtyping", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            struct interface A {}
-
-            struct interface B: A  {}
-
-            struct S: B {}
-
-
-            fun foo(): {A} {
-                var s: S{B} = S()
-                return s
-            }
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("intersection anystruct type subtyping", func(t *testing.T) {
+	t.Run("intersection type subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4351,13 +4315,13 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             // Case I: &{B, C} is a subtype of &{B}
             fun foo(): &{B} {
-                var s: S{B, C} = S()
+                var s: {B, C} = S()
                 return &s as &{B, C}
             }
 
             // Case II: &{B} is a subtype of &{A}
             fun bar(): &{A} {
-               var s: S{B} = S()
+               var s: {B} = S()
                return &s as &{B}
             }
         `)
@@ -4379,15 +4343,15 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
             struct S: B, C {}
 
             // Case I: &S{B, C} is a subtype of &S{B}
-            fun foo(): &S{B} {
-                var s: S{B, C} = S()
-                return &s as &S{B, C}
+            fun foo(): &{B} {
+                var s: {B, C} = S()
+                return &s as &{B, C}
             }
 
-            // Case II: &S{B} is a subtype of &S{A}
-            fun bar(): &S{A} {
-               var s: S{B} = S()
-               return &s as &S{B}
+            // Case II: &{B} is a subtype of &S{A}
+            fun bar(): &{A} {
+               var s: {B} = S()
+               return &s as &{B}
             }
         `)
 
@@ -4407,16 +4371,16 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             struct S: B, C {}
 
-            // Case I: &S{B, C} is a subtype of &S{B}
-            fun foo(): &S{B} {
-                var s: S{B, C} = S()
-                return &s as &S{B, C}
+            // Case I: &{B, C} is a subtype of &{B}
+            fun foo(): &{B} {
+                var s: {B, C} = S()
+                return &s as &{B, C}
             }
 
-            // Case II: &S{B, C} is also a subtype of &S{A}
-            fun bar(): &S{A} {
-               var s: S{B, C} = S()
-               return &s as &S{B, C}
+            // Case II: &{B, C} is also a subtype of &{A}
+            fun bar(): &{A} {
+               var s: {B, C} = S()
+               return &s as &{B, C}
             }
         `)
 

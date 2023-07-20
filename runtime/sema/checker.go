@@ -899,7 +899,6 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 
 func CheckIntersectionType(
 	memoryGauge common.MemoryGauge,
-	intersectionType Type,
 	types []*InterfaceType,
 	report func(func(*ast.IntersectionType) error),
 ) Type {
@@ -978,74 +977,27 @@ func CheckIntersectionType(
 		})
 	}
 
-	var hadExplicitType = intersectionType != nil
+	// If no intersection type is given, infer `AnyResource`/`AnyStruct`
+	// based on the composite kind of the intersections.
 
-	if !hadExplicitType {
-		// If no intersection type is given, infer `AnyResource`/`AnyStruct`
-		// based on the composite kind of the intersections.
+	switch intersectionsCompositeKind {
+	case common.CompositeKindUnknown:
+		// If no intersection type is given, and also no intersections,
+		// the type is ambiguous.
 
-		switch intersectionsCompositeKind {
-		case common.CompositeKindUnknown:
-			// If no intersection type is given, and also no intersections,
-			// the type is ambiguous.
-
-			intersectionType = InvalidType
-
-			report(func(t *ast.IntersectionType) error {
-				return &AmbiguousIntersectionTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
-			})
-
-		case common.CompositeKindResource:
-			intersectionType = AnyResourceType
-
-		case common.CompositeKindStructure:
-			intersectionType = AnyStructType
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-	}
-
-	// The intersection type must be a composite type
-	// or `AnyResource`/`AnyStruct`
-
-	reportInvalidIntersectionType := func() {
 		report(func(t *ast.IntersectionType) error {
-			return &InvalidIntersectionTypeError{
-				Type:  intersectionType,
-				Range: ast.NewRangeFromPositioned(memoryGauge, t.Type),
-			}
+			return &AmbiguousIntersectionTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
 		})
+		return InvalidType
+
+	case common.CompositeKindResource, common.CompositeKindStructure:
+		break
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
 	var compositeType *CompositeType
-
-	if !intersectionType.IsInvalidType() {
-
-		if typeResult, ok := intersectionType.(*CompositeType); ok {
-			switch typeResult.Kind {
-
-			case common.CompositeKindResource,
-				common.CompositeKindStructure:
-
-				compositeType = typeResult
-
-			default:
-				reportInvalidIntersectionType()
-			}
-		} else {
-
-			switch intersectionType {
-			case AnyResourceType, AnyStructType, AnyType:
-				break
-
-			default:
-				if hadExplicitType {
-					reportInvalidIntersectionType()
-				}
-			}
-		}
-	}
 
 	// If the intersection type is a composite type,
 	// check that the intersections are conformances
@@ -1070,18 +1022,11 @@ func CheckIntersectionType(
 			}
 		}
 	}
-	return intersectionType
+
+	return &IntersectionType{Types: types}
 }
 
 func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
-	var intersectionType Type
-
-	// Convert the intersection type, if any
-
-	if t.Type != nil {
-		intersectionType = checker.ConvertType(t.Type)
-	}
-
 	// Convert the intersected types
 
 	var intersectedTypes []*InterfaceType
@@ -1114,19 +1059,15 @@ func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
 		intersectedTypes = append(intersectedTypes, intersectedInterfaceType)
 	}
 
-	intersectionType = CheckIntersectionType(
+	intersectionType := CheckIntersectionType(
 		checker.memoryGauge,
-		intersectionType,
 		intersectedTypes,
 		func(getError func(*ast.IntersectionType) error) {
 			checker.report(getError(t))
 		},
 	)
 
-	return &IntersectionType{
-		Type:  intersectionType,
-		Types: intersectedTypes,
-	}
+	return intersectionType
 }
 
 func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {

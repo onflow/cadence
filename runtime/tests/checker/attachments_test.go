@@ -1442,7 +1442,7 @@ func TestCheckBaseTyping(t *testing.T) {
 			struct interface I {}
 			attachment Test for I {
 				fun foo() {
-					let x = base as! &R{I}
+					let x = base as! &{I}
 				}
 			}`,
 		)
@@ -1460,7 +1460,7 @@ func TestCheckBaseTyping(t *testing.T) {
 			resource interface I {}
 			attachment Test for I {
 				fun foo() {
-					let x = base as! &R{I}
+					let x = base as! &{I}
 				}
 			}`,
 		)
@@ -2399,7 +2399,7 @@ func TestCheckAttach(t *testing.T) {
 			struct S: I {}
 			attachment A for AnyStruct {}
 			access(all) fun foo() {
-				let s: S{I} = S()
+				let s: {I} = S()
 				attach A() to s
 			}
 		`,
@@ -2412,25 +2412,6 @@ func TestCheckAttach(t *testing.T) {
 func TestCheckAttachToIntersectionType(t *testing.T) {
 
 	t.Parallel()
-
-	t.Run("struct intersection", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct interface I {}
-			struct S: I {}
-			attachment A for AnyStruct {}
-			access(all) fun foo() {
-				let s: S{I} = S()
-				attach A() to s
-			}
-		`,
-		)
-
-		require.NoError(t, err)
-	})
 
 	t.Run("any struct intersection", func(t *testing.T) {
 
@@ -2461,25 +2442,6 @@ func TestCheckAttachToIntersectionType(t *testing.T) {
 			resource R: I {}
 			attachment A for AnyResource {}
 			access(all) fun foo() {
-				let r: @R{I} <- create R()
-				destroy attach A() to <-r
-			}
-		`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("anyresource intersection", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource interface I {}
-			resource R: I {}
-			attachment A for AnyResource {}
-			access(all) fun foo() {
 				let r: @{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2489,48 +2451,7 @@ func TestCheckAttachToIntersectionType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach struct interface to struct interface", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct interface I {}
-			struct S: I {}
-			attachment A for I {}
-			access(all) fun foo() {
-				let s: S{I} = S()
-				attach A() to s
-			}
-		`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("attach struct interface to struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct interface I {}
-			struct S: I {}
-			attachment A for S {}
-			access(all) fun foo() {
-				let s: S{I} = S()
-				attach A() to s
-			}
-		`,
-		)
-
-		// there is no reason to error here; the owner of this
-		// intersection type is always able to unrestrict
-
-		require.NoError(t, err)
-	})
-
-	t.Run("attach anystruct interface to struct", func(t *testing.T) {
+	t.Run("attach interface to struct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2561,7 +2482,7 @@ func TestCheckAttachToIntersectionType(t *testing.T) {
 			resource R: I {}
 			attachment A for I {}
 			access(all) fun foo() {
-				let r: @R{I} <- create R()
+				let r: @{I} <- create R()
 				destroy attach A() to <-r
 			}
 		`,
@@ -2570,29 +2491,7 @@ func TestCheckAttachToIntersectionType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach resource interface to resource", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource interface I {}
-			resource R: I {}
-			attachment A for R {}
-			access(all) fun foo() {
-				let r: @R{I} <- create R()
-				destroy attach A() to <-r
-			}
-		`,
-		)
-
-		// owner can unrestrict `r` as they wish, so there is no reason to
-		// limit attach here
-
-		require.NoError(t, err)
-	})
-
-	t.Run("attach anyresource interface to resource", func(t *testing.T) {
+	t.Run("attach interface to resource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3447,13 +3346,14 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for S {}
-			access(all) fun foo(s: S{I}) {
+			access(all) fun foo(s: {I}) {
 				remove A from s
 			}
 		`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("basic struct interface", func(t *testing.T) {
@@ -3465,7 +3365,7 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for I {}
-			access(all) fun foo(s: S{I}) {
+			access(all) fun foo(s: {I}) {
 				remove A from s
 			}
 		`,
@@ -3483,16 +3383,15 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 			resource S: I {}
 			resource interface I {}
 			attachment A for S {}
-			access(all) fun foo(s: @S{I}) {
+			access(all) fun foo(s: @{I}) {
 				remove A from s
 				destroy s
 			}
 		`,
 		)
 
-		// owner can always unrestrict `s`, so no need to prevent removal of A
-
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("basic resource interface", func(t *testing.T) {
@@ -3504,7 +3403,7 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 			resource S: I {}
 			resource interface I {}
 			attachment A for I {}
-			access(all) fun foo(s: @S{I}) {
+			access(all) fun foo(s: @{I}) {
 				remove A from s
 				destroy s
 			}
@@ -3589,25 +3488,6 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 	})
 
 	t.Run("multiple intersection", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct S: I, J {}
-			struct interface I {}
-			struct interface J {}
-			attachment A for I {}
-			access(all) fun foo(s: S{I, J}) {
-				remove A from s
-			}
-		`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("anystruct multiple intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3962,7 +3842,7 @@ func TestCheckAccessAttachmentIntersection(t *testing.T) {
 		struct R: I {}
 		struct interface I {}
 		attachment A for I {}
-		access(all) fun foo(r: R{I}) {
+		access(all) fun foo(r: {I}) {
 			r[A]
 		}
 		`,
@@ -3985,22 +3865,6 @@ func TestCheckAccessAttachmentIntersection(t *testing.T) {
 		)
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
-	})
-
-	t.Run("intersection concrete base reference", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-		struct R: I {}
-		struct interface I {}
-		attachment A for R {}
-		access(all) fun foo(r: &R{I}) {
-			r[A]
-		}
-		`,
-		)
-		require.NoError(t, err)
 	})
 
 	t.Run("intersection concrete base reference to interface", func(t *testing.T) {
@@ -4077,7 +3941,7 @@ func TestCheckAccessAttachmentIntersection(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		access(all) fun foo(r: R{J}) {
+		access(all) fun foo(r: {J}) {
 			r[A]
 		}
 		`,
@@ -4096,7 +3960,7 @@ func TestCheckAccessAttachmentIntersection(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		access(all) fun foo(r: &R{J}) {
+		access(all) fun foo(r: &{J}) {
 			r[A]
 		}
 		`,
