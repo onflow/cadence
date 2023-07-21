@@ -129,8 +129,6 @@ var PublicAccountTypeGetCapabilityFunctionType = &FunctionType{
 }
 
 const PublicAccountTypeGetCapabilityFunctionDocString = `
-**DEPRECATED**: Use ` + "`capabilities.get`" + ` instead.
-
 Returns the capability at the given public path.
 `
 
@@ -152,8 +150,6 @@ var PublicAccountTypeGetLinkTargetFunctionType = &FunctionType{
 }
 
 const PublicAccountTypeGetLinkTargetFunctionDocString = `
-**DEPRECATED**
-
 Returns the target path of the capability at the given public or private path,
 or nil if there exists no capability at the given path.
 `
