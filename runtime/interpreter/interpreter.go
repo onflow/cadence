@@ -3745,19 +3745,20 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}()
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
-				staticType := value.StaticType(inter)
 
-				// Perform a forced type loading to see if the underlying type is not broken.
-				// If broken, skip this value from the iteration.
-				typeError := inter.checkTypeLoading(staticType)
-				if typeError != nil {
-					continue
-				}
+				staticType := value.StaticType(inter)
 
 				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
 				identifier := string(key.(StringAtreeValue))
 				pathValue := NewPathValue(inter, domain, identifier)
 				runtimeType := NewTypeValue(inter, staticType)
+
+				// Perform a forced value dereferencing to see if the associated type is not broken.
+				// If broken, skip this value from the iteration.
+				valueError := inter.checkValue(address, pathValue, value, staticType)
+				if valueError != nil {
+					continue
+				}
 
 				subInvocation := NewInvocation(
 					inter,
@@ -3799,14 +3800,20 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 	)
 }
 
-func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
+func (interpreter *Interpreter) checkValue(
+	address common.Address,
+	path PathValue,
+	value Value,
+	staticType StaticType,
+) (valueError error) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			rootError := r
 			for {
 				switch err := r.(type) {
 				case errors.UserError, errors.ExternalError:
-					typeError = err.(error)
+					valueError = err.(error)
 					return
 				case xerrors.Wrapper:
 					r = err.Unwrap()
@@ -3817,8 +3824,36 @@ func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeErr
 		}
 	}()
 
-	// Here it is only interested in whether the type can be properly loaded.
-	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
+	// Here, the value at the path could be either:
+	//	1) The actual stored value
+	//	2) A link to the value at the storage (private/public paths)
+	//
+	// Therefore, try to find the final path, and try loading the value.
+
+	// However, borrow type is not statically known.
+	// So take the borrow type from the value itself
+
+	var borrowedType StaticType
+	if _, ok := value.(LinkValue); ok {
+		// Link values always have a `CapabilityStaticType` static type.
+		borrowedType = staticType.(CapabilityStaticType).BorrowType
+	} else {
+		borrowedType = NewReferenceStaticType(interpreter, false, staticType, staticType)
+	}
+
+	var semaType sema.Type
+	semaType, valueError = interpreter.ConvertStaticToSemaType(borrowedType)
+	if valueError != nil {
+		return valueError
+	}
+
+	// This is guaranteed to be a reference type, because `borrowedType` is always a reference.
+	referenceType, ok := semaType.(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	_, valueError = interpreter.checkValueAtPath(address, path, referenceType, EmptyLocationRange)
 
 	return
 }
@@ -4481,50 +4516,63 @@ func (interpreter *Interpreter) pathCapabilityCheckFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			target, authorized, err :=
-				interpreter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					borrowType,
-					true,
-					locationRange,
-				)
+			valid, err := interpreter.checkValueAtPath(address, pathValue, borrowType, locationRange)
 			if err != nil {
 				panic(err)
 			}
 
-			if target == nil {
-				return FalseValue
-			}
-
-			switch target := target.(type) {
-			case AccountCapabilityTarget:
-				return TrueValue
-
-			case PathCapabilityTarget:
-				targetPath := PathValue(target)
-
-				reference := NewStorageReferenceValue(
-					interpreter,
-					authorized,
-					address,
-					targetPath,
-					borrowType.Type,
-				)
-
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				return AsBoolValue(
-					reference.ReferencedValue(interpreter, invocation.LocationRange, false) != nil,
-				)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			return AsBoolValue(valid)
 		},
 	)
+}
+
+func (interpreter *Interpreter) checkValueAtPath(
+	address common.Address,
+	pathValue PathValue,
+	borrowType *sema.ReferenceType,
+	locationRange LocationRange,
+) (bool, error) {
+
+	target, authorized, err := interpreter.GetPathCapabilityFinalTarget(
+		address,
+		pathValue,
+		borrowType,
+		true,
+		locationRange,
+	)
+
+	if err != nil {
+		return false, err
+	}
+
+	if target == nil {
+		return false, nil
+	}
+
+	switch target := target.(type) {
+	case AccountCapabilityTarget:
+		return true, nil
+
+	case PathCapabilityTarget:
+		targetPath := PathValue(target)
+
+		reference := NewStorageReferenceValue(
+			interpreter,
+			authorized,
+			address,
+			targetPath,
+			borrowType.Type,
+		)
+
+		// Attempt to dereference,
+		// which reads the stored value
+		// and performs a dynamic type check
+
+		return reference.ReferencedValue(interpreter, locationRange, false) != nil, nil
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
