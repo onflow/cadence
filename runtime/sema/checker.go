@@ -373,12 +373,7 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	// Therefore, this is done in two steps.
 
 	for _, declaration := range program.InterfaceDeclarations() {
-		checker.declareInterfaceType(declaration)
-	}
-
-	for _, declaration := range program.InterfaceDeclarations() {
-		interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
-
+		interfaceType := checker.declareInterfaceType(declaration)
 		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
 
@@ -389,6 +384,13 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		// *after* the full container chain is fully set up
 
 		VisitThisAndNested(compositeType, registerInElaboration)
+	}
+
+	// Resolve conformances
+	for _, declaration := range program.InterfaceDeclarations() {
+		interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
+		interfaceType.ExplicitInterfaceConformances =
+			checker.explicitInterfaceConformances(declaration, interfaceType)
 	}
 
 	for _, declaration := range program.AttachmentDeclarations() {

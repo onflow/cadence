@@ -287,10 +287,6 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	checker.Elaboration.SetInterfaceDeclarationType(declaration, interfaceType)
 	checker.Elaboration.SetInterfaceTypeDeclaration(interfaceType, declaration)
 
-	// Resolve conformances
-	interfaceType.ExplicitInterfaceConformances =
-		checker.explicitInterfaceConformances(declaration, interfaceType)
-
 	if !declaration.CompositeKind.SupportsInterfaces() {
 		checker.report(
 			&InvalidInterfaceDeclarationError{
@@ -402,6 +398,11 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	// Declare nested declarations' members
 
 	for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
+		// resolve conformances
+		nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
+		nestedInterfaceType.ExplicitInterfaceConformances =
+			checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
+
 		checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 	}
 
