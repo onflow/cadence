@@ -519,7 +519,7 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		err := AsCadenceError(r)
+		err := asCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -549,7 +549,7 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	}
 }
 
-func AsCadenceError(r any) error {
+func asCadenceError(r any) error {
 	err, isError := r.(error)
 	if !isError {
 		return errors.NewUnexpectedError("%s", r)
@@ -3838,7 +3838,7 @@ func (interpreter *Interpreter) checkValue(
 	}()
 
 	// Here, the value at the path could be either:
-	//	1) The actual stored value
+	//	1) The actual stored value (storage path)
 	//	2) A link to the value at the storage (private/public paths)
 	//
 	// Therefore, try to find the final path, and try loading the value.
@@ -3846,21 +3846,22 @@ func (interpreter *Interpreter) checkValue(
 	// However, borrow type is not statically known.
 	// So take the borrow type from the value itself
 
-	var borrowedType StaticType
+	var borrowType StaticType
 	if _, ok := value.(LinkValue); ok {
 		// Link values always have a `CapabilityStaticType` static type.
-		borrowedType = staticType.(CapabilityStaticType).BorrowType
+		borrowType = staticType.(CapabilityStaticType).BorrowType
 	} else {
-		borrowedType = NewReferenceStaticType(interpreter, false, staticType, staticType)
+		// Reference type with value's type (i.e. `staticType`) as both the borrow type and the referenced type.
+		borrowType = NewReferenceStaticType(interpreter, false, staticType, staticType)
 	}
 
 	var semaType sema.Type
-	semaType, valueError = interpreter.ConvertStaticToSemaType(borrowedType)
+	semaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
 	if valueError != nil {
 		return valueError
 	}
 
-	// This is guaranteed to be a reference type, because `borrowedType` is always a reference.
+	// This is guaranteed to be a reference type, because `borrowType` is always a reference.
 	referenceType, ok := semaType.(*sema.ReferenceType)
 	if !ok {
 		panic(errors.NewUnreachableError())

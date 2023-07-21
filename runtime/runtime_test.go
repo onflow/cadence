@@ -7704,7 +7704,7 @@ func assertRuntimeErrorIsInternalError(t *testing.T, err error) {
 	require.True(
 		t,
 		runtimeErrors.IsInternalError(innerError),
-		"Expected `UserError`, found `%T`", innerError,
+		"Expected `InternalError`, found `%T`", innerError,
 	)
 }
 
@@ -8999,4 +8999,154 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}
+
+func TestRuntimeWrappedErrorHandling(t *testing.T) {
+
+	t.Parallel()
+
+	foo := []byte(`
+        access(all) contract Foo {
+            access(all) resource R {
+                access(all) var x: Int
+
+                init() {
+                    self.x = 0
+                }
+            }
+
+            access(all) fun createR(): @R {
+                return <-create R()
+            }
+        }
+    `)
+
+	brokenFoo := []byte(`
+        access(all) contract Foo {
+            access(all) resource R {
+                access(all) var x: Int
+
+                init() {
+                    self.x = "hello"
+                }
+            }
+
+            access(all) fun createR(): @R {
+                return <-create R()
+            }
+        }
+    `)
+
+	tx1 := []byte(`
+        import Foo from 0x1
+
+        transaction {
+            prepare(signer: AuthAccount) {
+                signer.save(<- Foo.createR(), to: /storage/r)
+                signer.link<&Foo.R>(/private/r, target:/storage/r)
+            }
+        }
+    `)
+
+	tx2 := []byte(`
+        transaction {
+            prepare(signer: AuthAccount) {
+                var cap = signer.getCapability<&AnyStruct>(/private/r)
+				cap.check()
+            }
+        }
+    `)
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.AtreeValidationEnabled = false
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	deploy := DeploymentTransaction("Foo", foo)
+
+	var contractCode []byte
+	var events []cadence.Event
+
+	isContractBroken := false
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return contractCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			if isContractBroken && contractCode != nil {
+				return brokenFoo, nil
+			}
+			return contractCode, nil
+		},
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			contractCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		getAndSetProgram: func(location Location, load func() (*interpreter.Program, error)) (*interpreter.Program, error) {
+			program, err := load()
+			if err == nil {
+				return program, nil
+			}
+			return program, fmt.Errorf("wrapped error: %w", err)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Run Tx to save values
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Run Tx to load value.
+	// Mark the contract is broken
+
+	isContractBroken = true
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	RequireError(t, err)
+
+	// Returned error MUST be a user error.
+	// It can NOT be an internal error.
+	assertRuntimeErrorIsUserError(t, err)
 }
