@@ -2051,6 +2051,69 @@ func (v Contract) GetFieldValues() []Value {
 	return v.Fields
 }
 
+// InclusiveRange
+
+type InclusiveRange struct {
+	InclusiveRangeType *InclusiveRangeType
+	Start              Value
+	End                Value
+	Step               Value
+}
+
+var _ Value = InclusiveRange{}
+
+func NewInclusiveRange(start, end, step Value) InclusiveRange {
+	return InclusiveRange{
+		Start: start,
+		End:   end,
+		Step:  step,
+	}
+}
+
+func NewMeteredInclusiveRange(
+	gauge common.MemoryGauge,
+	start, end, step Value,
+) (InclusiveRange, error) {
+	common.UseMemory(gauge, common.CadenceInclusiveRangeValueMemoryUsage)
+	return NewInclusiveRange(start, end, step), nil
+}
+
+func (InclusiveRange) isValue() {}
+
+func (v InclusiveRange) Type() Type {
+	if v.InclusiveRangeType == nil {
+		// Return nil Type instead of Type referencing nil *InclusiveRangeType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
+	return v.InclusiveRangeType
+}
+
+func (v InclusiveRange) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v InclusiveRange) WithType(typ *InclusiveRangeType) InclusiveRange {
+	v.InclusiveRangeType = typ
+	return v
+}
+
+func (v InclusiveRange) ToGoValue() any {
+	return []any{
+		v.Start.ToGoValue(),
+		v.End.ToGoValue(),
+		v.Step.ToGoValue(),
+	}
+}
+
+func (v InclusiveRange) String() string {
+	return formatComposite(
+		v.InclusiveRangeType.ID(),
+		[]Field{}, // TODO: May be bring back the range formatter.
+		[]Value{v.Start, v.End, v.Step},
+	)
+}
+
 // PathLink
 
 type PathLink struct {

@@ -329,18 +329,18 @@ var (
 			Or(CapabilityPathTypeTag).
 			Or(StoragePathTypeTag)
 
-	ConstantSizedTypeTag  = newTypeTagFromLowerMask(constantSizedTypeMask)
-	VariableSizedTypeTag  = newTypeTagFromLowerMask(variableSizedTypeMask)
-	DictionaryTypeTag     = newTypeTagFromLowerMask(dictionaryTypeMask)
-	InclusiveRangeTypeTag = newTypeTagFromUpperMask(inclusiveRangeTypeMask)
-	CompositeTypeTag      = newTypeTagFromLowerMask(compositeTypeMask)
-	ReferenceTypeTag      = newTypeTagFromLowerMask(referenceTypeMask)
-	GenericTypeTag        = newTypeTagFromLowerMask(genericTypeMask)
-	FunctionTypeTag       = newTypeTagFromUpperMask(functionTypeMask)
-	InterfaceTypeTag      = newTypeTagFromUpperMask(interfaceTypeMask)
+	ConstantSizedTypeTag = newTypeTagFromLowerMask(constantSizedTypeMask)
+	VariableSizedTypeTag = newTypeTagFromLowerMask(variableSizedTypeMask)
+	DictionaryTypeTag    = newTypeTagFromLowerMask(dictionaryTypeMask)
+	CompositeTypeTag     = newTypeTagFromLowerMask(compositeTypeMask)
+	ReferenceTypeTag     = newTypeTagFromLowerMask(referenceTypeMask)
+	GenericTypeTag       = newTypeTagFromLowerMask(genericTypeMask)
+	FunctionTypeTag      = newTypeTagFromUpperMask(functionTypeMask)
+	InterfaceTypeTag     = newTypeTagFromUpperMask(interfaceTypeMask)
 
 	RestrictedTypeTag                  = newTypeTagFromUpperMask(restrictedTypeMask)
 	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
+	InclusiveRangeTypeTag              = newTypeTagFromUpperMask(inclusiveRangeTypeMask)
 	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
 	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
 	AnyResourceAttachmentTypeTag       = newTypeTagFromUpperMask(anyResourceAttachmentMask)
@@ -371,7 +371,8 @@ var (
 				Or(CapabilityTypeTag).
 				Or(FunctionTypeTag).
 				Or(StorageCapabilityControllerTypeTag).
-				Or(AccountCapabilityControllerTypeTag)
+				Or(AccountCapabilityControllerTypeTag).
+				Or(InclusiveRangeTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)

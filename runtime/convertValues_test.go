@@ -1441,6 +1441,91 @@ func TestExportAddressValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+func TestExportInclusiveRangeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with_step", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			pub fun main(): InclusiveRange<Int> {
+				return InclusiveRange(10, 20, step: 2)
+			}
+		`
+
+		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType{})
+
+		actual := cadence.ValueWithCachedTypeID(exportValueFromScript(t, script))
+		expected := cadence.ValueWithCachedTypeID(
+			cadence.NewInclusiveRange(
+				cadence.NewInt(10),
+				cadence.NewInt(20),
+				cadence.NewInt(2)).WithType(inclusiveRangeType),
+		)
+
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("without_step", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			pub fun main(): InclusiveRange<Int> {
+				return InclusiveRange(10, 20)
+			}
+		`
+
+		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType{})
+
+		actual := cadence.ValueWithCachedTypeID(exportValueFromScript(t, script))
+		expected := cadence.ValueWithCachedTypeID(
+			cadence.NewInclusiveRange(
+				cadence.NewInt(10),
+				cadence.NewInt(20),
+				cadence.NewInt(1)).WithType(inclusiveRangeType),
+		)
+
+		assert.Equal(t, expected, actual)
+	})
+}
+
+func TestImportInclusiveRangeValue(t *testing.T) {
+
+	t.Parallel()
+
+	value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewInt(-10), cadence.NewInt(-2))
+
+	inter := newTestInterpreter(t)
+
+	actual, err := ImportValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		nil,
+		value,
+		sema.NewInclusiveRangeType(inter, sema.IntType),
+	)
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewInclusiveRangeValueWithStep(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewIntValueFromInt64(inter, 10),
+			interpreter.NewIntValueFromInt64(inter, -10),
+			interpreter.NewIntValueFromInt64(inter, -2),
+			interpreter.InclusiveRangeStaticType{
+				ElementType: interpreter.PrimitiveStaticTypeInt,
+			},
+		),
+		actual,
+	)
+}
+
 func TestExportStructValue(t *testing.T) {
 
 	t.Parallel()

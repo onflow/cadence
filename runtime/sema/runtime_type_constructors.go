@@ -181,6 +181,21 @@ var CapabilityTypeFunctionType = &FunctionType{
 	),
 }
 
+var InclusiveRangeTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MetaType,
+		},
+	),
+}
+
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
 		Name:      "OptionalType",
@@ -244,5 +259,12 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 		Name:      "CapabilityType",
 		Value:     CapabilityTypeFunctionType,
 		DocString: "Creates a run-time type representing a capability type of the given reference type. Returns nil if the type is not a reference.",
+	},
+
+	{
+		Name:  "InclusiveRangeType",
+		Value: InclusiveRangeTypeFunctionType,
+		DocString: `Creates a run-time type representing an inclusive range type of the given run-time member type. 
+		Returns nil if the member type is not a valid inclusive range member type.`,
 	},
 }

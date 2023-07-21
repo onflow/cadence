@@ -709,6 +709,10 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		borrowType := ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		return NewCapabilityStaticType(memoryGauge, borrowType)
 
+	case *sema.InclusiveRangeType:
+		memberType := ConvertSemaToStaticType(memoryGauge, t.MemberType)
+		return NewInclusiveRangeStaticType(memoryGauge, memberType)
+
 	case *sema.FunctionType:
 		return NewFunctionStaticType(memoryGauge, t)
 	}

@@ -3371,6 +3371,7 @@ func init() {
 			HashAlgorithmType,
 			StorageCapabilityControllerType,
 			AccountCapabilityControllerType,
+			&InclusiveRangeType{},
 		},
 	)
 
@@ -5238,6 +5239,7 @@ type InclusiveRangeType struct {
 }
 
 var _ Type = &InclusiveRangeType{}
+var _ ParameterizedType = &InclusiveRangeType{}
 
 func NewInclusiveRangeType(memoryGauge common.MemoryGauge, elementType Type) *InclusiveRangeType {
 	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
@@ -5253,9 +5255,13 @@ func (*InclusiveRangeType) Tag() TypeTag {
 }
 
 func (r *InclusiveRangeType) String() string {
+	memberString := ""
+	if r.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", r.MemberType.String())
+	}
 	return fmt.Sprintf(
-		"InclusiveRange<%s>",
-		r.MemberType,
+		"InclusiveRange%s",
+		memberString,
 	)
 }
 
@@ -5327,6 +5333,41 @@ func (r *InclusiveRangeType) RewriteWithRestrictedTypes() (Type, bool) {
 		}, true
 	} else {
 		return r, false
+	}
+}
+
+func (t *InclusiveRangeType) BaseType() Type {
+	if t.MemberType == nil {
+		return nil
+	}
+	return &InclusiveRangeType{}
+}
+
+func (t *InclusiveRangeType) Instantiate(typeArguments []Type, report func(err error)) Type {
+	memberType := typeArguments[0]
+	return &InclusiveRangeType{
+		MemberType: memberType,
+	}
+}
+
+func (t *InclusiveRangeType) TypeArguments() []Type {
+	memberType := t.MemberType
+	if memberType == nil {
+		memberType = IntegerType
+	}
+	return []Type{
+		memberType,
+	}
+}
+
+var inclusiveRangeTypeParameter = &TypeParameter{
+	Name:      "T",
+	TypeBound: IntegerType,
+}
+
+func (*InclusiveRangeType) TypeParameters() []*TypeParameter {
+	return []*TypeParameter{
+		inclusiveRangeTypeParameter,
 	}
 }
 
@@ -5979,6 +6020,14 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		return IsSubType(typedSubType.KeyType, typedSuperType.KeyType) &&
 			IsSubType(typedSubType.ValueType, typedSuperType.ValueType)
+
+	// case *InclusiveRangeType:
+	// 	typedSubType, ok := subType.(*InclusiveRangeType)
+	// 	if !ok {
+	// 		return false
+	// 	}
+
+	// 	return IsSubType(typedSubType.MemberType, typedSuperType.MemberType)
 
 	case *VariableSizedType:
 		typedSubType, ok := subType.(*VariableSizedType)

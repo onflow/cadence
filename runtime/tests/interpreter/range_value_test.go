@@ -361,7 +361,7 @@ func TestInclusiveRange(t *testing.T) {
 					   let s : %s = %d
 					   let e : %s = %d
 					   let step : %s = %d
-					   let r = InclusiveRange(s, e, step: step)
+					   let r: InclusiveRange<%s> = InclusiveRange(s, e, step: step)
 
 					   %s
 					`,
@@ -371,6 +371,7 @@ func TestInclusiveRange(t *testing.T) {
 					testCase.e,
 					testCase.ty.String(),
 					testCase.step,
+					testCase.ty.String(),
 					containsCode,
 				)
 			} else {
@@ -562,4 +563,28 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 			"step value cannot be negative for unsigned integer type",
 		)
 	}
+
+	runInvalidCase(
+		t,
+		"same_supertype_different_subtype_start_end",
+		`
+			let a: Integer = UInt8(0)
+			let b: Integer = Int16(10)
+			let r = InclusiveRange(a, b)
+		`,
+		&interpreter.InclusiveRangeConstructionError{},
+		"start and end are of different types",
+	)
+	runInvalidCase(
+		t,
+		"same_supertype_different_subtype_start_step",
+		`
+			let a: Integer = UInt8(0)
+			let b: Integer = UInt8(10)
+			let s: Integer = UInt16(2)
+			let r = InclusiveRange(a, b, step: s)
+		`,
+		&interpreter.InclusiveRangeConstructionError{},
+		"step must be of the same type as start and end",
+	)
 }

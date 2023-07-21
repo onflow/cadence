@@ -3622,6 +3622,36 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 			},
 		),
 	},
+	{
+		name: "InclusiveRangeType",
+		converter: NewUnmeteredHostFunctionValue(
+			sema.InclusiveRangeTypeFunctionType,
+			func(invocation Invocation) Value {
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				ty := typeValue.Type
+				// InclusiveRanges must hold integers
+				// _, ok = ty.(Sig)
+				// if !ok {
+				// 	return Nil
+				// }
+
+				return NewSomeValueNonCopying(
+					invocation.Interpreter,
+					NewTypeValue(
+						invocation.Interpreter,
+						NewInclusiveRangeStaticType(
+							invocation.Interpreter,
+							ty,
+						),
+					),
+				)
+			},
+		),
+	},
 }
 
 func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {

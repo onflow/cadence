@@ -91,6 +91,7 @@ const (
 	MemoryKindCadenceArrayValueBase
 	MemoryKindCadenceArrayValueLength
 	MemoryKindCadenceDictionaryValue
+	MemoryKindCadenceInclusiveRangeValue
 	MemoryKindCadenceKeyValuePair
 	MemoryKindCadenceStructValueBase
 	MemoryKindCadenceStructValueSize
@@ -243,6 +244,7 @@ const (
 	MemoryKindRestrictedSemaType
 	MemoryKindReferenceSemaType
 	MemoryKindCapabilitySemaType
+	MemoryKindInclusiveRangeSemaType
 
 	// ordered-map
 	MemoryKindOrderedMap

@@ -382,7 +382,13 @@ func exportCompositeValue(
 
 	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok {
-		panic(errors.NewUnreachableError())
+		// InclusiveRange is stored as a CompositeValue but isn't a CompositeType.
+		inclusiveRangeType, ok := semaType.(*sema.InclusiveRangeType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return exportCompositeValueAsInclusiveRange(v, inclusiveRangeType, inter, locationRange, seenReferences)
 	}
 
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
@@ -611,6 +617,67 @@ func exportDictionaryValue(
 	exportType := ExportType(v.SemaType(inter), map[sema.TypeID]cadence.Type{}).(*cadence.DictionaryType)
 
 	return dictionary.WithType(exportType), err
+}
+
+func exportCompositeValueAsInclusiveRange(
+	v interpreter.Value,
+	inclusiveRangeType *sema.InclusiveRangeType,
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	seenReferences seenReferences,
+) (
+	cadence.InclusiveRange,
+	error,
+) {
+	compositeValue, ok := v.(*interpreter.CompositeValue)
+	if !ok {
+		// InclusiveRange is stored as a CompositeValue.
+		panic(errors.NewUnreachableError())
+	}
+
+	getField := func(fieldName string) (cadence.Value, error) {
+		fieldValue := compositeValue.GetField(inter, locationRange, fieldName)
+		if fieldValue == nil && compositeValue.ComputedFields != nil {
+			if computedField, ok := compositeValue.ComputedFields[fieldName]; ok {
+				fieldValue = computedField(inter, locationRange)
+			}
+		}
+
+		return exportValueWithInterpreter(
+			fieldValue,
+			inter,
+			locationRange,
+			seenReferences,
+		)
+	}
+
+	startValue, err := getField(sema.InclusiveRangeTypeStartFieldName)
+	if err != nil {
+		return cadence.InclusiveRange{}, err
+	}
+
+	endValue, err := getField(sema.InclusiveRangeTypeEndFieldName)
+	if err != nil {
+		return cadence.InclusiveRange{}, err
+	}
+
+	stepValue, err := getField(sema.InclusiveRangeTypeStepFieldName)
+	if err != nil {
+		return cadence.InclusiveRange{}, err
+	}
+
+	inclusiveRange, err := cadence.NewMeteredInclusiveRange(
+		inter,
+		startValue,
+		endValue,
+		stepValue,
+	)
+	if err != nil {
+		return cadence.InclusiveRange{}, err
+	}
+
+	t := exportInclusiveRangeType(inter, inclusiveRangeType, map[sema.TypeID]cadence.Type{}).(*cadence.InclusiveRangeType)
+	return inclusiveRange.WithType(t), err
 }
 
 func exportPathLinkValue(v interpreter.PathLinkValue, inter *interpreter.Interpreter) (cadence.PathLink, error) {
@@ -853,6 +920,8 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			v.EnumType.Fields,
 			v.Fields,
 		)
+	case cadence.InclusiveRange:
+		return i.importInclusiveRangeValue(v, expectedType)
 	case cadence.TypeValue:
 		return i.importTypeValue(v.StaticType)
 	case cadence.PathCapability:
@@ -1379,6 +1448,69 @@ func (i valueImporter) importDictionaryValue(
 		locationRange,
 		dictionaryStaticType,
 		keysAndValues...,
+	), nil
+}
+
+func (i valueImporter) importInclusiveRangeValue(
+	v cadence.InclusiveRange,
+	expectedType sema.Type,
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
+
+	inclusiveRangeType, ok := expectedType.(*sema.InclusiveRangeType)
+	if !ok {
+		return nil, errors.NewDefaultUserError(
+			"cannot import InclusiveRange: expected InclusiveRangeType, got '%s'",
+			expectedType.ID(),
+		)
+	}
+
+	expectedMemberType := inclusiveRangeType.MemberType
+	inter := i.inter
+	locationRange := i.locationRange
+
+	startValue, err := i.importValue(v.Start, expectedMemberType)
+	if err != nil {
+		return nil, err
+	}
+	startInteger, ok := startValue.(interpreter.IntegerValue)
+	if !ok {
+		return nil, err
+	}
+
+	stepValue, err := i.importValue(v.Step, expectedMemberType)
+	if err != nil {
+		return nil, err
+	}
+	stepInteger, ok := stepValue.(interpreter.IntegerValue)
+	if !ok {
+		return nil, err
+	}
+
+	endValue, err := i.importValue(v.End, expectedMemberType)
+	if err != nil {
+		return nil, err
+	}
+	endInteger, ok := endValue.(interpreter.IntegerValue)
+	if !ok {
+		return nil, err
+	}
+
+	staticType := interpreter.ConvertSemaToStaticType(inter, inclusiveRangeType)
+	inclusiveRangeStaticType, ok := staticType.(interpreter.InclusiveRangeStaticType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return interpreter.NewInclusiveRangeValueWithStep(
+		inter,
+		locationRange,
+		startInteger,
+		endInteger,
+		stepInteger,
+		inclusiveRangeStaticType,
 	), nil
 }
 

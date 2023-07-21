@@ -19,6 +19,8 @@
 package stdlib
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -57,7 +59,7 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 			},
 			{
 				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     "endInclusive",
+				Identifier:     "end",
 				TypeAnnotation: typeAnnotation,
 			},
 			{
@@ -80,23 +82,27 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 	inclusiveRangeConstructorFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		start, startOk := invocation.Arguments[0].(interpreter.IntegerValue)
-		endInclusive, endInclusiveOk := invocation.Arguments[1].(interpreter.IntegerValue)
+		end, endOk := invocation.Arguments[1].(interpreter.IntegerValue)
 
-		if !startOk || !endInclusiveOk {
+		if !startOk || !endOk {
 			panic(errors.NewUnreachableError())
 		}
 
 		inter := invocation.Interpreter
 		locationRange := invocation.LocationRange
 
-		leftStaticType := start.StaticType(inter)
-		rightStaticType := endInclusive.StaticType(inter)
-		if leftStaticType != rightStaticType {
-			// Checker would only allow same type for both start & endInclusive.
-			panic(errors.NewUnreachableError())
+		startStaticType := start.StaticType(inter)
+		endStaticType := end.StaticType(inter)
+		if startStaticType != endStaticType {
+			panic(interpreter.InclusiveRangeConstructionError{
+				LocationRange: locationRange,
+				Message: fmt.Sprintf("start and end are of different types. start: %s and end: %s",
+					startStaticType,
+					endStaticType),
+			})
 		}
 
-		rangeStaticType := interpreter.InclusiveRangeStaticType{ElementType: leftStaticType}
+		rangeStaticType := interpreter.InclusiveRangeStaticType{ElementType: startStaticType}
 
 		if len(invocation.Arguments) > 2 {
 			step, ok := invocation.Arguments[2].(interpreter.IntegerValue)
@@ -104,16 +110,26 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 				panic(errors.NewUnreachableError())
 			}
 
+			stepStaticType := step.StaticType(inter)
+			if stepStaticType != startStaticType {
+				panic(interpreter.InclusiveRangeConstructionError{
+					LocationRange: locationRange,
+					Message: fmt.Sprintf("step must be of the same type as start and end. start/end: %s and step: %s",
+						startStaticType,
+						stepStaticType),
+				})
+			}
+
 			return interpreter.NewInclusiveRangeValueWithStep(
 				inter,
 				locationRange,
 				start,
-				endInclusive,
+				end,
 				step,
 				rangeStaticType,
 			)
 		} else {
-			return interpreter.NewInclusiveRangeValue(inter, locationRange, start, endInclusive, rangeStaticType)
+			return interpreter.NewInclusiveRangeValue(inter, locationRange, start, end, rangeStaticType)
 		}
 	},
 )

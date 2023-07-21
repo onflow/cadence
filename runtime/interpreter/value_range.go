@@ -35,13 +35,13 @@ func NewInclusiveRangeValue(
 	rangeType InclusiveRangeStaticType,
 ) *CompositeValue {
 	startComparable, startOk := start.(ComparableValue)
-	endInclusiveComparable, endInclusiveOk := end.(ComparableValue)
-	if !startOk || !endInclusiveOk {
+	endComparable, endOk := end.(ComparableValue)
+	if !startOk || !endOk {
 		panic(errors.NewUnreachableError())
 	}
 
 	step := interpreter.GetValueForIntegerType(1, rangeType.ElementType)
-	if startComparable.Greater(interpreter, endInclusiveComparable, locationRange) {
+	if startComparable.Greater(interpreter, endComparable, locationRange) {
 		elemSemaTy := interpreter.MustConvertStaticToSemaType(rangeType.ElementType)
 		if _, ok := sema.AllUnsignedIntegerTypesSet[elemSemaTy]; ok {
 			panic(InclusiveRangeConstructionError{
@@ -71,8 +71,10 @@ func NewInclusiveRangeValueWithStep(
 	rangeType InclusiveRangeStaticType,
 ) *CompositeValue {
 
+	zeroValue := interpreter.GetValueForIntegerType(0, rangeType.ElementType)
+
 	// Validate that the step is non-zero.
-	if step.Equal(interpreter, locationRange, interpreter.GetValueForIntegerType(0, rangeType.ElementType)) {
+	if step.Equal(interpreter, locationRange, zeroValue) {
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
 			Message:       "step value cannot be zero",
@@ -83,8 +85,8 @@ func NewInclusiveRangeValueWithStep(
 	// If start < end, step must be > 0
 	// If start > end, step must be < 0
 	// If start == end, step doesn't matter.
-	if (start.Less(interpreter, end, locationRange) && step.Less(interpreter, interpreter.GetValueForIntegerType(0, rangeType.ElementType), locationRange)) ||
-		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, interpreter.GetValueForIntegerType(0, rangeType.ElementType), locationRange)) {
+	if (start.Less(interpreter, end, locationRange) && step.Less(interpreter, zeroValue, locationRange)) ||
+		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, zeroValue, locationRange)) {
 
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
@@ -160,24 +162,24 @@ func rangeContains(
 	needleValue IntegerValue,
 ) BoolValue {
 	start := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeStartFieldName)
-	endInclusive := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeEndFieldName)
+	end := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeEndFieldName)
 	step := getFieldAsIntegerValue(rangeValue, interpreter, locationRange, sema.InclusiveRangeTypeStepFieldName)
 
 	result := start.Equal(interpreter, locationRange, needleValue) ||
-		endInclusive.Equal(interpreter, locationRange, needleValue)
+		end.Equal(interpreter, locationRange, needleValue)
 
 	if result {
 		return TrueValue
 	}
 
 	greaterThanStart := needleValue.Greater(interpreter, start, locationRange)
-	greaterThanEndInclusive := needleValue.Greater(interpreter, endInclusive, locationRange)
+	greaterThanend := needleValue.Greater(interpreter, end, locationRange)
 
-	if greaterThanStart == greaterThanEndInclusive {
-		// If needle is greater or smaller than both start & endInclusive, then it is outside the range.
+	if greaterThanStart == greaterThanend {
+		// If needle is greater or smaller than both start & end, then it is outside the range.
 		result = false
 	} else {
-		// needle is in between start and endInclusive.
+		// needle is in between start and end.
 		// start + k * step should be equal to needle i.e. (needle - start) mod step == 0.
 		diff, ok := needleValue.Minus(interpreter, start, locationRange).(IntegerValue)
 		if !ok {

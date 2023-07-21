@@ -221,27 +221,27 @@ func TestInclusiveRangeConstructionValid(t *testing.T) {
 					   let s : %s = %d
 					   let e : %s = %d
 					   let step : %s = %d
-					   let r = InclusiveRange(s, e, step: step)
+					   let r: InclusiveRange<%s> = InclusiveRange(s, e, step: step)
 
 					   let rs = r.start
 					   let re = r.end
 					   let rstep = r.step
 					   let contains_res = r.contains(s)
 					`,
-					testCase.ty.String(), testCase.s, testCase.ty.String(), testCase.e, testCase.ty.String(), testCase.step)
+					testCase.ty.String(), testCase.s, testCase.ty.String(), testCase.e, testCase.ty.String(), testCase.step, testCase.ty.String())
 			} else {
 				code = fmt.Sprintf(
 					`
 					   let s : %s = %d
 					   let e : %s = %d
-					   let r = InclusiveRange(s, e)
+					   let r: InclusiveRange<%s> = InclusiveRange(s, e)
 
 					   let rs = r.start
 					   let re = r.end
 					   let rstep = r.step
 					   let contains_res = r.contains(s)
 					`,
-					testCase.ty.String(), testCase.s, testCase.ty.String(), testCase.e)
+					testCase.ty.String(), testCase.s, testCase.ty.String(), testCase.e, testCase.ty.String())
 			}
 
 			checker, err := ParseAndCheckWithOptions(t, code,

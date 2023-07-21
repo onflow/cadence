@@ -136,6 +136,9 @@ const (
 	returnKey         = "return"
 	typeBoundKey      = "typeBound"
 	functionTypeKey   = "functionType"
+	startKey          = "start"
+	endKey            = "end"
+	stepKey           = "step"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -222,6 +225,8 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeEvent(valueJSON)
 	case contractTypeStr:
 		return d.decodeContract(valueJSON)
+	case inclusiveRangeTypeStr:
+		return d.decodeInclusiveRange(valueJSON)
 	case pathTypeStr:
 		return d.decodePath(valueJSON)
 	case typeTypeStr:
@@ -864,6 +869,27 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 		comp.fieldTypes,
 		nil,
 	))
+}
+
+func (d *Decoder) decodeInclusiveRange(valueJSON any) cadence.InclusiveRange {
+	obj := toObject(valueJSON)
+
+	start := obj.GetValue(d, startKey)
+	end := obj.GetValue(d, endKey)
+	step := obj.GetValue(d, stepKey)
+
+	value, err := cadence.NewMeteredInclusiveRange(
+		d.gauge,
+		start,
+		end,
+		step,
+	)
+
+	if err != nil {
+		panic(errors.NewDefaultUserError("invalid InclusiveRange: %w", err))
+	}
+
+	return value
 }
 
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {

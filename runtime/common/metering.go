@@ -174,13 +174,14 @@ var (
 
 	// Sema types
 
-	VariableSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
-	ConstantSizedSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
-	DictionarySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
-	OptionalSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
-	RestrictedSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
-	ReferenceSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
-	CapabilitySemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+	VariableSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	InclusiveRangeSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindInclusiveRangeSemaType)
+	OptionalSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
+	RestrictedSemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindRestrictedSemaType)
+	ReferenceSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	CapabilitySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
 
 	// Storage related memory usages
 
@@ -192,6 +193,7 @@ var (
 	// Cadence external values
 
 	CadenceDictionaryValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceDictionaryValue)
+	CadenceInclusiveRangeValueMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceInclusiveRangeValue)
 	CadenceArrayValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceArrayValueBase)
 	CadenceStructValueBaseMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceStructValueBase)
 	CadenceResourceValueBaseMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceResourceValueBase)
