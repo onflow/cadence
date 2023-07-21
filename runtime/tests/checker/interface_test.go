@@ -4500,6 +4500,42 @@ func TestNestedInterfaceInheritance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("all in one contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract interface C {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+		 
+			fun createR(m: @{MiddleInterface}): @{TopInterface} {
+				return <-m
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract interface reverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract interface C {
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		 
+			fun createR(m: @{MiddleInterface}): @{TopInterface} {
+				return <-m
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("contract interface", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
@@ -4559,6 +4595,30 @@ func TestNestedInterfaceInheritance(t *testing.T) {
 		contract C1 {
 			resource interface TopInterface {}
 		}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed with top levels", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{SuperTopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract C1 {
+			resource interface TopInterface: SuperTopInterface {}
+		}
+		contract interface CI {
+				resource interface MiddleInterface: C1.TopInterface {}
+		}
+		resource interface SuperTopInterface {}
         `,
 		)
 
