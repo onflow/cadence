@@ -4429,3 +4429,48 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestNestedInterfaceInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("all in one contract", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract C {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+			resource ConcreteResource: MiddleInterface {}
+		 
+			fun createR(): @{TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract interface CI {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+		}
+        contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+		 
+			fun createR(): @{CI.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+}

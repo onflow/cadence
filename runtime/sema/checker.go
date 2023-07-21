@@ -379,10 +379,6 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	for _, declaration := range program.InterfaceDeclarations() {
 		interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
 
-		// Resolve conformances
-		interfaceType.ExplicitInterfaceConformances =
-			checker.explicitInterfaceConformances(declaration, interfaceType)
-
 		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
 
