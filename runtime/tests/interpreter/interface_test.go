@@ -883,3 +883,37 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		assert.Equal(t, []string{"A", "D", "F", "E", "C", "B"}, logs)
 	})
 }
+
+func TestRuntimeNestedInterfaceCast(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+	access(all) contract C {
+		access(all) resource interface TopInterface {}
+		access(all) resource interface MiddleInterface: TopInterface {}
+		access(all) resource ConcreteResource: MiddleInterface {}
+	 
+		access(all) fun createMiddleInterface(): @{MiddleInterface} {
+			return <-create ConcreteResource()
+		}
+	 }
+
+	 access(all) fun main() {
+		let x <- C.createMiddleInterface()
+		let y <- x as! @{C.TopInterface}
+		destroy y
+	 }
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{},
+			Config: &interpreter.Config{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+}
