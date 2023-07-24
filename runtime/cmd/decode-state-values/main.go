@@ -212,6 +212,10 @@ func (s *slabStorage) Count() int {
 	return len(storage)
 }
 
+func (s *slabStorage) RetrieveIfLoaded(id atree.StorageID) atree.Slab {
+	panic("unexpected RetrieveIfLoaded call")
+}
+
 // interpreterStorage
 
 type interpreterStorage struct {
