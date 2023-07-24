@@ -1128,6 +1128,109 @@ func TestCheckResourceArrayReverseInvalid(t *testing.T) {
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 }
 
+func TestCheckArrayFilter(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x = [1, 2, 3]
+			let onlyEven =
+				fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			let y = x.filter(onlyEven)
+		}
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayFilterInvalidArgs(t *testing.T) {
+
+	t.Parallel()
+
+	testInvalidArgs := func(code string, expectedErrors []sema.SemanticError) {
+		_, err := ParseAndCheck(t, code)
+
+		errs := RequireCheckerErrors(t, err, len(expectedErrors))
+
+		for i, e := range expectedErrors {
+			assert.IsType(t, e, errs[i])
+		}
+	}
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [1, 2, 3]
+			let y = x.filter(100)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.TypeMismatchError{},
+		},
+	)
+
+	testInvalidArgs(`
+		fun test() {
+			let x = [1, 2, 3]
+			let onlyEvenInt16 =
+				fun (_ x: Int16): Bool {
+					return x % 2 == 0
+				}
+
+			let y = x.filter(onlyEvenInt16)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.TypeMismatchError{},
+		},
+	)
+
+	testInvalidArgs(`
+		fun test() {
+			let x : [Int; 5] = [1, 2, 3, 21, 30]
+			let onlyEvenInt =
+				fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			let y = x.filter(onlyEvenInt)
+		}
+	`,
+		[]sema.SemanticError{
+			&sema.NotDeclaredMemberError{},
+		},
+	)
+}
+
+func TestCheckResourceArrayFilterInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource X {}
+
+		fun test(): @[X] {
+			let xs <- [<-create X()]
+			let allResources =
+				fun (_ x: @X): Bool {
+					destroy x
+					return true
+				}
+
+			let filteredXs <-xs.filter(allResources)
+			destroy xs
+			return <- filteredXs
+		}
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+}
+
 func TestCheckArrayContains(t *testing.T) {
 
 	t.Parallel()

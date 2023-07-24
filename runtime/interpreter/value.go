@@ -2443,6 +2443,28 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				)
 			},
 		)
+
+	case sema.ArrayTypeFilterFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayFilterFunctionType(
+				v.SemaType(interpreter).ElementType(false),
+			),
+			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
+				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Filter(
+					interpreter,
+					invocation.LocationRange,
+					funcArgument,
+				)
+			},
+		)
 	}
 
 	return nil
@@ -2933,6 +2955,81 @@ func (v *ArrayValue) Reverse(
 
 			value := v.Get(interpreter, locationRange, index)
 			index--
+
+			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		},
+	)
+}
+
+func (v *ArrayValue) Filter(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	procedure FunctionValue,
+) Value {
+	filteredValues := make([]Value, 0)
+	filteredValuesCount := 0
+	i := 0
+
+	iterationInvocation := func(arrayElement Value) Invocation {
+		return NewInvocation(
+			interpreter,
+			nil,
+			nil,
+			[]Value{arrayElement},
+			[]sema.Type{sema.BoolType},
+			nil,
+			locationRange,
+		)
+	}
+
+	iterate := func() {
+		err := v.array.Iterate(
+			func(item atree.Value) (bool, error) {
+				arrayElement := MustConvertStoredValue(interpreter, item)
+
+				shouldInclude, ok := procedure.invoke(iterationInvocation(arrayElement)).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if shouldInclude {
+					filteredValues = append(filteredValues, arrayElement)
+					filteredValuesCount++
+				}
+
+				i++
+				return true, nil
+			},
+		)
+
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	iterate()
+
+	iterationIndex := 0
+	return NewArrayValueWithIterator(
+		interpreter,
+		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
+		common.ZeroAddress,
+		uint64(filteredValuesCount),
+		func() Value {
+
+			if iterationIndex == filteredValuesCount {
+				return nil
+			}
+
+			value := filteredValues[iterationIndex]
+			iterationIndex++
 
 			return value.Transfer(
 				interpreter,
