@@ -3045,14 +3045,14 @@ access(all) contract AuctionDutch {
 
 	access(all) struct BidInfo {
 		access(contract) let id: UInt64
-		access(contract) let vaultCap: Capability<&{FungibleToken.Vault}>
+		access(contract) let vaultCap: Capability<&{FungibleToken.Receiver}>
 		access(contract) let nftCap: Capability<&{NonFungibleToken.Receiver}>
 		access(contract) var time: UFix64
 		access(contract) var balance: UFix64
 		access(contract) var winning: Bool
 
 
-		init(id: UInt64, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Vault}>, time: UFix64, balance: UFix64) {
+		init(id: UInt64, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Receiver}>, time: UFix64, balance: UFix64) {
 			self.id=id
 			self.nftCap= nftCap
 			self.vaultCap=vaultCap
@@ -3499,7 +3499,7 @@ access(all) contract AuctionDutch {
 			//emit event
 		}
 
-		access(all) fun addBid(vault: @FlowToken.Vault, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Vault}>, time: UFix64) : UInt64{
+		access(all) fun addBid(vault: @FlowToken.Vault, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Receiver}>, time: UFix64) : UInt64{
 
 			let bidId=self.totalBids
 
@@ -3530,7 +3530,7 @@ access(all) contract AuctionDutch {
 		access(all) fun getBids(_ id: UInt64) : Bids
 		//these methods are only allowed to be called from within this contract, but we want to call them on another users resource
 		access(contract) fun getAuction(_ id:UInt64) : &Auction
-		access(all) fun bid(id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Vault}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid
+		access(all) fun bid(id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid
 	}
 
 
@@ -3611,7 +3611,7 @@ access(all) contract AuctionDutch {
 			return (&self.auctions[id] as &Auction?)!
 		}
 
-		access(all) fun bid(id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Vault}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid{
+		access(all) fun bid(id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid{
 			//TODO: pre id should exist
 
 			let time= 42.0 // Clock.time()
@@ -3745,7 +3745,7 @@ access(all) contract AuctionDutch {
 	}
 
 	access(all) resource interface BidCollectionPublic {
-		access(all) fun bid(marketplace: Address, id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Vault}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)
+		access(all) fun bid(marketplace: Address, id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)
 		access(all) fun getIds() :[UInt64]
 		access(all) fun getReport(_ id: UInt64) : ExcessFlowReport
 
@@ -3768,7 +3768,7 @@ access(all) contract AuctionDutch {
 			return ExcessFlowReport(id:id, report: bid.getBidInfo(), excessAmount: bid.getExcessBalance())
 		}
 
-		access(all) fun bid(marketplace: Address, id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Vault}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)  {
+		access(all) fun bid(marketplace: Address, id: UInt64, vault: @{FungibleToken.Vault}, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)  {
 
 			let dutchAuctionCap=getAccount(marketplace).getCapability<&AuctionDutch.Collection>(AuctionDutch.CollectionPublicPath)
 			let bid <- dutchAuctionCap.borrow()!.bid(id: id, vault: <- vault, vaultCap: vaultCap, nftCap: nftCap)
@@ -3968,7 +3968,7 @@ import FlowToken from 0x7e60df042a9c0868
 
 transaction(recipient: Address, amount: UFix64) {
     let tokenAdmin: &FlowToken.Administrator
-    let tokenReceiver: &{FungibleToken.Vault}
+    let tokenReceiver: &{FungibleToken.Receiver}
 
     prepare(signer: AuthAccount) {
         self.tokenAdmin = signer
@@ -3977,7 +3977,7 @@ transaction(recipient: Address, amount: UFix64) {
 
         self.tokenReceiver = getAccount(recipient)
             .getCapability(/public/flowTokenReceiver)
-            .borrow<&{FungibleToken.Vault}>()
+            .borrow<&{FungibleToken.Receiver}>()
             ?? panic("Unable to borrow receiver reference")
     }
 
@@ -4092,7 +4092,7 @@ transaction(recipient: Address, amount: UFix64) {
                 let vault <- signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)!
                     .withdraw(amount: 4.0)
 
-                let vaultCap = signer.getCapability<&{FungibleToken.Vault}>(/public/flowTokenReceiver)
+                let vaultCap = signer.getCapability<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
                 let nftCap = signer.getCapability<&{NonFungibleToken.Receiver}>(/public/doesNotExist)
 
                 let bid <- getAccount(0x99ca04281098b33d)
