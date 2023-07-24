@@ -1203,7 +1203,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            pub fun main() {
+            fun main() {
                 var foo <- create Foo()
 
                 // Get a reference to the inner resource.
@@ -1219,7 +1219,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 destroy foo2
             }
 
-            pub fun getRef(_ ref: &Baz): &Baz {
+            fun getRef(_ ref: &Baz): &Baz {
                 return ref
             }
         `,
@@ -1236,7 +1236,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             resource Foo {}
 
-            pub fun main() {
+            fun main() {
                 var dict <- {"levelOne": <- {"levelTwo": <- create Foo()}}
 
                 // Get a reference to the inner resource.
@@ -1252,7 +1252,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 destroy dict2
             }
 
-            pub fun getRef(_ ref: &{String: Foo}?): &{String: Foo}? {
+            fun getRef(_ ref: &{String: Foo}?): &{String: Foo}? {
                 return ref
             }
         `,
@@ -1269,7 +1269,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             resource Foo {}
 
-            pub fun main() {
+            fun main() {
                 var array <- [<-[<- create Foo()]]
 
                 // Get a reference to the inner resource.
@@ -1285,7 +1285,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 destroy array2
             }
 
-            pub fun getRef(_ ref: &[Foo]): &[Foo] {
+            fun getRef(_ ref: &[Foo]): &[Foo] {
                 return ref
             }
         `,
@@ -1317,7 +1317,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            pub fun main() {
+            fun main() {
                 var foo <- create Foo()
 
                 // Get a reference to the inner resource.
@@ -1333,7 +1333,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 destroy foo2
             }
 
-            pub fun getRef(_ ref: &Bar?): &Bar? {
+            fun getRef(_ ref: &Bar?): &Bar? {
                 return ref
             }
         `,
