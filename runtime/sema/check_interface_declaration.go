@@ -413,8 +413,12 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 		interfaceType.InitializerPurity = checker.initializerPurity(compositeKind, initializers)
 
 		// Declare nested declarations' members
-
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
+			// resolve conformances
+			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
+			nestedInterfaceType.ExplicitInterfaceConformances =
+				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
+
 			checker.declareInterfaceMembersAndValue(nestedInterfaceDeclaration)
 		}
 
