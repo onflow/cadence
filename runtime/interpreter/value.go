@@ -1810,7 +1810,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v)
+	interpreter.invalidateReferencedResources(v, true)
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.array = nil
@@ -2681,7 +2681,7 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v)
+		interpreter.invalidateReferencedResources(v, false)
 
 		if config.InvalidatedResourceValidationEnabled {
 			v.array = nil
@@ -15487,7 +15487,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v)
+	interpreter.invalidateReferencedResources(v, true)
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.dictionary = nil
@@ -16252,7 +16252,7 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v)
+		interpreter.invalidateReferencedResources(v, false)
 
 		if config.InvalidatedResourceValidationEnabled {
 			v.dictionary = nil
@@ -17104,7 +17104,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v)
+	interpreter.invalidateReferencedResources(v, true)
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.dictionary = nil
@@ -17929,7 +17929,7 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v)
+		interpreter.invalidateReferencedResources(v, false)
 
 		if config.InvalidatedResourceValidationEnabled {
 			v.dictionary = nil

@@ -5544,7 +5544,7 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	values[value] = struct{}{}
 }
 
-func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
+func (interpreter *Interpreter) invalidateReferencedResources(value Value, destroyed bool) {
 	// skip non-resource typed values
 	if !value.IsResourceKinded(interpreter) {
 		return
@@ -5555,23 +5555,23 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 	switch value := value.(type) {
 	case *CompositeValue:
 		value.ForEachField(interpreter, func(_ string, fieldValue Value) {
-			interpreter.invalidateReferencedResources(fieldValue)
+			interpreter.invalidateReferencedResources(fieldValue, destroyed)
 		})
 		storageID = value.StorageID()
 	case *DictionaryValue:
 		value.Iterate(interpreter, func(_, value Value) (resume bool) {
-			interpreter.invalidateReferencedResources(value)
+			interpreter.invalidateReferencedResources(value, destroyed)
 			return true
 		})
 		storageID = value.StorageID()
 	case *ArrayValue:
 		value.Iterate(interpreter, func(element Value) (resume bool) {
-			interpreter.invalidateReferencedResources(element)
+			interpreter.invalidateReferencedResources(element, destroyed)
 			return true
 		})
 		storageID = value.StorageID()
 	case *SomeValue:
-		interpreter.invalidateReferencedResources(value.value)
+		interpreter.invalidateReferencedResources(value.value, destroyed)
 		return
 	default:
 		// skip non-container typed values.
@@ -5587,10 +5587,13 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 		switch value := value.(type) {
 		case *CompositeValue:
 			value.dictionary = nil
+			value.isDestroyed = destroyed
 		case *DictionaryValue:
 			value.dictionary = nil
+			value.isDestroyed = destroyed
 		case *ArrayValue:
 			value.array = nil
+			value.isDestroyed = destroyed
 		default:
 			panic(errors.NewUnreachableError())
 		}

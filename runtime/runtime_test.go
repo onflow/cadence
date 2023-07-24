@@ -8464,8 +8464,7 @@ func TestInvalidatedResourceUse(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var destroyedResourceErr interpreter.DestroyedResourceError
-	require.ErrorAs(t, err, &destroyedResourceErr)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 
 }
 
