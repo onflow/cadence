@@ -3517,3 +3517,200 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestNestedInterfaceInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("mixed top level", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		resource interface Y: C.X {}
+        contract C {
+			resource interface X {}
+		}	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed top level interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		resource interface Y: C.X {}
+        contract interface C {
+			resource interface X {}
+		}	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract C {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+			resource ConcreteResource: MiddleInterface {}
+		 
+			fun createR(): @{TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract reverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract C {
+			resource ConcreteResource: MiddleInterface {}
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		 
+			fun createR(): @{TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract interface C {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+		 
+			fun createR(m: @{MiddleInterface}): @{TopInterface} {
+				return <-m
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract interface reverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract interface C {
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		 
+			fun createR(m: @{MiddleInterface}): @{TopInterface} {
+				return <-m
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract interface CI {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+		}
+        contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+		 
+			fun createR(): @{CI.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{CI.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract interface CI {
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{C1.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract interface CI {
+				resource interface MiddleInterface: C1.TopInterface {}
+		}
+		contract C1 {
+			resource interface TopInterface {}
+		}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed with top levels", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{SuperTopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract C1 {
+			resource interface TopInterface: SuperTopInterface {}
+		}
+		contract interface CI {
+				resource interface MiddleInterface: C1.TopInterface {}
+		}
+		resource interface SuperTopInterface {}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+}
