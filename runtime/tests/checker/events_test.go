@@ -107,7 +107,8 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		validTypes := append(
+		validTypes := common.Concat(
+			sema.AllNumberTypes,
 			[]sema.Type{
 				sema.StringType,
 				sema.CharacterType,
@@ -120,7 +121,6 @@ func TestCheckEventDeclaration(t *testing.T) {
 				sema.PrivatePathType,
 				sema.CapabilityPathType,
 			},
-			sema.AllNumberTypes...,
 		)
 
 		tests := validTypes[:]
@@ -261,7 +261,7 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
-              pub event Transfer(to: Int, from: Int)
+              access(all) event Transfer(to: Int, from: Int)
             `,
 			ParseAndCheckOptions{
 				Location: utils.ImportedLocation,
@@ -272,7 +272,7 @@ func TestCheckEmitEvent(t *testing.T) {
 		_, err = ParseAndCheckWithOptions(t, `
               import Transfer from "imported"
 
-              pub fun test() {
+              access(all) fun test() {
                   emit Transfer(to: 1, from: 2)
               }
             `,
@@ -291,4 +291,34 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		assert.IsType(t, &sema.EmitImportedEventError{}, errs[0])
 	})
+}
+
+func TestCheckAccountEventParameter(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("AuthAccount", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract Test {
+              event Account(account: AuthAccount)
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("PublicAccount", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract Test {
+              event Account(account: PublicAccount)
+          }
+        `)
+		require.NoError(t, err)
+	})
+
 }

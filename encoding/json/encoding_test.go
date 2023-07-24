@@ -617,6 +617,46 @@ func TestEncodeWord64(t *testing.T) {
 	}...)
 }
 
+func TestEncodeWord128(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.NewWord128(0),
+			// language=json
+			`{"type":"Word128","value":"0"}`,
+		},
+		{
+			"Max",
+			cadence.Word128{Value: sema.Word128TypeMaxIntBig},
+			// language=json
+			`{"type":"Word128","value":"340282366920938463463374607431768211455"}`,
+		},
+	}...)
+}
+
+func TestEncodeWord256(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.NewWord256(0),
+			// language=json
+			`{"type":"Word256","value":"0"}`,
+		},
+		{
+			"Max",
+			cadence.Word256{Value: sema.Word256TypeMaxIntBig},
+			// language=json
+			`{"type":"Word256","value":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}`,
+		},
+	}...)
+}
+
 func TestEncodeFix64(t *testing.T) {
 
 	t.Parallel()
@@ -1736,6 +1776,8 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		cadence.Word16Type{},
 		cadence.Word32Type{},
 		cadence.Word64Type{},
+		cadence.Word128Type{},
+		cadence.Word256Type{},
 		cadence.Fix64Type{},
 		cadence.UFix64Type{},
 		cadence.BlockType{},
@@ -2375,8 +2417,8 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.ReferenceType{
-					Authorized: false,
-					Type:       cadence.IntType{},
+					Authorization: cadence.UnauthorizedAccess,
+					Type:          cadence.IntType{},
 				},
 			},
 			// language=json
@@ -2389,16 +2431,157 @@ func TestEncodeType(t *testing.T) {
                     "type": {
                       "kind": "Int"
                     },
-                    "authorized": false
+                    "authorization": {
+						"kind": "Unauthorized",
+						"entitlements": null
+					}
                   }
                 }
               }
             `,
 		)
-
 	})
 
-	t.Run("with static function", func(t *testing.T) {
+	t.Run("with static auth(foo) &int", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementMapAuthorization{
+						TypeID: "foo",
+					},
+					Type: cadence.IntType{},
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorization": {
+						"kind": "EntitlementMapAuthorization",
+						"entitlements": [
+							{
+								"kind": "EntitlementMap",
+								"typeID": "foo",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							}
+						]
+					}
+                  }
+                }
+              }
+            `,
+		)
+	})
+
+	t.Run("with static auth(X, Y) &int", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementSetAuthorization{
+						Kind:         cadence.Conjunction,
+						Entitlements: []common.TypeID{"X", "Y"},
+					},
+					Type: cadence.IntType{},
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorization": {
+						"kind": "EntitlementConjunctionSet",
+						"entitlements": [
+							{
+								"kind": "Entitlement",
+								"typeID": "X",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							},
+							{
+								"kind": "Entitlement",
+								"typeID": "Y",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							}
+						]
+					}
+                  }
+                }
+              }
+            `,
+		)
+	})
+
+	t.Run("with static auth(X | Y) &int", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementSetAuthorization{
+						Kind:         cadence.Disjunction,
+						Entitlements: []common.TypeID{"X", "Y"},
+					},
+					Type: cadence.IntType{},
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorization": {
+						"kind": "EntitlementDisjunctionSet",
+						"entitlements": [
+							{
+								"kind": "Entitlement",
+								"typeID": "X",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							},
+							{
+								"kind": "Entitlement",
+								"typeID": "Y",
+								"type": null,
+								"fields": null, 
+								"initializers": null
+							}
+						]
+					}
+                  }
+                }
+              }
+            `,
+		)
+	})
+
+	t.Run("with static function, with type parameters", func(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
@@ -2421,6 +2604,7 @@ func TestEncodeType(t *testing.T) {
                   "staticType": {
                     "kind": "Function",
 					"purity": "",
+                    "typeID": "fun<T>(String):Int",
                     "return": {
                       "kind": "Int"
                     },
@@ -2467,6 +2651,7 @@ func TestEncodeType(t *testing.T) {
 				{	
 					"kind" : "Function",
 					"purity": "view",
+                    "typeID": "view fun(String):Int",
 					"return" : {"kind" : "Int"},
 					"typeParameters": [],
 					"parameters" : [
@@ -2476,6 +2661,45 @@ func TestEncodeType(t *testing.T) {
 			}`,
 		)
 
+	})
+
+	t.Run("with static function, without type parameters (decode only)", func(t *testing.T) {
+
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Function",
+                    "typeID": "((String):Int)",
+                    "return": {
+                      "kind": "Int"
+                    },
+                    "parameters": [
+                      {
+                        "label": "qux",
+                        "id": "baz",
+                        "type": {
+                          "kind": "String"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            `,
+			cadence.TypeValue{
+				StaticType: &cadence.FunctionType{
+					Parameters: []cadence.Parameter{
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+					},
+					ReturnType: cadence.IntType{},
+				},
+			},
+		)
 	})
 
 	t.Run("with implicit purity", func(t *testing.T) {
@@ -2533,16 +2757,15 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
-	t.Run("with static restricted type", func(t *testing.T) {
+	t.Run("with static intersection type", func(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 			// language=json
@@ -2551,11 +2774,9 @@ func TestEncodeType(t *testing.T) {
                 "type": "Type",
                 "value": {
                   "staticType": {
-                    "kind": "Restriction",
-                    "type": {
-                      "kind": "Int"
-                    },
-                    "restrictions": [
+                    "kind": "Intersection",
+                    "typeID": "{String}",
+                    "types": [
                       {
                         "kind": "String"
                       }
@@ -2585,36 +2806,66 @@ func TestEncodeCapability(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(
-		t,
-		cadence.StorageCapability{
-			Path: cadence.Path{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			BorrowType: cadence.IntType{},
-		},
-		// language=json
-		`
-          {
-            "type": "Capability",
-            "value": {
-              "path": {
-                "type": "Path",
+	t.Run("path", func(t *testing.T) {
+
+		path, err := cadence.NewPath(common.PathDomainPublic, "foo")
+		require.NoError(t, err)
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewPathCapability(
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				path,
+				cadence.IntType{},
+			),
+			// language=json
+			`
+              {
+                "type": "Capability",
                 "value": {
-                  "domain": "storage",
-                  "identifier": "foo"
+                  "path": {
+                    "type": "Path",
+                    "value": {
+                      "domain": "public",
+                      "identifier": "foo"
+                    }
+                  },
+                  "borrowType": {
+                    "kind": "Int"
+                  },
+                  "address": "0x0000000102030405"
                 }
-              },
-              "borrowType": {
-                "kind": "Int"
-              },
-              "address": "0x0000000102030405"
-            }
-          }
-        `,
-	)
+              }
+            `,
+		)
+	})
+
+	t.Run("ID", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewIDCapability(
+				6,
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				cadence.IntType{},
+			),
+			// language=json
+			`
+              {
+                "type": "Capability",
+                "value": {
+                  "borrowType": {
+                    "kind": "Int"
+                  },
+                  "address": "0x0000000102030405",
+                  "id": "6"
+                }
+              }
+            `,
+		)
+	})
 }
 
 func TestDecodeFixedPoints(t *testing.T) {
@@ -3359,20 +3610,6 @@ func TestExportFunctionValue(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "foo",
-			},
-		},
-	}
-
-	ty.Fields[0].Type = &cadence.OptionalType{
-		Type: ty,
-	}
-
 	testEncode(
 		t,
 		cadence.Function{
@@ -3388,6 +3625,7 @@ func TestExportFunctionValue(t *testing.T) {
             "value": {
               "functionType": {
                 "kind": "Function",
+                "typeID": "fun():Void",
                 "parameters": [],
                 "typeParameters": [],
                 "purity":"",
@@ -3399,4 +3637,78 @@ func TestExportFunctionValue(t *testing.T) {
           }
         `,
 	)
+}
+
+func TestImportFunctionValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without type parameters", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Function",
+                "value": {
+                  "functionType": {
+                    "kind": "Function",
+                    "typeID": "(():Void)",
+                    "parameters": [],
+                    "return": {
+                      "kind": "Void"
+                    }
+                  }
+                }
+              }
+            `,
+			cadence.Function{
+				FunctionType: &cadence.FunctionType{
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.VoidType{},
+				},
+			},
+		)
+	})
+
+	t.Run("with type parameters", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Function",
+                "value": {
+                  "functionType": {
+                    "kind": "Function",
+                    "typeID": "(<T>():Void)",
+                    "typeParameters": [
+                      {"name": "T"}
+                    ],
+                    "parameters": [],
+                    "return": {
+                      "kind": "Void"
+                    }
+                  }
+                }
+              }
+            `,
+			cadence.Function{
+				FunctionType: &cadence.FunctionType{
+					TypeParameters: []cadence.TypeParameter{
+						{Name: "T"},
+					},
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.VoidType{},
+				},
+			},
+		)
+	})
+
 }

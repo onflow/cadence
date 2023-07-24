@@ -1,36 +1,43 @@
 
-pub struct PublicAccount {
+access(all) struct PublicAccount {
 
     /// The address of the account.
-    pub let address: Address
+    access(all) let address: Address
 
     /// The FLOW balance of the default vault of this account.
-    pub let balance: UFix64
+    access(all) let balance: UFix64
 
     /// The FLOW balance of the default vault of this account that is available to be moved.
-    pub let availableBalance: UFix64
+    access(all) let availableBalance: UFix64
 
     /// The current amount of storage used by the account in bytes.
-    pub let storageUsed: UInt64
+    access(all) let storageUsed: UInt64
 
     /// The storage capacity of the account in bytes.
-    pub let storageCapacity: UInt64
+    access(all) let storageCapacity: UInt64
 
     /// The contracts deployed to the account.
-    pub let contracts: PublicAccount.Contracts
+    access(all) let contracts: PublicAccount.Contracts
 
     /// The keys assigned to the account.
-    pub let keys: PublicAccount.Keys
+    access(all) let keys: PublicAccount.Keys
+
+    /// The capabilities of the account.
+    access(all) let capabilities: PublicAccount.Capabilities
 
     /// All public paths of this account.
-    pub let publicPaths: [PublicPath]
+    access(all) let publicPaths: [PublicPath]
 
+    /// **DEPRECATED**: Use `capabilities.get` instead.
+    ///
     /// Returns the capability at the given public path.
-    pub fun getCapability<T: &Any>(_ path: PublicPath): Capability<T>
+    access(all) fun getCapability<T: &Any>(_ path: PublicPath): Capability<T>
 
+    /// **DEPRECATED**
+    ///
     /// Returns the target path of the capability at the given public or private path,
     /// or nil if there exists no capability at the given path.
-    pub fun getLinkTarget(_ path: CapabilityPath): Path?
+    access(all) fun getLinkTarget(_ path: CapabilityPath): Path?
 
     /// Iterate over all the public paths of an account.
     /// passing each path and type in turn to the provided callback function.
@@ -43,40 +50,51 @@ pub struct PublicAccount {
     ///
     /// The order of iteration, as well as the behavior of adding or removing objects from storage during iteration,
     /// is undefined.
-    pub fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
+    access(all) fun forEachPublic(_ function: fun(PublicPath, Type): Bool)
 
-    pub struct Contracts {
+    access(all) struct Contracts {
 
         /// The names of all contracts deployed in the account.
-        pub let names: [String]
+        access(all) let names: [String]
 
         /// Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
         ///
         /// Returns nil if no contract/contract interface with the given name exists in the account.
-        pub fun get(name: String): DeployedContract?
+        access(all) fun get(name: String): DeployedContract?
 
         /// Returns a reference of the given type to the contract with the given name in the account, if any.
         ///
         /// Returns nil if no contract with the given name exists in the account,
         /// or if the contract does not conform to the given type.
-        pub fun borrow<T: &Any>(name: String): T?
+        access(all) fun borrow<T: &Any>(name: String): T?
     }
 
-    pub struct Keys {
+    access(all) struct Keys {
 
         /// Returns the key at the given index, if it exists, or nil otherwise.
         ///
         /// Revoked keys are always returned, but they have `isRevoked` field set to true.
-        pub fun get(keyIndex: Int): AccountKey?
+        access(all) fun get(keyIndex: Int): AccountKey?
 
         /// Iterate over all unrevoked keys in this account,
         /// passing each key in turn to the provided function.
         ///
         /// Iteration is stopped early if the function returns `false`.
         /// The order of iteration is undefined.
-        pub fun forEach(_ function: fun(AccountKey): Bool)
+        access(all) fun forEach(_ function: fun(AccountKey): Bool)
 
         /// The total number of unrevoked keys in this account.
-        pub let count: UInt64
+        access(all) let count: UInt64
+    }
+
+    access(all) struct Capabilities {
+        /// get returns the storage capability at the given path, if one was stored there.
+        access(all) fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+
+        /// borrow gets the storage capability at the given path, and borrows the capability if it exists.
+        ///
+        /// Returns nil if the capability does not exist or cannot be borrowed using the given type.
+        /// The function is equivalent to `get(path)?.borrow()`.
+        access(all) fun borrow<T: &Any>(_ path: PublicPath): T?
     }
 }

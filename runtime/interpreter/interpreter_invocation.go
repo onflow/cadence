@@ -100,6 +100,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 					atree.Address{},
 					false,
 					nil,
+					nil,
 				)
 			}
 		}
@@ -112,6 +113,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 
 	invocation := NewInvocation(
 		interpreter,
+		nil,
 		nil,
 		nil,
 		transferredArguments,
@@ -142,6 +144,13 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	}
 	if invocation.Base != nil {
 		interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
+	}
+	if invocation.BoundAuthorization != nil {
+		oldInvocationValue := interpreter.SharedState.currentEntitlementMappedValue
+		interpreter.SharedState.currentEntitlementMappedValue = invocation.BoundAuthorization
+		defer func() {
+			interpreter.SharedState.currentEntitlementMappedValue = oldInvocationValue
+		}()
 	}
 
 	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)

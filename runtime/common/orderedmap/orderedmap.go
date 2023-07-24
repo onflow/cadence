@@ -118,6 +118,16 @@ func (om *OrderedMap[K, V]) Set(key K, value V) (oldValue V, present bool) {
 	return
 }
 
+// SetAll sets all the values in the input map in the receiver map, overrwriting any previous entries
+func (om *OrderedMap[K, V]) SetAll(other *OrderedMap[K, V]) {
+	if other == nil {
+		return
+	}
+	other.Foreach(func(key K, value V) {
+		om.Set(key, value)
+	})
+}
+
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
 func (om *OrderedMap[K, V]) Delete(key K) (oldValue V, present bool) {
@@ -173,6 +183,20 @@ func (om *OrderedMap[K, V]) Foreach(f func(key K, value V)) {
 	}
 }
 
+// ForeachWithIndex iterates over the entries of the map in the insertion order, and invokes
+// the provided function for each key-value pair.
+func (om *OrderedMap[K, V]) ForeachWithIndex(f func(index int, key K, value V)) {
+	if om.pairs == nil {
+		return
+	}
+
+	index := 0
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		f(index, pair.Key, pair.Value)
+		index++
+	}
+}
+
 // ForeachWithError iterates over the entries of the map in the insertion order,
 // and invokes the provided function for each key-value pair.
 // If the passed function returns an error, iteration breaks and the error is returned.
@@ -188,6 +212,46 @@ func (om *OrderedMap[K, V]) ForeachWithError(f func(key K, value V) error) error
 		}
 	}
 	return nil
+}
+
+// ForAllKeys iterates over the keys of the map, and returns whether the provided
+// predicate is true for all of them
+func (om *OrderedMap[K, V]) ForAllKeys(predicate func(key K) bool) bool {
+	if om.pairs == nil {
+		return true
+	}
+
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		if !predicate(pair.Key) {
+			return false
+		}
+	}
+	return true
+}
+
+// ForAnyKey iterates over the keys of the map, and returns whether the provided
+// predicate is true for any of them
+func (om *OrderedMap[K, V]) ForAnyKey(predicate func(key K) bool) bool {
+	if om.pairs == nil {
+		return true
+	}
+
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		if predicate(pair.Key) {
+			return true
+		}
+	}
+	return false
+}
+
+// KeySetIsDisjointFrom checks whether the key set of the receiver is disjoint from of the
+// argument map's key set
+func (om *OrderedMap[K, V]) KeySetIsDisjointFrom(other *OrderedMap[K, V]) bool {
+	isDisjoint := true
+	om.Foreach(func(key K, _ V) {
+		isDisjoint = isDisjoint && !other.Contains(key)
+	})
+	return isDisjoint
 }
 
 // Pair is an entry in an OrderedMap

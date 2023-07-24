@@ -52,8 +52,8 @@ func TestCheckRepeatedImport(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub let x = 1
-          pub let y = 2
+          access(all) let x = 1
+          access(all) let y = 2
         `,
 		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
@@ -87,11 +87,11 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 
 	importedCheckerX, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return 1
           }
 
-          pub let x = test()
+          access(all) let x = test()
         `,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
@@ -104,11 +104,11 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 
 	importedCheckerY, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return 2
           }
 
-          pub let y = test()
+          access(all) let y = test()
         `,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
@@ -166,7 +166,7 @@ func TestCheckInvalidRepeatedImport(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub let x = 1
+          access(all) let x = 1
         `,
 		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
@@ -204,11 +204,11 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 
 	importedCheckerX, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return 1
           }
 
-          pub let x = test()
+          access(all) let x = test()
         `,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
@@ -221,11 +221,11 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 
 	importedCheckerY, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return 2
           }
 
-          pub let y = test()
+          access(all) let y = test()
         `,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
@@ -282,7 +282,7 @@ func TestCheckImportAll(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun answer(): Int {
+          access(all) fun answer(): Int {
               return 42
           }
         `,
@@ -297,7 +297,7 @@ func TestCheckImportAll(t *testing.T) {
 		`
           import "imported"
 
-          pub let x = answer()
+          access(all) let x = answer()
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
@@ -319,7 +319,7 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-           pub let x = 1
+           access(all) let x = 1
         `,
 		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
@@ -332,7 +332,7 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
 		`
            import answer from "imported"
 
-           pub let x = answer()
+           access(all) let x = answer()
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
@@ -356,11 +356,11 @@ func TestCheckImportSome(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun answer(): Int {
+          access(all) fun answer(): Int {
               return 42
           }
 
-          pub let x = 1
+          access(all) let x = 1
         `,
 		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
@@ -373,7 +373,7 @@ func TestCheckImportSome(t *testing.T) {
 		`
           import answer from "imported"
 
-          pub let x = answer()
+          access(all) let x = answer()
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
@@ -438,9 +438,9 @@ func TestCheckImportTypes(t *testing.T) {
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(
 					`
-                       pub %[1]s Test %[2]s
+                       access(all) %[1]s Test %[2]s
 
-                       pub %[1]s interface TestInterface %[2]s
+                       access(all) %[1]s interface TestInterface %[2]s
                     `,
 					compositeKind.Keyword(),
 					body,
@@ -455,7 +455,7 @@ func TestCheckImportTypes(t *testing.T) {
 			var useCode string
 			if compositeKind != common.CompositeKindContract {
 				useCode = fmt.Sprintf(
-					`pub let x: %[1]sTest %[2]s %[3]s Test%[4]s`,
+					`access(all) let x: %[1]sTest %[2]s %[3]s Test%[4]s`,
 					compositeKind.Annotation(),
 					compositeKind.TransferOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -468,7 +468,7 @@ func TestCheckImportTypes(t *testing.T) {
 					`
                       import "imported"
 
-                      pub %[1]s TestImpl: TestInterface {}
+                      access(all) %[1]s TestImpl: TestInterface {}
 
                       %[2]s
                     `,
@@ -575,7 +575,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 	const codeEven = `
       import odd from "odd"
 
-      pub fun even(_ n: Int): Bool {
+      access(all) fun even(_ n: Int): Bool {
           if n == 0 {
               return true
           }
@@ -588,7 +588,7 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 	const codeOdd = `
       import even from "even"
 
-      pub fun odd(_ n: Int): Bool {
+      access(all) fun odd(_ n: Int): Bool {
           if n == 0 {
               return false
           }
@@ -697,7 +697,7 @@ func TestCheckImportVirtual(t *testing.T) {
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,
-		Access:          ast.AccessPublic,
+		Access:          sema.UnauthorizedAccess,
 		Type:            fooType,
 	})
 

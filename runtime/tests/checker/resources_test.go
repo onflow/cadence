@@ -1627,7 +1627,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub resource R {}
+          access(all) resource R {}
         `,
 		ParseAndCheckOptions{
 			Location: ImportedLocation,
@@ -1640,7 +1640,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 		`
           import R from "imported"
 
-          pub fun test() {
+          access(all) fun test() {
               destroy create R()
           }
         `,
@@ -1674,7 +1674,7 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
 
               contract B {
 
-                  pub fun test() {
+                  access(all) fun test() {
                       destroy create A.R()
                   }
               }
@@ -1693,7 +1693,7 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
               contract A {
                   resource R {}
 
-                  pub fun test() {
+                  access(all) fun test() {
                       destroy create R()
                   }
               }
@@ -1811,11 +1811,11 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             resource Foo {}
 
-            pub fun foo(): @Foo? {
+            access(all) fun foo(): @Foo? {
                 return <- create Foo()
             }
 
-            pub let isNil = foo() == nil
+            access(all) let isNil = foo() == nil
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -3383,7 +3383,7 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
 }
 
 // TestCheckResourceInterfaceUseAsType test if a resource
-// is a subtype of a restricted AnyResource type.
+// is a subtype of a intersection AnyResource type.
 func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 
 	t.Parallel()
@@ -3499,7 +3499,7 @@ func TestCheckInvalidResourceLossThroughFunctionResultAccess(t *testing.T) {
 }
 
 // TestCheckAnyResourceDestruction tests if resources
-// can be passed to restricted AnyResources parameters,
+// can be passed to intersection AnyResources parameters,
 // and if the argument can be destroyed.
 func TestCheckAnyResourceDestruction(t *testing.T) {
 
@@ -3982,11 +3982,10 @@ func TestCheckInvalidResourceDictionaryKeysForeach(t *testing.T) {
         }
     `)
 
-	errs := RequireCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 	assert.IsType(t, &sema.InvalidResourceDictionaryMemberError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 func TestCheckInvalidResourceLossAfterMoveThroughDictionaryIndexing(t *testing.T) {
@@ -5229,7 +5228,7 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
 	})
 }
 
-func TestCheckRestrictedAnyResourceType(t *testing.T) {
+func TestCheckIntersectionAnyResourceType(t *testing.T) {
 
 	t.Parallel()
 
@@ -5239,7 +5238,7 @@ func TestCheckRestrictedAnyResourceType(t *testing.T) {
 
           resource R: RI {}
 
-          let ri: @AnyResource{RI} <- create R()
+          let ri: @{RI} <- create R()
         `)
 
 		require.NoError(t, err)
@@ -5251,7 +5250,7 @@ func TestCheckRestrictedAnyResourceType(t *testing.T) {
 
           resource R: RI {}
 
-          let ri: @[AnyResource{RI}] <- [<-create R()]
+          let ri: @[{RI}] <- [<-create R()]
         `)
 
 		require.NoError(t, err)
@@ -5325,7 +5324,7 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
 
-      pub contract C {
+      access(all) contract C {
 
           resource R {
 
@@ -5336,7 +5335,7 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
               }
           }
 
-          pub fun bar() {
+          access(all) fun bar() {
               return
           }
       }
@@ -9379,7 +9378,7 @@ func TestCheckBadResourceInterface(t *testing.T) {
 
 		_, err := ParseAndCheck(t, "resource interface foo{struct d:foo{ contract d:foo{ contract x:foo{ struct d{} contract d:foo{ contract d:foo {}}}}}}")
 
-		errs := RequireCheckerErrors(t, err, 24)
+		errs := RequireCheckerErrors(t, err, 22)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -9393,18 +9392,16 @@ func TestCheckBadResourceInterface(t *testing.T) {
 		assert.IsType(t, &sema.RedeclarationError{}, errs[9])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[12])
-		assert.IsType(t, &sema.ConformanceError{}, errs[13])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[14])
-		assert.IsType(t, &sema.ConformanceError{}, errs[15])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[16])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[17])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[18])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[19])
+		assert.IsType(t, &sema.ConformanceError{}, errs[12])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[13])
+		assert.IsType(t, &sema.ConformanceError{}, errs[14])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[15])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[16])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[17])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[18])
+		assert.IsType(t, &sema.ConformanceError{}, errs[19])
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[20])
 		assert.IsType(t, &sema.ConformanceError{}, errs[21])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[22])
-		assert.IsType(t, &sema.ConformanceError{}, errs[23])
 	})
 }
 
@@ -9448,4 +9445,60 @@ func TestCheckConditionalResourceCreationAndReturn(t *testing.T) {
     `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckResourceWithFunction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without return statement", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          fun test() {
+              let x: @AnyResource? <- nil
+
+              fun () {}
+
+              destroy x
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("with return statement", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          fun test() {
+              let x: @AnyResource? <- nil
+
+              fun (): Bool {
+                  return true
+              }
+
+              destroy x
+          }
+        `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          let x: @AnyResource? <- nil
+
+          fun () {
+              destroy x
+          }
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }

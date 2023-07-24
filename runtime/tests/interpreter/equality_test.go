@@ -40,20 +40,75 @@ func TestInterpretEquality(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("capability", func(t *testing.T) {
+	t.Run("capability (path)", func(t *testing.T) {
 
 		t.Parallel()
 
 		capabilityValueDeclaration := stdlib.StandardLibraryValue{
 			Name: "cap",
 			Type: &sema.CapabilityType{},
-			Value: &interpreter.StorageCapabilityValue{
-				Address: interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				Path: interpreter.PathValue{
+			Value: interpreter.NewUnmeteredPathCapabilityValue(
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				interpreter.PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "something",
 				},
+				nil,
+			),
+			Kind: common.DeclarationKindConstant,
+		}
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(capabilityValueDeclaration)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, capabilityValueDeclaration)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              let maybeCapNonNil: Capability? = cap
+              let maybeCapNil: Capability? = nil
+              let res1 = maybeCapNonNil != nil
+              let res2 = maybeCapNil == nil
+		    `,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
 			},
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			inter.Globals.Get("res1").GetValue(),
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			inter.Globals.Get("res2").GetValue(),
+		)
+	})
+
+	t.Run("capability (ID)", func(t *testing.T) {
+
+		t.Parallel()
+
+		capabilityValueDeclaration := stdlib.StandardLibraryValue{
+			Name: "cap",
+			Type: &sema.CapabilityType{},
+			Value: interpreter.NewUnmeteredIDCapabilityValue(
+				4,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				nil,
+			),
 			Kind: common.DeclarationKindConstant,
 		}
 
@@ -173,6 +228,8 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 			interpreter.PrimitiveStaticTypeWord16,
 			interpreter.PrimitiveStaticTypeWord32,
 			interpreter.PrimitiveStaticTypeWord64,
+			interpreter.PrimitiveStaticTypeWord128,
+			interpreter.PrimitiveStaticTypeWord256,
 		}
 
 		for _, subtype := range intSubtypes {

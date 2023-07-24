@@ -267,6 +267,10 @@ func convertIntValue(
 		return interpreter.ConvertWord32(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Word64Type:
 		return interpreter.ConvertWord64(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
+	case sema.Word128Type:
+		return interpreter.ConvertWord128(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
+	case sema.Word256Type:
+		return interpreter.ConvertWord256(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 
 	default:
 		return nil, UnsupportedLiteralError
@@ -323,7 +327,14 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 
 	case *sema.OptionalType:
 		if _, ok := expression.(*ast.NilExpression); ok {
-			return cadence.NewMeteredOptional(inter, nil), nil
+			value := cadence.NewMeteredOptional(inter, nil)
+			for {
+				ty, ok = ty.Type.(*sema.OptionalType)
+				if !ok {
+					return value, nil
+				}
+				value = cadence.NewMeteredOptional(inter, value)
+			}
 		}
 
 		converted, err := LiteralValue(inter, expression, ty.Type)

@@ -534,25 +534,29 @@ func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error
 
 // ReferenceType
 
+type Authorization struct {
+	EntitlementSet EntitlementSet `json:"EntitlementSet"`
+}
+
 type ReferenceType struct {
-	Type       Type     `json:"ReferencedType"`
-	StartPos   Position `json:"-"`
-	Authorized bool
+	Type          Type           `json:"ReferencedType"`
+	StartPos      Position       `json:"-"`
+	Authorization *Authorization `json:"Authorization"`
 }
 
 var _ Type = &ReferenceType{}
 
 func NewReferenceType(
 	memoryGauge common.MemoryGauge,
-	authorized bool,
+	authorization *Authorization,
 	typ Type,
 	startPos Position,
 ) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceTypeMemoryUsage)
 	return &ReferenceType{
-		Authorized: authorized,
-		Type:       typ,
-		StartPos:   startPos,
+		Authorization: authorization,
+		Type:          typ,
+		StartPos:      startPos,
 	}
 }
 
@@ -570,13 +574,27 @@ func (t *ReferenceType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return t.Type.EndPosition(memoryGauge)
 }
 
-const referenceTypeAuthKeywordSpaceDoc = prettier.Text("auth ")
+const referenceTypeAuthKeywordDoc = prettier.Text("auth")
 const referenceTypeSymbolDoc = prettier.Text("&")
 
 func (t *ReferenceType) Doc() prettier.Doc {
 	var doc prettier.Concat
-	if t.Authorized {
-		doc = append(doc, referenceTypeAuthKeywordSpaceDoc)
+	if t.Authorization != nil {
+		doc = append(doc, referenceTypeAuthKeywordDoc)
+		entitlementSet := t.Authorization.EntitlementSet
+		if entitlementSet != nil && len(entitlementSet.Entitlements()) > 0 {
+			entitlements := entitlementSet.Entitlements()
+			// TODO: add indentation, improve separators. follow e.g. ParameterList.Doc()
+			doc = append(doc, prettier.Text("("))
+			for i, entitlement := range entitlements {
+				doc = append(doc, entitlement.Doc())
+				if i < len(entitlements)-1 {
+					doc = append(doc, prettier.Text(entitlementSet.Separator().String()), prettier.Space)
+				}
+			}
+			doc = append(doc, prettier.Text(")"))
+		}
+		doc = append(doc, prettier.Space)
 	}
 
 	return append(
@@ -603,92 +621,86 @@ func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) erro
 	return checker.CheckReferenceTypeEquality(t, other)
 }
 
-// RestrictedType
+// IntersectionType
 
-type RestrictedType struct {
-	Type         Type `json:"RestrictedType"`
-	Restrictions []*NominalType
+type IntersectionType struct {
+	Types []*NominalType
 	Range
 }
 
-var _ Type = &RestrictedType{}
+var _ Type = &IntersectionType{}
 
-func NewRestrictedType(
+func NewIntersectionType(
 	memoryGauge common.MemoryGauge,
-	typ Type,
-	restrictions []*NominalType,
+	types []*NominalType,
 	astRange Range,
-) *RestrictedType {
-	common.UseMemory(memoryGauge, common.RestrictedTypeMemoryUsage)
-	return &RestrictedType{
-		Type:         typ,
-		Restrictions: restrictions,
-		Range:        astRange,
+) *IntersectionType {
+	common.UseMemory(memoryGauge, common.IntersectionTypeMemoryUsage)
+	return &IntersectionType{
+		Types: types,
+		Range: astRange,
 	}
 }
 
-func (*RestrictedType) isType() {}
+func (*IntersectionType) isType() {}
 
-func (t *RestrictedType) String() string {
+func (t *IntersectionType) String() string {
 	return Prettier(t)
 }
 
-const restrictedTypeStartDoc = prettier.Text("{")
-const restrictedTypeEndDoc = prettier.Text("}")
-const restrictedTypeSeparatorDoc = prettier.Text(",")
+const intersectionTypeStartDoc = prettier.Text("{")
+const intersectionTypeEndDoc = prettier.Text("}")
+const intersectionTypeSeparatorDoc = prettier.Text(",")
 
-func (t *RestrictedType) Doc() prettier.Doc {
-	restrictionsDoc := prettier.Concat{
+func (t *IntersectionType) Doc() prettier.Doc {
+	intersectionDoc := prettier.Concat{
 		prettier.SoftLine{},
 	}
 
-	for i, restriction := range t.Restrictions {
+	for i, typ := range t.Types {
 		if i > 0 {
-			restrictionsDoc = append(
-				restrictionsDoc,
-				restrictedTypeSeparatorDoc,
+			intersectionDoc = append(
+				intersectionDoc,
+				intersectionTypeSeparatorDoc,
 				prettier.Line{},
 			)
 		}
-		restrictionsDoc = append(
-			restrictionsDoc,
-			restriction.Doc(),
+		intersectionDoc = append(
+			intersectionDoc,
+			typ.Doc(),
 		)
 	}
 
 	var doc prettier.Concat
-	if t.Type != nil {
-		doc = append(doc, t.Type.Doc())
-	}
 
 	return append(doc,
 		prettier.Group{
 			Doc: prettier.Concat{
-				restrictedTypeStartDoc,
+				intersectionTypeStartDoc,
 				prettier.Indent{
-					Doc: restrictionsDoc,
+					Doc: intersectionDoc,
 				},
 				prettier.SoftLine{},
-				restrictedTypeEndDoc,
+				intersectionTypeEndDoc,
 			},
 		},
 	)
 
 }
 
-func (t *RestrictedType) MarshalJSON() ([]byte, error) {
-	type Alias RestrictedType
+func (t *IntersectionType) MarshalJSON() ([]byte, error) {
+	type Alias IntersectionType
 	return json.Marshal(&struct {
 		*Alias
 		Type string
 	}{
-		Type:  "RestrictedType",
+		Type:  "IntersectionType",
 		Alias: (*Alias)(t),
 	})
 }
 
-func (t *RestrictedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
-	return checker.CheckRestrictedTypeEquality(t, other)
+func (t *IntersectionType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckIntersectionTypeEquality(t, other)
 }
 
 // InstantiationType represents an instantiation of a generic (nominal) type
@@ -795,6 +807,6 @@ type TypeEqualityChecker interface {
 	CheckDictionaryTypeEquality(*DictionaryType, Type) error
 	CheckFunctionTypeEquality(*FunctionType, Type) error
 	CheckReferenceTypeEquality(*ReferenceType, Type) error
-	CheckRestrictedTypeEquality(*RestrictedType, Type) error
+	CheckIntersectionTypeEquality(*IntersectionType, Type) error
 	CheckInstantiationTypeEquality(*InstantiationType, Type) error
 }

@@ -43,7 +43,7 @@ type decodeTypeFn func(types *cadenceTypeByCCFTypeID) (cadence.Type, error)
 //	/ constsized-array-type
 //	/ dict-type
 //	/ reference-type
-//	/ restricted-type
+//	/ intersection-type
 //	/ capability-type
 //	/ type-ref
 //
@@ -74,8 +74,8 @@ func (d *Decoder) decodeInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type,
 	case CBORTagReferenceType:
 		return d.decodeReferenceType(types, d.decodeInlineType)
 
-	case CBORTagRestrictedType:
-		return d.decodeRestrictedType(types, d.decodeNullableInlineType, d.decodeInlineType)
+	case CBORTagIntersectionType:
+		return d.decodeIntersectionType(types, d.decodeNullableInlineType, d.decodeInlineType)
 
 	case CBORTagCapabilityType:
 		return d.decodeCapabilityType(types, d.decodeNullableInlineType)
@@ -176,6 +176,12 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 	case TypeWord64:
 		return cadence.TheWord64Type, nil
 
+	case TypeWord128:
+		return cadence.TheWord128Type, nil
+
+	case TypeWord256:
+		return cadence.TheWord256Type, nil
+
 	case TypeFix64:
 		return cadence.TheFix64Type, nil
 
@@ -262,6 +268,12 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 
 	case TypeVoid:
 		return cadence.TheVoidType, nil
+
+	case TypeAnyStructAttachmentType:
+		return cadence.TheAnyStructAttachmentType, nil
+
+	case TypeAnyResourceAttachmentType:
+		return cadence.TheAnyResourceAttachmentType, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported encoded simple type ID %d", simpleTypeID)
@@ -464,6 +476,11 @@ func (d *Decoder) decodeCapabilityType(
 	return cadence.NewMeteredCapabilityType(d.gauge, borrowType), nil
 }
 
+func (d *Decoder) decodeAuthorization() (cadence.Authorization, error) {
+	err := d.dec.DecodeNil()
+	return cadence.UnauthorizedAccess, err
+}
+
 // decodeReferenceType decodes reference-type or reference-type-value as
 // language=CDDL
 // reference-type =
@@ -493,8 +510,8 @@ func (d *Decoder) decodeReferenceType(
 		return nil, err
 	}
 
-	// element 0: authorized
-	authorized, err := d.dec.DecodeBool()
+	// element 0: authorization
+	authorization, err := d.decodeAuthorization()
 	if err != nil {
 		return nil, err
 	}
@@ -509,93 +526,89 @@ func (d *Decoder) decodeReferenceType(
 		return nil, errors.New("unexpected nil type as reference type")
 	}
 
-	return cadence.NewMeteredReferenceType(d.gauge, authorized, elementType), nil
+	return cadence.NewMeteredReferenceType(d.gauge, authorization, elementType), nil
 }
 
-// decodeRestrictedType decodes restricted-type or restricted-type-value as
+// decodeIntersectionType decodes intersection-type or intersection-type-value as
 // language=CDDL
-// restricted-type =
+// intersection-type =
 //
-//	; cbor-tag-restricted-type
+//	; cbor-tag-intersection-type
 //	#6.143([
 //	  type: inline-type / nil,
-//	  restrictions: [* inline-type]
+//	  types: [* inline-type]
 //	])
 //
-// restricted-type-value =
+// intersection-type-value =
 //
-//	; cbor-tag-restricted-type-value
+//	; cbor-tag-intersection-type-value
 //	#6.191([
 //	  type: type-value / nil,
-//	  restrictions: [* type-value]
+//	  types: [* type-value]
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
-func (d *Decoder) decodeRestrictedType(
+func (d *Decoder) decodeIntersectionType(
 	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
-	decodeRestrictionTypeFn decodeTypeFn,
+	decodeIntersectionTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
-	// Decode array of length 2.
-	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	// types
+	typeCount, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
 	}
-
-	// element 0: type
-	typ, err := decodeTypeFn(types)
-	if err != nil {
-		return nil, err
+	if typeCount == 0 {
+		return nil, errors.New("unexpected empty intersection type")
 	}
 
-	// element 1: restrictions
-	restrictionCount, err := d.dec.DecodeArrayHead()
-	if err != nil {
-		return nil, err
-	}
+	intersectionTypeIDs := make(map[string]struct{}, typeCount)
+	var previousIntersectionTypeID string
 
-	restrictionTypeIDs := make(map[string]struct{}, restrictionCount)
-	var previousRestrictedTypeID string
-
-	restrictions := make([]cadence.Type, restrictionCount)
-	for i := 0; i < int(restrictionCount); i++ {
-		// Decode restriction.
-		restrictedType, err := decodeRestrictionTypeFn(types)
+	intersectionTypes := make([]cadence.Type, typeCount)
+	for i := 0; i < int(typeCount); i++ {
+		// Decode type.
+		intersectedType, err := decodeIntersectionTypeFn(types)
 		if err != nil {
 			return nil, err
 		}
 
-		if restrictedType == nil {
-			return nil, errors.New("unexpected nil type as restriction type")
+		if intersectedType == nil {
+			return nil, errors.New("unexpected nil type as intersection type")
 		}
 
-		restrictedTypeID := restrictedType.ID()
+		intersectionTypeID := intersectedType.ID()
 
 		// "Valid CCF Encoding Requirements" in CCF specs:
 		//
-		//   "Elements MUST be unique in restricted-type or restricted-type-value."
-		if _, ok := restrictionTypeIDs[restrictedTypeID]; ok {
-			return nil, fmt.Errorf("found duplicate restricted type %s", restrictedTypeID)
+		//   "Elements MUST be unique in intersection-type or intersection-type-value."
+		if _, ok := intersectionTypeIDs[intersectionTypeID]; ok {
+			return nil, fmt.Errorf("found duplicate intersection type %s", intersectionTypeID)
 		}
 
-		// "Deterministic CCF Encoding Requirements" in CCF specs:
-		//
-		//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
-		//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
-		if !stringsAreSortedBytewise(previousRestrictedTypeID, restrictedTypeID) {
-			return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousRestrictedTypeID, restrictedTypeID)
+		if d.dm.enforceSortRestrictedTypes == EnforceSortBytewiseLexical {
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "intersection-type.types MUST be sorted by intersection's cadence-type-id"
+			//   "intersection-type-value.types MUST be sorted by intersection's cadence-type-id."
+			if !stringsAreSortedBytewise(previousIntersectionTypeID, intersectionTypeID) {
+				return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousIntersectionTypeID, intersectionTypeID)
+			}
 		}
 
-		restrictionTypeIDs[restrictedTypeID] = struct{}{}
-		previousRestrictedTypeID = restrictedTypeID
+		intersectionTypeIDs[intersectionTypeID] = struct{}{}
+		previousIntersectionTypeID = intersectionTypeID
 
-		restrictions[i] = restrictedType
+		intersectionTypes[i] = intersectedType
 	}
 
-	return cadence.NewMeteredRestrictedType(
+	if len(intersectionTypes) == 0 {
+		return nil, errors.New("unexpected empty intersection type")
+	}
+
+	return cadence.NewMeteredIntersectionType(
 		d.gauge,
-		typ,
-		restrictions,
+		intersectionTypes,
 	), nil
 }
 

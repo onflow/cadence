@@ -1,1 +1,1 @@
-pub struct Test: Exportable {}
+access(all) struct Test: Exportable {}

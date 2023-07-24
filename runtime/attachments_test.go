@@ -41,23 +41,23 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource R {
-				pub fun foo(): Int {
+		access(all) contract Test {
+			access(all) resource R {
+				access(all) fun foo(): Int {
 					return 3
 				}
 			}
-			pub attachment A for R {
-				pub fun foo(): Int {
+			access(all) attachment A for R {
+				access(all) fun foo(): Int {
 					return base.foo()
 				}
 			}
-			pub fun makeRWithA(): @R {
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -143,7 +143,7 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, logs[0], "3")
+	require.Equal(t, []string{"3"}, logs)
 }
 
 func TestAccountAttachmentExportFailure(t *testing.T) {
@@ -157,10 +157,10 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource R {}
-			pub attachment A for R {}
-			pub fun makeRWithA(): @R {
+		access(all) contract Test {
+			access(all) resource R {}
+			access(all) attachment A for R {}
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -168,7 +168,7 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		pub fun main(): &Test.A? { 
+		access(all) fun main(): &Test.A? { 
 			let r <- Test.makeRWithA()
 			let a = r[Test.A]
 			destroy r
@@ -227,20 +227,21 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 }
 
 func TestAccountAttachmentExport(t *testing.T) {
+
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource R {}
-			pub attachment A for R {}
-			pub fun makeRWithA(): @R {
+		access(all) contract Test {
+			access(all) resource R {}
+			access(all) attachment A for R {}
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -248,7 +249,7 @@ func TestAccountAttachmentExport(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		pub fun main(): &Test.A? { 
+		access(all) fun main(): &Test.A? { 
 			let r <- Test.makeRWithA()
 			let authAccount = getAuthAccount(0x1)
 			authAccount.save(<-r, to: /storage/foo)
@@ -311,20 +312,21 @@ func TestAccountAttachmentExport(t *testing.T) {
 }
 
 func TestAccountAttachedExport(t *testing.T) {
+
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource R {}
-			pub attachment A for R {}
-			pub fun makeRWithA(): @R {
+		access(all) contract Test {
+			access(all) resource R {}
+			access(all) attachment A for R {}
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -332,7 +334,7 @@ func TestAccountAttachedExport(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		pub fun main(): @Test.R { 
+		access(all) fun main(): @Test.R { 
 			return <-Test.makeRWithA()
 		}
 	 `)
@@ -397,26 +399,26 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource interface I {
-				pub fun foo(): Int
+		access(all) contract Test {
+			access(all) resource interface I {
+				access(all) fun foo(): Int
 			}
-			pub resource R: I {
-				pub fun foo(): Int {
+			access(all) resource R: I {
+				access(all) fun foo(): Int {
 					return 3
 				}
 			}
-			pub attachment A for I {
-				pub fun foo(): Int {
+			access(all) attachment A for I {
+				access(all) fun foo(): Int {
 					return base.foo()
 				}
 			}
-			pub fun makeRWithA(): @R {
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -502,7 +504,7 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, logs[0], "3")
+	require.Equal(t, []string{"3"}, logs)
 }
 
 func TestAccountAttachmentCapability(t *testing.T) {
@@ -511,26 +513,26 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	storage := newTestLedger(nil, nil)
 	rt := newTestInterpreterRuntimeWithAttachments()
 
-	logs := make([]string, 0)
-	events := make([]string, 0)
+	var logs []string
+	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource interface I {
-				pub fun foo(): Int
+		access(all) contract Test {
+			access(all) resource interface I {
+				access(all) fun foo(): Int
 			}
-			pub resource R: I {
-				pub fun foo(): Int {
+			access(all) resource R: I {
+				access(all) fun foo(): Int {
 					return 3
 				}
 			}
-			pub attachment A for I {
-				pub fun foo(): Int {
+			access(all) attachment A for I {
+				access(all) fun foo(): Int {
 					return base.foo()
 				}
 			}
-			pub fun makeRWithA(): @R {
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -641,5 +643,5 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.Equal(t, logs[0], "3")
+	require.Equal(t, []string{"3"}, logs)
 }

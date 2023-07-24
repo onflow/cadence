@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -49,10 +50,12 @@ var integerTestValues = map[string]interpreter.NumberValue{
 	"UInt128": interpreter.NewUnmeteredUInt128ValueFromUint64(60),
 	"UInt256": interpreter.NewUnmeteredUInt256ValueFromUint64(60),
 	// Word*
-	"Word8":  interpreter.NewUnmeteredWord8Value(60),
-	"Word16": interpreter.NewUnmeteredWord16Value(60),
-	"Word32": interpreter.NewUnmeteredWord32Value(60),
-	"Word64": interpreter.NewUnmeteredWord64Value(60),
+	"Word8":   interpreter.NewUnmeteredWord8Value(60),
+	"Word16":  interpreter.NewUnmeteredWord16Value(60),
+	"Word32":  interpreter.NewUnmeteredWord32Value(60),
+	"Word64":  interpreter.NewUnmeteredWord64Value(60),
+	"Word128": interpreter.NewUnmeteredWord128ValueFromUint64(60),
+	"Word256": interpreter.NewUnmeteredWord256ValueFromUint64(60),
 }
 
 func init() {
@@ -721,9 +724,9 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 
 	// Verify all test cases exist
 
-	for _, ty := range append(
-		sema.AllSignedIntegerTypes[:],
-		sema.AllSignedFixedPointTypes...,
+	for _, ty := range common.Concat(
+		sema.AllSignedIntegerTypes,
+		sema.AllSignedFixedPointTypes,
 	) {
 
 		testCase, ok := testCases[ty]
@@ -747,9 +750,9 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		}
 	}
 
-	for _, ty := range append(
-		sema.AllUnsignedIntegerTypes[:],
-		sema.AllUnsignedFixedPointTypes...,
+	for _, ty := range common.Concat(
+		sema.AllUnsignedIntegerTypes,
+		sema.AllUnsignedFixedPointTypes,
 	) {
 
 		if strings.HasPrefix(ty.String(), "Word") {

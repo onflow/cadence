@@ -131,19 +131,11 @@ var FunctionTypeFunctionType = NewSimpleFunctionType(
 	MetaTypeAnnotation,
 )
 
-var RestrictedTypeFunctionType = NewSimpleFunctionType(
+var IntersectionTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
-			Identifier: "identifier",
-			TypeAnnotation: NewTypeAnnotation(
-				&OptionalType{
-					Type: StringType,
-				},
-			),
-		},
-		{
-			Identifier: "restrictions",
+			Identifier: "types",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{
 					Type: StringType,
@@ -158,15 +150,19 @@ var ReferenceTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
 		{
-			Identifier:     "authorized",
-			TypeAnnotation: BoolTypeAnnotation,
+			Identifier: "entitlements",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: StringType,
+				},
+			),
 		},
 		{
 			Identifier:     "type",
 			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	MetaTypeAnnotation,
+	OptionalMetaTypeAnnotation,
 )
 
 var CapabilityTypeFunctionType = NewSimpleFunctionType(
@@ -228,16 +224,23 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	},
 
 	{
-		Name:      "ReferenceType",
-		Value:     ReferenceTypeFunctionType,
-		DocString: "Creates a run-time type representing a reference type of the given type, with authorization provided by the first argument.",
+		Name:  "ReferenceType",
+		Value: ReferenceTypeFunctionType,
+		DocString: `
+		Creates a run-time type representing a reference type of the given type. 
+
+		The first argument specifies the set of entitlements to which this reference is entitled. 
+
+		Providing an empty array will result in an unauthorized return value. 
+
+		Providing invalid entitlements in the input array will result in a nil return value`,
 	},
 
 	{
-		Name:  "RestrictedType",
-		Value: RestrictedTypeFunctionType,
-		DocString: `Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument.
-		Returns nil if the restriction is not valid.`,
+		Name:  "IntersectionType",
+		Value: IntersectionTypeFunctionType,
+		DocString: `Creates a run-time type representing an intersection of the interface identifiers in the argument.
+		Returns nil if the intersection is not valid.`,
 	},
 
 	{

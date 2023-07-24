@@ -179,8 +179,7 @@ func ParseTokenStream[T any](
 	result, err := parse(p)
 	if err != nil {
 		p.report(err)
-		var zero T
-		return zero, p.errors
+		return result, p.errors
 	}
 
 	p.skipSpaceAndComments()
@@ -563,7 +562,14 @@ func (p *parser) endAmbiguity() {
 	}
 }
 
-func ParseExpression(memoryGauge common.MemoryGauge, input []byte, config Config) (expression ast.Expression, errs []error) {
+func ParseExpression(
+	memoryGauge common.MemoryGauge,
+	input []byte,
+	config Config,
+) (
+	expression ast.Expression,
+	errs []error,
+) {
 	return Parse(
 		memoryGauge,
 		input,

@@ -868,6 +868,19 @@ func (StorageMutatedDuringIterationError) Error() string {
 	return "storage iteration continued after modifying storage"
 }
 
+// ContainerMutatedDuringIterationError
+type ContainerMutatedDuringIterationError struct {
+	LocationRange
+}
+
+var _ errors.UserError = ContainerMutatedDuringIterationError{}
+
+func (ContainerMutatedDuringIterationError) IsUserError() {}
+
+func (ContainerMutatedDuringIterationError) Error() string {
+	return "resource container modified during iteration"
+}
+
 // InvalidHexByteError
 type InvalidHexByteError struct {
 	LocationRange
@@ -975,4 +988,17 @@ func (AccountLinkingForbiddenError) IsUserError() {}
 
 func (e AccountLinkingForbiddenError) Error() string {
 	return "account linking is not allowed"
+}
+
+// RecursiveTransferError
+type RecursiveTransferError struct {
+	LocationRange
+}
+
+var _ errors.UserError = RecursiveTransferError{}
+
+func (RecursiveTransferError) IsUserError() {}
+
+func (RecursiveTransferError) Error() string {
+	return "recursive transfer of value"
 }

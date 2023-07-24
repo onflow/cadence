@@ -75,7 +75,7 @@ func NewVariableDeclaration(
 
 func NewEmptyVariableDeclaration(gauge common.MemoryGauge) *VariableDeclaration {
 	common.UseMemory(gauge, common.VariableDeclarationMemoryUsage)
-	return &VariableDeclaration{}
+	return &VariableDeclaration{Access: AccessNotSpecified}
 }
 
 func (*VariableDeclaration) isDeclaration() {}
@@ -206,7 +206,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(d.Access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 

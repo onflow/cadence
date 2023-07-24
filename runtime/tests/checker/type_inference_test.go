@@ -762,7 +762,7 @@ func TestCheckInferenceWithCheckerErrors(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 4)
+		errs := RequireCheckerErrors(t, err, 3)
 
 		for _, err := range errs {
 			require.IsType(t, &sema.NotDeclaredError{}, err)
@@ -816,21 +816,20 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				code: `
                     let x = [Foo(), Bar(), Baz()]
 
-                    pub struct interface I1 {}
+                    access(all) struct interface I1 {}
 
-                    pub struct interface I2 {}
+                    access(all) struct interface I2 {}
 
-                    pub struct interface I3 {}
+                    access(all) struct interface I3 {}
 
-                    pub struct Foo: I1, I2 {}
+                    access(all) struct Foo: I1, I2 {}
 
-                    pub struct Bar: I2, I3 {}
+                    access(all) struct Bar: I2, I3 {}
 
-                    pub struct Baz: I1, I2, I3 {}
+                    access(all) struct Baz: I1, I2, I3 {}
                 `,
-				expectedElementType: &sema.RestrictedType{
-					Type: sema.AnyStructType,
-					Restrictions: []*sema.InterfaceType{
+				expectedElementType: &sema.IntersectionType{
+					Types: []*sema.InterfaceType{
 						{
 							Location:      common.StringLocation("test"),
 							Identifier:    "I2",
@@ -844,16 +843,15 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				code: `
                     let x = [[Bar()], [Baz()]]
 
-                    pub struct interface Foo {}
+                    access(all) struct interface Foo {}
 
-                    pub struct Bar: Foo {}
+                    access(all) struct Bar: Foo {}
 
-                    pub struct Baz: Foo {}
+                    access(all) struct Baz: Foo {}
                 `,
 				expectedElementType: &sema.VariableSizedType{
-					Type: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					Type: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
 								Identifier:    "Foo",
@@ -869,16 +867,15 @@ func TestCheckArraySupertypeInference(t *testing.T) {
                     // Covariance is supported with explicit type annotation.
                     let x = [[Bar()], [Baz()]] as [[{Foo}]]
 
-                    pub struct interface Foo {}
+                    access(all) struct interface Foo {}
 
-                    pub struct Bar: Foo {}
+                    access(all) struct Bar: Foo {}
 
-                    pub struct Baz: Foo {}
+                    access(all) struct Baz: Foo {}
                 `,
 				expectedElementType: &sema.VariableSizedType{
-					Type: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					Type: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
 								Identifier:    "Foo",
@@ -937,9 +934,9 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 		code := `
             let x = [<- create Foo(), Bar()]
 
-            pub resource Foo {}
+            access(all) resource Foo {}
 
-            pub struct Bar {}
+            access(all) struct Bar {}
         `
 		_, err := ParseAndCheck(t, code)
 		errs := RequireCheckerErrors(t, err, 1)
@@ -1016,22 +1013,21 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				code: `
                     let x = {0: Foo(), 1: Bar(), 2: Baz()}
 
-                    pub struct interface I1 {}
+                    access(all) struct interface I1 {}
 
-                    pub struct interface I2 {}
+                    access(all) struct interface I2 {}
 
-                    pub struct interface I3 {}
+                    access(all) struct interface I3 {}
 
-                    pub struct Foo: I1, I2 {}
+                    access(all) struct Foo: I1, I2 {}
 
-                    pub struct Bar: I2, I3 {}
+                    access(all) struct Bar: I2, I3 {}
 
-                    pub struct Baz: I1, I2, I3 {}
+                    access(all) struct Baz: I1, I2, I3 {}
                 `,
 				expectedKeyType: sema.IntType,
-				expectedValueType: &sema.RestrictedType{
-					Type: sema.AnyStructType,
-					Restrictions: []*sema.InterfaceType{
+				expectedValueType: &sema.IntersectionType{
+					Types: []*sema.InterfaceType{
 						{
 							Location:      common.StringLocation("test"),
 							Identifier:    "I2",
@@ -1045,18 +1041,17 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				code: `
                     let x = { 0: {100: Bar()}, 1: {200: Baz()} }
 
-                    pub struct interface Foo {}
+                    access(all) struct interface Foo {}
 
-                    pub struct Bar: Foo {}
+                    access(all) struct Bar: Foo {}
 
-                    pub struct Baz: Foo {}
+                    access(all) struct Baz: Foo {}
                 `,
 				expectedKeyType: sema.IntType,
 				expectedValueType: &sema.DictionaryType{
 					KeyType: sema.IntType,
-					ValueType: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					ValueType: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
 								Identifier:    "Foo",
@@ -1072,18 +1067,17 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
                     // Covariance is supported with explicit type annotation.
                     let x = { 0: {100: Bar()}, 1: {200: Baz()} } as {Int: {Int: {Foo}}}
 
-                    pub struct interface Foo {}
+                    access(all) struct interface Foo {}
 
-                    pub struct Bar: Foo {}
+                    access(all) struct Bar: Foo {}
 
-                    pub struct Baz: Foo {}
+                    access(all) struct Baz: Foo {}
                 `,
 				expectedKeyType: sema.IntType,
 				expectedValueType: &sema.DictionaryType{
 					KeyType: sema.IntType,
-					ValueType: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					ValueType: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
 								Identifier:    "Foo",
@@ -1104,7 +1098,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				code: `
                     let x <- {0: <- {10: <- create Foo()}, 1: <- {"one": <- create Foo()}}
 
-                    pub resource Foo {}
+                    access(all) resource Foo {}
                 `,
 				expectedKeyType:   sema.IntType,
 				expectedValueType: sema.AnyResourceType,
@@ -1133,9 +1127,9 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		code := `
             let x = {0: <- create Foo(), 1: Bar()}
 
-            pub resource Foo {}
+            access(all) resource Foo {}
 
-            pub struct Bar {}
+            access(all) struct Bar {}
         `
 		_, err := ParseAndCheck(t, code)
 		errs := RequireCheckerErrors(t, err, 1)
@@ -1191,7 +1185,7 @@ func TestCheckTypeInferenceForTypesWithDifferentTypeMaskRanges(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            let x: @AnyResource{Foo} <- create Bar()
+            let x: @{Foo} <- create Bar()
             let y = [<-x, 6]
 
             resource interface Foo {}
@@ -1207,7 +1201,7 @@ func TestCheckTypeInferenceForTypesWithDifferentTypeMaskRanges(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            let x: AnyStruct{Foo} = Bar()
+            let x: {Foo} = Bar()
             let y = true ? x : nil
 
             struct interface Foo {}
@@ -1219,5 +1213,48 @@ func TestCheckTypeInferenceForTypesWithDifferentTypeMaskRanges(t *testing.T) {
 
 		xType := RequireGlobalValue(t, checker.Elaboration, "y")
 		require.IsType(t, &sema.OptionalType{Type: sema.AnyStructType}, xType)
+	})
+}
+
+func TestCheckCompositeSupertypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("common inherited interface", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+                let x = true ? Foo() : Bar()
+
+                access(all) struct interface I1 {}
+
+                access(all) struct interface I2: I1 {}
+
+                access(all) struct interface I3: I1 {}
+
+                access(all) struct Foo: I2 {}
+
+                access(all) struct Bar: I3 {}
+            `
+
+		expectedType := &sema.IntersectionType{
+			Types: []*sema.InterfaceType{
+				{
+					Location:      common.StringLocation("test"),
+					Identifier:    "I1",
+					CompositeKind: common.CompositeKindStructure,
+				},
+			},
+		}
+
+		checker, err := ParseAndCheck(t, code)
+		require.NoError(t, err)
+
+		xType := RequireGlobalValue(t, checker.Elaboration, "x")
+
+		require.IsType(t, &sema.IntersectionType{}, xType)
+		intersectionType := xType.(*sema.IntersectionType)
+
+		assert.Equal(t, expectedType.ID(), intersectionType.ID())
 	})
 }

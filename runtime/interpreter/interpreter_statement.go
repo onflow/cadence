@@ -106,6 +106,16 @@ func (interpreter *Interpreter) VisitContinueStatement(_ *ast.ContinueStatement)
 	return theContinueResult
 }
 
+func (interpreter *Interpreter) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) StatementResult {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (interpreter *Interpreter) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) StatementResult {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) StatementResult {
 	switch test := statement.Test.(type) {
 	case ast.Expression:
@@ -318,6 +328,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 		atree.Address{},
 		false,
 		nil,
+		nil,
 	)
 
 	iterable, ok := transferredValue.(IterableValue)
@@ -462,7 +473,7 @@ func (interpreter *Interpreter) VisitRemoveStatement(removeStatement *ast.Remove
 
 	if attachment.IsResourceKinded(interpreter) {
 		// this attachment is no longer attached to its base, but the `base` variable is still available in the destructor
-		attachment.setBaseValue(interpreter, base)
+		attachment.setBaseValue(interpreter, base, attachmentBaseAuthorization(interpreter, attachment))
 		attachment.Destroy(interpreter, locationRange)
 	}
 

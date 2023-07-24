@@ -31,9 +31,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestRuntimeContract(t *testing.T) {
@@ -224,7 +222,7 @@ func TestRuntimeContract(t *testing.T) {
 			if storageMap == nil {
 				return false
 			}
-			return storageMap.ValueExists("Test")
+			return storageMap.ValueExists(interpreter.StringStorageMapKey("Test"))
 		}
 
 		t.Run("add", func(t *testing.T) {
@@ -510,8 +508,8 @@ func TestRuntimeContract(t *testing.T) {
 	t.Run("valid contract, correct name", func(t *testing.T) {
 		test(t, testCase{
 			name:        "Test",
-			code:        `pub contract Test {}`,
-			code2:       `pub contract Test { pub fun test() {} }`,
+			code:        `access(all) contract Test {}`,
+			code2:       `access(all) contract Test { access(all) fun test() {} }`,
 			valid:       true,
 			isInterface: false,
 		})
@@ -520,8 +518,8 @@ func TestRuntimeContract(t *testing.T) {
 	t.Run("valid contract interface, correct name", func(t *testing.T) {
 		test(t, testCase{
 			name:        "Test",
-			code:        `pub contract interface Test {}`,
-			code2:       `pub contract interface Test { pub fun test() }`,
+			code:        `access(all) contract interface Test {}`,
+			code2:       `access(all) contract interface Test { access(all) fun test() }`,
 			valid:       true,
 			isInterface: true,
 		})
@@ -530,7 +528,7 @@ func TestRuntimeContract(t *testing.T) {
 	t.Run("valid contract, wrong name", func(t *testing.T) {
 		test(t, testCase{
 			name:        "XYZ",
-			code:        `pub contract Test {}`,
+			code:        `access(all) contract Test {}`,
 			valid:       false,
 			isInterface: false,
 		})
@@ -539,7 +537,7 @@ func TestRuntimeContract(t *testing.T) {
 	t.Run("valid contract interface, wrong name", func(t *testing.T) {
 		test(t, testCase{
 			name:        "XYZ",
-			code:        `pub contract interface Test {}`,
+			code:        `access(all) contract interface Test {}`,
 			valid:       false,
 			isInterface: true,
 		})
@@ -567,9 +565,9 @@ func TestRuntimeContract(t *testing.T) {
 		test(t, testCase{
 			name: "Test",
 			code: `
-              pub contract Test {}
+              access(all) contract Test {}
 
-              pub contract Test2 {}
+              access(all) contract Test2 {}
             `,
 			valid:       false,
 			isInterface: false,
@@ -580,9 +578,9 @@ func TestRuntimeContract(t *testing.T) {
 		test(t, testCase{
 			name: "Test",
 			code: `
-              pub contract interface Test {}
+              access(all) contract interface Test {}
 
-              pub contract interface Test2 {}
+              access(all) contract interface Test2 {}
             `,
 			valid:       false,
 			isInterface: true,
@@ -593,9 +591,9 @@ func TestRuntimeContract(t *testing.T) {
 		test(t, testCase{
 			name: "Test",
 			code: `
-              pub contract Test {}
+              access(all) contract Test {}
 
-              pub contract interface Test2 {}
+              access(all) contract interface Test2 {}
             `,
 			valid:       false,
 			isInterface: false,
@@ -608,18 +606,18 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 	t.Parallel()
 
 	contractA := `
-      pub contract A {
+      access(all) contract A {
 
-          pub fun a(): Int {
+          access(all) fun a(): Int {
               return 1
           }
       }
     `
 
 	contractB := `
-      pub contract B {
+      access(all) contract B {
 
-          pub fun b(): Int {
+          access(all) fun b(): Int {
               return 2
           }
       }
@@ -628,9 +626,9 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 	contractC := `
       import A, B from 0x1
 
-      pub contract C {
+      access(all) contract C {
 
-          pub fun c(): Int {
+          access(all) fun c(): Int {
               return A.a() + B.b()
           }
       }
@@ -674,24 +672,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			delete(accountCodes, location)
 			return nil
 		},
-		resolveLocation: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
-
-			// Resolve each identifier as an address location
-
-			for _, identifier := range identifiers {
-				result = append(result, sema.ResolvedLocation{
-					Location: common.AddressLocation{
-						Address: location.(common.AddressLocation).Address,
-						Name:    identifier.Identifier,
-					},
-					Identifiers: []ast.Identifier{
-						identifier,
-					},
-				})
-			}
-
-			return
-		},
+		resolveLocation: multipleIdentifierLocationResolver,
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},

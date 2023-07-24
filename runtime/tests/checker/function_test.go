@@ -133,21 +133,10 @@ func TestCheckFunctionAccess(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-       pub fun test() {}
+       access(all) fun test() {}
     `)
 
 	require.NoError(t, err)
-}
-
-func TestCheckInvalidFunctionAccess(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       pub(set) fun test() {}
-    `)
-
-	expectInvalidAccessModifierError(t, err)
 }
 
 func TestCheckReturnWithoutExpression(t *testing.T) {
@@ -380,10 +369,9 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
       let test = makeKittyIdGetter()
     `)
 
-	errs := RequireCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidFunctionWithResult(t *testing.T) {
@@ -465,14 +453,14 @@ func TestCheckResultVariable(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            pub resource R {
-                pub let id: UInt64
+            access(all) resource R {
+                access(all) let id: UInt64
                 init() {
                     self.id = 1
                 }
             }
 
-            pub fun main(): @R  {
+            access(all) fun main(): @R  {
                 post {
                     result.id == 1234: "Invalid id"
                 }
@@ -487,14 +475,14 @@ func TestCheckResultVariable(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            pub resource R {
-                pub let id: UInt64
+            access(all) resource R {
+                access(all) let id: UInt64
                 init() {
                     self.id = 1
                 }
             }
 
-            pub fun main(): @R?  {
+            access(all) fun main(): @R?  {
                 post {
                     result!.id == 1234: "invalid id"
                 }

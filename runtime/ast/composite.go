@@ -27,16 +27,20 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+// ConformingDeclaration
+type ConformingDeclaration interface {
+	Declaration
+	ConformanceList() []*NominalType
+}
+
 // CompositeDeclaration
 
 // NOTE: For events, only an empty initializer is declared
 
 type CompositeLikeDeclaration interface {
-	Element
-	Declaration
-	Statement
+	ConformingDeclaration
+	isCompositeLikeDeclaration()
 	Kind() common.CompositeKind
-	ConformanceList() []*NominalType
 }
 
 type CompositeDeclaration struct {
@@ -90,6 +94,8 @@ func (*CompositeDeclaration) isDeclaration() {}
 // NOTE: statement, so it can be represented in the AST,
 // but will be rejected in semantic analysis
 func (*CompositeDeclaration) isStatement() {}
+
+func (*CompositeDeclaration) isCompositeLikeDeclaration() {}
 
 func (d *CompositeDeclaration) DeclarationIdentifier() *Identifier {
 	return &d.Identifier
@@ -145,7 +151,7 @@ func (d *CompositeDeclaration) EventDoc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(d.Access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 
@@ -193,7 +199,7 @@ func CompositeDocument(
 		doc = append(
 			doc,
 			prettier.Text(access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 
@@ -409,13 +415,6 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 
 	var docs []prettier.Doc
 
-	if d.Access != AccessNotSpecified {
-		docs = append(
-			docs,
-			prettier.Text(d.Access.Keyword()),
-		)
-	}
-
 	if d.IsStatic() {
 		docs = append(
 			docs,
@@ -452,6 +451,14 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 		doc = prettier.Join(prettier.Space, docs...)
 	} else {
 		doc = identifierTypeDoc
+	}
+
+	if d.Access != AccessNotSpecified {
+		doc = prettier.Concat{
+			prettier.Text(d.Access.Keyword()),
+			prettier.HardLine{},
+			doc,
+		}
 	}
 
 	return prettier.Group{
@@ -560,7 +567,7 @@ func (d *EnumCaseDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(d.Access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 

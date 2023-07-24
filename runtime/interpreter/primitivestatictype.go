@@ -151,8 +151,8 @@ const (
 	PrimitiveStaticTypeWord16
 	PrimitiveStaticTypeWord32
 	PrimitiveStaticTypeWord64
-	_ // future: Word128
-	_ // future: Word256
+	PrimitiveStaticTypeWord128
+	PrimitiveStaticTypeWord256
 	_
 
 	// Fix*
@@ -200,6 +200,12 @@ const (
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
 	PrimitiveStaticTypeAuthAccountInbox
+	PrimitiveStaticTypeStorageCapabilityController
+	PrimitiveStaticTypeAccountCapabilityController
+	PrimitiveStaticTypeAuthAccountStorageCapabilities
+	PrimitiveStaticTypeAuthAccountAccountCapabilities
+	PrimitiveStaticTypeAuthAccountCapabilities
+	PrimitiveStaticTypePublicAccountCapabilities
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -241,6 +247,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeUInt256,
 		PrimitiveStaticTypeInt128,
 		PrimitiveStaticTypeInt256,
+		PrimitiveStaticTypeWord128,
+		PrimitiveStaticTypeWord256,
 		PrimitiveStaticTypeInteger,
 		PrimitiveStaticTypeSignedInteger,
 		PrimitiveStaticTypeNumber,
@@ -280,7 +288,13 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeAuthAccountInbox,
 		PrimitiveStaticTypeAuthAccountKeys,
 		PrimitiveStaticTypePublicAccountKeys,
-		PrimitiveStaticTypeAccountKey:
+		PrimitiveStaticTypeAccountKey,
+		PrimitiveStaticTypeStorageCapabilityController,
+		PrimitiveStaticTypeAccountCapabilityController,
+		PrimitiveStaticTypeAuthAccountStorageCapabilities,
+		PrimitiveStaticTypeAuthAccountAccountCapabilities,
+		PrimitiveStaticTypeAuthAccountCapabilities,
+		PrimitiveStaticTypePublicAccountCapabilities:
 		return UnknownElementSize
 	}
 	return UnknownElementSize
@@ -382,6 +396,10 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.Word32Type
 	case PrimitiveStaticTypeWord64:
 		return sema.Word64Type
+	case PrimitiveStaticTypeWord128:
+		return sema.Word128Type
+	case PrimitiveStaticTypeWord256:
+		return sema.Word256Type
 
 	// Fix*
 	case PrimitiveStaticTypeFix64:
@@ -423,6 +441,18 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.AccountKeyType
 	case PrimitiveStaticTypeAuthAccountInbox:
 		return sema.AuthAccountInboxType
+	case PrimitiveStaticTypeStorageCapabilityController:
+		return sema.StorageCapabilityControllerType
+	case PrimitiveStaticTypeAccountCapabilityController:
+		return sema.AccountCapabilityControllerType
+	case PrimitiveStaticTypeAuthAccountStorageCapabilities:
+		return sema.AuthAccountStorageCapabilitiesType
+	case PrimitiveStaticTypeAuthAccountAccountCapabilities:
+		return sema.AuthAccountAccountCapabilitiesType
+	case PrimitiveStaticTypeAuthAccountCapabilities:
+		return sema.AuthAccountCapabilitiesType
+	case PrimitiveStaticTypePublicAccountCapabilities:
+		return sema.PublicAccountCapabilitiesType
 	default:
 		panic(errors.NewUnexpectedError("missing case for %s", i))
 	}
@@ -500,6 +530,10 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeWord32
 	case sema.Word64Type:
 		typ = PrimitiveStaticTypeWord64
+	case sema.Word128Type:
+		typ = PrimitiveStaticTypeWord128
+	case sema.Word256Type:
+		typ = PrimitiveStaticTypeWord256
 
 	// Fix*
 	case sema.Fix64Type:
@@ -555,15 +589,34 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeAccountKey
 	case sema.AuthAccountInboxType:
 		typ = PrimitiveStaticTypeAuthAccountInbox
+	case sema.StorageCapabilityControllerType:
+		typ = PrimitiveStaticTypeStorageCapabilityController
+	case sema.AccountCapabilityControllerType:
+		typ = PrimitiveStaticTypeAccountCapabilityController
+	case sema.AuthAccountStorageCapabilitiesType:
+		typ = PrimitiveStaticTypeAuthAccountStorageCapabilities
+	case sema.AuthAccountAccountCapabilitiesType:
+		typ = PrimitiveStaticTypeAuthAccountAccountCapabilities
+	case sema.AuthAccountCapabilitiesType:
+		typ = PrimitiveStaticTypeAuthAccountCapabilities
+	case sema.PublicAccountCapabilitiesType:
+		typ = PrimitiveStaticTypePublicAccountCapabilities
 	}
 
-	switch t.(type) {
+	switch t := t.(type) {
 	case *sema.AddressType:
 		typ = PrimitiveStaticTypeAddress
 
 	// Storage
 	case *sema.CapabilityType:
-		typ = PrimitiveStaticTypeCapability
+		// Only convert unparameterized Capability type
+		if t.BorrowType == nil {
+			typ = PrimitiveStaticTypeCapability
+		}
+	}
+
+	if typ == PrimitiveStaticTypeUnknown {
+		return
 	}
 
 	return NewPrimitiveStaticType(memoryGauge, typ) // default is 0 aka PrimitiveStaticTypeUnknown

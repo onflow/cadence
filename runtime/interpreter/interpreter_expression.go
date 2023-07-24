@@ -194,7 +194,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			if isNestedResourceMove {
 				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, identifier)
 			} else {
-				resultValue = interpreter.getMember(target, locationRange, identifier)
+				resultValue = interpreter.getMemberWithAuthMapping(target, locationRange, identifier)
 			}
 			if resultValue == nil && !allowMissing {
 				panic(UseBeforeInitializationError{
@@ -383,37 +383,11 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		}
 		return left.BitwiseRightShift(interpreter, right, locationRange)
 
-	case ast.OperationLess:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.Less(interpreter, right, locationRange)
-
-	case ast.OperationLessEqual:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.LessEqual(interpreter, right, locationRange)
-
-	case ast.OperationGreater:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.Greater(interpreter, right, locationRange)
-
-	case ast.OperationGreaterEqual:
-		left, leftOk := leftValue.(NumberValue)
-		right, rightOk := rightValue().(NumberValue)
-		if !leftOk || !rightOk {
-			error(right)
-		}
-		return left.GreaterEqual(interpreter, right, locationRange)
+	case ast.OperationLess,
+		ast.OperationLessEqual,
+		ast.OperationGreater,
+		ast.OperationGreaterEqual:
+		return interpreter.testComparison(leftValue, rightValue(), expression)
 
 	case ast.OperationEqual:
 		return interpreter.testEqual(leftValue, rightValue(), expression)
@@ -521,6 +495,62 @@ func (interpreter *Interpreter) testEqual(left, right Value, expression *ast.Bin
 			right,
 		),
 	)
+}
+
+func (interpreter *Interpreter) testComparison(left, right Value, expression *ast.BinaryExpression) BoolValue {
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+
+	leftComparable, leftOk := left.(ComparableValue)
+	rightComparable, rightOk := right.(ComparableValue)
+
+	if !leftOk || !rightOk {
+		panic(InvalidOperandsError{
+			Operation:     expression.Operation,
+			LeftType:      left.StaticType(interpreter),
+			RightType:     right.StaticType(interpreter),
+			LocationRange: locationRange,
+		})
+	}
+
+	switch expression.Operation {
+	case ast.OperationLess:
+		return leftComparable.Less(
+			interpreter,
+			rightComparable,
+			locationRange,
+		)
+
+	case ast.OperationLessEqual:
+		return leftComparable.LessEqual(
+			interpreter,
+			rightComparable,
+			locationRange,
+		)
+
+	case ast.OperationGreater:
+		return leftComparable.Greater(
+			interpreter,
+			rightComparable,
+			locationRange,
+		)
+
+	case ast.OperationGreaterEqual:
+		return leftComparable.GreaterEqual(
+			interpreter,
+			rightComparable,
+			locationRange,
+		)
+
+	default:
+		panic(&unsupportedOperation{
+			kind:      common.OperationKindBinary,
+			operation: expression.Operation,
+			Range:     ast.NewUnmeteredRangeFromPositioned(expression),
+		})
+	}
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) Value {
@@ -652,6 +682,12 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 	case sema.Word64Type:
 		common.UseMemory(memoryGauge, word64MemoryUsage)
 		return NewUnmeteredWord64Value(uint64(value.Int64()))
+	case sema.Word128Type:
+		// BigInt value is already metered at parser.
+		return NewUnmeteredWord128ValueFromBigInt(value)
+	case sema.Word256Type:
+		// BigInt value is already metered at parser.
+		return NewUnmeteredWord256ValueFromBigInt(value)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -897,6 +933,15 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		panic(errors.NewUnreachableError())
 	}
 
+	// Bound functions
+	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
+		self := *boundFunction.Self
+		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
+			storageID := resource.StorageID()
+			interpreter.trackReferencedResourceKindedValue(storageID, resource)
+		}
+	}
+
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
 
 	var argumentExpressions []ast.Expression
@@ -1032,11 +1077,12 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		HasPosition: expression.Expression,
 	}
 
-	expectedType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType
+	expectedType := interpreter.substituteMappedEntitlements(interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
 		valueStaticType := value.StaticType(interpreter)
+		valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
 		switch expression.Operation {
@@ -1046,14 +1092,12 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			value = interpreter.BoxOptional(locationRange, value, expectedType)
+			value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
 
 			return NewSomeValueNonCopying(interpreter, value)
 
 		case ast.OperationForceCast:
 			if !isSubType {
-				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
-
 				locationRange := LocationRange{
 					Location:    interpreter.Location,
 					HasPosition: expression.Expression,
@@ -1067,7 +1111,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			return interpreter.BoxOptional(locationRange, value, expectedType)
+			return interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -1110,6 +1154,31 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
+	makeReference := func(value Value, typ *sema.ReferenceType) *EphemeralReferenceValue {
+		var auth Authorization
+
+		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
+		// of that mapped access in the body of the function should be replaced with the computed output of the map
+		if _, isMapped := typ.Authorization.(sema.EntitlementMapAccess); isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
+			auth = interpreter.SharedState.currentEntitlementMappedValue
+		} else {
+			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, typ.Authorization)
+		}
+
+		return NewEphemeralReferenceValue(
+			interpreter,
+			auth,
+			value,
+			typ.Type,
+		)
+	}
+
+	// There are four potential cases:
+	// 1) Target type is optional, actual value is also optional (nil/SomeValue)
+	// 2) Target type is optional, actual value is non-optional
+	// 3) Target type is non-optional, actual value is optional (SomeValue)
+	// 4) Target type is non-optional, actual value is non-optional
+
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
 		innerBorrowType, ok := typ.Type.(*sema.ReferenceType)
@@ -1120,6 +1189,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 		switch result := result.(type) {
 		case *SomeValue:
+			// Case (1):
 			// References to optionals are transformed into optional references,
 			// so move the *SomeValue out to the reference itself
 
@@ -1133,18 +1203,14 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewEphemeralReferenceValue(
-					interpreter,
-					innerBorrowType.Authorized,
-					innerValue,
-					innerBorrowType.Type,
-				),
+				makeReference(innerValue, innerBorrowType),
 			)
 
 		case NilValue:
 			return Nil
 
 		default:
+			// Case (2):
 			// If the referenced value is non-optional,
 			// but the target type is optional,
 			// then box the reference properly
@@ -1156,19 +1222,27 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			return interpreter.BoxOptional(
 				locationRange,
-				NewEphemeralReferenceValue(
-					interpreter,
-					innerBorrowType.Authorized,
-					result,
-					innerBorrowType.Type,
-				),
+				makeReference(result, innerBorrowType),
 				borrowType,
 			)
 		}
 
 	case *sema.ReferenceType:
-		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
+		// Case (3): target type is non-optional, actual value is optional.
+		// Unwrap the optional and add it to reference tracking.
+		if someValue, ok := result.(*SomeValue); ok {
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: referenceExpression.Expression,
+			}
+			innerValue := someValue.InnerValue(interpreter, locationRange)
+			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
+		}
+
+		// Case (4): target type is non-optional, actual value is also non-optional
+		return makeReference(result, typ)
 	}
+
 	panic(errors.NewUnreachableError())
 }
 
@@ -1239,9 +1313,21 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
 	// Instead, we create an implicit constructor argument containing a reference to the base.
+
+	var auth Authorization = UnauthorizedAccess
+	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
+
+	if attachmentType.RequiredEntitlements.Len() > 0 {
+		baseAccess := sema.EntitlementSetAccess{
+			SetKind:      sema.Conjunction,
+			Entitlements: attachmentType.RequiredEntitlements,
+		}
+		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
+	}
+
 	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
-		false,
+		auth,
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
@@ -1265,6 +1351,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		atree.Address{},
 		false,
 		nil,
+		nil,
 	).(*CompositeValue)
 
 	// we enforce this in the checker
@@ -1272,13 +1359,10 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		panic(errors.NewUnreachableError())
 	}
 
-	// when `v[A]` is executed, we set `A`'s base to `&v`
-	attachment.setBaseValue(interpreter, base)
-
 	base.SetTypeKey(
 		interpreter,
 		locationRange,
-		interpreter.MustSemaTypeOfValue(attachment),
+		attachmentType,
 		attachment,
 	)
 

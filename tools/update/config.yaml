@@ -7,6 +7,14 @@ repos:
       deps:
         - onflow/cadence
 
+- repo: onflow/cadence-tools
+  needsRelease: true
+  mods:
+    - path: lint
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+
 - repo: onflow/flow-go
   needsRelease: false
   mods:
@@ -45,23 +53,12 @@ repos:
 - repo: onflow/flow-cli
   needsRelease: false
   mods:
-    - path: pkg/flowkit
+    - path: flowkit
       deps:
         - onflow/cadence
         - onflow/flow-go-sdk
         - onflow/flow-go
         - onflow/flow-emulator
-        - onflow/cadence-tools/test
-
-- repo: onflow/cadence-tools
-  needsRelease: true
-  mods:
-    - path: lint
-      deps:
-        - onflow/cadence
-        - onflow/flow-go-sdk
-        - onflow/flow-go
-        - onflow/flow-cli/pkg/flowkit
 
 - repo: onflow/cadence-tools
   needsRelease: true
@@ -73,6 +70,7 @@ repos:
         - onflow/flow-go
         - onflow/flow-emulator
         - onflow/cadence-tools/lint
+        - onflow/flow-cli/flowkit
 
 - repo: onflow/flow-cli
   needsRelease: true

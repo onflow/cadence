@@ -45,6 +45,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			address,
 			true,
 			`
+			  entitlement X
               resource R {
                   let foo: Int
 
@@ -93,8 +94,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
                   return foo(/public/single)
               }
 
-              fun singleAuth(): auth &R? {
-                  return account.getCapability(/public/single).borrow<auth &R>()
+              fun singleAuth(): auth(X) &R? {
+                  return account.getCapability(/public/single).borrow<auth(X) &R>()
               }
 
               fun singleR2(): &R2? {
@@ -258,6 +259,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			address,
 			true,
 			`
+			  entitlement X
               struct S {
                   let foo: Int
 
@@ -306,8 +308,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
                   return foo(/public/single)
               }
 
-              fun singleAuth(): auth &S? {
-                  return account.getCapability(/public/single).borrow<auth &S>()
+              fun singleAuth(): auth(X) &S? {
+                  return account.getCapability(/public/single).borrow<auth(X) &S>()
               }
 
               fun singleS2(): &S2? {
@@ -472,7 +474,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			true,
 			`
               #allowAccountLinking
-
+			  entitlement X
               fun link(): Capability {
                   return account.linkAccount(/private/acct)!
               }
@@ -485,8 +487,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
                   return address(cap)
               }
 
-              fun borrowAuth(_ cap: Capability): auth &AuthAccount? {
-                  return cap.borrow<auth &AuthAccount>()
+              fun borrowAuth(_ cap: Capability): auth(X) &AuthAccount? {
+                  return cap.borrow<auth(X) &AuthAccount>()
               }
 
               fun unlinkAfterBorrow(_ cap: Capability): Address {
@@ -560,6 +562,8 @@ func TestInterpretCapability_check(t *testing.T) {
                   }
               }
 
+			  entitlement X
+
               resource R2 {
                   let foo: Int
 
@@ -601,7 +605,7 @@ func TestInterpretCapability_check(t *testing.T) {
               }
 
               fun singleAuth(): Bool {
-                  return account.getCapability(/public/single).check<auth &R>()
+                  return account.getCapability(/public/single).check<auth(X) &R>()
               }
 
               fun singleR2(): Bool {
@@ -738,6 +742,8 @@ func TestInterpretCapability_check(t *testing.T) {
                   }
               }
 
+			  entitlement X
+
               struct S2 {
                   let foo: Int
 
@@ -779,7 +785,7 @@ func TestInterpretCapability_check(t *testing.T) {
               }
 
               fun singleAuth(): Bool {
-                  return account.getCapability(/public/single).check<auth &S>()
+                  return account.getCapability(/public/single).check<auth(X) &S>()
               }
 
               fun singleS2(): Bool {
@@ -914,12 +920,14 @@ func TestInterpretCapability_check(t *testing.T) {
                   return account.linkAccount(/private/acct)!
               }
 
+			  entitlement X
+
               fun check(_ cap: Capability): Bool {
                   return cap.check<&AuthAccount>()
               }
 
               fun checkAuth(_ cap: Capability): Bool {
-                  return cap.check<auth &AuthAccount>()
+                  return cap.check<auth(X) &AuthAccount>()
               }
             `,
 			sema.Config{
@@ -1148,7 +1156,7 @@ func TestInterpretCapabilityFunctionMultipleTypes(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedReference := interpreter.NewUnmeteredStorageReferenceValue(
-			false,
+			interpreter.UnauthorizedAccess,
 			address.ToAddress(),
 			interpreter.NewUnmeteredPathValue(
 				common.PathDomainStorage,

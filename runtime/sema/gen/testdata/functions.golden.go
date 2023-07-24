@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
 const TestTypeNothingFunctionName = "nothing"
 
 var TestTypeNothingFunctionType = &FunctionType{
@@ -113,7 +115,8 @@ const TestTypeTypeParamWithBoundFunctionName = "typeParamWithBound"
 var TestTypeTypeParamWithBoundFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -180,6 +183,7 @@ var TestType = &SimpleType{
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
+	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
 }
@@ -187,50 +191,58 @@ var TestType = &SimpleType{
 func init() {
 	TestType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessAll,
 				TestTypeNothingFunctionName,
 				TestTypeNothingFunctionType,
 				TestTypeNothingFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessAll,
 				TestTypeParamsFunctionName,
 				TestTypeParamsFunctionType,
 				TestTypeParamsFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessAll,
 				TestTypeReturnBoolFunctionName,
 				TestTypeReturnBoolFunctionType,
 				TestTypeReturnBoolFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessAll,
 				TestTypeParamsAndReturnFunctionName,
 				TestTypeParamsAndReturnFunctionType,
 				TestTypeParamsAndReturnFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessAll,
 				TestTypeTypeParamFunctionName,
 				TestTypeTypeParamFunctionType,
 				TestTypeTypeParamFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessAll,
 				TestTypeTypeParamWithBoundFunctionName,
 				TestTypeTypeParamWithBoundFunctionType,
 				TestTypeTypeParamWithBoundFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessAll,
 				TestTypeTypeParamWithBoundAndParamFunctionName,
 				TestTypeTypeParamWithBoundAndParamFunctionType,
 				TestTypeTypeParamWithBoundAndParamFunctionDocString,
 			),
-			NewUnmeteredPublicFunctionMember(
+			NewUnmeteredFunctionMember(
 				t,
+				ast.AccessAll,
 				TestTypeViewFunctionFunctionName,
 				TestTypeViewFunctionFunctionType,
 				TestTypeViewFunctionFunctionDocString,

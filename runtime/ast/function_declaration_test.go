@@ -34,7 +34,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &FunctionDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
 			Identifier: "xyz",
@@ -125,7 +125,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "FunctionDeclaration",
-            "Access": "AccessPublic",
+            "Access": "AccessAll",
             "IsStatic": true,
             "IsNative": true,
             "Identifier": {
@@ -289,7 +289,7 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 	t.Parallel()
 
 	decl := &FunctionDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Purity: FunctionPurityView,
 		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
@@ -330,8 +330,8 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 
 	require.Equal(t,
 		prettier.Concat{
-			prettier.Text("pub"),
-			prettier.Space,
+			prettier.Text("access(all)"),
+			prettier.HardLine{},
 			prettier.Text("view"),
 			prettier.Space,
 			prettier.Text("static"),
@@ -383,7 +383,7 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FunctionDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -420,7 +420,8 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			"pub fun xyz(ok foobar: AB): @CD {}",
+			`access(all)
+fun xyz(ok foobar: AB): @CD {}`,
 			decl.String(),
 		)
 
@@ -430,7 +431,7 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FunctionDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -488,7 +489,8 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			"pub fun xyz<A, B: C>(ok foobar: AB): @CD {}",
+			`access(all)
+fun xyz<A, B: C>(ok foobar: AB): @CD {}`,
 			decl.String(),
 		)
 	})

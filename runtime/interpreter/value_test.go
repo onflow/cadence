@@ -175,6 +175,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		atree.Address(newOwner),
 		false,
 		nil,
+		nil,
 	)
 	array = arrayCopy.(*ArrayValue)
 
@@ -568,6 +569,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		atree.Address{},
 		false,
 		nil,
+		nil,
 	)
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
@@ -871,6 +873,7 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		atree.Address{},
 		false,
 		nil,
+		nil,
 	).(*CompositeValue)
 
 	value = composite.GetMember(
@@ -960,6 +963,14 @@ func TestStringer(t *testing.T) {
 		"Word64": {
 			value:    NewUnmeteredWord64Value(64),
 			expected: "64",
+		},
+		"Word128": {
+			value:    NewUnmeteredWord128ValueFromUint64(128),
+			expected: "128",
+		},
+		"Word256": {
+			value:    NewUnmeteredWord256ValueFromUint64(256),
+			expected: "256",
 		},
 		"UFix64": {
 			value:    NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
@@ -1077,10 +1088,10 @@ func TestStringer(t *testing.T) {
 		},
 		"PathLink": {
 			value: PathLinkValue{
-				TargetPath: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "foo",
-				},
+				TargetPath: NewUnmeteredPathValue(
+					common.PathDomainStorage,
+					"foo",
+				),
 				Type: PrimitiveStaticTypeInt,
 			},
 			expected: "PathLink<Int>(/storage/foo)",
@@ -1090,36 +1101,45 @@ func TestStringer(t *testing.T) {
 			expected: "AccountLink()",
 		},
 		"Path": {
-			value: PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
+			value: NewUnmeteredPathValue(
+				common.PathDomainStorage,
+				"foo",
+			),
 			expected: "/storage/foo",
 		},
 		"Type": {
-			value:    TypeValue{Type: PrimitiveStaticTypeInt},
+			value:    NewUnmeteredTypeValue(PrimitiveStaticTypeInt),
 			expected: "Type<Int>()",
 		},
-		"Capability with borrow type": {
-			value: &StorageCapabilityValue{
-				Path: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "foo",
-				},
-				Address:    NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-				BorrowType: PrimitiveStaticTypeInt,
-			},
-			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
+		"path Capability with borrow type": {
+			value: NewUnmeteredPathCapabilityValue(
+				NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+				NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					"foo",
+				),
+				PrimitiveStaticTypeInt,
+			),
+			expected: "Capability<Int>(address: 0x0000000102030405, path: /public/foo)",
 		},
-		"Capability without borrow type": {
-			value: &StorageCapabilityValue{
-				Path: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "foo",
-				},
-				Address: NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-			},
-			expected: "Capability(address: 0x0000000102030405, path: /storage/foo)",
+		"path Capability without borrow type": {
+			value: NewUnmeteredPathCapabilityValue(
+				NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+				NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					"foo",
+				),
+				nil,
+			),
+			expected: "Capability(address: 0x0000000102030405, path: /public/foo)",
+		},
+		"ID Capability with borrow type": {
+			value: NewUnmeteredIDCapabilityValue(
+				6,
+				NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+				PrimitiveStaticTypeInt,
+			),
+			expected: "Capability<Int>(address: 0x0000000102030405, id: 6)",
 		},
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
@@ -1134,7 +1154,7 @@ func TestStringer(t *testing.T) {
 					common.ZeroAddress,
 				)
 				arrayRef := NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					array,
 					&sema.VariableSizedType{
 						Type: sema.AnyStructType,
@@ -1455,6 +1475,30 @@ func TestGetHashInput(t *testing.T) {
 			value:    NewUnmeteredWord64Value(math.MaxUint64),
 			expected: []byte{byte(HashInputTypeWord64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		},
+		"Word128": {
+			value:    NewUnmeteredWord128ValueFromUint64(128),
+			expected: []byte{byte(HashInputTypeWord128), 128},
+		},
+		"Word128 min": {
+			value:    NewUnmeteredWord128ValueFromUint64(0),
+			expected: append([]byte{byte(HashInputTypeWord128)}, 0),
+		},
+		"Word128 max": {
+			value:    NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeWord128)}, sema.Word128TypeMaxIntBig.Bytes()...),
+		},
+		"Word256": {
+			value:    NewUnmeteredWord256ValueFromUint64(256),
+			expected: []byte{byte(HashInputTypeWord256), 1, 0},
+		},
+		"Word256 min": {
+			value:    NewUnmeteredWord256ValueFromUint64(0),
+			expected: append([]byte{byte(HashInputTypeWord256)}, 0),
+		},
+		"Word256 max": {
+			value:    NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+			expected: append([]byte{byte(HashInputTypeWord256)}, sema.Word256TypeMaxIntBig.Bytes()...),
+		},
 		"UFix64": {
 			value:    NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
 			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
@@ -1572,10 +1616,10 @@ func TestGetHashInput(t *testing.T) {
 			),
 		},
 		"Path": {
-			value: PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
+			value: NewUnmeteredPathValue(
+				common.PathDomainStorage,
+				"foo",
+			),
 			expected: []byte{
 				byte(HashInputTypePath),
 				// domain: storage
@@ -1585,10 +1629,10 @@ func TestGetHashInput(t *testing.T) {
 			},
 		},
 		"Path long identifier": {
-			value: PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: strings.Repeat("a", 32),
-			},
+			value: NewUnmeteredPathValue(
+				common.PathDomainStorage,
+				strings.Repeat("a", 32),
+			),
 			expected: append(
 				[]byte{byte(HashInputTypePath),
 					// domain: storage
@@ -1657,19 +1701,23 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	// Obtain a self referencing (cyclic) ephemeral reference value.
 
 	code := `
-        pub fun getEphemeralRef(): &Foo {
+        access(all) fun getEphemeralRef(): &Foo {
             var foo = Foo()
             var fooRef = &foo as &Foo
 
             // Create the cyclic reference
-            fooRef.bar = fooRef
+            fooRef.setBar(fooRef)
 
             return fooRef
         }
 
-        pub struct Foo {
+        access(all) struct Foo {
 
-            pub(set) var bar: &Foo?
+            access(all) var bar: &Foo?
+
+			access(all) fun setBar(_ bar: &Foo) {
+				self.bar = bar
+			}
 
             init() {
                 self.bar = nil
@@ -1707,7 +1755,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	assert.True(t, conforms)
 }
 
-func TestStorageCapabilityValue_Equal(t *testing.T) {
+func TestPathCapabilityValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
@@ -1718,24 +1766,24 @@ func TestStorageCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			(&StorageCapabilityValue{
-				Address: AddressValue{0x1},
-				Path: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test",
-				},
-				BorrowType: PrimitiveStaticTypeInt,
-			}).Equal(
+			NewUnmeteredPathCapabilityValue(
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					"test",
+				),
+				PrimitiveStaticTypeInt,
+			).Equal(
 				inter,
 				EmptyLocationRange,
-				&StorageCapabilityValue{
-					Address: AddressValue{0x1},
-					Path: PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: "test",
-					},
-					BorrowType: PrimitiveStaticTypeInt,
-				},
+				NewUnmeteredPathCapabilityValue(
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					NewUnmeteredPathValue(
+						common.PathDomainPublic,
+						"test",
+					),
+					PrimitiveStaticTypeInt,
+				),
 			),
 		)
 	})
@@ -1747,22 +1795,24 @@ func TestStorageCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			(&StorageCapabilityValue{
-				Address: AddressValue{0x1},
-				Path: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test",
-				},
-			}).Equal(
+			NewUnmeteredPathCapabilityValue(
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					"test",
+				),
+				nil,
+			).Equal(
 				inter,
 				EmptyLocationRange,
-				&StorageCapabilityValue{
-					Address: AddressValue{0x1},
-					Path: PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: "test",
-					},
-				},
+				NewUnmeteredPathCapabilityValue(
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					NewUnmeteredPathValue(
+						common.PathDomainPublic,
+						"test",
+					),
+					nil,
+				),
 			),
 		)
 	})
@@ -1774,24 +1824,24 @@ func TestStorageCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&StorageCapabilityValue{
-				Address: AddressValue{0x1},
-				Path: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test1",
-				},
-				BorrowType: PrimitiveStaticTypeInt,
-			}).Equal(
+			NewUnmeteredPathCapabilityValue(
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					"test1",
+				),
+				PrimitiveStaticTypeInt,
+			).Equal(
 				inter,
 				EmptyLocationRange,
-				&StorageCapabilityValue{
-					Address: AddressValue{0x1},
-					Path: PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: "test2",
-					},
-					BorrowType: PrimitiveStaticTypeInt,
-				},
+				NewUnmeteredPathCapabilityValue(
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					NewUnmeteredPathValue(
+						common.PathDomainPublic,
+						"test2",
+					),
+					PrimitiveStaticTypeInt,
+				),
 			),
 		)
 	})
@@ -1803,24 +1853,24 @@ func TestStorageCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&StorageCapabilityValue{
-				Address: AddressValue{0x1},
-				Path: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test",
-				},
-				BorrowType: PrimitiveStaticTypeInt,
-			}).Equal(
+			NewUnmeteredPathCapabilityValue(
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					"test",
+				),
+				PrimitiveStaticTypeInt,
+			).Equal(
 				inter,
 				EmptyLocationRange,
-				&StorageCapabilityValue{
-					Address: AddressValue{0x2},
-					Path: PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: "test",
-					},
-					BorrowType: PrimitiveStaticTypeInt,
-				},
+				NewUnmeteredPathCapabilityValue(
+					NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+					NewUnmeteredPathValue(
+						common.PathDomainPublic,
+						"test",
+					),
+					PrimitiveStaticTypeInt,
+				),
 			),
 		)
 	})
@@ -1832,24 +1882,24 @@ func TestStorageCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&StorageCapabilityValue{
-				Address: AddressValue{0x1},
-				Path: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test",
-				},
-				BorrowType: PrimitiveStaticTypeInt,
-			}).Equal(
+			NewUnmeteredPathCapabilityValue(
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					"test",
+				),
+				PrimitiveStaticTypeInt,
+			).Equal(
 				inter,
 				EmptyLocationRange,
-				&StorageCapabilityValue{
-					Address: AddressValue{0x1},
-					Path: PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: "test",
-					},
-					BorrowType: PrimitiveStaticTypeString,
-				},
+				NewUnmeteredPathCapabilityValue(
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					NewUnmeteredPathValue(
+						common.PathDomainPublic,
+						"test",
+					),
+					PrimitiveStaticTypeString,
+				),
 			),
 		)
 	})
@@ -1861,17 +1911,144 @@ func TestStorageCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&StorageCapabilityValue{
-				Address: AddressValue{0x1},
-				Path: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test",
-				},
-				BorrowType: PrimitiveStaticTypeInt,
-			}).Equal(
+			NewUnmeteredPathCapabilityValue(
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					"test",
+				),
+				PrimitiveStaticTypeInt,
+			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredStringValue("test"),
+				NewUnmeteredIDCapabilityValue(
+					4,
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					PrimitiveStaticTypeInt,
+				),
+			),
+		)
+	})
+}
+
+func TestIDCapabilityValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal, borrow type", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		require.True(t,
+			NewUnmeteredIDCapabilityValue(
+				4,
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				PrimitiveStaticTypeInt,
+			).Equal(
+				inter,
+				EmptyLocationRange,
+				NewUnmeteredIDCapabilityValue(
+					4,
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					PrimitiveStaticTypeInt,
+				),
+			),
+		)
+	})
+
+	t.Run("different addresses", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		require.False(t,
+			NewUnmeteredIDCapabilityValue(
+				4,
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				PrimitiveStaticTypeInt,
+			).Equal(
+				inter,
+				EmptyLocationRange,
+				NewUnmeteredIDCapabilityValue(
+					4,
+					NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+					PrimitiveStaticTypeInt,
+				),
+			),
+		)
+	})
+
+	t.Run("different borrow types", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		require.False(t,
+			NewUnmeteredIDCapabilityValue(
+				4,
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				PrimitiveStaticTypeInt,
+			).Equal(
+				inter,
+				EmptyLocationRange,
+				NewUnmeteredIDCapabilityValue(
+					4,
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					PrimitiveStaticTypeString,
+				),
+			),
+		)
+	})
+
+	t.Run("different ID", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		require.False(t,
+			NewUnmeteredIDCapabilityValue(
+				4,
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				PrimitiveStaticTypeInt,
+			).Equal(
+				inter,
+				EmptyLocationRange,
+				NewUnmeteredIDCapabilityValue(
+					5,
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					PrimitiveStaticTypeInt,
+				),
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		require.False(t,
+			NewUnmeteredIDCapabilityValue(
+				4,
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				PrimitiveStaticTypeInt,
+			).Equal(
+				inter,
+				EmptyLocationRange,
+				NewUnmeteredPathCapabilityValue(
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+					NewUnmeteredPathValue(
+						common.PathDomainPublic,
+						"test",
+					),
+					PrimitiveStaticTypeInt,
+				),
 			),
 		)
 	})
@@ -1888,10 +2065,10 @@ func TestAddressValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			AddressValue{0x1}.Equal(
+			NewUnmeteredAddressValueFromBytes([]byte{0x1}).Equal(
 				inter,
 				EmptyLocationRange,
-				AddressValue{0x1},
+				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 			),
 		)
 	})
@@ -1903,10 +2080,10 @@ func TestAddressValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			AddressValue{0x1}.Equal(
+			NewUnmeteredAddressValueFromBytes([]byte{0x1}).Equal(
 				inter,
 				EmptyLocationRange,
-				AddressValue{0x2},
+				NewUnmeteredAddressValueFromBytes([]byte{0x2}),
 			),
 		)
 	})
@@ -1918,7 +2095,7 @@ func TestAddressValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			AddressValue{0x1}.Equal(
+			NewUnmeteredAddressValueFromBytes([]byte{0x1}).Equal(
 				inter,
 				EmptyLocationRange,
 				NewUnmeteredUInt8Value(1),
@@ -2212,16 +2389,16 @@ func TestPathValue_Equal(t *testing.T) {
 			inter := newTestInterpreter(t)
 
 			require.True(t,
-				PathValue{
-					Domain:     domain,
-					Identifier: "test",
-				}.Equal(
+				NewUnmeteredPathValue(
+					domain,
+					"test",
+				).Equal(
 					inter,
 					EmptyLocationRange,
-					PathValue{
-						Domain:     domain,
-						Identifier: "test",
-					},
+					NewUnmeteredPathValue(
+						domain,
+						"test",
+					),
 				),
 			)
 		})
@@ -2239,16 +2416,16 @@ func TestPathValue_Equal(t *testing.T) {
 				inter := newTestInterpreter(t)
 
 				require.False(t,
-					PathValue{
-						Domain:     domain,
-						Identifier: "test",
-					}.Equal(
+					NewUnmeteredPathValue(
+						domain,
+						"test",
+					).Equal(
 						inter,
 						EmptyLocationRange,
-						PathValue{
-							Domain:     otherDomain,
-							Identifier: "test",
-						},
+						NewUnmeteredPathValue(
+							otherDomain,
+							"test",
+						),
 					),
 				)
 			})
@@ -2262,16 +2439,16 @@ func TestPathValue_Equal(t *testing.T) {
 			inter := newTestInterpreter(t)
 
 			require.False(t,
-				PathValue{
-					Domain:     domain,
-					Identifier: "test1",
-				}.Equal(
+				NewUnmeteredPathValue(
+					domain,
+					"test1",
+				).Equal(
 					inter,
 					EmptyLocationRange,
-					PathValue{
-						Domain:     domain,
-						Identifier: "test2",
-					},
+					NewUnmeteredPathValue(
+						domain,
+						"test2",
+					),
 				),
 			)
 		})
@@ -2284,10 +2461,10 @@ func TestPathValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "test",
-			}.Equal(
+			NewUnmeteredPathValue(
+				common.PathDomainStorage,
+				"test",
+			).Equal(
 				inter,
 				EmptyLocationRange,
 				NewUnmeteredStringValue("/storage/test"),
@@ -2308,19 +2485,19 @@ func TestPathLinkValue_Equal(t *testing.T) {
 
 		require.True(t,
 			PathLinkValue{
-				TargetPath: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test",
-				},
+				TargetPath: NewUnmeteredPathValue(
+					common.PathDomainStorage,
+					"test",
+				),
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
 				inter,
 				EmptyLocationRange,
 				PathLinkValue{
-					TargetPath: PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: "test",
-					},
+					TargetPath: NewUnmeteredPathValue(
+						common.PathDomainStorage,
+						"test",
+					),
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -2335,19 +2512,19 @@ func TestPathLinkValue_Equal(t *testing.T) {
 
 		require.False(t,
 			PathLinkValue{
-				TargetPath: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test1",
-				},
+				TargetPath: NewUnmeteredPathValue(
+					common.PathDomainStorage,
+					"test1",
+				),
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
 				inter,
 				EmptyLocationRange,
 				PathLinkValue{
-					TargetPath: PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: "test2",
-					},
+					TargetPath: NewUnmeteredPathValue(
+						common.PathDomainStorage,
+						"test2",
+					),
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -2362,19 +2539,19 @@ func TestPathLinkValue_Equal(t *testing.T) {
 
 		require.False(t,
 			PathLinkValue{
-				TargetPath: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test",
-				},
+				TargetPath: NewUnmeteredPathValue(
+					common.PathDomainStorage,
+					"test",
+				),
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
 				inter,
 				EmptyLocationRange,
 				PathLinkValue{
-					TargetPath: PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: "test",
-					},
+					TargetPath: NewUnmeteredPathValue(
+						common.PathDomainStorage,
+						"test",
+					),
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -2389,10 +2566,10 @@ func TestPathLinkValue_Equal(t *testing.T) {
 
 		require.False(t,
 			PathLinkValue{
-				TargetPath: PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "test",
-				},
+				TargetPath: NewUnmeteredPathValue(
+					common.PathDomainStorage,
+					"test",
+				),
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
 				inter,
@@ -3250,6 +3427,8 @@ func TestNumberValue_Equal(t *testing.T) {
 		"Word16":  NewUnmeteredWord16Value(16),
 		"Word32":  NewUnmeteredWord32Value(32),
 		"Word64":  NewUnmeteredWord64Value(64),
+		"Word128": NewUnmeteredWord128ValueFromUint64(128),
+		"Word256": NewUnmeteredWord256ValueFromUint64(256),
 		"UFix64":  NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
 		"Fix64":   NewUnmeteredFix64ValueWithInteger(-32, EmptyLocationRange),
 	}
@@ -3302,7 +3481,7 @@ func TestNumberValue_Equal(t *testing.T) {
 				value.Equal(
 					inter,
 					EmptyLocationRange,
-					AddressValue{0x1},
+					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				),
 			)
 		})
@@ -3549,7 +3728,7 @@ func TestNonStorable(t *testing.T) {
 	storage := newUnmeteredInMemoryStorage()
 
 	code := `
-      pub struct Foo {
+      access(all) struct Foo {
 
           let bar: &Int?
 
@@ -3628,6 +3807,8 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 		sema.Word16Type:  NewUnmeteredWord16Value(42),
 		sema.Word32Type:  NewUnmeteredWord32Value(42),
 		sema.Word64Type:  NewUnmeteredWord64Value(42),
+		sema.Word128Type: NewUnmeteredWord128ValueFromUint64(42),
+		sema.Word256Type: NewUnmeteredWord256ValueFromUint64(42),
 		sema.Int8Type:    NewUnmeteredInt8Value(42),
 		sema.Int16Type:   NewUnmeteredInt16Value(42),
 		sema.Int32Type:   NewUnmeteredInt32Value(42),
@@ -3746,7 +3927,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		require.NoError(t, err)
 
 		storageMap := storage.GetStorageMap(testAddress, "storage", true)
-		storageMap.WriteValue(inter, "test", TrueValue)
+		storageMap.WriteValue(inter, StringStorageMapKey("test"), TrueValue)
 
 		value := valueFactory(inter)
 
@@ -3931,6 +4112,8 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			sema.Word16Type:  NewUnmeteredWord16Value(42),
 			sema.Word32Type:  NewUnmeteredWord32Value(42),
 			sema.Word64Type:  NewUnmeteredWord64Value(42),
+			sema.Word128Type: NewUnmeteredWord128ValueFromUint64(42),
+			sema.Word256Type: NewUnmeteredWord256ValueFromUint64(42),
 			sema.Int8Type:    NewUnmeteredInt8Value(42),
 			sema.Int16Type:   NewUnmeteredInt16Value(42),
 			sema.Int32Type:   NewUnmeteredInt32Value(42),
@@ -4001,7 +4184,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					TrueValue,
 					sema.BoolType,
 				)
@@ -4012,7 +4195,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(*Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
-					false,
+					UnauthorizedAccess,
 					TrueValue,
 					sema.StringType,
 				)
@@ -4028,7 +4211,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(_ *Interpreter) Value {
 				return NewUnmeteredStorageReferenceValue(
-					false,
+					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					sema.BoolType,
@@ -4040,7 +4223,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		test(
 			func(_ *Interpreter) Value {
 				return NewUnmeteredStorageReferenceValue(
-					false,
+					UnauthorizedAccess,
 					testAddress,
 					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
 					sema.StringType,
@@ -4050,18 +4233,39 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 	})
 
-	t.Run("StorageCapabilityValue", func(t *testing.T) {
+	t.Run("PathCapabilityValue", func(t *testing.T) {
 
 		t.Parallel()
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredStorageCapabilityValue(
+				return NewUnmeteredPathCapabilityValue(
 					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
-					NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+					NewUnmeteredPathValue(
+						common.PathDomainPublic,
+						"test",
+					),
 					ReferenceStaticType{
-						Authorized:     false,
-						BorrowedType:   PrimitiveStaticTypeBool,
+						Authorization:  UnauthorizedAccess,
+						ReferencedType: PrimitiveStaticTypeBool,
+					},
+				)
+			},
+			true,
+		)
+	})
+
+	t.Run("IDCapabilityValue", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			func(_ *Interpreter) Value {
+				return NewUnmeteredIDCapabilityValue(
+					NewUnmeteredUInt64Value(4),
+					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
+					ReferenceStaticType{
+						Authorization:  UnauthorizedAccess,
 						ReferencedType: PrimitiveStaticTypeBool,
 					},
 				)

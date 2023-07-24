@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +41,7 @@ import (
 type storageKey struct {
 	address common.Address
 	domain  string
-	key     string
+	key     atree.Value
 }
 
 func testAccount(
@@ -146,7 +148,7 @@ func testAccountWithErrorHandler(
 			iterator := accountStorage.Iterator(inter)
 			for {
 				key, value := iterator.Next()
-				if key == "" {
+				if key == nil {
 					break
 				}
 				storageKey := storageKey{
@@ -665,6 +667,10 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   account.save(<-r, to: /storage/r)
               }
 
+			  fun checkR(): Bool {
+				  return account.check<@R>(from: /storage/r)
+			  }
+
               fun borrowR(): &R? {
                   return account.borrow<&R>(from: /storage/r)
               }
@@ -673,9 +679,17 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   return account.borrow<&R>(from: /storage/r)!.foo
               }
 
+			  fun checkR2(): Bool {
+				  return account.check<@R2>(from: /storage/r)
+			  }
+
               fun borrowR2(): &R2? {
                   return account.borrow<&R2>(from: /storage/r)
               }
+
+			  fun checkR2WithInvalidPath(): Bool {
+				  return account.check<@R2>(from: /storage/wrongpath)
+			  }
 
               fun changeAfterBorrow(): Int {
                  let ref = account.borrow<&R>(from: /storage/r)!
@@ -701,7 +715,15 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Run("borrow R ", func(t *testing.T) {
 
-			// first borrow
+			// first check & borrow
+			checkRes, err := inter.Invoke("checkR")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(true),
+				checkRes,
+			)
 
 			value, err := inter.Invoke("borrowR")
 			require.NoError(t, err)
@@ -732,7 +754,15 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			// TODO: should fail, i.e. return nil
 
-			// second borrow
+			// second check & borrow
+			checkRes, err = inter.Invoke("checkR")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(true),
+				checkRes,
+			)
 
 			value, err = inter.Invoke("borrowR")
 			require.NoError(t, err)
@@ -748,8 +778,16 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		})
 
 		t.Run("borrow R2", func(t *testing.T) {
+			checkRes, err := inter.Invoke("checkR2")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(false),
+				checkRes,
+			)
 
-			_, err := inter.Invoke("borrowR2")
+			_, err = inter.Invoke("borrowR2")
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
@@ -764,6 +802,17 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
+
+		t.Run("check R2 with wrong path", func(t *testing.T) {
+			checkRes, err := inter.Invoke("checkR2WithInvalidPath")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(false),
+				checkRes,
+			)
 		})
 	})
 
@@ -799,6 +848,10 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   account.save(s, to: /storage/s)
               }
 
+			  fun checkS(): Bool {
+				  return account.check<S>(from: /storage/s)
+			  }
+
               fun borrowS(): &S? {
                   return account.borrow<&S>(from: /storage/s)
               }
@@ -806,8 +859,12 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
               fun foo(): Int {
                   return account.borrow<&S>(from: /storage/s)!.foo
               }
-
-              fun borrowS2(): &S2? {
+			 
+			  fun checkS2(): Bool {
+				  return account.check<S2>(from: /storage/s)
+			  }
+             
+			  fun borrowS2(): &S2? {
                   return account.borrow<&S2>(from: /storage/s)
               }
 
@@ -826,8 +883,8 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
               fun invalidBorrowS(): &S2? {
                   let s = S()
                   account.save(s, to: /storage/another_s)
-                  let borrowedS = account.borrow<auth &AnyStruct>(from: /storage/another_s)
-                  return borrowedS as! auth &S2?
+                  let borrowedS = account.borrow<&AnyStruct>(from: /storage/another_s)
+                  return borrowedS as! &S2?
               }
             `,
 			sema.Config{},
@@ -842,7 +899,15 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Run("borrow S", func(t *testing.T) {
 
-			// first borrow
+			// first check & borrow
+			checkRes, err := inter.Invoke("checkS")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(true),
+				checkRes,
+			)
 
 			value, err := inter.Invoke("borrowS")
 			require.NoError(t, err)
@@ -873,7 +938,15 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			// TODO: should fail, i.e. return nil
 
-			// second borrow
+			// second check & borrow
+			checkRes, err = inter.Invoke("checkS")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(true),
+				checkRes,
+			)
 
 			value, err = inter.Invoke("borrowS")
 			require.NoError(t, err)
@@ -889,6 +962,14 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 		})
 
 		t.Run("borrow S2", func(t *testing.T) {
+			checkRes, err := inter.Invoke("checkS2")
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.AsBoolValue(false),
+				checkRes,
+			)
 
 			_, err = inter.Invoke("borrowS2")
 			RequireError(t, err)
@@ -981,22 +1062,22 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						nil,
 						&sema.ReferenceType{
-							Authorized: false,
-							Type:       rType,
+							Authorization: sema.UnauthorizedAccess,
+							Type:          rType,
 						},
 					)
 
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredPathCapabilityValue(
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "rCap",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1030,22 +1111,22 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						nil,
 						&sema.ReferenceType{
-							Authorized: false,
-							Type:       r2Type,
+							Authorization: sema.UnauthorizedAccess,
+							Type:          r2Type,
 						},
 					)
 
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredPathCapabilityValue(
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "rCap2",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1134,22 +1215,22 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						nil,
 						&sema.ReferenceType{
-							Authorized: false,
-							Type:       sType,
+							Authorization: sema.UnauthorizedAccess,
+							Type:          sType,
 						},
 					)
 
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredPathCapabilityValue(
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "sCap",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1177,29 +1258,29 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
 					capability := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
-					require.IsType(t, &interpreter.StorageCapabilityValue{}, capability)
+					require.IsType(t, &interpreter.PathCapabilityValue{}, capability)
 
 					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						nil,
 						&sema.ReferenceType{
-							Authorized: false,
-							Type:       s2Type,
+							Authorization: sema.UnauthorizedAccess,
+							Type:          s2Type,
 						},
 					)
 
 					RequireValuesEqual(
 						t,
 						inter,
-						&interpreter.StorageCapabilityValue{
-							Address: address,
-							Path: interpreter.PathValue{
+						interpreter.NewUnmeteredPathCapabilityValue(
+							address,
+							interpreter.PathValue{
 								Domain:     capabilityDomain,
 								Identifier: "sCap2",
 							},
-							BorrowType: expectedBorrowType,
-						},
+							expectedBorrowType,
+						),
 						capability,
 					)
 
@@ -1291,22 +1372,22 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
 					nil,
 					&sema.ReferenceType{
-						Authorized: false,
-						Type:       sType,
+						Authorization: sema.UnauthorizedAccess,
+						Type:          sType,
 					},
 				)
 
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.StorageCapabilityValue{
-						Address: address,
-						Path: interpreter.PathValue{
+					interpreter.NewUnmeteredPathCapabilityValue(
+						address,
+						interpreter.PathValue{
 							Domain:     capabilityDomain,
 							Identifier: "sCap",
 						},
-						BorrowType: expectedBorrowType,
-					},
+						expectedBorrowType,
+					),
 					capability,
 				)
 			})
@@ -1373,22 +1454,22 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				expectedBorrowType := interpreter.ConvertSemaToStaticType(
 					nil,
 					&sema.ReferenceType{
-						Authorized: false,
-						Type:       sType,
+						Authorization: sema.UnauthorizedAccess,
+						Type:          sType,
 					},
 				)
 
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.StorageCapabilityValue{
-						Address: address,
-						Path: interpreter.PathValue{
+					interpreter.NewUnmeteredPathCapabilityValue(
+						address,
+						interpreter.PathValue{
 							Domain:     capabilityDomain,
 							Identifier: "s2Cap",
 						},
-						BorrowType: expectedBorrowType,
-					},
+						expectedBorrowType,
+					),
 					capability,
 				)
 
@@ -1402,22 +1483,22 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 				expectedBorrowType = interpreter.ConvertSemaToStaticType(
 					nil,
 					&sema.ReferenceType{
-						Authorized: false,
-						Type:       sType,
+						Authorization: sema.UnauthorizedAccess,
+						Type:          sType,
 					},
 				)
 
 				RequireValuesEqual(
 					t,
 					inter,
-					&interpreter.StorageCapabilityValue{
-						Address: address,
-						Path: interpreter.PathValue{
+					interpreter.NewUnmeteredPathCapabilityValue(
+						address,
+						interpreter.PathValue{
 							Domain:     capabilityDomain,
 							Identifier: "s1Cap",
 						},
-						BorrowType: expectedBorrowType,
-					},
+						expectedBorrowType,
+					),
 					capability,
 				)
 			})
@@ -1828,16 +1909,16 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 
 					require.NoError(t, err)
 
-					require.IsType(t, &interpreter.StorageCapabilityValue{}, value)
+					require.IsType(t, &interpreter.PathCapabilityValue{}, value)
 
-					actualBorrowType := value.(*interpreter.StorageCapabilityValue).BorrowType
+					actualBorrowType := value.(*interpreter.PathCapabilityValue).BorrowType
 
 					if typed {
 						expectedBorrowType := interpreter.ConvertSemaToStaticType(
 							nil,
 							&sema.ReferenceType{
-								Authorized: false,
-								Type:       sema.IntType,
+								Authorization: sema.UnauthorizedAccess,
+								Type:          sema.IntType,
 							},
 						)
 						require.Equal(t,
@@ -3014,7 +3095,7 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 
 			importedChecker, err := checker.ParseAndCheckWithOptions(t,
 				`
-                  pub fun foo() {
+                  access(all) fun foo() {
                       account.save("bar", to: /storage/foo5)
                   }
                 `,

@@ -25,9 +25,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestRuntimeError(t *testing.T) {
@@ -107,7 +109,7 @@ func TestRuntimeError(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
-            pub fun main() {
+            access(all) fun main() {
                 let a: UInt8 = 255
                 let b: UInt8 = 1
                 // overflow
@@ -147,7 +149,7 @@ func TestRuntimeError(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
-			pub fun main() {
+			access(all) fun main() {
 				let x: AnyStruct? = nil
 				let y = x!
 			}
@@ -175,6 +177,66 @@ func TestRuntimeError(t *testing.T) {
 				"  |\n"+
 				"4 | 				let y = x!\n"+
 				"  | 				        ^^\n",
+		)
+	})
+
+	t.Run("execution multiline nested error", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
+			access(all) resource Resource {
+				init(s:String){
+					panic("42")
+				}
+			}
+		
+			access(all) fun createResource(): @Resource{
+				return <- create Resource(
+					s: "argument"
+				)
+			}
+			
+			access(all) fun main() {
+				destroy createResource()
+			}
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		location := common.ScriptLocation{0x1}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  location,
+			},
+		)
+
+		require.EqualError(t, err,
+			"Execution failed:\n"+
+				"  --> 0100000000000000000000000000000000000000000000000000000000000000:15:12\n"+
+				"   |\n"+
+				"15 | 				destroy createResource()\n"+
+				"   | 				        ^^^^^^^^^^^^^^^^\n"+
+				"\n"+
+				"  --> 0100000000000000000000000000000000000000000000000000000000000000:9:21\n"+
+				"   |\n"+
+				" 9 | 				return <- create Resource(\n"+
+				"10 | 					s: \"argument\"\n"+
+				"11 | 				)\n"+
+				"   | 				^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
+				"\n"+
+				"error: panic: 42\n"+
+				" --> 0100000000000000000000000000000000000000000000000000000000000000:4:5\n"+
+				"  |\n"+
+				"4 | 					panic(\"42\")\n"+
+				"  | 					^^^^^^^^^^^\n",
 		)
 	})
 
@@ -272,7 +334,7 @@ func TestRuntimeError(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		importedScript := []byte(`
-            pub fun add() {
+            access(all) fun add() {
                 let a: UInt8 = 255
                 let b: UInt8 = 1
                 // overflow
@@ -283,7 +345,7 @@ func TestRuntimeError(t *testing.T) {
 		script := []byte(`
             import add from "imported"
 
-            pub fun main() {
+            access(all) fun main() {
                 add()
             }
         `)
@@ -356,7 +418,7 @@ func TestRuntimeError(t *testing.T) {
               // program itself has more errors:
 
               // invalid top-level declaration
-              pub fun foo() {
+              access(all) fun foo() {
                   // invalid reference to undeclared variable
                   Y
               }
@@ -366,7 +428,7 @@ func TestRuntimeError(t *testing.T) {
 				Name:    "B",
 			}: `
               // invalid top-level declaration
-              pub fun bar() {
+              access(all) fun bar() {
                   // invalid reference to undeclared variable
                   X
               }
@@ -374,20 +436,7 @@ func TestRuntimeError(t *testing.T) {
 		}
 
 		runtimeInterface := &testRuntimeInterface{
-			resolveLocation: func(identifiers []ast.Identifier, location Location) (result []sema.ResolvedLocation, err error) {
-				for _, identifier := range identifiers {
-					result = append(result, sema.ResolvedLocation{
-						Location: common.AddressLocation{
-							Address: location.(common.AddressLocation).Address,
-							Name:    identifier.Identifier,
-						},
-						Identifiers: []ast.Identifier{
-							identifier,
-						},
-					})
-				}
-				return
-			},
+			resolveLocation: multipleIdentifierLocationResolver,
 			getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 				code := codes[location]
 				return []byte(code), nil
@@ -407,10 +456,10 @@ func TestRuntimeError(t *testing.T) {
 		require.EqualError(t, err,
 			"Execution failed:\n"+
 				"error: function declarations are not valid at the top-level\n"+
-				" --> 0000000000000002.B:3:22\n"+
+				" --> 0000000000000002.B:3:30\n"+
 				"  |\n"+
-				"3 |               pub fun bar() {\n"+
-				"  |                       ^^^\n"+
+				"3 |               access(all) fun bar() {\n"+
+				"  |                               ^^^\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `X`\n"+
 				" --> 0000000000000002.B:5:18\n"+
@@ -419,10 +468,10 @@ func TestRuntimeError(t *testing.T) {
 				"  |                   ^ not found in this scope\n"+
 				"\n"+
 				"error: function declarations are not valid at the top-level\n"+
-				" --> 0000000000000001.A:8:22\n"+
+				" --> 0000000000000001.A:8:30\n"+
 				"  |\n"+
-				"8 |               pub fun foo() {\n"+
-				"  |                       ^^^\n"+
+				"8 |               access(all) fun foo() {\n"+
+				"  |                               ^^^\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `Y`\n"+
 				"  --> 0000000000000001.A:10:18\n"+
@@ -432,4 +481,260 @@ func TestRuntimeError(t *testing.T) {
 		)
 
 	})
+}
+
+func TestRuntimeDefaultFunctionConflictPrintingError(t *testing.T) {
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	makeDeployTransaction := func(name, code string) []byte {
+		return []byte(fmt.Sprintf(
+			`
+              transaction {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  acct.contracts.add(name: "%s", code: "%s".decodeHex())
+                }
+              }
+            `,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
+	contractInterfaceCode := `
+      access(all) contract TestInterfaces {
+
+          access(all) resource interface A {
+              access(all) fun foo() {
+                  let x = 3
+              }
+          }
+
+		  access(all) resource interface B {
+			access(all) fun foo() 
+		}
+      }
+    `
+
+	contractCode := `
+      import TestInterfaces from 0x2
+      access(all) contract TestContract {
+          access(all) resource R: TestInterfaces.A, TestInterfaces.B {}
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // filling lots of space
+		  // filling lots of space
+		  // filling lots of space
+      }
+    `
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	var nextAccount byte = 0x2
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		createAccount: func(payer Address) (address Address, err error) {
+			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
+			nextAccount++
+			return result.ToAddress(), nil
+		},
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{0x1}}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deployTransaction := makeDeployTransaction("TestInterfaces", contractInterfaceCode)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	deployTransaction = makeDeployTransaction("TestContract", contractCode)
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "access(all) resource R: TestInterfaces.A, TestInterfaces.B {}")
+
+	var errType *sema.CheckerError
+	require.ErrorAs(t, err, &errType)
+
+	checkerErr := err.(Error).
+		Err.(interpreter.Error).
+		Err.(*stdlib.InvalidContractDeploymentError).
+		Err.(*ParsingCheckingError).
+		Err.(*sema.CheckerError)
+
+	var specificErrType *sema.DefaultFunctionConflictError
+	require.ErrorAs(t, checkerErr.Errors[0], &specificErrType)
+
+	errorRange := checkerErr.Errors[0].(*sema.DefaultFunctionConflictError).Range
+
+	require.Equal(t, errorRange.StartPos.Line, 4)
+}
+
+func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	makeDeployTransaction := func(name, code string) []byte {
+		return []byte(fmt.Sprintf(
+			`
+              transaction {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  acct.contracts.add(name: "%s", code: "%s".decodeHex())
+                }
+              }
+            `,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
+	contractInterfaceCode := `
+      access(all) contract TestInterfaces {
+
+          access(all) resource interface A {
+              access(all) fun foo() {
+                  let x = 3
+              }
+          }
+
+		  access(all) resource interface B {
+			access(all) fun foo() {
+				let x = 4
+			}
+		}
+      }
+    `
+
+	contractCode := `
+      import TestInterfaces from 0x2
+      access(all) contract TestContract {
+          access(all) resource R: TestInterfaces.A, TestInterfaces.B {}
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // fill space
+		  // filling lots of space
+		  // filling lots of space
+		  // filling lots of space
+      }
+    `
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	var nextAccount byte = 0x2
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		createAccount: func(payer Address) (address Address, err error) {
+			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
+			nextAccount++
+			return result.ToAddress(), nil
+		},
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{0x1}}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deployTransaction := makeDeployTransaction("TestInterfaces", contractInterfaceCode)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	deployTransaction = makeDeployTransaction("TestContract", contractCode)
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "access(all) resource R: TestInterfaces.A, TestInterfaces.B {}")
+
+	var errType *sema.CheckerError
+	require.ErrorAs(t, err, &errType)
+
+	checkerErr := err.(Error).
+		Err.(interpreter.Error).
+		Err.(*stdlib.InvalidContractDeploymentError).
+		Err.(*ParsingCheckingError).
+		Err.(*sema.CheckerError)
+
+	var specificErrType *sema.MultipleInterfaceDefaultImplementationsError
+	require.ErrorAs(t, checkerErr.Errors[0], &specificErrType)
+
+	errorRange := checkerErr.Errors[0].(*sema.MultipleInterfaceDefaultImplementationsError).Range
+
+	require.Equal(t, errorRange.StartPos.Line, 4)
 }

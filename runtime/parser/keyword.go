@@ -41,10 +41,7 @@ const (
 	KeywordIn          = "in"
 	KeywordEmit        = "emit"
 	KeywordAuth        = "auth"
-	KeywordPriv        = "priv"
-	KeywordPub         = "pub"
 	KeywordAccess      = "access"
-	KeywordSet         = "set"
 	KeywordAll         = "all"
 	KeywordSelf        = "self"
 	KeywordInit        = "init"
@@ -58,6 +55,8 @@ const (
 	KeywordStruct      = "struct"
 	KeywordResource    = "resource"
 	KeywordInterface   = "interface"
+	KeywordEntitlement = "entitlement"
+	KeywordMapping     = "mapping"
 	KeywordTransaction = "transaction"
 	KeywordPrepare     = "prepare"
 	KeywordExecute     = "execute"
@@ -70,8 +69,12 @@ const (
 	keywordAttach      = "attach"
 	keywordRemove      = "remove"
 	keywordTo          = "to"
+	KeywordWith        = "with"
+	KeywordRequire     = "require"
 	KeywordStatic      = "static"
 	KeywordNative      = "native"
+	KeywordPub         = "pub"
+	KeywordPriv        = "priv"
 	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 
@@ -95,10 +98,7 @@ var allKeywords = []string{
 	KeywordIn,
 	KeywordEmit,
 	KeywordAuth,
-	KeywordPriv,
-	KeywordPub,
 	KeywordAccess,
-	KeywordSet,
 	KeywordAll,
 	KeywordSelf,
 	KeywordInit,
@@ -112,6 +112,7 @@ var allKeywords = []string{
 	KeywordStruct,
 	KeywordResource,
 	KeywordInterface,
+	KeywordEntitlement,
 	KeywordTransaction,
 	KeywordPrepare,
 	KeywordExecute,
@@ -120,15 +121,24 @@ var allKeywords = []string{
 	KeywordDefault,
 	KeywordEnum,
 	KeywordView,
+	KeywordWith,
+	KeywordMapping,
+	KeywordRequire,
+	keywordAttach,
+	keywordAttachment,
+	keywordTo,
+	keywordRemove,
 }
 
 // Keywords that can be used in identifier position without ambiguity.
 var softKeywords = []string{
 	KeywordFrom,
 	KeywordAccount,
-	KeywordSet,
 	KeywordAll,
 	KeywordView,
+	keywordAttach,
+	keywordRemove,
+	keywordTo,
 }
 
 var softKeywordsTable = mph.Build(softKeywords)

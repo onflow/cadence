@@ -19,7 +19,10 @@
 
 package sema
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+)
 
 const FooTypeFooFunctionName = "foo"
 
@@ -68,8 +71,9 @@ var FooBarType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			FooBarType,
+			ast.AccessAll,
 			FooBarTypeBarFunctionName,
 			FooBarTypeBarFunctionType,
 			FooBarTypeBarFunctionDocString,
@@ -96,14 +100,17 @@ var FooType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			FooType,
+			ast.AccessAll,
 			FooTypeFooFunctionName,
 			FooTypeFooFunctionType,
 			FooTypeFooFunctionDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			FooType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			FooTypeBarFieldName,
 			FooTypeBarFieldType,
 			FooTypeBarFieldDocString,

@@ -48,9 +48,11 @@ type Config struct {
 	// AuthAccountHandler is used to handle accounts
 	AuthAccountHandler AuthAccountHandlerFunc
 	// UUIDHandler is used to handle the generation of UUIDs
-	UUIDHandler    UUIDHandlerFunc
-	BaseActivation *VariableActivation
-	Debugger       *Debugger
+	UUIDHandler UUIDHandlerFunc
+	// CompositeTypeHandler is used to load composite types
+	CompositeTypeHandler CompositeTypeHandlerFunc
+	BaseActivation       *VariableActivation
+	Debugger             *Debugger
 	// OnStatement is triggered when a statement is about to be executed
 	OnStatement OnStatementFunc
 	// OnLoopIteration is triggered when a loop iteration is about to be executed
@@ -68,4 +70,8 @@ type Config struct {
 	AccountLinkingAllowed bool
 	// OnAccountLinked is triggered when an account is linked by the program
 	OnAccountLinked OnAccountLinkedFunc
+	// IDCapabilityCheckHandler is used to check ID capabilities
+	IDCapabilityCheckHandler IDCapabilityCheckHandlerFunc
+	// IDCapabilityBorrowHandler is used to borrow ID capabilities
+	IDCapabilityBorrowHandler IDCapabilityBorrowHandlerFunc
 }

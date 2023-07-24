@@ -71,6 +71,8 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 		{sema.Word16Type, "42", interpreter.NewUnmeteredWord16Value(42)},
 		{sema.Word32Type, "42", interpreter.NewUnmeteredWord32Value(42)},
 		{sema.Word64Type, "42", interpreter.NewUnmeteredWord64Value(42)},
+		{sema.Word128Type, "42", interpreter.NewUnmeteredWord128ValueFromUint64(42)},
+		{sema.Word256Type, "42", interpreter.NewUnmeteredWord256ValueFromUint64(42)},
 		{sema.Fix64Type, "1.23", interpreter.NewUnmeteredFix64Value(123000000)},
 		{sema.UFix64Type, "1.23", interpreter.NewUnmeteredUFix64Value(123000000)},
 	}
@@ -961,7 +963,7 @@ func TestInterpretDynamicCastingStructInterface(t *testing.T) {
 	types := []string{
 		"AnyStruct",
 		"S",
-		"AnyStruct{I}",
+		"{I}",
 	}
 
 	for operation := range dynamicCastingOperations {
@@ -1013,7 +1015,7 @@ func TestInterpretDynamicCastingResourceInterface(t *testing.T) {
 	types := []string{
 		"AnyResource",
 		"R",
-		"AnyResource{I}",
+		"{I}",
 	}
 
 	for operation := range dynamicCastingOperations {
@@ -1473,9 +1475,9 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
 
-			// Supertype: Restricted type
+			// Supertype: Intersection type
 
-			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1485,13 +1487,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
                       resource R: I1, I2 {}
                     `,
-					"R{I1, I2}",
-					"R{I2}",
+					"{I1, I2}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1501,58 +1503,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
                     `,
-					"R{I1}",
-					"R{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
 
-			t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
-
-				testResourceCastValid(t,
-					`
-	                  resource interface I {}
-
-	                  resource R: I {}
-	                `,
-					"R",
-					"R{I}",
-					operation,
-				)
-			})
-
-			t.Run("restricted AnyResource -> conforming restricted type", func(t *testing.T) {
-
-				testResourceCastValid(t,
-					`
-	                  resource interface RI {}
-
-	                  resource R: RI {}
-	                `,
-					"AnyResource{RI}",
-					"R{RI}",
-					operation,
-				)
-			})
-
-			// TODO: should statically fail?
-			t.Run("restricted AnyResource -> non-conforming restricted type", func(t *testing.T) {
-
-				testResourceCastInvalid(t,
-					`
-	                  resource interface RI {}
-
-	                  resource R: RI {}
-
-	                  resource T {}
-	                `,
-					"AnyResource{RI}",
-					"T{}",
-					operation,
-				)
-			})
-
-			t.Run("AnyResource -> conforming restricted type", func(t *testing.T) {
+			t.Run("AnyResource -> conforming intersection type", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1561,12 +1518,12 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource R: RI {}
 	                `,
 					"AnyResource",
-					"R{RI}",
+					"{RI}",
 					operation,
 				)
 			})
 
-			t.Run("AnyResource -> non-conforming restricted type", func(t *testing.T) {
+			t.Run("AnyResource -> non-conforming intersection type", func(t *testing.T) {
 
 				testResourceCastInvalid(t,
 					`
@@ -1577,14 +1534,14 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource T: TI {}
 	                `,
 					"AnyResource",
-					"T{TI}",
+					"{TI}",
 					operation,
 				)
 			})
 
-			// Supertype: Resource (unrestricted)
+			// Supertype: Resource
 
-			t.Run("restricted type -> unrestricted type: same resource", func(t *testing.T) {
+			t.Run("intersection type -> type: same resource", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1592,13 +1549,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I {}
                     `,
-					"R{I}",
+					"{I}",
 					"R",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyResource -> conforming resource", func(t *testing.T) {
+			t.Run("intersection -> conforming resource", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1606,13 +1563,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: RI {}
 	                `,
-					"AnyResource{RI}",
+					"{RI}",
 					"R",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyResource -> non-conforming resource", func(t *testing.T) {
+			t.Run("intersection -> non-conforming resource", func(t *testing.T) {
 
 				testResourceCastInvalid(t,
 					`
@@ -1622,13 +1579,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource T: RI {}
 	                `,
-					"AnyResource{RI}",
+					"{RI}",
 					"T",
 					operation,
 				)
 			})
 
-			t.Run("AnyResource -> unrestricted type: same type", func(t *testing.T) {
+			t.Run("AnyResource -> type: same type", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1643,7 +1600,7 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 				)
 			})
 
-			t.Run("AnyResource -> unrestricted type: different type", func(t *testing.T) {
+			t.Run("AnyResource -> type: different type", func(t *testing.T) {
 
 				testResourceCastInvalid(t,
 					`
@@ -1660,9 +1617,9 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 				)
 			})
 
-			// Supertype: restricted AnyResource
+			// Supertype: intersection AnyResource
 
-			t.Run("resource -> restricted AnyResource with conformance restriction", func(t *testing.T) {
+			t.Run("resource -> intersection AnyResource with conformance type", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1671,26 +1628,12 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource R: RI {}
 	                `,
 					"R",
-					"AnyResource{RI}",
+					"{RI}",
 					operation,
 				)
 			})
 
-			t.Run("restricted type -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
-
-				testResourceCastValid(t,
-					`
-	                  resource interface I {}
-
-	                  resource R: I {}
-	                `,
-					"R{I}",
-					"AnyResource{I}",
-					operation,
-				)
-			})
-
-			t.Run("restricted type -> restricted AnyResource with conformance not in restriction", func(t *testing.T) {
+			t.Run("intersection type -> intersection with conformance not in type", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1700,13 +1643,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
 	                `,
-					"R{I1}",
-					"AnyResource{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection -> intersection: fewer types", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1716,13 +1659,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
 	                `,
-					"AnyResource{I1, I2}",
-					"AnyResource{I2}",
+					"{I1, I2}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource: more restrictions", func(t *testing.T) {
+			t.Run("intersection -> intersection: more types", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1732,13 +1675,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
 	                `,
-					"AnyResource{I1}",
-					"AnyResource{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource: different restrictions, conforming", func(t *testing.T) {
+			t.Run("intersection -> intersection: different types, conforming", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1748,13 +1691,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
 	                `,
-					"AnyResource{I1}",
-					"AnyResource{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource: different restrictions, non-conforming", func(t *testing.T) {
+			t.Run("intersection -> intersection: different types, non-conforming", func(t *testing.T) {
 
 				testResourceCastInvalid(t,
 					`
@@ -1765,13 +1708,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource R: I1 {}
 
 	                `,
-					"AnyResource{I1}",
-					"AnyResource{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
+			t.Run("intersection -> intersection with non-conformance type", func(t *testing.T) {
 
 				testResourceCastInvalid(t,
 					`
@@ -1781,13 +1724,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1 {}
 	                `,
-					"AnyResource{I1}",
-					"AnyResource{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
 
-			t.Run("AnyResource -> restricted AnyResource", func(t *testing.T) {
+			t.Run("AnyResource -> intersection", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1796,14 +1739,14 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 	                  resource R: I {}
 	                `,
 					"AnyResource",
-					"AnyResource{I}",
+					"{I}",
 					operation,
 				)
 			})
 
 			// Supertype: AnyResource
 
-			t.Run("restricted type -> AnyResource", func(t *testing.T) {
+			t.Run("intersection -> AnyResource", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1813,29 +1756,13 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	                  resource R: I1, I2 {}
 	                `,
-					"R{I1}",
+					"{I1}",
 					"AnyResource",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyResource -> AnyResource", func(t *testing.T) {
-
-				testResourceCastValid(t,
-					`
-	                  resource interface I1 {}
-
-	                  resource interface I2 {}
-
-	                  resource R: I1, I2 {}
-	                `,
-					"AnyResource{I1}",
-					"AnyResource",
-					operation,
-				)
-			})
-
-			t.Run("unrestricted type -> AnyResource", func(t *testing.T) {
+			t.Run("type -> AnyResource", func(t *testing.T) {
 
 				testResourceCastValid(t,
 					`
@@ -1862,9 +1789,9 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
 
-			// Supertype: Restricted type
+			// Supertype: Intersection type
 
-			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -1874,13 +1801,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
                       struct S: I1, I2 {}
                     `,
-					"S{I1, I2}",
-					"S{I2}",
+					"{I1, I2}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -1890,13 +1817,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
                     `,
-					"S{I1}",
-					"S{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
 
-			t.Run("unrestricted type -> restricted type: same struct", func(t *testing.T) {
+			t.Run("type -> intersection type: same struct", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -1905,43 +1832,12 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: I {}
 	                `,
 					"S",
-					"S{I}",
+					"{I}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> conforming restricted type", func(t *testing.T) {
-
-				testStructCastValid(t,
-					`
-	                  struct interface SI {}
-
-	                  struct S: SI {}
-	                `,
-					"AnyStruct{SI}",
-					"S{SI}",
-					operation,
-				)
-			})
-
-			// TODO: should statically fail?
-			t.Run("restricted AnyStruct -> non-conforming restricted type", func(t *testing.T) {
-
-				testStructCastInvalid(t,
-					`
-	                  struct interface SI {}
-
-	                  struct S: SI {}
-
-	                  struct T {}
-	                `,
-					"AnyStruct{SI}",
-					"T{}",
-					operation,
-				)
-			})
-
-			t.Run("AnyStruct -> conforming restricted type", func(t *testing.T) {
+			t.Run("AnyStruct -> conforming intersection type", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -1950,12 +1846,12 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: SI {}
 	                `,
 					"AnyStruct",
-					"S{SI}",
+					"{SI}",
 					operation,
 				)
 			})
 
-			t.Run("AnyStruct -> non-conforming restricted type", func(t *testing.T) {
+			t.Run("AnyStruct -> non-conforming intersection type", func(t *testing.T) {
 
 				testStructCastInvalid(t,
 					`
@@ -1966,14 +1862,14 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct T: TI {}
 	                `,
 					"AnyStruct",
-					"T{TI}",
+					"{TI}",
 					operation,
 				)
 			})
 
-			// Supertype: Struct (unrestricted)
+			// Supertype: Struct
 
-			t.Run("restricted type -> unrestricted type: same struct", func(t *testing.T) {
+			t.Run("intersection type -> type: same struct", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -1981,13 +1877,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I {}
                     `,
-					"S{I}",
+					"{I}",
 					"S",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> conforming struct", func(t *testing.T) {
+			t.Run("intersection AnyStruct -> conforming struct", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -1995,13 +1891,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: SI {}
 	                `,
-					"AnyStruct{SI}",
+					"{SI}",
 					"S",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> non-conforming struct", func(t *testing.T) {
+			t.Run("intersection AnyStruct -> non-conforming struct", func(t *testing.T) {
 
 				testStructCastInvalid(t,
 					`
@@ -2011,13 +1907,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct T: SI {}
 	                `,
-					"AnyStruct{SI}",
+					"{SI}",
 					"T",
 					operation,
 				)
 			})
 
-			t.Run("AnyStruct -> unrestricted type: same type", func(t *testing.T) {
+			t.Run("AnyStruct -> type: same type", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2032,7 +1928,7 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 				)
 			})
 
-			t.Run("AnyStruct -> unrestricted type: different type", func(t *testing.T) {
+			t.Run("AnyStruct -> type: different type", func(t *testing.T) {
 
 				testStructCastInvalid(t,
 					`
@@ -2049,9 +1945,9 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 				)
 			})
 
-			// Supertype: restricted AnyStruct
+			// Supertype: intersection
 
-			t.Run("struct -> restricted AnyStruct with conformance restriction", func(t *testing.T) {
+			t.Run("struct -> intersection with conformance type", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2060,26 +1956,12 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: SI {}
 	                `,
 					"S",
-					"AnyStruct{SI}",
+					"{SI}",
 					operation,
 				)
 			})
 
-			t.Run("restricted type -> restricted AnyStruct with conformance in restriction", func(t *testing.T) {
-
-				testStructCastValid(t,
-					`
-	                  struct interface I {}
-
-	                  struct S: I {}
-	                `,
-					"S{I}",
-					"AnyStruct{I}",
-					operation,
-				)
-			})
-
-			t.Run("restricted type -> restricted AnyStruct with conformance not in restriction", func(t *testing.T) {
+			t.Run("intersection type -> intersection with conformance not in type", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2089,13 +1971,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"S{I1}",
-					"AnyStruct{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection -> intersection: fewer types", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2105,13 +1987,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"AnyStruct{I1, I2}",
-					"AnyStruct{I2}",
+					"{I1, I2}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct: more restrictions", func(t *testing.T) {
+			t.Run("intersection -> intersection: more types", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2121,13 +2003,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"AnyStruct{I1}",
-					"AnyStruct{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct: different restrictions, conforming", func(t *testing.T) {
+			t.Run("intersection -> intersection: different types, conforming", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2137,13 +2019,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"AnyStruct{I1}",
-					"AnyStruct{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct: different restrictions, non-conforming", func(t *testing.T) {
+			t.Run("intersection -> intersection: different types, non-conforming", func(t *testing.T) {
 
 				testStructCastInvalid(t,
 					`
@@ -2154,13 +2036,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: I1 {}
 
 	                `,
-					"AnyStruct{I1}",
-					"AnyStruct{I2}",
+					"{I1}",
+					"{I2}",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+			t.Run("intersection AnyStruct -> intersection AnyStruct with non-conformance type", func(t *testing.T) {
 
 				testStructCastInvalid(t,
 					`
@@ -2170,13 +2052,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1 {}
 	                `,
-					"AnyStruct{I1}",
-					"AnyStruct{I1, I2}",
+					"{I1}",
+					"{I1, I2}",
 					operation,
 				)
 			})
 
-			t.Run("AnyStruct -> restricted AnyStruct", func(t *testing.T) {
+			t.Run("AnyStruct -> intersection AnyStruct", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2185,14 +2067,14 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 	                  struct S: I {}
 	                `,
 					"AnyStruct",
-					"AnyStruct{I}",
+					"{I}",
 					operation,
 				)
 			})
 
 			// Supertype: AnyStruct
 
-			t.Run("restricted type -> AnyStruct", func(t *testing.T) {
+			t.Run("intersection type -> AnyStruct", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2202,13 +2084,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"S{I1}",
+					"{I1}",
 					"AnyStruct",
 					operation,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> AnyStruct", func(t *testing.T) {
+			t.Run("intersection -> AnyStruct", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2218,13 +2100,13 @@ func TestInterpretDynamicCastingStructType(t *testing.T) {
 
 	                  struct S: I1, I2 {}
 	                `,
-					"AnyStruct{I1}",
+					"{I1}",
 					"AnyStruct",
 					operation,
 				)
 			})
 
-			t.Run("unrestricted type -> AnyStruct", func(t *testing.T) {
+			t.Run("type -> AnyStruct", func(t *testing.T) {
 
 				testStructCastValid(t,
 					`
@@ -2410,26 +2292,9 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
 
-			// Supertype: Restricted type
+			// Supertype: Intersection type
 
-			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
-
-				testReferenceCastValid(t,
-					`
-                      resource interface I1 {}
-
-                      resource interface I2 {}
-
-                      resource R: I1, I2 {}
-                    `,
-					"auth &R{I1, I2}",
-					"&R{I2}",
-					operation,
-					true,
-				)
-			})
-
-			t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -2438,78 +2303,87 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
                       resource interface I2 {}
 
                       resource R: I1, I2 {}
+
+					  entitlement E
                     `,
-					"auth &R{I1}",
-					"&R{I1, I2}",
+					"auth(E) &{I1, I2}",
+					"&{I2}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
+
+				testReferenceCastValid(t,
+					`
+                      resource interface I1 {}
+
+                      resource interface I2 {}
+
+                      resource R: I1, I2 {}
+
+					  entitlement E
+                    `,
+					"auth(E) &{I1}",
+					"&{I1, I2}",
+					operation,
+					true,
+				)
+			})
+
+			t.Run("type -> intersection type: same resource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  resource interface I {}
 
 	                  resource R: I {}
+
+					  entitlement E
 	                `,
-					"auth &R",
-					"&R{I}",
+					"auth(E) &R",
+					"&{I}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> conforming restricted type", func(t *testing.T) {
+			t.Run("intersection AnyResource -> conforming intersection type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  resource interface RI {}
 
 	                  resource R: RI {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource{RI}",
-					"&R{RI}",
+					"auth(E) &{RI}",
+					"&{RI}",
 					operation,
 					true,
 				)
 			})
 
-			// TODO: should statically fail?
-			t.Run("restricted AnyResource -> non-conforming restricted type", func(t *testing.T) {
-
-				testReferenceCastInvalid(t,
-					`
-	                  resource interface RI {}
-
-	                  resource R: RI {}
-
-	                  resource T {}
-	                `,
-					"auth &AnyResource{RI}",
-					"&T{}",
-					operation,
-					true,
-				)
-			})
-
-			t.Run("AnyResource -> conforming restricted type", func(t *testing.T) {
+			t.Run("AnyResource -> conforming intersection type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  resource interface RI {}
 
 	                  resource R: RI {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource",
-					"&R{RI}",
+					"auth(E) &AnyResource",
+					"&{RI}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("AnyResource -> non-conforming restricted type", func(t *testing.T) {
+			t.Run("AnyResource -> non-conforming intersection type", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -2518,47 +2392,53 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface TI {}
 
 	                  resource T: TI {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource",
-					"&T{TI}",
+					"auth(E) &AnyResource",
+					"&{TI}",
 					operation,
 					true,
 				)
 			})
 
-			// Supertype: Resource (unrestricted)
+			// Supertype: Resource
 
-			t.Run("restricted type -> unrestricted type: same resource", func(t *testing.T) {
+			t.Run("intersection type -> type: same resource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  resource interface I {}
 
 	                  resource R: I {}
+
+					  entitlement E
 	                `,
-					"auth &R{I}",
+					"auth(E) &{I}",
 					"&R",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> conforming resource", func(t *testing.T) {
+			t.Run("intersection AnyResource -> conforming resource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  resource interface RI {}
 
 	                  resource R: RI {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource{RI}",
+					"auth(E) &{RI}",
 					"&R",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> non-conforming resource", func(t *testing.T) {
+			t.Run("intersection AnyResource -> non-conforming resource", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -2567,30 +2447,34 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource R: RI {}
 
 	                  resource T: RI {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource{RI}",
+					"auth(E) &{RI}",
 					"&T",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("AnyResource -> unrestricted type: same type", func(t *testing.T) {
+			t.Run("AnyResource -> type: same type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  resource interface RI {}
 
 	                  resource R: RI {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource",
+					"auth(E) &AnyResource",
 					"&R",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("AnyResource -> unrestricted type: different type", func(t *testing.T) {
+			t.Run("AnyResource -> type: different type", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -2599,46 +2483,52 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource R: RI {}
 
 	                  resource T: RI {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource",
+					"auth(E) &AnyResource",
 					"&T",
 					operation,
 					true,
 				)
 			})
 
-			// Supertype: restricted AnyResource
+			// Supertype: intersection AnyResource
 
-			t.Run("resource -> restricted AnyResource with conformance restriction", func(t *testing.T) {
+			t.Run("resource -> intersection AnyResource with conformance type", func(t *testing.T) {
 
 				testReferenceCastValid(t, `
 	                  resource interface RI {}
 
 	                  resource R: RI {}
+
+					  entitlement E
 	                `,
-					"auth &R",
-					"&AnyResource{RI}",
+					"auth(E) &R",
+					"&{RI}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted type -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
+			t.Run("intersection type -> intersection AnyResource with conformance in type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                   resource interface I {}
 
 	                   resource R: I {}
+
+					   entitlement E
 	                `,
-					"auth &R{I}",
-					"&AnyResource{I}",
+					"auth(E) &{I}",
+					"&{I}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted type -> restricted AnyResource with conformance not in restriction", func(t *testing.T) {
+			t.Run("intersection type -> intersection AnyResource with conformance not in type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -2647,15 +2537,17 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface I2 {}
 
 	                  resource R: I1, I2 {}
+
+					  entitlement E
                     `,
-					"auth &R{I1}",
-					"&AnyResource{I2}",
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection AnyResource -> intersection AnyResource: fewer types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -2664,15 +2556,17 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface I2 {}
 
 	                  resource R: I1, I2 {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource{I1, I2}",
-					"&AnyResource{I2}",
+					"auth(E) &{I1, I2}",
+					"&{I2}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource: more restrictions", func(t *testing.T) {
+			t.Run("intersection AnyResource -> intersection AnyResource: more types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -2681,15 +2575,17 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface I2 {}
 
 	                  resource R: I1, I2 {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource{I1}",
-					"&AnyResource{I1, I2}",
+					"auth(E) &{I1}",
+					"&{I1, I2}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource: different restrictions, conforming", func(t *testing.T) {
+			t.Run("intersection AnyResource -> intersection AnyResource: different types, conforming", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -2698,15 +2594,17 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface I2 {}
 
 	                  resource R: I1, I2 {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource{I1}",
-					"&AnyResource{I2}",
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource: different restrictions, non-conforming", func(t *testing.T) {
+			t.Run("intersection AnyResource -> intersection AnyResource: different types, non-conforming", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -2715,15 +2613,17 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface I2 {}
 
 	                  resource R: I1 {}
+
+					  entitlement E
 	                `,
-					"auth &AnyResource{I1}",
-					"&AnyResource{I2}",
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
+			t.Run("intersection AnyResource -> intersection AnyResource with non-conformance type", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -2732,24 +2632,26 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface I2 {}
 
 	                  resource R: I1 {}
-	                `,
-					"auth &AnyResource{I1}",
-					"&AnyResource{I1, I2}",
+	                entitlement E
+`,
+					"auth(E) &{I1}",
+					"&{I1, I2}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("AnyResource -> restricted AnyResource", func(t *testing.T) {
+			t.Run("AnyResource -> intersection AnyResource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  resource interface I {}
 
 	                  resource R: I {}
-	                `,
-					"auth &AnyResource",
-					"&AnyResource{I}",
+	                entitlement E
+`,
+					"auth(E) &AnyResource",
+					"&{I}",
 					operation,
 					true,
 				)
@@ -2757,7 +2659,7 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
 			// Supertype: AnyResource
 
-			t.Run("restricted type -> AnyResource", func(t *testing.T) {
+			t.Run("intersection type -> AnyResource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -2766,15 +2668,16 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface I2 {}
 
 	                  resource R: I1, I2 {}
-	                `,
-					"auth &R{I1}",
+	                entitlement E
+`,
+					"auth(E) &{I1}",
 					"&AnyResource",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> AnyResource", func(t *testing.T) {
+			t.Run("intersection -> AnyResource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -2783,15 +2686,16 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface I2 {}
 
 	                  resource R: I1, I2 {}
-	                `,
-					"auth &AnyResource{I1}",
+	                entitlement E
+`,
+					"auth(E) &{I1}",
 					"&AnyResource",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("unrestricted type -> AnyResource", func(t *testing.T) {
+			t.Run("type -> AnyResource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -2800,8 +2704,9 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 	                  resource interface I2 {}
 
 	                  resource R: I1, I2 {}
-                    `,
-					"auth &R",
+                    entitlement E
+`,
+					"auth(E) &R",
 					"&AnyResource",
 					operation,
 					true,
@@ -2819,26 +2724,9 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
 
-			// Supertype: Restricted type
+			// Supertype: Intersection type
 
-			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
-
-				testReferenceCastValid(t,
-					`
-                      struct interface I1 {}
-
-                      struct interface I2 {}
-
-                      struct S: I1, I2 {}
-                    `,
-					"auth &S{I1, I2}",
-					"&S{I2}",
-					operation,
-					false,
-				)
-			})
-
-			t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -2847,78 +2735,82 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
                       struct interface I2 {}
 
                       struct S: I1, I2 {}
-                    `,
-					"auth &S{I1}",
-					"&S{I1, I2}",
+                      entitlement E
+`,
+					"auth(E) &{I1, I2}",
+					"&{I2}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("unrestricted type -> restricted type: same struct", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: more types", func(t *testing.T) {
+
+				testReferenceCastValid(t,
+					`
+                      struct interface I1 {}
+
+                      struct interface I2 {}
+
+                      struct S: I1, I2 {}
+                    entitlement E
+`,
+					"auth(E) &{I1}",
+					"&{I1, I2}",
+					operation,
+					false,
+				)
+			})
+
+			t.Run("type -> intersection type: same struct", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  struct interface I {}
 
 	                  struct S: I {}
-	                `,
-					"auth &S",
-					"&S{I}",
+	                entitlement E
+`,
+					"auth(E) &S",
+					"&{I}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> conforming restricted type", func(t *testing.T) {
+			t.Run("intersection -> conforming intersection type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  struct interface SI {}
 
 	                  struct S: SI {}
-	                `,
-					"auth &AnyStruct{SI}",
-					"&S{SI}",
+	                  entitlement E
+`,
+					"auth(E) &{SI}",
+					"&{SI}",
 					operation,
 					false,
 				)
 			})
 
-			// TODO: should statically fail?
-			t.Run("restricted AnyStruct -> non-conforming restricted type", func(t *testing.T) {
-
-				testReferenceCastInvalid(t,
-					`
-	                  struct interface SI {}
-
-	                  struct S: SI {}
-
-	                  struct T {}
-	                `,
-					"auth &AnyStruct{SI}",
-					"&T{}",
-					operation,
-					false,
-				)
-			})
-
-			t.Run("AnyStruct -> conforming restricted type", func(t *testing.T) {
+			t.Run("AnyStruct -> conforming intersection type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  struct interface SI {}
 
 	                  struct S: SI {}
-	                `,
-					"auth &AnyStruct",
-					"&S{SI}",
+	                entitlement E
+`,
+					"auth(E) &AnyStruct",
+					"&{SI}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("AnyStruct -> non-conforming restricted type", func(t *testing.T) {
+			t.Run("AnyStruct -> non-conforming intersection type", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -2927,47 +2819,32 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct interface TI {}
 
 	                  struct T: TI {}
-	                `,
-					"auth &AnyStruct",
-					"&T{TI}",
+	                entitlement E
+`,
+					"auth(E) &AnyStruct",
+					"&{TI}",
 					operation,
 					false,
 				)
 			})
 
-			// Supertype: Struct (unrestricted)
-
-			t.Run("restricted type -> unrestricted type: same struct", func(t *testing.T) {
-
-				testReferenceCastValid(t,
-					`
-	                  struct interface I {}
-
-	                  struct S: I {}
-	                `,
-					"auth &S{I}",
-					"&S",
-					operation,
-					false,
-				)
-			})
-
-			t.Run("restricted AnyStruct -> conforming struct", func(t *testing.T) {
+			t.Run("intersection -> conforming struct", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  struct interface SI {}
 
 	                  struct S: SI {}
-	                `,
-					"auth &AnyStruct{SI}",
+	                entitlement E
+`,
+					"auth(E) &{SI}",
 					"&S",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> non-conforming struct", func(t *testing.T) {
+			t.Run("intersection AnyStruct -> non-conforming struct", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -2976,30 +2853,32 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: SI {}
 
 	                  struct T: SI {}
-	                `,
-					"auth &AnyStruct{SI}",
+	                entitlement E
+`,
+					"auth(E) &{SI}",
 					"&T",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("AnyStruct -> unrestricted type: same type", func(t *testing.T) {
+			t.Run("AnyStruct -> type: same type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  struct interface SI {}
 
 	                  struct S: SI {}
-	                `,
-					"auth &AnyStruct",
+	                entitlement E
+`,
+					"auth(E) &AnyStruct",
 					"&S",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("AnyStruct -> unrestricted type: different type", func(t *testing.T) {
+			t.Run("AnyStruct -> type: different type", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -3008,46 +2887,32 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct S: SI {}
 
 	                  struct T: SI {}
-	                `,
-					"auth &AnyStruct",
+	                entitlement E
+`,
+					"auth(E) &AnyStruct",
 					"&T",
 					operation,
 					false,
 				)
 			})
 
-			// Supertype: restricted AnyStruct
+			// Supertype: intersection
 
-			t.Run("struct -> restricted AnyStruct with conformance restriction", func(t *testing.T) {
+			t.Run("struct -> intersection with conformance type", func(t *testing.T) {
 
 				testReferenceCastValid(t, `
 	                  struct interface SI {}
 
 	                  struct S: SI {}
-	                `,
-					"auth &S",
-					"&AnyStruct{SI}",
+	                entitlement E
+`,
+					"auth(E) &S",
+					"&{SI}",
 					operation,
 					false,
 				)
 			})
-
-			t.Run("restricted type -> restricted AnyStruct with conformance in restriction", func(t *testing.T) {
-
-				testReferenceCastValid(t,
-					`
-	                   struct interface I {}
-
-	                   struct S: I {}
-	                `,
-					"auth &S{I}",
-					"&AnyStruct{I}",
-					operation,
-					false,
-				)
-			})
-
-			t.Run("restricted type -> restricted AnyStruct with conformance not in restriction", func(t *testing.T) {
+			t.Run("intersection type -> intersection AnyStruct with conformance not in type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3056,15 +2921,16 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct interface I2 {}
 
 	                  struct S: I1, I2 {}
-                    `,
-					"auth &S{I1}",
-					"&AnyStruct{I2}",
+                    entitlement E
+`,
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection -> intersection: fewer types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3073,15 +2939,16 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct interface I2 {}
 
 	                  struct S: I1, I2 {}
-	                `,
-					"auth &AnyStruct{I1, I2}",
-					"&AnyStruct{I2}",
+	                entitlement E
+`,
+					"auth(E) &{I1, I2}",
+					"&{I2}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct: more restrictions", func(t *testing.T) {
+			t.Run("intersection -> intersection: more types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3090,15 +2957,16 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct interface I2 {}
 
 	                  struct S: I1, I2 {}
-	                `,
-					"auth &AnyStruct{I1}",
-					"&AnyStruct{I1, I2}",
+	                entitlement E
+`,
+					"auth(E) &{I1}",
+					"&{I1, I2}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct: different restrictions, conforming", func(t *testing.T) {
+			t.Run("intersection -> intersection: different types, conforming", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3107,15 +2975,16 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct interface I2 {}
 
 	                  struct S: I1, I2 {}
-	                `,
-					"auth &AnyStruct{I1}",
-					"&AnyStruct{I2}",
+	                entitlement E
+`,
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct: different restrictions, non-conforming", func(t *testing.T) {
+			t.Run("intersection -> intersection: different types, non-conforming", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -3124,15 +2993,16 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct interface I2 {}
 
 	                  struct S: I1 {}
-	                `,
-					"auth &AnyStruct{I1}",
-					"&AnyStruct{I2}",
+	                entitlement E
+`,
+					"auth(E) &{I1}",
+					"&{I2}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+			t.Run("intersection -> intersection with non-conformance type", func(t *testing.T) {
 
 				testReferenceCastInvalid(t,
 					`
@@ -3141,24 +3011,26 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct interface I2 {}
 
 	                  struct S: I1 {}
-	                `,
-					"auth &AnyStruct{I1}",
-					"&AnyStruct{I1, I2}",
+	                entitlement E
+`,
+					"auth(E) &{I1}",
+					"&{I1, I2}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("AnyStruct -> restricted AnyStruct", func(t *testing.T) {
+			t.Run("AnyStruct -> intersection", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
 	                  struct interface I {}
 
 	                  struct S: I {}
-	                `,
-					"auth &AnyStruct",
-					"&AnyStruct{I}",
+	                entitlement E
+`,
+					"auth(E) &AnyStruct",
+					"&{I}",
 					operation,
 					false,
 				)
@@ -3166,7 +3038,7 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 
 			// Supertype: AnyStruct
 
-			t.Run("restricted type -> AnyStruct", func(t *testing.T) {
+			t.Run("intersection type -> AnyStruct", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3175,15 +3047,16 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct interface I2 {}
 
 	                  struct S: I1, I2 {}
-	                `,
-					"auth &S{I1}",
+	                entitlement E
+`,
+					"auth(E) &{I1}",
 					"&AnyStruct",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> AnyStruct", func(t *testing.T) {
+			t.Run("type -> AnyStruct", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3192,25 +3065,9 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 	                  struct interface I2 {}
 
 	                  struct S: I1, I2 {}
-	                `,
-					"auth &AnyStruct{I1}",
-					"&AnyStruct",
-					operation,
-					false,
-				)
-			})
-
-			t.Run("unrestricted type -> AnyStruct", func(t *testing.T) {
-
-				testReferenceCastValid(t,
-					`
-	                  struct interface I1 {}
-
-	                  struct interface I2 {}
-
-	                  struct S: I1, I2 {}
-                    `,
-					"auth &S",
+                    entitlement E
+`,
+					"auth(E) &S",
 					"&AnyStruct",
 					operation,
 					false,
@@ -3227,9 +3084,9 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
 	for operation := range dynamicCastingOperations {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
-			// Supertype: Restricted type
+			// Supertype: Intersection type
 
-			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3239,14 +3096,14 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
 
                       resource R: I1, I2 {}
                     `,
-					"&R{I1, I2}",
-					"&R{I2}",
+					"&{I1, I2}",
+					"&{I2}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
+			t.Run("type -> intersection type: same resource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3255,15 +3112,15 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
                       resource R: I {}
                     `,
 					"&R",
-					"&R{I}",
+					"&{I}",
 					operation,
 					true,
 				)
 			})
 
-			// Supertype: restricted AnyResource
+			// Supertype: intersection AnyResource
 
-			t.Run("resource -> restricted AnyResource with conformance restriction", func(t *testing.T) {
+			t.Run("resource -> intersection with conformance type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3272,13 +3129,13 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
                       resource R: RI {}
                     `,
 					"&R",
-					"&AnyResource{RI}",
+					"&{RI}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted type -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
+			t.Run("intersection type -> intersection with conformance in type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3286,14 +3143,14 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
 
                       resource R: I {}
                     `,
-					"&R{I}",
-					"&AnyResource{I}",
+					"&{I}",
+					"&{I}",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> restricted AnyResource: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection -> intersection: fewer types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3303,8 +3160,8 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
 
                       resource R: I1, I2 {}
                     `,
-					"&AnyResource{I1, I2}",
-					"&AnyResource{I2}",
+					"&{I1, I2}",
+					"&{I2}",
 					operation,
 					true,
 				)
@@ -3312,7 +3169,7 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
 
 			// Supertype: AnyResource
 
-			t.Run("restricted type -> AnyResource", func(t *testing.T) {
+			t.Run("intersection type -> AnyResource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3322,31 +3179,14 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
 
                       resource R: I1, I2 {}
                     `,
-					"&R{I1}",
+					"&{I1}",
 					"&AnyResource",
 					operation,
 					true,
 				)
 			})
 
-			t.Run("restricted AnyResource -> AnyResource", func(t *testing.T) {
-
-				testReferenceCastValid(t,
-					`
-                      resource interface I1 {}
-
-                      resource interface I2 {}
-
-                      resource R: I1, I2 {}
-                    `,
-					"&AnyResource{I1}",
-					"&AnyResource",
-					operation,
-					true,
-				)
-			})
-
-			t.Run("unrestricted type -> AnyResource", func(t *testing.T) {
+			t.Run("type -> AnyResource", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3373,9 +3213,9 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
 	for operation := range dynamicCastingOperations {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
-			// Supertype: Restricted type
+			// Supertype: Intersection type
 
-			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection type -> intersection type: fewer types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3385,14 +3225,14 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I1, I2 {}
                     `,
-					"&S{I1, I2}",
-					"&S{I2}",
+					"&{I1, I2}",
+					"&{I2}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("unrestricted type -> restricted type: same struct", func(t *testing.T) {
+			t.Run("type -> intersection type: same struct", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3401,15 +3241,15 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
                       struct S: I {}
                     `,
 					"&S",
-					"&S{I}",
+					"&{I}",
 					operation,
 					false,
 				)
 			})
 
-			// Supertype: restricted AnyStruct
+			// Supertype: intersection AnyStruct
 
-			t.Run("struct -> restricted AnyStruct with conformance restriction", func(t *testing.T) {
+			t.Run("struct -> intersection with conformance type", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3418,28 +3258,13 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
                       struct S: RI {}
                     `,
 					"&S",
-					"&AnyStruct{RI}",
+					"&{RI}",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted type -> restricted AnyStruct with conformance in restriction", func(t *testing.T) {
-
-				testReferenceCastValid(t,
-					`
-                      struct interface I {}
-
-                      struct S: I {}
-                    `,
-					"&S{I}",
-					"&AnyStruct{I}",
-					operation,
-					false,
-				)
-			})
-
-			t.Run("restricted AnyStruct -> restricted AnyStruct: fewer restrictions", func(t *testing.T) {
+			t.Run("intersection -> intersection: fewer types", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3449,8 +3274,8 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I1, I2 {}
                     `,
-					"&AnyStruct{I1, I2}",
-					"&AnyStruct{I2}",
+					"&{I1, I2}",
+					"&{I2}",
 					operation,
 					false,
 				)
@@ -3458,7 +3283,7 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
 
 			// Supertype: AnyStruct
 
-			t.Run("restricted type -> AnyStruct", func(t *testing.T) {
+			t.Run("intersection type -> AnyStruct", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3468,31 +3293,14 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
 
                       struct S: I1, I2 {}
                     `,
-					"&S{I1}",
+					"&{I1}",
 					"&AnyStruct",
 					operation,
 					false,
 				)
 			})
 
-			t.Run("restricted AnyStruct -> AnyStruct", func(t *testing.T) {
-
-				testReferenceCastValid(t,
-					`
-                      struct interface I1 {}
-
-                      struct interface I2 {}
-
-                      struct S: I1, I2 {}
-                    `,
-					"&AnyStruct{I1}",
-					"&AnyStruct",
-					operation,
-					false,
-				)
-			})
-
-			t.Run("unrestricted type -> AnyStruct", func(t *testing.T) {
+			t.Run("type -> AnyStruct", func(t *testing.T) {
 
 				testReferenceCastValid(t,
 					`
@@ -3516,117 +3324,126 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 	t.Parallel()
 
-	structType := &sema.CompositeType{
-		Location:   TestLocation,
-		Identifier: "S",
-		Kind:       common.CompositeKindStructure,
-	}
+	test := func(
+		name string,
+		newCapabilityValue func(borrowType interpreter.StaticType) interpreter.CapabilityValue,
+	) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	types := []sema.Type{
-		&sema.CapabilityType{
-			BorrowType: &sema.ReferenceType{
-				Type: structType,
-			},
-		},
-		&sema.CapabilityType{
-			BorrowType: &sema.ReferenceType{
-				Type: sema.AnyStructType,
-			},
-		},
-		&sema.CapabilityType{},
-		sema.AnyStructType,
-	}
+			structType := &sema.CompositeType{
+				Location:   TestLocation,
+				Identifier: "S",
+				Kind:       common.CompositeKindStructure,
+			}
 
-	capabilityValue := &interpreter.StorageCapabilityValue{
-		Address: interpreter.AddressValue{},
-		Path:    interpreter.EmptyPathValue,
-		BorrowType: interpreter.ConvertSemaToStaticType(
-			nil,
-			&sema.ReferenceType{
-				Type: structType,
-			},
-		),
-	}
+			capabilityValue := newCapabilityValue(
+				interpreter.ConvertSemaToStaticType(
+					nil,
+					&sema.ReferenceType{
+						Type:          structType,
+						Authorization: sema.UnauthorizedAccess,
+					},
+				),
+			)
 
-	capabilityValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "cap",
-		Type: &sema.CapabilityType{
-			BorrowType: &sema.ReferenceType{
-				Type: structType,
-			},
-		},
-		Value: capabilityValue,
-		Kind:  common.DeclarationKindConstant,
-	}
+			types := []sema.Type{
+				&sema.CapabilityType{
+					BorrowType: &sema.ReferenceType{
+						Type:          structType,
+						Authorization: sema.UnauthorizedAccess,
+					},
+				},
+				&sema.CapabilityType{
+					BorrowType: &sema.ReferenceType{
+						Type:          sema.AnyStructType,
+						Authorization: sema.UnauthorizedAccess,
+					},
+				},
+				&sema.CapabilityType{},
+				sema.AnyStructType,
+			}
 
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(capabilityValueDeclaration)
+			capabilityValueDeclaration := stdlib.StandardLibraryValue{
+				Name: "cap",
+				Type: &sema.CapabilityType{
+					BorrowType: &sema.ReferenceType{
+						Type:          structType,
+						Authorization: sema.UnauthorizedAccess,
+					},
+				},
+				Value: capabilityValue,
+				Kind:  common.DeclarationKindConstant,
+			}
 
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, capabilityValueDeclaration)
+			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+			baseValueActivation.DeclareValue(capabilityValueDeclaration)
 
-	options := ParseCheckAndInterpretOptions{
-		CheckerConfig: &sema.Config{
-			BaseValueActivation: baseValueActivation,
-		},
-		Config: &interpreter.Config{
-			BaseActivation: baseActivation,
-		},
-	}
+			baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+			interpreter.Declare(baseActivation, capabilityValueDeclaration)
 
-	for operation, returnsOptional := range dynamicCastingOperations {
+			options := ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+				Config: &interpreter.Config{
+					BaseActivation: baseActivation,
+				},
+			}
 
-		t.Run(operation.Symbol(), func(t *testing.T) {
+			for operation, returnsOptional := range dynamicCastingOperations {
 
-			for _, fromType := range types {
-				for _, targetType := range types {
+				t.Run(operation.Symbol(), func(t *testing.T) {
 
-					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
+					for _, fromType := range types {
+						for _, targetType := range types {
 
-						inter, err := parseCheckAndInterpretWithOptions(t,
-							fmt.Sprintf(
-								`
+							t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
+
+								inter, err := parseCheckAndInterpretWithOptions(t,
+									fmt.Sprintf(
+										`
                                   struct S {}
                                   let x: %[1]s = cap
                                   let y: %[2]s? = x %[3]s %[2]s
                                 `,
-								fromType,
-								targetType,
-								operation.Symbol(),
-							),
-							options,
-						)
-						require.NoError(t, err)
+										fromType,
+										targetType,
+										operation.Symbol(),
+									),
+									options,
+								)
+								require.NoError(t, err)
 
-						AssertValuesEqual(
-							t,
-							inter,
-							capabilityValue,
-							inter.Globals.Get("x").GetValue(),
-						)
+								AssertValuesEqual(
+									t,
+									inter,
+									capabilityValue,
+									inter.Globals.Get("x").GetValue(),
+								)
 
-						AssertValuesEqual(
-							t,
-							inter,
-							interpreter.NewUnmeteredSomeValueNonCopying(
-								capabilityValue,
-							),
-							inter.Globals.Get("y").GetValue(),
-						)
-					})
-				}
+								AssertValuesEqual(
+									t,
+									inter,
+									interpreter.NewUnmeteredSomeValueNonCopying(
+										capabilityValue,
+									),
+									inter.Globals.Get("y").GetValue(),
+								)
+							})
+						}
 
-				for _, otherType := range []sema.Type{
-					sema.StringType,
-					sema.VoidType,
-					sema.BoolType,
-				} {
+						for _, otherType := range []sema.Type{
+							sema.StringType,
+							sema.VoidType,
+							sema.BoolType,
+						} {
 
-					t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
+							t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
 
-						inter, err := parseCheckAndInterpretWithOptions(t,
-							fmt.Sprintf(
-								`
+								inter, err := parseCheckAndInterpretWithOptions(t,
+									fmt.Sprintf(
+										`
                                   struct S {}
 
 		                          fun test(): Capability<&%[2]s>? {
@@ -3634,34 +3451,56 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		                              return x %[3]s Capability<&%[2]s>
 		                          }
 		                        `,
-								fromType,
-								otherType,
-								operation.Symbol(),
-							),
-							options,
-						)
-						require.NoError(t, err)
+										fromType,
+										otherType,
+										operation.Symbol(),
+									),
+									options,
+								)
+								require.NoError(t, err)
 
-						result, err := inter.Invoke("test")
+								result, err := inter.Invoke("test")
 
-						if returnsOptional {
-							require.NoError(t, err)
-							AssertValuesEqual(
-								t,
-								inter,
-								interpreter.Nil,
-								result,
-							)
-						} else {
-							RequireError(t, err)
+								if returnsOptional {
+									require.NoError(t, err)
+									AssertValuesEqual(
+										t,
+										inter,
+										interpreter.Nil,
+										result,
+									)
+								} else {
+									RequireError(t, err)
 
-							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+									require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+								}
+							})
 						}
-					})
-				}
+					}
+				})
 			}
 		})
 	}
+
+	test(
+		"path capability",
+		func(borrowType interpreter.StaticType) interpreter.CapabilityValue {
+			return interpreter.NewUnmeteredPathCapabilityValue(
+				interpreter.AddressValue{},
+				interpreter.EmptyPathValue,
+				borrowType,
+			)
+		},
+	)
+	test("path capability",
+		func(borrowType interpreter.StaticType) interpreter.CapabilityValue {
+			return interpreter.NewUnmeteredIDCapabilityValue(
+				4,
+				interpreter.AddressValue{},
+				borrowType,
+			)
+		},
+	)
 }
 
 func TestInterpretResourceConstructorCast(t *testing.T) {
@@ -3829,7 +3668,7 @@ func TestInterpretReferenceCasting(t *testing.T) {
             fun test() {
                 let x = bar()
                 let y = [&x as &AnyStruct]
-                let z = y as! [&bar{foo}]
+                let z = y as! [&{foo}]
             }
 
             struct interface foo {}
@@ -3852,7 +3691,7 @@ func TestInterpretReferenceCasting(t *testing.T) {
             fun test() {
                 let x = bar()
                 let y = {"a": &x as &AnyStruct}
-                let z = y as! {String: &bar{foo}}
+                let z = y as! {String: &{foo}}
             }
 
             struct interface foo {}

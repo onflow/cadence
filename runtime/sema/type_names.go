@@ -42,10 +42,12 @@ const (
 	UInt128TypeName = "UInt128"
 	UInt256TypeName = "UInt256"
 
-	Word8TypeName  = "Word8"
-	Word16TypeName = "Word16"
-	Word32TypeName = "Word32"
-	Word64TypeName = "Word64"
+	Word8TypeName   = "Word8"
+	Word16TypeName  = "Word16"
+	Word32TypeName  = "Word32"
+	Word64TypeName  = "Word64"
+	Word128TypeName = "Word128"
+	Word256TypeName = "Word256"
 
 	Fix64TypeName  = "Fix64"
 	UFix64TypeName = "UFix64"

@@ -186,7 +186,6 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				{sema.BoolType, "1", "2", nil},
 				{sema.BoolType, "1.2", "3.4", nil},
 				{sema.BoolType, "true", "2", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "1.2", "3", []error{
@@ -196,20 +195,15 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "true", "1.2", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "1", "true", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{sema.BoolType, "1.2", "true", []error{
-					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{sema.BoolType, "true", "false", []error{
-					&sema.InvalidBinaryOperandsError{},
-				}},
+				{sema.BoolType, "true", "false", nil},
 			},
 		},
 		{
@@ -328,6 +322,84 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 	}
 }
 
+type operationWithTypeTest struct {
+	ty                  sema.Type
+	left, right         string
+	leftType, rightType string
+	expectedErrors      []error
+}
+
+type operationWithTypeTests struct {
+	operations []ast.Operation
+	tests      []operationWithTypeTest
+}
+
+func TestCheckNonIntegerComparisonOperations(t *testing.T) {
+	t.Parallel()
+
+	allOperationTests := []operationWithTypeTests{
+		{
+			operations: []ast.Operation{
+				ast.OperationLess,
+				ast.OperationLessEqual,
+				ast.OperationGreater,
+				ast.OperationGreaterEqual,
+			},
+			tests: []operationWithTypeTest{
+				{sema.BoolType, "false", "true", "Bool", "Bool", nil},
+				{sema.BoolType, "false", "1", "Bool", "Int", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{sema.BoolType, "\"a\"", "\"b\"", "Character", "Character", nil},
+				{sema.BoolType, "1.2", "\"b\"", "Fix64", "Character", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{sema.BoolType, "\"\"", "\"\"", "String", "String", nil},
+				{sema.BoolType, "\"\"", "\"b\"", "String", "String", nil},
+				{sema.BoolType, "\"xyz\"", "\"b\"", "String", "String", nil},
+				{sema.BoolType, "\"x\"", "\"b\"", "Character", "String", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{sema.BoolType, "1.2", "\"bcd\"", "Fix64", "String", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
+			},
+		},
+	}
+
+	for _, operationTests := range allOperationTests {
+		for _, operation := range operationTests.operations {
+			for _, test := range operationTests.tests {
+
+				testName := fmt.Sprintf(
+					"%s / %s %s %s",
+					test.ty, test.left, operation.Symbol(), test.right,
+				)
+
+				t.Run(testName, func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`fun test(): %s { 
+								let a: %s = %s
+								let b: %s = %s
+								return a %s b 
+							}`,
+							test.ty, test.leftType, test.left, test.rightType, test.right, operation.Symbol(),
+						),
+					)
+
+					errs := RequireCheckerErrors(t, err, len(test.expectedErrors))
+
+					for i, expectedErr := range test.expectedErrors {
+						assert.IsType(t, expectedErr, errs[i])
+					}
+				})
+			}
+		}
+	}
+}
+
 func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
 
 	t.Parallel()
@@ -354,9 +426,9 @@ func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
 		},
 	}
 
-	for _, ty := range append(
-		sema.AllSignedIntegerTypes[:],
-		sema.AllSignedFixedPointTypes...,
+	for _, ty := range common.Concat(
+		sema.AllSignedIntegerTypes,
+		sema.AllSignedFixedPointTypes,
 	) {
 
 		if ty == sema.IntType {
@@ -372,9 +444,9 @@ func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
 		})
 	}
 
-	for _, ty := range append(
-		sema.AllUnsignedIntegerTypes[:],
-		sema.AllUnsignedFixedPointTypes...,
+	for _, ty := range common.Concat(
+		sema.AllUnsignedIntegerTypes,
+		sema.AllUnsignedFixedPointTypes,
 	) {
 
 		if ty == sema.UIntType || strings.HasPrefix(ty.String(), "Word") {

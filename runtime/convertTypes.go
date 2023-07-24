@@ -68,8 +68,8 @@ func ExportMeteredType(
 			return cadence.TheAddressType
 		case *sema.ReferenceType:
 			return exportReferenceType(gauge, t, results)
-		case *sema.RestrictedType:
-			return exportRestrictedType(gauge, t, results)
+		case *sema.IntersectionType:
+			return exportIntersectionType(gauge, t, results)
 		case *sema.CapabilityType:
 			return exportCapabilityType(gauge, t, results)
 		}
@@ -123,6 +123,10 @@ func ExportMeteredType(
 			return cadence.TheWord32Type
 		case sema.Word64Type:
 			return cadence.TheWord64Type
+		case sema.Word128Type:
+			return cadence.TheWord128Type
+		case sema.Word256Type:
+			return cadence.TheWord256Type
 		case sema.Fix64Type:
 			return cadence.TheFix64Type
 		case sema.UFix64Type:
@@ -462,6 +466,37 @@ func exportFunctionType(
 	)
 }
 
+func exportAuthorization(
+	gauge common.MemoryGauge,
+	access sema.Access,
+) cadence.Authorization {
+	switch access := access.(type) {
+	case sema.PrimitiveAccess:
+		if access.Equal(sema.UnauthorizedAccess) {
+			return cadence.UnauthorizedAccess
+		}
+	case sema.EntitlementMapAccess:
+		common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindCadenceEntitlementMapAccess))
+		return cadence.EntitlementMapAuthorization{
+			TypeID: access.Type.ID(),
+		}
+	case sema.EntitlementSetAccess:
+		common.UseMemory(gauge, common.MemoryUsage{
+			Kind:   common.MemoryKindCadenceEntitlementSetAccess,
+			Amount: uint64(access.Entitlements.Len()),
+		})
+		var entitlements []common.TypeID
+		access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
+			entitlements = append(entitlements, key.ID())
+		})
+		return cadence.EntitlementSetAuthorization{
+			Entitlements: entitlements,
+			Kind:         cadence.EntitlementSetKind(access.SetKind),
+		}
+	}
+	panic(fmt.Sprintf("cannot export authorization with access %T", access))
+}
+
 func exportReferenceType(
 	gauge common.MemoryGauge,
 	t *sema.ReferenceType,
@@ -471,29 +506,26 @@ func exportReferenceType(
 
 	return cadence.NewMeteredReferenceType(
 		gauge,
-		t.Authorized,
+		exportAuthorization(gauge, t.Authorization),
 		convertedType,
 	)
 }
 
-func exportRestrictedType(
+func exportIntersectionType(
 	gauge common.MemoryGauge,
-	t *sema.RestrictedType,
+	t *sema.IntersectionType,
 	results map[sema.TypeID]cadence.Type,
-) *cadence.RestrictedType {
+) *cadence.IntersectionType {
 
-	convertedType := ExportMeteredType(gauge, t.Type, results)
+	intersectionTypes := make([]cadence.Type, len(t.Types))
 
-	restrictions := make([]cadence.Type, len(t.Restrictions))
-
-	for i, restriction := range t.Restrictions {
-		restrictions[i] = ExportMeteredType(gauge, restriction, results)
+	for i, typ := range t.Types {
+		intersectionTypes[i] = ExportMeteredType(gauge, typ, results)
 	}
 
-	return cadence.NewMeteredRestrictedType(
+	return cadence.NewMeteredIntersectionType(
 		gauge,
-		convertedType,
-		restrictions,
+		intersectionTypes,
 	)
 }
 
@@ -529,6 +561,18 @@ func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType
 		t.CompositeTypeQualifiedIdentifier(),
 		"", // intentionally empty
 	)
+}
+
+func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorization) interpreter.Authorization {
+	switch auth := auth.(type) {
+	case cadence.Unauthorized:
+		return interpreter.UnauthorizedAccess
+	case cadence.EntitlementMapAuthorization:
+		return interpreter.NewEntitlementMapAuthorization(memoryGauge, auth.TypeID)
+	case cadence.EntitlementSetAuthorization:
+		return interpreter.NewEntitlementSetAuthorization(memoryGauge, auth.Entitlements, sema.EntitlementSetKind(auth.Kind))
+	}
+	panic(fmt.Sprintf("cannot import authorization of type %T", auth))
 }
 
 func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.StaticType {
@@ -603,6 +647,10 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord32)
 	case cadence.Word64Type:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord64)
+	case cadence.Word128Type:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord128)
+	case cadence.Word256Type:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord256)
 	case cadence.Fix64Type:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeFix64)
 	case cadence.UFix64Type:
@@ -634,23 +682,21 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case *cadence.ReferenceType:
 		return interpreter.NewReferenceStaticType(
 			memoryGauge,
-			t.Authorized,
+			importAuthorization(memoryGauge, t.Authorization),
 			ImportType(memoryGauge, t.Type),
-			nil,
 		)
-	case *cadence.RestrictedType:
-		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))
-		for _, restriction := range t.Restrictions {
-			intf, ok := restriction.(cadence.InterfaceType)
+	case *cadence.IntersectionType:
+		types := make([]interpreter.InterfaceStaticType, 0, len(t.Types))
+		for _, typ := range t.Types {
+			intf, ok := typ.(cadence.InterfaceType)
 			if !ok {
 				panic(fmt.Sprintf("cannot export type of type %T", t))
 			}
-			restrictions = append(restrictions, importInterfaceType(memoryGauge, intf))
+			types = append(types, importInterfaceType(memoryGauge, intf))
 		}
-		return interpreter.NewRestrictedStaticType(
+		return interpreter.NewIntersectionStaticType(
 			memoryGauge,
-			ImportType(memoryGauge, t.Type),
-			restrictions,
+			types,
 		)
 	case cadence.BlockType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeBlock)
@@ -681,6 +727,6 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 	case cadence.DeployedContractType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeDeployedContract)
 	default:
-		panic(fmt.Sprintf("cannot export type of type %T", t))
+		panic(fmt.Sprintf("cannot import type of type %T", t))
 	}
 }

@@ -107,13 +107,13 @@ func TestCheckComposite(t *testing.T) {
 				fmt.Sprintf(
 					`
                       %s Test %s {
-                          pub(set) var foo: Int
+                          access(all) var foo: Int
 
                           init(foo: Int) {
                               self.foo = foo
                           }
 
-                          pub fun getFoo(): Int {
+                          access(all) fun getFoo(): Int {
                               return self.foo
                           }
                       }
@@ -847,7 +847,7 @@ func TestCheckInvalidResourceFieldWithMissingResourceAnnotation(t *testing.T) {
 
 			annotationType := "Test"
 			if isInterface {
-				annotationType = "AnyResource{Test}"
+				annotationType = "{Test}"
 			}
 
 			_, err := ParseAndCheck(t,
@@ -2208,7 +2208,7 @@ func TestCheckInvalidStructureFunctionWithMissingBody(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
         struct Test {
-            pub fun getFoo(): Int
+            access(all) fun getFoo(): Int
         }
 	`)
 

@@ -47,6 +47,7 @@ type SimpleType struct {
 	Importable          bool
 	Exportable          bool
 	Equatable           bool
+	Comparable          bool
 	Storable            bool
 	IsResource          bool
 }
@@ -93,6 +94,10 @@ func (t *SimpleType) IsEquatable() bool {
 	return t.Equatable
 }
 
+func (t *SimpleType) IsComparable() bool {
+	return t.Comparable
+}
+
 func (t *SimpleType) IsExportable(_ map[*Member]bool) bool {
 	return t.Exportable
 }
@@ -105,7 +110,7 @@ func (*SimpleType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *SimpleType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *SimpleType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
@@ -115,6 +120,10 @@ func (*SimpleType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err erro
 
 func (t *SimpleType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (t *SimpleType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	return f(t)
 }
 
 func (t *SimpleType) GetMembers() map[string]MemberResolver {

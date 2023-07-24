@@ -104,15 +104,15 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	const fooContractV1 = `
-        pub contract Foo {
+        access(all) contract Foo {
             init() {}
-            pub fun hello() {}
+            access(all) fun hello() {}
         }
     `
 	const barContractV1 = `
         import Foo from 0x01
 
-        pub contract Bar {
+        access(all) contract Bar {
             init() {
                 Foo.hello()
             }
@@ -120,16 +120,16 @@ func TestContractUpdateWithDependencies(t *testing.T) {
     `
 
 	const fooContractV2 = `
-        pub contract Foo {
+        access(all) contract Foo {
             init() {}
-            pub fun hello(_ a: Int) {}
+            access(all) fun hello(_ a: Int) {}
         }
     `
 
 	const barContractV2 = `
         import Foo from 0x01
 
-        pub contract Bar {
+        access(all) contract Bar {
             init() {
                 Foo.hello(5)
             }
@@ -225,9 +225,9 @@ func TestContractUpdateWithPrecedingIdentifiers(t *testing.T) {
 	}
 
 	const fooContractV1 = `
-        pub contract Foo {
+        access(all) contract Foo {
             // NOTE: invalid preceding identifier in member declaration
-            bar pub let foo: Int
+            bar access(all) let foo: Int
 
             init() {
                 self.foo = 1
@@ -236,8 +236,8 @@ func TestContractUpdateWithPrecedingIdentifiers(t *testing.T) {
     `
 
 	const fooContractV2 = `
-        pub contract Foo {
-            pub let foo: Int
+        access(all) contract Foo {
+            access(all) let foo: Int
 
             init() {
                 self.foo = 1

@@ -39,7 +39,8 @@ const (
 	MemoryKindOptionalValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
-	MemoryKindStorageCapabilityValue
+	MemoryKindIDCapabilityValue
+	MemoryKindPathCapabilityValue
 	MemoryKindPathLinkValue
 	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
@@ -51,6 +52,8 @@ const (
 	MemoryKindBigInt
 	MemoryKindSimpleCompositeValue
 	MemoryKindPublishedValue
+	MemoryKindStorageCapabilityControllerValue
+	MemoryKindAccountCapabilityControllerValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
@@ -70,7 +73,9 @@ const (
 	MemoryKindConstantSizedStaticType
 	MemoryKindDictionaryStaticType
 	MemoryKindOptionalStaticType
-	MemoryKindRestrictedStaticType
+	MemoryKindIntersectionStaticType
+	MemoryKindEntitlementSetStaticAccess
+	MemoryKindEntitlementMapStaticAccess
 	MemoryKindReferenceStaticType
 	MemoryKindCapabilityStaticType
 	MemoryKindFunctionStaticType
@@ -104,7 +109,8 @@ const (
 	MemoryKindCadenceAccountLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
-	MemoryKindCadenceStorageCapabilityValue
+	MemoryKindCadenceIDCapabilityValue
+	MemoryKindCadencePathCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
@@ -124,8 +130,10 @@ const (
 	MemoryKindCadenceResourceInterfaceType
 	MemoryKindCadenceContractInterfaceType
 	MemoryKindCadenceFunctionType
+	MemoryKindCadenceEntitlementSetAccess
+	MemoryKindCadenceEntitlementMapAccess
 	MemoryKindCadenceReferenceType
-	MemoryKindCadenceRestrictedType
+	MemoryKindCadenceIntersectionType
 	MemoryKindCadenceCapabilityType
 	MemoryKindCadenceEnumType
 
@@ -167,6 +175,9 @@ const (
 	MemoryKindCompositeDeclaration
 	MemoryKindAttachmentDeclaration
 	MemoryKindInterfaceDeclaration
+	MemoryKindEntitlementDeclaration
+	MemoryKindEntitlementMappingElement
+	MemoryKindEntitlementMappingDeclaration
 	MemoryKindEnumCaseDeclaration
 	MemoryKindFieldDeclaration
 	MemoryKindTransactionDeclaration
@@ -219,7 +230,7 @@ const (
 	MemoryKindNominalType
 	MemoryKindOptionalType
 	MemoryKindReferenceType
-	MemoryKindRestrictedType
+	MemoryKindIntersectionType
 	MemoryKindVariableSizedType
 
 	MemoryKindPosition
@@ -234,8 +245,10 @@ const (
 	MemoryKindConstantSizedSemaType
 	MemoryKindDictionarySemaType
 	MemoryKindOptionalSemaType
-	MemoryKindRestrictedSemaType
+	MemoryKindIntersectionSemaType
 	MemoryKindReferenceSemaType
+	MemoryKindEntitlementSemaType
+	MemoryKindEntitlementMapSemaType
 	MemoryKindCapabilitySemaType
 
 	// ordered-map

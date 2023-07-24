@@ -70,7 +70,7 @@ func NewSimpleCompositeValue(
 	}
 }
 
-func (*SimpleCompositeValue) IsValue() {}
+func (*SimpleCompositeValue) isValue() {}
 
 func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitSimpleCompositeValue(interpreter, v)
@@ -236,6 +236,7 @@ func (v *SimpleCompositeValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {

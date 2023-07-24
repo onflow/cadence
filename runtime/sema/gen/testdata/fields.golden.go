@@ -19,6 +19,8 @@
 
 package sema
 
+import "github.com/onflow/cadence/runtime/ast"
+
 const TestTypeTestIntFieldName = "testInt"
 
 var TestTypeTestIntFieldType = UInt64Type
@@ -40,7 +42,8 @@ This is a test optional integer.
 const TestTypeTestRefIntFieldName = "testRefInt"
 
 var TestTypeTestRefIntFieldType = &ReferenceType{
-	Type: UInt64Type,
+	Type:          UInt64Type,
+	Authorization: UnauthorizedAccess,
 }
 
 const TestTypeTestRefIntFieldDocString = `
@@ -100,7 +103,7 @@ const TestTypeTestCapFieldName = "testCap"
 var TestTypeTestCapFieldType = &CapabilityType{}
 
 const TestTypeTestCapFieldDocString = `
-This is a test capability field.
+This is a test unparameterized capability field.
 `
 
 const TestTypeTestCapIntFieldName = "testCapInt"
@@ -111,7 +114,17 @@ var TestTypeTestCapIntFieldType = MustInstantiate(
 )
 
 const TestTypeTestCapIntFieldDocString = `
-This is a test specific capability field.
+This is a test parameterized capability field.
+`
+
+const TestTypeTestIntersectionWithoutTypeFieldName = "testIntersectionWithoutType"
+
+var TestTypeTestIntersectionWithoutTypeFieldType = &IntersectionType{
+	Types: []*InterfaceType{BarType, BazType},
+}
+
+const TestTypeTestIntersectionWithoutTypeFieldDocString = `
+This is a test intersection type (without type) field.
 `
 
 const TestTypeName = "Test"
@@ -124,6 +137,7 @@ var TestType = &SimpleType{
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
+	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
 }
@@ -131,65 +145,93 @@ var TestType = &SimpleType{
 func init() {
 	TestType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestIntFieldName,
 				TestTypeTestIntFieldType,
 				TestTypeTestIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestOptIntFieldName,
 				TestTypeTestOptIntFieldType,
 				TestTypeTestOptIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestRefIntFieldName,
 				TestTypeTestRefIntFieldType,
 				TestTypeTestRefIntFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestVarIntsFieldName,
 				TestTypeTestVarIntsFieldType,
 				TestTypeTestVarIntsFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestConstIntsFieldName,
 				TestTypeTestConstIntsFieldType,
 				TestTypeTestConstIntsFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestParamFieldName,
 				TestTypeTestParamFieldType,
 				TestTypeTestParamFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestAddressFieldName,
 				TestTypeTestAddressFieldType,
 				TestTypeTestAddressFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestTypeFieldName,
 				TestTypeTestTypeFieldType,
 				TestTypeTestTypeFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestCapFieldName,
 				TestTypeTestCapFieldType,
 				TestTypeTestCapFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredFieldMember(
 				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
 				TestTypeTestCapIntFieldName,
 				TestTypeTestCapIntFieldType,
 				TestTypeTestCapIntFieldDocString,
+			),
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
+				TestTypeTestIntersectionWithoutTypeFieldName,
+				TestTypeTestIntersectionWithoutTypeFieldType,
+				TestTypeTestIntersectionWithoutTypeFieldDocString,
 			),
 		})
 	}

@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -387,82 +388,82 @@ func (t OptionalStaticType) Equal(other StaticType) bool {
 	return t.Type.Equal(otherOptionalType.Type)
 }
 
-// RestrictedStaticType
-
-type RestrictedStaticType struct {
-	Type         StaticType
-	Restrictions []InterfaceStaticType
+var NilStaticType = OptionalStaticType{
+	Type: PrimitiveStaticTypeNever,
 }
 
-var _ StaticType = &RestrictedStaticType{}
+// IntersectionStaticType
 
-func NewRestrictedStaticType(
+type IntersectionStaticType struct {
+	Types      []InterfaceStaticType
+	LegacyType StaticType
+}
+
+var _ StaticType = &IntersectionStaticType{}
+
+func NewIntersectionStaticType(
 	memoryGauge common.MemoryGauge,
-	staticType StaticType,
-	restrictions []InterfaceStaticType,
-) *RestrictedStaticType {
-	common.UseMemory(memoryGauge, common.RestrictedStaticTypeMemoryUsage)
+	types []InterfaceStaticType,
+) *IntersectionStaticType {
+	common.UseMemory(memoryGauge, common.IntersectionStaticTypeMemoryUsage)
 
-	return &RestrictedStaticType{
-		Type:         staticType,
-		Restrictions: restrictions,
+	return &IntersectionStaticType{
+		Types: types,
 	}
 }
 
 // NOTE: must be pointer receiver, as static types get used in type values,
 // which are used as keys in maps when exporting.
 // Key types in Go maps must be (transitively) hashable types,
-// and slices are not, but `Restrictions` is one.
-func (*RestrictedStaticType) isStaticType() {}
+// and slices are not, but `Types` is one.
+func (*IntersectionStaticType) isStaticType() {}
 
-func (RestrictedStaticType) elementSize() uint {
+func (IntersectionStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (t *RestrictedStaticType) String() string {
-	var restrictions []string
+func (t *IntersectionStaticType) String() string {
+	var types []string
 
-	count := len(t.Restrictions)
+	count := len(t.Types)
 	if count > 0 {
-		restrictions = make([]string, count)
+		types = make([]string, count)
 
-		for i, restriction := range t.Restrictions {
-			restrictions[i] = restriction.String()
+		for i, typ := range t.Types {
+			types[i] = typ.String()
 		}
 	}
 
-	return fmt.Sprintf("%s{%s}", t.Type, strings.Join(restrictions, ", "))
+	return fmt.Sprintf("{%s}", strings.Join(types, ", "))
 }
 
-func (t *RestrictedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	restrictions := make([]string, len(t.Restrictions))
+func (t *IntersectionStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	types := make([]string, len(t.Types))
 
-	for i, restriction := range t.Restrictions {
-		restrictions[i] = restriction.MeteredString(memoryGauge)
+	for i, typ := range t.Types {
+		types[i] = typ.MeteredString(memoryGauge)
 	}
 
 	// len = (comma + space) x (n - 1)
 	// To handle n == 0:
 	// 		len = (comma + space) x n
 	//
-	l := len(restrictions)*2 + 2
+	l := len(types)*2 + 2
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 
-	typeStr := t.Type.MeteredString(memoryGauge)
-
-	return fmt.Sprintf("%s{%s}", typeStr, strings.Join(restrictions, ", "))
+	return fmt.Sprintf("{%s}", strings.Join(types, ", "))
 }
 
-func (t *RestrictedStaticType) Equal(other StaticType) bool {
-	otherRestrictedType, ok := other.(*RestrictedStaticType)
-	if !ok || len(t.Restrictions) != len(otherRestrictedType.Restrictions) {
+func (t *IntersectionStaticType) Equal(other StaticType) bool {
+	otherIntersectionType, ok := other.(*IntersectionStaticType)
+	if !ok || len(t.Types) != len(otherIntersectionType.Types) {
 		return false
 	}
 
 outer:
-	for _, restriction := range t.Restrictions {
-		for _, otherRestriction := range otherRestrictedType.Restrictions {
-			if restriction.Equal(otherRestriction) {
+	for _, typ := range t.Types {
+		for _, otherType := range otherIntersectionType.Types {
+			if typ.Equal(otherType) {
 				continue outer
 			}
 		}
@@ -470,32 +471,164 @@ outer:
 		return false
 	}
 
-	return t.Type.Equal(otherRestrictedType.Type)
+	return true
+}
+
+// Authorization
+
+type Authorization interface {
+	isAuthorization()
+	String() string
+	MeteredString(common.MemoryGauge) string
+	Equal(auth Authorization) bool
+	Encode(e *cbor.StreamEncoder) error
+}
+
+type Unauthorized struct{}
+
+var UnauthorizedAccess Authorization = Unauthorized{}
+
+func (Unauthorized) isAuthorization() {}
+
+func (Unauthorized) String() string {
+	return ""
+}
+
+func (Unauthorized) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(0))
+	return ""
+}
+
+func (Unauthorized) Equal(auth Authorization) bool {
+	_, ok := auth.(Unauthorized)
+	return ok
+}
+
+type EntitlementSetAuthorization struct {
+	Entitlements *sema.TypeIDOrderedSet
+	SetKind      sema.EntitlementSetKind
+}
+
+var _ Authorization = EntitlementSetAuthorization{}
+
+func NewEntitlementSetAuthorization(
+	memoryGauge common.MemoryGauge,
+	entitlementList []common.TypeID,
+	kind sema.EntitlementSetKind,
+) EntitlementSetAuthorization {
+	common.UseMemory(memoryGauge, common.MemoryUsage{
+		Kind:   common.MemoryKindEntitlementSetStaticAccess,
+		Amount: uint64(len(entitlementList)),
+	})
+
+	entitlements := orderedmap.New[sema.TypeIDOrderedSet](len(entitlementList))
+	for _, entitlement := range entitlementList {
+		entitlements.Set(entitlement, struct{}{})
+	}
+
+	return EntitlementSetAuthorization{Entitlements: entitlements, SetKind: kind}
+}
+
+func (EntitlementSetAuthorization) isAuthorization() {}
+
+func (e EntitlementSetAuthorization) string(stringer func(common.TypeID) string) string {
+	var builder strings.Builder
+	builder.WriteString("auth(")
+
+	e.Entitlements.ForeachWithIndex(func(i int, entitlement common.TypeID, value struct{}) {
+		builder.WriteString(stringer(entitlement))
+		if i < e.Entitlements.Len()-1 {
+			if e.SetKind == sema.Conjunction {
+				builder.WriteString(", ")
+			} else {
+				builder.WriteString(" | ")
+			}
+
+		}
+	})
+	builder.WriteString(") ")
+	return builder.String()
+}
+
+func (e EntitlementSetAuthorization) String() string {
+	return e.string(func(ti common.TypeID) string { return string(ti) })
+}
+
+func (e EntitlementSetAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.AuthStringMemoryUsage)
+	return e.string(func(ti common.TypeID) string {
+		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(ti)))
+		return string(ti)
+	})
+}
+
+func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
+	// sets are equivalent if they contain the same elements, regardless of order
+	if auth, ok := auth.(EntitlementSetAuthorization); ok {
+		if e.SetKind != auth.SetKind {
+			return false
+		}
+		if auth.Entitlements.Len() != e.Entitlements.Len() {
+			return false
+		}
+		return auth.Entitlements.ForAllKeys(func(entitlement common.TypeID) bool {
+			return e.Entitlements.Contains(entitlement)
+		})
+	}
+	return false
+}
+
+type EntitlementMapAuthorization struct {
+	TypeID common.TypeID
+}
+
+var _ Authorization = EntitlementMapAuthorization{}
+
+func NewEntitlementMapAuthorization(memoryGauge common.MemoryGauge, id common.TypeID) EntitlementMapAuthorization {
+	common.UseMemory(memoryGauge, common.EntitlementMapStaticTypeMemoryUsage)
+
+	return EntitlementMapAuthorization{TypeID: id}
+}
+
+func (EntitlementMapAuthorization) isAuthorization() {}
+
+func (e EntitlementMapAuthorization) String() string {
+	return fmt.Sprintf("auth(%s) ", e.TypeID)
+}
+
+func (e EntitlementMapAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.AuthStringMemoryUsage)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(e.TypeID)))
+	return e.String()
+}
+
+func (e EntitlementMapAuthorization) Equal(auth Authorization) bool {
+	switch auth := auth.(type) {
+	case EntitlementMapAuthorization:
+		return e.TypeID == auth.TypeID
+	}
+	return false
 }
 
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
-	// BorrowedType is the type of the usage (T in &T)
-	BorrowedType StaticType
 	// ReferencedType is type of the referenced value (the type of the target)
 	ReferencedType StaticType
-	Authorized     bool
+	Authorization  Authorization
 }
 
 var _ StaticType = ReferenceStaticType{}
 
 func NewReferenceStaticType(
 	memoryGauge common.MemoryGauge,
-	authorized bool,
-	borrowedType StaticType,
+	authorization Authorization,
 	referencedType StaticType,
 ) ReferenceStaticType {
 	common.UseMemory(memoryGauge, common.ReferenceStaticTypeMemoryUsage)
 
 	return ReferenceStaticType{
-		Authorized:     authorized,
-		BorrowedType:   borrowedType,
+		Authorization:  authorization,
 		ReferencedType: referencedType,
 	}
 }
@@ -507,29 +640,15 @@ func (ReferenceStaticType) elementSize() uint {
 }
 
 func (t ReferenceStaticType) String() string {
-	auth := ""
-	if t.Authorized {
-		auth = "auth "
-	}
-
-	return fmt.Sprintf("%s&%s", auth, t.BorrowedType)
+	auth := t.Authorization.String()
+	return fmt.Sprintf("%s&%s", auth, t.ReferencedType)
 }
 
 func (t ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	if t.Authorized {
-		common.UseMemory(memoryGauge, common.AuthReferenceStaticTypeStringMemoryUsage)
-	} else {
-		common.UseMemory(memoryGauge, common.ReferenceStaticTypeStringMemoryUsage)
-	}
-
-	typeStr := t.BorrowedType.MeteredString(memoryGauge)
-
-	auth := ""
-	if t.Authorized {
-		auth = "auth "
-	}
-
-	return fmt.Sprintf("%s&%s", auth, typeStr)
+	typeStr := t.ReferencedType.MeteredString(memoryGauge)
+	authString := t.Authorization.MeteredString(memoryGauge)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(typeStr)+len(authString)))
+	return fmt.Sprintf("%s&%s", authString, typeStr)
 }
 
 func (t ReferenceStaticType) Equal(other StaticType) bool {
@@ -538,8 +657,8 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
-	return t.Authorized == otherReferenceType.Authorized &&
-		t.BorrowedType.Equal(otherReferenceType.BorrowedType)
+	return t.Authorization.Equal(otherReferenceType.Authorization) &&
+		t.ReferencedType.Equal(otherReferenceType.ReferencedType)
 }
 
 // CapabilityStaticType
@@ -604,6 +723,12 @@ func (t CapabilityStaticType) Equal(other StaticType) bool {
 // Conversion
 
 func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) StaticType {
+
+	primitiveStaticType := ConvertSemaToPrimitiveStaticType(memoryGauge, t)
+	if primitiveStaticType != PrimitiveStaticTypeUnknown {
+		return primitiveStaticType
+	}
+
 	switch t := t.(type) {
 	case *sema.CompositeType:
 		return NewCompositeStaticType(memoryGauge, t.Location, t.QualifiedIdentifier(), t.ID())
@@ -623,42 +748,39 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 			ConvertSemaToStaticType(memoryGauge, t.Type),
 		)
 
-	case *sema.RestrictedType:
-		var restrictions []InterfaceStaticType
-		restrictionCount := len(t.Restrictions)
-		if restrictionCount > 0 {
-			restrictions = make([]InterfaceStaticType, restrictionCount)
+	case *sema.IntersectionType:
+		var intersectedTypess []InterfaceStaticType
+		typeCount := len(t.Types)
+		if typeCount > 0 {
+			intersectedTypess = make([]InterfaceStaticType, typeCount)
 
-			for i, restriction := range t.Restrictions {
-				restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, restriction)
+			for i, typ := range t.Types {
+				intersectedTypess[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, typ)
 			}
 		}
 
-		return NewRestrictedStaticType(
+		return NewIntersectionStaticType(
 			memoryGauge,
-			ConvertSemaToStaticType(memoryGauge, t.Type),
-			restrictions,
+			intersectedTypess,
 		)
 
 	case *sema.ReferenceType:
 		return ConvertSemaReferenceTypeToStaticReferenceType(memoryGauge, t)
 
 	case *sema.CapabilityType:
-		var borrowType StaticType
-		if t.BorrowType != nil {
-			borrowType = ConvertSemaToStaticType(memoryGauge, t.BorrowType)
+		if t.BorrowType == nil {
+			// Unparameterized Capability type should have been
+			// converted to primitive static type earlier
+			panic(errors.NewUnreachableError())
 		}
+		borrowType := ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		return NewCapabilityStaticType(memoryGauge, borrowType)
 
 	case *sema.FunctionType:
 		return NewFunctionStaticType(memoryGauge, t)
 	}
 
-	primitiveStaticType := ConvertSemaToPrimitiveStaticType(memoryGauge, t)
-	if primitiveStaticType == PrimitiveStaticTypeUnknown {
-		return nil
-	}
-	return primitiveStaticType
+	return nil
 }
 
 func ConvertSemaArrayTypeToStaticArrayType(
@@ -693,15 +815,39 @@ func ConvertSemaDictionaryTypeToStaticDictionaryType(
 	)
 }
 
+func ConvertSemaAccesstoStaticAuthorization(
+	memoryGauge common.MemoryGauge,
+	access sema.Access,
+) Authorization {
+	switch access := access.(type) {
+	case sema.PrimitiveAccess:
+		if access.Equal(sema.UnauthorizedAccess) {
+			return UnauthorizedAccess
+		}
+
+	case sema.EntitlementSetAccess:
+		var entitlements []common.TypeID
+		access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
+			typeId := key.ID()
+			entitlements = append(entitlements, typeId)
+		})
+		return NewEntitlementSetAuthorization(memoryGauge, entitlements, access.SetKind)
+
+	case sema.EntitlementMapAccess:
+		typeId := access.Type.ID()
+		return NewEntitlementMapAuthorization(memoryGauge, typeId)
+	}
+	panic(errors.NewUnreachableError())
+}
+
 func ConvertSemaReferenceTypeToStaticReferenceType(
 	memoryGauge common.MemoryGauge,
 	t *sema.ReferenceType,
 ) ReferenceStaticType {
 	return NewReferenceStaticType(
 		memoryGauge,
-		t.Authorized,
+		ConvertSemaAccesstoStaticAuthorization(memoryGauge, t.Authorization),
 		ConvertSemaToStaticType(memoryGauge, t.Type),
-		nil,
 	)
 }
 
@@ -712,11 +858,46 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(
 	return NewInterfaceStaticType(memoryGauge, t.Location, t.QualifiedIdentifier())
 }
 
+func ConvertStaticAuthorizationToSemaAccess(
+	memoryGauge common.MemoryGauge,
+	auth Authorization,
+	getEntitlement func(typeID common.TypeID) (*sema.EntitlementType, error),
+	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error),
+) (sema.Access, error) {
+	switch auth := auth.(type) {
+	case Unauthorized:
+		return sema.UnauthorizedAccess, nil
+	case EntitlementMapAuthorization:
+		entitlement, err := getEntitlementMapType(auth.TypeID)
+		if err != nil {
+			return nil, err
+		}
+		return sema.NewEntitlementMapAccess(entitlement), nil
+	case EntitlementSetAuthorization:
+		var entitlements []*sema.EntitlementType
+		err := auth.Entitlements.ForeachWithError(func(id common.TypeID, value struct{}) error {
+			entitlement, err := getEntitlement(id)
+			if err != nil {
+				return err
+			}
+			entitlements = append(entitlements, entitlement)
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		return sema.NewEntitlementSetAccess(entitlements, auth.SetKind), nil
+	}
+	panic(errors.NewUnreachableError())
+}
+
 func ConvertStaticToSemaType(
 	memoryGauge common.MemoryGauge,
 	typ StaticType,
 	getInterface func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error),
 	getComposite func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error),
+	getEntitlement func(typeID common.TypeID) (*sema.EntitlementType, error),
+	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error),
 ) (_ sema.Type, err error) {
 	switch t := typ.(type) {
 	case CompositeStaticType:
@@ -726,14 +907,28 @@ func ConvertStaticToSemaType(
 		return getInterface(t.Location, t.QualifiedIdentifier)
 
 	case VariableSizedStaticType:
-		ty, err := ConvertStaticToSemaType(memoryGauge, t.Type, getInterface, getComposite)
+		ty, err := ConvertStaticToSemaType(
+			memoryGauge,
+			t.Type,
+			getInterface,
+			getComposite,
+			getEntitlement,
+			getEntitlementMapType,
+		)
 		if err != nil {
 			return nil, err
 		}
 		return sema.NewVariableSizedType(memoryGauge, ty), nil
 
 	case ConstantSizedStaticType:
-		ty, err := ConvertStaticToSemaType(memoryGauge, t.Type, getInterface, getComposite)
+		ty, err := ConvertStaticToSemaType(
+			memoryGauge,
+			t.Type,
+			getInterface,
+			getComposite,
+			getEntitlement,
+			getEntitlementMapType,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -745,12 +940,26 @@ func ConvertStaticToSemaType(
 		), nil
 
 	case DictionaryStaticType:
-		keyType, err := ConvertStaticToSemaType(memoryGauge, t.KeyType, getInterface, getComposite)
+		keyType, err := ConvertStaticToSemaType(
+			memoryGauge,
+			t.KeyType,
+			getInterface,
+			getComposite,
+			getEntitlement,
+			getEntitlementMapType,
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		valueType, err := ConvertStaticToSemaType(memoryGauge, t.ValueType, getInterface, getComposite)
+		valueType, err := ConvertStaticToSemaType(
+			memoryGauge,
+			t.ValueType,
+			getInterface,
+			getComposite,
+			getEntitlement,
+			getEntitlementMapType,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -762,40 +971,59 @@ func ConvertStaticToSemaType(
 		), nil
 
 	case OptionalStaticType:
-		ty, err := ConvertStaticToSemaType(memoryGauge, t.Type, getInterface, getComposite)
+		ty, err := ConvertStaticToSemaType(
+			memoryGauge,
+			t.Type,
+			getInterface,
+			getComposite,
+			getEntitlement,
+			getEntitlementMapType,
+		)
 		if err != nil {
 			return nil, err
 		}
 		return sema.NewOptionalType(memoryGauge, ty), err
 
-	case *RestrictedStaticType:
-		var restrictions []*sema.InterfaceType
+	case *IntersectionStaticType:
+		var intersectedTypes []*sema.InterfaceType
 
-		restrictionCount := len(t.Restrictions)
-		if restrictionCount > 0 {
-			restrictions = make([]*sema.InterfaceType, restrictionCount)
+		typeCount := len(t.Types)
+		if typeCount > 0 {
+			intersectedTypes = make([]*sema.InterfaceType, typeCount)
 
-			for i, restriction := range t.Restrictions {
-				restrictions[i], err = getInterface(restriction.Location, restriction.QualifiedIdentifier)
+			for i, typ := range t.Types {
+				intersectedTypes[i], err = getInterface(typ.Location, typ.QualifiedIdentifier)
 				if err != nil {
 					return nil, err
 				}
 			}
 		}
 
-		ty, err := ConvertStaticToSemaType(memoryGauge, t.Type, getInterface, getComposite)
+		return sema.NewIntersectionType(
+			memoryGauge,
+			intersectedTypes,
+		), nil
+
+	case ReferenceStaticType:
+		ty, err := ConvertStaticToSemaType(
+			memoryGauge,
+			t.ReferencedType,
+			getInterface,
+			getComposite,
+			getEntitlement,
+			getEntitlementMapType,
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		return sema.NewRestrictedType(
+		access, err := ConvertStaticAuthorizationToSemaAccess(
 			memoryGauge,
-			ty,
-			restrictions,
-		), nil
+			t.Authorization,
+			getEntitlement,
+			getEntitlementMapType,
+		)
 
-	case ReferenceStaticType:
-		ty, err := ConvertStaticToSemaType(memoryGauge, t.BorrowedType, getInterface, getComposite)
 		if err != nil {
 			return nil, err
 		}
@@ -803,13 +1031,20 @@ func ConvertStaticToSemaType(
 		return sema.NewReferenceType(
 			memoryGauge,
 			ty,
-			t.Authorized,
+			access,
 		), nil
 
 	case CapabilityStaticType:
 		var borrowType sema.Type
 		if t.BorrowType != nil {
-			borrowType, err = ConvertStaticToSemaType(memoryGauge, t.BorrowType, getInterface, getComposite)
+			borrowType, err = ConvertStaticToSemaType(
+				memoryGauge,
+				t.BorrowType,
+				getInterface,
+				getComposite,
+				getEntitlement,
+				getEntitlementMapType,
+			)
 			if err != nil {
 				return nil, err
 			}

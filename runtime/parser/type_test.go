@@ -285,7 +285,6 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorized: false,
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "Int",
@@ -298,25 +297,179 @@ func TestParseReferenceType(t *testing.T) {
 		)
 	})
 
-	t.Run("authorized, nominal", func(t *testing.T) {
+	t.Run("authorized, no entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("auth &Int")
+		_, errs := testParseType("auth &Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '('",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("authorized, one entitlement", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth(X) &Int")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorized: true,
+				Authorization: &ast.Authorization{
+					EntitlementSet: &ast.ConjunctiveEntitlementSet{
+						Elements: []*ast.NominalType{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "X",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+						},
+					},
+				},
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "Int",
-						Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
+						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
 					},
 				},
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
 			result,
+		)
+	})
+
+	t.Run("authorized, two conjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth(X, Y) &Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.Authorization{
+					EntitlementSet: &ast.ConjunctiveEntitlementSet{
+						Elements: []*ast.NominalType{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "X",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+							{
+								Identifier: ast.Identifier{
+									Identifier: "Y",
+									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
+							},
+						},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, two disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth(X| Y) &Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.Authorization{
+					EntitlementSet: &ast.DisjunctiveEntitlementSet{
+						Elements: []*ast.NominalType{
+							{
+								Identifier: ast.Identifier{
+									Identifier: "X",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+							{
+								Identifier: ast.Identifier{
+									Identifier: "Y",
+									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
+							},
+						},
+					},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, empty entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth() &Int")
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in type: ')'",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("authorized, mixed entitlements conjunction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth(X, Y | Z) &Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: got '|', expected ',' or ')'",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("authorized, mixed entitlements conjunction", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth(X | Y, Z) &Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: got ',', expected '|' or ')'",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
 		)
 	})
 }
@@ -335,7 +488,6 @@ func TestParseOptionalReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			&ast.OptionalType{
 				Type: &ast.ReferenceType{
-					Authorized: false,
 					Type: &ast.NominalType{
 						Identifier: ast.Identifier{
 							Identifier: "Int",
@@ -351,106 +503,60 @@ func TestParseOptionalReferenceType(t *testing.T) {
 	})
 }
 
-func TestParseRestrictedType(t *testing.T) {
+func TestParseIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("with restricted type, no restrictions", func(t *testing.T) {
+	t.Run("with old prefix and no types", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("T{}")
-		require.Empty(t, errs)
+		_, errs := testParseType("T{}")
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "T",
-						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
-					},
-				},
-				Restrictions: nil,
-				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: '{'",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
-			result,
+			errs,
 		)
 	})
 
-	t.Run("with restricted type, one restriction", func(t *testing.T) {
+	t.Run("with old prefix and one type", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("T{U}")
-		require.Empty(t, errs)
-
+		_, errs := testParseType("T{U}")
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "T",
-						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
-					},
-				},
-				Restrictions: []*ast.NominalType{
-					{
-						Identifier: ast.Identifier{
-							Identifier: "U",
-							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
-						},
-					},
-				},
-				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: '{'",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
-			result,
+			errs,
 		)
 	})
 
-	t.Run("with restricted type, two restrictions", func(t *testing.T) {
+	t.Run("with old prefix and two types", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("T{U , V }")
-		require.Empty(t, errs)
-
+		_, errs := testParseType("T{U , V }")
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "T",
-						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
-					},
-				},
-				Restrictions: []*ast.NominalType{
-					{
-						Identifier: ast.Identifier{
-							Identifier: "U",
-							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
-						},
-					},
-					{
-						Identifier: ast.Identifier{
-							Identifier: "V",
-							Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
-						},
-					},
-				},
-				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token: '{'",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
-			result,
+			errs,
 		)
 	})
 
-	t.Run("without restricted type, no restrictions", func(t *testing.T) {
+	t.Run("no types", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -458,7 +564,7 @@ func TestParseRestrictedType(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
+			&ast.IntersectionType{
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -468,7 +574,7 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("without restricted type, one restriction", func(t *testing.T) {
+	t.Run("one type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -476,8 +582,8 @@ func TestParseRestrictedType(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
-				Restrictions: []*ast.NominalType{
+			&ast.IntersectionType{
+				Types: []*ast.NominalType{
 					{
 						Identifier: ast.Identifier{
 							Identifier: "T",
@@ -494,7 +600,7 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid: without restricted type, missing type after comma", func(t *testing.T) {
+	t.Run("invalid: missing type after comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -510,8 +616,8 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 
 		utils.AssertEqualWithDiff(t,
-			&ast.RestrictedType{
-				Restrictions: []*ast.NominalType{
+			&ast.IntersectionType{
+				Types: []*ast.NominalType{
 					{
 						Identifier: ast.Identifier{
 							Identifier: "T",
@@ -528,7 +634,7 @@ func TestParseRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid: without restricted type, type without comma", func(t *testing.T) {
+	t.Run("invalid: type without comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -547,7 +653,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without restricted type, colon", func(t *testing.T) {
+	t.Run("invalid: colon", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -555,7 +661,7 @@ func TestParseRestrictedType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected colon in restricted type",
+					Message: "unexpected colon in intersection type",
 					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
@@ -566,72 +672,15 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, colon", func(t *testing.T) {
+	t.Run("invalid: colon", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("T{U , V : W }")
+		result, errs := testParseType("{U , V : W }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: `unexpected token: got ':', expected ',' or '}'`,
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
-				},
-			},
-			errs,
-		)
-
-		// TODO: return type
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without restricted type, first is non-nominal", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("{[T]}")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "non-nominal type in restriction list: [T]",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
-				},
-			},
-			errs,
-		)
-
-		// TODO: return type with non-nominal restrictions
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: with restricted type, first is non-nominal", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{[U]}")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected non-nominal type: [U]",
-					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
-				},
-			},
-			errs,
-		)
-
-		// TODO: return type
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without restricted type, second is non-nominal", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("{T, [U]}")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "non-nominal type in restriction list: [U]",
+					Message: `unexpected colon in intersection type`,
 					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
@@ -642,16 +691,35 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, second is non-nominal", func(t *testing.T) {
+	t.Run("invalid: first is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseType("T{U, [V]}")
+		result, errs := testParseType("{[T]}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected non-nominal type: [V]",
-					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+					Message: "non-nominal type in intersection list: [T]",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+			},
+			errs,
+		)
+
+		// TODO: return type with non-nominal types
+		assert.Nil(t, result)
+	})
+
+	t.Run("invalid: second is non-nominal", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("{T, [U]}")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "non-nominal type in intersection list: [U]",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
 				},
 			},
 			errs,
@@ -661,7 +729,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: without restricted type, missing end", func(t *testing.T) {
+	t.Run("invalid: missing end", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -679,25 +747,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, missing end", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
-				},
-			},
-			errs,
-		)
-
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without restricted type, missing end after type", func(t *testing.T) {
+	t.Run("invalid: missing end after type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -715,25 +765,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, missing end after type", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{U")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected '}'",
-					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
-				},
-			},
-			errs,
-		)
-
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without restricted type, missing end after comma", func(t *testing.T) {
+	t.Run("invalid: missing end after comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -751,25 +783,7 @@ func TestParseRestrictedType(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("invalid: with restricted type, missing end after comma", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{U,")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "invalid end of input, expected type",
-					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
-				},
-			},
-			errs,
-		)
-
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: without restricted type, just comma", func(t *testing.T) {
+	t.Run("invalid: just comma", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -777,26 +791,8 @@ func TestParseRestrictedType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected comma in restricted type",
+					Message: "unexpected comma in intersection type",
 					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
-				},
-			},
-			errs,
-		)
-
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid: with restricted type, just comma", func(t *testing.T) {
-
-		t.Parallel()
-
-		result, errs := testParseType("T{,}")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected comma",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
 			errs,
@@ -1357,7 +1353,7 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-		pub fun test(a: Int32, b: [Int32; 2], c: [[Int32; 3]]): [[Int64]] {}
+		access(all) fun test(a: Int32, b: [Int32; 2], c: [[Int32; 3]]): [[Int64]] {}
 	`
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
@@ -1365,136 +1361,279 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.FunctionDeclaration{
-				Access: ast.AccessPublic,
-				Identifier: ast.Identifier{
-					Identifier: "test",
-					Pos:        ast.Position{Offset: 11, Line: 2, Column: 10},
-				},
 				ParameterList: &ast.ParameterList{
 					Parameters: []*ast.Parameter{
 						{
-							Identifier: ast.Identifier{
-								Identifier: "a",
-								Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-							},
 							TypeAnnotation: &ast.TypeAnnotation{
-								IsResource: false,
 								Type: &ast.NominalType{
 									Identifier: ast.Identifier{
 										Identifier: "Int32",
-										Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
+										Pos: ast.Position{
+											Offset: 27,
+											Line:   2,
+											Column: 26,
+										},
 									},
 								},
-								StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
+								StartPos: ast.Position{
+									Offset: 27,
+									Line:   2,
+									Column: 26,
+								},
+								IsResource: false,
 							},
-							StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+							Label: "",
+							Identifier: ast.Identifier{
+								Identifier: "a",
+								Pos: ast.Position{
+									Offset: 24,
+									Line:   2,
+									Column: 23,
+								},
+							},
+							StartPos: ast.Position{
+								Offset: 24,
+								Line:   2,
+								Column: 23,
+							},
 						},
 						{
-							Identifier: ast.Identifier{
-								Identifier: "b",
-								Pos:        ast.Position{Offset: 26, Line: 2, Column: 25},
-							},
 							TypeAnnotation: &ast.TypeAnnotation{
-								IsResource: false,
 								Type: &ast.ConstantSizedType{
 									Type: &ast.NominalType{
 										Identifier: ast.Identifier{
 											Identifier: "Int32",
-											Pos:        ast.Position{Offset: 30, Line: 2, Column: 29},
+											Pos: ast.Position{
+												Offset: 38,
+												Line:   2,
+												Column: 37,
+											},
 										},
 									},
 									Size: &ast.IntegerExpression{
-										PositiveLiteral: []byte("2"),
-										Value:           big.NewInt(2),
-										Base:            10,
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
-											EndPos:   ast.Position{Offset: 37, Line: 2, Column: 36},
+										Value: big.NewInt(2),
+										PositiveLiteral: []uint8{
+											0x32,
 										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 45,
+												Line:   2,
+												Column: 44,
+											},
+											EndPos: ast.Position{
+												Offset: 45,
+												Line:   2,
+												Column: 44,
+											},
+										},
+										Base: 10,
 									},
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 29, Line: 2, Column: 28},
-										EndPos:   ast.Position{Offset: 38, Line: 2, Column: 37},
+										StartPos: ast.Position{
+											Offset: 37,
+											Line:   2,
+											Column: 36,
+										},
+										EndPos: ast.Position{
+											Offset: 46,
+											Line:   2,
+											Column: 45,
+										},
 									},
 								},
-								StartPos: ast.Position{Offset: 29, Line: 2, Column: 28},
+								StartPos: ast.Position{
+									Offset: 37,
+									Line:   2,
+									Column: 36,
+								},
+								IsResource: false,
 							},
-							StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
+							Identifier: ast.Identifier{
+								Identifier: "b",
+								Pos: ast.Position{
+									Offset: 34,
+									Line:   2,
+									Column: 33,
+								},
+							},
+							StartPos: ast.Position{
+								Offset: 34,
+								Line:   2,
+								Column: 33,
+							},
 						},
 						{
-							Identifier: ast.Identifier{
-								Identifier: "c",
-								Pos:        ast.Position{Offset: 41, Line: 2, Column: 40},
-							},
 							TypeAnnotation: &ast.TypeAnnotation{
-								IsResource: false,
 								Type: &ast.VariableSizedType{
 									Type: &ast.ConstantSizedType{
 										Type: &ast.NominalType{
 											Identifier: ast.Identifier{
 												Identifier: "Int32",
-												Pos:        ast.Position{Offset: 46, Line: 2, Column: 45},
+												Pos: ast.Position{
+													Offset: 54,
+													Line:   2,
+													Column: 53,
+												},
 											},
 										},
 										Size: &ast.IntegerExpression{
-											PositiveLiteral: []byte("3"),
-											Value:           big.NewInt(3),
-											Base:            10,
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 53, Line: 2, Column: 52},
-												EndPos:   ast.Position{Offset: 53, Line: 2, Column: 52},
+											Value: big.NewInt(3),
+											PositiveLiteral: []uint8{
+												0x33,
 											},
+											Range: ast.Range{
+												StartPos: ast.Position{
+													Offset: 61,
+													Line:   2,
+													Column: 60,
+												},
+												EndPos: ast.Position{
+													Offset: 61,
+													Line:   2,
+													Column: 60,
+												},
+											},
+											Base: 10,
 										},
 										Range: ast.Range{
-											StartPos: ast.Position{Offset: 45, Line: 2, Column: 44},
-											EndPos:   ast.Position{Offset: 54, Line: 2, Column: 53},
+											StartPos: ast.Position{
+												Offset: 53,
+												Line:   2,
+												Column: 52,
+											},
+											EndPos: ast.Position{
+												Offset: 62,
+												Line:   2,
+												Column: 61,
+											},
 										},
 									},
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 44, Line: 2, Column: 43},
-										EndPos:   ast.Position{Offset: 55, Line: 2, Column: 54},
+										StartPos: ast.Position{
+											Offset: 52,
+											Line:   2,
+											Column: 51,
+										},
+										EndPos: ast.Position{
+											Offset: 63,
+											Line:   2,
+											Column: 62,
+										},
 									},
 								},
-								StartPos: ast.Position{Offset: 44, Line: 2, Column: 43},
+								StartPos: ast.Position{
+									Offset: 52,
+									Line:   2,
+									Column: 51,
+								},
+								IsResource: false,
 							},
-							StartPos: ast.Position{Offset: 41, Line: 2, Column: 40},
+							Identifier: ast.Identifier{
+								Identifier: "c",
+								Pos: ast.Position{
+									Offset: 49,
+									Line:   2,
+									Column: 48,
+								},
+							},
+							StartPos: ast.Position{
+								Offset: 49,
+								Line:   2,
+								Column: 48,
+							},
 						},
 					},
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-						EndPos:   ast.Position{Offset: 56, Line: 2, Column: 55},
+						StartPos: ast.Position{
+							Offset: 23,
+							Line:   2,
+							Column: 22,
+						},
+						EndPos: ast.Position{
+							Offset: 64,
+							Line:   2,
+							Column: 63,
+						},
 					},
 				},
 				ReturnTypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
 					Type: &ast.VariableSizedType{
 						Type: &ast.VariableSizedType{
 							Type: &ast.NominalType{
-								Identifier: ast.Identifier{Identifier: "Int64",
-									Pos: ast.Position{Offset: 61, Line: 2, Column: 60},
+								Identifier: ast.Identifier{
+									Identifier: "Int64",
+									Pos: ast.Position{
+										Offset: 69,
+										Line:   2,
+										Column: 68,
+									},
 								},
 							},
 							Range: ast.Range{
-								StartPos: ast.Position{Offset: 60, Line: 2, Column: 59},
-								EndPos:   ast.Position{Offset: 66, Line: 2, Column: 65},
+								StartPos: ast.Position{
+									Offset: 68,
+									Line:   2,
+									Column: 67,
+								},
+								EndPos: ast.Position{
+									Offset: 74,
+									Line:   2,
+									Column: 73,
+								},
 							},
 						},
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 59, Line: 2, Column: 58},
-							EndPos:   ast.Position{Offset: 67, Line: 2, Column: 66},
+							StartPos: ast.Position{
+								Offset: 67,
+								Line:   2,
+								Column: 66,
+							},
+							EndPos: ast.Position{
+								Offset: 75,
+								Line:   2,
+								Column: 74,
+							},
 						},
 					},
-					StartPos: ast.Position{Offset: 59, Line: 2, Column: 58},
+					StartPos: ast.Position{
+						Offset: 67,
+						Line:   2,
+						Column: 66,
+					},
+					IsResource: false,
 				},
 				FunctionBlock: &ast.FunctionBlock{
 					Block: &ast.Block{
 						Range: ast.Range{
-							StartPos: ast.Position{Offset: 69, Line: 2, Column: 68},
-							EndPos:   ast.Position{Offset: 70, Line: 2, Column: 69},
+							StartPos: ast.Position{
+								Offset: 77,
+								Line:   2,
+								Column: 76,
+							},
+							EndPos: ast.Position{
+								Offset: 78,
+								Line:   2,
+								Column: 77,
+							},
 						},
 					},
 				},
-				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos: ast.Position{
+						Offset: 19,
+						Line:   2,
+						Column: 18,
+					},
+				},
+				StartPos: ast.Position{
+					Offset: 3,
+					Line:   2,
+					Column: 2,
+				},
+				Access: ast.AccessAll,
+				Flags:  0x00,
 			},
 		},
 		result.Declarations(),
@@ -1514,6 +1653,7 @@ func TestParseDictionaryTypeInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{Identifier: "x",
 					Pos: ast.Position{Offset: 10, Line: 2, Column: 9},
@@ -1575,6 +1715,7 @@ func TestParseIntegerTypes(t *testing.T) {
 	require.Empty(t, errs)
 
 	a := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "a",
 			Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -1607,6 +1748,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 	}
 	b := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "b",
 			Pos:        ast.Position{Offset: 25, Line: 3, Column: 6},
@@ -1638,6 +1780,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 21, Line: 3, Column: 2},
 	}
 	c := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "c",
 			Pos:        ast.Position{Offset: 44, Line: 4, Column: 6},
@@ -1669,6 +1812,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 40, Line: 4, Column: 2},
 	}
 	d := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "d",
 			Pos:        ast.Position{Offset: 63, Line: 5, Column: 6},
@@ -1700,6 +1844,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 59, Line: 5, Column: 2},
 	}
 	e := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "e",
 			Pos:        ast.Position{Offset: 82, Line: 6, Column: 6},
@@ -1731,6 +1876,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 78, Line: 6, Column: 2},
 	}
 	f := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "f",
 			Pos:        ast.Position{Offset: 101, Line: 7, Column: 6},
@@ -1762,6 +1908,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 97, Line: 7, Column: 2},
 	}
 	g := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "g",
 			Pos:        ast.Position{Offset: 121, Line: 8, Column: 6},
@@ -1793,6 +1940,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: ast.Position{Offset: 117, Line: 8, Column: 2},
 	}
 	h := &ast.VariableDeclaration{
+		Access: ast.AccessNotSpecified,
 		Identifier: ast.Identifier{
 			Identifier: "h",
 			Pos:        ast.Position{Offset: 141, Line: 9, Column: 6},
@@ -1843,6 +1991,7 @@ func TestParseFunctionTypeInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "add",
 					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -1920,6 +2069,7 @@ func TestParseFunctionArrayType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -2003,6 +2153,7 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -2097,6 +2248,7 @@ func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access: ast.AccessNotSpecified,
 				Identifier: ast.Identifier{
 					Identifier: "test",
 					Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
@@ -2184,6 +2336,7 @@ func TestParseViewFunctionTypeWithNewSyntax(t *testing.T) {
 
 	expected := []ast.Declaration{
 		&ast.VariableDeclaration{
+			Access:     ast.AccessNotSpecified,
 			IsConstant: true,
 			Identifier: ast.Identifier{
 				Identifier: "test",
@@ -2267,6 +2420,7 @@ func TestParseNewSyntaxFunctionType(t *testing.T) {
 
 	expected := []ast.Declaration{
 		&ast.VariableDeclaration{
+			Access:     ast.AccessNotSpecified,
 			IsConstant: true,
 			Identifier: ast.Identifier{
 				Identifier: "test",
@@ -2350,6 +2504,7 @@ func TestParseOptionalTypeDouble(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2404,6 +2559,7 @@ func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "f",
@@ -2460,6 +2616,7 @@ func TestParseReferenceTypeInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2520,6 +2677,7 @@ func TestParseOptionalReference(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2561,72 +2719,7 @@ func TestParseOptionalReference(t *testing.T) {
 	)
 }
 
-func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
-
-	t.Parallel()
-
-	const code = `
-       let x: &R{I} = 1
-	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
-
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				IsConstant: true,
-				Identifier: ast.Identifier{
-					Identifier: "x",
-					Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
-				},
-				TypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.ReferenceType{
-						Type: &ast.RestrictedType{
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "R",
-									Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-								},
-							},
-							Restrictions: []*ast.NominalType{
-								{
-									Identifier: ast.Identifier{
-										Identifier: "I",
-										Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
-									},
-								},
-							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-								EndPos:   ast.Position{Offset: 19, Line: 2, Column: 18},
-							},
-						},
-						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
-				Value: &ast.IntegerExpression{
-					PositiveLiteral: []byte("1"),
-					Value:           big.NewInt(1),
-					Base:            10,
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
-						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
-					},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 21, Line: 2, Column: 20},
-				},
-				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
-			},
-		},
-		result.Declarations(),
-	)
-}
-
-func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
+func TestParseIntersectionReferenceType(t *testing.T) {
 
 	t.Parallel()
 
@@ -2639,6 +2732,7 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2647,8 +2741,8 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.ReferenceType{
-						Type: &ast.RestrictedType{
-							Restrictions: []*ast.NominalType{
+						Type: &ast.IntersectionType{
+							Types: []*ast.NominalType{
 								{
 									Identifier: ast.Identifier{
 										Identifier: "I",
@@ -2685,72 +2779,7 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 	)
 }
 
-func TestParseOptionalRestrictedType(t *testing.T) {
-
-	t.Parallel()
-
-	const code = `
-       let x: @R{I}? = 1
-	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
-
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				IsConstant: true,
-				Identifier: ast.Identifier{
-					Identifier: "x",
-					Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
-				},
-				TypeAnnotation: &ast.TypeAnnotation{
-					IsResource: true,
-					Type: &ast.OptionalType{
-						Type: &ast.RestrictedType{
-							Type: &ast.NominalType{
-								Identifier: ast.Identifier{
-									Identifier: "R",
-									Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
-								},
-							},
-							Restrictions: []*ast.NominalType{
-								{
-									Identifier: ast.Identifier{
-										Identifier: "I",
-										Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
-									},
-								},
-							},
-							Range: ast.Range{
-								StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
-								EndPos:   ast.Position{Offset: 19, Line: 2, Column: 18},
-							},
-						},
-						EndPos: ast.Position{Offset: 20, Line: 2, Column: 19},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
-				Value: &ast.IntegerExpression{
-					PositiveLiteral: []byte("1"),
-					Value:           big.NewInt(1),
-					Base:            10,
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
-						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
-					},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 22, Line: 2, Column: 21},
-				},
-				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
-			},
-		},
-		result.Declarations(),
-	)
-}
-
-func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
+func TestParseOptionalIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
@@ -2763,6 +2792,7 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "x",
@@ -2771,8 +2801,8 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: true,
 					Type: &ast.OptionalType{
-						Type: &ast.RestrictedType{
-							Restrictions: []*ast.NominalType{
+						Type: &ast.IntersectionType{
+							Types: []*ast.NominalType{
 								{
 									Identifier: ast.Identifier{
 										Identifier: "I",
@@ -2809,56 +2839,23 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 	)
 }
 
-func TestParseAuthorizedReferenceType(t *testing.T) {
+func TestParseAuthorizedReferenceTypeWithNoEntitlements(t *testing.T) {
 
 	t.Parallel()
 
 	const code = `
        let x: auth &R = 1
 	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
+	_, errs := testParseProgram(code)
 
 	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				IsConstant: true,
-				Identifier: ast.Identifier{
-					Identifier: "x",
-					Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
-				},
-				TypeAnnotation: &ast.TypeAnnotation{
-					IsResource: false,
-					Type: &ast.ReferenceType{
-						Authorized: true,
-						Type: &ast.NominalType{
-							Identifier: ast.Identifier{
-								Identifier: "R", Pos: ast.Position{Offset: 21, Line: 2, Column: 20}},
-						},
-						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-					},
-					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-				},
-				Value: &ast.IntegerExpression{
-					PositiveLiteral: []byte("1"),
-					Value:           big.NewInt(1),
-					Base:            10,
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
-						EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
-					},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 23, Line: 2, Column: 22},
-				},
-				StartPos:          ast.Position{Offset: 8, Line: 2, Column: 7},
-				SecondTransfer:    nil,
-				SecondValue:       nil,
-				ParentIfStatement: nil,
+		[]error{
+			&SyntaxError{
+				Message: "expected token '('",
+				Pos:     ast.Position{Offset: 20, Line: 2, Column: 19},
 			},
 		},
-		result.Declarations(),
+		errs.(Error).Errors,
 	)
 }
 
@@ -2875,6 +2872,7 @@ func TestParseInstantiationTypeInVariableDeclaration(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{
 			&ast.VariableDeclaration{
+				Access:     ast.AccessNotSpecified,
 				IsConstant: true,
 				Identifier: ast.Identifier{
 					Identifier: "a",
@@ -2971,6 +2969,7 @@ func TestParseParenthesizedTypes(t *testing.T) {
 	require.Empty(t, errs)
 	expected := []ast.Declaration{
 		&ast.VariableDeclaration{
+			Access:     ast.AccessNotSpecified,
 			IsConstant: true,
 			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
 			TypeAnnotation: &ast.TypeAnnotation{
@@ -3010,6 +3009,7 @@ func TestParseNestedParenthesizedTypes(t *testing.T) {
 	require.Empty(t, errs)
 	expected := []ast.Declaration{
 		&ast.VariableDeclaration{
+			Access:     ast.AccessNotSpecified,
 			IsConstant: true,
 			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
 			TypeAnnotation: &ast.TypeAnnotation{

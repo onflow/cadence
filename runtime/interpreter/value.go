@@ -106,7 +106,7 @@ type Value interface {
 	// Stringer provides `func String() string`
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
-	IsValue()
+	isValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
 	Walk(interpreter *Interpreter, walkChild func(Value))
 	StaticType(interpreter *Interpreter) StaticType
@@ -133,6 +133,7 @@ type Value interface {
 		address atree.Address,
 		remove bool,
 		storable atree.Storable,
+		preventTransfer map[atree.StorageID]struct{},
 	) Value
 	DeepRemove(interpreter *Interpreter)
 	// Clone returns a new value that is equal to this value.
@@ -186,6 +187,15 @@ func newValueComparator(interpreter *Interpreter, locationRange LocationRange) a
 	}
 }
 
+// ComparableValue
+type ComparableValue interface {
+	EquatableValue
+	Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+	GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue
+}
+
 // ResourceKindedValue
 
 type ResourceKindedValue interface {
@@ -210,6 +220,28 @@ type ReferenceTrackedResourceKindedValue interface {
 	IsReferenceTrackedResourceKindedValue()
 	StorageID() atree.StorageID
 	IsStaleResource(*Interpreter) bool
+}
+
+// ContractValue is the value of a contract.
+// Under normal circumstances, a contract value is always a CompositeValue.
+// However, in the test framework, an imported contract is constructed via a constructor function.
+// Hence, during tests, the value is a HostFunctionValue.
+type ContractValue interface {
+	Value
+	SetNestedVariables(variables map[string]*Variable)
+}
+
+// CapabilityValue
+type CapabilityValue interface {
+	atree.Storable
+	EquatableValue
+	isCapabilityValue()
+}
+
+// LinkValue
+type LinkValue interface {
+	Value
+	isLinkValue()
 }
 
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
@@ -267,6 +299,7 @@ func safeMul(a, b int, locationRange LocationRange) int {
 // TypeValue
 
 type TypeValue struct {
+	// Optional. nil represents "unknown"/"invalid" type
 	Type StaticType
 }
 
@@ -289,7 +322,7 @@ func NewTypeValue(
 	return NewUnmeteredTypeValue(staticType)
 }
 
-func (TypeValue) IsValue() {}
+func (TypeValue) isValue() {}
 
 func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
@@ -442,6 +475,7 @@ func (v TypeValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -499,7 +533,7 @@ var _ Value = VoidValue{}
 var _ atree.Storable = VoidValue{}
 var _ EquatableValue = VoidValue{}
 
-func (VoidValue) IsValue() {}
+func (VoidValue) isValue() {}
 
 func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitVoidValue(interpreter, v)
@@ -561,6 +595,7 @@ func (v VoidValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -607,7 +642,7 @@ func AsBoolValue(v bool) BoolValue {
 	return FalseValue
 }
 
-func (BoolValue) IsValue() {}
+func (BoolValue) isValue() {}
 
 func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoolValue(interpreter, v)
@@ -638,6 +673,42 @@ func (v BoolValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 		return false
 	}
 	return bool(v) == bool(otherBool)
+}
+
+func (v BoolValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return !v && o
+}
+
+func (v BoolValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return !v || o
+}
+
+func (v BoolValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return v && !o
+}
+
+func (v BoolValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return v || !o
 }
 
 // HashInput returns a byte slice containing:
@@ -697,6 +768,7 @@ func (v BoolValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -749,10 +821,11 @@ func NewCharacterValue(
 var _ Value = CharacterValue("a")
 var _ atree.Storable = CharacterValue("a")
 var _ EquatableValue = CharacterValue("a")
+var _ ComparableValue = CharacterValue("a")
 var _ HashableValue = CharacterValue("a")
 var _ MemberAccessibleValue = CharacterValue("a")
 
-func (CharacterValue) IsValue() {}
+func (CharacterValue) isValue() {}
 
 func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCharacterValue(interpreter, v)
@@ -796,6 +869,38 @@ func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool
 	return v.NormalForm() == otherChar.NormalForm()
 }
 
+func (v CharacterValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return v.NormalForm() < otherChar.NormalForm()
+}
+
+func (v CharacterValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return v.NormalForm() <= otherChar.NormalForm()
+}
+
+func (v CharacterValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return v.NormalForm() > otherChar.NormalForm()
+}
+
+func (v CharacterValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherChar, ok := other.(CharacterValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return v.NormalForm() >= otherChar.NormalForm()
+}
+
 func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
 	s := []byte(string(v))
 	length := 1 + len(s)
@@ -837,6 +942,7 @@ func (v CharacterValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -884,6 +990,10 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, nam
 				)
 			},
 		)
+
+	case sema.CharacterTypeUtf8FieldName:
+		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v)))
+		return ByteSliceToByteArrayValue(interpreter, []byte(v))
 	}
 	return nil
 }
@@ -932,6 +1042,7 @@ func NewStringValue(
 var _ Value = &StringValue{}
 var _ atree.Storable = &StringValue{}
 var _ EquatableValue = &StringValue{}
+var _ ComparableValue = &StringValue{}
 var _ HashableValue = &StringValue{}
 var _ ValueIndexableValue = &StringValue{}
 var _ MemberAccessibleValue = &StringValue{}
@@ -945,7 +1056,7 @@ func (v *StringValue) prepareGraphemes() {
 	}
 }
 
-func (*StringValue) IsValue() {}
+func (*StringValue) isValue() {}
 
 func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
@@ -983,6 +1094,58 @@ func (v *StringValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 		return false
 	}
 	return v.NormalForm() == otherString.NormalForm()
+}
+
+func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() < otherString.NormalForm())
+}
+
+func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() <= otherString.NormalForm())
+}
+
+func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() > otherString.NormalForm())
+}
+
+func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	otherString, ok := other.(*StringValue)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return AsBoolValue(v.NormalForm() >= otherString.NormalForm())
 }
 
 // HashInput returns a byte slice containing:
@@ -1029,7 +1192,7 @@ func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locat
 	)
 }
 
-var emptyString = NewUnmeteredStringValue("")
+var EmptyString = NewUnmeteredStringValue("")
 
 func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRange) Value {
 	fromIndex := from.ToInt(locationRange)
@@ -1056,7 +1219,7 @@ func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRa
 	}
 
 	if fromIndex == toIndex {
-		return emptyString
+		return EmptyString
 	}
 
 	v.prepareGraphemes()
@@ -1256,6 +1419,7 @@ func (v *StringValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -1432,6 +1596,7 @@ func NewArrayValue(
 				atree.Address(address),
 				true,
 				nil,
+				nil,
 			)
 
 			return value
@@ -1531,7 +1696,7 @@ var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
 
-func (*ArrayValue) IsValue() {}
+func (*ArrayValue) isValue() {}
 
 func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	descend := visitor.VisitArrayValue(interpreter, v)
@@ -1544,17 +1709,25 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *ArrayValue) Iterate(gauge common.MemoryGauge, f func(element Value) (resume bool)) {
-	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-		// atree.Array iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
+func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
+	iterate := func() {
+		err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+			// atree.Array iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
 
-		resume = f(MustConvertStoredValue(gauge, element))
+			resume = f(MustConvertStoredValue(interpreter, element))
 
-		return resume, nil
-	})
-	if err != nil {
-		panic(errors.NewExternalError(err))
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
 	}
 }
 
@@ -1623,9 +1796,17 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		}()
 	}
 
-	v.Walk(interpreter, func(element Value) {
-		maybeDestroy(interpreter, locationRange, element)
-	})
+	storageID := v.StorageID()
+
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Walk(interpreter, func(element Value) {
+				maybeDestroy(interpreter, locationRange, element)
+			})
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -1701,6 +1882,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 				atree.Address{},
 				false,
 				nil,
+				nil,
 			)
 		},
 	)
@@ -1748,9 +1930,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 		panic(errors.NewExternalError(err))
 	}
 
-	config := interpreter.SharedState.Config
-
-	return StoredValue(interpreter, storable, config.Storage)
+	return StoredValue(interpreter, storable, interpreter.Storage())
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
@@ -1765,6 +1945,8 @@ func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Set function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -1787,6 +1969,9 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 		v.array.Address(),
 		true,
 		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
 	)
 
 	existingStorable, err := v.array.Set(uint64(index), element)
@@ -1797,8 +1982,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	config := interpreter.SharedState.Config
-	existingValue := StoredValue(interpreter, existingStorable, config.Storage)
+	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 
 	existingValue.DeepRemove(interpreter)
 
@@ -1839,6 +2023,8 @@ func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReference
 
 func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRange, element Value) {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(
 		v.array.Count(),
@@ -1857,6 +2043,9 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 		v.array.Address(),
 		true,
 		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
 	)
 
 	err := v.array.Append(element)
@@ -1884,6 +2073,8 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+
+	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Insert function will check the upper bound and report an atree.IndexOutOfBoundsError
@@ -1914,6 +2105,9 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 		v.array.Address(),
 		true,
 		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
 	)
 
 	err := v.array.Insert(uint64(index), element)
@@ -1938,6 +2132,8 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationR
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
 	// atree's Array.Remove function will check the upper bound and report an atree.IndexOutOfBoundsError
 
@@ -1957,8 +2153,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
 
-	config := interpreter.SharedState.Config
-	value := StoredValue(interpreter, storable, config.Storage)
+	value := StoredValue(interpreter, storable, interpreter.Storage())
 
 	return value.Transfer(
 		interpreter,
@@ -1966,6 +2161,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 		atree.Address{},
 		true,
 		storable,
+		nil,
 	)
 }
 
@@ -2223,6 +2419,20 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				)
 			},
 		)
+
+	case sema.ArrayTypeReverseFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayReverseFunctionType(
+				v.SemaType(interpreter),
+			),
+			func(invocation Invocation) Value {
+				return v.Reverse(
+					invocation.Interpreter,
+					invocation.LocationRange,
+				)
+			},
+		)
 	}
 
 	return nil
@@ -2352,8 +2562,12 @@ func (v *ArrayValue) Equal(interpreter *Interpreter, locationRange LocationRange
 	return true
 }
 
-func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return atree.StorageIDStorable(v.StorageID()), nil
+func (v *ArrayValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
+	return v.array.Storable(storage, address, maxInlineSize)
 }
 
 func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
@@ -2364,6 +2578,7 @@ func (v *ArrayValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
 	common.UseMemory(interpreter, baseUsage)
@@ -2395,11 +2610,20 @@ func (v *ArrayValue) Transfer(
 	}
 
 	currentStorageID := v.StorageID()
-	currentAddress := currentStorageID.Address
+
+	if preventTransfer == nil {
+		preventTransfer = map[atree.StorageID]struct{}{}
+	} else if _, ok := preventTransfer[currentStorageID]; ok {
+		panic(RecursiveTransferError{
+			LocationRange: locationRange,
+		})
+	}
+	preventTransfer[currentStorageID] = struct{}{}
+	defer delete(preventTransfer, currentStorageID)
 
 	array := v.array
 
-	needsStoreTo := address != currentAddress
+	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -2423,7 +2647,7 @@ func (v *ArrayValue) Transfer(
 				}
 
 				element := MustConvertStoredValue(interpreter, value).
-					Transfer(interpreter, locationRange, address, remove, nil)
+					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
 
 				return element, nil
 			},
@@ -2494,7 +2718,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 
 	array, err := atree.NewArrayFromBatchData(
 		config.Storage,
-		v.StorageID().Address,
+		v.StorageAddress(),
 		v.array.Type(),
 		func() (atree.Value, error) {
 			value, err := iterator.Next()
@@ -2560,8 +2784,12 @@ func (v *ArrayValue) StorageID() atree.StorageID {
 	return v.array.StorageID()
 }
 
+func (v *ArrayValue) StorageAddress() atree.Address {
+	return v.array.Address()
+}
+
 func (v *ArrayValue) GetOwner() common.Address {
-	return common.Address(v.StorageID().Address)
+	return common.Address(v.StorageAddress())
 }
 
 func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
@@ -2573,7 +2801,7 @@ func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
 }
 
 func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
-	return address != v.StorageID().Address
+	return address != v.StorageAddress()
 }
 
 func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
@@ -2658,6 +2886,39 @@ func (v *ArrayValue) Slice(
 				atree.Address{},
 				false,
 				nil,
+				nil,
+			)
+		},
+	)
+}
+
+func (v *ArrayValue) Reverse(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+) Value {
+	count := v.Count()
+	index := count - 1
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		v.Type,
+		common.ZeroAddress,
+		uint64(count),
+		func() Value {
+			if index < 0 {
+				return nil
+			}
+
+			value := v.Get(interpreter, locationRange, index)
+			index--
+
+			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
 			)
 		},
 	)
@@ -2665,7 +2926,7 @@ func (v *ArrayValue) Slice(
 
 // NumberValue
 type NumberValue interface {
-	EquatableValue
+	ComparableValue
 	ToInt(locationRange LocationRange) int
 	Negate(*Interpreter, LocationRange) NumberValue
 	Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
@@ -2677,10 +2938,6 @@ type NumberValue interface {
 	SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
 	Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
 	SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
-	Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
-	LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
-	Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
-	GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue
 	ToBigEndianBytes() []byte
 }
 
@@ -2869,10 +3126,11 @@ var _ atree.Storable = IntValue{}
 var _ NumberValue = IntValue{}
 var _ IntegerValue = IntValue{}
 var _ EquatableValue = IntValue{}
+var _ ComparableValue = IntValue{}
 var _ HashableValue = IntValue{}
 var _ MemberAccessibleValue = IntValue{}
 
-func (IntValue) IsValue() {}
+func (IntValue) isValue() {}
 
 func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitIntValue(interpreter, v)
@@ -3102,7 +3360,7 @@ func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue, loc
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v IntValue) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3116,7 +3374,7 @@ func (v IntValue) Less(interpreter *Interpreter, other NumberValue, locationRang
 	return AsBoolValue(cmp == -1)
 }
 
-func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3130,7 +3388,7 @@ func (v IntValue) LessEqual(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v IntValue) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3145,7 +3403,7 @@ func (v IntValue) Greater(interpreter *Interpreter, other NumberValue, locationR
 
 }
 
-func (v IntValue) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v IntValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(IntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3347,6 +3605,7 @@ func (v IntValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -3397,9 +3656,10 @@ var _ atree.Storable = Int8Value(0)
 var _ NumberValue = Int8Value(0)
 var _ IntegerValue = Int8Value(0)
 var _ EquatableValue = Int8Value(0)
+var _ ComparableValue = Int8Value(0)
 var _ HashableValue = Int8Value(0)
 
-func (Int8Value) IsValue() {}
+func (Int8Value) isValue() {}
 
 func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt8Value(interpreter, v)
@@ -3705,7 +3965,7 @@ func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 	return NewInt8Value(interpreter, valueGetter)
 }
 
-func (v Int8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3718,7 +3978,7 @@ func (v Int8Value) Less(interpreter *Interpreter, other NumberValue, locationRan
 	return AsBoolValue(v < o)
 }
 
-func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3731,7 +3991,7 @@ func (v Int8Value) LessEqual(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v <= o)
 }
 
-func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3744,7 +4004,7 @@ func (v Int8Value) Greater(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(v > o)
 }
 
-func (v Int8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -3933,6 +4193,7 @@ func (v Int8Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -3983,10 +4244,11 @@ var _ atree.Storable = Int16Value(0)
 var _ NumberValue = Int16Value(0)
 var _ IntegerValue = Int16Value(0)
 var _ EquatableValue = Int16Value(0)
+var _ ComparableValue = Int16Value(0)
 var _ HashableValue = Int16Value(0)
 var _ MemberAccessibleValue = Int16Value(0)
 
-func (Int16Value) IsValue() {}
+func (Int16Value) isValue() {}
 
 func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt16Value(interpreter, v)
@@ -4291,7 +4553,7 @@ func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt16Value(interpreter, valueGetter)
 }
 
-func (v Int16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4304,7 +4566,7 @@ func (v Int16Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4317,7 +4579,7 @@ func (v Int16Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4330,7 +4592,7 @@ func (v Int16Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Int16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4521,6 +4783,7 @@ func (v Int16Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -4571,10 +4834,11 @@ var _ atree.Storable = Int32Value(0)
 var _ NumberValue = Int32Value(0)
 var _ IntegerValue = Int32Value(0)
 var _ EquatableValue = Int32Value(0)
+var _ ComparableValue = Int32Value(0)
 var _ HashableValue = Int32Value(0)
 var _ MemberAccessibleValue = Int32Value(0)
 
-func (Int32Value) IsValue() {}
+func (Int32Value) isValue() {}
 
 func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt32Value(interpreter, v)
@@ -4880,7 +5144,7 @@ func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt32Value(interpreter, valueGetter)
 }
 
-func (v Int32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4893,7 +5157,7 @@ func (v Int32Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4906,7 +5170,7 @@ func (v Int32Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -4919,7 +5183,7 @@ func (v Int32Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Int32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5109,6 +5373,7 @@ func (v Int32Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -5157,10 +5422,11 @@ var _ atree.Storable = Int64Value(0)
 var _ NumberValue = Int64Value(0)
 var _ IntegerValue = Int64Value(0)
 var _ EquatableValue = Int64Value(0)
+var _ ComparableValue = Int64Value(0)
 var _ HashableValue = Int64Value(0)
 var _ MemberAccessibleValue = Int64Value(0)
 
-func (Int64Value) IsValue() {}
+func (Int64Value) isValue() {}
 
 func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt64Value(interpreter, v)
@@ -5468,7 +5734,7 @@ func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt64Value(interpreter, valueGetter)
 }
 
-func (v Int64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5481,7 +5747,7 @@ func (v Int64Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5494,7 +5760,7 @@ func (v Int64Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5508,7 +5774,7 @@ func (v Int64Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 
 }
 
-func (v Int64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -5693,6 +5959,7 @@ func (v Int64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -5758,10 +6025,11 @@ var _ atree.Storable = Int128Value{}
 var _ NumberValue = Int128Value{}
 var _ IntegerValue = Int128Value{}
 var _ EquatableValue = Int128Value{}
+var _ ComparableValue = Int128Value{}
 var _ HashableValue = Int128Value{}
 var _ MemberAccessibleValue = Int128Value{}
 
-func (Int128Value) IsValue() {}
+func (Int128Value) isValue() {}
 
 func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt128Value(interpreter, v)
@@ -6117,7 +6385,7 @@ func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6131,7 +6399,7 @@ func (v Int128Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(cmp == -1)
 }
 
-func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6145,7 +6413,7 @@ func (v Int128Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6159,7 +6427,7 @@ func (v Int128Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(cmp == 1)
 }
 
-func (v Int128Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int128Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6381,6 +6649,7 @@ func (v Int128Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -6446,10 +6715,11 @@ var _ atree.Storable = Int256Value{}
 var _ NumberValue = Int256Value{}
 var _ IntegerValue = Int256Value{}
 var _ EquatableValue = Int256Value{}
+var _ ComparableValue = Int256Value{}
 var _ HashableValue = Int256Value{}
 var _ MemberAccessibleValue = Int256Value{}
 
-func (Int256Value) IsValue() {}
+func (Int256Value) isValue() {}
 
 func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt256Value(interpreter, v)
@@ -6803,7 +7073,7 @@ func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
-func (v Int256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6817,7 +7087,7 @@ func (v Int256Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(cmp == -1)
 }
 
-func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6831,7 +7101,7 @@ func (v Int256Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -6845,7 +7115,7 @@ func (v Int256Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(cmp == 1)
 }
 
-func (v Int256Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Int256Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7066,6 +7336,7 @@ func (v Int256Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -7168,10 +7439,11 @@ var _ atree.Storable = UIntValue{}
 var _ NumberValue = UIntValue{}
 var _ IntegerValue = UIntValue{}
 var _ EquatableValue = UIntValue{}
+var _ ComparableValue = UIntValue{}
 var _ HashableValue = UIntValue{}
 var _ MemberAccessibleValue = UIntValue{}
 
-func (UIntValue) IsValue() {}
+func (UIntValue) isValue() {}
 
 func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUIntValue(interpreter, v)
@@ -7411,7 +7683,7 @@ func (v UIntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UIntValue) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7425,7 +7697,7 @@ func (v UIntValue) Less(interpreter *Interpreter, other NumberValue, locationRan
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7439,7 +7711,7 @@ func (v UIntValue) LessEqual(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7453,7 +7725,7 @@ func (v UIntValue) Greater(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UIntValue) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UIntValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7655,6 +7927,7 @@ func (v UIntValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -7691,6 +7964,7 @@ var _ atree.Storable = UInt8Value(0)
 var _ NumberValue = UInt8Value(0)
 var _ IntegerValue = UInt8Value(0)
 var _ EquatableValue = UInt8Value(0)
+var _ ComparableValue = UInt8Value(0)
 var _ HashableValue = UInt8Value(0)
 var _ MemberAccessibleValue = UInt8Value(0)
 
@@ -7706,7 +7980,7 @@ func NewUnmeteredUInt8Value(value uint8) UInt8Value {
 	return UInt8Value(value)
 }
 
-func (UInt8Value) IsValue() {}
+func (UInt8Value) isValue() {}
 
 func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt8Value(interpreter, v)
@@ -7937,7 +8211,7 @@ func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7950,7 +8224,7 @@ func (v UInt8Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7963,7 +8237,7 @@ func (v UInt8Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -7976,7 +8250,7 @@ func (v UInt8Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8203,6 +8477,7 @@ func (v UInt8Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -8239,6 +8514,7 @@ var _ atree.Storable = UInt16Value(0)
 var _ NumberValue = UInt16Value(0)
 var _ IntegerValue = UInt16Value(0)
 var _ EquatableValue = UInt16Value(0)
+var _ ComparableValue = UInt16Value(0)
 var _ HashableValue = UInt16Value(0)
 var _ MemberAccessibleValue = UInt16Value(0)
 
@@ -8254,7 +8530,7 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 	return UInt16Value(value)
 }
 
-func (UInt16Value) IsValue() {}
+func (UInt16Value) isValue() {}
 
 func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt16Value(interpreter, v)
@@ -8490,7 +8766,7 @@ func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8503,7 +8779,7 @@ func (v UInt16Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8516,7 +8792,7 @@ func (v UInt16Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8529,7 +8805,7 @@ func (v UInt16Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -8714,6 +8990,7 @@ func (v UInt16Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -8762,10 +9039,11 @@ var _ atree.Storable = UInt32Value(0)
 var _ NumberValue = UInt32Value(0)
 var _ IntegerValue = UInt32Value(0)
 var _ EquatableValue = UInt32Value(0)
+var _ ComparableValue = UInt32Value(0)
 var _ HashableValue = UInt32Value(0)
 var _ MemberAccessibleValue = UInt32Value(0)
 
-func (UInt32Value) IsValue() {}
+func (UInt32Value) isValue() {}
 
 func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt32Value(interpreter, v)
@@ -9002,7 +9280,7 @@ func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9015,7 +9293,7 @@ func (v UInt32Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9028,7 +9306,7 @@ func (v UInt32Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9041,7 +9319,7 @@ func (v UInt32Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9226,6 +9504,7 @@ func (v UInt32Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -9262,6 +9541,7 @@ var _ atree.Storable = UInt64Value(0)
 var _ NumberValue = UInt64Value(0)
 var _ IntegerValue = UInt64Value(0)
 var _ EquatableValue = UInt64Value(0)
+var _ ComparableValue = UInt64Value(0)
 var _ HashableValue = UInt64Value(0)
 var _ MemberAccessibleValue = UInt64Value(0)
 
@@ -9283,7 +9563,7 @@ func NewUnmeteredUInt64Value(value uint64) UInt64Value {
 	return UInt64Value(value)
 }
 
-func (UInt64Value) IsValue() {}
+func (UInt64Value) isValue() {}
 
 func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt64Value(interpreter, v)
@@ -9541,7 +9821,7 @@ func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9554,7 +9834,7 @@ func (v UInt64Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9567,7 +9847,7 @@ func (v UInt64Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9580,7 +9860,7 @@ func (v UInt64Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -9765,6 +10045,7 @@ func (v UInt64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -9830,10 +10111,11 @@ var _ atree.Storable = UInt128Value{}
 var _ NumberValue = UInt128Value{}
 var _ IntegerValue = UInt128Value{}
 var _ EquatableValue = UInt128Value{}
+var _ ComparableValue = UInt128Value{}
 var _ HashableValue = UInt128Value{}
 var _ MemberAccessibleValue = UInt128Value{}
 
-func (UInt128Value) IsValue() {}
+func (UInt128Value) isValue() {}
 
 func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt128Value(interpreter, v)
@@ -10127,7 +10409,7 @@ func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10141,7 +10423,7 @@ func (v UInt128Value) Less(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10155,7 +10437,7 @@ func (v UInt128Value) LessEqual(interpreter *Interpreter, other NumberValue, loc
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10169,7 +10451,7 @@ func (v UInt128Value) Greater(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt128Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt128Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10396,6 +10678,7 @@ func (v UInt128Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -10461,10 +10744,11 @@ var _ atree.Storable = UInt256Value{}
 var _ NumberValue = UInt256Value{}
 var _ IntegerValue = UInt256Value{}
 var _ EquatableValue = UInt256Value{}
+var _ ComparableValue = UInt256Value{}
 var _ HashableValue = UInt256Value{}
 var _ MemberAccessibleValue = UInt256Value{}
 
-func (UInt256Value) IsValue() {}
+func (UInt256Value) isValue() {}
 
 func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt256Value(interpreter, v)
@@ -10760,7 +11044,7 @@ func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 	return v.Div(interpreter, other, locationRange)
 }
 
-func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10774,7 +11058,7 @@ func (v UInt256Value) Less(interpreter *Interpreter, other NumberValue, location
 	return AsBoolValue(cmp == -1)
 }
 
-func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10788,7 +11072,7 @@ func (v UInt256Value) LessEqual(interpreter *Interpreter, other NumberValue, loc
 	return AsBoolValue(cmp <= 0)
 }
 
-func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -10802,7 +11086,7 @@ func (v UInt256Value) Greater(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(cmp == 1)
 }
 
-func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UInt256Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11026,6 +11310,7 @@ func (v UInt256Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -11062,6 +11347,7 @@ var _ atree.Storable = Word8Value(0)
 var _ NumberValue = Word8Value(0)
 var _ IntegerValue = Word8Value(0)
 var _ EquatableValue = Word8Value(0)
+var _ ComparableValue = Word8Value(0)
 var _ HashableValue = Word8Value(0)
 var _ MemberAccessibleValue = Word8Value(0)
 
@@ -11079,7 +11365,7 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 	return Word8Value(value)
 }
 
-func (Word8Value) IsValue() {}
+func (Word8Value) isValue() {}
 
 func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord8Value(interpreter, v)
@@ -11232,7 +11518,7 @@ func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Numb
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word8Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11245,7 +11531,7 @@ func (v Word8Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11258,7 +11544,7 @@ func (v Word8Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11271,7 +11557,7 @@ func (v Word8Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Word8Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word8Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11443,6 +11729,7 @@ func (v Word8Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -11479,6 +11766,7 @@ var _ atree.Storable = Word16Value(0)
 var _ NumberValue = Word16Value(0)
 var _ IntegerValue = Word16Value(0)
 var _ EquatableValue = Word16Value(0)
+var _ ComparableValue = Word16Value(0)
 var _ HashableValue = Word16Value(0)
 var _ MemberAccessibleValue = Word16Value(0)
 
@@ -11496,7 +11784,7 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 	return Word16Value(value)
 }
 
-func (Word16Value) IsValue() {}
+func (Word16Value) isValue() {}
 
 func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord16Value(interpreter, v)
@@ -11648,7 +11936,7 @@ func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word16Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11661,7 +11949,7 @@ func (v Word16Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11674,7 +11962,7 @@ func (v Word16Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11687,7 +11975,7 @@ func (v Word16Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v Word16Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word16Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word16Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -11861,6 +12149,7 @@ func (v Word16Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -11897,6 +12186,7 @@ var _ atree.Storable = Word32Value(0)
 var _ NumberValue = Word32Value(0)
 var _ IntegerValue = Word32Value(0)
 var _ EquatableValue = Word32Value(0)
+var _ ComparableValue = Word32Value(0)
 var _ HashableValue = Word32Value(0)
 var _ MemberAccessibleValue = Word32Value(0)
 
@@ -11914,7 +12204,7 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 	return Word32Value(value)
 }
 
-func (Word32Value) IsValue() {}
+func (Word32Value) isValue() {}
 
 func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord32Value(interpreter, v)
@@ -12067,7 +12357,7 @@ func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word32Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12080,7 +12370,7 @@ func (v Word32Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12093,7 +12383,7 @@ func (v Word32Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12106,7 +12396,7 @@ func (v Word32Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v Word32Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word32Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word32Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12280,6 +12570,7 @@ func (v Word32Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -12316,6 +12607,7 @@ var _ atree.Storable = Word64Value(0)
 var _ NumberValue = Word64Value(0)
 var _ IntegerValue = Word64Value(0)
 var _ EquatableValue = Word64Value(0)
+var _ ComparableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
 var _ MemberAccessibleValue = Word64Value(0)
 
@@ -12339,7 +12631,7 @@ func NewUnmeteredWord64Value(value uint64) Word64Value {
 // call ToBigInt instead of ToInt.
 var _ BigNumberValue = Word64Value(0)
 
-func (Word64Value) IsValue() {}
+func (Word64Value) isValue() {}
 
 func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord64Value(interpreter, v)
@@ -12510,7 +12802,7 @@ func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Num
 	panic(errors.NewUnreachableError())
 }
 
-func (v Word64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12523,7 +12815,7 @@ func (v Word64Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12536,7 +12828,7 @@ func (v Word64Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12549,7 +12841,7 @@ func (v Word64Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v Word64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Word64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -12723,6 +13015,7 @@ func (v Word64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -12747,6 +13040,1112 @@ func (v Word64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 }
 
 func (Word64Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
+// Word128Value
+
+type Word128Value struct {
+	BigInt *big.Int
+}
+
+func NewWord128ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Word128Value {
+	return NewWord128ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			return new(big.Int).SetInt64(value)
+		},
+	)
+}
+
+var Word128MemoryUsage = common.NewBigIntMemoryUsage(16)
+
+func NewWord128ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) Word128Value {
+	common.UseMemory(memoryGauge, Word128MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredWord128ValueFromBigInt(value)
+}
+
+func NewUnmeteredWord128ValueFromUint64(value uint64) Word128Value {
+	return NewUnmeteredWord128ValueFromBigInt(new(big.Int).SetUint64(value))
+}
+
+func NewUnmeteredWord128ValueFromBigInt(value *big.Int) Word128Value {
+	return Word128Value{
+		BigInt: value,
+	}
+}
+
+var _ Value = Word128Value{}
+var _ atree.Storable = Word128Value{}
+var _ NumberValue = Word128Value{}
+var _ IntegerValue = Word128Value{}
+var _ EquatableValue = Word128Value{}
+var _ ComparableValue = Word128Value{}
+var _ HashableValue = Word128Value{}
+var _ MemberAccessibleValue = Word128Value{}
+
+func (Word128Value) isValue() {}
+
+func (v Word128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitWord128Value(interpreter, v)
+}
+
+func (Word128Value) Walk(_ *Interpreter, _ func(Value)) {
+	// NO-OP
+}
+
+func (Word128Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord128)
+}
+
+func (Word128Value) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
+func (v Word128Value) ToInt(locationRange LocationRange) int {
+	if !v.BigInt.IsInt64() {
+		panic(OverflowError{LocationRange: locationRange})
+	}
+	return int(v.BigInt.Int64())
+}
+
+func (v Word128Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
+func (v Word128Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
+	return new(big.Int).Set(v.BigInt)
+}
+
+func (v Word128Value) String() string {
+	return format.BigInt(v.BigInt)
+}
+
+func (v Word128Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Word128Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
+func (v Word128Value) Negate(*Interpreter, LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word128Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and wrap around in case of overflow.
+			//
+			// Note that since v and o are both in the range [0, 2**128 - 1),
+			// their sum will be in range [0, 2*(2**128 - 1)).
+			// Hence it is sufficient to subtract 2**128 to wrap around.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.Word128TypeMaxIntBig) > 0 {
+				sum.Sub(sum, sema.Word128TypeMaxIntPlusOneBig)
+			}
+			return sum
+		},
+	)
+}
+
+func (v Word128Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word128Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and wrap around in case of underflow.
+			//
+			// Note that since v and o are both in the range [0, 2**128 - 1),
+			// their difference will be in range [-(2**128 - 1), 2**128 - 1).
+			// Hence it is sufficient to add 2**128 to wrap around.
+			//
+			// If Go gains a native uint128 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Sign() < 0 {
+				diff.Add(diff, sema.Word128TypeMaxIntPlusOneBig)
+			}
+			return diff
+		},
+	)
+}
+
+func (v Word128Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word128Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{LocationRange: locationRange})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
+}
+
+func (v Word128Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.Word128TypeMaxIntBig) > 0 {
+				res.Mod(res, sema.Word128TypeMaxIntPlusOneBig)
+			}
+			return res
+		},
+	)
+}
+
+func (v Word128Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word128Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{LocationRange: locationRange})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
+
+}
+
+func (v Word128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == -1)
+}
+
+func (v Word128Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp <= 0)
+}
+
+func (v Word128Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == 1)
+}
+
+func (v Word128Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp >= 0)
+}
+
+func (v Word128Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+	otherInt, ok := other.(Word128Value)
+	if !ok {
+		return false
+	}
+	cmp := v.BigInt.Cmp(otherInt.BigInt)
+	return cmp == 0
+}
+
+// HashInput returns a byte slice containing:
+// - HashInputTypeWord128 (1 byte)
+// - big int encoded in big endian (n bytes)
+func (v Word128Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
+
+	length := 1 + len(b)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeWord128)
+	copy(buffer[1:], b)
+	return buffer
+}
+
+func ConvertWord128(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+	return NewWord128ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+
+			var v *big.Int
+
+			switch value := value.(type) {
+			case BigNumberValue:
+				v = value.ToBigInt(memoryGauge)
+
+			case NumberValue:
+				v = big.NewInt(int64(value.ToInt(locationRange)))
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			if v.Cmp(sema.Word128TypeMaxIntBig) > 0 || v.Sign() < 0 {
+				// When Sign() < 0, Mod will add sema.Word128TypeMaxIntPlusOneBig
+				// to ensure the range is [0, sema.Word128TypeMaxIntPlusOneBig)
+				v.Mod(v, sema.Word128TypeMaxIntPlusOneBig)
+			}
+
+			return v
+		},
+	)
+}
+
+func (v Word128Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
+}
+
+func (v Word128Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
+}
+
+func (v Word128Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
+
+}
+
+func (v Word128Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{LocationRange: locationRange})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{LocationRange: locationRange})
+			}
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
+}
+
+func (v Word128Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word128Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord128ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{LocationRange: locationRange})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{LocationRange: locationRange})
+			}
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
+}
+
+func (v Word128Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word128Type, locationRange)
+}
+
+func (Word128Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (Word128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+	// Numbers have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word128Value) ToBigEndianBytes() []byte {
+	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+}
+
+func (v Word128Value) ConformsToStaticType(
+	_ *Interpreter,
+	_ LocationRange,
+	_ TypeConformanceResults,
+) bool {
+	return true
+}
+
+func (Word128Value) IsStorable() bool {
+	return true
+}
+
+func (v Word128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return v, nil
+}
+
+func (Word128Value) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (Word128Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Word128Value) Transfer(
+	interpreter *Interpreter,
+	_ LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v Word128Value) Clone(_ *Interpreter) Value {
+	return NewUnmeteredWord128ValueFromBigInt(v.BigInt)
+}
+
+func (Word128Value) DeepRemove(_ *Interpreter) {
+	// NO-OP
+}
+
+func (v Word128Value) ByteSize() uint32 {
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
+}
+
+func (v Word128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (Word128Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
+// Word256Value
+
+type Word256Value struct {
+	BigInt *big.Int
+}
+
+func NewWord256ValueFromUint64(memoryGauge common.MemoryGauge, value int64) Word256Value {
+	return NewWord256ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+			return new(big.Int).SetInt64(value)
+		},
+	)
+}
+
+var Word256MemoryUsage = common.NewBigIntMemoryUsage(32)
+
+func NewWord256ValueFromBigInt(memoryGauge common.MemoryGauge, bigIntConstructor func() *big.Int) Word256Value {
+	common.UseMemory(memoryGauge, Word256MemoryUsage)
+	value := bigIntConstructor()
+	return NewUnmeteredWord256ValueFromBigInt(value)
+}
+
+func NewUnmeteredWord256ValueFromUint64(value uint64) Word256Value {
+	return NewUnmeteredWord256ValueFromBigInt(new(big.Int).SetUint64(value))
+}
+
+func NewUnmeteredWord256ValueFromBigInt(value *big.Int) Word256Value {
+	return Word256Value{
+		BigInt: value,
+	}
+}
+
+var _ Value = Word256Value{}
+var _ atree.Storable = Word256Value{}
+var _ NumberValue = Word256Value{}
+var _ IntegerValue = Word256Value{}
+var _ EquatableValue = Word256Value{}
+var _ ComparableValue = Word256Value{}
+var _ HashableValue = Word256Value{}
+var _ MemberAccessibleValue = Word256Value{}
+
+func (Word256Value) isValue() {}
+
+func (v Word256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitWord256Value(interpreter, v)
+}
+
+func (Word256Value) Walk(_ *Interpreter, _ func(Value)) {
+	// NO-OP
+}
+
+func (Word256Value) StaticType(interpreter *Interpreter) StaticType {
+	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord256)
+}
+
+func (Word256Value) IsImportable(_ *Interpreter) bool {
+	return true
+}
+
+func (v Word256Value) ToInt(locationRange LocationRange) int {
+	if !v.BigInt.IsInt64() {
+		panic(OverflowError{LocationRange: locationRange})
+	}
+	return int(v.BigInt.Int64())
+}
+
+func (v Word256Value) ByteLength() int {
+	return common.BigIntByteLength(v.BigInt)
+}
+
+func (v Word256Value) ToBigInt(memoryGauge common.MemoryGauge) *big.Int {
+	common.UseMemory(memoryGauge, common.NewBigIntMemoryUsage(v.ByteLength()))
+	return new(big.Int).Set(v.BigInt)
+}
+
+func (v Word256Value) String() string {
+	return format.BigInt(v.BigInt)
+}
+
+func (v Word256Value) RecursiveString(_ SeenReferences) string {
+	return v.String()
+}
+
+func (v Word256Value) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+	common.UseMemory(
+		memoryGauge,
+		common.NewRawStringMemoryUsage(
+			OverEstimateNumberStringLength(memoryGauge, v),
+		),
+	)
+	return v.String()
+}
+
+func (v Word256Value) Negate(*Interpreter, LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Plus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationPlus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			sum := new(big.Int)
+			sum.Add(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just add and wrap around in case of overflow.
+			//
+			// Note that since v and o are both in the range [0, 2**256 - 1),
+			// their sum will be in range [0, 2*(2**256 - 1)).
+			// Hence it is sufficient to subtract 2**256 to wrap around.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//  if sum < v {
+			//      ...
+			//  }
+			//
+			if sum.Cmp(sema.Word256TypeMaxIntBig) > 0 {
+				sum.Sub(sum, sema.Word256TypeMaxIntPlusOneBig)
+			}
+			return sum
+		},
+	)
+}
+
+func (v Word256Value) SaturatingPlus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Minus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMinus,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			diff := new(big.Int)
+			diff.Sub(v.BigInt, o.BigInt)
+			// Given that this value is backed by an arbitrary size integer,
+			// we can just subtract and wrap around in case of underflow.
+			//
+			// Note that since v and o are both in the range [0, 2**256 - 1),
+			// their difference will be in range [-(2**256 - 1), 2**256 - 1).
+			// Hence it is sufficient to add 2**256 to wrap around.
+			//
+			// If Go gains a native uint256 type and we switch this value
+			// to be based on it, then we need to follow INT30-C:
+			//
+			//   if diff > v {
+			// 	     ...
+			//   }
+			//
+			if diff.Sign() < 0 {
+				diff.Add(diff, sema.Word256TypeMaxIntPlusOneBig)
+			}
+			return diff
+		},
+	)
+}
+
+func (v Word256Value) SaturatingMinus(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Mod(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMod,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{LocationRange: locationRange})
+			}
+			return res.Rem(v.BigInt, o.BigInt)
+		},
+	)
+}
+
+func (v Word256Value) Mul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationMul,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			res.Mul(v.BigInt, o.BigInt)
+			if res.Cmp(sema.Word256TypeMaxIntBig) > 0 {
+				res.Mod(res, sema.Word256TypeMaxIntPlusOneBig)
+			}
+			return res
+		},
+	)
+}
+
+func (v Word256Value) SaturatingMul(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationDiv,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Cmp(res) == 0 {
+				panic(DivisionByZeroError{LocationRange: locationRange})
+			}
+			return res.Div(v.BigInt, o.BigInt)
+		},
+	)
+
+}
+
+func (v Word256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue {
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLess,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == -1)
+}
+
+func (v Word256Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationLessEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp <= 0)
+}
+
+func (v Word256Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreater,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp == 1)
+}
+
+func (v Word256Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationGreaterEqual,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	cmp := v.BigInt.Cmp(o.BigInt)
+	return AsBoolValue(cmp >= 0)
+}
+
+func (v Word256Value) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+	otherInt, ok := other.(Word256Value)
+	if !ok {
+		return false
+	}
+	cmp := v.BigInt.Cmp(otherInt.BigInt)
+	return cmp == 0
+}
+
+// HashInput returns a byte slice containing:
+// - HashInputTypeWord256 (1 byte)
+// - big int encoded in big endian (n bytes)
+func (v Word256Value) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
+	b := UnsignedBigIntToBigEndianBytes(v.BigInt)
+
+	length := 1 + len(b)
+	var buffer []byte
+	if length <= len(scratch) {
+		buffer = scratch[:length]
+	} else {
+		buffer = make([]byte, length)
+	}
+
+	buffer[0] = byte(HashInputTypeWord256)
+	copy(buffer[1:], b)
+	return buffer
+}
+
+func ConvertWord256(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) Value {
+	return NewWord256ValueFromBigInt(
+		memoryGauge,
+		func() *big.Int {
+
+			var v *big.Int
+
+			switch value := value.(type) {
+			case BigNumberValue:
+				v = value.ToBigInt(memoryGauge)
+
+			case NumberValue:
+				v = big.NewInt(int64(value.ToInt(locationRange)))
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			if v.Cmp(sema.Word256TypeMaxIntBig) > 0 || v.Sign() < 0 {
+				// When Sign() < 0, Mod will add sema.Word256TypeMaxIntPlusOneBig
+				// to ensure the range is [0, sema.Word256TypeMaxIntPlusOneBig)
+				v.Mod(v, sema.Word256TypeMaxIntPlusOneBig)
+			}
+
+			return v
+		},
+	)
+}
+
+func (v Word256Value) BitwiseOr(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseOr,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Or(v.BigInt, o.BigInt)
+		},
+	)
+}
+
+func (v Word256Value) BitwiseXor(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseXor,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.Xor(v.BigInt, o.BigInt)
+		},
+	)
+}
+
+func (v Word256Value) BitwiseAnd(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseAnd,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			return res.And(v.BigInt, o.BigInt)
+		},
+	)
+
+}
+
+func (v Word256Value) BitwiseLeftShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseLeftShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{LocationRange: locationRange})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{LocationRange: locationRange})
+			}
+			return res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
+}
+
+func (v Word256Value) BitwiseRightShift(interpreter *Interpreter, other IntegerValue, locationRange LocationRange) IntegerValue {
+	o, ok := other.(Word256Value)
+	if !ok {
+		panic(InvalidOperandsError{
+			Operation: ast.OperationBitwiseRightShift,
+			LeftType:  v.StaticType(interpreter),
+			RightType: other.StaticType(interpreter),
+		})
+	}
+
+	return NewWord256ValueFromBigInt(
+		interpreter,
+		func() *big.Int {
+			res := new(big.Int)
+			if o.BigInt.Sign() < 0 {
+				panic(UnderflowError{LocationRange: locationRange})
+			}
+			if !o.BigInt.IsUint64() {
+				panic(OverflowError{LocationRange: locationRange})
+			}
+			return res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+		},
+	)
+}
+
+func (v Word256Value) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+	return getNumberValueMember(interpreter, v, name, sema.Word256Type, locationRange)
+}
+
+func (Word256Value) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (Word256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+	// Numbers have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) ToBigEndianBytes() []byte {
+	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+}
+
+func (v Word256Value) ConformsToStaticType(
+	_ *Interpreter,
+	_ LocationRange,
+	_ TypeConformanceResults,
+) bool {
+	return true
+}
+
+func (Word256Value) IsStorable() bool {
+	return true
+}
+
+func (v Word256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+	return v, nil
+}
+
+func (Word256Value) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (Word256Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Word256Value) Transfer(
+	interpreter *Interpreter,
+	_ LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v Word256Value) Clone(_ *Interpreter) Value {
+	return NewUnmeteredWord256ValueFromBigInt(v.BigInt)
+}
+
+func (Word256Value) DeepRemove(_ *Interpreter) {
+	// NO-OP
+}
+
+func (v Word256Value) ByteSize() uint32 {
+	return cborTagSize + getBigIntCBORSize(v.BigInt)
+}
+
+func (v Word256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (Word256Value) ChildStorables() []atree.Storable {
 	return nil
 }
 
@@ -12798,10 +14197,11 @@ var _ atree.Storable = Fix64Value(0)
 var _ NumberValue = Fix64Value(0)
 var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = Fix64Value(0)
+var _ ComparableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
 var _ MemberAccessibleValue = Fix64Value(0)
 
-func (Fix64Value) IsValue() {}
+func (Fix64Value) isValue() {}
 
 func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitFix64Value(interpreter, v)
@@ -13094,7 +14494,7 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 	)
 }
 
-func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13107,7 +14507,7 @@ func (v Fix64Value) Less(interpreter *Interpreter, other NumberValue, locationRa
 	return AsBoolValue(v < o)
 }
 
-func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13120,7 +14520,7 @@ func (v Fix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locat
 	return AsBoolValue(v <= o)
 }
 
-func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13133,7 +14533,7 @@ func (v Fix64Value) Greater(interpreter *Interpreter, other NumberValue, locatio
 	return AsBoolValue(v > o)
 }
 
-func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v Fix64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13262,6 +14662,7 @@ func (v Fix64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -13333,10 +14734,11 @@ var _ atree.Storable = UFix64Value(0)
 var _ NumberValue = UFix64Value(0)
 var _ FixedPointValue = Fix64Value(0)
 var _ EquatableValue = UFix64Value(0)
+var _ ComparableValue = UFix64Value(0)
 var _ HashableValue = UFix64Value(0)
 var _ MemberAccessibleValue = UFix64Value(0)
 
-func (UFix64Value) IsValue() {}
+func (UFix64Value) isValue() {}
 
 func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUFix64Value(interpreter, v)
@@ -13591,7 +14993,7 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 	)
 }
 
-func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13604,7 +15006,7 @@ func (v UFix64Value) Less(interpreter *Interpreter, other NumberValue, locationR
 	return AsBoolValue(v < o)
 }
 
-func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13617,7 +15019,7 @@ func (v UFix64Value) LessEqual(interpreter *Interpreter, other NumberValue, loca
 	return AsBoolValue(v <= o)
 }
 
-func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13630,7 +15032,7 @@ func (v UFix64Value) Greater(interpreter *Interpreter, other NumberValue, locati
 	return AsBoolValue(v > o)
 }
 
-func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other NumberValue, locationRange LocationRange) BoolValue {
+func (v UFix64Value) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
 		panic(InvalidOperandsError{
@@ -13766,6 +15168,7 @@ func (v UFix64Value) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -13960,7 +15363,7 @@ var _ MemberAccessibleValue = &CompositeValue{}
 var _ ReferenceTrackedResourceKindedValue = &CompositeValue{}
 var _ ContractValue = &CompositeValue{}
 
-func (*CompositeValue) IsValue() {}
+func (*CompositeValue) isValue() {}
 
 func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	descend := visitor.VisitCompositeValue(interpreter, v)
@@ -14033,45 +15436,54 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
-	// if this type has attachments, destroy all of them before invoking the destructor
-	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
-		// an attachment's destructor may make reference to `base`, so we must set the base value
-		// for the attachment before invoking its destructor. For other functions, this happens
-		// automatically when the attachment is accessed with the access expression `v[A]`, which
-		// is a necessary pre-requisite for calling any members of the attachment. However, in
-		// the case of a destructor, this is called implicitly, and thus must have its `base`
-		// set manually
-		attachment.setBaseValue(interpreter, v)
-		attachment.Destroy(interpreter, locationRange)
-	})
+	storageID := v.StorageID()
 
-	interpreter = v.getInterpreter(interpreter)
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			// if this type has attachments, destroy all of them before invoking the destructor
+			v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
+				// an attachment's destructor may make reference to `base`, so we must set the base value
+				// for the attachment before invoking its destructor. For other functions, this happens
+				// automatically when the attachment is accessed with the access expression `v[A]`, which
+				// is a necessary pre-requisite for calling any members of the attachment. However, in
+				// the case of a destructor, this is called implicitly, and thus must have its `base`
+				// set manually
+				attachment.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, attachment))
+				attachment.Destroy(interpreter, locationRange)
+			})
 
-	// if composite was deserialized, dynamically link in the destructor
-	if v.Destructor == nil {
-		v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-	}
+			interpreter = v.getInterpreter(interpreter)
 
-	destructor := v.Destructor
+			// if composite was deserialized, dynamically link in the destructor
+			if v.Destructor == nil {
+				v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+			}
 
-	if destructor != nil {
-		var base *EphemeralReferenceValue
-		var self MemberAccessibleValue = v
-		if v.Kind == common.CompositeKindAttachment {
-			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
-		}
-		invocation := NewInvocation(
-			interpreter,
-			&self,
-			base,
-			nil,
-			nil,
-			nil,
-			locationRange,
-		)
+			destructor := v.Destructor
 
-		destructor.invoke(invocation)
-	}
+			if destructor != nil {
+				var base *EphemeralReferenceValue
+				var self MemberAccessibleValue = v
+				if v.Kind == common.CompositeKindAttachment {
+					base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
+				}
+				invocation := NewInvocation(
+					interpreter,
+					&self,
+					base,
+					nil,
+					nil,
+					nil,
+					nil,
+					locationRange,
+				)
+
+				destructor.invoke(invocation)
+			}
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -14088,6 +15500,10 @@ func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRang
 	case sema.ResourceOwnerFieldName:
 		if v.Kind == common.CompositeKindResource {
 			return v.OwnerValue(interpreter, locationRange)
+		}
+	case sema.CompositeForEachAttachmentFunctionName:
+		if v.Kind.SupportsAttachments() {
+			return v.forEachAttachmentFunction(interpreter, locationRange)
 		}
 	}
 
@@ -14124,8 +15540,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	storable, err := v.dictionary.Get(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -14182,7 +15598,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		if v.Kind == common.CompositeKindAttachment {
 			base, self = attachmentBaseAndSelfValues(interpreter, locationRange, v)
 		}
-		return NewBoundFunctionValue(interpreter, function, &self, base)
+		return NewBoundFunctionValue(interpreter, function, &self, base, nil)
 	}
 
 	return nil
@@ -14223,7 +15639,7 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange LocationRange) OptionalValue {
-	address := v.StorageID().Address
+	address := v.StorageAddress()
 
 	if address == (atree.Address{}) {
 		return NilOptionalValue
@@ -14272,8 +15688,8 @@ func (v *CompositeValue) RemoveMember(
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -14302,6 +15718,7 @@ func (v *CompositeValue) RemoveMember(
 			atree.Address{},
 			true,
 			existingValueStorable,
+			nil,
 		)
 }
 
@@ -14335,7 +15752,7 @@ func (v *CompositeValue) SetMember(
 		}()
 	}
 
-	address := v.StorageID().Address
+	address := v.StorageAddress()
 
 	value = value.Transfer(
 		interpreter,
@@ -14343,11 +15760,14 @@ func (v *CompositeValue) SetMember(
 		address,
 		true,
 		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
 	)
 
 	existingStorable, err := v.dictionary.Set(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		NewStringAtreeValue(interpreter, name),
 		value,
 	)
@@ -14451,8 +15871,8 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 	}
 
 	storable, err := v.dictionary.Get(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -14662,16 +16082,20 @@ func (v *CompositeValue) IsStorable() bool {
 	return v.Location != nil
 }
 
-func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (v *CompositeValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
 	if !v.IsStorable() {
 		return NonStorable{Value: v}, nil
 	}
 
-	return atree.StorageIDStorable(v.StorageID()), nil
+	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
 func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
-	return address != v.StorageID().Address
+	return address != v.StorageAddress()
 }
 
 func (v *CompositeValue) IsResourceKinded(interpreter *Interpreter) bool {
@@ -14689,6 +16113,7 @@ func (v *CompositeValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
@@ -14723,11 +16148,21 @@ func (v *CompositeValue) Transfer(
 	}
 
 	currentStorageID := v.StorageID()
-	currentAddress := currentStorageID.Address
+	currentAddress := v.StorageAddress()
+
+	if preventTransfer == nil {
+		preventTransfer = map[atree.StorageID]struct{}{}
+	} else if _, ok := preventTransfer[currentStorageID]; ok {
+		panic(RecursiveTransferError{
+			LocationRange: locationRange,
+		})
+	}
+	preventTransfer[currentStorageID] = struct{}{}
+	defer delete(preventTransfer, currentStorageID)
 
 	dictionary := v.dictionary
 
-	needsStoreTo := address != currentAddress
+	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo && v.Kind == common.CompositeKindContract {
@@ -14750,8 +16185,8 @@ func (v *CompositeValue) Transfer(
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
-			StringAtreeComparator,
-			StringAtreeHashInput,
+			StringAtreeValueComparator,
+			StringAtreeValueHashInput,
 			v.dictionary.Seed(),
 			func() (atree.Value, atree.Value, error) {
 
@@ -14769,11 +16204,20 @@ func (v *CompositeValue) Transfer(
 				value := MustConvertStoredValue(interpreter, atreeValue)
 				// the base of an attachment is not stored in the atree, so in order to make the
 				// transfer happen properly, we set the base value here if this field is an attachment
-				if compositeValue, ok := value.(*CompositeValue); ok && compositeValue.Kind == common.CompositeKindAttachment {
-					compositeValue.setBaseValue(interpreter, v)
+				if compositeValue, ok := value.(*CompositeValue); ok &&
+					compositeValue.Kind == common.CompositeKindAttachment {
+
+					compositeValue.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, compositeValue))
 				}
 
-				value = value.Transfer(interpreter, locationRange, address, remove, nil)
+				value = value.Transfer(
+					interpreter,
+					locationRange,
+					address,
+					remove,
+					nil,
+					preventTransfer,
+				)
 
 				return atreeKey, value, nil
 			},
@@ -14878,11 +16322,11 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 
 	dictionary, err := atree.NewMapFromBatchData(
 		config.Storage,
-		v.StorageID().Address,
+		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		v.dictionary.Seed(),
 		func() (atree.Value, atree.Value, error) {
 
@@ -14965,7 +16409,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 }
 
 func (v *CompositeValue) GetOwner() common.Address {
-	return common.Address(v.StorageID().Address)
+	return common.Address(v.StorageAddress())
 }
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
@@ -14988,6 +16432,10 @@ func (v *CompositeValue) StorageID() atree.StorageID {
 	return v.dictionary.StorageID()
 }
 
+func (v *CompositeValue) StorageAddress() atree.Address {
+	return v.dictionary.Address()
+}
+
 func (v *CompositeValue) RemoveField(
 	interpreter *Interpreter,
 	_ LocationRange,
@@ -14995,8 +16443,8 @@ func (v *CompositeValue) RemoveField(
 ) {
 
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		StringAtreeComparator,
-		StringAtreeHashInput,
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
 		StringAtreeValue(name),
 	)
 	if err != nil {
@@ -15015,8 +16463,7 @@ func (v *CompositeValue) RemoveField(
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
-	config := interpreter.SharedState.Config
-	existingValue := StoredValue(interpreter, existingValueStorable, config.Storage)
+	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
 	existingValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
@@ -15059,7 +16506,7 @@ func (v *CompositeValue) getBaseValue(interpreter *Interpreter, locationRange Lo
 	return v.base
 }
 
-func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue, authorization Authorization) {
 	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -15068,14 +16515,12 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 	var baseType sema.Type
 	switch ty := attachmentType.GetBaseType().(type) {
 	case *sema.InterfaceType:
-		baseType, _ = ty.RewriteWithRestrictedTypes()
+		baseType, _ = ty.RewriteWithIntersectionTypes()
 	default:
 		baseType = ty
 	}
 
-	// the base reference can only be borrowed with the declared type of the attachment's base
-	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
-
+	v.base = NewEphemeralReferenceValue(interpreter, authorization, base, baseType)
 	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
 
@@ -15102,15 +16547,102 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 	return attachments
 }
 
+func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CompositeForEachAttachmentFunctionType(interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType).GetCompositeKind()),
+		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
+			functionValue, ok := invocation.Arguments[0].(FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			fn := func(attachment *CompositeValue) {
+
+				attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
+
+				// attachments are unauthorized during iteration
+				attachmentReferenceAuth := UnauthorizedAccess
+
+				attachmentReference := NewEphemeralReferenceValue(
+					interpreter,
+					attachmentReferenceAuth,
+					attachment,
+					attachmentType,
+				)
+
+				invocation := NewInvocation(
+					interpreter,
+					nil,
+					nil,
+					nil,
+					[]Value{attachmentReference},
+					[]sema.Type{sema.NewReferenceType(interpreter, attachmentType, sema.UnauthorizedAccess)},
+					nil,
+					locationRange,
+				)
+				functionValue.invoke(invocation)
+			}
+
+			v.forEachAttachment(interpreter, locationRange, fn)
+			return Void
+		},
+	)
+}
+
+func attachmentReferenceAuthorization(
+	interpreter *Interpreter,
+	attachmentType *sema.CompositeType,
+	baseAccess sema.Access,
+) (Authorization, error) {
+	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
+	var attachmentReferenceAuth Authorization = UnauthorizedAccess
+	if attachmentType.AttachmentEntitlementAccess == nil {
+		return attachmentReferenceAuth, nil
+	}
+	attachmentReferenceAccess, err := attachmentType.AttachmentEntitlementAccess.Image(baseAccess, func() ast.Range { return ast.EmptyRange })
+	if err != nil {
+		return nil, err
+	}
+	return ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentReferenceAccess), nil
+}
+
+func attachmentBaseAuthorization(
+	interpreter *Interpreter,
+	attachment *CompositeValue,
+) Authorization {
+	var auth Authorization = UnauthorizedAccess
+	attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
+	if attachmentType.RequiredEntitlements.Len() > 0 {
+		baseAccess := sema.EntitlementSetAccess{
+			SetKind:      sema.Conjunction,
+			Entitlements: attachmentType.RequiredEntitlements,
+		}
+		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
+	}
+	return auth
+}
+
 func attachmentBaseAndSelfValues(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	v *CompositeValue,
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	base = v.getBaseValue(interpreter, locationRange)
+
+	attachmentType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
+
+	var attachmentReferenceAuth Authorization = UnauthorizedAccess
+	if attachmentType.AttachmentEntitlementAccess != nil {
+		attachmentReferenceAuth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
+	}
+
 	// in attachment functions, self is a reference value
-	self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
+	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
 	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
+
 	return
 }
 
@@ -15148,22 +16680,42 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 	}
 }
 
+func (v *CompositeValue) getTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	keyType sema.Type,
+	baseAccess sema.Access,
+) Value {
+	attachment := v.getAttachmentValue(interpreter, locationRange, keyType)
+	if attachment == nil {
+		return Nil
+	}
+	attachmentType := keyType.(*sema.CompositeType)
+	// dynamically set the attachment's base to this composite, but with authorization based on the requested access on that attachment
+	attachment.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, attachment))
+
+	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
+	attachmentReferenceAuth, err := attachmentReferenceAuthorization(interpreter, attachmentType, baseAccess)
+	if err != nil {
+		return Nil
+	}
+	attachmentRef := NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, attachment, attachmentType)
+	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+
+	return NewSomeValueNonCopying(interpreter, attachmentRef)
+}
+
 func (v *CompositeValue) GetTypeKey(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	ty sema.Type,
 ) Value {
-	attachment := v.getAttachmentValue(interpreter, locationRange, ty)
-	if attachment == nil {
-		return NilValue{}
+	var access sema.Access = sema.UnauthorizedAccess
+	attachmentTyp, isAttachmentType := ty.(*sema.CompositeType)
+	if isAttachmentType && attachmentTyp.AttachmentEntitlementAccess != nil {
+		access = attachmentTyp.AttachmentEntitlementAccess.Domain()
 	}
-	// dynamically set the attachment's base to this composite
-	attachment.setBaseValue(interpreter, v)
-
-	attachmentRef := NewEphemeralReferenceValue(interpreter, false, attachment, ty)
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
-
-	return NewSomeValueNonCopying(interpreter, attachmentRef)
+	return v.getTypeKey(interpreter, locationRange, ty, access)
 }
 
 func (v *CompositeValue) SetTypeKey(
@@ -15308,6 +16860,68 @@ func newDictionaryValueFromOrderedMap(
 	}
 }
 
+func newDictionaryValueWithIterator(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	staticType DictionaryStaticType,
+	count uint64,
+	seed uint64,
+	address common.Address,
+	values func() (Value, Value),
+) *DictionaryValue {
+	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+
+	var v *DictionaryValue
+
+	config := interpreter.SharedState.Config
+
+	if config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			// NOTE: in defer, as v is only initialized at the end of the function
+			// if there was no error during construction
+			if v == nil {
+				return
+			}
+
+			typeInfo := v.Type.String()
+			count := v.Count()
+
+			interpreter.reportDictionaryValueConstructTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
+
+	constructor := func() *atree.OrderedMap {
+		orderedMap, err := atree.NewMapFromBatchData(
+			config.Storage,
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			staticType,
+			newValueComparator(interpreter, locationRange),
+			newHashInputProvider(interpreter, locationRange),
+			seed,
+			func() (atree.Value, atree.Value, error) {
+				key, value := values()
+				return key, value, nil
+			},
+		)
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+		return orderedMap
+	}
+
+	// values are added to the dictionary after creation, not here
+	v = newDictionaryValueFromConstructor(interpreter, staticType, count, constructor)
+
+	return v
+}
+
 func newDictionaryValueFromConstructor(
 	gauge common.MemoryGauge,
 	staticType DictionaryStaticType,
@@ -15339,7 +16953,7 @@ var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 
-func (*DictionaryValue) IsValue() {}
+func (*DictionaryValue) isValue() {}
 
 func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
@@ -15352,20 +16966,53 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *DictionaryValue) Iterate(gauge common.MemoryGauge, f func(key, value Value) (resume bool)) {
-	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
-		// atree.OrderedMap iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
+func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+	iterate := func() {
+		err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+			// atree.OrderedMap iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
 
-		resume = f(
-			MustConvertStoredValue(gauge, key),
-			MustConvertStoredValue(gauge, value),
-		)
+			resume = f(
+				MustConvertStoredValue(interpreter, key),
+				MustConvertStoredValue(interpreter, value),
+			)
 
-		return resume, nil
-	})
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
+	}
+}
+
+type DictionaryIterator struct {
+	mapIterator *atree.MapIterator
+}
+
+func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+	atreeValue, err := i.mapIterator.NextKey()
 	if err != nil {
 		panic(errors.NewExternalError(err))
+	}
+	if atreeValue == nil {
+		return nil
+	}
+	return MustConvertStoredValue(gauge, atreeValue)
+}
+
+func (v *DictionaryValue) Iterator() DictionaryIterator {
+	mapIterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return DictionaryIterator{
+		mapIterator: mapIterator,
 	}
 }
 
@@ -15439,12 +17086,21 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		}()
 	}
 
-	v.Iterate(interpreter, func(key, value Value) (resume bool) {
-		// Resources cannot be keys at the moment, so should theoretically not be needed
-		maybeDestroy(interpreter, locationRange, key)
-		maybeDestroy(interpreter, locationRange, value)
-		return true
-	})
+	storageID := v.StorageID()
+
+	interpreter.withResourceDestruction(
+		storageID,
+		locationRange,
+		func() {
+			v.Iterate(interpreter, func(key, value Value) (resume bool) {
+				// Resources cannot be keys at the moment, so should theoretically not be needed
+				maybeDestroy(interpreter, locationRange, key)
+				maybeDestroy(interpreter, locationRange, value)
+
+				return true
+			})
+		},
+	)
 
 	v.isDestroyed = true
 
@@ -15467,6 +17123,7 @@ func (v *DictionaryValue) ForEachKey(
 			interpreter,
 			nil,
 			nil,
+			nil,
 			[]Value{key},
 			[]sema.Type{keyType},
 			nil,
@@ -15474,21 +17131,29 @@ func (v *DictionaryValue) ForEachKey(
 		)
 	}
 
-	err := v.dictionary.IterateKeys(
-		func(item atree.Value) (bool, error) {
-			key := MustConvertStoredValue(interpreter, item)
+	iterate := func() {
+		err := v.dictionary.IterateKeys(
+			func(item atree.Value) (bool, error) {
+				key := MustConvertStoredValue(interpreter, item)
 
-			shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+				shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			return bool(shouldContinue), nil
-		},
-	)
+				return bool(shouldContinue), nil
+			},
+		)
 
-	if err != nil {
-		panic(errors.NewExternalError(err))
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
 	}
 }
 
@@ -15501,20 +17166,15 @@ func (v *DictionaryValue) ContainsKey(
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
-	_, err := v.dictionary.Get(
+	exists, err := v.dictionary.Has(
 		valueComparator,
 		hashInputProvider,
 		keyValue,
 	)
 	if err != nil {
-		var keyNotFoundError *atree.KeyNotFoundError
-		if goerrors.As(err, &keyNotFoundError) {
-			return FalseValue
-		}
 		panic(errors.NewExternalError(err))
 	}
-
-	return TrueValue
+	return AsBoolValue(exists)
 }
 
 func (v *DictionaryValue) Get(
@@ -15565,6 +17225,8 @@ func (v *DictionaryValue) SetKey(
 	keyValue Value,
 	value Value,
 ) {
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -15693,7 +17355,14 @@ func (v *DictionaryValue) GetMember(
 				}
 
 				return MustConvertStoredValue(interpreter, key).
-					Transfer(interpreter, locationRange, atree.Address{}, false, nil)
+					Transfer(
+						interpreter,
+						locationRange,
+						atree.Address{},
+						false,
+						nil,
+						nil,
+					)
 			},
 		)
 
@@ -15720,7 +17389,14 @@ func (v *DictionaryValue) GetMember(
 				}
 
 				return MustConvertStoredValue(interpreter, value).
-					Transfer(interpreter, locationRange, atree.Address{}, false, nil)
+					Transfer(
+						interpreter,
+						locationRange,
+						atree.Address{},
+						false,
+						nil,
+						nil,
+					)
 			})
 
 	case "remove":
@@ -15847,6 +17523,8 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
@@ -15866,8 +17544,7 @@ func (v *DictionaryValue) Remove(
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 
-	config := interpreter.SharedState.Config
-	storage := config.Storage
+	storage := interpreter.Storage()
 
 	// Key
 
@@ -15884,6 +17561,7 @@ func (v *DictionaryValue) Remove(
 			atree.Address{},
 			true,
 			existingValueStorable,
+			nil,
 		)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -15903,6 +17581,8 @@ func (v *DictionaryValue) Insert(
 	keyValue, value Value,
 ) OptionalValue {
 
+	interpreter.validateMutation(v.StorageID(), locationRange)
+
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
 	common.UseMemory(interpreter, common.AtreeMapElementOverhead)
@@ -15914,12 +17594,17 @@ func (v *DictionaryValue) Insert(
 
 	address := v.dictionary.Address()
 
+	preventTransfer := map[atree.StorageID]struct{}{
+		v.StorageID(): {},
+	}
+
 	keyValue = keyValue.Transfer(
 		interpreter,
 		locationRange,
 		address,
 		true,
 		nil,
+		preventTransfer,
 	)
 
 	value = value.Transfer(
@@ -15928,6 +17613,7 @@ func (v *DictionaryValue) Insert(
 		address,
 		true,
 		nil,
+		preventTransfer,
 	)
 
 	valueComparator := newValueComparator(interpreter, locationRange)
@@ -15950,8 +17636,7 @@ func (v *DictionaryValue) Insert(
 		return NilOptionalValue
 	}
 
-	config := interpreter.SharedState.Config
-	storage := config.Storage
+	storage := interpreter.Storage()
 
 	existingValue := StoredValue(
 		interpreter,
@@ -15963,6 +17648,7 @@ func (v *DictionaryValue) Insert(
 		atree.Address{},
 		true,
 		existingValueStorable,
+		nil,
 	)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -16106,8 +17792,12 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, locationRange Location
 	}
 }
 
-func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return atree.StorageIDStorable(v.StorageID()), nil
+func (v *DictionaryValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
+	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
@@ -16118,6 +17808,7 @@ func (v *DictionaryValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
 		v.dictionary.Count(),
@@ -16152,11 +17843,20 @@ func (v *DictionaryValue) Transfer(
 	}
 
 	currentStorageID := v.StorageID()
-	currentAddress := currentStorageID.Address
+
+	if preventTransfer == nil {
+		preventTransfer = map[atree.StorageID]struct{}{}
+	} else if _, ok := preventTransfer[currentStorageID]; ok {
+		panic(RecursiveTransferError{
+			LocationRange: locationRange,
+		})
+	}
+	preventTransfer[currentStorageID] = struct{}{}
+	defer delete(preventTransfer, currentStorageID)
 
 	dictionary := v.dictionary
 
-	needsStoreTo := address != currentAddress
+	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(interpreter)
 
 	if needsStoreTo || !isResourceKinded {
@@ -16191,10 +17891,10 @@ func (v *DictionaryValue) Transfer(
 				}
 
 				key := MustConvertStoredValue(interpreter, atreeKey).
-					Transfer(interpreter, locationRange, address, remove, nil)
+					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
 
 				value := MustConvertStoredValue(interpreter, atreeValue).
-					Transfer(interpreter, locationRange, address, remove, nil)
+					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
 
 				return key, value, nil
 			},
@@ -16266,7 +17966,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 
 	dictionary, err := atree.NewMapFromBatchData(
 		config.Storage,
-		v.StorageID().Address,
+		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
 		valueComparator,
@@ -16305,6 +18005,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
+
 	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
@@ -16343,11 +18044,15 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 }
 
 func (v *DictionaryValue) GetOwner() common.Address {
-	return common.Address(v.StorageID().Address)
+	return common.Address(v.StorageAddress())
 }
 
 func (v *DictionaryValue) StorageID() atree.StorageID {
 	return v.dictionary.StorageID()
+}
+
+func (v *DictionaryValue) StorageAddress() atree.Address {
+	return v.dictionary.Address()
 }
 
 func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryType {
@@ -16359,7 +18064,7 @@ func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryTyp
 }
 
 func (v *DictionaryValue) NeedsStoreTo(address atree.Address) bool {
-	return address != v.StorageID().Address
+	return address != v.StorageAddress()
 }
 
 func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
@@ -16393,7 +18098,7 @@ var _ EquatableValue = NilValue{}
 var _ MemberAccessibleValue = NilValue{}
 var _ OptionalValue = NilValue{}
 
-func (NilValue) IsValue() {}
+func (NilValue) isValue() {}
 
 func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitNilValue(interpreter, v)
@@ -16418,8 +18123,8 @@ func (NilValue) isOptionalValue() {}
 
 func (NilValue) forEach(_ func(Value)) {}
 
-func (n NilValue) fmap(inter *Interpreter, f func(Value) Value) OptionalValue {
-	return n
+func (v NilValue) fmap(_ *Interpreter, _ func(Value) Value) OptionalValue {
+	return v
 }
 
 func (NilValue) IsDestroyed() bool {
@@ -16506,6 +18211,7 @@ func (v NilValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -16559,7 +18265,7 @@ var _ EquatableValue = &SomeValue{}
 var _ MemberAccessibleValue = &SomeValue{}
 var _ OptionalValue = &SomeValue{}
 
-func (*SomeValue) IsValue() {}
+func (*SomeValue) isValue() {}
 
 func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	descend := visitor.VisitSomeValue(interpreter, v)
@@ -16574,6 +18280,10 @@ func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value)) {
 }
 
 func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
+	if v.isDestroyed {
+		return nil
+	}
+
 	innerType := v.value.StaticType(inter)
 	if innerType == nil {
 		return nil
@@ -16664,6 +18374,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRa
 				f := func(v Value) Value {
 					transformInvocation := NewInvocation(
 						invocation.Interpreter,
+						nil,
 						nil,
 						nil,
 						[]Value{v},
@@ -16787,6 +18498,7 @@ func (v *SomeValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 	config := interpreter.SharedState.Config
 
@@ -16801,7 +18513,14 @@ func (v *SomeValue) Transfer(
 
 	if needsStoreTo || !isResourceKinded {
 
-		innerValue = v.value.Transfer(interpreter, locationRange, address, remove, nil)
+		innerValue = v.value.Transfer(
+			interpreter,
+			locationRange,
+			address,
+			remove,
+			nil,
+			preventTransfer,
+		)
 
 		if remove {
 			interpreter.RemoveReferencedSlab(v.valueStorable)
@@ -16888,17 +18607,22 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
+type AuthorizedValue interface {
+	GetAuthorization() Authorization
+}
+
 type ReferenceValue interface {
+	Value
 	isReference()
+	ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value
 }
 
 // StorageReferenceValue
-
 type StorageReferenceValue struct {
 	BorrowedType         sema.Type
 	TargetPath           PathValue
 	TargetStorageAddress common.Address
-	Authorized           bool
+	Authorization        Authorization
 }
 
 var _ Value = &StorageReferenceValue{}
@@ -16906,16 +18630,17 @@ var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
+var _ AuthorizedValue = &StorageReferenceValue{}
 var _ ReferenceValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
-	authorized bool,
+	authorization Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
 	return &StorageReferenceValue{
-		Authorized:           authorized,
+		Authorization:        authorization,
 		TargetStorageAddress: targetStorageAddress,
 		TargetPath:           targetPath,
 		BorrowedType:         borrowedType,
@@ -16924,21 +18649,21 @@ func NewUnmeteredStorageReferenceValue(
 
 func NewStorageReferenceValue(
 	memoryGauge common.MemoryGauge,
-	authorized bool,
+	authorization Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
 	common.UseMemory(memoryGauge, common.StorageReferenceValueMemoryUsage)
 	return NewUnmeteredStorageReferenceValue(
-		authorized,
+		authorization,
 		targetStorageAddress,
 		targetPath,
 		borrowedType,
 	)
 }
 
-func (*StorageReferenceValue) IsValue() {}
+func (*StorageReferenceValue) isValue() {}
 
 func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStorageReferenceValue(interpreter, v)
@@ -16972,10 +18697,13 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 
 	return NewReferenceStaticType(
 		inter,
-		v.Authorized,
-		ConvertSemaToStaticType(inter, v.BorrowedType),
+		v.Authorization,
 		self.StaticType(inter),
 	)
+}
+
+func (v *StorageReferenceValue) GetAuthorization() Authorization {
+	return v.Authorization
 }
 
 func (*StorageReferenceValue) IsImportable(_ *Interpreter) bool {
@@ -16987,7 +18715,9 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
-	referenced := interpreter.ReadStored(address, domain, identifier)
+	storageMapKey := StringStorageMapKey(identifier)
+
+	referenced := interpreter.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		return nil, nil
 	}
@@ -17010,7 +18740,7 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value {
-	referencedValue, err := v.dereference(interpreter, EmptyLocationRange)
+	referencedValue, err := v.dereference(interpreter, locationRange)
 	if err == nil {
 		return referencedValue
 	}
@@ -17131,6 +18861,15 @@ func (v *StorageReferenceValue) GetTypeKey(
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
 
+	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+		return selfComposite.getTypeKey(
+			interpreter,
+			locationRange,
+			key,
+			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+		)
+	}
+
 	return self.(TypeIndexableValue).
 		GetTypeKey(interpreter, locationRange, key)
 }
@@ -17163,7 +18902,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Val
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
 		v.TargetPath != otherReference.TargetPath ||
-		v.Authorized != otherReference.Authorized {
+		!v.Authorization.Equal(otherReference.Authorization) {
 
 		return false
 	}
@@ -17222,6 +18961,7 @@ func (v *StorageReferenceValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -17231,7 +18971,7 @@ func (v *StorageReferenceValue) Transfer(
 
 func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredStorageReferenceValue(
-		v.Authorized,
+		v.Authorization,
 		v.TargetStorageAddress,
 		v.TargetPath,
 		v.BorrowedType,
@@ -17247,9 +18987,10 @@ func (*StorageReferenceValue) isReference() {}
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
-	Value        Value
-	BorrowedType sema.Type
-	Authorized   bool
+	Value Value
+	// BorrowedType is the T in &T
+	BorrowedType  sema.Type
+	Authorization Authorization
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -17257,31 +18998,32 @@ var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
+var _ AuthorizedValue = &EphemeralReferenceValue{}
 var _ ReferenceValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
-	authorized bool,
+	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
 	return &EphemeralReferenceValue{
-		Authorized:   authorized,
-		Value:        value,
-		BorrowedType: borrowedType,
+		Authorization: authorization,
+		Value:         value,
+		BorrowedType:  borrowedType,
 	}
 }
 
 func NewEphemeralReferenceValue(
-	interpreter *Interpreter,
-	authorized bool,
+	gauge common.MemoryGauge,
+	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
-	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
+	common.UseMemory(gauge, common.EphemeralReferenceValueMemoryUsage)
+	return NewUnmeteredEphemeralReferenceValue(authorization, value, borrowedType)
 }
 
-func (*EphemeralReferenceValue) IsValue() {}
+func (*EphemeralReferenceValue) isValue() {}
 
 func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
@@ -17313,7 +19055,7 @@ func (v *EphemeralReferenceValue) MeteredString(memoryGauge common.MemoryGauge, 
 }
 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
-	referencedValue := v.ReferencedValue(inter, EmptyLocationRange)
+	referencedValue := v.ReferencedValue(inter, EmptyLocationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			Cause: "the value being referenced has been destroyed or moved",
@@ -17324,10 +19066,13 @@ func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
 
 	return NewReferenceStaticType(
 		inter,
-		v.Authorized,
-		ConvertSemaToStaticType(inter, v.BorrowedType),
+		v.Authorization,
 		self.StaticType(inter),
 	)
+}
+
+func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
+	return v.Authorization
 }
 
 func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
@@ -17337,26 +19082,16 @@ func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
 func (v *EphemeralReferenceValue) ReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
+	_ bool,
 ) *Value {
-	// Just like for storage references, references to optionals are unwrapped,
-	// i.e. a reference to `nil` aborts when dereferenced.
-
-	switch referenced := v.Value.(type) {
-	case *SomeValue:
-		innerValue := referenced.InnerValue(interpreter, locationRange)
-		return &innerValue
-	case NilValue:
-		return nil
-	default:
-		return &v.Value
-	}
+	return &v.Value
 }
 
 func (v *EphemeralReferenceValue) MustReferencedValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 ) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			Cause:         "the value being referenced has been destroyed or moved",
@@ -17458,6 +19193,15 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 ) Value {
 	self := v.MustReferencedValue(interpreter, locationRange)
 
+	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+		return selfComposite.getTypeKey(
+			interpreter,
+			locationRange,
+			key,
+			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+		)
+	}
+
 	return self.(TypeIndexableValue).
 		GetTypeKey(interpreter, locationRange, key)
 }
@@ -17489,7 +19233,7 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ LocationRange, other V
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok ||
 		v.Value != otherReference.Value ||
-		v.Authorized != otherReference.Authorized {
+		!v.Authorization.Equal(otherReference.Authorization) {
 
 		return false
 	}
@@ -17506,7 +19250,7 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue := v.ReferencedValue(interpreter, locationRange)
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
 	if referencedValue == nil {
 		return false
 	}
@@ -17567,6 +19311,7 @@ func (v *EphemeralReferenceValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -17575,7 +19320,7 @@ func (v *EphemeralReferenceValue) Transfer(
 }
 
 func (v *EphemeralReferenceValue) Clone(*Interpreter) Value {
-	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
+	return NewUnmeteredEphemeralReferenceValue(v.Authorization, v.Value, v.BorrowedType)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
@@ -17642,7 +19387,7 @@ var _ EquatableValue = AddressValue{}
 var _ HashableValue = AddressValue{}
 var _ MemberAccessibleValue = AddressValue{}
 
-func (AddressValue) IsValue() {}
+func (AddressValue) isValue() {}
 
 func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAddressValue(interpreter, v)
@@ -17783,6 +19528,7 @@ func (v AddressValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -17810,60 +19556,35 @@ func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-func accountGetCapabilityFunction(
-	gauge common.MemoryGauge,
-	addressValue AddressValue,
-	pathType sema.Type,
-	funcType *sema.FunctionType,
-) *HostFunctionValue {
+func AddressFromBytes(invocation Invocation) Value {
+	argument, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
-	return NewHostFunctionValue(
-		gauge,
-		funcType,
-		func(invocation Invocation) Value {
+	inter := invocation.Interpreter
 
-			path, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+	bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+	if err != nil {
+		panic(err)
+	}
 
-			interpreter := invocation.Interpreter
+	return NewAddressValue(invocation.Interpreter, common.MustBytesToAddress(bytes))
+}
 
-			pathStaticType := path.StaticType(interpreter)
+func AddressFromString(invocation Invocation) Value {
+	argument, ok := invocation.Arguments[0].(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
-			if !interpreter.IsSubTypeOfSemaType(pathStaticType, pathType) {
-				pathSemaType := interpreter.MustConvertStaticToSemaType(pathStaticType)
+	addr, err := common.HexToAddressAssertPrefix(argument.Str)
+	if err != nil {
+		return Nil
+	}
 
-				panic(TypeMismatchError{
-					ExpectedType:  pathType,
-					ActualType:    pathSemaType,
-					LocationRange: invocation.LocationRange,
-				})
-			}
-
-			// NOTE: the type parameter is optional, for backwards compatibility
-
-			var borrowType *sema.ReferenceType
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				// we handle the nil case for this below
-				borrowType, _ = ty.(*sema.ReferenceType)
-			}
-
-			var borrowStaticType StaticType
-			if borrowType != nil {
-				borrowStaticType = ConvertSemaToStaticType(interpreter, borrowType)
-			}
-
-			return NewStorageCapabilityValue(
-				gauge,
-				addressValue,
-				path,
-				borrowStaticType,
-			)
-		},
-	)
+	inter := invocation.Interpreter
+	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
 }
 
 // PathValue
@@ -17894,7 +19615,7 @@ var _ EquatableValue = PathValue{}
 var _ HashableValue = PathValue{}
 var _ MemberAccessibleValue = PathValue{}
 
-func (PathValue) IsValue() {}
+func (PathValue) isValue() {}
 
 func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathValue(interpreter, v)
@@ -18093,6 +19814,7 @@ func (v PathValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -18121,96 +19843,99 @@ func (PathValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-// StorageCapabilityValue
+// PathCapabilityValue
 
-type StorageCapabilityValue struct {
+type PathCapabilityValue struct {
 	BorrowType StaticType
 	Path       PathValue
 	Address    AddressValue
 }
 
-func NewUnmeteredStorageCapabilityValue(
+func NewUnmeteredPathCapabilityValue(
 	address AddressValue,
 	path PathValue,
 	borrowType StaticType,
-) *StorageCapabilityValue {
-	return &StorageCapabilityValue{
+) *PathCapabilityValue {
+	return &PathCapabilityValue{
 		Address:    address,
 		Path:       path,
 		BorrowType: borrowType,
 	}
 }
 
-func NewStorageCapabilityValue(
+func NewPathCapabilityValue(
 	memoryGauge common.MemoryGauge,
 	address AddressValue,
 	path PathValue,
 	borrowType StaticType,
-) *StorageCapabilityValue {
+) *PathCapabilityValue {
 	// Constant because its constituents are already metered.
-	common.UseMemory(memoryGauge, common.StorageCapabilityValueMemoryUsage)
-	return NewUnmeteredStorageCapabilityValue(address, path, borrowType)
+	common.UseMemory(memoryGauge, common.PathCapabilityValueMemoryUsage)
+	return NewUnmeteredPathCapabilityValue(address, path, borrowType)
 }
 
-var _ Value = &StorageCapabilityValue{}
-var _ atree.Storable = &StorageCapabilityValue{}
-var _ EquatableValue = &StorageCapabilityValue{}
-var _ MemberAccessibleValue = &StorageCapabilityValue{}
+var _ Value = &PathCapabilityValue{}
+var _ atree.Storable = &PathCapabilityValue{}
+var _ EquatableValue = &PathCapabilityValue{}
+var _ CapabilityValue = &PathCapabilityValue{}
+var _ MemberAccessibleValue = &PathCapabilityValue{}
 
-func (*StorageCapabilityValue) IsValue() {}
+func (*PathCapabilityValue) isValue() {}
 
-func (v *StorageCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitStorageCapabilityValue(interpreter, v)
+func (*PathCapabilityValue) isCapabilityValue() {}
+
+func (v *PathCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitPathCapabilityValue(interpreter, v)
 }
 
-func (v *StorageCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
 	walkChild(v.Address)
 	walkChild(v.Path)
 }
 
-func (v *StorageCapabilityValue) StaticType(inter *Interpreter) StaticType {
+func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
 	return NewCapabilityStaticType(
 		inter,
 		v.BorrowType,
 	)
 }
 
-func (v *StorageCapabilityValue) IsImportable(_ *Interpreter) bool {
+func (v *PathCapabilityValue) IsImportable(_ *Interpreter) bool {
 	return v.Path.Domain == common.PathDomainPublic
 }
 
-func (v *StorageCapabilityValue) String() string {
+func (v *PathCapabilityValue) String() string {
 	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *StorageCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
+func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.String()
 	}
-	return format.StorageCapability(
+	return format.PathCapability(
 		borrowType,
 		v.Address.RecursiveString(seenReferences),
 		v.Path.RecursiveString(seenReferences),
 	)
 }
 
-func (v *StorageCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	common.UseMemory(memoryGauge, common.StorageCapabilityValueStringMemoryUsage)
+func (v *PathCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.PathCapabilityValueStringMemoryUsage)
 
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.MeteredString(memoryGauge)
 	}
 
-	return format.StorageCapability(
+	return format.PathCapability(
 		borrowType,
 		v.Address.MeteredString(memoryGauge, seenReferences),
 		v.Path.MeteredString(memoryGauge, seenReferences),
 	)
 }
 
-func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		var borrowType *sema.ReferenceType
@@ -18218,7 +19943,7 @@ func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationR
 			// this function will panic already if this conversion fails
 			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return interpreter.storageCapabilityBorrowFunction(v.Address, v.Path, borrowType)
+		return interpreter.pathCapabilityBorrowFunction(v.Address, v.Path, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		var borrowType *sema.ReferenceType
@@ -18226,26 +19951,29 @@ func (v *StorageCapabilityValue) GetMember(interpreter *Interpreter, _ LocationR
 			// this function will panic already if this conversion fails
 			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return interpreter.storageCapabilityCheckFunction(v.Address, v.Path, borrowType)
+		return interpreter.pathCapabilityCheckFunction(v.Address, v.Path, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
 		return v.Address
+
+	case sema.CapabilityTypeIDFieldName:
+		return UInt64Value(0)
 	}
 
 	return nil
 }
 
-func (*StorageCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*PathCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Capabilities have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*StorageCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*PathCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StorageCapabilityValue) ConformsToStaticType(
+func (v *PathCapabilityValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ LocationRange,
 	_ TypeConformanceResults,
@@ -18253,8 +19981,8 @@ func (v *StorageCapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StorageCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
-	otherCapability, ok := other.(*StorageCapabilityValue)
+func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+	otherCapability, ok := other.(*PathCapabilityValue)
 	if !ok {
 		return false
 	}
@@ -18273,11 +20001,11 @@ func (v *StorageCapabilityValue) Equal(interpreter *Interpreter, locationRange L
 		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
 }
 
-func (*StorageCapabilityValue) IsStorable() bool {
+func (*PathCapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v *StorageCapabilityValue) Storable(
+func (v *PathCapabilityValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
 	maxInlineSize uint64,
@@ -18290,20 +20018,21 @@ func (v *StorageCapabilityValue) Storable(
 	)
 }
 
-func (*StorageCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
+func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*StorageCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*PathCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
 	return false
 }
 
-func (v *StorageCapabilityValue) Transfer(
+func (v *PathCapabilityValue) Transfer(
 	interpreter *Interpreter,
 	_ LocationRange,
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		v.DeepRemove(interpreter)
@@ -18312,31 +20041,231 @@ func (v *StorageCapabilityValue) Transfer(
 	return v
 }
 
-func (v *StorageCapabilityValue) Clone(interpreter *Interpreter) Value {
-	return &StorageCapabilityValue{
-		Address:    v.Address.Clone(interpreter).(AddressValue),
-		Path:       v.Path.Clone(interpreter).(PathValue),
-		BorrowType: v.BorrowType,
-	}
+func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
+	return NewUnmeteredPathCapabilityValue(
+		v.Address.Clone(interpreter).(AddressValue),
+		v.Path.Clone(interpreter).(PathValue),
+		v.BorrowType,
+	)
 }
 
-func (v *StorageCapabilityValue) DeepRemove(interpreter *Interpreter) {
+func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter) {
 	v.Address.DeepRemove(interpreter)
 	v.Path.DeepRemove(interpreter)
 }
 
-func (v *StorageCapabilityValue) ByteSize() uint32 {
+func (v *PathCapabilityValue) ByteSize() uint32 {
 	return mustStorableSize(v)
 }
 
-func (v *StorageCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+func (v *PathCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v *StorageCapabilityValue) ChildStorables() []atree.Storable {
+func (v *PathCapabilityValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
 		v.Address,
 		v.Path,
+	}
+}
+
+// IDCapabilityValue
+
+type IDCapabilityValue struct {
+	BorrowType StaticType
+	Address    AddressValue
+	ID         UInt64Value
+}
+
+func NewUnmeteredIDCapabilityValue(
+	id UInt64Value,
+	address AddressValue,
+	borrowType StaticType,
+) *IDCapabilityValue {
+	return &IDCapabilityValue{
+		ID:         id,
+		Address:    address,
+		BorrowType: borrowType,
+	}
+}
+
+func NewIDCapabilityValue(
+	memoryGauge common.MemoryGauge,
+	id UInt64Value,
+	address AddressValue,
+	borrowType StaticType,
+) *IDCapabilityValue {
+	// Constant because its constituents are already metered.
+	common.UseMemory(memoryGauge, common.IDCapabilityValueMemoryUsage)
+	return NewUnmeteredIDCapabilityValue(id, address, borrowType)
+}
+
+var _ Value = &IDCapabilityValue{}
+var _ atree.Storable = &IDCapabilityValue{}
+var _ CapabilityValue = &IDCapabilityValue{}
+var _ EquatableValue = &IDCapabilityValue{}
+var _ MemberAccessibleValue = &IDCapabilityValue{}
+
+func (*IDCapabilityValue) isValue() {}
+
+func (*IDCapabilityValue) isCapabilityValue() {}
+
+func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitIDCapabilityValue(interpreter, v)
+}
+
+func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+	walkChild(v.ID)
+	walkChild(v.Address)
+}
+
+func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
+	return NewCapabilityStaticType(
+		inter,
+		v.BorrowType,
+	)
+}
+
+func (v *IDCapabilityValue) IsImportable(_ *Interpreter) bool {
+	return false
+}
+
+func (v *IDCapabilityValue) String() string {
+	return v.RecursiveString(SeenReferences{})
+}
+
+func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
+	return format.IDCapability(
+		v.BorrowType.String(),
+		v.Address.RecursiveString(seenReferences),
+		v.ID.RecursiveString(seenReferences),
+	)
+}
+
+func (v *IDCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	common.UseMemory(memoryGauge, common.IDCapabilityValueStringMemoryUsage)
+
+	return format.IDCapability(
+		v.BorrowType.MeteredString(memoryGauge),
+		v.Address.MeteredString(memoryGauge, seenReferences),
+		v.ID.MeteredString(memoryGauge, seenReferences),
+	)
+}
+
+func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case sema.CapabilityTypeBorrowFunctionName:
+		// this function will panic already if this conversion fails
+		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		return interpreter.idCapabilityBorrowFunction(v.Address, v.ID, borrowType)
+
+	case sema.CapabilityTypeCheckFunctionName:
+		// this function will panic already if this conversion fails
+		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		return interpreter.idCapabilityCheckFunction(v.Address, v.ID, borrowType)
+
+	case sema.CapabilityTypeAddressFieldName:
+		return v.Address
+
+	case sema.CapabilityTypeIDFieldName:
+		return v.ID
+	}
+
+	return nil
+}
+
+func (*IDCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+	// Capabilities have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (*IDCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+	// Capabilities have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (v *IDCapabilityValue) ConformsToStaticType(
+	_ *Interpreter,
+	_ LocationRange,
+	_ TypeConformanceResults,
+) bool {
+	return true
+}
+
+func (v *IDCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+	otherCapability, ok := other.(*IDCapabilityValue)
+	if !ok {
+		return false
+	}
+
+	return otherCapability.ID == v.ID &&
+		otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
+		otherCapability.BorrowType.Equal(v.BorrowType)
+}
+
+func (*IDCapabilityValue) IsStorable() bool {
+	return true
+}
+
+func (v *IDCapabilityValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(
+		v,
+		storage,
+		address,
+		maxInlineSize,
+	)
+}
+
+func (*IDCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
+	return false
+}
+
+func (*IDCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v *IDCapabilityValue) Transfer(
+	interpreter *Interpreter,
+	_ LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
+) Value {
+	if remove {
+		v.DeepRemove(interpreter)
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
+	return NewUnmeteredIDCapabilityValue(
+		v.ID,
+		v.Address.Clone(interpreter).(AddressValue),
+		v.BorrowType,
+	)
+}
+
+func (v *IDCapabilityValue) DeepRemove(interpreter *Interpreter) {
+	v.Address.DeepRemove(interpreter)
+}
+
+func (v *IDCapabilityValue) ByteSize() uint32 {
+	return mustStorableSize(v)
+}
+
+func (v *IDCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v *IDCapabilityValue) ChildStorables() []atree.Storable {
+	return []atree.Storable{
+		v.Address,
 	}
 }
 
@@ -18365,8 +20294,11 @@ var EmptyPathLinkValue = PathLinkValue{}
 var _ Value = PathLinkValue{}
 var _ atree.Value = PathLinkValue{}
 var _ EquatableValue = PathLinkValue{}
+var _ LinkValue = PathLinkValue{}
 
-func (PathLinkValue) IsValue() {}
+func (PathLinkValue) isValue() {}
+
+func (PathLinkValue) isLinkValue() {}
 
 func (v PathLinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathLinkValue(interpreter, v)
@@ -18451,6 +20383,7 @@ func (v PathLinkValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -18488,20 +20421,23 @@ func (v PathLinkValue) ChildStorables() []atree.Storable {
 type PublishedValue struct {
 	// NB: If `publish` and `claim` are ever extended to support arbitrary values, rather than just capabilities,
 	// this will need to be changed to `Value`, and more storage-related operations must be implemented for `PublishedValue`
-	Value     *StorageCapabilityValue
+	Value     CapabilityValue
 	Recipient AddressValue
 }
 
-func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value *StorageCapabilityValue) *PublishedValue {
+func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value CapabilityValue) *PublishedValue {
 	common.UseMemory(memoryGauge, common.PublishedValueMemoryUsage)
-	return &PublishedValue{Recipient: recipient, Value: value}
+	return &PublishedValue{
+		Recipient: recipient,
+		Value:     value,
+	}
 }
 
 var _ Value = &PublishedValue{}
 var _ atree.Value = &PublishedValue{}
 var _ EquatableValue = &PublishedValue{}
 
-func (*PublishedValue) IsValue() {}
+func (*PublishedValue) isValue() {}
 
 func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPublishedValue(interpreter, v)
@@ -18584,14 +20520,30 @@ func (v *PublishedValue) Transfer(
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
+	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 	// NB: if the inner value of a PublishedValue can be a resource,
 	// we must perform resource-related checks here as well
 
 	if v.NeedsStoreTo(address) {
 
-		innerValue := v.Value.Transfer(interpreter, locationRange, address, remove, nil).(*StorageCapabilityValue)
-		addressValue := v.Recipient.Transfer(interpreter, locationRange, address, remove, nil).(AddressValue)
+		innerValue := v.Value.Transfer(
+			interpreter,
+			locationRange,
+			address,
+			remove,
+			nil,
+			preventTransfer,
+		).(CapabilityValue)
+
+		addressValue := v.Recipient.Transfer(
+			interpreter,
+			locationRange,
+			address,
+			remove,
+			nil,
+			preventTransfer,
+		).(AddressValue)
 
 		if remove {
 			interpreter.RemoveReferencedSlab(storable)
@@ -18607,7 +20559,7 @@ func (v *PublishedValue) Transfer(
 func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
 	return &PublishedValue{
 		Recipient: v.Recipient,
-		Value:     v.Value,
+		Value:     v.Value.Clone(interpreter).(CapabilityValue),
 	}
 }
 
@@ -18630,15 +20582,6 @@ func (v *PublishedValue) ChildStorables() []atree.Storable {
 	}
 }
 
-// ContractValue is the value of a contract.
-// Under normal circumstances, a contract value is always a CompositeValue.
-// However, in the test framework, an imported contract is constructed via a constructor function.
-// Hence, during tests, the value is a HostFunctionValue.
-type ContractValue interface {
-	Value
-	SetNestedVariables(variables map[string]*Variable)
-}
-
 // AccountLinkValue
 
 type AccountLinkValue struct{}
@@ -18657,8 +20600,11 @@ var EmptyAccountLinkValue = AccountLinkValue{}
 var _ Value = AccountLinkValue{}
 var _ atree.Value = AccountLinkValue{}
 var _ EquatableValue = AccountLinkValue{}
+var _ LinkValue = AccountLinkValue{}
 
-func (AccountLinkValue) IsValue() {}
+func (AccountLinkValue) isValue() {}
+
+func (AccountLinkValue) isLinkValue() {}
 
 func (v AccountLinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAccountLinkValue(interpreter, v)
@@ -18679,8 +20625,9 @@ func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewCapabilityStaticType(
 		interpreter,
 		ReferenceStaticType{
-			BorrowedType:   authAccountStaticType,
 			ReferencedType: authAccountStaticType,
+			// ENTITLEMENTS TODO: eventually account types should support entitlements
+			Authorization: UnauthorizedAccess,
 		},
 	)
 }
@@ -18736,6 +20683,7 @@ func (v AccountLinkValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)

@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	cdcErrors "github.com/onflow/cadence/runtime/errors"
@@ -36,6 +37,14 @@ import (
 )
 
 func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpreter, error) {
+	return newTestContractInterpreterWithTestFramework(t, code, nil)
+}
+
+func newTestContractInterpreterWithTestFramework(
+	t *testing.T,
+	code string,
+	testFramework TestFramework,
+) (*interpreter.Interpreter, error) {
 	program, err := parser.ParseProgram(
 		nil,
 		[]byte(code),
@@ -64,7 +73,7 @@ func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpr
 			) {
 				if importedLocation == TestContractLocation {
 					return sema.ElaborationImport{
-						Elaboration: TestContractChecker.Elaboration,
+						Elaboration: GetTestContractType().Checker.Elaboration,
 					}, nil
 				}
 
@@ -84,14 +93,19 @@ func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpr
 
 	var uuid uint64 = 0
 
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, AssertFunction)
+	interpreter.Declare(baseActivation, PanicFunction)
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		&interpreter.Config{
-			Storage: storage,
+			Storage:        storage,
+			BaseActivation: baseActivation,
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				if location == TestContractLocation {
-					program := interpreter.ProgramFromChecker(TestContractChecker)
+					program := interpreter.ProgramFromChecker(GetTestContractType().Checker)
 					subInterpreter, err := inter.NewSubInterpreter(program, location)
 					if err != nil {
 						panic(err)
@@ -103,7 +117,7 @@ func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpr
 
 				return nil
 			},
-			ContractValueHandler: NewTestInterpreterContractValueHandler(nil),
+			ContractValueHandler: NewTestInterpreterContractValueHandler(testFramework),
 			UUIDHandler: func() (uint64, error) {
 				uuid++
 				return uuid, nil
@@ -127,7 +141,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
             import Test
 
-            pub fun test(): Bool {
+            access(all) fun test(): Bool {
                 let matcher = Test.newMatcher(fun (_ value: AnyStruct): Bool {
                      if !value.getType().isSubtype(of: Type<Int>()) {
                         return false
@@ -154,7 +168,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
 
                let matcher = Test.newMatcher(fun (_ value: Int): Bool {
                     return value == 7
@@ -178,7 +192,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
 
                let matcher = Test.newMatcher(fun (_ value: Int): Bool {
                     return (value + 7) == 4
@@ -203,7 +217,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
 
                let matcher = Test.newMatcher(fun (_ value: &Foo): Bool {
                    return value.a == 4
@@ -218,8 +232,8 @@ func TestTestNewMatcher(t *testing.T) {
                return res
            }
 
-           pub resource Foo {
-               pub let a: Int
+           access(all) resource Foo {
+               access(all) let a: Int
 
                init(_ a: Int) {
                    self.a = a
@@ -241,7 +255,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
 	       import Test
 
-	       pub fun test() {
+	       access(all) fun test() {
 
 	           let matcher = Test.newMatcher(fun (_ value: @Foo): Bool {
 	                destroy value
@@ -249,7 +263,7 @@ func TestTestNewMatcher(t *testing.T) {
 	           })
 	       }
 
-	       pub resource Foo {}
+	       access(all) resource Foo {}
 	    `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -264,7 +278,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
 	       import Test
 
-	       pub fun test(): Bool {
+	       access(all) fun test(): Bool {
 
 	           let matcher = Test.newMatcher<Int>(fun (_ value: Int): Bool {
 	                return value == 7
@@ -288,7 +302,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
 	       import Test
 
-	       pub fun test() {
+	       access(all) fun test() {
 
 	           let matcher = Test.newMatcher<String>(fun (_ value: Int): Bool {
 	                return value == 7
@@ -309,7 +323,7 @@ func TestTestNewMatcher(t *testing.T) {
 		script := `
 	       import Test
 
-	       pub fun test() {
+	       access(all) fun test() {
 
 	           let matcher1 = Test.newMatcher(fun (_ value: Int): Bool {
 	                return (value + 5) == 10
@@ -345,7 +359,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.equal(1)
            }
         `
@@ -363,7 +377,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let matcher = Test.equal(1)
                return matcher.test(1)
            }
@@ -383,13 +397,13 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let f = Foo()
                let matcher = Test.equal(f)
                return matcher.test(f)
            }
 
-           pub struct Foo {}
+           access(all) struct Foo {}
         `
 
 		inter, err := newTestContractInterpreter(t, script)
@@ -406,13 +420,13 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let f <- create Foo()
                let matcher = Test.equal(<-f)
                return matcher.test(<- create Foo())
            }
 
-           pub resource Foo {}
+           access(all) resource Foo {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -429,7 +443,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let matcher = Test.equal<String>("hello")
            }
         `
@@ -447,7 +461,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let matcher = Test.equal<String>(1)
            }
         `
@@ -465,7 +479,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let one = Test.equal(1)
                let two = Test.equal(2)
 
@@ -490,7 +504,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let one = Test.equal(1)
                let two = Test.equal(2)
 
@@ -514,7 +528,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let one = Test.equal(1)
                let two = Test.equal(2)
 
@@ -538,7 +552,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let one = Test.equal(1)
 
 		        let notOne = Test.not(one)
@@ -546,7 +560,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		        return notOne.test(2)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let one = Test.equal(1)
 
 		        let notOne = Test.not(one)
@@ -573,7 +587,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let one = Test.equal(1)
                let two = Test.equal(2)
                let three = Test.equal(3)
@@ -598,7 +612,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let foo <- create Foo()
                let bar <- create Bar()
 
@@ -611,8 +625,8 @@ func TestTestEqualMatcher(t *testing.T) {
                    && matcher.test(<-create Bar())
            }
 
-           pub resource Foo {}
-           pub resource Bar {}
+           access(all) resource Foo {}
+           access(all) resource Bar {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -630,7 +644,7 @@ func TestTestEqualMatcher(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test(): Bool {
+           access(all) fun test(): Bool {
                let foo <- create Foo()
                let bar <- create Bar()
 
@@ -642,8 +656,8 @@ func TestTestEqualMatcher(t *testing.T) {
                return matcher.test(<-create Foo())
            }
 
-           pub resource Foo {}
-           pub resource Bar {}
+           access(all) resource Foo {}
+           access(all) resource Bar {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -652,6 +666,291 @@ func TestTestEqualMatcher(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+	})
+}
+
+func TestAssertEqual(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all)  fun test() {
+		        Test.assertEqual("this string", "this string")
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all)  fun test() {
+		        Test.assertEqual(15, 21)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"assertion failed: not equal: expected: 15, actual: 21",
+		)
+	})
+
+	t.Run("different types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test() {
+		        Test.assertEqual(true, 1)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"assertion failed: not equal: expected: true, actual: 1",
+		)
+	})
+
+	t.Run("address with address", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun testEqual() {
+		        let expected = Address(0xf8d6e0586b0a20c7)
+		        let actual = Address(0xf8d6e0586b0a20c7)
+		        Test.assertEqual(expected, actual)
+		    }
+
+		    access(all) fun testNotEqual() {
+		        let expected = Address(0xf8d6e0586b0a20c7)
+		        let actual = Address(0xee82856bf20e2aa6)
+		        Test.assertEqual(expected, actual)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testEqual")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNotEqual")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"not equal: expected: 0xf8d6e0586b0a20c7, actual: 0xee82856bf20e2aa6",
+		)
+	})
+
+	t.Run("struct with struct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) struct Foo {
+		        access(all) let answer: Int
+
+		        init(answer: Int) {
+		            self.answer = answer
+		        }
+		    }
+
+		    access(all) fun testEqual() {
+		        let expected = Foo(answer: 42)
+		        let actual = Foo(answer: 42)
+		        Test.assertEqual(expected, actual)
+		    }
+
+		    access(all) fun testNotEqual() {
+		        let expected = Foo(answer: 42)
+		        let actual = Foo(answer: 420)
+		        Test.assertEqual(expected, actual)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testEqual")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNotEqual")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"not equal: expected: S.test.Foo(answer: 42), actual: S.test.Foo(answer: 420)",
+		)
+	})
+
+	t.Run("array with array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun testEqual() {
+		        let expected = [1, 2, 3]
+		        let actual = [1, 2, 3]
+		        Test.assertEqual(expected, actual)
+		    }
+
+		    access(all) fun testNotEqual() {
+		        let expected = [1, 2, 3]
+		        let actual = [1, 2]
+		        Test.assertEqual(expected, actual)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testEqual")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNotEqual")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"not equal: expected: [1, 2, 3], actual: [1, 2]",
+		)
+	})
+
+	t.Run("dictionary with dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun testEqual() {
+		        let expected = {1: true, 2: false, 3: true}
+		        let actual = {1: true, 2: false, 3: true}
+		        Test.assertEqual(expected, actual)
+		    }
+
+		    access(all) fun testNotEqual() {
+		        let expected = {1: true, 2: false}
+		        let actual = {1: true, 2: true}
+		        Test.assertEqual(expected, actual)
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testEqual")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNotEqual")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"not equal: expected: {2: false, 1: true}, actual: {2: true, 1: true}",
+		)
+	})
+
+	t.Run("resource with resource matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test() {
+		        let f1 <- create Foo()
+		        let f2 <- create Foo()
+		        Test.assertEqual(<-f1, <-f2)
+		    }
+
+		    access(all) resource Foo {}
+		`
+
+		_, err := newTestContractInterpreter(t, script)
+
+		errs := checker.RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("resource with struct matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test() {
+		        let foo <- create Foo()
+		        let bar = Bar()
+		        Test.assertEqual(<-foo, bar)
+		    }
+
+		    access(all) resource Foo {}
+		    access(all) struct Bar {}
+		`
+
+		_, err := newTestContractInterpreter(t, script)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("struct with resource matcher", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test() {
+		        let foo = Foo()
+		        let bar <- create Bar()
+		        Test.expect(foo, Test.equal(<-bar))
+		    }
+
+		    access(all) struct Foo {}
+		    access(all) resource Bar {}
+		`
+
+		_, err := newTestContractInterpreter(t, script)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
 
@@ -665,7 +964,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        let scriptResult = Test.ScriptResult(
@@ -677,7 +976,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		        return successful.test(scriptResult)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        let scriptResult = Test.ScriptResult(
@@ -708,7 +1007,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        let transactionResult = Test.TransactionResult(
@@ -719,7 +1018,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		        return successful.test(transactionResult)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        let transactionResult = Test.TransactionResult(
@@ -749,7 +1048,7 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let successful = Test.beSucceeded()
 
 		        return successful.test("hello")
@@ -774,7 +1073,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let failed = Test.beFailed()
 
 		        let scriptResult = Test.ScriptResult(
@@ -786,7 +1085,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		        return failed.test(scriptResult)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let failed = Test.beFailed()
 
 		        let scriptResult = Test.ScriptResult(
@@ -817,7 +1116,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let failed = Test.beFailed()
 
 		        let transactionResult = Test.TransactionResult(
@@ -828,7 +1127,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		        return failed.test(transactionResult)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let failed = Test.beFailed()
 
 		        let transactionResult = Test.TransactionResult(
@@ -858,7 +1157,7 @@ func TestTestBeFailedMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let failed = Test.beFailed()
 
 		        return failed.test([])
@@ -883,13 +1182,13 @@ func TestTestBeNilMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let isNil = Test.beNil()
 
 		        return isNil.test(nil)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let isNil = Test.beNil()
 
 		        return isNil.test([1, 2])
@@ -919,13 +1218,13 @@ func TestTestBeEmptyMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let emptyArray = Test.beEmpty()
 
 		        return emptyArray.test([])
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let emptyArray = Test.beEmpty()
 
 		        return emptyArray.test([42, 23, 31])
@@ -950,14 +1249,14 @@ func TestTestBeEmptyMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let emptyDict = Test.beEmpty()
 		        let dict: {Bool: Int} = {}
 
 		        return emptyDict.test(dict)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let emptyDict = Test.beEmpty()
 		        let dict: {Bool: Int} = {true: 1, false: 0}
 
@@ -983,7 +1282,7 @@ func TestTestBeEmptyMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let emptyDict = Test.beEmpty()
 
 		        return emptyDict.test("empty")
@@ -1010,13 +1309,13 @@ func TestTestHaveElementCountMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let hasThreeElements = Test.haveElementCount(3)
 
 		        return hasThreeElements.test([42, 23, 31])
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let hasThreeElements = Test.haveElementCount(3)
 
 		        return hasThreeElements.test([42])
@@ -1041,14 +1340,14 @@ func TestTestHaveElementCountMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let hasTwoElements = Test.haveElementCount(2)
 		        let dict: {Bool: Int} = {true: 1, false: 0}
 
 		        return hasTwoElements.test(dict)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let hasTwoElements = Test.haveElementCount(2)
 		        let dict: {Bool: Int} = {}
 
@@ -1074,7 +1373,7 @@ func TestTestHaveElementCountMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let hasTwoElements = Test.haveElementCount(2)
 
 		        return hasTwoElements.test("two")
@@ -1101,13 +1400,13 @@ func TestTestContainMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let containsTwenty = Test.contain(20)
 
 		        return containsTwenty.test([42, 20, 31])
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let containsTwenty = Test.contain(20)
 
 		        return containsTwenty.test([42])
@@ -1132,14 +1431,14 @@ func TestTestContainMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let containsFalse = Test.contain(false)
 		        let dict: {Bool: Int} = {true: 1, false: 0}
 
 		        return containsFalse.test(dict)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let containsFive = Test.contain(5)
 		        let dict: {Int: Bool} = {1: true, 0: false}
 
@@ -1165,7 +1464,7 @@ func TestTestContainMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let containsFalse = Test.contain(false)
 
 		        return containsFalse.test("false")
@@ -1192,13 +1491,13 @@ func TestTestBeGreaterThanMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let greaterThanFive = Test.beGreaterThan(5)
 
 		        return greaterThanFive.test(7)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let greaterThanFive = Test.beGreaterThan(5)
 
 		        return greaterThanFive.test(2)
@@ -1223,7 +1522,7 @@ func TestTestBeGreaterThanMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let greaterThanFive = Test.beGreaterThan(5)
 
 		        return greaterThanFive.test("7")
@@ -1248,13 +1547,13 @@ func TestTestBeLessThanMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun testMatch(): Bool {
+		    access(all) fun testMatch(): Bool {
 		        let lessThanSeven = Test.beLessThan(7)
 
 		        return lessThanSeven.test(5)
 		    }
 
-		    pub fun testNoMatch(): Bool {
+		    access(all) fun testNoMatch(): Bool {
 		        let lessThanSeven = Test.beLessThan(7)
 
 		        return lessThanSeven.test(9)
@@ -1279,7 +1578,7 @@ func TestTestBeLessThanMatcher(t *testing.T) {
 		script := `
 		    import Test
 
-		    pub fun test(): Bool {
+		    access(all) fun test(): Bool {
 		        let lessThanSeven = Test.beLessThan(7)
 
 		        return lessThanSeven.test(true)
@@ -1304,7 +1603,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect("this string", Test.equal("this string"))
            }
         `
@@ -1322,7 +1621,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect("this string", Test.equal("other string"))
            }
         `
@@ -1332,7 +1631,12 @@ func TestTestExpect(t *testing.T) {
 
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
-		assert.ErrorAs(t, err, &AssertionError{})
+
+		assertionErr := &AssertionError{}
+		assert.ErrorAs(t, err, assertionErr)
+		assert.Equal(t, "given value is: \"this string\"", assertionErr.Message)
+		assert.Equal(t, "test", assertionErr.LocationRange.Location.String())
+		assert.Equal(t, 5, assertionErr.LocationRange.StartPosition().Line)
 	})
 
 	t.Run("different types", func(t *testing.T) {
@@ -1341,7 +1645,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect("string", Test.equal(1))
            }
         `
@@ -1360,7 +1664,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect<String>("hello", Test.equal("hello"))
            }
         `
@@ -1378,7 +1682,7 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                Test.expect<Int>("string", Test.equal(1))
            }
         `
@@ -1396,13 +1700,13 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let f1 <- create Foo()
                let f2 <- create Foo()
                Test.expect(<-f1, Test.equal(<-f2))
            }
 
-           pub resource Foo {}
+           access(all) resource Foo {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -1418,14 +1722,14 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let foo <- create Foo()
                let bar = Bar()
                Test.expect(<-foo, Test.equal(bar))
            }
 
-           pub resource Foo {}
-           pub struct Bar {}
+           access(all) resource Foo {}
+           access(all) struct Bar {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -1440,14 +1744,14 @@ func TestTestExpect(t *testing.T) {
 		script := `
            import Test
 
-           pub fun test() {
+           access(all) fun test() {
                let foo = Foo()
                let bar <- create Bar()
                Test.expect(foo, Test.equal(<-bar))
            }
 
-           pub struct Foo {}
-           pub resource Bar {}
+           access(all) struct Foo {}
+           access(all) resource Bar {}
         `
 
 		_, err := newTestContractInterpreter(t, script)
@@ -1455,4 +1759,428 @@ func TestTestExpect(t *testing.T) {
 		errs := checker.RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
+}
+
+func TestTestExpectFailure(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("expect failure with no failure found", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(): Void {
+		            foo.correctAnswer(42)
+		        }, errorMessageSubstring: "wrong answer!")
+		    }
+
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(
+			t,
+			err,
+			"Expected a failure, but found none.",
+		)
+	})
+
+	t.Run("expect failure with matching error message", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(): Void {
+		            foo.correctAnswer(43)
+		        }, errorMessageSubstring: "wrong answer!")
+		    }
+
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("expect failure with mismatching error message", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(): Void {
+		            foo.correctAnswer(43)
+		        }, errorMessageSubstring: "what is wrong?")
+		    }
+
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(
+			t,
+			err,
+			"Expected error message to include: \"what is wrong?\".",
+		)
+	})
+
+	t.Run("expect failure with wrong function signature", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(answer: UInt64): Foo {
+		            foo.correctAnswer(42)
+		            return foo
+		        }, errorMessageSubstring: "wrong answer")
+		    }
+
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		_, err := newTestContractInterpreter(t, script)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("expect failure with wrong error message type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test() {
+		        let foo = Foo(answer: 42)
+		        Test.expectFailure(fun(): Void {
+		            foo.correctAnswer(42)
+		        }, errorMessageSubstring: ["wrong answer"])
+		    }
+
+		    access(all) struct Foo {
+		        access(self) let answer: UInt8
+
+		        init(answer: UInt8) {
+		            self.answer = answer
+		        }
+
+		        access(all) fun correctAnswer(_ input: UInt8): Bool {
+		            if self.answer != input {
+		                panic("wrong answer!")
+		            }
+		            return true
+		        }
+		    }
+		`
+
+		_, err := newTestContractInterpreter(t, script)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+}
+
+func TestBlockchain(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("all events, empty", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test(): [AnyStruct] {
+		        var blockchain = Test.newEmulatorBlockchain()
+		        return blockchain.events()
+		    }
+		`
+
+		eventsInvoked := false
+
+		testFramework := &mockedTestFramework{
+			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+				eventsInvoked = true
+				assert.Nil(t, eventType)
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+					common.Address{},
+				)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, eventsInvoked)
+	})
+
+	t.Run("typed events, empty", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+		    import Test
+
+		    access(all) fun test(): [AnyStruct] {
+		        var blockchain = Test.newEmulatorBlockchain()
+
+		        // 'Foo' is not an event-type.
+		        // But we just need to test the API, so it doesn't really matter.
+		        var typ = Type<Foo>()
+
+		        return blockchain.eventsOfType(typ)
+		    }
+
+		    access(all) struct Foo {}
+		`
+
+		eventsInvoked := false
+
+		testFramework := &mockedTestFramework{
+			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+				eventsInvoked = true
+				assert.NotNil(t, eventType)
+
+				require.IsType(t, interpreter.CompositeStaticType{}, eventType)
+				compositeType := eventType.(interpreter.CompositeStaticType)
+				assert.Equal(t, "Foo", compositeType.QualifiedIdentifier)
+
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+					common.Address{},
+				)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, eventsInvoked)
+	})
+
+	// TODO: Add more tests for the remaining functions.
+}
+
+type mockedTestFramework struct {
+	runScript          func(inter *interpreter.Interpreter, code string, arguments []interpreter.Value)
+	createAccount      func() (*Account, error)
+	addTransaction     func(inter *interpreter.Interpreter, code string, authorizers []common.Address, signers []*Account, arguments []interpreter.Value) error
+	executeTransaction func() *TransactionResult
+	commitBlock        func() error
+	deployContract     func(inter *interpreter.Interpreter, name string, code string, account *Account, arguments []interpreter.Value) error
+	readFile           func(s string) (string, error)
+	useConfiguration   func(configuration *Configuration)
+	stdlibHandler      func() StandardLibraryHandler
+	logs               func() []string
+	serviceAccount     func() (*Account, error)
+	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
+	reset              func()
+}
+
+var _ TestFramework = &mockedTestFramework{}
+
+func (m mockedTestFramework) RunScript(
+	inter *interpreter.Interpreter,
+	code string,
+	arguments []interpreter.Value,
+) *ScriptResult {
+	if m.runScript == nil {
+		panic("'RunScript' is not implemented")
+	}
+
+	return m.RunScript(inter, code, arguments)
+}
+
+func (m mockedTestFramework) CreateAccount() (*Account, error) {
+	if m.createAccount == nil {
+		panic("'CreateAccount' is not implemented")
+	}
+
+	return m.createAccount()
+}
+
+func (m mockedTestFramework) AddTransaction(
+	inter *interpreter.Interpreter,
+	code string,
+	authorizers []common.Address,
+	signers []*Account,
+	arguments []interpreter.Value,
+) error {
+	if m.addTransaction == nil {
+		panic("'AddTransaction' is not implemented")
+	}
+
+	return m.addTransaction(inter, code, authorizers, signers, arguments)
+}
+
+func (m mockedTestFramework) ExecuteNextTransaction() *TransactionResult {
+	if m.executeTransaction == nil {
+		panic("'ExecuteNextTransaction' is not implemented")
+	}
+
+	return m.executeTransaction()
+}
+
+func (m mockedTestFramework) CommitBlock() error {
+	if m.commitBlock == nil {
+		panic("'CommitBlock' is not implemented")
+	}
+
+	return m.commitBlock()
+}
+
+func (m mockedTestFramework) DeployContract(
+	inter *interpreter.Interpreter,
+	name string,
+	code string,
+	account *Account,
+	arguments []interpreter.Value,
+) error {
+	if m.deployContract == nil {
+		panic("'DeployContract' is not implemented")
+	}
+
+	return m.deployContract(inter, name, code, account, arguments)
+}
+
+func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
+	if m.readFile == nil {
+		panic("'ReadFile' is not implemented")
+	}
+
+	return m.readFile(fileName)
+}
+
+func (m mockedTestFramework) UseConfiguration(configuration *Configuration) {
+	if m.useConfiguration == nil {
+		panic("'UseConfiguration' is not implemented")
+	}
+
+	m.useConfiguration(configuration)
+}
+
+func (m mockedTestFramework) StandardLibraryHandler() StandardLibraryHandler {
+	if m.stdlibHandler == nil {
+		panic("'StandardLibraryHandler' is not implemented")
+	}
+
+	return m.stdlibHandler()
+}
+
+func (m mockedTestFramework) Logs() []string {
+	if m.logs == nil {
+		panic("'Logs' is not implemented")
+	}
+
+	return m.logs()
+}
+
+func (m mockedTestFramework) ServiceAccount() (*Account, error) {
+	if m.serviceAccount == nil {
+		panic("'ServiceAccount' is not implemented")
+	}
+
+	return m.serviceAccount()
+}
+
+func (m mockedTestFramework) Events(
+	inter *interpreter.Interpreter,
+	eventType interpreter.StaticType,
+) interpreter.Value {
+	if m.events == nil {
+		panic("'Events' is not implemented")
+	}
+
+	return m.events(inter, eventType)
+}
+
+func (m mockedTestFramework) Reset() {
+	if m.reset == nil {
+		panic("'Reset' is not implemented")
+	}
+
+	m.reset()
 }

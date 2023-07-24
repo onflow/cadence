@@ -19,7 +19,10 @@
 
 package sema
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+)
 
 const PublicAccountTypeAddressFieldName = "address"
 
@@ -77,6 +80,14 @@ const PublicAccountTypeKeysFieldDocString = `
 The keys assigned to the account.
 `
 
+const PublicAccountTypeCapabilitiesFieldName = "capabilities"
+
+var PublicAccountTypeCapabilitiesFieldType = PublicAccountCapabilitiesType
+
+const PublicAccountTypeCapabilitiesFieldDocString = `
+The capabilities of the account.
+`
+
 const PublicAccountTypePublicPathsFieldName = "publicPaths"
 
 var PublicAccountTypePublicPathsFieldType = &VariableSizedType{
@@ -92,7 +103,8 @@ const PublicAccountTypeGetCapabilityFunctionName = "getCapability"
 var PublicAccountTypeGetCapabilityFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -118,6 +130,8 @@ var PublicAccountTypeGetCapabilityFunctionType = &FunctionType{
 }
 
 const PublicAccountTypeGetCapabilityFunctionDocString = `
+**DEPRECATED**: Use ` + "`capabilities.get`" + ` instead.
+
 Returns the capability at the given public path.
 `
 
@@ -139,6 +153,8 @@ var PublicAccountTypeGetLinkTargetFunctionType = &FunctionType{
 }
 
 const PublicAccountTypeGetLinkTargetFunctionDocString = `
+**DEPRECATED**
+
 Returns the target path of the capability at the given public or private path,
 or nil if there exists no capability at the given path.
 `
@@ -221,7 +237,8 @@ const PublicAccountContractsTypeBorrowFunctionName = "borrow"
 var PublicAccountContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: AnyType,
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
 	},
 }
 
@@ -266,20 +283,24 @@ var PublicAccountContractsType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountContractsType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountContractsTypeNamesFieldName,
 			PublicAccountContractsTypeNamesFieldType,
 			PublicAccountContractsTypeNamesFieldDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountContractsType,
+			ast.AccessAll,
 			PublicAccountContractsTypeGetFunctionName,
 			PublicAccountContractsTypeGetFunctionType,
 			PublicAccountContractsTypeGetFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountContractsType,
+			ast.AccessAll,
 			PublicAccountContractsTypeBorrowFunctionName,
 			PublicAccountContractsTypeBorrowFunctionType,
 			PublicAccountContractsTypeBorrowFunctionDocString,
@@ -367,20 +388,24 @@ var PublicAccountKeysType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountKeysType,
+			ast.AccessAll,
 			PublicAccountKeysTypeGetFunctionName,
 			PublicAccountKeysTypeGetFunctionType,
 			PublicAccountKeysTypeGetFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountKeysType,
+			ast.AccessAll,
 			PublicAccountKeysTypeForEachFunctionName,
 			PublicAccountKeysTypeForEachFunctionType,
 			PublicAccountKeysTypeForEachFunctionDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountKeysType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountKeysTypeCountFieldName,
 			PublicAccountKeysTypeCountFieldType,
 			PublicAccountKeysTypeCountFieldDocString,
@@ -389,6 +414,115 @@ func init() {
 
 	PublicAccountKeysType.Members = MembersAsMap(members)
 	PublicAccountKeysType.Fields = MembersFieldNames(members)
+}
+
+const PublicAccountCapabilitiesTypeGetFunctionName = "get"
+
+var PublicAccountCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
+	Name: "T",
+	TypeBound: &ReferenceType{
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
+	},
+}
+
+var PublicAccountCapabilitiesTypeGetFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		PublicAccountCapabilitiesTypeGetFunctionTypeParameterT,
+	},
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: MustInstantiate(
+				&CapabilityType{},
+				&GenericType{
+					TypeParameter: PublicAccountCapabilitiesTypeGetFunctionTypeParameterT,
+				},
+			),
+		},
+	),
+}
+
+const PublicAccountCapabilitiesTypeGetFunctionDocString = `
+get returns the storage capability at the given path, if one was stored there.
+`
+
+const PublicAccountCapabilitiesTypeBorrowFunctionName = "borrow"
+
+var PublicAccountCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
+	Name: "T",
+	TypeBound: &ReferenceType{
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
+	},
+}
+
+var PublicAccountCapabilitiesTypeBorrowFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		PublicAccountCapabilitiesTypeBorrowFunctionTypeParameterT,
+	},
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: &GenericType{
+				TypeParameter: PublicAccountCapabilitiesTypeBorrowFunctionTypeParameterT,
+			},
+		},
+	),
+}
+
+const PublicAccountCapabilitiesTypeBorrowFunctionDocString = `
+borrow gets the storage capability at the given path, and borrows the capability if it exists.
+
+Returns nil if the capability does not exist or cannot be borrowed using the given type.
+The function is equivalent to ` + "`get(path)?.borrow()`" + `.
+`
+
+const PublicAccountCapabilitiesTypeName = "Capabilities"
+
+var PublicAccountCapabilitiesType = func() *CompositeType {
+	var t = &CompositeType{
+		Identifier:         PublicAccountCapabilitiesTypeName,
+		Kind:               common.CompositeKindStructure,
+		importable:         false,
+		hasComputedMembers: true,
+	}
+
+	return t
+}()
+
+func init() {
+	var members = []*Member{
+		NewUnmeteredFunctionMember(
+			PublicAccountCapabilitiesType,
+			ast.AccessAll,
+			PublicAccountCapabilitiesTypeGetFunctionName,
+			PublicAccountCapabilitiesTypeGetFunctionType,
+			PublicAccountCapabilitiesTypeGetFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			PublicAccountCapabilitiesType,
+			ast.AccessAll,
+			PublicAccountCapabilitiesTypeBorrowFunctionName,
+			PublicAccountCapabilitiesTypeBorrowFunctionType,
+			PublicAccountCapabilitiesTypeBorrowFunctionDocString,
+		),
+	}
+
+	PublicAccountCapabilitiesType.Members = MembersAsMap(members)
+	PublicAccountCapabilitiesType.Fields = MembersFieldNames(members)
 }
 
 const PublicAccountTypeName = "PublicAccount"
@@ -403,73 +537,101 @@ var PublicAccountType = func() *CompositeType {
 
 	t.SetNestedType(PublicAccountContractsTypeName, PublicAccountContractsType)
 	t.SetNestedType(PublicAccountKeysTypeName, PublicAccountKeysType)
+	t.SetNestedType(PublicAccountCapabilitiesTypeName, PublicAccountCapabilitiesType)
 	return t
 }()
 
 func init() {
 	var members = []*Member{
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountTypeAddressFieldName,
 			PublicAccountTypeAddressFieldType,
 			PublicAccountTypeAddressFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountTypeBalanceFieldName,
 			PublicAccountTypeBalanceFieldType,
 			PublicAccountTypeBalanceFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountTypeAvailableBalanceFieldName,
 			PublicAccountTypeAvailableBalanceFieldType,
 			PublicAccountTypeAvailableBalanceFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountTypeStorageUsedFieldName,
 			PublicAccountTypeStorageUsedFieldType,
 			PublicAccountTypeStorageUsedFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountTypeStorageCapacityFieldName,
 			PublicAccountTypeStorageCapacityFieldType,
 			PublicAccountTypeStorageCapacityFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountTypeContractsFieldName,
 			PublicAccountTypeContractsFieldType,
 			PublicAccountTypeContractsFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountTypeKeysFieldName,
 			PublicAccountTypeKeysFieldType,
 			PublicAccountTypeKeysFieldDocString,
 		),
-		NewUnmeteredPublicConstantFieldMember(
+		NewUnmeteredFieldMember(
 			PublicAccountType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
+			PublicAccountTypeCapabilitiesFieldName,
+			PublicAccountTypeCapabilitiesFieldType,
+			PublicAccountTypeCapabilitiesFieldDocString,
+		),
+		NewUnmeteredFieldMember(
+			PublicAccountType,
+			ast.AccessAll,
+			ast.VariableKindConstant,
 			PublicAccountTypePublicPathsFieldName,
 			PublicAccountTypePublicPathsFieldType,
 			PublicAccountTypePublicPathsFieldDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountType,
+			ast.AccessAll,
 			PublicAccountTypeGetCapabilityFunctionName,
 			PublicAccountTypeGetCapabilityFunctionType,
 			PublicAccountTypeGetCapabilityFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountType,
+			ast.AccessAll,
 			PublicAccountTypeGetLinkTargetFunctionName,
 			PublicAccountTypeGetLinkTargetFunctionType,
 			PublicAccountTypeGetLinkTargetFunctionDocString,
 		),
-		NewUnmeteredPublicFunctionMember(
+		NewUnmeteredFunctionMember(
 			PublicAccountType,
+			ast.AccessAll,
 			PublicAccountTypeForEachPublicFunctionName,
 			PublicAccountTypeForEachPublicFunctionType,
 			PublicAccountTypeForEachPublicFunctionDocString,

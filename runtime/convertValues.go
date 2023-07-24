@@ -184,6 +184,20 @@ func exportValueWithInterpreter(
 		return cadence.NewMeteredWord32(inter, uint32(v)), nil
 	case interpreter.Word64Value:
 		return cadence.NewMeteredWord64(inter, uint64(v)), nil
+	case interpreter.Word128Value:
+		return cadence.NewMeteredWord128FromBig(
+			inter,
+			func() *big.Int {
+				return v.ToBigInt(inter)
+			},
+		)
+	case interpreter.Word256Value:
+		return cadence.NewMeteredWord256FromBig(
+			inter,
+			func() *big.Int {
+				return v.ToBigInt(inter)
+			},
+		)
 	case interpreter.Fix64Value:
 		return cadence.Fix64(v), nil
 	case interpreter.UFix64Value:
@@ -219,8 +233,10 @@ func exportValueWithInterpreter(
 		return exportPathValue(inter, v)
 	case interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
-	case *interpreter.StorageCapabilityValue:
-		return exportStorageCapabilityValue(v, inter)
+	case *interpreter.IDCapabilityValue:
+		return exportIDCapabilityValue(v, inter)
+	case *interpreter.PathCapabilityValue:
+		return exportPathCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
@@ -629,10 +645,10 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 	)
 }
 
-func exportStorageCapabilityValue(
-	v *interpreter.StorageCapabilityValue,
+func exportPathCapabilityValue(
+	v *interpreter.PathCapabilityValue,
 	inter *interpreter.Interpreter,
-) (cadence.StorageCapability, error) {
+) (cadence.PathCapability, error) {
 	var borrowType sema.Type
 	if v.BorrowType != nil {
 		borrowType = inter.MustConvertStaticToSemaType(v.BorrowType)
@@ -640,14 +656,29 @@ func exportStorageCapabilityValue(
 
 	path, err := exportPathValue(inter, v.Path)
 	if err != nil {
-		return cadence.StorageCapability{}, err
+		return cadence.PathCapability{}, err
 	}
 
-	return cadence.NewMeteredStorageCapability(
+	return cadence.NewMeteredPathCapability(
 		inter,
-		path,
 		cadence.NewMeteredAddress(inter, v.Address),
+		path,
 		ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{}),
+	), nil
+}
+
+func exportIDCapabilityValue(
+	v *interpreter.IDCapabilityValue,
+	inter *interpreter.Interpreter,
+) (cadence.IDCapability, error) {
+	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
+	exportedBorrowType := ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
+
+	return cadence.NewMeteredIDCapability(
+		inter,
+		cadence.NewMeteredUInt64(inter, uint64(v.ID)),
+		cadence.NewMeteredAddress(inter, v.Address),
+		exportedBorrowType,
 	), nil
 }
 
@@ -776,6 +807,10 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		return i.importWord32(v), nil
 	case cadence.Word64:
 		return i.importWord64(v), nil
+	case cadence.Word128:
+		return i.importWord128(v), nil
+	case cadence.Word256:
+		return i.importWord256(v), nil
 	case cadence.Fix64:
 		return i.importFix64(v), nil
 	case cadence.UFix64:
@@ -820,9 +855,15 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		)
 	case cadence.TypeValue:
 		return i.importTypeValue(v.StaticType)
-	case cadence.StorageCapability:
-		return i.importStorageCapability(
+	case cadence.PathCapability:
+		return i.importPathCapability(
+			v.Address,
 			v.Path,
+			v.BorrowType,
+		)
+	case cadence.IDCapability:
+		return i.importIDCapability(
+			v.ID,
 			v.Address,
 			v.BorrowType,
 		)
@@ -1010,6 +1051,24 @@ func (i valueImporter) importWord64(v cadence.Word64) interpreter.Word64Value {
 	)
 }
 
+func (i valueImporter) importWord128(v cadence.Word128) interpreter.Word128Value {
+	return interpreter.NewWord128ValueFromBigInt(
+		i.inter,
+		func() *big.Int {
+			return v.Value
+		},
+	)
+}
+
+func (i valueImporter) importWord256(v cadence.Word256) interpreter.Word256Value {
+	return interpreter.NewWord256ValueFromBigInt(
+		i.inter,
+		func() *big.Int {
+			return v.Value
+		},
+	)
+}
+
 func (i valueImporter) importFix64(v cadence.Fix64) interpreter.Fix64Value {
 	return interpreter.NewFix64Value(
 		i.inter,
@@ -1091,12 +1150,12 @@ func (i valueImporter) importTypeValue(v cadence.Type) (interpreter.TypeValue, e
 	return interpreter.NewTypeValue(inter, typ), nil
 }
 
-func (i valueImporter) importStorageCapability(
-	path cadence.Path,
+func (i valueImporter) importPathCapability(
 	address cadence.Address,
+	path cadence.Path,
 	borrowType cadence.Type,
 ) (
-	*interpreter.StorageCapabilityValue,
+	*interpreter.PathCapabilityValue,
 	error,
 ) {
 	_, ok := borrowType.(*cadence.ReferenceType)
@@ -1109,7 +1168,7 @@ func (i valueImporter) importStorageCapability(
 
 	inter := i.inter
 
-	return interpreter.NewStorageCapabilityValue(
+	return interpreter.NewPathCapabilityValue(
 		inter,
 		interpreter.NewAddressValue(
 			inter,
@@ -1118,7 +1177,37 @@ func (i valueImporter) importStorageCapability(
 		i.importPathValue(path),
 		ImportType(inter, borrowType),
 	), nil
+}
 
+func (i valueImporter) importIDCapability(
+	id cadence.UInt64,
+	address cadence.Address,
+	borrowType cadence.Type,
+) (
+	*interpreter.IDCapabilityValue,
+	error,
+) {
+	_, ok := borrowType.(*cadence.ReferenceType)
+	if !ok {
+		return nil, errors.NewDefaultUserError(
+			"cannot import capability: expected reference, got '%s'",
+			borrowType.ID(),
+		)
+	}
+
+	inter := i.inter
+
+	addressValue := interpreter.NewAddressValue(
+		inter,
+		common.Address(address),
+	)
+
+	return interpreter.NewIDCapabilityValue(
+		inter,
+		i.importUInt64(id),
+		addressValue,
+		ImportType(inter, borrowType),
+	), nil
 }
 
 func (i valueImporter) importOptionalValue(

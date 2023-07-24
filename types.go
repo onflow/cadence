@@ -20,6 +20,8 @@ package cadence
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -824,6 +826,46 @@ func (t Word64Type) Equal(other Type) bool {
 	return t == other
 }
 
+// Word128Type
+
+type Word128Type struct{}
+
+var TheWord128Type = Word128Type{}
+
+func NewWord128Type() Word128Type {
+	return TheWord128Type
+}
+
+func (Word128Type) isType() {}
+
+func (Word128Type) ID() string {
+	return "Word128"
+}
+
+func (t Word128Type) Equal(other Type) bool {
+	return t == other
+}
+
+// Word256Type
+
+type Word256Type struct{}
+
+var TheWord256Type = Word256Type{}
+
+func NewWord256Type() Word256Type {
+	return TheWord256Type
+}
+
+func (Word256Type) isType() {}
+
+func (Word256Type) ID() string {
+	return "Word256"
+}
+
+func (t Word256Type) Equal(other Type) bool {
+	return t == other
+}
+
 // Fix64Type
 
 type Fix64Type struct{}
@@ -1032,6 +1074,231 @@ func NewField(identifier string, typ Type) Field {
 		Identifier: identifier,
 		Type:       typ,
 	}
+}
+
+type HasFields interface {
+	GetFields() []Field
+	GetFieldValues() []Value
+}
+
+func GetFieldByName(v HasFields, fieldName string) Value {
+	fieldValues := v.GetFieldValues()
+	fields := v.GetFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	for i, field := range v.GetFields() {
+		if field.Identifier == fieldName {
+			return v.GetFieldValues()[i]
+		}
+	}
+	return nil
+}
+
+func GetFieldsMappedByName(v HasFields) map[string]Value {
+	fieldValues := v.GetFieldValues()
+	fields := v.GetFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	fieldsMap := make(map[string]Value, len(fields))
+	for i, field := range fields {
+		fieldsMap[field.Identifier] = fieldValues[i]
+	}
+	return fieldsMap
+}
+
+// DecodeFields decodes a HasFields into a struct
+func DecodeFields(hasFields HasFields, s interface{}) error {
+	v := reflect.ValueOf(s)
+	if !v.IsValid() || v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("s must be a pointer to a struct")
+	}
+
+	v = v.Elem()
+	t := v.Type()
+
+	fieldsMap := GetFieldsMappedByName(hasFields)
+
+	for i := 0; i < v.NumField(); i++ {
+		structField := t.Field(i)
+		tag := structField.Tag
+		fieldValue := v.Field(i)
+
+		cadenceFieldNameTag := tag.Get("cadence")
+		if cadenceFieldNameTag == "" {
+			continue
+		}
+
+		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+			return fmt.Errorf("cannot set field %s", structField.Name)
+		}
+
+		cadenceField := fieldsMap[cadenceFieldNameTag]
+		if cadenceField == nil {
+			return fmt.Errorf("%s field not found", cadenceFieldNameTag)
+		}
+
+		cadenceFieldValue := reflect.ValueOf(cadenceField)
+
+		var decodeSpecialFieldFunc func(p reflect.Type, value Value) (*reflect.Value, error)
+
+		switch fieldValue.Kind() {
+		case reflect.Ptr:
+			decodeSpecialFieldFunc = decodeOptional
+		case reflect.Map:
+			decodeSpecialFieldFunc = decodeDict
+		case reflect.Array, reflect.Slice:
+			decodeSpecialFieldFunc = decodeSlice
+		}
+
+		if decodeSpecialFieldFunc != nil {
+			cadenceFieldValuePtr, err := decodeSpecialFieldFunc(fieldValue.Type(), cadenceField)
+			if err != nil {
+				return fmt.Errorf("cannot decode %s field %s: %w", fieldValue.Kind(), structField.Name, err)
+			}
+			cadenceFieldValue = *cadenceFieldValuePtr
+		}
+
+		if !cadenceFieldValue.CanConvert(fieldValue.Type()) {
+			return fmt.Errorf(
+				"cannot convert cadence field %s of type %s to struct field %s of type %s",
+				cadenceFieldNameTag,
+				cadenceField.Type().ID(),
+				structField.Name,
+				fieldValue.Type(),
+			)
+		}
+
+		fieldValue.Set(cadenceFieldValue.Convert(fieldValue.Type()))
+	}
+
+	return nil
+}
+
+func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
+	optional, ok := cadenceField.(Optional)
+	if !ok {
+		return nil, fmt.Errorf("field is not an optional")
+	}
+
+	// if optional is nil, skip and default the field to nil
+	if optional.ToGoValue() == nil {
+		zeroValue := reflect.Zero(valueType)
+		return &zeroValue, nil
+	}
+
+	optionalValue := reflect.ValueOf(optional.Value)
+
+	// Check the type
+	if valueType.Elem() != optionalValue.Type() && valueType.Elem().Kind() != reflect.Interface {
+		return nil, fmt.Errorf("cannot set field: expected %v, got %v",
+			valueType.Elem(), optionalValue.Type())
+	}
+
+	if valueType.Elem().Kind() == reflect.Interface {
+		newInterfaceVal := reflect.New(reflect.TypeOf((*interface{})(nil)).Elem())
+		newInterfaceVal.Elem().Set(optionalValue)
+
+		return &newInterfaceVal, nil
+	}
+
+	// Create a new pointer for optionalValue
+	newPtr := reflect.New(optionalValue.Type())
+	newPtr.Elem().Set(optionalValue)
+
+	return &newPtr, nil
+}
+
+func decodeDict(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
+	dict, ok := cadenceField.(Dictionary)
+	if !ok {
+		return nil, fmt.Errorf("field is not a dictionary")
+	}
+
+	mapKeyType := valueType.Key()
+	mapValueType := valueType.Elem()
+
+	mapValue := reflect.MakeMap(valueType)
+	for _, pair := range dict.Pairs {
+
+		// Convert key and value to their Go counterparts
+		var key, value reflect.Value
+		if mapKeyType.Kind() == reflect.Ptr {
+			return nil, fmt.Errorf("map key cannot be a pointer (optional) type")
+		}
+		key = reflect.ValueOf(pair.Key)
+
+		if mapValueType.Kind() == reflect.Ptr {
+			// If the map value is a pointer type, unwrap it from optional
+			valueOptional, err := decodeOptional(mapValueType, pair.Value)
+			if err != nil {
+				return nil, fmt.Errorf("cannot decode optional map value for key %s: %w", pair.Key.String(), err)
+			}
+			value = *valueOptional
+		} else {
+			value = reflect.ValueOf(pair.Value)
+		}
+
+		if mapKeyType != key.Type() {
+			return nil, fmt.Errorf("map key type mismatch: expected %v, got %v", mapKeyType, key.Type())
+		}
+		if mapValueType != value.Type() && mapValueType.Kind() != reflect.Interface {
+			return nil, fmt.Errorf("map value type mismatch: expected %v, got %v", mapValueType, value.Type())
+		}
+
+		// Add key-value pair to the map
+		mapValue.SetMapIndex(key, value)
+	}
+
+	return &mapValue, nil
+}
+
+func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
+	array, ok := cadenceField.(Array)
+	if !ok {
+		return nil, fmt.Errorf("field is not an array")
+	}
+
+	var arrayValue reflect.Value
+
+	constantSizeArray, ok := array.ArrayType.(*ConstantSizedArrayType)
+	if ok {
+		arrayValue = reflect.New(reflect.ArrayOf(int(constantSizeArray.Size), valueType.Elem())).Elem()
+	} else {
+		// If the array is not constant sized, create a slice
+		arrayValue = reflect.MakeSlice(valueType, len(array.Values), len(array.Values))
+	}
+
+	for i, value := range array.Values {
+		var elementValue reflect.Value
+		if valueType.Elem().Kind() == reflect.Ptr {
+			// If the array value is a pointer type, unwrap it from optional
+			valueOptional, err := decodeOptional(valueType.Elem(), value)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding array element optional: %w", err)
+			}
+			elementValue = *valueOptional
+		} else {
+			elementValue = reflect.ValueOf(value)
+		}
+		if elementValue.Type() != valueType.Elem() && valueType.Elem().Kind() != reflect.Interface {
+			return nil, fmt.Errorf(
+				"array element type mismatch at index %d: expected %v, got %v",
+				i,
+				valueType.Elem(),
+				elementValue.Type(),
+			)
+		}
+
+		arrayValue.Index(i).Set(elementValue)
+	}
+
+	return &arrayValue, nil
 }
 
 // Parameter
@@ -1834,40 +2101,158 @@ func (t *FunctionType) Equal(other Type) bool {
 	return t.ReturnType.Equal(otherType.ReturnType)
 }
 
+// Authorization
+
+type Authorization interface {
+	isAuthorization()
+	ID() string
+	Equal(auth Authorization) bool
+}
+
+type Unauthorized struct{}
+
+var UnauthorizedAccess Authorization = Unauthorized{}
+
+func (Unauthorized) isAuthorization() {}
+
+func (Unauthorized) ID() string {
+	return ""
+}
+
+func (Unauthorized) Equal(auth Authorization) bool {
+	switch auth.(type) {
+	case Unauthorized:
+		return true
+	}
+	return false
+}
+
+type EntitlementSetKind uint8
+
+const (
+	Conjunction EntitlementSetKind = iota
+	Disjunction
+)
+
+type EntitlementSetAuthorization struct {
+	Entitlements []common.TypeID
+	Kind         EntitlementSetKind
+}
+
+var _ Authorization = EntitlementSetAuthorization{}
+
+func NewEntitlementSetAuthorization(gauge common.MemoryGauge, entitlements []common.TypeID, kind EntitlementSetKind) EntitlementSetAuthorization {
+	common.UseMemory(gauge, common.MemoryUsage{
+		Kind:   common.MemoryKindCadenceEntitlementSetAccess,
+		Amount: uint64(len(entitlements)),
+	})
+	return EntitlementSetAuthorization{
+		Entitlements: entitlements,
+		Kind:         kind,
+	}
+}
+
+func (EntitlementSetAuthorization) isAuthorization() {}
+
+func (e EntitlementSetAuthorization) ID() string {
+	var builder strings.Builder
+	builder.WriteString("auth(")
+	var separator string
+
+	if e.Kind == Conjunction {
+		separator = ", "
+	} else if e.Kind == Disjunction {
+		separator = " | "
+	}
+
+	for i, entitlement := range e.Entitlements {
+		builder.WriteString(string(entitlement))
+		if i < len(e.Entitlements) {
+			builder.WriteString(separator)
+		}
+	}
+	builder.WriteString(")")
+	return builder.String()
+}
+
+func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
+	switch auth := auth.(type) {
+	case EntitlementSetAuthorization:
+		if len(e.Entitlements) != len(auth.Entitlements) {
+			return false
+		}
+
+		for i, entitlement := range e.Entitlements {
+			if auth.Entitlements[i] != entitlement {
+				return false
+			}
+		}
+		return e.Kind == auth.Kind
+	}
+	return false
+}
+
+type EntitlementMapAuthorization struct {
+	TypeID common.TypeID
+}
+
+var _ Authorization = EntitlementMapAuthorization{}
+
+func NewEntitlementMapAuthorization(gauge common.MemoryGauge, id common.TypeID) EntitlementMapAuthorization {
+	common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindCadenceEntitlementMapAccess))
+	return EntitlementMapAuthorization{
+		TypeID: id,
+	}
+}
+
+func (EntitlementMapAuthorization) isAuthorization() {}
+
+func (e EntitlementMapAuthorization) ID() string {
+	return fmt.Sprintf("auth(%s)", e.TypeID)
+}
+
+func (e EntitlementMapAuthorization) Equal(auth Authorization) bool {
+	switch auth := auth.(type) {
+	case EntitlementMapAuthorization:
+		return e.TypeID == auth.TypeID
+	}
+	return false
+}
+
 // ReferenceType
 
 type ReferenceType struct {
-	Type       Type
-	Authorized bool
-	typeID     string
+	Type          Type
+	Authorization Authorization
+	typeID        string
 }
 
 var _ Type = &ReferenceType{}
 
 func NewReferenceType(
-	authorized bool,
+	authorization Authorization,
 	typ Type,
 ) *ReferenceType {
 	return &ReferenceType{
-		Authorized: authorized,
-		Type:       typ,
+		Authorization: authorization,
+		Type:          typ,
 	}
 }
 
 func NewMeteredReferenceType(
 	gauge common.MemoryGauge,
-	authorized bool,
+	authorization Authorization,
 	typ Type,
 ) *ReferenceType {
 	common.UseMemory(gauge, common.CadenceReferenceTypeMemoryUsage)
-	return NewReferenceType(authorized, typ)
+	return NewReferenceType(authorization, typ)
 }
 
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) ID() string {
 	if t.typeID == "" {
-		t.typeID = sema.FormatReferenceTypeID(t.Authorized, t.Type.ID())
+		t.typeID = fmt.Sprintf("%s&%s", t.Authorization.ID(), t.Type.ID())
 	}
 	return t.typeID
 }
@@ -1878,87 +2263,69 @@ func (t *ReferenceType) Equal(other Type) bool {
 		return false
 	}
 
-	return t.Authorized == otherType.Authorized &&
+	return t.Authorization.Equal(otherType.Authorization) &&
 		t.Type.Equal(otherType.Type)
 }
 
-// RestrictedType
+// IntersectionType
 
-type RestrictionSet = map[Type]struct{}
+type IntersectionSet = map[Type]struct{}
 
-type RestrictedType struct {
-	typeID             string
-	Type               Type
-	Restrictions       []Type
-	restrictionSet     RestrictionSet
-	restrictionSetOnce sync.Once
+type IntersectionType struct {
+	typeID              string
+	Types               []Type
+	intersectionSet     IntersectionSet
+	intersectionSetOnce sync.Once
 }
 
-func NewRestrictedType(
-	typ Type,
-	restrictions []Type,
-) *RestrictedType {
-	return &RestrictedType{
-		Type:         typ,
-		Restrictions: restrictions,
+func NewIntersectionType(
+	types []Type,
+) *IntersectionType {
+	return &IntersectionType{
+		Types: types,
 	}
 }
 
-func NewMeteredRestrictedType(
+func NewMeteredIntersectionType(
 	gauge common.MemoryGauge,
-	typ Type,
-	restrictions []Type,
-) *RestrictedType {
-	common.UseMemory(gauge, common.CadenceRestrictedTypeMemoryUsage)
-	return NewRestrictedType(typ, restrictions)
+	types []Type,
+) *IntersectionType {
+	common.UseMemory(gauge, common.CadenceIntersectionTypeMemoryUsage)
+	return NewIntersectionType(types)
 }
 
-func (*RestrictedType) isType() {}
+func (*IntersectionType) isType() {}
 
-func (t *RestrictedType) ID() string {
+func (t *IntersectionType) ID() string {
 	if t.typeID == "" {
-		var restrictionStrings []string
-		restrictionCount := len(t.Restrictions)
-		if restrictionCount > 0 {
-			restrictionStrings = make([]string, 0, restrictionCount)
-			for _, restriction := range t.Restrictions {
-				restrictionStrings = append(restrictionStrings, restriction.ID())
+		var typeStrings []string
+		typeCount := len(t.Types)
+		if typeCount > 0 {
+			typeStrings = make([]string, 0, typeCount)
+			for _, typ := range t.Types {
+				typeStrings = append(typeStrings, typ.ID())
 			}
 		}
-		var typeString string
-		if t.Type != nil {
-			typeString = t.Type.ID()
-		}
-		t.typeID = sema.FormatRestrictedTypeID(typeString, restrictionStrings)
+		t.typeID = sema.FormatIntersectionTypeID(typeStrings)
 	}
 	return t.typeID
 }
 
-func (t *RestrictedType) Equal(other Type) bool {
-	otherType, ok := other.(*RestrictedType)
+func (t *IntersectionType) Equal(other Type) bool {
+	otherType, ok := other.(*IntersectionType)
 	if !ok {
 		return false
 	}
 
-	if t.Type == nil && otherType.Type != nil {
-		return false
-	}
-	if t.Type != nil && otherType.Type == nil {
-		return false
-	}
-	if t.Type != nil && !t.Type.Equal(otherType.Type) {
+	intersectionSet := t.IntersectionSet()
+	otherIntersectionSet := otherType.IntersectionSet()
+
+	if len(intersectionSet) != len(otherIntersectionSet) {
 		return false
 	}
 
-	restrictionSet := t.RestrictionSet()
-	otherRestrictionSet := otherType.RestrictionSet()
-
-	if len(restrictionSet) != len(otherRestrictionSet) {
-		return false
-	}
-
-	for restriction := range restrictionSet { //nolint:maprange
-		_, ok := otherRestrictionSet[restriction]
+	for typ := range intersectionSet { //nolint:maprange
+		_, ok := otherIntersectionSet[typ]
 		if !ok {
 			return false
 		}
@@ -1967,18 +2334,18 @@ func (t *RestrictedType) Equal(other Type) bool {
 	return true
 }
 
-func (t *RestrictedType) initializeRestrictionSet() {
-	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = make(RestrictionSet, len(t.Restrictions))
-		for _, restriction := range t.Restrictions {
-			t.restrictionSet[restriction] = struct{}{}
+func (t *IntersectionType) initializeIntersectionSet() {
+	t.intersectionSetOnce.Do(func() {
+		t.intersectionSet = make(IntersectionSet, len(t.Types))
+		for _, typ := range t.Types {
+			t.intersectionSet[typ] = struct{}{}
 		}
 	})
 }
 
-func (t *RestrictedType) RestrictionSet() RestrictionSet {
-	t.initializeRestrictionSet()
-	return t.restrictionSet
+func (t *IntersectionType) IntersectionSet() IntersectionSet {
+	t.initializeIntersectionSet()
+	return t.intersectionSet
 }
 
 // BlockType
@@ -2414,9 +2781,9 @@ func TypeWithCachedTypeID(t Type) Type {
 			}
 		}
 
-	case *RestrictedType:
-		for _, restriction := range t.Restrictions {
-			TypeWithCachedTypeID(restriction)
+	case *IntersectionType:
+		for _, typ := range t.Types {
+			TypeWithCachedTypeID(typ)
 		}
 	}
 

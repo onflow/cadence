@@ -57,4 +57,6 @@ type Config struct {
 	AccountLinkingEnabled bool
 	// AttachmentsEnabled determines if attachments are enabled
 	AttachmentsEnabled bool
+	// CapabilityControllersEnabled determines if capability controllers are enabled
+	CapabilityControllersEnabled bool
 }

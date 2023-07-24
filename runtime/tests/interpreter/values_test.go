@@ -149,6 +149,7 @@ func TestRandomMapOperations(t *testing.T) {
 			newOwner,
 			false,
 			nil,
+			nil,
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), copyOfTestMap.Count())
@@ -488,6 +489,7 @@ func TestRandomMapOperations(t *testing.T) {
 			newOwner,
 			true,
 			nil,
+			nil,
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), movedDictionary.Count())
@@ -602,6 +604,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			interpreter.EmptyLocationRange,
 			newOwner,
 			false,
+			nil,
 			nil,
 		).(*interpreter.ArrayValue)
 
@@ -858,6 +861,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			newOwner,
 			true,
 			nil,
+			nil,
 		).(*interpreter.ArrayValue)
 
 		require.Equal(t, len(elements), movedArray.Count())
@@ -946,6 +950,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			newOwner,
 			false,
 			nil,
+			nil,
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
@@ -986,6 +991,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			newOwner,
 			false,
 			nil,
+			nil,
 		).(*interpreter.CompositeValue)
 
 		require.NoError(t, err)
@@ -1009,6 +1015,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			interpreter.EmptyLocationRange,
 			newOwner,
 			true,
+			nil,
 			nil,
 		).(*interpreter.CompositeValue)
 
@@ -1126,7 +1133,7 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 	if currentDepth < containerMaxDepth {
 		n = randomInt(Composite)
 	} else {
-		n = randomInt(Capability)
+		n = randomInt(IDCapability)
 	}
 
 	switch n {
@@ -1142,15 +1149,24 @@ func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) inter
 		return randomArrayValue(inter, currentDepth)
 	case Composite:
 		return randomCompositeValue(inter, common.CompositeKindStructure, currentDepth)
-	case Capability:
-		return &interpreter.StorageCapabilityValue{
-			Address: randomAddressValue(),
-			Path:    randomPathValue(),
-			BorrowType: interpreter.ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: interpreter.PrimitiveStaticTypeAnyStruct,
+	case PathCapability:
+		return interpreter.NewUnmeteredPathCapabilityValue(
+			randomAddressValue(),
+			randomPathValue(),
+			interpreter.ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-		}
+		)
+	case IDCapability:
+		return interpreter.NewUnmeteredIDCapabilityValue(
+			interpreter.UInt64Value(randomInt(math.MaxInt-1)),
+			randomAddressValue(),
+			interpreter.ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+		)
 	case Some:
 		return interpreter.NewUnmeteredSomeValueNonCopying(
 			randomStorableValue(inter, currentDepth+1),
@@ -1210,6 +1226,10 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 		return interpreter.NewUnmeteredWord32Value(rand.Uint32())
 	case Word64:
 		return interpreter.NewUnmeteredWord64Value(rand.Uint64())
+	case Word128:
+		return interpreter.NewUnmeteredWord128ValueFromUint64(rand.Uint64())
+	case Word256:
+		return interpreter.NewUnmeteredWord256ValueFromUint64(rand.Uint64())
 
 	// Fixed point
 	case Fix64:
@@ -1477,6 +1497,10 @@ func intSubtype(n int) sema.Type {
 		return sema.Word32Type
 	case Word64:
 		return sema.Word64Type
+	case Word128:
+		return sema.Word128Type
+	case Word256:
+		return sema.Word256Type
 
 	default:
 		panic(fmt.Sprintf("unsupported:  %d", n))
@@ -1508,6 +1532,8 @@ const (
 	Word16
 	Word32
 	Word64
+	Word128
+	Word256
 
 	Fix64
 	UFix64
@@ -1528,7 +1554,8 @@ const (
 
 	Void
 	Nil // `Never?`
-	Capability
+	PathCapability
+	IDCapability
 
 	// Containers
 	Some

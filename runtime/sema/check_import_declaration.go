@@ -45,7 +45,7 @@ func (checker *Checker) VisitImportDeclaration(declaration *ast.ImportDeclaratio
 	})
 }
 
-func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) Type {
+func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) {
 	locationRange := ast.NewRange(
 		checker.memoryGauge,
 		declaration.LocationPos,
@@ -53,10 +53,37 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 		declaration.LocationPos,
 	)
 
-	resolvedLocations, err := checker.resolveLocation(declaration.Identifiers, declaration.Location)
+	identifiers := declaration.Identifiers
+
+	resolvedLocations, err := checker.resolveLocation(identifiers, declaration.Location)
 	if err != nil {
 		checker.report(err)
-		return nil
+		return
+	}
+
+	// 1) If the import is just for an address (e.g. `import 0x01`) without specifying any contracts, AND
+	// 2) If the imported address is same as the address of the account to which the current contract is deploying,
+	// Then this could create a cycle, as soon the current contract is deployed.
+	// e.g:
+	//    import 0x01
+	//    access(all) contract Foo {}
+	//
+
+	if len(identifiers) == 0 {
+		if currentProgramLocation, ok := checker.Location.(common.AddressLocation); ok {
+			if importLocation, ok := declaration.Location.(common.AddressLocation); ok {
+				if currentProgramLocation.Address == importLocation.Address {
+					checker.report(
+						&CyclicImportsError{
+							Location: declaration.Location,
+							Range:    locationRange,
+						},
+					)
+
+					return
+				}
+			}
+		}
 	}
 
 	checker.Elaboration.SetImportDeclarationsResolvedLocations(declaration, resolvedLocations)
@@ -64,8 +91,6 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	for _, resolvedLocation := range resolvedLocations {
 		checker.importResolvedLocation(resolvedLocation, locationRange)
 	}
-
-	return nil
 }
 
 func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error) {
@@ -107,7 +132,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 			// In that case, return the error as is, for this location.
 			//
 			// If the error is not a cyclic error,
-			// it is considered a error in the imported program,
+			// it is considered an error in the imported program,
 			// and is wrapped
 
 			if _, ok := err.(*CyclicImportsError); !ok {
@@ -246,7 +271,7 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 		)
 
 		// NOTE: declare constant variable with invalid type to silence rest of program
-		const access = ast.AccessPrivate
+		const access = PrimitiveAccess(ast.AccessSelf)
 
 		_, err := checker.valueActivations.declare(variableDeclaration{
 			identifier:               identifier.Identifier,

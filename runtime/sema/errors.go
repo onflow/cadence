@@ -76,6 +76,23 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// SuggestedFix
+
+type HasSuggestedFixes interface {
+	SuggestFixes(code string) []SuggestedFix
+}
+
+type SuggestedFix struct {
+	Message   string
+	TextEdits []TextEdit
+}
+
+type TextEdit struct {
+	Replacement string
+	Insertion   string
+	ast.Range
+}
+
 // InvalidPragmaError
 
 type InvalidPragmaError struct {
@@ -411,31 +428,59 @@ func (e *NotCallableError) Error() string {
 	)
 }
 
-// ArgumentCountError
+// InsufficientArgumentsError
 
-type ArgumentCountError struct {
-	ParameterCount int
-	ArgumentCount  int
+type InsufficientArgumentsError struct {
+	MinCount    int
+	ActualCount int
 	ast.Range
 }
 
-var _ SemanticError = &ArgumentCountError{}
-var _ errors.UserError = &ArgumentCountError{}
-var _ errors.SecondaryError = &ArgumentCountError{}
+var _ SemanticError = &InsufficientArgumentsError{}
+var _ errors.UserError = &InsufficientArgumentsError{}
+var _ errors.SecondaryError = &InsufficientArgumentsError{}
 
-func (*ArgumentCountError) isSemanticError() {}
+func (*InsufficientArgumentsError) isSemanticError() {}
 
-func (*ArgumentCountError) IsUserError() {}
+func (*InsufficientArgumentsError) IsUserError() {}
 
-func (e *ArgumentCountError) Error() string {
-	return "incorrect number of arguments"
+func (e *InsufficientArgumentsError) Error() string {
+	return "too few arguments"
 }
 
-func (e *ArgumentCountError) SecondaryError() string {
+func (e *InsufficientArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected %d, got %d",
-		e.ParameterCount,
-		e.ArgumentCount,
+		"expected at least %d, got %d",
+		e.MinCount,
+		e.ActualCount,
+	)
+}
+
+// ExcessiveArgumentsError
+
+type ExcessiveArgumentsError struct {
+	MaxCount    int
+	ActualCount int
+	ast.Range
+}
+
+var _ SemanticError = &ExcessiveArgumentsError{}
+var _ errors.UserError = &ExcessiveArgumentsError{}
+var _ errors.SecondaryError = &ExcessiveArgumentsError{}
+
+func (*ExcessiveArgumentsError) isSemanticError() {}
+
+func (*ExcessiveArgumentsError) IsUserError() {}
+
+func (e *ExcessiveArgumentsError) Error() string {
+	return "too many arguments"
+}
+
+func (e *ExcessiveArgumentsError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected up to %d, got %d",
+		e.MaxCount,
+		e.ActualCount,
 	)
 }
 
@@ -450,6 +495,7 @@ type MissingArgumentLabelError struct {
 
 var _ SemanticError = &MissingArgumentLabelError{}
 var _ errors.UserError = &MissingArgumentLabelError{}
+var _ HasSuggestedFixes = &MissingArgumentLabelError{}
 
 func (*MissingArgumentLabelError) isSemanticError() {}
 
@@ -460,6 +506,23 @@ func (e *MissingArgumentLabelError) Error() string {
 		"missing argument label: `%s`",
 		e.ExpectedArgumentLabel,
 	)
+}
+
+func (e *MissingArgumentLabelError) SuggestFixes(_ string) []SuggestedFix {
+	return []SuggestedFix{
+		{
+			Message: "insert argument label",
+			TextEdits: []TextEdit{
+				{
+					Insertion: fmt.Sprintf("%s: ", e.ExpectedArgumentLabel),
+					Range: ast.NewUnmeteredRange(
+						e.StartPos,
+						e.StartPos,
+					),
+				},
+			},
+		},
+	}
 }
 
 // IncorrectArgumentLabelError
@@ -473,6 +536,7 @@ type IncorrectArgumentLabelError struct {
 var _ SemanticError = &IncorrectArgumentLabelError{}
 var _ errors.UserError = &IncorrectArgumentLabelError{}
 var _ errors.SecondaryError = &IncorrectArgumentLabelError{}
+var _ HasSuggestedFixes = &IncorrectArgumentLabelError{}
 
 func (*IncorrectArgumentLabelError) isSemanticError() {}
 
@@ -492,6 +556,50 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 		expected,
 		e.ActualArgumentLabel,
 	)
+}
+
+func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []SuggestedFix {
+	if len(e.ExpectedArgumentLabel) > 0 {
+		return []SuggestedFix{
+			{
+				Message: "replace argument label",
+				TextEdits: []TextEdit{
+					{
+						Replacement: fmt.Sprintf("%s:", e.ExpectedArgumentLabel),
+						Range:       e.Range,
+					},
+				},
+			},
+		}
+	} else {
+		endPos := e.Range.EndPos
+
+		var whitespaceSuffixLength int
+		for offset := endPos.Offset + 1; offset < len(code); offset++ {
+			if code[offset] == ' ' {
+				whitespaceSuffixLength++
+			} else {
+				break
+			}
+		}
+
+		adjustedEndPos := endPos.Shifted(nil, whitespaceSuffixLength)
+
+		return []SuggestedFix{
+			{
+				Message: "remove argument label",
+				TextEdits: []TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: e.Range.StartPos,
+							EndPos:   adjustedEndPos,
+						},
+					},
+				},
+			},
+		}
+	}
 }
 
 // InvalidUnaryOperandError
@@ -655,7 +763,7 @@ type InvalidAccessModifierError struct {
 	Explanation     string
 	Pos             ast.Position
 	DeclarationKind common.DeclarationKind
-	Access          ast.Access
+	Access          Access
 }
 
 var _ SemanticError = &InvalidAccessModifierError{}
@@ -671,7 +779,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		explanation = fmt.Sprintf(". %s", e.Explanation)
 	}
 
-	if e.Access == ast.AccessNotSpecified {
+	if e.Access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return fmt.Sprintf(
 			"invalid effective access modifier for %s%s",
 			e.DeclarationKind.Name(),
@@ -681,7 +789,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		return fmt.Sprintf(
 			"invalid access modifier for %s: `%s`%s",
 			e.DeclarationKind.Name(),
-			e.Access.Keyword(),
+			e.Access.AccessKeyword(),
 			explanation,
 		)
 	}
@@ -692,11 +800,11 @@ func (e *InvalidAccessModifierError) StartPosition() ast.Position {
 }
 
 func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	if e.Access == ast.AccessNotSpecified {
+	if e.Access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return e.Pos
 	}
 
-	length := len(e.Access.Keyword())
+	length := len(e.Access.AccessKeyword())
 	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
@@ -915,6 +1023,7 @@ type NotDeclaredMemberError struct {
 var _ SemanticError = &NotDeclaredMemberError{}
 var _ errors.UserError = &NotDeclaredMemberError{}
 var _ errors.SecondaryError = &NotDeclaredMemberError{}
+var _ HasSuggestedFixes = &NotDeclaredMemberError{}
 
 func (*NotDeclaredMemberError) isSemanticError() {}
 
@@ -928,18 +1037,54 @@ func (e *NotDeclaredMemberError) Error() string {
 	)
 }
 
+func (e *NotDeclaredMemberError) findOptionalMember() string {
+	optionalType, ok := e.Type.(*OptionalType)
+	if !ok {
+		return ""
+	}
+
+	members := optionalType.Type.GetMembers()
+	name := e.Name
+	_, ok = members[name]
+	if !ok {
+		return ""
+	}
+
+	return name
+}
+
 func (e *NotDeclaredMemberError) SecondaryError() string {
-	if optionalType, ok := e.Type.(*OptionalType); ok {
-		members := optionalType.Type.GetMembers()
-		name := e.Name
-		if _, ok := members[name]; ok {
-			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
-		}
+	if optionalMember := e.findOptionalMember(); optionalMember != "" {
+		return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", optionalMember)
 	}
 	if closestMember := e.findClosestMember(); closestMember != "" {
 		return fmt.Sprintf("did you mean `%s`?", closestMember)
 	}
 	return "unknown member"
+}
+
+func (e *NotDeclaredMemberError) SuggestFixes(_ string) []SuggestedFix {
+	optionalMember := e.findOptionalMember()
+	if optionalMember == "" {
+		return nil
+	}
+
+	accessPos := e.Expression.AccessPos
+
+	return []SuggestedFix{
+		{
+			Message: "use optional chaining",
+			TextEdits: []TextEdit{
+				{
+					Insertion: "?",
+					Range: ast.Range{
+						StartPos: accessPos,
+						EndPos:   accessPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // findClosestMember searches the names of the members on the accessed type,
@@ -1115,6 +1260,23 @@ func (e *FunctionExpressionInConditionError) Error() string {
 	return "condition contains function"
 }
 
+// InvalidEmitConditionError
+
+type InvalidEmitConditionError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidEmitConditionError{}
+var _ errors.UserError = &InvalidEmitConditionError{}
+
+func (*InvalidEmitConditionError) isSemanticError() {}
+
+func (*InvalidEmitConditionError) IsUserError() {}
+
+func (e *InvalidEmitConditionError) Error() string {
+	return "invalid emit condition "
+}
+
 // MissingReturnValueError
 
 type MissingReturnValueError struct {
@@ -1282,6 +1444,7 @@ type ConformanceError struct {
 	CompositeDeclaration           ast.CompositeLikeDeclaration
 	CompositeType                  *CompositeType
 	InterfaceType                  *InterfaceType
+	NestedInterfaceType            *InterfaceType
 	InitializerMismatch            *InitializerMismatch
 	MissingMembers                 []*Member
 	MemberMismatches               []MemberMismatch
@@ -1377,6 +1540,14 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 		})
 	}
 
+	if e.NestedInterfaceType != e.InterfaceType {
+		compositeIdentifierRange := ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.DeclarationIdentifier())
+		notes = append(notes, &NestedConformanceMismatchNote{
+			nestedInterfaceType: e.NestedInterfaceType,
+			Range:               compositeIdentifierRange,
+		})
+	}
+
 	return
 }
 
@@ -1390,12 +1561,26 @@ func (n MemberMismatchNote) Message() string {
 	return "mismatch here"
 }
 
+// NestedConformanceMismatchNote
+
+type NestedConformanceMismatchNote struct {
+	nestedInterfaceType *InterfaceType
+	ast.Range
+}
+
+func (n NestedConformanceMismatchNote) Message() string {
+	return fmt.Sprintf(
+		"does not conform to nested interface requirement `%s`",
+		n.nestedInterfaceType,
+	)
+}
+
 // DuplicateConformanceError
 //
 // TODO: just make this a warning?
 type DuplicateConformanceError struct {
-	CompositeType *CompositeType
-	InterfaceType *InterfaceType
+	CompositeKindedType CompositeKindedType
+	InterfaceType       *InterfaceType
 	ast.Range
 }
 
@@ -1409,17 +1594,38 @@ func (*DuplicateConformanceError) IsUserError() {}
 func (e *DuplicateConformanceError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` repeats conformance to %s `%s`",
-		e.CompositeType.Kind.Name(),
-		e.CompositeType.QualifiedString(),
+		e.CompositeKindedType.GetCompositeKind().Name(),
+		e.CompositeKindedType.QualifiedString(),
 		e.InterfaceType.CompositeKind.DeclarationKind(true).Name(),
+		e.InterfaceType.QualifiedString(),
+	)
+}
+
+// CyclicConformanceError
+type CyclicConformanceError struct {
+	InterfaceType *InterfaceType
+	ast.Range
+}
+
+var _ SemanticError = CyclicConformanceError{}
+var _ errors.UserError = CyclicConformanceError{}
+
+func (CyclicConformanceError) isSemanticError() {}
+
+func (CyclicConformanceError) IsUserError() {}
+
+func (e CyclicConformanceError) Error() string {
+	return fmt.Sprintf(
+		"`%s` has a cyclic conformance to itself",
 		e.InterfaceType.QualifiedString(),
 	)
 }
 
 // MultipleInterfaceDefaultImplementationsError
 type MultipleInterfaceDefaultImplementationsError struct {
-	CompositeType *CompositeType
-	Member        *Member
+	CompositeKindedType CompositeKindedType
+	Member              *Member
+	ast.Range
 }
 
 var _ SemanticError = &MultipleInterfaceDefaultImplementationsError{}
@@ -1432,18 +1638,10 @@ func (*MultipleInterfaceDefaultImplementationsError) IsUserError() {}
 func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` has multiple interface default implementations for function `%s`",
-		e.CompositeType.Kind.Name(),
-		e.CompositeType.QualifiedString(),
+		e.CompositeKindedType.GetCompositeKind().Name(),
+		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
-}
-
-func (e *MultipleInterfaceDefaultImplementationsError) StartPosition() ast.Position {
-	return e.Member.Identifier.StartPosition()
-}
-
-func (e *MultipleInterfaceDefaultImplementationsError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Member.Identifier.EndPosition(memoryGauge)
 }
 
 // SpecialFunctionDefaultImplementationError
@@ -1479,8 +1677,9 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 
 // DefaultFunctionConflictError
 type DefaultFunctionConflictError struct {
-	CompositeType *CompositeType
-	Member        *Member
+	CompositeKindedType CompositeKindedType
+	Member              *Member
+	ast.Range
 }
 
 var _ SemanticError = &DefaultFunctionConflictError{}
@@ -1493,18 +1692,38 @@ func (*DefaultFunctionConflictError) IsUserError() {}
 func (e *DefaultFunctionConflictError) Error() string {
 	return fmt.Sprintf(
 		"%s `%s` has conflicting requirements for function `%s`",
-		e.CompositeType.Kind.Name(),
-		e.CompositeType.QualifiedString(),
+		e.CompositeKindedType.GetCompositeKind().Name(),
+		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
 }
 
-func (e *DefaultFunctionConflictError) StartPosition() ast.Position {
-	return e.Member.Identifier.StartPosition()
+// InterfaceMemberConflictError
+type InterfaceMemberConflictError struct {
+	InterfaceType            *InterfaceType
+	ConflictingInterfaceType *InterfaceType
+	MemberName               string
+	MemberKind               common.DeclarationKind
+	ConflictingMemberKind    common.DeclarationKind
+	ast.Range
 }
 
-func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Member.Identifier.EndPosition(memoryGauge)
+var _ SemanticError = &InterfaceMemberConflictError{}
+var _ errors.UserError = &InterfaceMemberConflictError{}
+
+func (*InterfaceMemberConflictError) isSemanticError() {}
+
+func (*InterfaceMemberConflictError) IsUserError() {}
+
+func (e *InterfaceMemberConflictError) Error() string {
+	return fmt.Sprintf(
+		"`%s` %s of `%s` conflicts with a %s with the same name in `%s`",
+		e.MemberName,
+		e.MemberKind.Name(),
+		e.InterfaceType.QualifiedIdentifier(),
+		e.ConflictingMemberKind.Name(),
+		e.ConflictingInterfaceType.QualifiedString(),
+	)
 }
 
 // MissingConformanceError
@@ -2803,7 +3022,7 @@ func (e *InvalidOptionalChainingError) Error() string {
 
 type InvalidAccessError struct {
 	Name              string
-	RestrictingAccess ast.Access
+	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -2828,7 +3047,8 @@ func (e *InvalidAccessError) Error() string {
 
 type InvalidAssignmentAccessError struct {
 	Name              string
-	RestrictingAccess ast.Access
+	ContainerType     Type
+	RestrictingAccess Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -2852,8 +3072,8 @@ func (e *InvalidAssignmentAccessError) Error() string {
 
 func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"consider making it publicly settable with `%s`",
-		ast.AccessPublicSettable.Keyword(),
+		"consider adding a setter function to %s",
+		e.ContainerType.QualifiedString(),
 	)
 }
 
@@ -3335,64 +3555,43 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 	)
 }
 
-// InvalidRestrictedTypeError
+// InvalidIntersectedTypeError
 
-type InvalidRestrictedTypeError struct {
+type InvalidIntersectedTypeError struct {
 	Type Type
 	ast.Range
 }
 
-var _ SemanticError = &InvalidRestrictedTypeError{}
-var _ errors.UserError = &InvalidRestrictedTypeError{}
+var _ SemanticError = &InvalidIntersectedTypeError{}
+var _ errors.UserError = &InvalidIntersectedTypeError{}
 
-func (*InvalidRestrictedTypeError) isSemanticError() {}
+func (*InvalidIntersectedTypeError) isSemanticError() {}
 
-func (*InvalidRestrictedTypeError) IsUserError() {}
+func (*InvalidIntersectedTypeError) IsUserError() {}
 
-func (e *InvalidRestrictedTypeError) Error() string {
-	return fmt.Sprintf(
-		"cannot restrict type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
-// InvalidRestrictionTypeError
-
-type InvalidRestrictionTypeError struct {
-	Type Type
-	ast.Range
-}
-
-var _ SemanticError = &InvalidRestrictionTypeError{}
-var _ errors.UserError = &InvalidRestrictionTypeError{}
-
-func (*InvalidRestrictionTypeError) isSemanticError() {}
-
-func (*InvalidRestrictionTypeError) IsUserError() {}
-
-func (e *InvalidRestrictionTypeError) Error() string {
+func (e *InvalidIntersectedTypeError) Error() string {
 	return fmt.Sprintf(
 		"cannot restrict using non-resource/structure interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// RestrictionCompositeKindMismatchError
+// IntersectionCompositeKindMismatchError
 
-type RestrictionCompositeKindMismatchError struct {
+type IntersectionCompositeKindMismatchError struct {
 	CompositeKind         common.CompositeKind
 	PreviousCompositeKind common.CompositeKind
 	ast.Range
 }
 
-var _ SemanticError = &RestrictionCompositeKindMismatchError{}
-var _ errors.UserError = &RestrictionCompositeKindMismatchError{}
+var _ SemanticError = &IntersectionCompositeKindMismatchError{}
+var _ errors.UserError = &IntersectionCompositeKindMismatchError{}
 
-func (*RestrictionCompositeKindMismatchError) isSemanticError() {}
+func (*IntersectionCompositeKindMismatchError) isSemanticError() {}
 
-func (*RestrictionCompositeKindMismatchError) IsUserError() {}
+func (*IntersectionCompositeKindMismatchError) IsUserError() {}
 
-func (e *RestrictionCompositeKindMismatchError) Error() string {
+func (e *IntersectionCompositeKindMismatchError) Error() string {
 	return fmt.Sprintf(
 		"interface kind %s does not match previous interface kind %s",
 		e.CompositeKind,
@@ -3400,105 +3599,87 @@ func (e *RestrictionCompositeKindMismatchError) Error() string {
 	)
 }
 
-// InvalidRestrictionTypeDuplicateError
+// InvalidIntersectionTypeDuplicateError
 
-type InvalidRestrictionTypeDuplicateError struct {
+type InvalidIntersectionTypeDuplicateError struct {
 	Type *InterfaceType
 	ast.Range
 }
 
-var _ SemanticError = &InvalidRestrictionTypeDuplicateError{}
-var _ errors.UserError = &InvalidRestrictionTypeDuplicateError{}
+var _ SemanticError = &InvalidIntersectionTypeDuplicateError{}
+var _ errors.UserError = &InvalidIntersectionTypeDuplicateError{}
 
-func (*InvalidRestrictionTypeDuplicateError) isSemanticError() {}
+func (*InvalidIntersectionTypeDuplicateError) isSemanticError() {}
 
-func (*InvalidRestrictionTypeDuplicateError) IsUserError() {}
+func (*InvalidIntersectionTypeDuplicateError) IsUserError() {}
 
-func (e *InvalidRestrictionTypeDuplicateError) Error() string {
+func (e *InvalidIntersectionTypeDuplicateError) Error() string {
 	return fmt.Sprintf(
-		"duplicate restriction: `%s`",
+		"duplicate intersected type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// InvalidNonConformanceRestrictionError
+// InvalidNonConformanceIntersectionError
 
-type InvalidNonConformanceRestrictionError struct {
+type InvalidNonConformanceIntersectionError struct {
 	Type *InterfaceType
 	ast.Range
 }
 
-var _ SemanticError = &InvalidNonConformanceRestrictionError{}
-var _ errors.UserError = &InvalidNonConformanceRestrictionError{}
+var _ SemanticError = &InvalidNonConformanceIntersectionError{}
+var _ errors.UserError = &InvalidNonConformanceIntersectionError{}
 
-func (*InvalidNonConformanceRestrictionError) isSemanticError() {}
+func (*InvalidNonConformanceIntersectionError) isSemanticError() {}
 
-func (*InvalidNonConformanceRestrictionError) IsUserError() {}
+func (*InvalidNonConformanceIntersectionError) IsUserError() {}
 
-func (e *InvalidNonConformanceRestrictionError) Error() string {
+func (e *InvalidNonConformanceIntersectionError) Error() string {
 	return fmt.Sprintf(
-		"restricted type does not conform to restricting type: `%s`",
+		"intersection type does not conform to restricting type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// InvalidRestrictedTypeMemberAccessError
+// IntersectionMemberClashError
 
-type InvalidRestrictedTypeMemberAccessError struct {
-	Name string
-	ast.Range
-}
-
-var _ SemanticError = &InvalidRestrictedTypeMemberAccessError{}
-var _ errors.UserError = &InvalidRestrictedTypeMemberAccessError{}
-
-func (*InvalidRestrictedTypeMemberAccessError) isSemanticError() {}
-
-func (*InvalidRestrictedTypeMemberAccessError) IsUserError() {}
-
-func (e *InvalidRestrictedTypeMemberAccessError) Error() string {
-	return fmt.Sprintf("member of restricted type is not accessible: %s", e.Name)
-}
-
-// RestrictionMemberClashError
-
-type RestrictionMemberClashError struct {
+type IntersectionMemberClashError struct {
 	RedeclaringType       *InterfaceType
 	OriginalDeclaringType *InterfaceType
 	Name                  string
 	ast.Range
 }
 
-var _ SemanticError = &RestrictionMemberClashError{}
-var _ errors.UserError = &RestrictionMemberClashError{}
+var _ SemanticError = &IntersectionMemberClashError{}
+var _ errors.UserError = &IntersectionMemberClashError{}
 
-func (*RestrictionMemberClashError) isSemanticError() {}
+func (*IntersectionMemberClashError) isSemanticError() {}
 
-func (*RestrictionMemberClashError) IsUserError() {}
+func (*IntersectionMemberClashError) IsUserError() {}
 
-func (e *RestrictionMemberClashError) Error() string {
+func (e *IntersectionMemberClashError) Error() string {
 	return fmt.Sprintf(
-		"restriction has member clash with previous restriction `%s`: %s",
+		"intersected type has member clash with previous intersected type `%s`: %s",
 		e.OriginalDeclaringType.QualifiedString(),
 		e.Name,
 	)
 }
 
-// AmbiguousRestrictedTypeError
+// AmbiguousIntersectionTypeError
 
-type AmbiguousRestrictedTypeError struct {
+type AmbiguousIntersectionTypeError struct {
 	ast.Range
 }
 
-var _ SemanticError = &AmbiguousRestrictedTypeError{}
-var _ errors.UserError = &AmbiguousRestrictedTypeError{}
+var _ SemanticError = &AmbiguousIntersectionTypeError{}
+var _ errors.UserError = &AmbiguousIntersectionTypeError{}
 
-func (*AmbiguousRestrictedTypeError) isSemanticError() {}
+func (*AmbiguousIntersectionTypeError) isSemanticError() {}
 
-func (*AmbiguousRestrictedTypeError) IsUserError() {}
+func (*AmbiguousIntersectionTypeError) IsUserError() {}
 
-func (e *AmbiguousRestrictedTypeError) Error() string {
-	return "ambiguous restricted type"
+func (e *AmbiguousIntersectionTypeError) Error() string {
+	return "ambiguous intersection type"
 }
 
 // InvalidPathDomainError
@@ -3929,6 +4110,276 @@ func (e *InvalidatedResourceReferenceError) ErrorNotes() []errors.ErrorNote {
 	}
 }
 
+// InvalidEntitlementAccessError
+type InvalidEntitlementAccessError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidEntitlementAccessError{}
+var _ errors.UserError = &InvalidEntitlementAccessError{}
+
+func (*InvalidEntitlementAccessError) isSemanticError() {}
+
+func (*InvalidEntitlementAccessError) IsUserError() {}
+
+func (e *InvalidEntitlementAccessError) Error() string {
+	return "only struct or resource members may be declared with entitlement access"
+}
+
+func (e *InvalidEntitlementAccessError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidEntitlementAccessError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidMultipleMappedEntitlementError
+type InvalidMultipleMappedEntitlementError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidMultipleMappedEntitlementError{}
+var _ errors.UserError = &InvalidMultipleMappedEntitlementError{}
+
+func (*InvalidMultipleMappedEntitlementError) isSemanticError() {}
+
+func (*InvalidMultipleMappedEntitlementError) IsUserError() {}
+
+func (e *InvalidMultipleMappedEntitlementError) Error() string {
+	return "entitlement mappings cannot be used as part of an entitlement set"
+}
+
+func (e *InvalidMultipleMappedEntitlementError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMultipleMappedEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidNonEntitlementTypeInMapError
+type InvalidNonEntitlementTypeInMapError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidNonEntitlementTypeInMapError{}
+var _ errors.UserError = &InvalidNonEntitlementTypeInMapError{}
+
+func (*InvalidNonEntitlementTypeInMapError) isSemanticError() {}
+
+func (*InvalidNonEntitlementTypeInMapError) IsUserError() {}
+
+func (e *InvalidNonEntitlementTypeInMapError) Error() string {
+	return "cannot use non-entitlement type in entitlement mapping"
+}
+
+func (e *InvalidNonEntitlementTypeInMapError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidNonEntitlementTypeInMapError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidMappedEntitlementMemberError
+type InvalidMappedEntitlementMemberError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidMappedEntitlementMemberError{}
+var _ errors.UserError = &InvalidMappedEntitlementMemberError{}
+
+func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
+
+func (*InvalidMappedEntitlementMemberError) IsUserError() {}
+
+func (e *InvalidMappedEntitlementMemberError) Error() string {
+	return "mapped entitlement access modifiers may only be used for fields or accessors with a reference type authorized with the same mapped entitlement"
+}
+
+func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidMappedEntitlementMemberError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+// InvalidNonEntitlementAccessError
+type InvalidNonEntitlementAccessError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementAccessError{}
+var _ errors.UserError = &InvalidNonEntitlementAccessError{}
+
+func (*InvalidNonEntitlementAccessError) isSemanticError() {}
+
+func (*InvalidNonEntitlementAccessError) IsUserError() {}
+
+func (e *InvalidNonEntitlementAccessError) Error() string {
+	return "only entitlements may be used in access modifiers"
+}
+
+// DirectEntitlementAnnotationError
+type DirectEntitlementAnnotationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &DirectEntitlementAnnotationError{}
+var _ errors.UserError = &DirectEntitlementAnnotationError{}
+
+func (*DirectEntitlementAnnotationError) isSemanticError() {}
+
+func (*DirectEntitlementAnnotationError) IsUserError() {}
+
+func (e *DirectEntitlementAnnotationError) Error() string {
+	return "cannot use an entitlement type outside of an `access` declaration or `auth` modifier"
+}
+
+// UnrepresentableEntitlementMapOutputError
+type UnrepresentableEntitlementMapOutputError struct {
+	Input EntitlementSetAccess
+	Map   *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &UnrepresentableEntitlementMapOutputError{}
+var _ errors.UserError = &UnrepresentableEntitlementMapOutputError{}
+
+func (*UnrepresentableEntitlementMapOutputError) isSemanticError() {}
+
+func (*UnrepresentableEntitlementMapOutputError) IsUserError() {}
+
+func (e *UnrepresentableEntitlementMapOutputError) Error() string {
+	return fmt.Sprintf("cannot map %s through %s because the output is unrepresentable", e.Input.AccessKeyword(), e.Map.QualifiedString())
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
+// InvalidMappedAuthorizationOutsideOfFieldError
+type InvalidMappedAuthorizationOutsideOfFieldError struct {
+	Map *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &InvalidMappedAuthorizationOutsideOfFieldError{}
+var _ errors.UserError = &InvalidMappedAuthorizationOutsideOfFieldError{}
+
+func (*InvalidMappedAuthorizationOutsideOfFieldError) isSemanticError() {}
+
+func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
+	return fmt.Sprintf(
+		"cannot use mapped entitlement authorization for %s outside of a field or accessor function using the same entitlement access",
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *InvalidMappedAuthorizationOutsideOfFieldError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
+type DuplicateEntitlementRequirementError struct {
+	Entitlement *EntitlementType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementRequirementError{}
+var _ errors.UserError = &DuplicateEntitlementRequirementError{}
+
+func (*DuplicateEntitlementRequirementError) isSemanticError() {}
+
+func (*DuplicateEntitlementRequirementError) IsUserError() {}
+
+func (e *DuplicateEntitlementRequirementError) Error() string {
+	return fmt.Sprintf("entitlement %s is already required by this attachment", e.Entitlement.QualifiedString())
+}
+
+type DuplicateEntitlementProvidedError struct {
+	Entitlement *EntitlementType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementProvidedError{}
+var _ errors.UserError = &DuplicateEntitlementProvidedError{}
+
+func (*DuplicateEntitlementProvidedError) isSemanticError() {}
+
+func (*DuplicateEntitlementProvidedError) IsUserError() {}
+
+func (e *DuplicateEntitlementProvidedError) Error() string {
+	return fmt.Sprintf("entitlement %s is already provided to this attachment", e.Entitlement.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type InvalidNonEntitlementRequirement struct {
+	InvalidType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementRequirement{}
+var _ errors.UserError = &InvalidNonEntitlementRequirement{}
+
+func (*InvalidNonEntitlementRequirement) isSemanticError() {}
+
+func (*InvalidNonEntitlementRequirement) IsUserError() {}
+
+func (e *InvalidNonEntitlementRequirement) Error() string {
+	return fmt.Sprintf("cannot use %s as an entitlement requirement", e.InvalidType.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type InvalidNonEntitlementProvidedError struct {
+	InvalidType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidNonEntitlementProvidedError{}
+var _ errors.UserError = &InvalidNonEntitlementProvidedError{}
+
+func (*InvalidNonEntitlementProvidedError) isSemanticError() {}
+
+func (*InvalidNonEntitlementProvidedError) IsUserError() {}
+
+func (e *InvalidNonEntitlementProvidedError) Error() string {
+	return fmt.Sprintf("cannot provide %s as an entitlement to this attachment", e.InvalidType.QualifiedString())
+}
+
+// InvalidNonEntitlementRequirement
+type RequiredEntitlementNotProvidedError struct {
+	RequiredEntitlement *EntitlementType
+	AttachmentType      *CompositeType
+	ast.Range
+}
+
+var _ SemanticError = &RequiredEntitlementNotProvidedError{}
+var _ errors.UserError = &RequiredEntitlementNotProvidedError{}
+
+func (*RequiredEntitlementNotProvidedError) isSemanticError() {}
+
+func (*RequiredEntitlementNotProvidedError) IsUserError() {}
+
+func (e *RequiredEntitlementNotProvidedError) Error() string {
+	return fmt.Sprintf(
+		"attachment type %s requires entitlement %s to be provided when attaching",
+		e.AttachmentType.QualifiedString(),
+		e.RequiredEntitlement.QualifiedString(),
+	)
+}
+
 // InvalidBaseTypeError
 
 type InvalidBaseTypeError struct {
@@ -4091,4 +4542,50 @@ func (*AttachmentsNotEnabledError) IsUserError() {}
 
 func (e *AttachmentsNotEnabledError) Error() string {
 	return "attachments are not enabled and cannot be used in this environment"
+}
+
+// InvalidAttachmentEntitlementError
+type InvalidAttachmentEntitlementError struct {
+	Attachment               *CompositeType
+	AttachmentAccessModifier Access
+	InvalidEntitlement       *EntitlementType
+	Pos                      ast.Position
+}
+
+var _ SemanticError = &InvalidAttachmentEntitlementError{}
+var _ errors.UserError = &InvalidAttachmentEntitlementError{}
+
+func (*InvalidAttachmentEntitlementError) isSemanticError() {}
+
+func (*InvalidAttachmentEntitlementError) IsUserError() {}
+
+func (e *InvalidAttachmentEntitlementError) Error() string {
+	entitlementDescription := "entitlements"
+	if e.InvalidEntitlement != nil {
+		entitlementDescription = fmt.Sprintf("`%s`", e.InvalidEntitlement.QualifiedIdentifier())
+	}
+
+	return fmt.Sprintf("cannot use %s in the access modifier for a member in `%s`",
+		entitlementDescription,
+		e.Attachment.QualifiedIdentifier())
+}
+
+func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
+	switch access := e.AttachmentAccessModifier.(type) {
+	case PrimitiveAccess:
+		return "attachments declared with `access(all)` access do not support entitlements on their members"
+	case EntitlementMapAccess:
+		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
+			e.InvalidEntitlement.QualifiedIdentifier(),
+			access.Type.QualifiedIdentifier())
+	}
+	return ""
+}
+
+func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidAttachmentEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
 }
