@@ -1710,8 +1710,20 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
+	v.iterate(interpreter, v.array.Iterate, f)
+}
+
+func (v *ArrayValue) IterateLoaded(interpreter *Interpreter, f func(element Value) (resume bool)) {
+	v.iterate(interpreter, v.array.IterateLoadedValues, f)
+}
+
+func (v *ArrayValue) iterate(
+	interpreter *Interpreter,
+	atreeIterate func(fn atree.ArrayIterationFunc) error,
+	f func(element Value) (resume bool),
+) {
 	iterate := func() {
-		err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
@@ -16415,8 +16427,19 @@ func (v *CompositeValue) GetOwner() common.Address {
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
 func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName string, fieldValue Value)) {
+	v.forEachField(gauge, v.dictionary.Iterate, f)
+}
 
-	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
+func (v *CompositeValue) ForEachLoadedField(gauge common.MemoryGauge, f func(fieldName string, fieldValue Value)) {
+	v.forEachField(gauge, v.dictionary.IterateLoadedValues, f)
+}
+
+func (v *CompositeValue) forEachField(
+	gauge common.MemoryGauge,
+	atreeIterate func(fn atree.MapEntryIterationFunc) error,
+	f func(fieldName string, fieldValue Value),
+) {
+	err := atreeIterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
 			string(key.(StringAtreeValue)),
 			MustConvertStoredValue(gauge, value),
@@ -16967,8 +16990,20 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+	v.iterate(interpreter, v.dictionary.Iterate, f)
+}
+
+func (v *DictionaryValue) IterateLoaded(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+	v.iterate(interpreter, v.dictionary.IterateLoadedValues, f)
+}
+
+func (v *DictionaryValue) iterate(
+	interpreter *Interpreter,
+	atreeIterate func(fn atree.MapEntryIterationFunc) error,
+	f func(key Value, value Value) (resume bool),
+) {
 	iterate := func() {
-		err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+		err := atreeIterate(func(key, value atree.Value) (resume bool, err error) {
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 

@@ -5554,18 +5554,18 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value, destr
 
 	switch value := value.(type) {
 	case *CompositeValue:
-		value.ForEachField(interpreter, func(_ string, fieldValue Value) {
+		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) {
 			interpreter.invalidateReferencedResources(fieldValue, destroyed)
 		})
 		storageID = value.StorageID()
 	case *DictionaryValue:
-		value.Iterate(interpreter, func(_, value Value) (resume bool) {
+		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
 			interpreter.invalidateReferencedResources(value, destroyed)
 			return true
 		})
 		storageID = value.StorageID()
 	case *ArrayValue:
-		value.Iterate(interpreter, func(element Value) (resume bool) {
+		value.IterateLoaded(interpreter, func(element Value) (resume bool) {
 			interpreter.invalidateReferencedResources(element, destroyed)
 			return true
 		})
