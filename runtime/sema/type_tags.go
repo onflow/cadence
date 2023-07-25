@@ -674,11 +674,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		restrictedTypeMask,
 		transactionTypeMask,
 		interfaceTypeMask,
-		functionTypeMask:
+		functionTypeMask,
+		inclusiveRangeTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
-
-	case inclusiveRangeTypeMask:
-		return commonSuperTypeOfRanges(types)
 
 	case anyResourceAttachmentMask:
 		return AnyResourceAttachmentType
@@ -694,34 +692,6 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	default:
 		return nil
-	}
-}
-
-func commonSuperTypeOfRanges(types []Type) Type {
-	// We reach here if all types are range types.
-	// Therefore, decide the common supertype based on the member types.
-
-	var memberTypes []Type
-
-	for _, typ := range types {
-		// 'Never' type doesn't affect the supertype.
-		// Hence, ignore them
-		if typ == NeverType {
-			continue
-		}
-
-		rangeType, ok := typ.(*InclusiveRangeType)
-		if !ok {
-			panic(errors.NewUnexpectedError("expected inclusive range type, found %s", typ))
-		}
-
-		memberTypes = append(memberTypes, rangeType.MemberType)
-	}
-
-	memberSuperType := leastCommonSuperType(memberTypes...)
-
-	return &InclusiveRangeType{
-		MemberType: memberSuperType,
 	}
 }
 

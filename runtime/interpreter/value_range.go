@@ -43,7 +43,7 @@ func NewInclusiveRangeValue(
 	step := interpreter.GetValueForIntegerType(1, rangeType.ElementType)
 	if startComparable.Greater(interpreter, endComparable, locationRange) {
 		elemSemaTy := interpreter.MustConvertStaticToSemaType(rangeType.ElementType)
-		if _, ok := sema.AllUnsignedIntegerTypesSet[elemSemaTy]; ok {
+		if elemSemaTy.Tag().BelongsTo(sema.UnsignedIntegerTypeTag) {
 			panic(InclusiveRangeConstructionError{
 				LocationRange: locationRange,
 				Message:       fmt.Sprintf("step value cannot be negative for unsigned integer type %s", elemSemaTy),

@@ -17052,67 +17052,72 @@ func (v *CompositeValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType := v.StaticType(interpreter).(CompositeStaticType)
-
+	staticType := v.StaticType(interpreter)
 	semaType := interpreter.MustConvertStaticToSemaType(staticType)
 
-	compositeType, ok := semaType.(*sema.CompositeType)
-	if !ok ||
-		v.Kind != compositeType.Kind ||
-		v.TypeID() != compositeType.ID() {
+	// CompositeValue is also used for storing types which aren't CompositeStaticType.
+	// E.g. InclusiveRange.
+	if _, ok := staticType.(CompositeStaticType); ok {
+		compositeType, ok := semaType.(*sema.CompositeType)
+		if !ok ||
+			v.Kind != compositeType.Kind ||
+			v.TypeID() != compositeType.ID() {
 
-		return false
-	}
-
-	if compositeType.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue().Value
-		if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
 			return false
 		}
-	}
 
-	fieldsLen := int(v.dictionary.Count())
-	if v.ComputedFields != nil {
-		fieldsLen += len(v.ComputedFields)
-	}
-
-	if fieldsLen != len(compositeType.Fields) {
-		return false
-	}
-
-	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(interpreter, locationRange, fieldName)
-		if value == nil {
-			if v.ComputedFields == nil {
+		if compositeType.Kind == common.CompositeKindAttachment {
+			base := v.getBaseValue().Value
+			if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
 				return false
 			}
+		}
 
-			fieldGetter, ok := v.ComputedFields[fieldName]
+		fieldsLen := int(v.dictionary.Count())
+		if v.ComputedFields != nil {
+			fieldsLen += len(v.ComputedFields)
+		}
+
+		if fieldsLen != len(compositeType.Fields) {
+			return false
+		}
+
+		for _, fieldName := range compositeType.Fields {
+			value := v.GetField(interpreter, locationRange, fieldName)
+			if value == nil {
+				if v.ComputedFields == nil {
+					return false
+				}
+
+				fieldGetter, ok := v.ComputedFields[fieldName]
+				if !ok {
+					return false
+				}
+
+				value = fieldGetter(interpreter, locationRange)
+			}
+
+			member, ok := compositeType.Members.Get(fieldName)
 			if !ok {
 				return false
 			}
 
-			value = fieldGetter(interpreter, locationRange)
-		}
+			fieldStaticType := value.StaticType(interpreter)
 
-		member, ok := compositeType.Members.Get(fieldName)
-		if !ok {
-			return false
-		}
+			if !interpreter.IsSubTypeOfSemaType(fieldStaticType, member.TypeAnnotation.Type) {
+				return false
+			}
 
-		fieldStaticType := value.StaticType(interpreter)
-
-		if !interpreter.IsSubTypeOfSemaType(fieldStaticType, member.TypeAnnotation.Type) {
-			return false
+			if !value.ConformsToStaticType(
+				interpreter,
+				locationRange,
+				results,
+			) {
+				return false
+			}
 		}
+	} else {
 
-		if !value.ConformsToStaticType(
-			interpreter,
-			locationRange,
-			results,
-		) {
-			return false
-		}
 	}
 
 	return true

@@ -3457,8 +3457,6 @@ var AllUnsignedIntegerTypes = []Type{
 	Word256Type,
 }
 
-var AllUnsignedIntegerTypesSet = make(map[Type]struct{})
-
 var AllIntegerTypes = common.Concat(
 	AllUnsignedIntegerTypes,
 	AllSignedIntegerTypes,
@@ -3605,11 +3603,6 @@ func init() {
 				),
 			)
 		}
-	}
-
-	// Populate AllUnsignedIntegerTypesSet
-	for _, ty := range AllUnsignedIntegerTypes {
-		AllUnsignedIntegerTypesSet[ty] = struct{}{}
 	}
 }
 
@@ -5230,7 +5223,7 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 	}
 }
 
-// InclusiveRangeType todo.
+// InclusiveRangeType
 
 type InclusiveRangeType struct {
 	MemberType          Type
@@ -5284,12 +5277,15 @@ func (r *InclusiveRangeType) Equal(other Type) bool {
 	if !ok {
 		return false
 	}
+	if otherRange.MemberType == nil {
+		return r.MemberType == nil
+	}
 
 	return otherRange.MemberType.Equal(r.MemberType)
 }
 
 func (r *InclusiveRangeType) IsResourceType() bool {
-	return r.MemberType.IsResourceType()
+	return false
 }
 
 func (r *InclusiveRangeType) IsInvalidType() bool {
