@@ -180,7 +180,7 @@ func getBlockAtHeight(
 		block, exists, err = provider.GetBlockAtHeight(height)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 
 	return block, exists
@@ -205,7 +205,7 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 				height, err = provider.GetCurrentBlockHeight()
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			block, exists := getBlockAtHeight(

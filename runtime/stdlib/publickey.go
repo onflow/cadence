@@ -67,6 +67,9 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 		errors.WrapPanic(func() {
 			err = validator.ValidatePublicKey(publicKey)
 		})
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
 		return err
 	}
 }
@@ -290,7 +293,7 @@ func newPublicKeyVerifySignatureFunction(
 			})
 
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return interpreter.AsBoolValue(valid)
@@ -343,7 +346,7 @@ func newPublicKeyVerifyPoPFunction(
 				valid, err = verifier.BLSVerifyPOP(publicKey, signature)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 			return interpreter.AsBoolValue(valid)
 		},

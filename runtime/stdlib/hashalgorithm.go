@@ -155,7 +155,7 @@ func hash(
 		result, err = hasher.Hash(data, tag, hashAlgorithm)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 	return interpreter.ByteSliceToByteArrayValue(inter, result)
 }
