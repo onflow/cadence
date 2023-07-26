@@ -9037,7 +9037,7 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 			Location:  common.ScriptLocation{},
 		},
 	)
-	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
