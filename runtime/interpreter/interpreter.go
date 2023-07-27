@@ -242,15 +242,14 @@ type Storage interface {
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
 
 type Interpreter struct {
-	Location            common.Location
-	statement           ast.Statement
-	Program             *Program
-	SharedState         *SharedState
-	Globals             GlobalVariables
-	activations         *VariableActivations
-	Transactions        []*HostFunctionValue
-	interpreted         bool
-	cachedIntegerValues map[StaticType]map[int64]IntegerValue
+	Location     common.Location
+	statement    ast.Statement
+	Program      *Program
+	SharedState  *SharedState
+	Globals      GlobalVariables
+	activations  *VariableActivations
+	Transactions []*HostFunctionValue
+	interpreted  bool
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -262,10 +261,14 @@ var _ ast.ExpressionVisitor[Value] = &Interpreter{}
 // It is reused across all interpreters.
 var BaseActivation *VariableActivation
 
+var cachedIntegerValues map[StaticType]map[int8]IntegerValue
+
 func init() {
 	// No need to meter since this is only created once
 	BaseActivation = activations.NewActivation[*Variable](nil, nil)
 	defineBaseFunctions(BaseActivation)
+
+	cachedIntegerValues = make(map[StaticType]map[int8]IntegerValue)
 }
 
 func NewInterpreter(
@@ -287,10 +290,9 @@ func NewInterpreterWithSharedState(
 ) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
-		Program:             program,
-		Location:            location,
-		SharedState:         sharedState,
-		cachedIntegerValues: make(map[StaticType]map[int64]IntegerValue),
+		Program:     program,
+		Location:    location,
+		SharedState: sharedState,
 	}
 
 	// Register self
@@ -2357,8 +2359,8 @@ func (interpreter *Interpreter) WriteStored(
 
 // Get the provided int64 value in the required staticType.
 // Note: Assumes that the provided value fits within the constraints of the staticType.
-func (interpreter *Interpreter) GetValueForIntegerType(value int64, staticType StaticType) IntegerValue {
-	typedCache, typedOk := interpreter.cachedIntegerValues[staticType]
+func GetValueForIntegerType(value int8, staticType StaticType) IntegerValue {
+	typedCache, typedOk := cachedIntegerValues[staticType]
 	if typedOk {
 		val, ok := typedCache[value]
 		if ok {
@@ -2368,16 +2370,16 @@ func (interpreter *Interpreter) GetValueForIntegerType(value int64, staticType S
 
 	val := getValueForIntegerType(value, staticType)
 	if !typedOk {
-		interpreter.cachedIntegerValues[staticType] = make(map[int64]IntegerValue)
+		cachedIntegerValues[staticType] = make(map[int8]IntegerValue)
 	}
-	interpreter.cachedIntegerValues[staticType][value] = val
+	cachedIntegerValues[staticType][value] = val
 	return val
 }
 
-func getValueForIntegerType(value int64, staticType StaticType) IntegerValue {
+func getValueForIntegerType(value int8, staticType StaticType) IntegerValue {
 	switch staticType {
 	case PrimitiveStaticTypeInt:
-		return NewUnmeteredIntValueFromInt64(value)
+		return NewUnmeteredIntValueFromInt64(int64(value))
 	case PrimitiveStaticTypeInt8:
 		return NewUnmeteredInt8Value(int8(value))
 	case PrimitiveStaticTypeInt16:
@@ -2385,11 +2387,11 @@ func getValueForIntegerType(value int64, staticType StaticType) IntegerValue {
 	case PrimitiveStaticTypeInt32:
 		return NewUnmeteredInt32Value(int32(value))
 	case PrimitiveStaticTypeInt64:
-		return NewUnmeteredInt64Value(value)
+		return NewUnmeteredInt64Value(int64(value))
 	case PrimitiveStaticTypeInt128:
-		return NewUnmeteredInt128ValueFromInt64(value)
+		return NewUnmeteredInt128ValueFromInt64(int64(value))
 	case PrimitiveStaticTypeInt256:
-		return NewUnmeteredInt256ValueFromInt64(value)
+		return NewUnmeteredInt256ValueFromInt64(int64(value))
 
 	case PrimitiveStaticTypeUInt:
 		return NewUnmeteredUIntValueFromUint64(uint64(value))
