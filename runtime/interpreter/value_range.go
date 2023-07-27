@@ -59,7 +59,7 @@ func NewInclusiveRangeValue(
 		step = negatedStep
 	}
 
-	return NewInclusiveRangeValueWithStep(interpreter, locationRange, start, end, step, rangeStaticType, rangeSemaType)
+	return createInclusiveRange(interpreter, locationRange, start, end, step, rangeStaticType, rangeSemaType)
 }
 
 // NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end & step.
@@ -101,6 +101,18 @@ func NewInclusiveRangeValueWithStep(
 		})
 	}
 
+	return createInclusiveRange(interpreter, locationRange, start, end, step, rangeType, rangeSemaType)
+}
+
+func createInclusiveRange(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	start IntegerValue,
+	end IntegerValue,
+	step IntegerValue,
+	rangeType InclusiveRangeStaticType,
+	rangeSemaType *sema.InclusiveRangeType,
+) *CompositeValue {
 	fields := []CompositeField{
 		{
 			Name:  sema.InclusiveRangeTypeStartFieldName,
