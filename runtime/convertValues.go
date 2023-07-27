@@ -1511,6 +1511,7 @@ func (i valueImporter) importInclusiveRangeValue(
 		endInteger,
 		stepInteger,
 		inclusiveRangeStaticType,
+		inclusiveRangeType,
 	), nil
 }
 

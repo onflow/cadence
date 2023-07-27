@@ -409,6 +409,7 @@ func TestInclusiveRange(t *testing.T) {
 				testCase.ty,
 			)
 			rangeType := interpreter.NewInclusiveRangeStaticType(nil, elementType)
+			rangeSemaType := sema.NewInclusiveRangeType(nil, testCase.ty)
 
 			var expectedRangeValue *interpreter.CompositeValue
 
@@ -420,6 +421,7 @@ func TestInclusiveRange(t *testing.T) {
 					interpreter.GetValueForIntegerType(testCase.e, elementType),
 					interpreter.GetValueForIntegerType(testCase.step, elementType),
 					rangeType,
+					rangeSemaType,
 				)
 			} else {
 				expectedRangeValue = interpreter.NewInclusiveRangeValue(
@@ -428,6 +430,7 @@ func TestInclusiveRange(t *testing.T) {
 					interpreter.GetValueForIntegerType(testCase.s, elementType),
 					interpreter.GetValueForIntegerType(testCase.e, elementType),
 					rangeType,
+					rangeSemaType,
 				)
 			}
 

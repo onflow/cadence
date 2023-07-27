@@ -32,7 +32,8 @@ func NewInclusiveRangeValue(
 	locationRange LocationRange,
 	start IntegerValue,
 	end IntegerValue,
-	rangeType InclusiveRangeStaticType,
+	rangeStaticType InclusiveRangeStaticType,
+	rangeSemaType *sema.InclusiveRangeType,
 ) *CompositeValue {
 	startComparable, startOk := start.(ComparableValue)
 	endComparable, endOk := end.(ComparableValue)
@@ -40,9 +41,9 @@ func NewInclusiveRangeValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	step := GetValueForIntegerType(1, rangeType.ElementType)
+	step := GetValueForIntegerType(1, rangeStaticType.ElementType)
 	if startComparable.Greater(interpreter, endComparable, locationRange) {
-		elemSemaTy := interpreter.MustConvertStaticToSemaType(rangeType.ElementType)
+		elemSemaTy := interpreter.MustConvertStaticToSemaType(rangeStaticType.ElementType)
 		if elemSemaTy.Tag().BelongsTo(sema.UnsignedIntegerTypeTag) {
 			panic(InclusiveRangeConstructionError{
 				LocationRange: locationRange,
@@ -58,7 +59,7 @@ func NewInclusiveRangeValue(
 		step = negatedStep
 	}
 
-	return NewInclusiveRangeValueWithStep(interpreter, locationRange, start, end, step, rangeType)
+	return NewInclusiveRangeValueWithStep(interpreter, locationRange, start, end, step, rangeStaticType, rangeSemaType)
 }
 
 // NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end & step.
@@ -69,6 +70,7 @@ func NewInclusiveRangeValueWithStep(
 	end IntegerValue,
 	step IntegerValue,
 	rangeType InclusiveRangeStaticType,
+	rangeSemaType *sema.InclusiveRangeType,
 ) *CompositeValue {
 
 	zeroValue := GetValueForIntegerType(0, rangeType.ElementType)
@@ -114,8 +116,6 @@ func NewInclusiveRangeValueWithStep(
 		},
 	}
 
-	rangeSemaType := getInclusiveRangeSemaType(interpreter, rangeType)
-
 	rangeValue := NewCompositeValueWithStaticType(
 		interpreter,
 		locationRange,
@@ -148,10 +148,6 @@ func NewInclusiveRangeValueWithStep(
 	}
 
 	return rangeValue
-}
-
-func getInclusiveRangeSemaType(interpreter *Interpreter, rangeType InclusiveRangeStaticType) *sema.InclusiveRangeType {
-	return interpreter.MustConvertStaticToSemaType(rangeType).(*sema.InclusiveRangeType)
 }
 
 func rangeContains(

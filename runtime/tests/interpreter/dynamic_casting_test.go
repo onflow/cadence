@@ -1527,6 +1527,7 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 							interpreter.InclusiveRangeStaticType{
 								ElementType: interpreter.PrimitiveStaticTypeInt,
 							},
+							sema.NewInclusiveRangeType(nil, sema.IntType),
 						)
 
 						AssertValuesEqual(

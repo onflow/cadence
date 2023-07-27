@@ -106,6 +106,7 @@ func TestInclusiveRangeStorage(t *testing.T) {
 		NewUnmeteredInt16Value(100),
 		NewUnmeteredInt16Value(5),
 		NewInclusiveRangeStaticType(inter, PrimitiveStaticTypeInt16),
+		sema.NewInclusiveRangeType(inter, sema.Int16Type),
 	)
 
 	require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())

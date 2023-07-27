@@ -103,6 +103,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 		}
 
 		rangeStaticType := interpreter.InclusiveRangeStaticType{ElementType: startStaticType}
+		rangeSemaType := sema.NewInclusiveRangeType(invocation.Interpreter, invocation.ArgumentTypes[0])
 
 		if len(invocation.Arguments) > 2 {
 			step, ok := invocation.Arguments[2].(interpreter.IntegerValue)
@@ -127,9 +128,17 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 				end,
 				step,
 				rangeStaticType,
+				rangeSemaType,
 			)
 		} else {
-			return interpreter.NewInclusiveRangeValue(inter, locationRange, start, end, rangeStaticType)
+			return interpreter.NewInclusiveRangeValue(
+				inter,
+				locationRange,
+				start,
+				end,
+				rangeStaticType,
+				rangeSemaType,
+			)
 		}
 	},
 )
