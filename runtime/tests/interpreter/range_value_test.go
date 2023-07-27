@@ -41,7 +41,7 @@ type containsTestCase struct {
 
 type inclusiveRangeConstructionTest struct {
 	ty            sema.Type
-	s, e, step    int64
+	s, e, step    int8
 	containsTests []containsTestCase
 }
 
@@ -416,17 +416,17 @@ func TestInclusiveRange(t *testing.T) {
 				expectedRangeValue = interpreter.NewInclusiveRangeValueWithStep(
 					inter,
 					interpreter.EmptyLocationRange,
-					inter.GetValueForIntegerType(testCase.s, elementType),
-					inter.GetValueForIntegerType(testCase.e, elementType),
-					inter.GetValueForIntegerType(testCase.step, elementType),
+					interpreter.GetValueForIntegerType(testCase.s, elementType),
+					interpreter.GetValueForIntegerType(testCase.e, elementType),
+					interpreter.GetValueForIntegerType(testCase.step, elementType),
 					rangeType,
 				)
 			} else {
 				expectedRangeValue = interpreter.NewInclusiveRangeValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					inter.GetValueForIntegerType(testCase.s, elementType),
-					inter.GetValueForIntegerType(testCase.e, elementType),
+					interpreter.GetValueForIntegerType(testCase.s, elementType),
+					interpreter.GetValueForIntegerType(testCase.e, elementType),
 					rangeType,
 				)
 			}

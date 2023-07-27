@@ -2381,7 +2381,7 @@ func getValueForIntegerType(value int8, staticType StaticType) IntegerValue {
 	case PrimitiveStaticTypeInt:
 		return NewUnmeteredIntValueFromInt64(int64(value))
 	case PrimitiveStaticTypeInt8:
-		return NewUnmeteredInt8Value(int8(value))
+		return NewUnmeteredInt8Value(value)
 	case PrimitiveStaticTypeInt16:
 		return NewUnmeteredInt16Value(int16(value))
 	case PrimitiveStaticTypeInt32:
@@ -3636,10 +3636,10 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				ty := typeValue.Type
 				// InclusiveRanges must hold integers
-				// _, ok = ty.(Sig)
-				// if !ok {
-				// 	return Nil
-				// }
+				elemSemaTy := invocation.Interpreter.MustConvertStaticToSemaType(ty)
+				if !elemSemaTy.Tag().BelongsTo(sema.IntegerTypeTag) {
+					return Nil
+				}
 
 				return NewSomeValueNonCopying(
 					invocation.Interpreter,
