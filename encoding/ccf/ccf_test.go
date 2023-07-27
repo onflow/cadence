@@ -5700,6 +5700,69 @@ func TestEncodeStruct(t *testing.T) {
 	)
 }
 
+func TestEncodeInclusiveRange(t *testing.T) {
+
+	t.Parallel()
+
+	simpleInclusiveRange := encodeTest{
+		name: "simpleInclusiveRange",
+		val: func() cadence.Value {
+			return cadence.NewInclusiveRange(
+				cadence.NewInt256(10),
+				cadence.NewInt256(20),
+				cadence.NewInt256(5),
+			).WithType(cadence.NewInclusiveRangeType(cadence.NewInt256Type()))
+		}(),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"type":"InclusiveRange<Int256>","value":[{"type":"Int256","value":"10"},{"type":"Int256","value":"20"},{"type":"Int256","value":"5"}]}
+			//
+			// language=edn, format=ccf
+			// 130([145([137(10)]), [10, 20, 5]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type (InclusiveRange<Int256>)
+			// tag
+			0xd8, ccf.CBORTagInclusiveRangeType,
+			// array, 1 item follows
+			0x81,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int256 type ID (10)
+			0x0a,
+			// array data without inlined type definition
+			// array, 3 items follow
+			0x83,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 10
+			0xa,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 20
+			0x14,
+			// tag (big num)
+			0xc2,
+			// bytes, 1 bytes follow
+			0x41,
+			// 5
+			0x5,
+		},
+	}
+
+	testAllEncodeAndDecode(t,
+		simpleInclusiveRange,
+	)
+}
+
 func TestEncodeEvent(t *testing.T) {
 
 	t.Parallel()

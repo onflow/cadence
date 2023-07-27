@@ -220,6 +220,14 @@ func newValueTestCases() map[string]valueTestCase {
 			},
 			string: "{\"key\": \"value\"}",
 		},
+		"InclusiveRange": {
+			value:       NewInclusiveRange(NewInt(85), NewInt(-85), NewInt(-2)),
+			exampleType: NewInclusiveRangeType(IntType{}),
+			withType: func(value Value, ty Type) Value {
+				return value.(InclusiveRange).WithType(ty.(*InclusiveRangeType))
+			},
+			string: "InclusiveRange<Int>(start: 85, end: -85, step: -2)",
+		},
 		"Bytes": {
 			value:        NewBytes([]byte{0x1, 0x2}),
 			string:       "[0x1, 0x2]",

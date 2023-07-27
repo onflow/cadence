@@ -136,6 +136,7 @@ const (
 	returnKey         = "return"
 	typeBoundKey      = "typeBound"
 	functionTypeKey   = "functionType"
+	elementKey        = "element"
 	startKey          = "start"
 	endKey            = "end"
 	stepKey           = "step"
@@ -1210,6 +1211,11 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.gauge,
 			d.decodeType(obj.Get(keyKey), results),
 			d.decodeType(obj.Get(valueKey), results),
+		)
+	case "InclusiveRange":
+		return cadence.NewMeteredInclusiveRangeType(
+			d.gauge,
+			d.decodeType(obj.Get(elementKey), results),
 		)
 	case "ConstantSizedArray":
 		size := toUInt(obj.Get(sizeKey))

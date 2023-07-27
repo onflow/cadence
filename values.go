@@ -2058,6 +2058,7 @@ type InclusiveRange struct {
 	Start              Value
 	End                Value
 	Step               Value
+	fields             []Field
 }
 
 var _ Value = InclusiveRange{}
@@ -2107,9 +2108,30 @@ func (v InclusiveRange) ToGoValue() any {
 }
 
 func (v InclusiveRange) String() string {
+	if v.InclusiveRangeType == nil {
+		return ""
+	}
+
+	if v.fields == nil {
+		v.fields = []Field{
+			{
+				Identifier: sema.InclusiveRangeTypeStartFieldName,
+				Type:       v.InclusiveRangeType.ElementType,
+			},
+			{
+				Identifier: sema.InclusiveRangeTypeEndFieldName,
+				Type:       v.InclusiveRangeType.ElementType,
+			},
+			{
+				Identifier: sema.InclusiveRangeTypeStepFieldName,
+				Type:       v.InclusiveRangeType.ElementType,
+			},
+		}
+	}
+
 	return formatComposite(
 		v.InclusiveRangeType.ID(),
-		[]Field{}, // TODO: May be bring back the range formatter.
+		v.fields,
 		[]Value{v.Start, v.End, v.Step},
 	)
 }
