@@ -6017,14 +6017,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return IsSubType(typedSubType.KeyType, typedSuperType.KeyType) &&
 			IsSubType(typedSubType.ValueType, typedSuperType.ValueType)
 
-	// case *InclusiveRangeType:
-	// 	typedSubType, ok := subType.(*InclusiveRangeType)
-	// 	if !ok {
-	// 		return false
-	// 	}
-
-	// 	return IsSubType(typedSubType.MemberType, typedSuperType.MemberType)
-
 	case *VariableSizedType:
 		typedSubType, ok := subType.(*VariableSizedType)
 		if !ok {
