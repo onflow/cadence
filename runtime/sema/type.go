@@ -1920,6 +1920,31 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				)
 			},
 		},
+		ArrayTypeFilterFunctionName: {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayFilterFunctionType(elementType),
+					arrayTypeFilterFunctionDocString,
+				)
+			},
+		},
 	}
 
 	// TODO: maybe still return members but report a helpful error?
@@ -2087,32 +2112,6 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					ArrayRemoveLastFunctionType(elementType),
 					arrayTypeRemoveLastFunctionDocString,
-				)
-			},
-		}
-
-		members[ArrayTypeFilterFunctionName] = MemberResolver{
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
-
-				elementType := arrayType.ElementType(false)
-
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArrayFilterFunctionType(elementType),
-					arrayTypeFilterFunctionDocString,
 				)
 			},
 		}

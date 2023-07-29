@@ -1142,6 +1142,16 @@ func TestCheckArrayFilter(t *testing.T) {
 
 			let y = x.filter(onlyEven)
 		}
+
+		fun testFixedSize() {
+			let x : [Int; 5] = [1, 2, 3, 21, 30]
+			let onlyEvenInt =
+				fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			let y = x.filter(onlyEvenInt)
+		}
     `)
 
 	require.NoError(t, err)
@@ -1185,22 +1195,6 @@ func TestCheckArrayFilterInvalidArgs(t *testing.T) {
 	`,
 		[]sema.SemanticError{
 			&sema.TypeMismatchError{},
-		},
-	)
-
-	testInvalidArgs(`
-		fun test() {
-			let x : [Int; 5] = [1, 2, 3, 21, 30]
-			let onlyEvenInt =
-				fun (_ x: Int): Bool {
-					return x % 2 == 0
-				}
-
-			let y = x.filter(onlyEvenInt)
-		}
-	`,
-		[]sema.SemanticError{
-			&sema.NotDeclaredMemberError{},
 		},
 	)
 }
