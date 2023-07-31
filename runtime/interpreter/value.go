@@ -2973,50 +2973,46 @@ func (v *ArrayValue) Filter(
 	locationRange LocationRange,
 	procedure FunctionValue,
 ) Value {
-	filteredValues := make([]Value, 0)
 	filteredValuesCount := 0
-	i := 0
 
+	invocation := NewInvocation(
+		interpreter,
+		nil,
+		nil,
+		[]Value{}, // Set later during invocation.
+		[]sema.Type{v.semaType.ElementType(false)},
+		nil,
+		locationRange,
+	)
 	iterationInvocation := func(arrayElement Value) Invocation {
-		return NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			[]Value{arrayElement},
-			[]sema.Type{sema.BoolType},
-			nil,
-			locationRange,
-		)
+		invocation.Arguments = []Value{arrayElement}
+		return invocation
 	}
 
-	iterate := func() {
-		err := v.array.Iterate(
-			func(item atree.Value) (bool, error) {
-				arrayElement := MustConvertStoredValue(interpreter, item)
+	iterator, err := v.array.Iterator()
 
-				shouldInclude, ok := procedure.invoke(iterationInvocation(arrayElement)).(BoolValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+	i := 0
+	err = v.array.Iterate(
+		func(item atree.Value) (bool, error) {
+			arrayElement := MustConvertStoredValue(interpreter, item)
 
-				if shouldInclude {
-					filteredValues = append(filteredValues, arrayElement)
-					filteredValuesCount++
-				}
+			shouldInclude, ok := procedure.invoke(iterationInvocation(arrayElement)).(BoolValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-				i++
-				return true, nil
-			},
-		)
+			if shouldInclude {
+				filteredValuesCount++
+			}
 
-		if err != nil {
-			panic(errors.NewExternalError(err))
-		}
+			i++
+			return true, nil
+		},
+	)
+	if err != nil {
+		panic(errors.NewExternalError(err))
 	}
 
-	iterate()
-
-	iterationIndex := 0
 	return NewArrayValueWithIterator(
 		interpreter,
 		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
@@ -3024,12 +3020,34 @@ func (v *ArrayValue) Filter(
 		uint64(filteredValuesCount),
 		func() Value {
 
-			if iterationIndex == filteredValuesCount {
-				return nil
-			}
+			var value Value
 
-			value := filteredValues[iterationIndex]
-			iterationIndex++
+			for {
+				atreeValue, err := iterator.Next()
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				// Also handles the end of array case since iterator.Next() returns nil for that.
+				if atreeValue == nil {
+					return nil
+				}
+
+				value = MustConvertStoredValue(interpreter, atreeValue)
+				if value == nil {
+					return nil
+				}
+
+				shouldInclude, ok := procedure.invoke(iterationInvocation(value)).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				// We found the next entry of the filtered array.
+				if shouldInclude {
+					break
+				}
+			}
 
 			return value.Transfer(
 				interpreter,

@@ -10745,8 +10745,8 @@ func TestInterpretArrayFilter(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-		let xs = [1, 2, 3, 100, 200]
-		let xs_fixed: [Int; 5] = [1, 2, 3, 100, 200]
+		let xs = [1, 2, 3, 100, 201]
+		let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
 		let emptyVals: [Int] = []
 		let emptyVals_fixed: [Int; 0] = []
 
@@ -10910,7 +10910,6 @@ func TestInterpretArrayFilter(t *testing.T) {
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(100),
-				interpreter.NewUnmeteredIntValueFromInt64(200),
 			), interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
@@ -10920,7 +10919,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(3),
 				interpreter.NewUnmeteredIntValueFromInt64(100),
-				interpreter.NewUnmeteredIntValueFromInt64(200),
+				interpreter.NewUnmeteredIntValueFromInt64(201),
 			))
 
 		runValidCase(t, "filtersa"+suffix, "originalsa"+suffix,
