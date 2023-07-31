@@ -2989,7 +2989,6 @@ func (v *ArrayValue) Filter(
 		return invocation
 	}
 
-	i := 0
 	err := v.array.Iterate(
 		func(item atree.Value) (bool, error) {
 			arrayElement := MustConvertStoredValue(interpreter, item)
@@ -3003,7 +3002,6 @@ func (v *ArrayValue) Filter(
 				filteredValuesCount++
 			}
 
-			i++
 			return true, nil
 		},
 	)
