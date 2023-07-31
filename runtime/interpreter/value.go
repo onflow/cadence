@@ -2989,10 +2989,8 @@ func (v *ArrayValue) Filter(
 		return invocation
 	}
 
-	iterator, err := v.array.Iterator()
-
 	i := 0
-	err = v.array.Iterate(
+	err := v.array.Iterate(
 		func(item atree.Value) (bool, error) {
 			arrayElement := MustConvertStoredValue(interpreter, item)
 
@@ -3009,6 +3007,11 @@ func (v *ArrayValue) Filter(
 			return true, nil
 		},
 	)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	iterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
