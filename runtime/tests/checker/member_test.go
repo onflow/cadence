@@ -527,6 +527,24 @@ func TestCheckMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("composite reference, non-existing field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {}
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: Int = testRef.x
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var memberErr *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errs[0], &memberErr)
+	})
+
 	t.Run("composite reference, function", func(t *testing.T) {
 		t.Parallel()
 

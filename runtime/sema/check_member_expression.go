@@ -112,10 +112,6 @@ func (checker *Checker) getReferenceType(typ Type, substituteAuthorization bool,
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
-	if memberType == nil {
-		return false
-	}
-
 	if _, isReference := referenceType(parentType); !isReference {
 		return false
 	}
