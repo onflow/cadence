@@ -4953,7 +4953,7 @@ func (t *InterfaceType) initializeMemberResolvers() {
 
 		// add any inherited members from up the inheritance chain
 		for _, conformance := range t.EffectiveInterfaceConformances() {
-			for name, member := range conformance.InterfaceType.GetMembers() {
+			for name, member := range conformance.InterfaceType.GetMembers() { //nolint:maprange
 				if _, ok := members[name]; !ok {
 					members[name] = member
 				}
