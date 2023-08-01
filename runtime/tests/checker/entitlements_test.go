@@ -4772,6 +4772,33 @@ func TestCheckEntitlementConditions(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
+
+	t.Run("result value inherited interface entitlement resource", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+		entitlement X
+		entitlement Y
+		resource interface I {
+			access(X) view fun foo(): Bool {
+				return true
+			}
+		}
+		resource interface J: I {
+			access(Y) view fun bar(): Bool {
+				return true
+			}
+		}
+		fun bar(r: @{J}): @{J} {
+			post {
+				result.foo(): ""
+				result.bar(): ""
+			}
+			return <-r
+		}
+		`)
+
+		assert.NoError(t, err)
+	})
 }
 
 func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
