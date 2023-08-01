@@ -4095,6 +4095,72 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
 }
 
+func TestInheritedInterfaceMembers(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inherited interface field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			let foo: String
+		}
+		resource interface B: A {}
+		resource C: B {
+			let foo: String
+			init() {
+				self.foo = ""
+			}
+		}
+		fun test() {
+			let c: @{B} <- create C()
+			c.foo
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			fun foo ()
+		}
+		resource interface B: A {}
+		fun test(c: @{B}) {
+			c.foo()
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("doubly inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			fun foo ()
+		}
+		resource interface B: A {}
+		resource interface C: B {}
+		fun test(c: @{C}) {
+			c.foo()
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
 func TestCheckInterfaceEventsInheritance(t *testing.T) {
 
 	t.Parallel()
