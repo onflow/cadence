@@ -4585,6 +4585,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 
 func TestCheckEntitlementConditions(t *testing.T) {
 	t.Parallel()
+
 	t.Run("use of function on owned value", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
@@ -4804,6 +4805,72 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			}
 			return <-r
 		}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("result value usage, variable-sized resource array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {}
+
+			fun foo(r: @[R]): @[R] {
+				post {
+					bar(result): ""
+				}
+				return <-r
+			}
+
+			// 'result' variable should have all the entitlements available for arrays.
+			view fun bar(_ r: auth(Mutable, Insertable, Removable) &[R]): Bool {
+				return true
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("result value usage, constant-sized resource array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {}
+
+			fun foo(r: @[R; 5]): @[R; 5] {
+				post {
+					bar(result): ""
+				}
+				return <-r
+			}
+
+			// 'result' variable should have all the entitlements available for arrays.
+			view fun bar(_ r: auth(Mutable, Insertable, Removable) &[R; 5]): Bool {
+				return true
+			}
+		`)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("result value usage, resource dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {}
+
+			fun foo(r: @{String:R}): @{String:R} {
+				post {
+					bar(result): ""
+				}
+				return <-r
+			}
+
+			// 'result' variable should have all the entitlements available for dictionaries.
+			view fun bar(_ r: auth(Mutable, Insertable, Removable) &{String:R}): Bool {
+				return true
+			}
 		`)
 
 		assert.NoError(t, err)
