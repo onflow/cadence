@@ -3766,9 +3766,16 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 				pathValue := NewPathValue(inter, domain, identifier)
 				runtimeType := NewTypeValue(inter, staticType)
 
-				// Perform a forced value dereferencing to see if the associated type is not broken.
+				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
-				valueError := inter.checkValue(address, pathValue, value, staticType)
+				valueError := inter.checkValue(
+					address,
+					pathValue,
+					value,
+					staticType,
+					invocation.LocationRange,
+				)
+
 				if valueError != nil {
 					continue
 				}
@@ -3818,6 +3825,7 @@ func (interpreter *Interpreter) checkValue(
 	path PathValue,
 	value Value,
 	staticType StaticType,
+	locationRange LocationRange,
 ) (valueError error) {
 
 	defer func() {
@@ -3867,7 +3875,7 @@ func (interpreter *Interpreter) checkValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	_, valueError = interpreter.checkValueAtPath(address, path, referenceType, EmptyLocationRange)
+	_, valueError = interpreter.checkValueAtPath(address, path, referenceType, locationRange)
 
 	return
 }
