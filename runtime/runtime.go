@@ -263,6 +263,7 @@ func getWrappedError(recovered any, location Location, codesAndPrograms codesAnd
 		return newError(err, location, codesAndPrograms)
 	}
 }
+
 func (r *interpreterRuntime) NewScriptExecutor(
 	script Script,
 	context Context,

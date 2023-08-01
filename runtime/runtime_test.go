@@ -9000,3 +9000,163 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
+
+func TestRuntimeComputationMeteringError(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	t.Run("regular error returned", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            pub fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			meterComputation: func(compKind common.ComputationKind, intensity uint) error {
+				return fmt.Errorf("computation limit exceeded")
+			},
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+
+		// Returned error MUST be an external error.
+		// It can NOT be an internal error.
+		assertRuntimeErrorIsExternalError(t, err)
+	})
+
+	t.Run("regular error panicked", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            pub fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			meterComputation: func(compKind common.ComputationKind, intensity uint) error {
+				panic(fmt.Errorf("computation limit exceeded"))
+			},
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+
+		// Returned error MUST be an external error.
+		// It can NOT be an internal error.
+		assertRuntimeErrorIsExternalError(t, err)
+	})
+
+	t.Run("go runtime error panicked", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            pub fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			meterComputation: func(compKind common.ComputationKind, intensity uint) error {
+				// Cause a runtime error
+				var x any = "hello"
+				_ = x.(int)
+				return nil
+			},
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+
+		// Returned error MUST be an internal error.
+		assertRuntimeErrorIsInternalError(t, err)
+	})
+
+	t.Run("go runtime error returned", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            pub fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			meterComputation: func(compKind common.ComputationKind, intensity uint) (err error) {
+				// Cause a runtime error. Catch it and return.
+				var x any = "hello"
+				defer func() {
+					if r := recover(); r != nil {
+						if r, ok := r.(error); ok {
+							err = r
+						}
+					}
+				}()
+
+				_ = x.(int)
+
+				return
+			},
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+
+		// Returned error MUST be an internal error.
+		assertRuntimeErrorIsInternalError(t, err)
+	})
+}
