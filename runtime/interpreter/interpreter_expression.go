@@ -138,21 +138,25 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 
 	isNestedResourceMove := elaboration.IsNestedResourceMoveExpression(indexExpression)
 
+	var get func(allowMissing bool) Value
+
+	if isNestedResourceMove {
+		get = func(_ bool) Value {
+			value := target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
+			target.InsertKey(interpreter, locationRange, transferredIndexingValue, placeholder)
+			return value
+		}
+	} else {
+		get = func(_ bool) Value {
+			return target.GetKey(interpreter, locationRange, transferredIndexingValue)
+		}
+	}
+
 	return getterSetter{
 		target: target,
-		get: func(_ bool) Value {
-			if isNestedResourceMove {
-				return target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
-			} else {
-				return target.GetKey(interpreter, locationRange, transferredIndexingValue)
-			}
-		},
+		get:    get,
 		set: func(value Value) {
-			if isNestedResourceMove {
-				target.InsertKey(interpreter, locationRange, transferredIndexingValue, value)
-			} else {
-				target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
-			}
+			target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
 		},
 	}
 }
