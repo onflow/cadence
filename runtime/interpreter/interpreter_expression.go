@@ -136,6 +136,29 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 		},
 	)
 
+	// Normally, moves of nested resources (e.g `let r <- rs[0]`) are statically rejected.
+	//
+	// However, there are cases in which we do allow moves of nested resources:
+	//
+	// - In a swap statement (e.g. `rs[0] <-> rs[1]`)
+	// - In a variable declaration with two values/assignments (e.g. `let r <- rs["foo"] <- nil`)
+	//
+	// In both cases we know that a move of the nested resource is immediately followed by a replacement.
+	// This notion of an expression that moves a nested resource is tracked in the elaboration.
+	//
+	// When indexing is a move of a nested resource, we need to remove the key/value from the container.
+	// However, for some containers, like arrays, the removal influences other values in the container.
+	// In case of an array, the removal of an element shifts all following elements.
+	//
+	// A removal alone would thus result in subsequent code being executed incorrectly.
+	// For example, in the case where a swap operation through indexing is performed on the same array,
+	// e.g. `rs[0] <-> rs[1]`, once the first removal was performed, the second operates on a modified container.
+	//
+	// Prevent this problem by temporarily writing a placeholder value after the removal.
+	// Only perform the replacement with a placeholder in the case of a nested resource move.
+	// We know that in that case the get operation will be followed by a set operation,
+	// which will replace the temporary placeholder.
+
 	isNestedResourceMove := elaboration.IsNestedResourceMoveExpression(indexExpression)
 
 	var get func(allowMissing bool) Value
