@@ -113,7 +113,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: &S1} = {}
-              let dictRef = &dict as auth(Mutable) &{Int: &AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: &AnyStruct}
 
               let s2 = S2()
               dictRef[0] = &s2 as &AnyStruct
@@ -148,7 +148,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: S1} = {}
-              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = S2()
 
@@ -186,7 +186,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
          fun test(): Int {
              let dict: {Int: &S1} = {}
-             let dictRef = &dict as auth(Mutable) &{Int: &AnyStruct}
+             let dictRef = &dict as auth(Mutate) &{Int: &AnyStruct}
 
              let s2 = S2()
              dictRef[0] = &s2 as &AnyStruct
@@ -225,7 +225,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
          fun test(): Int {
              let dict: {Int: S1} = {}
-             let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
+             let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
              dictRef[0] = S2()
 
@@ -267,7 +267,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
               let s2 = S2()
 
-              let dictRef = &dict as auth(Mutable) &{Int: &AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: &AnyStruct}
               dictRef[0] = &s2 as &AnyStruct
 
               dict.values[0].value = 1
@@ -308,7 +308,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: S1} = {}
-              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = S2()
 
@@ -340,7 +340,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
               let s2 = S2()
 
-              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
               dictRef[0] = s2
 
               let x = dict.values[0]
@@ -369,7 +369,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: fun(): Int} = {}
-              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = f2
 
@@ -393,7 +393,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: [UInt8]} = {}
-              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = "not an [UInt8] array, but a String"
 
@@ -417,7 +417,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: [UInt8]} = {}
-              let dictRef = &dict as auth(Mutable) &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = "not an [UInt8] array, but a String"
 
@@ -649,7 +649,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target: auth(Mutable) &[R]) {
+            fun test(target: auth(Mutate) &[R]) {
                 target.append(<- create R())
 
                 // Take reference while in the account
@@ -681,7 +681,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutable"},
+				[]common.TypeID{"Mutate"},
 				sema.Conjunction,
 			),
 			array,
@@ -755,7 +755,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target1: auth(Mutable) &[R], target2: auth(Mutable) &[R]) {
+            fun test(target1: auth(Mutate) &[R], target2: auth(Mutate) &[R]) {
                 target1.append(<- create R())
 
                 // Take reference while in the account_1
@@ -785,7 +785,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutable"},
+				[]common.TypeID{"Mutate"},
 				sema.Conjunction,
 			),
 			array1,
@@ -808,7 +808,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutable"},
+				[]common.TypeID{"Mutate"},
 				sema.Conjunction,
 			),
 			array2,
@@ -839,7 +839,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target: auth(Mutable) &[R]): Int {
+            fun test(target: auth(Mutate) &[R]): Int {
                 target.append(<- create R())
 
                 // Take reference while in the account
@@ -878,7 +878,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutable"},
+				[]common.TypeID{"Mutate"},
 				sema.Conjunction,
 			),
 			array,
@@ -951,7 +951,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
             var ref2: &R? = nil
             var ref3: &R? = nil
 
-            fun setup(collection: auth(Mutable) &[R]) {
+            fun setup(collection: auth(Mutate) &[R]) {
                 collection.append(<- create R())
 
                 // Take reference while in the account
@@ -1007,7 +1007,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutable"},
+				[]common.TypeID{"Mutate"},
 				sema.Conjunction,
 			),
 			array,

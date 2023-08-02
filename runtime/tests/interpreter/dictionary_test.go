@@ -35,7 +35,7 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
             let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
             fun test() {
-                var dictionaryRef = &dictionary as auth(Mutable) &{String: String}
+                var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
 
                 // Public functions
                 dictionaryRef.containsKey("foo")
@@ -79,7 +79,7 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
             let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
             fun test() {
-                var dictionaryRef = &dictionary as auth(Mutable) &{String: String}
+                var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
 
                 // Public functions
                 dictionaryRef.containsKey("foo")
@@ -101,7 +101,7 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
             let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
             fun test() {
-                var dictionaryRef = &dictionary as auth(Mutable) &{String: String}
+                var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
 
                 // Public functions
                 dictionaryRef.containsKey("foo")

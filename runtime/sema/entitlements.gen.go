@@ -19,23 +19,23 @@
 
 package sema
 
-var MutableEntitlement = &EntitlementType{
-	Identifier: "Mutable",
+var MutateEntitlement = &EntitlementType{
+	Identifier: "Mutate",
 }
 
-var InsertableEntitlement = &EntitlementType{
-	Identifier: "Insertable",
+var InsertEntitlement = &EntitlementType{
+	Identifier: "Insert",
 }
 
-var RemovableEntitlement = &EntitlementType{
-	Identifier: "Removable",
+var RemoveEntitlement = &EntitlementType{
+	Identifier: "Remove",
 }
 
 func init() {
-	BuiltinEntitlements[MutableEntitlement.Identifier] = MutableEntitlement
-	addToBaseActivation(MutableEntitlement)
-	BuiltinEntitlements[InsertableEntitlement.Identifier] = InsertableEntitlement
-	addToBaseActivation(InsertableEntitlement)
-	BuiltinEntitlements[RemovableEntitlement.Identifier] = RemovableEntitlement
-	addToBaseActivation(RemovableEntitlement)
+	BuiltinEntitlements[MutateEntitlement.Identifier] = MutateEntitlement
+	addToBaseActivation(MutateEntitlement)
+	BuiltinEntitlements[InsertEntitlement.Identifier] = InsertEntitlement
+	addToBaseActivation(InsertEntitlement)
+	BuiltinEntitlements[RemoveEntitlement.Identifier] = RemoveEntitlement
+	addToBaseActivation(RemoveEntitlement)
 }

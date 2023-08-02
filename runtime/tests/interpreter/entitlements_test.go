@@ -2956,16 +2956,16 @@ func TestInterpretBuiltinEntitlements(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
         struct S {
-            access(Mutable) fun foo() {}
-            access(Insertable) fun bar() {}
-            access(Removable) fun baz() {}
+            access(Mutate) fun foo() {}
+            access(Insert) fun bar() {}
+            access(Remove) fun baz() {}
         }
 
         fun main() {
             let s = S()
-            let mutableRef = &s as auth(Mutable) &S
-            let insertableRef = &s as auth(Insertable) &S
-            let removableRef = &s as auth(Removable) &S
+            let mutableRef = &s as auth(Mutate) &S
+            let insertableRef = &s as auth(Insert) &S
+            let removableRef = &s as auth(Remove) &S
         }
     `)
 
@@ -3039,14 +3039,14 @@ func TestInterpretIdentityMapping(t *testing.T) {
             fun main() {
                 let s = S()
 
-                let mutableRef = &s as auth(Mutable) &S
-                let ref1: auth(Mutable) &AnyStruct = mutableRef.foo()
+                let mutableRef = &s as auth(Mutate) &S
+                let ref1: auth(Mutate) &AnyStruct = mutableRef.foo()
 
-                let insertableRef = &s as auth(Insertable) &S
-                let ref2: auth(Insertable) &AnyStruct = insertableRef.foo()
+                let insertableRef = &s as auth(Insert) &S
+                let ref2: auth(Insert) &AnyStruct = insertableRef.foo()
 
-                let removableRef = &s as auth(Removable) &S
-                let ref3: auth(Removable) &AnyStruct = removableRef.foo()
+                let removableRef = &s as auth(Remove) &S
+                let ref3: auth(Remove) &AnyStruct = removableRef.foo()
             }
         `)
 
@@ -3068,11 +3068,11 @@ func TestInterpretIdentityMapping(t *testing.T) {
             fun main() {
                 let s = S()
 
-                let ref1 = &s as auth(Insertable | Removable) &S
-                let resultRef1: auth(Insertable | Removable) &AnyStruct = ref1.foo()
+                let ref1 = &s as auth(Insert | Remove) &S
+                let resultRef1: auth(Insert | Remove) &AnyStruct = ref1.foo()
 
-                let ref2 = &s as auth(Insertable, Removable) &S
-                let resultRef2: auth(Insertable, Removable) &AnyStruct = ref2.foo()
+                let ref2 = &s as auth(Insert, Remove) &S
+                let resultRef2: auth(Insert, Remove) &AnyStruct = ref2.foo()
             }
         `)
 

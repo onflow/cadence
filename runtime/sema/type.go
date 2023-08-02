@@ -1945,12 +1945,12 @@ If either of the parameters are out of the bounds of the array, or the indices a
 `
 
 var insertableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{InsertableEntitlement, MutableEntitlement},
+	[]*EntitlementType{InsertEntitlement, MutateEntitlement},
 	Disjunction,
 )
 
 var removableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{RemovableEntitlement, MutableEntitlement},
+	[]*EntitlementType{RemoveEntitlement, MutateEntitlement},
 	Disjunction,
 )
 
@@ -2516,9 +2516,9 @@ func (t *VariableSizedType) SupportedEntitlements() *EntitlementOrderedSet {
 
 var arrayDictionaryEntitlements = func() *EntitlementOrderedSet {
 	set := orderedmap.New[EntitlementOrderedSet](3)
-	set.Set(MutableEntitlement, struct{}{})
-	set.Set(InsertableEntitlement, struct{}{})
-	set.Set(RemovableEntitlement, struct{}{})
+	set.Set(MutateEntitlement, struct{}{})
+	set.Set(InsertEntitlement, struct{}{})
+	set.Set(RemoveEntitlement, struct{}{})
 	return set
 }()
 
