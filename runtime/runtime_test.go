@@ -2005,7 +2005,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
         prepare(signer: AuthAccount) {
           signer.save(<-createContainer(), to: /storage/container)
-          signer.link<auth(Insertable) &Container>(/public/container, target: /storage/container)
+          signer.link<auth(Insert) &Container>(/public/container, target: /storage/container)
         }
       }
     `)
@@ -2017,7 +2017,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
           let ref = publicAccount.getCapability(/public/container)
-              .borrow<auth(Insertable) &Container>()!
+              .borrow<auth(Insert) &Container>()!
 
           let length = ref.values.length
           ref.appendValue(1)
@@ -2034,7 +2034,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
           let publicAccount = getAccount(signer.address)
           let ref = publicAccount
               .getCapability(/public/container)
-              .borrow<auth(Insertable) &Container>()!
+              .borrow<auth(Insert) &Container>()!
 
           let length = ref.values.length
           ref.appendValue(2)
@@ -7019,7 +7019,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 		script := []byte(`
           access(all) fun main(): Capability {
               let dict: {Int: AuthAccount} = {}
-              let ref = &dict as auth(Mutable) &{Int: AnyStruct}
+              let ref = &dict as auth(Mutate) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
               return dict.values[0].getCapability(/private/xxx)
           }
@@ -7054,7 +7054,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 		script := []byte(`
           access(all) fun main(): Capability {
               let dict: {Int: AuthAccount} = {}
-              let ref = &dict as auth(Mutable) &{Int: AnyStruct}
+              let ref = &dict as auth(Mutate) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
               return dict.values[0].getCapability(/public/xxx)
           }
@@ -7089,7 +7089,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 		script := []byte(`
           access(all) fun main(): Capability {
               let dict: {Int: PublicAccount} = {}
-              let ref = &dict as auth(Mutable) &{Int: AnyStruct}
+              let ref = &dict as auth(Mutate) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
               return dict.values[0].getCapability(/public/xxx)
           }

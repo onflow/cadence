@@ -1498,7 +1498,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Mutable) &[String]
+                    var arrayRef = &array as auth(Mutate) &[String]
                     arrayRef.append("baz")
                     arrayRef.appendAll(["baz"])
                     arrayRef.insert(at:0, "baz")
@@ -1537,7 +1537,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Insertable) &[String]
+                    var arrayRef = &array as auth(Insert) &[String]
                     arrayRef.append("baz")
                     arrayRef.appendAll(["baz"])
                     arrayRef.insert(at:0, "baz")
@@ -1554,7 +1554,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Removable) &[String]
+                    var arrayRef = &array as auth(Remove) &[String]
                     arrayRef.append("baz")
                     arrayRef.appendAll(["baz"])
                     arrayRef.insert(at:0, "baz")
@@ -1580,7 +1580,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Mutable) &[String]
+                    var arrayRef = &array as auth(Mutate) &[String]
                     arrayRef.remove(at: 1)
                     arrayRef.removeFirst()
                     arrayRef.removeLast()
@@ -1619,7 +1619,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Insertable) &[String]
+                    var arrayRef = &array as auth(Insert) &[String]
                     arrayRef.remove(at: 1)
                     arrayRef.removeFirst()
                     arrayRef.removeLast()
@@ -1641,7 +1641,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Removable) &[String]
+                    var arrayRef = &array as auth(Remove) &[String]
                     arrayRef.remove(at: 1)
                     arrayRef.removeFirst()
                     arrayRef.removeLast()
@@ -1662,7 +1662,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Mutable) &[String]
+                    var arrayRef = &array as auth(Mutate) &[String]
                     arrayRef.contains("hello")
                     arrayRef.firstIndex(of: "hello")
                     arrayRef.slice(from: 2, upTo: 4)
@@ -1698,7 +1698,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Insertable) &[String]
+                    var arrayRef = &array as auth(Insert) &[String]
                     arrayRef.contains("hello")
                     arrayRef.firstIndex(of: "hello")
                     arrayRef.slice(from: 2, upTo: 4)
@@ -1716,7 +1716,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Removable) &[String]
+                    var arrayRef = &array as auth(Remove) &[String]
                     arrayRef.contains("hello")
                     arrayRef.firstIndex(of: "hello")
                     arrayRef.slice(from: 2, upTo: 4)
@@ -1738,7 +1738,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Mutable) &[String]
+                    var arrayRef = &array as auth(Mutate) &[String]
                     arrayRef[0] = "baz"
                 }
 	        `)
@@ -1766,7 +1766,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			assert.Contains(
 				t,
 				errors[0].Error(),
-				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a non-auth reference",
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a non-auth reference",
 			)
 		})
 
@@ -1777,7 +1777,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Insertable) &[String]
+                    var arrayRef = &array as auth(Insert) &[String]
                     arrayRef[0] = "baz"
                 }
 	        `)
@@ -1790,7 +1790,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			assert.Contains(
 				t,
 				errors[0].Error(),
-				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a (Insertable) reference",
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a (Insert) reference",
 			)
 		})
 
@@ -1801,7 +1801,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Removable) &[String]
+                    var arrayRef = &array as auth(Remove) &[String]
                     arrayRef[0] = "baz"
                 }
 	        `)
@@ -1814,7 +1814,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			assert.Contains(
 				t,
 				errors[0].Error(),
-				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a (Removable) reference",
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a (Remove) reference",
 			)
 		})
 
@@ -1825,7 +1825,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Insertable, Removable) &[String]
+                    var arrayRef = &array as auth(Insert, Remove) &[String]
                     arrayRef[0] = "baz"
                 }
 	        `)
@@ -1844,7 +1844,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
                 let array: [String] = ["foo", "bar"]
 
                 fun test() {
-                    var arrayRef = &array as auth(Mutable) &[String]
+                    var arrayRef = &array as auth(Mutate) &[String]
                     arrayRef[0] <-> arrayRef[1]
                 }
 	        `)
@@ -1886,7 +1886,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Mutable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
                     dictionaryRef.insert(key: "three", "baz")
                 }
 	        `)
@@ -1919,7 +1919,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Insertable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Insert) &{String: String}
                     dictionaryRef.insert(key: "three", "baz")
                 }
 	        `)
@@ -1956,7 +1956,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Mutable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
                     dictionaryRef.remove(key: "foo")
                 }
 	        `)
@@ -1989,7 +1989,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Insertable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Insert) &{String: String}
                     dictionaryRef.remove(key: "foo")
                 }
 	        `)
@@ -2007,7 +2007,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Removable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Remove) &{String: String}
                     dictionaryRef.remove(key: "foo")
                 }
 	        `)
@@ -2026,7 +2026,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Mutable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
                     dictionaryRef.containsKey("foo")
                     dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
                 }
@@ -2058,7 +2058,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Insertable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Insert) &{String: String}
                     dictionaryRef.containsKey("foo")
                     dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
                 }
@@ -2074,7 +2074,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Removable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Remove) &{String: String}
                     dictionaryRef.containsKey("foo")
                     dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
                 }
@@ -2094,7 +2094,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Mutable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
                     dictionaryRef["three"] = "baz"
                 }
 	        `)
@@ -2122,7 +2122,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			assert.Contains(
 				t,
 				errors[0].Error(),
-				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a non-auth reference",
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a non-auth reference",
 			)
 		})
 
@@ -2133,7 +2133,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Removable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Remove) &{String: String}
                     dictionaryRef["three"] = "baz"
                 }
 	        `)
@@ -2146,7 +2146,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			assert.Contains(
 				t,
 				errors[0].Error(),
-				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a (Removable) reference",
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a (Remove) reference",
 			)
 		})
 
@@ -2157,7 +2157,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Insertable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Insert) &{String: String}
                     dictionaryRef["three"] = "baz"
                 }
 	        `)
@@ -2170,7 +2170,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			assert.Contains(
 				t,
 				errors[0].Error(),
-				"can only assign to a reference with (Mutable) or (Insertable, Removable) access, but found a (Insertable) reference",
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a (Insert) reference",
 			)
 		})
 
@@ -2181,7 +2181,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Insertable, Removable) &{String: String}
+                    var dictionaryRef = &dictionary as auth(Insert, Remove) &{String: String}
                     dictionaryRef["three"] = "baz"
                 }
 	        `)
@@ -2200,7 +2200,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
                 let dictionary: {String: AnyStruct} = {"one" : "foo", "two" : "bar"}
 
                 fun test() {
-                    var dictionaryRef = &dictionary as auth(Mutable) &{String: AnyStruct}
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: AnyStruct}
                     dictionaryRef["one"] <-> dictionaryRef["two"]
                 }
 	        `)

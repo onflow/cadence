@@ -101,7 +101,7 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
             let array: [String] = ["foo", "bar"]
 
             fun test() {
-                var arrayRef = &array as auth(Mutable) &[String]
+                var arrayRef = &array as auth(Mutate) &[String]
 
                 // Public functions
                 arrayRef.contains("hello")
@@ -153,7 +153,7 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
             let array: [String] = ["foo", "bar"]
 
             fun test() {
-                var arrayRef = &array as auth(Insertable) &[String]
+                var arrayRef = &array as auth(Insert) &[String]
 
                 // Public functions
                 arrayRef.contains("hello")
@@ -179,7 +179,7 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
             let array: [String] = ["foo", "bar", "baz"]
 
             fun test() {
-                var arrayRef = &array as auth(Removable) &[String]
+                var arrayRef = &array as auth(Remove) &[String]
 
                 // Public functions
                 arrayRef.contains("hello")

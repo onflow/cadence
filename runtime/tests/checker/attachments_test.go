@@ -4178,7 +4178,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				access(all) resource R {}
 
 				entitlement mapping M {
-					Mutable -> Insertable
+					Mutate -> Insert
 				}
 
 				access(M) attachment A for R {
@@ -4231,7 +4231,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 				entitlement mapping M {
-					Mutable -> Insertable
+					Mutate -> Insert
 				}
 
 				access(all) resource R {

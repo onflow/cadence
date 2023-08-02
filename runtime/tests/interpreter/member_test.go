@@ -1054,7 +1054,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 
             fun test() {
                 let dict: {String: AnyStruct} = {"foo": Foo(), "bar": Foo()}
-                let dictRef = &dict as auth(Mutable) &{String: AnyStruct}
+                let dictRef = &dict as auth(Mutate) &{String: AnyStruct}
 
                 dictRef["foo"] <-> dictRef["bar"]
             }

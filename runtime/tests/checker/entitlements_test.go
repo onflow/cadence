@@ -4824,7 +4824,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			}
 
 			// 'result' variable should have all the entitlements available for arrays.
-			view fun bar(_ r: auth(Mutable, Insertable, Removable) &[R]): Bool {
+			view fun bar(_ r: auth(Mutate, Insert, Remove) &[R]): Bool {
 				return true
 			}
 		`)
@@ -4846,7 +4846,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			}
 
 			// 'result' variable should have all the entitlements available for arrays.
-			view fun bar(_ r: auth(Mutable, Insertable, Removable) &[R; 5]): Bool {
+			view fun bar(_ r: auth(Mutate, Insert, Remove) &[R; 5]): Bool {
 				return true
 			}
 		`)
@@ -4868,7 +4868,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			}
 
 			// 'result' variable should have all the entitlements available for dictionaries.
-			view fun bar(_ r: auth(Mutable, Insertable, Removable) &{String:R}): Bool {
+			view fun bar(_ r: auth(Mutate, Insert, Remove) &{String:R}): Bool {
 				return true
 			}
 		`)
@@ -5367,16 +5367,16 @@ func TestCheckBuiltinEntitlements(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             struct S {
-                access(Mutable) fun foo() {}
-                access(Insertable) fun bar() {}
-                access(Removable) fun baz() {}
+                access(Mutate) fun foo() {}
+                access(Insert) fun bar() {}
+                access(Remove) fun baz() {}
             }
 
             fun main() {
                 let s = S()
-                let mutableRef = &s as auth(Mutable) &S
-                let insertableRef = &s as auth(Insertable) &S
-                let removableRef = &s as auth(Removable) &S
+                let mutableRef = &s as auth(Mutate) &S
+                let insertableRef = &s as auth(Insert) &S
+                let removableRef = &s as auth(Remove) &S
             }
         `)
 
@@ -5387,9 +5387,9 @@ func TestCheckBuiltinEntitlements(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            entitlement Mutable
-            entitlement Insertable
-            entitlement Removable
+            entitlement Mutate
+            entitlement Insert
+            entitlement Remove
         `)
 
 		errs := RequireCheckerErrors(t, err, 3)
@@ -5423,7 +5423,7 @@ func TestCheckIdentityMapping(t *testing.T) {
                 let resultRef1: &AnyStruct = s.foo()
 
                 // Error: Must return an unauthorized ref
-                let resultRef2: auth(Mutable) &AnyStruct = s.foo()
+                let resultRef2: auth(Mutate) &AnyStruct = s.foo()
             }
         `)
 
@@ -5460,7 +5460,7 @@ func TestCheckIdentityMapping(t *testing.T) {
                 let resultRef1: &AnyStruct = ref.foo()
 
                 // Error: Must return an unauthorized ref
-                let resultRef2: auth(Mutable) &AnyStruct = ref.foo()
+                let resultRef2: auth(Mutate) &AnyStruct = ref.foo()
             }
         `)
 
@@ -5483,14 +5483,14 @@ func TestCheckIdentityMapping(t *testing.T) {
             fun main() {
                 let s = S()
 
-                let mutableRef = &s as auth(Mutable) &S
-                let ref1: auth(Mutable) &AnyStruct = mutableRef.foo()
+                let mutableRef = &s as auth(Mutate) &S
+                let ref1: auth(Mutate) &AnyStruct = mutableRef.foo()
 
-                let insertableRef = &s as auth(Insertable) &S
-                let ref2: auth(Insertable) &AnyStruct = insertableRef.foo()
+                let insertableRef = &s as auth(Insert) &S
+                let ref2: auth(Insert) &AnyStruct = insertableRef.foo()
 
-                let removableRef = &s as auth(Removable) &S
-                let ref3: auth(Removable) &AnyStruct = removableRef.foo()
+                let removableRef = &s as auth(Remove) &S
+                let ref3: auth(Remove) &AnyStruct = removableRef.foo()
             }
         `)
 
@@ -5511,11 +5511,11 @@ func TestCheckIdentityMapping(t *testing.T) {
             fun main() {
                 let s = S()
 
-                let ref1 = &s as auth(Insertable | Removable) &S
-                let resultRef1: auth(Insertable | Removable) &AnyStruct = ref1.foo()
+                let ref1 = &s as auth(Insert | Remove) &S
+                let resultRef1: auth(Insert | Remove) &AnyStruct = ref1.foo()
 
-                let ref2 = &s as auth(Insertable, Removable) &S
-                let resultRef2: auth(Insertable, Removable) &AnyStruct = ref2.foo()
+                let ref2 = &s as auth(Insert, Remove) &S
+                let resultRef2: auth(Insert, Remove) &AnyStruct = ref2.foo()
             }
         `)
 
