@@ -112,17 +112,17 @@ func (checker *Checker) getReferenceType(typ Type, substituteAuthorization bool,
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
-	if memberType == nil || !isReferenceType(parentType) {
+	if _, isReference := referenceType(parentType); !isReference {
 		return false
 	}
 
 	return memberType.ContainFieldsOrElements()
 }
 
-func isReferenceType(typ Type) bool {
+func referenceType(typ Type) (*ReferenceType, bool) {
 	unwrappedType := UnwrapOptionalType(typ)
-	_, isReference := unwrappedType.(*ReferenceType)
-	return isReference
+	refType, isReference := unwrappedType.(*ReferenceType)
+	return refType, isReference
 }
 
 func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, resultingType Type, member *Member, isOptional bool) {

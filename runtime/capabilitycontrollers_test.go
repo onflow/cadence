@@ -85,7 +85,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       /// > Our version of quicksort is not the fastest possible,
                       /// > but it's one of the simplest.
                       ///
-                      access(all) fun quickSort(_ items: &[AnyStruct], isLess: fun(Int, Int): Bool) {
+                      access(all) fun quickSort(_ items: auth(Mutable) &[AnyStruct], isLess: fun(Int, Int): Bool) {
 
                           fun quickSortPart(leftIndex: Int, rightIndex: Int) {
 
@@ -95,6 +95,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                               let pivotIndex = (leftIndex + rightIndex) / 2
 
+                              items[pivotIndex] <-> items[leftIndex]
                               items[pivotIndex] <-> items[leftIndex]
 
                               var lastIndex = leftIndex
@@ -1802,7 +1803,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controllers1.length == 3)
 
                           Test.quickSort(
-                              &controllers1 as &[AnyStruct],
+                              &controllers1 as auth(Mutable) &[AnyStruct],
                               isLess: fun(i: Int, j: Int): Bool {
                                   let a = controllers1[i]
                                   let b = controllers1[j]
@@ -1900,7 +1901,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controllers1.length == 3)
 
                           Test.quickSort(
-                              &controllers1 as &[AnyStruct],
+                              &controllers1 as auth(Mutable) &[AnyStruct],
                               isLess: fun(i: Int, j: Int): Bool {
                                   let a = controllers1[i]
                                   let b = controllers1[j]
@@ -2251,7 +2252,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controllers.length == 3)
 
                           Test.quickSort(
-                              &controllers as &[AnyStruct],
+                              &controllers as auth(Mutable) &[AnyStruct],
                               isLess: fun(i: Int, j: Int): Bool {
                                   let a = controllers[i]
                                   let b = controllers[j]
@@ -2329,7 +2330,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           assert(controllers.length == 3)
 
                           Test.quickSort(
-                              &controllers as &[AnyStruct],
+                              &controllers as auth(Mutable) &[AnyStruct],
                               isLess: fun(i: Int, j: Int): Bool {
                                   let a = controllers[i]
                                   let b = controllers[j]
@@ -2584,7 +2585,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                               let controllers1Before = signer.capabilities.storage.getControllers(forPath: storagePath1)
                               Test.quickSort(
-                                  &controllers1Before as &[AnyStruct],
+                                  &controllers1Before as auth(Mutable) &[AnyStruct],
                                   isLess: fun(i: Int, j: Int): Bool {
                                       let a = controllers1Before[i]
                                       let b = controllers1Before[j]
@@ -2598,7 +2599,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                               let controllers2Before = signer.capabilities.storage.getControllers(forPath: storagePath2)
                               Test.quickSort(
-                                  &controllers2Before as &[AnyStruct],
+                                  &controllers2Before as auth(Mutable) &[AnyStruct],
                                   isLess: fun(i: Int, j: Int): Bool {
                                       let a = controllers2Before[i]
                                       let b = controllers2Before[j]
@@ -2622,7 +2623,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                               let controllers1After = signer.capabilities.storage.getControllers(forPath: storagePath1)
                               Test.quickSort(
-                                  &controllers1After as &[AnyStruct],
+                                  &controllers1After as auth(Mutable) &[AnyStruct],
                                   isLess: fun(i: Int, j: Int): Bool {
                                       let a = controllers1After[i]
                                       let b = controllers1After[j]
@@ -2635,7 +2636,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                               let controllers2After = signer.capabilities.storage.getControllers(forPath: storagePath2)
                               Test.quickSort(
-                                  &controllers2After as &[AnyStruct],
+                                  &controllers2After as auth(Mutable) &[AnyStruct],
                                   isLess: fun(i: Int, j: Int): Bool {
                                       let a = controllers2After[i]
                                       let b = controllers2After[j]
