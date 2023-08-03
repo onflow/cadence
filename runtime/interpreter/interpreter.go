@@ -2234,7 +2234,7 @@ func (interpreter *Interpreter) declareInterface(
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
 				interpreter.declareNonEnumCompositeValue(nestedCompositeDeclaration, lexicalScope)
 			} else {
-				// this should be statically prevented in the checker
+				// this is statically prevented in the checker
 				panic(errors.NewUnreachableError())
 			}
 		}

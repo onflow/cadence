@@ -156,26 +156,11 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
-		// only event types may be declared in interfaces
-		if nestedComposite.Kind() != common.CompositeKindEvent {
-			checker.report(&InvalidNestedDeclarationError{
-				NestedDeclarationKind:    nestedComposite.DeclarationKind(),
-				ContainerDeclarationKind: declaration.DeclarationKind(),
-				Range:                    declaration.Range,
-			})
-		} else {
-			// events should be checked like composites
+		// only event types may be declared in interfaces.
+		// However, the error will be reported later in `declareNestedDeclarations``
+		if nestedComposite.Kind() == common.CompositeKindEvent {
 			checker.visitCompositeLikeDeclaration(nestedComposite)
 		}
-	}
-
-	for _, nestedAttachment := range declaration.Members.Attachments() {
-		// only event types may be declared in interfaces
-		checker.report(&InvalidNestedDeclarationError{
-			NestedDeclarationKind:    nestedAttachment.DeclarationKind(),
-			ContainerDeclarationKind: declaration.DeclarationKind(),
-			Range:                    declaration.Range,
-		})
 	}
 
 	return

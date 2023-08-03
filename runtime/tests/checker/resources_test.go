@@ -9333,11 +9333,11 @@ func TestCheckBadResourceInterface(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 6)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
-		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[3])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[4])
-		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[5])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[3])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[5])
 	})
 
 	t.Run("bad resource interface: longer", func(t *testing.T) {
@@ -9347,14 +9347,14 @@ func TestCheckBadResourceInterface(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 9)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
-		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[2])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[3])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[4])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[5])
-		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[6])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[7])
-		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[8])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[6])
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[7])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[8])
 	})
 }
 

@@ -404,7 +404,7 @@ func (checker *Checker) declareNestedDeclarations(
 ) {
 	nestedDeclarations = map[string]ast.Declaration{}
 
-	// Only contracts support nested composite declarations
+	// Only concrete contracts support nested composite declarations
 	if containerCompositeKind != common.CompositeKindContract {
 
 		reportInvalidNesting := func(nestedDeclarationKind common.DeclarationKind, identifier ast.Identifier) {
@@ -421,15 +421,10 @@ func (checker *Checker) declareNestedDeclarations(
 
 			firstNestedCompositeDeclaration := nestedCompositeDeclarations[0]
 
-			// composite-in-interface nesting errors are already reported elsewhere
-			if (containerDeclarationKind != common.DeclarationKindStructureInterface &&
-				containerDeclarationKind != common.DeclarationKindResourceInterface) ||
-				firstNestedCompositeDeclaration.DeclarationKind() == common.DeclarationKindEvent {
-				reportInvalidNesting(
-					firstNestedCompositeDeclaration.DeclarationKind(),
-					firstNestedCompositeDeclaration.Identifier,
-				)
-			}
+			reportInvalidNesting(
+				firstNestedCompositeDeclaration.DeclarationKind(),
+				firstNestedCompositeDeclaration.Identifier,
+			)
 
 		} else if len(nestedInterfaceDeclarations) > 0 {
 
@@ -459,14 +454,11 @@ func (checker *Checker) declareNestedDeclarations(
 
 			firstNestedAttachmentDeclaration := nestedAttachmentDeclaration[0]
 
-			// this error has already been reported elsewhere
-			if containerDeclarationKind != common.DeclarationKindStructureInterface &&
-				containerDeclarationKind != common.DeclarationKindResourceInterface {
-				reportInvalidNesting(
-					firstNestedAttachmentDeclaration.DeclarationKind(),
-					firstNestedAttachmentDeclaration.Identifier,
-				)
-			}
+			reportInvalidNesting(
+				firstNestedAttachmentDeclaration.DeclarationKind(),
+				firstNestedAttachmentDeclaration.Identifier,
+			)
+
 		}
 
 		// NOTE: don't return, so nested declarations / types are still declared
@@ -480,19 +472,30 @@ func (checker *Checker) declareNestedDeclarations(
 			nestedDeclarationKind common.DeclarationKind,
 			identifier ast.Identifier,
 		) {
+			if containerDeclarationKind.IsInterfaceDeclaration() && !nestedDeclarationKind.IsInterfaceDeclaration() {
+				switch nestedCompositeKind {
+				case common.CompositeKindEvent:
+					break
 
-			switch nestedCompositeKind {
-			case common.CompositeKindResource,
-				common.CompositeKindStructure,
-				common.CompositeKindAttachment,
-				common.CompositeKindEvent,
-				common.CompositeKindEnum:
-				break
+				default:
+					checker.report(
+						&InvalidNestedDeclarationError{
+							NestedDeclarationKind:    nestedDeclarationKind,
+							ContainerDeclarationKind: containerDeclarationKind,
+							Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
+						},
+					)
+				}
+			} else {
+				switch nestedCompositeKind {
+				case common.CompositeKindResource,
+					common.CompositeKindStructure,
+					common.CompositeKindAttachment,
+					common.CompositeKindEvent,
+					common.CompositeKindEnum:
+					break
 
-			default:
-				// if this is inside a contract interface, this error has already been reported elsewhere
-				if nestedDeclarationKind == common.DeclarationKindContractInterface ||
-					containerDeclarationKind != common.DeclarationKindContractInterface {
+				default:
 					checker.report(
 						&InvalidNestedDeclarationError{
 							NestedDeclarationKind:    nestedDeclarationKind,

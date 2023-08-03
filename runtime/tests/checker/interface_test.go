@@ -2131,11 +2131,11 @@ func TestCheckBadStructInterface(t *testing.T) {
 
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[2])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[2])
 	assert.IsType(t, &sema.RedeclarationError{}, errs[3])
-	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[5])
-	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[6])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[4])
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[5])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[6])
 }
 
 func TestCheckInterfaceInheritance(t *testing.T) {
