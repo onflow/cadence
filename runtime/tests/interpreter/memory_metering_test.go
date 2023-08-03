@@ -705,7 +705,8 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", newTestAuthAccountValue(meter, randomAddressValue()))
+		addressValue := newRandomValueGenerator().randomAddressValue()
+		_, err := inter.Invoke("main", newTestAuthAccountValue(meter, addressValue))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -724,7 +725,8 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", newTestPublicAccountValue(meter, randomAddressValue()))
+		addressValue := newRandomValueGenerator().randomAddressValue()
+		_, err := inter.Invoke("main", newTestPublicAccountValue(meter, addressValue))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
