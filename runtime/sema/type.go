@@ -1940,7 +1940,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					memoryGauge,
 					arrayType,
 					identifier,
-					ArrayFilterFunctionType(elementType),
+					ArrayFilterFunctionType(memoryGauge, elementType),
 					arrayTypeFilterFunctionDocString,
 				)
 			},
@@ -2264,7 +2264,7 @@ func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
 	}
 }
 
-func ArrayFilterFunctionType(elementType Type) *FunctionType {
+func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *FunctionType {
 	// fun filter(_ function: ((T): Bool)): [T]
 	// funcType: elementType -> Bool
 	funcType := &FunctionType{
@@ -2285,9 +2285,7 @@ func ArrayFilterFunctionType(elementType Type) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(funcType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(&VariableSizedType{
-			Type: elementType,
-		}),
+		ReturnTypeAnnotation: NewTypeAnnotation(NewVariableSizedType(memoryGauge, elementType)),
 	}
 }
 
