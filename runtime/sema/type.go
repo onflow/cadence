@@ -7655,6 +7655,43 @@ func (t *EntitlementMapType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+// Converts its input to an entitled type according to the following rules:
+// * `ConvertToEntitledType(&T) ---> auth(Entitlements(T)) &T`
+// * `ConvertToEntitledType(Capability<T>) ---> Capability<ConvertToEntitledType(T)>`
+// * `ConvertToEntitledType(T) ---> T`
+// where Entitlements(I) is defined as the result of T.SupportedEntitlements()
+func ConvertToEntitledType(memoryGauge common.MemoryGauge, t Type) Type {
+	switch t := t.(type) {
+	case *ReferenceType:
+		switch t.Authorization {
+		case UnauthorizedAccess:
+			innerType := ConvertToEntitledType(memoryGauge, t.Type)
+			auth := UnauthorizedAccess
+			if entitlementSupportingType, ok := innerType.(EntitlementSupportingType); ok {
+				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+				if supportedEntitlements.Len() > 0 {
+					auth = EntitlementSetAccess{
+						SetKind:      Conjunction,
+						Entitlements: supportedEntitlements,
+					}
+				}
+			}
+			return NewReferenceType(
+				memoryGauge,
+				innerType,
+				auth,
+			)
+		// type is already entitled
+		default:
+			return t
+		}
+	case *CapabilityType:
+		return NewCapabilityType(memoryGauge, ConvertToEntitledType(memoryGauge, t.BorrowType))
+	default:
+		return t
+	}
+}
+
 var NativeCompositeTypes = map[string]*CompositeType{}
 
 func init() {

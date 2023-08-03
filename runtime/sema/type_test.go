@@ -2021,3 +2021,10 @@ func TestMapType(t *testing.T) {
 		require.True(t, outputFunction.Parameters[0].TypeAnnotation.Type.(*GenericType).TypeParameter == outputFunction.TypeParameters[0])
 	})
 }
+
+func TestConvertToEntitledType(t *testing.T) {
+
+	t.Parallel()
+
+	entitlementE := NewEntitlementType()
+}
