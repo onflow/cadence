@@ -141,8 +141,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			},
 		},
 		PreConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: true,
 				},
@@ -169,8 +168,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			},
 		},
 		PostConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: false,
 				},
@@ -211,16 +209,18 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 						prettier.Group{
 							Doc: prettier.Concat{
 								prettier.Text("access(all)"),
-								prettier.Text(" "),
-								prettier.Text("let"),
-								prettier.Text(" "),
-								prettier.Group{
-									Doc: prettier.Concat{
-										prettier.Text("f"),
-										prettier.Text(": "),
-										prettier.Concat{
-											prettier.Text("@"),
-											prettier.Text("F"),
+								prettier.HardLine{},
+								prettier.Concat{
+									prettier.Text("let"),
+									prettier.Text(" "),
+									prettier.Group{
+										Doc: prettier.Concat{
+											prettier.Text("f"),
+											prettier.Text(": "),
+											prettier.Concat{
+												prettier.Text("@"),
+												prettier.Text("F"),
+											},
 										},
 									},
 								},
@@ -405,8 +405,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			},
 		},
 		PreConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: true,
 				},
@@ -433,8 +432,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			},
 		},
 		PostConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: false,
 				},
@@ -447,25 +445,26 @@ func TestTransactionDeclaration_String(t *testing.T) {
 
 	require.Equal(
 		t,
-		"transaction(x: X) {\n"+
-			"    access(all) let f: @F\n"+
-			"    \n"+
-			"    prepare(signer: AuthAccount) {}\n"+
-			"    \n"+
-			"    pre {\n"+
-			"        true:\n"+
-			"            \"pre\"\n"+
-			"    }\n"+
-			"    \n"+
-			"    execute {\n"+
-			"        \"xyz\"\n"+
-			"    }\n"+
-			"    \n"+
-			"    post {\n"+
-			"        false:\n"+
-			"            \"post\"\n"+
-			"    }\n"+
-			"}",
+		`transaction(x: X) {
+    access(all)
+    let f: @F
+    
+    prepare(signer: AuthAccount) {}
+    
+    pre {
+        true:
+            "pre"
+    }
+    
+    execute {
+        "xyz"
+    }
+    
+    post {
+        false:
+            "post"
+    }
+}`,
 		decl.String(),
 	)
 }

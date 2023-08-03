@@ -1343,24 +1343,16 @@ func TestImportRuntimeType(t *testing.T) {
 			},
 		},
 		{
-			label: "RestrictedType",
-			actual: &cadence.RestrictedType{
-				Type: &cadence.StructType{
-					Location:            TestLocation,
-					QualifiedIdentifier: "S",
-				},
-				Restrictions: []cadence.Type{
+			label: "IntersectionType",
+			actual: &cadence.IntersectionType{
+				Types: []cadence.Type{
 					&cadence.StructInterfaceType{
 						Location:            TestLocation,
 						QualifiedIdentifier: "T",
 					}},
 			},
-			expected: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            TestLocation,
-					QualifiedIdentifier: "S",
-				},
-				Restrictions: []interpreter.InterfaceStaticType{
+			expected: &interpreter.IntersectionStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						Location:            TestLocation,
 						QualifiedIdentifier: "T",
@@ -2067,7 +2059,7 @@ func TestExportTypeValue(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("with restricted static type", func(t *testing.T) {
+	t.Run("with intersection static type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2097,9 +2089,8 @@ func TestExportTypeValue(t *testing.T) {
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
 		ty := interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
-				Restrictions: []interpreter.InterfaceStaticType{
+			Type: &interpreter.IntersectionStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						Location:            TestLocation,
 						QualifiedIdentifier: "SI",
@@ -2113,13 +2104,8 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Type: &cadence.StructType{
-						QualifiedIdentifier: "S",
-						Location:            TestLocation,
-						Fields:              []cadence.Field{},
-					},
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						&cadence.StructInterfaceType{
 							QualifiedIdentifier: "SI",
 							Location:            TestLocation,

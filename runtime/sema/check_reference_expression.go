@@ -37,9 +37,9 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 	}
 
 	// Check the result type and ensure it is a reference type
-
+	var isOpt bool
 	var referenceType *ReferenceType
-	var targetType, returnType Type
+	var expectedLeftType, returnType Type
 
 	if !resultType.IsInvalidType() {
 		var ok bool
@@ -51,8 +51,9 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 		//
 		// In this case the reference expression's type is an optional type.
 		// Unwrap it one level to get the actual reference type
-		optType, optOk := resultType.(*OptionalType)
-		if optOk {
+		var optType *OptionalType
+		optType, isOpt = resultType.(*OptionalType)
+		if isOpt {
 			resultType = optType.Type
 		}
 
@@ -65,10 +66,10 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 				},
 			)
 		} else {
-			targetType = referenceType.Type
+			expectedLeftType = referenceType.Type
 			returnType = referenceType
-			if optOk {
-				targetType = &OptionalType{Type: targetType}
+			if isOpt {
+				expectedLeftType = &OptionalType{Type: expectedLeftType}
 				returnType = &OptionalType{Type: returnType}
 			}
 		}
@@ -78,7 +79,29 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	referencedExpression := referenceExpression.Expression
 
-	referencedType := checker.VisitExpression(referencedExpression, targetType)
+	beforeErrors := len(checker.errors)
+
+	referencedType, actualType := checker.visitExpression(referencedExpression, expectedLeftType)
+
+	hasErrors := len(checker.errors) > beforeErrors
+	if !hasErrors {
+		// If the reference type was an optional type,
+		// we proposed an optional type to the referenced expression.
+		//
+		// Check that it actually has an optional type
+
+		// If the reference type was a non-optional type,
+		// check that the referenced expression does not have an optional type
+
+		if _, ok := actualType.(*OptionalType); ok != isOpt {
+			checker.report(&TypeMismatchError{
+				ExpectedType: expectedLeftType,
+				ActualType:   actualType,
+				Expression:   referencedExpression,
+				Range:        checker.expressionRange(referenceExpression),
+			})
+		}
+	}
 
 	if referenceType == nil {
 		return InvalidType

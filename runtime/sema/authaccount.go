@@ -23,5 +23,5 @@ package sema
 var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
 
 func init() {
-	AuthAccountContractsTypeAddFunctionType.RequiredArgumentCount = RequiredArgumentCount(2)
+	AuthAccountContractsTypeAddFunctionType.Arity = &Arity{Min: 2}
 }

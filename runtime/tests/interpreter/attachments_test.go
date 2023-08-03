@@ -1092,7 +1092,7 @@ func TestInterpretAttachmentNameConflict(t *testing.T) {
 	})
 }
 
-func TestInterpretAttachmentRestrictedType(t *testing.T) {
+func TestInterpretAttachmentIntersectionType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {
@@ -1162,7 +1162,7 @@ func TestInterpretAttachmentRestrictedType(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
 
-	t.Run("constructor on restricted", func(t *testing.T) {
+	t.Run("constructor on intersection", func(t *testing.T) {
 
 		t.Parallel()
 

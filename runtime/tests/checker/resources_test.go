@@ -3383,7 +3383,7 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
 }
 
 // TestCheckResourceInterfaceUseAsType test if a resource
-// is a subtype of a restricted AnyResource type.
+// is a subtype of a intersection AnyResource type.
 func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 
 	t.Parallel()
@@ -3499,7 +3499,7 @@ func TestCheckInvalidResourceLossThroughFunctionResultAccess(t *testing.T) {
 }
 
 // TestCheckAnyResourceDestruction tests if resources
-// can be passed to restricted AnyResources parameters,
+// can be passed to intersection AnyResources parameters,
 // and if the argument can be destroyed.
 func TestCheckAnyResourceDestruction(t *testing.T) {
 
@@ -3982,11 +3982,10 @@ func TestCheckInvalidResourceDictionaryKeysForeach(t *testing.T) {
         }
     `)
 
-	errs := RequireCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 	assert.IsType(t, &sema.InvalidResourceDictionaryMemberError{}, errs[1])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
 
 func TestCheckInvalidResourceLossAfterMoveThroughDictionaryIndexing(t *testing.T) {
@@ -5229,7 +5228,7 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
 	})
 }
 
-func TestCheckRestrictedAnyResourceType(t *testing.T) {
+func TestCheckIntersectionAnyResourceType(t *testing.T) {
 
 	t.Parallel()
 
@@ -5239,7 +5238,7 @@ func TestCheckRestrictedAnyResourceType(t *testing.T) {
 
           resource R: RI {}
 
-          let ri: @AnyResource{RI} <- create R()
+          let ri: @{RI} <- create R()
         `)
 
 		require.NoError(t, err)
@@ -5251,7 +5250,7 @@ func TestCheckRestrictedAnyResourceType(t *testing.T) {
 
           resource R: RI {}
 
-          let ri: @[AnyResource{RI}] <- [<-create R()]
+          let ri: @[{RI}] <- [<-create R()]
         `)
 
 		require.NoError(t, err)
@@ -9446,4 +9445,60 @@ func TestCheckConditionalResourceCreationAndReturn(t *testing.T) {
     `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckResourceWithFunction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without return statement", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          fun test() {
+              let x: @AnyResource? <- nil
+
+              fun () {}
+
+              destroy x
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("with return statement", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          fun test() {
+              let x: @AnyResource? <- nil
+
+              fun (): Bool {
+                  return true
+              }
+
+              destroy x
+          }
+        `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          let x: @AnyResource? <- nil
+
+          fun () {
+              destroy x
+          }
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }

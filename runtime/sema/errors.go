@@ -76,6 +76,23 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// SuggestedFix
+
+type HasSuggestedFixes interface {
+	SuggestFixes(code string) []SuggestedFix
+}
+
+type SuggestedFix struct {
+	Message   string
+	TextEdits []TextEdit
+}
+
+type TextEdit struct {
+	Replacement string
+	Insertion   string
+	ast.Range
+}
+
 // InvalidPragmaError
 
 type InvalidPragmaError struct {
@@ -411,31 +428,59 @@ func (e *NotCallableError) Error() string {
 	)
 }
 
-// ArgumentCountError
+// InsufficientArgumentsError
 
-type ArgumentCountError struct {
-	ParameterCount int
-	ArgumentCount  int
+type InsufficientArgumentsError struct {
+	MinCount    int
+	ActualCount int
 	ast.Range
 }
 
-var _ SemanticError = &ArgumentCountError{}
-var _ errors.UserError = &ArgumentCountError{}
-var _ errors.SecondaryError = &ArgumentCountError{}
+var _ SemanticError = &InsufficientArgumentsError{}
+var _ errors.UserError = &InsufficientArgumentsError{}
+var _ errors.SecondaryError = &InsufficientArgumentsError{}
 
-func (*ArgumentCountError) isSemanticError() {}
+func (*InsufficientArgumentsError) isSemanticError() {}
 
-func (*ArgumentCountError) IsUserError() {}
+func (*InsufficientArgumentsError) IsUserError() {}
 
-func (e *ArgumentCountError) Error() string {
-	return "incorrect number of arguments"
+func (e *InsufficientArgumentsError) Error() string {
+	return "too few arguments"
 }
 
-func (e *ArgumentCountError) SecondaryError() string {
+func (e *InsufficientArgumentsError) SecondaryError() string {
 	return fmt.Sprintf(
-		"expected %d, got %d",
-		e.ParameterCount,
-		e.ArgumentCount,
+		"expected at least %d, got %d",
+		e.MinCount,
+		e.ActualCount,
+	)
+}
+
+// ExcessiveArgumentsError
+
+type ExcessiveArgumentsError struct {
+	MaxCount    int
+	ActualCount int
+	ast.Range
+}
+
+var _ SemanticError = &ExcessiveArgumentsError{}
+var _ errors.UserError = &ExcessiveArgumentsError{}
+var _ errors.SecondaryError = &ExcessiveArgumentsError{}
+
+func (*ExcessiveArgumentsError) isSemanticError() {}
+
+func (*ExcessiveArgumentsError) IsUserError() {}
+
+func (e *ExcessiveArgumentsError) Error() string {
+	return "too many arguments"
+}
+
+func (e *ExcessiveArgumentsError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected up to %d, got %d",
+		e.MaxCount,
+		e.ActualCount,
 	)
 }
 
@@ -450,6 +495,7 @@ type MissingArgumentLabelError struct {
 
 var _ SemanticError = &MissingArgumentLabelError{}
 var _ errors.UserError = &MissingArgumentLabelError{}
+var _ HasSuggestedFixes = &MissingArgumentLabelError{}
 
 func (*MissingArgumentLabelError) isSemanticError() {}
 
@@ -460,6 +506,23 @@ func (e *MissingArgumentLabelError) Error() string {
 		"missing argument label: `%s`",
 		e.ExpectedArgumentLabel,
 	)
+}
+
+func (e *MissingArgumentLabelError) SuggestFixes(_ string) []SuggestedFix {
+	return []SuggestedFix{
+		{
+			Message: "insert argument label",
+			TextEdits: []TextEdit{
+				{
+					Insertion: fmt.Sprintf("%s: ", e.ExpectedArgumentLabel),
+					Range: ast.NewUnmeteredRange(
+						e.StartPos,
+						e.StartPos,
+					),
+				},
+			},
+		},
+	}
 }
 
 // IncorrectArgumentLabelError
@@ -473,6 +536,7 @@ type IncorrectArgumentLabelError struct {
 var _ SemanticError = &IncorrectArgumentLabelError{}
 var _ errors.UserError = &IncorrectArgumentLabelError{}
 var _ errors.SecondaryError = &IncorrectArgumentLabelError{}
+var _ HasSuggestedFixes = &IncorrectArgumentLabelError{}
 
 func (*IncorrectArgumentLabelError) isSemanticError() {}
 
@@ -492,6 +556,50 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 		expected,
 		e.ActualArgumentLabel,
 	)
+}
+
+func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []SuggestedFix {
+	if len(e.ExpectedArgumentLabel) > 0 {
+		return []SuggestedFix{
+			{
+				Message: "replace argument label",
+				TextEdits: []TextEdit{
+					{
+						Replacement: fmt.Sprintf("%s:", e.ExpectedArgumentLabel),
+						Range:       e.Range,
+					},
+				},
+			},
+		}
+	} else {
+		endPos := e.Range.EndPos
+
+		var whitespaceSuffixLength int
+		for offset := endPos.Offset + 1; offset < len(code); offset++ {
+			if code[offset] == ' ' {
+				whitespaceSuffixLength++
+			} else {
+				break
+			}
+		}
+
+		adjustedEndPos := endPos.Shifted(nil, whitespaceSuffixLength)
+
+		return []SuggestedFix{
+			{
+				Message: "remove argument label",
+				TextEdits: []TextEdit{
+					{
+						Replacement: "",
+						Range: ast.Range{
+							StartPos: e.Range.StartPos,
+							EndPos:   adjustedEndPos,
+						},
+					},
+				},
+			},
+		}
+	}
 }
 
 // InvalidUnaryOperandError
@@ -915,6 +1023,7 @@ type NotDeclaredMemberError struct {
 var _ SemanticError = &NotDeclaredMemberError{}
 var _ errors.UserError = &NotDeclaredMemberError{}
 var _ errors.SecondaryError = &NotDeclaredMemberError{}
+var _ HasSuggestedFixes = &NotDeclaredMemberError{}
 
 func (*NotDeclaredMemberError) isSemanticError() {}
 
@@ -928,18 +1037,54 @@ func (e *NotDeclaredMemberError) Error() string {
 	)
 }
 
+func (e *NotDeclaredMemberError) findOptionalMember() string {
+	optionalType, ok := e.Type.(*OptionalType)
+	if !ok {
+		return ""
+	}
+
+	members := optionalType.Type.GetMembers()
+	name := e.Name
+	_, ok = members[name]
+	if !ok {
+		return ""
+	}
+
+	return name
+}
+
 func (e *NotDeclaredMemberError) SecondaryError() string {
-	if optionalType, ok := e.Type.(*OptionalType); ok {
-		members := optionalType.Type.GetMembers()
-		name := e.Name
-		if _, ok := members[name]; ok {
-			return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", name)
-		}
+	if optionalMember := e.findOptionalMember(); optionalMember != "" {
+		return fmt.Sprintf("type is optional, consider optional-chaining: ?.%s", optionalMember)
 	}
 	if closestMember := e.findClosestMember(); closestMember != "" {
 		return fmt.Sprintf("did you mean `%s`?", closestMember)
 	}
 	return "unknown member"
+}
+
+func (e *NotDeclaredMemberError) SuggestFixes(_ string) []SuggestedFix {
+	optionalMember := e.findOptionalMember()
+	if optionalMember == "" {
+		return nil
+	}
+
+	accessPos := e.Expression.AccessPos
+
+	return []SuggestedFix{
+		{
+			Message: "use optional chaining",
+			TextEdits: []TextEdit{
+				{
+					Insertion: "?",
+					Range: ast.Range{
+						StartPos: accessPos,
+						EndPos:   accessPos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // findClosestMember searches the names of the members on the accessed type,
@@ -1113,6 +1258,23 @@ func (*FunctionExpressionInConditionError) IsUserError() {}
 
 func (e *FunctionExpressionInConditionError) Error() string {
 	return "condition contains function"
+}
+
+// InvalidEmitConditionError
+
+type InvalidEmitConditionError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidEmitConditionError{}
+var _ errors.UserError = &InvalidEmitConditionError{}
+
+func (*InvalidEmitConditionError) isSemanticError() {}
+
+func (*InvalidEmitConditionError) IsUserError() {}
+
+func (e *InvalidEmitConditionError) Error() string {
+	return "invalid emit condition "
 }
 
 // MissingReturnValueError
@@ -1463,6 +1625,7 @@ func (e CyclicConformanceError) Error() string {
 type MultipleInterfaceDefaultImplementationsError struct {
 	CompositeKindedType CompositeKindedType
 	Member              *Member
+	ast.Range
 }
 
 var _ SemanticError = &MultipleInterfaceDefaultImplementationsError{}
@@ -1479,14 +1642,6 @@ func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
 		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
-}
-
-func (e *MultipleInterfaceDefaultImplementationsError) StartPosition() ast.Position {
-	return e.Member.Identifier.StartPosition()
-}
-
-func (e *MultipleInterfaceDefaultImplementationsError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Member.Identifier.EndPosition(memoryGauge)
 }
 
 // SpecialFunctionDefaultImplementationError
@@ -1524,6 +1679,7 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 type DefaultFunctionConflictError struct {
 	CompositeKindedType CompositeKindedType
 	Member              *Member
+	ast.Range
 }
 
 var _ SemanticError = &DefaultFunctionConflictError{}
@@ -1540,14 +1696,6 @@ func (e *DefaultFunctionConflictError) Error() string {
 		e.CompositeKindedType.QualifiedString(),
 		e.Member.Identifier.Identifier,
 	)
-}
-
-func (e *DefaultFunctionConflictError) StartPosition() ast.Position {
-	return e.Member.Identifier.StartPosition()
-}
-
-func (e *DefaultFunctionConflictError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.Member.Identifier.EndPosition(memoryGauge)
 }
 
 // InterfaceMemberConflictError
@@ -3407,64 +3555,43 @@ func (e *ConstantSizedArrayLiteralSizeError) SecondaryError() string {
 	)
 }
 
-// InvalidRestrictedTypeError
+// InvalidIntersectedTypeError
 
-type InvalidRestrictedTypeError struct {
+type InvalidIntersectedTypeError struct {
 	Type Type
 	ast.Range
 }
 
-var _ SemanticError = &InvalidRestrictedTypeError{}
-var _ errors.UserError = &InvalidRestrictedTypeError{}
+var _ SemanticError = &InvalidIntersectedTypeError{}
+var _ errors.UserError = &InvalidIntersectedTypeError{}
 
-func (*InvalidRestrictedTypeError) isSemanticError() {}
+func (*InvalidIntersectedTypeError) isSemanticError() {}
 
-func (*InvalidRestrictedTypeError) IsUserError() {}
+func (*InvalidIntersectedTypeError) IsUserError() {}
 
-func (e *InvalidRestrictedTypeError) Error() string {
-	return fmt.Sprintf(
-		"cannot restrict type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
-// InvalidRestrictionTypeError
-
-type InvalidRestrictionTypeError struct {
-	Type Type
-	ast.Range
-}
-
-var _ SemanticError = &InvalidRestrictionTypeError{}
-var _ errors.UserError = &InvalidRestrictionTypeError{}
-
-func (*InvalidRestrictionTypeError) isSemanticError() {}
-
-func (*InvalidRestrictionTypeError) IsUserError() {}
-
-func (e *InvalidRestrictionTypeError) Error() string {
+func (e *InvalidIntersectedTypeError) Error() string {
 	return fmt.Sprintf(
 		"cannot restrict using non-resource/structure interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// RestrictionCompositeKindMismatchError
+// IntersectionCompositeKindMismatchError
 
-type RestrictionCompositeKindMismatchError struct {
+type IntersectionCompositeKindMismatchError struct {
 	CompositeKind         common.CompositeKind
 	PreviousCompositeKind common.CompositeKind
 	ast.Range
 }
 
-var _ SemanticError = &RestrictionCompositeKindMismatchError{}
-var _ errors.UserError = &RestrictionCompositeKindMismatchError{}
+var _ SemanticError = &IntersectionCompositeKindMismatchError{}
+var _ errors.UserError = &IntersectionCompositeKindMismatchError{}
 
-func (*RestrictionCompositeKindMismatchError) isSemanticError() {}
+func (*IntersectionCompositeKindMismatchError) isSemanticError() {}
 
-func (*RestrictionCompositeKindMismatchError) IsUserError() {}
+func (*IntersectionCompositeKindMismatchError) IsUserError() {}
 
-func (e *RestrictionCompositeKindMismatchError) Error() string {
+func (e *IntersectionCompositeKindMismatchError) Error() string {
 	return fmt.Sprintf(
 		"interface kind %s does not match previous interface kind %s",
 		e.CompositeKind,
@@ -3472,105 +3599,87 @@ func (e *RestrictionCompositeKindMismatchError) Error() string {
 	)
 }
 
-// InvalidRestrictionTypeDuplicateError
+// InvalidIntersectionTypeDuplicateError
 
-type InvalidRestrictionTypeDuplicateError struct {
+type InvalidIntersectionTypeDuplicateError struct {
 	Type *InterfaceType
 	ast.Range
 }
 
-var _ SemanticError = &InvalidRestrictionTypeDuplicateError{}
-var _ errors.UserError = &InvalidRestrictionTypeDuplicateError{}
+var _ SemanticError = &InvalidIntersectionTypeDuplicateError{}
+var _ errors.UserError = &InvalidIntersectionTypeDuplicateError{}
 
-func (*InvalidRestrictionTypeDuplicateError) isSemanticError() {}
+func (*InvalidIntersectionTypeDuplicateError) isSemanticError() {}
 
-func (*InvalidRestrictionTypeDuplicateError) IsUserError() {}
+func (*InvalidIntersectionTypeDuplicateError) IsUserError() {}
 
-func (e *InvalidRestrictionTypeDuplicateError) Error() string {
+func (e *InvalidIntersectionTypeDuplicateError) Error() string {
 	return fmt.Sprintf(
-		"duplicate restriction: `%s`",
+		"duplicate intersected type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// InvalidNonConformanceRestrictionError
+// InvalidNonConformanceIntersectionError
 
-type InvalidNonConformanceRestrictionError struct {
+type InvalidNonConformanceIntersectionError struct {
 	Type *InterfaceType
 	ast.Range
 }
 
-var _ SemanticError = &InvalidNonConformanceRestrictionError{}
-var _ errors.UserError = &InvalidNonConformanceRestrictionError{}
+var _ SemanticError = &InvalidNonConformanceIntersectionError{}
+var _ errors.UserError = &InvalidNonConformanceIntersectionError{}
 
-func (*InvalidNonConformanceRestrictionError) isSemanticError() {}
+func (*InvalidNonConformanceIntersectionError) isSemanticError() {}
 
-func (*InvalidNonConformanceRestrictionError) IsUserError() {}
+func (*InvalidNonConformanceIntersectionError) IsUserError() {}
 
-func (e *InvalidNonConformanceRestrictionError) Error() string {
+func (e *InvalidNonConformanceIntersectionError) Error() string {
 	return fmt.Sprintf(
-		"restricted type does not conform to restricting type: `%s`",
+		"intersection type does not conform to restricting type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// InvalidRestrictedTypeMemberAccessError
+// IntersectionMemberClashError
 
-type InvalidRestrictedTypeMemberAccessError struct {
-	Name string
-	ast.Range
-}
-
-var _ SemanticError = &InvalidRestrictedTypeMemberAccessError{}
-var _ errors.UserError = &InvalidRestrictedTypeMemberAccessError{}
-
-func (*InvalidRestrictedTypeMemberAccessError) isSemanticError() {}
-
-func (*InvalidRestrictedTypeMemberAccessError) IsUserError() {}
-
-func (e *InvalidRestrictedTypeMemberAccessError) Error() string {
-	return fmt.Sprintf("member of restricted type is not accessible: %s", e.Name)
-}
-
-// RestrictionMemberClashError
-
-type RestrictionMemberClashError struct {
+type IntersectionMemberClashError struct {
 	RedeclaringType       *InterfaceType
 	OriginalDeclaringType *InterfaceType
 	Name                  string
 	ast.Range
 }
 
-var _ SemanticError = &RestrictionMemberClashError{}
-var _ errors.UserError = &RestrictionMemberClashError{}
+var _ SemanticError = &IntersectionMemberClashError{}
+var _ errors.UserError = &IntersectionMemberClashError{}
 
-func (*RestrictionMemberClashError) isSemanticError() {}
+func (*IntersectionMemberClashError) isSemanticError() {}
 
-func (*RestrictionMemberClashError) IsUserError() {}
+func (*IntersectionMemberClashError) IsUserError() {}
 
-func (e *RestrictionMemberClashError) Error() string {
+func (e *IntersectionMemberClashError) Error() string {
 	return fmt.Sprintf(
-		"restriction has member clash with previous restriction `%s`: %s",
+		"intersected type has member clash with previous intersected type `%s`: %s",
 		e.OriginalDeclaringType.QualifiedString(),
 		e.Name,
 	)
 }
 
-// AmbiguousRestrictedTypeError
+// AmbiguousIntersectionTypeError
 
-type AmbiguousRestrictedTypeError struct {
+type AmbiguousIntersectionTypeError struct {
 	ast.Range
 }
 
-var _ SemanticError = &AmbiguousRestrictedTypeError{}
-var _ errors.UserError = &AmbiguousRestrictedTypeError{}
+var _ SemanticError = &AmbiguousIntersectionTypeError{}
+var _ errors.UserError = &AmbiguousIntersectionTypeError{}
 
-func (*AmbiguousRestrictedTypeError) isSemanticError() {}
+func (*AmbiguousIntersectionTypeError) isSemanticError() {}
 
-func (*AmbiguousRestrictedTypeError) IsUserError() {}
+func (*AmbiguousIntersectionTypeError) IsUserError() {}
 
-func (e *AmbiguousRestrictedTypeError) Error() string {
-	return "ambiguous restricted type"
+func (e *AmbiguousIntersectionTypeError) Error() string {
+	return "ambiguous intersection type"
 }
 
 // InvalidPathDomainError

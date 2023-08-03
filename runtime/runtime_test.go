@@ -2586,7 +2586,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           signer.save(<-createR(), to: /storage/r)
-          let cap = signer.capabilities.storage.issue<&AnyResource{RI}>(/storage/r)
+          let cap = signer.capabilities.storage.issue<&{RI}>(/storage/r)
           signer.capabilities.publish(cap, at: /public/r) 
         }
       }
@@ -2602,7 +2602,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let ref = signer.capabilities.borrow<&AnyResource{RI}>(/public/r)!
+          let ref = signer.capabilities.borrow<&{RI}>(/public/r)!
           ref.x()
         }
       }
@@ -4167,7 +4167,7 @@ access(all) contract FungibleToken {
             }
         }
 
-        access(all) fun deposit(from: @AnyResource{Receiver}) {
+        access(all) fun deposit(from: @{Receiver}) {
             pre {
                 from.balance > 0:
                     "Deposit balance needs to be positive!"
@@ -4193,7 +4193,7 @@ access(all) contract FungibleToken {
         }
 
         // transfer combines withdraw and deposit into one function call
-        access(all) fun transfer(to: &AnyResource{Receiver}, amount: Int) {
+        access(all) fun transfer(to: &{Receiver}, amount: Int) {
             pre {
                 amount <= self.balance:
                     "Insufficient funds"
@@ -4205,7 +4205,7 @@ access(all) contract FungibleToken {
             to.deposit(from: <-self.withdraw(amount: amount))
         }
 
-        access(all) fun deposit(from: @AnyResource{Receiver}) {
+        access(all) fun deposit(from: @{Receiver}) {
             self.balance = self.balance + from.balance
             destroy from
         }
@@ -4220,7 +4220,7 @@ access(all) contract FungibleToken {
     }
 
     access(all) resource VaultMinter {
-        access(all) fun mintTokens(amount: Int, recipient: &AnyResource{Receiver}) {
+        access(all) fun mintTokens(amount: Int, recipient: &{Receiver}) {
             recipient.deposit(from: <-create Vault(balance: amount))
         }
     }
@@ -4255,9 +4255,8 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
           prepare(acct: AuthAccount) {
 
-              let receiverCap = acct.capabilities.storage.issue<&AnyResource{FungibleToken.Receiver}>(
-                  /storage/vault
-              )
+              let receiverCap = acct.capabilities.storage
+                  .issue<&{FungibleToken.Receiver}>(/storage/vault)
               acct.capabilities.publish(receiverCap, at: /public/receiver)
 
               let vaultCap = acct.capabilities.storage.issue<&FungibleToken.Vault>(/storage/vault)
@@ -4277,9 +4276,8 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
               acct.save(<-vault, to: /storage/vault)
 
-              let receiverCap = acct.capabilities.storage.issue<&AnyResource{FungibleToken.Receiver}>(
-                  /storage/vault
-              )
+              let receiverCap = acct.capabilities.storage
+                  .issue<&{FungibleToken.Receiver}>(/storage/vault)
               acct.capabilities.publish(receiverCap, at: /public/receiver)
 
               let vaultCap = acct.capabilities.storage.issue<&FungibleToken.Vault>(/storage/vault)
@@ -4385,9 +4383,8 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       transaction {
 
           prepare(acct: AuthAccount) {
-              let receiverCap = acct.capabilities.storage.issue<&AnyResource{FungibleToken.Receiver}>(
-                  /storage/vault
-              )
+              let receiverCap = acct.capabilities.storage
+                  .issue<&{FungibleToken.Receiver}>(/storage/vault)
               acct.capabilities.publish(receiverCap, at: /public/receiver1)
 
               let vaultCap = acct.capabilities.storage.issue<&FungibleToken.Vault>(/storage/vault)
@@ -4407,9 +4404,8 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
               acct.save(<-vault, to: /storage/vault)
 
-              let receiverCap = acct.capabilities.storage.issue<&AnyResource{FungibleToken.Receiver}>(
-                  /storage/vault
-              )
+              let receiverCap = acct.capabilities.storage
+                  .issue<&{FungibleToken.Receiver}>(/storage/vault)
               acct.capabilities.publish(receiverCap, at: /public/receiver2)
 
               let vaultCap = acct.capabilities.storage.issue<&FungibleToken.Vault>(/storage/vault)
@@ -4561,7 +4557,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
                   transaction {
                       prepare(signer: AuthAccount) {
-                          signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
+                          signer.borrow<&{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
                       }
                   }
                 `,
@@ -6957,6 +6953,25 @@ func singleIdentifierLocationResolver(t testing.TB) func(identifiers []Identifie
 	}
 }
 
+func multipleIdentifierLocationResolver(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+
+	// Resolve each identifier as an address location
+
+	for _, identifier := range identifiers {
+		result = append(result, sema.ResolvedLocation{
+			Location: common.AddressLocation{
+				Address: location.(common.AddressLocation).Address,
+				Name:    identifier.Identifier,
+			},
+			Identifiers: []ast.Identifier{
+				identifier,
+			},
+		})
+	}
+
+	return
+}
+
 func TestRuntimeGetConfig(t *testing.T) {
 	t.Parallel()
 
@@ -8561,4 +8576,371 @@ func TestInvalidatedResourceUse2(t *testing.T) {
 	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+}
+
+func TestRuntimeInvalidRecursiveTransferViaVariableDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.AtreeValidationEnabled = false
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	contract := []byte(`
+      access(all) contract Test{
+
+          access(all) resource Holder{
+
+              access(all) var vaults: @[AnyResource]
+
+              init(_ vaults: @[AnyResource]){
+                  self.vaults <- vaults
+              }
+
+              access(all) fun x(): @[AnyResource] {
+                  var x <- self.vaults <- [<-Test.dummy()]
+                  return <-x
+              }
+
+              destroy() {
+                  var t <-  self.vaults[0] <- self.vaults    // here is the problem
+                  destroy t
+                  Test.account.save(<- self.x(), to: /storage/x42)
+              }
+          }
+
+          access(all) fun createHolder(_ vaults: @[AnyResource]): @Holder {
+              return <- create Holder(<-vaults)
+          }
+
+          access(all) resource Dummy {}
+
+          access(all) fun dummy(): @Dummy {
+              return <- create Dummy()
+          }
+      }
+    `)
+
+	tx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+              var holder <- Test.createHolder(<-[<-Test.dummy(), <-Test.dummy()])
+              destroy holder
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Test
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.RecursiveTransferError{})
+}
+
+func TestRuntimeInvalidRecursiveTransferViaFunctionArgument(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.AtreeValidationEnabled = false
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	contract := []byte(`
+      access(all) contract Test{
+
+          access(all) resource Holder {
+
+              access(all) var vaults: @[AnyResource]
+
+              init(_ vaults: @[AnyResource]) {
+                  self.vaults <- vaults
+              }
+
+              destroy() {
+                  self.vaults.append(<-self.vaults)
+              }
+          }
+
+          access(all) fun createHolder(_ vaults: @[AnyResource]): @Holder {
+              return <- create Holder(<-vaults)
+          }
+
+          access(all) resource Dummy {}
+
+          access(all) fun dummy(): @Dummy {
+              return <- create Dummy()
+          }
+      }
+    `)
+
+	tx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+              var holder <- Test.createHolder(<-[<-Test.dummy(), <-Test.dummy()])
+              destroy holder
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Test
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.RecursiveTransferError{})
+}
+
+func TestRuntimeOptionalReferenceAttack(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+      access(all) resource Vault {
+          access(all) var balance: UFix64
+
+          init(balance: UFix64) {
+              self.balance = balance
+          }
+
+          access(all) fun withdraw(amount: UFix64): @Vault {
+              self.balance = self.balance - amount
+              return <-create Vault(balance: amount)
+          }
+
+          access(all) fun deposit(from: @Vault) {
+              self.balance = self.balance + from.balance
+              destroy from
+          }
+      }
+
+      access(all) fun empty(): @Vault {
+          return <- create Vault(balance: 0.0)
+      }
+
+      access(all) fun giveme(): @Vault {
+          return <- create Vault(balance: 10.0)
+      }
+
+      access(all) fun main() {
+          var vault <- giveme() //get 10 token
+          var someDict:@{Int:Vault} <- {1:<-vault}
+          var r = (&someDict[1] as &AnyResource) as! &Vault
+          var double <- empty()
+          double.deposit(from: <- someDict.remove(key:1)!)
+          double.deposit(from: <- r.withdraw(amount:10.0))
+          log(double.balance) // 20
+          destroy double
+          destroy someDict
+      }
+    `
+
+	runtime := newTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	var events []cadence.Event
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(s string) {
+
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(nil, b)
+	}
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: [][]byte{},
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+
+	RequireError(t, err)
+
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestRuntimeReturnDestroyedOptional(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	script := []byte(`
+      access(all) resource Foo {}
+
+      access(all) fun main(): AnyStruct {
+          let y: @Foo? <- create Foo()
+          let z: @AnyResource <- y
+          var ref = &z as &AnyResource
+          ref = returnSameRef(ref)
+          destroy z
+          return ref
+      }
+
+      access(all) fun returnSameRef(_ ref: &AnyResource): &AnyResource {
+          return ref
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+	}
+
+	// Test
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }

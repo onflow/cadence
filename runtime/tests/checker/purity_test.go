@@ -303,6 +303,94 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		})
 	})
 
+	t.Run("copy", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.copy<Int>(from: /storage/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.borrow<&Int>(from: /storage/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("check", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.check<Int>(from: /storage/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("getlinktarget", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.getLinkTarget(/public/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("getcap", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.getCapability<&Int>(/public/foo)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("get contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.contracts.get(name: "")
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow contract", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.contracts.borrow<&Int>(name: "")
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("get keys", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckAccount(t, `
+        view fun foo() {
+            authAccount.keys.get(keyIndex: 0)
+        }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("save", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
@@ -442,14 +530,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
             emit FooEvent()
         }
         `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(t, errs[0].(*sema.PurityError).Range, ast.Range{
-			StartPos: ast.Position{Offset: 68, Line: 4, Column: 17},
-			EndPos:   ast.Position{Offset: 77, Line: 4, Column: 26},
-		})
+		require.NoError(t, err)
 	})
 
 	t.Run("external write", func(t *testing.T) {

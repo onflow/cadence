@@ -521,23 +521,6 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		value := inter.Globals.Get("ref").GetValue()
 		require.IsType(t, interpreter.Nil, value)
 	})
-
-	t.Run("upcast to optional", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          let i: Int = 1
-          let ref = &i as &Int?
-        `)
-
-		value := inter.Globals.Get("ref").GetValue()
-		require.IsType(t, &interpreter.SomeValue{}, value)
-
-		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange)
-		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
-	})
 }
 
 func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
@@ -1328,4 +1311,82 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
 	require.Error(t, err)
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+}
+
+func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      struct S {
+         fun foo() {}
+      }
+
+      fun main() {
+        let y: AnyStruct? = nil
+        let z: AnyStruct = y
+        let ref = &z as &AnyStruct
+        let s = ref as! &S
+        s.foo()
+      }
+    `)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+}
+
+func TestInterpretReferenceToOptional(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun main(): AnyStruct {
+        let y: Int? = nil
+        let z: AnyStruct = y
+        return &z as &AnyStruct
+      }
+    `)
+
+	value, err := inter.Invoke("main")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		&interpreter.EphemeralReferenceValue{
+			Value:         interpreter.Nil,
+			BorrowedType:  sema.AnyStructType,
+			Authorization: interpreter.UnauthorizedAccess,
+		},
+		value,
+	)
+}
+
+func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        resource Foo {}
+
+        fun main(): AnyStruct {
+            let y: @Foo? <- create Foo()
+            let z: @AnyResource <- y
+
+            var ref1 = &z as &AnyResource
+
+            var ref2 = returnSameRef(ref1)
+
+            destroy z
+            return ref2
+        }
+
+        fun returnSameRef(_ ref: &AnyResource): &AnyResource {
+            return ref
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
 }

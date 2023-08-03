@@ -39,6 +39,22 @@ type LocationRange struct {
 	ast.HasPosition
 }
 
+var _ ast.HasPosition = LocationRange{}
+
+func (r LocationRange) StartPosition() ast.Position {
+	if r.HasPosition == nil {
+		return ast.EmptyPosition
+	}
+	return r.HasPosition.StartPosition()
+}
+
+func (r LocationRange) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	if r.HasPosition == nil {
+		return ast.EmptyPosition
+	}
+	return r.HasPosition.EndPosition(memoryGauge)
+}
+
 func (r LocationRange) ImportLocation() common.Location {
 	return r.Location
 }

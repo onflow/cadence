@@ -946,3 +946,16 @@ func (e InvalidAttachmentOperationTargetError) Error() string {
 		e.Value,
 	)
 }
+
+// RecursiveTransferError
+type RecursiveTransferError struct {
+	LocationRange
+}
+
+var _ errors.UserError = RecursiveTransferError{}
+
+func (RecursiveTransferError) IsUserError() {}
+
+func (RecursiveTransferError) Error() string {
+	return "recursive transfer of value"
+}

@@ -149,6 +149,7 @@ func TestRandomMapOperations(t *testing.T) {
 			newOwner,
 			false,
 			nil,
+			nil,
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), copyOfTestMap.Count())
@@ -488,6 +489,7 @@ func TestRandomMapOperations(t *testing.T) {
 			newOwner,
 			true,
 			nil,
+			nil,
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), movedDictionary.Count())
@@ -602,6 +604,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			interpreter.EmptyLocationRange,
 			newOwner,
 			false,
+			nil,
 			nil,
 		).(*interpreter.ArrayValue)
 
@@ -858,6 +861,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			newOwner,
 			true,
 			nil,
+			nil,
 		).(*interpreter.ArrayValue)
 
 		require.Equal(t, len(elements), movedArray.Count())
@@ -946,6 +950,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			newOwner,
 			false,
 			nil,
+			nil,
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
@@ -986,6 +991,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			newOwner,
 			false,
 			nil,
+			nil,
 		).(*interpreter.CompositeValue)
 
 		require.NoError(t, err)
@@ -1009,6 +1015,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			interpreter.EmptyLocationRange,
 			newOwner,
 			true,
+			nil,
 			nil,
 		).(*interpreter.CompositeValue)
 

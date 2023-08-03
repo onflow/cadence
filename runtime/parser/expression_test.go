@@ -1478,7 +1478,7 @@ func TestParseInvocation(t *testing.T) {
 					{
 						Label:         "label",
 						LabelStartPos: &ast.Position{Offset: 2, Line: 1, Column: 2},
-						LabelEndPos:   &ast.Position{Offset: 6, Line: 1, Column: 6},
+						LabelEndPos:   &ast.Position{Offset: 7, Line: 1, Column: 7},
 						Expression: &ast.IntegerExpression{
 							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
@@ -1567,7 +1567,7 @@ func TestParseInvocation(t *testing.T) {
 					{
 						Label:         "a",
 						LabelStartPos: &ast.Position{Offset: 2, Line: 1, Column: 2},
-						LabelEndPos:   &ast.Position{Offset: 2, Line: 1, Column: 2},
+						LabelEndPos:   &ast.Position{Offset: 3, Line: 1, Column: 3},
 						Expression: &ast.IntegerExpression{
 							PositiveLiteral: []byte("1"),
 							Value:           big.NewInt(1),
@@ -1582,7 +1582,7 @@ func TestParseInvocation(t *testing.T) {
 					{
 						Label:         "b",
 						LabelStartPos: &ast.Position{Offset: 6, Line: 1, Column: 6},
-						LabelEndPos:   &ast.Position{Offset: 6, Line: 1, Column: 6},
+						LabelEndPos:   &ast.Position{Offset: 7, Line: 1, Column: 7},
 						Expression: &ast.IntegerExpression{
 							PositiveLiteral: []byte("2"),
 							Value:           big.NewInt(2),
@@ -4831,7 +4831,7 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-	    let a = b(x: 1, y: 2)
+	    let a = b(x: 1, y: 2, z : 3)
 	`
 	result, errs := testParseProgram(code)
 	require.Empty(t, errs)
@@ -4860,7 +4860,7 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 						{
 							Label:         "x",
 							LabelStartPos: &ast.Position{Offset: 16, Line: 2, Column: 15},
-							LabelEndPos:   &ast.Position{Offset: 16, Line: 2, Column: 15},
+							LabelEndPos:   &ast.Position{Offset: 17, Line: 2, Column: 16},
 							Expression: &ast.IntegerExpression{
 								PositiveLiteral: []byte("1"),
 								Value:           big.NewInt(1),
@@ -4875,7 +4875,7 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 						{
 							Label:         "y",
 							LabelStartPos: &ast.Position{Offset: 22, Line: 2, Column: 21},
-							LabelEndPos:   &ast.Position{Offset: 22, Line: 2, Column: 21},
+							LabelEndPos:   &ast.Position{Offset: 23, Line: 2, Column: 22},
 							Expression: &ast.IntegerExpression{
 								PositiveLiteral: []byte("2"),
 								Value:           big.NewInt(2),
@@ -4887,9 +4887,24 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 							},
 							TrailingSeparatorPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 						},
+						{
+							Label:         "z",
+							LabelStartPos: &ast.Position{Offset: 28, Line: 2, Column: 27},
+							LabelEndPos:   &ast.Position{Offset: 30, Line: 2, Column: 29},
+							Expression: &ast.IntegerExpression{
+								PositiveLiteral: []byte("3"),
+								Value:           big.NewInt(3),
+								Base:            10,
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
+									EndPos:   ast.Position{Offset: 32, Line: 2, Column: 31},
+								},
+							},
+							TrailingSeparatorPos: ast.Position{Offset: 33, Line: 2, Column: 32},
+						},
 					},
 					ArgumentsStartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
-					EndPos:            ast.Position{Offset: 26, Line: 2, Column: 25},
+					EndPos:            ast.Position{Offset: 33, Line: 2, Column: 32},
 				},
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},

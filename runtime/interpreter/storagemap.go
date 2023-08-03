@@ -67,20 +67,16 @@ func NewStorageMapWithRootID(storage atree.SlabStorage, storageID atree.StorageI
 
 // ValueExists returns true if the given key exists in the storage map.
 func (s StorageMap) ValueExists(key StorageMapKey) bool {
-	_, err := s.orderedMap.Get(
+	exists, err := s.orderedMap.Has(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
 		key.AtreeValue(),
 	)
 	if err != nil {
-		var keyNotFoundError *atree.KeyNotFoundError
-		if goerrors.As(err, &keyNotFoundError) {
-			return false
-		}
 		panic(errors.NewExternalError(err))
 	}
 
-	return true
+	return exists
 }
 
 // ReadValue returns the value for the given key.

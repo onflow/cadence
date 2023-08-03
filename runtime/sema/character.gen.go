@@ -21,6 +21,16 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
+const CharacterTypeUtf8FieldName = "utf8"
+
+var CharacterTypeUtf8FieldType = &VariableSizedType{
+	Type: UInt8Type,
+}
+
+const CharacterTypeUtf8FieldDocString = `
+The byte array of the UTF-8 encoding
+`
+
 const CharacterTypeToStringFunctionName = "toString"
 
 var CharacterTypeToStringFunctionType = &FunctionType{
@@ -51,6 +61,14 @@ var CharacterType = &SimpleType{
 func init() {
 	CharacterType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessAll,
+				ast.VariableKindConstant,
+				CharacterTypeUtf8FieldName,
+				CharacterTypeUtf8FieldType,
+				CharacterTypeUtf8FieldDocString,
+			),
 			NewUnmeteredFunctionMember(
 				t,
 				ast.AccessAll,

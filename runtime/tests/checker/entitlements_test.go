@@ -2890,19 +2890,19 @@ func TestCheckEntitlementTypeAnnotation(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
-	t.Run("restricted", func(t *testing.T) {
+	t.Run("intersection", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
 			entitlement E
 			resource interface I {
-				let e: E{E}
+				let e: {E}
 			}
 		`)
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidRestrictionTypeError{}, errs[0])
-		require.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[1])
+		require.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		require.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
 	})
 
 	t.Run("reference", func(t *testing.T) {
@@ -3101,19 +3101,19 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
-	t.Run("restricted", func(t *testing.T) {
+	t.Run("intersection", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
 			entitlement mapping E {}
 			resource interface I {
-				let e: E{E}
+				let e: {E}
 			}
 		`)
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidRestrictionTypeError{}, errs[0])
-		require.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[1])
+		require.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		require.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
 	})
 
 	t.Run("reference", func(t *testing.T) {
@@ -3485,11 +3485,16 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y) &Int?")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &Int?")
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		require.Equal(t, typeMismatchError.ExpectedType.QualifiedString(), "S?")
+		require.Equal(t, typeMismatchError.ActualType.QualifiedString(), "S")
+
+		require.ErrorAs(t, errs[1], &typeMismatchError)
+		require.Equal(t, typeMismatchError.ExpectedType.QualifiedString(), "auth(F, Y) &Int?")
+		require.Equal(t, typeMismatchError.ActualType.QualifiedString(), "auth(Y) &Int?")
 	})
 
 	t.Run("basic with optional function call return invalid", func(t *testing.T) {
@@ -3517,38 +3522,6 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &Int?")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &Int?")
-	})
-
-	t.Run("basic with optional partial map", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheck(t, `
-		entitlement X
-		entitlement Y
-		entitlement E
-		entitlement F
-		entitlement mapping M {
-			X -> Y
-			E -> F
-		}
-		struct S {
-			access(M) let foo: auth(M) &Int
-			init() {
-				self.foo = &3 as auth(F, Y) &Int
-			}
-		}
-		fun test(): &Int {
-			let s = S()
-			let ref = &s as auth(X) &S?
-			let i: auth(F, Y) &Int? = ref?.foo
-			return i!
-		}
-		`)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y) &Int?")
 		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &Int?")
 	})
 
@@ -4408,7 +4381,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("basic owned restricted fully entitled", func(t *testing.T) {
+	t.Run("basic owned intersection fully entitled", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
 		entitlement X

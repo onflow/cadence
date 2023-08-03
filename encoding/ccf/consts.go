@@ -62,7 +62,7 @@ const (
 	CBORTagConstsizedArrayType
 	CBORTagDictType
 	CBORTagReferenceType
-	CBORTagRestrictedType
+	CBORTagIntersectionType
 	CBORTagCapabilityType
 	_
 	_
@@ -117,7 +117,7 @@ const (
 	CBORTagConstsizedArrayTypeValue
 	CBORTagDictTypeValue
 	CBORTagReferenceTypeValue
-	CBORTagRestrictedTypeValue
+	CBORTagIntersectionTypeValue
 	CBORTagCapabilityTypeValue
 	CBORTagFunctionTypeValue
 	_

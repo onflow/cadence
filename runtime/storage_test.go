@@ -1285,10 +1285,11 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
           prepare(signer: AuthAccount) {
               signer.save(<-Test.createR(), to: /storage/r)
 
-              let cap = signer.capabilities.storage.issue<&Test.R{Test.RI}>(/storage/r)
+              let cap = signer.capabilities.storage
+                  .issue<&Test.R>(/storage/r)
               signer.capabilities.publish(cap, at: /public/r)
 
-              let ref = signer.capabilities.borrow<&Test.R{Test.RI}>(/public/r)!
+              let ref = signer.capabilities.borrow<&Test.R>(/public/r)!
 
               let casted = (ref as AnyStruct) as! &Test.R
           }
@@ -1382,10 +1383,10 @@ func TestRuntimeStorageReferenceDowncast(t *testing.T) {
           prepare(signer: AuthAccount) {
               signer.save(<-Test.createR(), to: /storage/r)
 
-              let cap = signer.capabilities.storage.issue<&Test.R{Test.RI}>(/storage/r)
+              let cap = signer.capabilities.storage.issue<&Test.R>(/storage/r)
               signer.capabilities.publish(cap, at: /public/r)
 
-              let ref = signer.capabilities.borrow<&Test.R{Test.RI}>(/public/r)!
+              let ref = signer.capabilities.borrow<&Test.R>(/public/r)!
 
               let casted = (ref as AnyStruct) as! auth(Test.E) &Test.R
           }
@@ -1988,7 +1989,7 @@ access(all) contract Test {
         return <- create Holder()
     }
 
-    access(all) fun attach(asRole: Role, receiver: &AnyResource{Receiver}) {
+    access(all) fun attach(asRole: Role, receiver: &{Receiver}) {
         // TODO: Now verify that the owner is valid.
 
         let capability = self.capabilities[asRole]!
@@ -2014,7 +2015,7 @@ transaction {
     prepare(acct: AuthAccount) {}
     execute {
         let holder <- Test.createHolder()
-        Test.attach(asRole: Test.Role.aaa, receiver: &holder as &AnyResource{Test.Receiver})
+        Test.attach(asRole: Test.Role.aaa, receiver: &holder as &{Test.Receiver})
         destroy holder
     }
 }

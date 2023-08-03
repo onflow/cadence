@@ -264,6 +264,11 @@ func (checker *Checker) recordReference(targetVariable *Variable, expr ast.Expre
 		return
 	}
 
+	unwrappedVarType := UnwrapOptionalType(targetVariable.Type)
+	if _, isReferenceType := unwrappedVarType.(*ReferenceType); !isReferenceType {
+		return
+	}
+
 	targetVariable.referencedResourceVariables = checker.referencedVariables(expr)
 }
 

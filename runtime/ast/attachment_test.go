@@ -207,7 +207,7 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 		t,
 		prettier.Concat{
 			prettier.Text("access(all)"),
-			prettier.Text(" "),
+			prettier.HardLine{},
 			prettier.Text("attachment"),
 			prettier.Text(" "),
 			prettier.Text("Foo"),
@@ -258,7 +258,14 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 		decl.Doc(),
 	)
 
-	require.Equal(t, "access(all) attachment Foo for Bar: Baz {\nrequire entitlement X\nrequire entitlement Y\n}", decl.String())
+	require.Equal(t,
+		`access(all)
+attachment Foo for Bar: Baz {
+require entitlement X
+require entitlement Y
+}`,
+		decl.String(),
+	)
 }
 
 func TestAttachExpressionMarshallJSON(t *testing.T) {

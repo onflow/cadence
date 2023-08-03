@@ -172,19 +172,15 @@ func TestType_ID(t *testing.T) {
 			"S.test.BarI",
 		},
 		{
-			&RestrictedType{
-				Type: &ResourceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Foo",
-				},
-				Restrictions: []Type{
+			&IntersectionType{
+				Types: []Type{
 					&ResourceInterfaceType{
 						Location:            utils.TestLocation,
 						QualifiedIdentifier: "FooI",
 					},
 				},
 			},
-			"S.test.Foo{S.test.FooI}",
+			"{S.test.FooI}",
 		},
 		{
 			&FunctionType{
@@ -1696,22 +1692,20 @@ func TestTypeEquality(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted type", func(t *testing.T) {
+	t.Run("intersection type", func(t *testing.T) {
 		t.Parallel()
 
 		t.Run("equal", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			source := &IntersectionType{
+				Types: []Type{
 					AnyType{},
 					IntType{},
 				},
 			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			target := &IntersectionType{
+				Types: []Type{
 					AnyType{},
 					IntType{},
 				},
@@ -1719,19 +1713,17 @@ func TestTypeEquality(t *testing.T) {
 			assert.True(t, source.Equal(target))
 		})
 
-		t.Run("different restrictions order", func(t *testing.T) {
+		t.Run("different intersections order", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			source := &IntersectionType{
+				Types: []Type{
 					AnyType{},
 					IntType{},
 				},
 			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			target := &IntersectionType{
+				Types: []Type{
 					IntType{},
 					AnyType{},
 				},
@@ -1739,20 +1731,18 @@ func TestTypeEquality(t *testing.T) {
 			assert.True(t, source.Equal(target))
 		})
 
-		t.Run("duplicate restrictions", func(t *testing.T) {
+		t.Run("duplicate intersections", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			source := &IntersectionType{
+				Types: []Type{
 					IntType{},
 					AnyType{},
 					IntType{},
 				},
 			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			target := &IntersectionType{
+				Types: []Type{
 					IntType{},
 					AnyType{},
 				},
@@ -1760,39 +1750,17 @@ func TestTypeEquality(t *testing.T) {
 			assert.True(t, source.Equal(target))
 		})
 
-		t.Run("different inner type", func(t *testing.T) {
+		t.Run("different intersections", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			source := &IntersectionType{
+				Types: []Type{
 					AnyType{},
 					IntType{},
 				},
 			}
-			target := &RestrictedType{
-				Type: StringType{},
-				Restrictions: []Type{
-					AnyType{},
-					IntType{},
-				},
-			}
-			assert.False(t, source.Equal(target))
-		})
-
-		t.Run("different restrictions", func(t *testing.T) {
-			t.Parallel()
-
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
-					IntType{},
-				},
-			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			target := &IntersectionType{
+				Types: []Type{
 					AnyType{},
 					StringType{},
 				},
@@ -1800,18 +1768,16 @@ func TestTypeEquality(t *testing.T) {
 			assert.False(t, source.Equal(target))
 		})
 
-		t.Run("different restrictions length", func(t *testing.T) {
+		t.Run("different intersections length", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			source := &IntersectionType{
+				Types: []Type{
 					AnyType{},
 				},
 			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			target := &IntersectionType{
+				Types: []Type{
 					AnyType{},
 					StringType{},
 				},
@@ -1822,9 +1788,8 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different type", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
+			source := &IntersectionType{
+				Types: []Type{
 					AnyType{},
 				},
 			}

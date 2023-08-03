@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/onflow/cadence v0.31.2-0.20230207221811-9eb6e7fe4121
 	github.com/rs/zerolog v1.26.1
-	github.com/sergi/go-diff v1.2.0
 	github.com/stretchr/testify v1.7.3
 )
 
@@ -15,6 +14,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.4.1-0.20220515183430-ad2eae63303f // indirect
 	github.com/fxamacker/circlehash v0.3.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.14 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381 // indirect
 	github.com/onflow/atree v0.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

@@ -430,22 +430,9 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 
 				checker, err := ParseAndCheck(t, code)
 
-				// NOTE: type mismatch is only tested when both kinds are not contracts
-				// (which can not be passed by value)
+				errs := RequireCheckerErrors(t, err, 1)
 
-				if firstKind != common.CompositeKindContract &&
-					secondKind != common.CompositeKindContract {
-
-					errs := RequireCheckerErrors(t, err, 2)
-
-					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-
-				} else {
-					errs := RequireCheckerErrors(t, err, 1)
-
-					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-				}
+				assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 
 				require.NotNil(t, checker)
 
@@ -1968,9 +1955,8 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 			Parameters: []sema.Parameter{
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(
-						&sema.RestrictedType{
-							Type: sema.AnyStructType,
-							Restrictions: []*sema.InterfaceType{
+						&sema.IntersectionType{
+							Types: []*sema.InterfaceType{
 								iType,
 							},
 						},
@@ -1980,9 +1966,8 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				&sema.DictionaryType{
 					KeyType: sema.IntType,
-					ValueType: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					ValueType: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							iType,
 						},
 					},
@@ -4110,6 +4095,72 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
 }
 
+func TestInheritedInterfaceMembers(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inherited interface field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			let foo: String
+		}
+		resource interface B: A {}
+		resource C: B {
+			let foo: String
+			init() {
+				self.foo = ""
+			}
+		}
+		fun test() {
+			let c: @{B} <- create C()
+			c.foo
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			fun foo ()
+		}
+		resource interface B: A {}
+		fun test(c: @{B}) {
+			c.foo()
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("doubly inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			fun foo ()
+		}
+		resource interface B: A {}
+		resource interface C: B {}
+		fun test(c: @{C}) {
+			c.foo()
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
 func TestCheckInterfaceEventsInheritance(t *testing.T) {
 
 	t.Parallel()
@@ -4175,28 +4226,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("restricted composite type subtyping", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            struct interface A {}
-
-            struct interface B: A  {}
-
-            struct S: B {}
-
-
-            fun foo(): {A} {
-                var s: S{B} = S()
-                return s
-            }
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("restricted anystruct type subtyping", func(t *testing.T) {
+	t.Run("intersection type subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4257,7 +4287,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attachment on restricted type", func(t *testing.T) {
+	t.Run("attachment on intersection type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4342,7 +4372,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted anystruct reference subtyping", func(t *testing.T) {
+	t.Run("intersection anystruct reference subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4357,13 +4387,13 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             // Case I: &{B, C} is a subtype of &{B}
             fun foo(): &{B} {
-                var s: S{B, C} = S()
+                var s: {B, C} = S()
                 return &s as &{B, C}
             }
 
             // Case II: &{B} is a subtype of &{A}
             fun bar(): &{A} {
-               var s: S{B} = S()
+               var s: {B} = S()
                return &s as &{B}
             }
         `)
@@ -4371,7 +4401,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted composite type reference subtyping", func(t *testing.T) {
+	t.Run("intersection composite type reference subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4385,22 +4415,22 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
             struct S: B, C {}
 
             // Case I: &S{B, C} is a subtype of &S{B}
-            fun foo(): &S{B} {
-                var s: S{B, C} = S()
-                return &s as &S{B, C}
+            fun foo(): &{B} {
+                var s: {B, C} = S()
+                return &s as &{B, C}
             }
 
-            // Case II: &S{B} is a subtype of &S{A}
-            fun bar(): &S{A} {
-               var s: S{B} = S()
-               return &s as &S{B}
+            // Case II: &{B} is a subtype of &S{A}
+            fun bar(): &{A} {
+               var s: {B} = S()
+               return &s as &{B}
             }
         `)
 
 		require.NoError(t, err)
 	})
 
-	t.Run("multi-restricted composite type reference subtyping", func(t *testing.T) {
+	t.Run("multi-intersection composite type reference subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4413,19 +4443,216 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             struct S: B, C {}
 
-            // Case I: &S{B, C} is a subtype of &S{B}
-            fun foo(): &S{B} {
-                var s: S{B, C} = S()
-                return &s as &S{B, C}
+            // Case I: &{B, C} is a subtype of &{B}
+            fun foo(): &{B} {
+                var s: {B, C} = S()
+                return &s as &{B, C}
             }
 
-            // Case II: &S{B, C} is also a subtype of &S{A}
-            fun bar(): &S{A} {
-               var s: S{B, C} = S()
-               return &s as &S{B, C}
+            // Case II: &{B, C} is also a subtype of &{A}
+            fun bar(): &{A} {
+               var s: {B, C} = S()
+               return &s as &{B, C}
             }
         `)
 
 		require.NoError(t, err)
 	})
+}
+
+func TestNestedInterfaceInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("mixed top level", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		resource interface Y: C.X {}
+        contract C {
+			resource interface X {}
+		}	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed top level interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		resource interface Y: C.X {}
+        contract interface C {
+			resource interface X {}
+		}	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract C {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+			resource ConcreteResource: MiddleInterface {}
+		 
+			fun createR(): @{TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract reverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract C {
+			resource ConcreteResource: MiddleInterface {}
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		 
+			fun createR(): @{TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract interface C {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+		 
+			fun createR(m: @{MiddleInterface}): @{TopInterface} {
+				return <-m
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract interface reverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract interface C {
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		 
+			fun createR(m: @{MiddleInterface}): @{TopInterface} {
+				return <-m
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract interface CI {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+		}
+        contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+		 
+			fun createR(): @{CI.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{CI.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract interface CI {
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{C1.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract interface CI {
+				resource interface MiddleInterface: C1.TopInterface {}
+		}
+		contract C1 {
+			resource interface TopInterface {}
+		}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed with top levels", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{SuperTopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract C1 {
+			resource interface TopInterface: SuperTopInterface {}
+		}
+		contract interface CI {
+				resource interface MiddleInterface: C1.TopInterface {}
+		}
+		resource interface SuperTopInterface {}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
 }

@@ -108,7 +108,7 @@ func (d *EntitlementDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(d.Access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 
@@ -177,7 +177,7 @@ func NewEntitlementMappingDeclaration(
 	docString string,
 	declRange Range,
 ) *EntitlementMappingDeclaration {
-	common.UseMemory(gauge, common.EntitlementDeclarationMemoryUsage)
+	common.UseMemory(gauge, common.EntitlementMappingDeclarationMemoryUsage)
 
 	return &EntitlementMappingDeclaration{
 		Access:       access,
@@ -242,7 +242,7 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(d.Access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 

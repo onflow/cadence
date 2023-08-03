@@ -135,7 +135,7 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Text(d.Access.Keyword()),
-			prettier.Space,
+			prettier.HardLine{},
 		)
 	}
 

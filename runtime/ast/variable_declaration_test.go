@@ -171,7 +171,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("access(all)"),
-					prettier.Text(" "),
+					prettier.HardLine{},
 					prettier.Text("let"),
 					prettier.Text(" "),
 					prettier.Group{
@@ -240,7 +240,7 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("access(all)"),
-					prettier.Text(" "),
+					prettier.HardLine{},
 					prettier.Text("let"),
 					prettier.Text(" "),
 					prettier.Group{
@@ -309,7 +309,8 @@ func TestVariableDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			"access(all) let foo: @AB <- true",
+			`access(all)
+let foo: @AB <- true`,
 			decl.String(),
 		)
 	})
@@ -347,7 +348,8 @@ func TestVariableDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			"access(all) let foo: @AB <- true <- false",
+			`access(all)
+let foo: @AB <- true <- false`,
 			decl.String(),
 		)
 	})

@@ -828,9 +828,8 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 
                     access(all) struct Baz: I1, I2, I3 {}
                 `,
-				expectedElementType: &sema.RestrictedType{
-					Type: sema.AnyStructType,
-					Restrictions: []*sema.InterfaceType{
+				expectedElementType: &sema.IntersectionType{
+					Types: []*sema.InterfaceType{
 						{
 							Location:      common.StringLocation("test"),
 							Identifier:    "I2",
@@ -851,9 +850,8 @@ func TestCheckArraySupertypeInference(t *testing.T) {
                     access(all) struct Baz: Foo {}
                 `,
 				expectedElementType: &sema.VariableSizedType{
-					Type: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					Type: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
 								Identifier:    "Foo",
@@ -876,9 +874,8 @@ func TestCheckArraySupertypeInference(t *testing.T) {
                     access(all) struct Baz: Foo {}
                 `,
 				expectedElementType: &sema.VariableSizedType{
-					Type: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					Type: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
 								Identifier:    "Foo",
@@ -1029,9 +1026,8 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
                     access(all) struct Baz: I1, I2, I3 {}
                 `,
 				expectedKeyType: sema.IntType,
-				expectedValueType: &sema.RestrictedType{
-					Type: sema.AnyStructType,
-					Restrictions: []*sema.InterfaceType{
+				expectedValueType: &sema.IntersectionType{
+					Types: []*sema.InterfaceType{
 						{
 							Location:      common.StringLocation("test"),
 							Identifier:    "I2",
@@ -1054,9 +1050,8 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				expectedKeyType: sema.IntType,
 				expectedValueType: &sema.DictionaryType{
 					KeyType: sema.IntType,
-					ValueType: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					ValueType: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
 								Identifier:    "Foo",
@@ -1081,9 +1076,8 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				expectedKeyType: sema.IntType,
 				expectedValueType: &sema.DictionaryType{
 					KeyType: sema.IntType,
-					ValueType: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					ValueType: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							{
 								Location:      common.StringLocation("test"),
 								Identifier:    "Foo",
@@ -1191,7 +1185,7 @@ func TestCheckTypeInferenceForTypesWithDifferentTypeMaskRanges(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            let x: @AnyResource{Foo} <- create Bar()
+            let x: @{Foo} <- create Bar()
             let y = [<-x, 6]
 
             resource interface Foo {}
@@ -1207,7 +1201,7 @@ func TestCheckTypeInferenceForTypesWithDifferentTypeMaskRanges(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            let x: AnyStruct{Foo} = Bar()
+            let x: {Foo} = Bar()
             let y = true ? x : nil
 
             struct interface Foo {}
@@ -1243,9 +1237,8 @@ func TestCheckCompositeSupertypeInference(t *testing.T) {
                 access(all) struct Bar: I3 {}
             `
 
-		expectedType := &sema.RestrictedType{
-			Type: sema.AnyStructType,
-			Restrictions: []*sema.InterfaceType{
+		expectedType := &sema.IntersectionType{
+			Types: []*sema.InterfaceType{
 				{
 					Location:      common.StringLocation("test"),
 					Identifier:    "I1",
@@ -1259,9 +1252,9 @@ func TestCheckCompositeSupertypeInference(t *testing.T) {
 
 		xType := RequireGlobalValue(t, checker.Elaboration, "x")
 
-		require.IsType(t, &sema.RestrictedType{}, xType)
-		restrictedType := xType.(*sema.RestrictedType)
+		require.IsType(t, &sema.IntersectionType{}, xType)
+		intersectionType := xType.(*sema.IntersectionType)
 
-		assert.Equal(t, expectedType.ID(), restrictedType.ID())
+		assert.Equal(t, expectedType.ID(), intersectionType.ID())
 	})
 }

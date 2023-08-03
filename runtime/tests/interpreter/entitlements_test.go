@@ -532,8 +532,8 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 			fun test(): Bool {
 				let x <- create R()
-				let r = &x as auth(E) &AnyResource{RI}
-				let r2 = r as! &R{RI}
+				let r = &x as auth(E) &{RI}
+				let r2 = r as! &{RI}
 				let isSuccess = r2 != nil
 				destroy x
 				return isSuccess
@@ -711,7 +711,8 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			entitlement X
 
 			fun test(): Bool {
-				let arr: auth(X) &Int? = &1
+				let one: Int? = 1
+				let arr: auth(X) &Int? = &one
 				let upArr = arr as &Int?
 				return upArr as? auth(X) &Int? == nil
 			}
@@ -1018,6 +1019,7 @@ func TestInterpretEntitledResult(t *testing.T) {
 
 func TestInterpretEntitlementMappingFields(t *testing.T) {
 	t.Parallel()
+
 	t.Run("basic", func(t *testing.T) {
 
 		t.Parallel()
@@ -1280,7 +1282,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			}
 		}
 		fun test(): auth(Y) &Int {
-			let s = S()
+			let s: S? = S()
 			let ref = &s as auth(X) &S?
 			let i = ref?.foo
 			return i!
@@ -1370,6 +1372,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 
 	t.Parallel()
+
 	t.Run("basic", func(t *testing.T) {
 
 		t.Parallel()
@@ -1496,7 +1499,7 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			}
 		}
 		fun test(): auth(Y, Z) &Int {
-			let s = S()
+			let s: S? = S()
 			let ref: auth(X, E) &S? = &s
 			let i = ref?.foo()
 			return i!
@@ -2282,7 +2285,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		)
 	})
 
-	t.Run("basic restricted access", func(t *testing.T) {
+	t.Run("basic intersection access", func(t *testing.T) {
 
 		t.Parallel()
 

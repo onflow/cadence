@@ -643,10 +643,12 @@ func TestParseLiteral(t *testing.T) {
 		)
 	}
 
-	for _, signedIntegerType := range append(
-		sema.AllSignedIntegerTypes[:],
-		sema.IntegerType,
-		sema.SignedIntegerType,
+	for _, signedIntegerType := range common.Concat(
+		sema.AllSignedIntegerTypes,
+		[]sema.Type{
+			sema.IntegerType,
+			sema.SignedIntegerType,
+		},
 	) {
 
 		t.Run(

@@ -1482,7 +1482,7 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
                           }
 
                           access(all) fun test() {
-                              let b: @AnyResource{B} <- create BImpl()
+                              let b: @{B} <- create BImpl()
                               let oldA <- b.a <- create A()
                               destroy oldA
                               destroy b
@@ -1996,7 +1996,7 @@ func TestCheckAccessSameContractInnerStructInterfaceField(t *testing.T) {
                           }
 
                           fun useB() {
-                              let b: AnyStruct{B} = A.BImpl()
+                              let b: {B} = A.BImpl()
                               b.field
                           }
                       }
@@ -2104,7 +2104,7 @@ func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
 
                       contract C {
                           fun useB() {
-                              let b: AnyStruct{A.B} = A.BImpl()
+                              let b: {A.B} = A.BImpl()
                               b.field
                           }
                       }
