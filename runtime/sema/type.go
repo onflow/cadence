@@ -4932,7 +4932,9 @@ func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 			})
 		}
 	})
-	// TODO: include inherited entitlements
+	t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
+		set.SetAll(it.SupportedEntitlements())
+	})
 
 	t.supportedEntitlements = set
 	return set
