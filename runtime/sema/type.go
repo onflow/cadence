@@ -7660,6 +7660,7 @@ func (t *EntitlementMapType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 // Converts its input to an entitled type according to the following rules:
 // * `ConvertToEntitledType(&T) ---> auth(Entitlements(T)) &T`
 // * `ConvertToEntitledType(Capability<T>) ---> Capability<ConvertToEntitledType(T)>`
+// * `ConvertToEntitledType(T?) ---> ConvertToEntitledType(T)?
 // * `ConvertToEntitledType(T) ---> T`
 // where Entitlements(I) is defined as the result of T.SupportedEntitlements()
 func ConvertToEntitledType(memoryGauge common.MemoryGauge, t Type) Type {
@@ -7687,6 +7688,8 @@ func ConvertToEntitledType(memoryGauge common.MemoryGauge, t Type) Type {
 		default:
 			return t
 		}
+	case *OptionalType:
+		return NewOptionalType(memoryGauge, ConvertToEntitledType(memoryGauge, t.Type))
 	case *CapabilityType:
 		return NewCapabilityType(memoryGauge, ConvertToEntitledType(memoryGauge, t.BorrowType))
 	default:
