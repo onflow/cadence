@@ -196,7 +196,7 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	checker.enterValueScope()
 	defer checker.leaveValueScope(declaration.EndPosition, false)
 
-	checker.declareCompositeLikeNestedTypes(declaration, ContainerKindComposite, true)
+	checker.declareCompositeLikeNestedTypes(declaration, true)
 
 	var initializationInfo *InitializationInfo
 	// The initializer must initialize all members that are fields,
@@ -313,7 +313,6 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 // and the type for the declaration was added to the elaboration in `CompositeDeclarationTypes`.
 func (checker *Checker) declareCompositeLikeNestedTypes(
 	declaration ast.CompositeLikeDeclaration,
-	kind ContainerKind,
 	declareConstructors bool,
 ) {
 	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
@@ -344,7 +343,7 @@ func (checker *Checker) declareCompositeLikeNestedTypes(
 		})
 		checker.report(err)
 
-		if declareConstructors && kind == ContainerKindComposite {
+		if declareConstructors {
 
 			// NOTE: Re-declare the constructor function for the nested composite declaration:
 			// The constructor was previously declared in `declareCompositeMembersAndValue`
@@ -728,8 +727,8 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 	return compositeType
 }
 
-func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.AttachmentDeclaration, kind ContainerKind) {
-	checker.declareCompositeLikeMembersAndValue(declaration, kind)
+func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.AttachmentDeclaration) {
+	checker.declareCompositeLikeMembersAndValue(declaration)
 }
 
 // declareCompositeMembersAndValue declares the members and the value
@@ -740,7 +739,6 @@ func (checker *Checker) declareAttachmentMembersAndValue(declaration *ast.Attach
 // `declareCompositeType` and exists in `checker.Elaboration.CompositeDeclarationTypes`.
 func (checker *Checker) declareCompositeLikeMembersAndValue(
 	declaration ast.CompositeLikeDeclaration,
-	containerKind ContainerKind,
 ) {
 	compositeType := checker.Elaboration.CompositeDeclarationType(declaration)
 	if compositeType == nil {
@@ -764,7 +762,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		checker.enterValueScope()
 		defer checker.leaveValueScope(declaration.EndPosition, false)
 
-		checker.declareCompositeLikeNestedTypes(declaration, containerKind, false)
+		checker.declareCompositeLikeNestedTypes(declaration, false)
 
 		// NOTE: determine initializer parameter types while nested types are in scope,
 		// and after declaring nested types as the initializer may use nested type in parameters
@@ -793,7 +791,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		// }
 		// ```
 		declareNestedComposite := func(nestedCompositeDeclaration ast.CompositeLikeDeclaration) {
-			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, containerKind)
+			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration)
 
 			// Declare nested composites' values (constructor/instance) as members of the containing composite
 
@@ -873,7 +871,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 			members, fields, origins = checker.defaultMembersAndOrigins(
 				declaration.DeclarationMembers(),
 				compositeType,
-				containerKind,
+				ContainerKindComposite,
 				declaration.DeclarationKind(),
 			)
 		}

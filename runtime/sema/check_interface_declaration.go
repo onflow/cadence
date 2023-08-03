@@ -94,7 +94,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 
 	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 		if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
-			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindComposite)
+			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration)
 		}
 	}
 
@@ -428,7 +428,7 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 		}
 
 		declareNestedEvent := func(nestedCompositeDeclaration ast.CompositeLikeDeclaration) {
-			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindComposite)
+			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration)
 
 			// Declare nested composites' values (constructor/instance) as members of the containing composite
 			identifier := *nestedCompositeDeclaration.DeclarationIdentifier()
