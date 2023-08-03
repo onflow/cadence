@@ -4548,6 +4548,7 @@ type Member struct {
 	// Predeclared fields can be considered initialized
 	Predeclared       bool
 	HasImplementation bool
+	HasConditions     bool
 	// IgnoreInSerialization determines if the field is ignored in serialization
 	IgnoreInSerialization bool
 }

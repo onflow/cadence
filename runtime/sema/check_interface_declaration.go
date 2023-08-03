@@ -669,16 +669,40 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	}
 
 	// Check if the two members have identical signatures.
-	// If yes, they are allowed, but subject to the conditions below.
 	// If not, report an error.
 	if !checker.memberSatisfied(interfaceType, interfaceMember, conflictingMember) {
 		reportMemberConflictError()
 		return
 	}
 
-	if interfaceMember.HasImplementation || conflictingMember.HasImplementation {
-		reportMemberConflictError()
-		return
+	// If yes, they are allowed, but subject to the conditions below.
+	// - Can have at-most one default implementation
+	// - A default implementation can only co-exist with a function with conditions
+	// i.e. Considering three possibilities for the conflicting functions:
+	//   (1) Declaration only: `fun foo()`
+	//   (2) Conditions only:  `fun foo() { pre{} }`
+	//   (3) Default funcs:    `fun foo() { ... }`
+	//
+	// Having conflicting identical functions with:
+	//  - (1) and (1) - OK
+	//  - (1) and (2) - OK
+	//  - (1) and (3) - Not OK
+	//  - (2) and (2) - OK
+	//  - (2) and (3) - OK
+	//  - (3) and (3) - Not OK
+
+	if interfaceMember.HasImplementation {
+		if conflictingMember.HasImplementation || !conflictingMember.HasConditions {
+			reportMemberConflictError()
+			return
+		}
+	}
+
+	if conflictingMember.HasImplementation {
+		if !interfaceMember.HasConditions {
+			reportMemberConflictError()
+			return
+		}
 	}
 
 	return
