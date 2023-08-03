@@ -2297,6 +2297,7 @@ func TestConvertToEntitledType(t *testing.T) {
 			Output: NewReferenceType(nil, interfaceTypeInheritingCapField, UnauthorizedAccess),
 			Name:   "interface inheriting capability field",
 		},
+		// TODO: add tests for array and dictionary entitlements once the mutability changes are merged
 	}
 
 	// create capability versions of all the existing tests
