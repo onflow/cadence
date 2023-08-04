@@ -152,6 +152,7 @@ The names of all contracts deployed in the account.
 const PublicAccountContractsTypeGetFunctionName = "get"
 
 var PublicAccountContractsTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "name",
@@ -182,6 +183,7 @@ var PublicAccountContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var PublicAccountContractsTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		PublicAccountContractsTypeBorrowFunctionTypeParameterT,
 	},
@@ -253,6 +255,7 @@ func init() {
 const PublicAccountKeysTypeGetFunctionName = "get"
 
 var PublicAccountKeysTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "keyIndex",
@@ -366,6 +369,7 @@ var PublicAccountCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 }
 
 var PublicAccountCapabilitiesTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		PublicAccountCapabilitiesTypeGetFunctionTypeParameterT,
 	},
@@ -403,6 +407,7 @@ var PublicAccountCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var PublicAccountCapabilitiesTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		PublicAccountCapabilitiesTypeBorrowFunctionTypeParameterT,
 	},
