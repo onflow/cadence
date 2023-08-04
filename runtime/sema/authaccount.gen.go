@@ -1115,6 +1115,7 @@ var AuthAccountCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountCapabilitiesTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountCapabilitiesTypeBorrowFunctionTypeParameterT,
 	},
