@@ -295,6 +295,8 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	inheritedMembers := make(map[string]*Member)
 	typeRequirementsInheritedMembers := make(map[string]map[string]*Member)
 
+	defaultFunctions := availableDefaultFunctions(compositeType)
+
 	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
 		checker.checkCompositeLikeConformance(
 			declaration,
@@ -307,6 +309,7 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 			},
 			inheritedMembers,
 			typeRequirementsInheritedMembers,
+			defaultFunctions,
 		)
 	}
 
@@ -346,6 +349,24 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	for _, nestedAttachments := range members.Attachments() {
 		ast.AcceptDeclaration[struct{}](nestedAttachments, checker)
 	}
+}
+
+func availableDefaultFunctions(compositeType *CompositeType) map[string]struct{} {
+	defaultFunctions := make(map[string]struct{})
+
+	for _, conformance := range compositeType.EffectiveInterfaceConformances() {
+		conformance.InterfaceType.Members.Foreach(func(name string, interfaceMember *Member) {
+			if interfaceMember.DeclarationKind != common.DeclarationKindFunction {
+				return
+			}
+
+			if interfaceMember.HasImplementation {
+				defaultFunctions[name] = struct{}{}
+			}
+		})
+	}
+
+	return defaultFunctions
 }
 
 // declareCompositeNestedTypes declares the types nested in a composite,
@@ -1362,6 +1383,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 	inheritedMembers map[string]*Member,
 	// type requirement name -> inherited members
 	typeRequirementsInheritedMembers map[string]map[string]*Member,
+	defaultFunctions map[string]struct{},
 ) {
 
 	var missingMembers []*Member
@@ -1434,31 +1456,31 @@ func (checker *Checker) checkCompositeLikeConformance(
 			// may provide a default function.
 
 			if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
-				var implementationExist bool
 
 				if existingMember, ok := inheritedMembers[name]; ok {
-					if existingMember.HasImplementation {
-						implementationExist = true
-					} else {
+					if !existingMember.HasImplementation {
 						inheritedMembers[name] = interfaceMember
-						implementationExist = interfaceMember.HasImplementation
 					}
 
-					hasConflicts := checker.checkMemberConflicts(compositeDeclaration, existingMember, interfaceMember, compositeType)
+					hasConflicts := checker.checkMemberConflicts(
+						compositeDeclaration,
+						existingMember,
+						interfaceMember,
+						compositeType,
+					)
+
 					if hasConflicts {
 						return
 					}
 				} else {
 					inheritedMembers[name] = interfaceMember
-					implementationExist = interfaceMember.HasImplementation
 				}
 
-				if implementationExist {
-					return
-				}
 			}
 
-			missingMembers = append(missingMembers, interfaceMember)
+			if _, ok := defaultFunctions[name]; !ok {
+				missingMembers = append(missingMembers, interfaceMember)
+			}
 		}
 
 	})
@@ -1490,6 +1512,12 @@ func (checker *Checker) checkCompositeLikeConformance(
 		checker.checkTypeRequirement(nestedCompositeType, compositeDeclaration, requiredCompositeType, inherited)
 	})
 
+	// If there are conformance error, return the error, rather than reporting.
+	// This is because even though some members of an interface are not implemented
+	// by the concrete type, some other interface could be providing the default impl.
+	// FLIP: https://github.com/onflow/flips/pull/83
+	// Therefore, we must first check all conformances before reporting the errors.
+
 	if len(missingMembers) > 0 ||
 		len(memberMismatches) > 0 ||
 		len(missingNestedCompositeTypes) > 0 ||
@@ -1518,9 +1546,7 @@ func (checker *Checker) checkMemberConflicts(
 	existingMember *Member,
 	newMember *Member,
 	compositeType *CompositeType,
-) bool {
-	const hasConflicts = true
-	const noConflicts = false
+) (hasConflicts bool) {
 
 	errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.DeclarationIdentifier())
 
@@ -1534,7 +1560,7 @@ func (checker *Checker) checkMemberConflicts(
 			},
 		)
 
-		return hasConflicts
+		return true
 	}
 
 	// At most one of them have could default impls.
@@ -1543,15 +1569,15 @@ func (checker *Checker) checkMemberConflicts(
 
 	if newMember.HasImplementation {
 		if existingMember.HasConditions {
-			return noConflicts
+			return false
 		}
 	} else if existingMember.HasImplementation {
 		if newMember.HasConditions {
-			return noConflicts
+			return false
 		}
 	} else {
 		// None of them have default impls
-		return noConflicts
+		return false
 	}
 
 	checker.report(
@@ -1562,7 +1588,7 @@ func (checker *Checker) checkMemberConflicts(
 		},
 	)
 
-	return hasConflicts
+	return true
 }
 
 // checkConformanceKindMatch ensures the composite kinds match.
@@ -1896,6 +1922,7 @@ func (checker *Checker) checkTypeRequirement(
 		},
 		inherited,
 		map[string]map[string]*Member{},
+		map[string]struct{}{},
 	)
 }
 
