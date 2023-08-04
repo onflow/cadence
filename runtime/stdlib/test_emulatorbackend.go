@@ -666,16 +666,20 @@ func (t *testEmulatorBackendType) newEventsFunction(
 const testEmulatorBackendTypeResetFunctionName = "reset"
 
 const testEmulatorBackendTypeResetFunctionDocString = `
-Resets the state of the blockchain.
+Resets the state of the blockchain at the given height.
 `
 
 func (t *testEmulatorBackendType) newResetFunction(
 	testFramework TestFramework,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
-		t.eventsFunctionType,
+		t.resetFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			testFramework.Reset()
+			height, ok := invocation.Arguments[0].(interpreter.UInt64Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			testFramework.Reset(uint64(height))
 			return interpreter.Void
 		},
 	)

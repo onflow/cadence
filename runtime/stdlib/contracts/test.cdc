@@ -122,10 +122,10 @@ pub contract Test {
             return self.backend.events(type)
         }
 
-        /// Resets the state of the blockchain.
+        /// Resets the state of the blockchain at the given height.
         ///
-        pub fun reset() {
-            self.backend.reset()
+        pub fun reset(to height: UInt64) {
+            self.backend.reset(to: height)
         }
     }
 
@@ -305,9 +305,9 @@ pub contract Test {
         ///
         pub fun events(_ type: Type?): [AnyStruct]
 
-        /// Resets the state of the blockchain.
+        /// Resets the state of the blockchain at the given height.
         ///
-        pub fun reset()
+        pub fun reset(to height: UInt64)
     }
 
     /// Returns a new matcher that negates the test of the given matcher.

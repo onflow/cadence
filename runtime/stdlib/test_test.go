@@ -2023,6 +2023,62 @@ func TestBlockchain(t *testing.T) {
 		assert.True(t, eventsInvoked)
 	})
 
+	t.Run("reset", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.reset(to: 5)
+            }
+		`
+
+		resetInvoked := false
+
+		testFramework := &mockedTestFramework{
+			reset: func(height uint64) {
+				resetInvoked = true
+				assert.Equal(t, uint64(5), height)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, resetInvoked)
+	})
+
+	t.Run("reset with type mismatch for height", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.reset(to: 5.5)
+            }
+		`
+
+		resetInvoked := false
+
+		testFramework := &mockedTestFramework{
+			reset: func(height uint64) {
+				resetInvoked = true
+			},
+		}
+
+		_, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.False(t, resetInvoked)
+	})
+
 	// TODO: Add more tests for the remaining functions.
 }
 
@@ -2039,7 +2095,7 @@ type mockedTestFramework struct {
 	logs               func() []string
 	serviceAccount     func() (*Account, error)
 	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
-	reset              func()
+	reset              func(uint64)
 }
 
 var _ TestFramework = &mockedTestFramework{}
@@ -2159,10 +2215,10 @@ func (m mockedTestFramework) Events(
 	return m.events(inter, eventType)
 }
 
-func (m mockedTestFramework) Reset() {
+func (m mockedTestFramework) Reset(height uint64) {
 	if m.reset == nil {
 		panic("'Reset' is not implemented")
 	}
 
-	m.reset()
+	m.reset(height)
 }
