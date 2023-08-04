@@ -3872,6 +3872,69 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("all three formats of function, interface type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello()
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface D: A, B, C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("all three formats of function, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello()
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct D: A, B, C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		defaultFunctionConflictError := &sema.DefaultFunctionConflictError{}
+		require.ErrorAs(t, errs[0], &defaultFunctionConflictError)
+	})
 }
 
 func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {

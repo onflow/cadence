@@ -52,7 +52,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		true,
 	)
 
-	inheritedMembers := map[string]*Member{}
+	inheritedMembers := map[string][]*Member{}
 	inheritedTypes := map[string]Type{}
 
 	for _, conformance := range interfaceType.EffectiveInterfaceConformances() {
@@ -549,7 +549,7 @@ func (checker *Checker) checkInterfaceConformance(
 	interfaceDeclaration *ast.InterfaceDeclaration,
 	interfaceType *InterfaceType,
 	conformance *InterfaceType,
-	inheritedMembers map[string]*Member,
+	inheritedMembersByName map[string][]*Member,
 	inheritedNestedTypes map[string]Type,
 ) {
 
@@ -564,17 +564,20 @@ func (checker *Checker) checkInterfaceConformance(
 		var isDuplicate bool
 
 		// Check if the members coming from other conformances have conflicts.
-		if conflictingMember, ok := inheritedMembers[name]; ok {
-			conflictingInterface := conflictingMember.ContainerType.(*InterfaceType)
-			isDuplicate = checker.checkDuplicateInterfaceMember(
-				conformance,
-				conformanceMember,
-				conflictingInterface,
-				conflictingMember,
-				func() ast.Range {
-					return ast.NewRangeFromPositioned(checker.memoryGauge, interfaceDeclaration.Identifier)
-				},
-			)
+		inheritedMembers, ok := inheritedMembersByName[name]
+		if ok {
+			for _, conflictingMember := range inheritedMembers {
+				conflictingInterface := conflictingMember.ContainerType.(*InterfaceType)
+				isDuplicate = checker.checkDuplicateInterfaceMember(
+					conformance,
+					conformanceMember,
+					conflictingInterface,
+					conflictingMember,
+					func() ast.Range {
+						return ast.NewRangeFromPositioned(checker.memoryGauge, interfaceDeclaration.Identifier)
+					},
+				)
+			}
 		}
 
 		// Check if the members coming from the current declaration have conflicts.
@@ -593,7 +596,8 @@ func (checker *Checker) checkInterfaceConformance(
 
 		// Add to the inherited members list, only if it's not a duplicated, to avoid redundant errors.
 		if !isDuplicate {
-			inheritedMembers[name] = conformanceMember
+			inheritedMembers = append(inheritedMembers, conformanceMember)
+			inheritedMembersByName[name] = inheritedMembers
 		}
 	})
 
