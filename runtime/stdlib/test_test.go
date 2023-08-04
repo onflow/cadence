@@ -1154,6 +1154,112 @@ func TestTestBeFailedMatcher(t *testing.T) {
 	})
 }
 
+func TestTestAssertErrorMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with ScriptResult", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun testMatch() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.failed,
+                    returnValue: nil,
+                    error: Test.Error("computation exceeding limit")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            pub fun testNoMatch() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.failed,
+                    returnValue: nil,
+                    error: Test.Error("computation exceeding memory")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            pub fun testNoError() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.succeeded,
+                    returnValue: 42,
+                    error: nil
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMatch")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNoMatch")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "the error message did not contain the given sub-string")
+
+		_, err = inter.Invoke("testNoError")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "no error was found")
+	})
+
+	t.Run("with TransactionResult", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun testMatch() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.failed,
+                    error: Test.Error("computation exceeding limit")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            pub fun testNoMatch() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.failed,
+                    error: Test.Error("computation exceeding memory")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            pub fun testNoError() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.succeeded,
+                    error: nil
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMatch")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNoMatch")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "the error message did not contain the given sub-string")
+
+		_, err = inter.Invoke("testNoError")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "no error was found")
+	})
+}
+
 func TestTestBeNilMatcher(t *testing.T) {
 
 	t.Parallel()

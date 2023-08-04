@@ -171,6 +171,10 @@ pub contract Test {
         /// The resulted status of an executed operation.
         ///
         pub let status: ResultStatus
+
+        /// The optionally resulted error of an executed operation.
+        ///
+        pub let error: Error?
     }
 
     /// The result of a transaction execution.
@@ -344,6 +348,30 @@ pub contract Test {
         return Matcher(test: fun (value: AnyStruct): Bool {
             return value == nil
         })
+    }
+
+    /// Asserts that the result of an executed operation, such as
+    /// scripts & transactions, has errored and the error message
+    /// contains the given sub-string.
+    ///
+    pub fun assertError(_ result: {Result}, errorMessage: String) {
+        pre {
+            result.status == ResultStatus.failed: "no error was found"
+        }
+
+        var found = false
+        let msg = result.error!.message
+        let msgLength = msg.length - errorMessage.length + 1
+        var i = 0
+        while i < msgLength {
+            if msg.slice(from: i, upTo: i + errorMessage.length) == errorMessage {
+                found = true
+                break
+            }
+            i = i + 1
+        }
+
+        assert(found, message: "the error message did not contain the given sub-string")
     }
 
 }
