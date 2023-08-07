@@ -4533,3 +4533,161 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 	})
 
 }
+
+func TestConvertToEntitledValue(t *testing.T) {
+	t.Parallel()
+
+	var uuid uint64
+
+	storage := newUnmeteredInMemoryStorage()
+
+	code := `
+		access(all) entitlement E
+		access(all) entitlement F
+		access(all) entitlement G
+
+		access(all) entitlement mapping M {
+			E -> F
+			F -> G
+		}
+
+		access(all)  struct S {
+			access(E) let eField: Int
+			access(F) let fField: String
+			init() {
+				self.eField = 0
+				self.fField = ""
+			}
+		}
+
+		access(all) resource R {
+			access(E, G) let egField: Int
+			init() {
+				self.egField = 0
+			}
+		}
+
+		access(all) resource Nested {
+			access(E | F) let efField: @R
+			init() {
+				self.efField <- create R()
+			}
+			destroy() {
+				destroy self.efField
+			}
+		}
+
+		access(all) fun makeS(): S {
+			return S()
+		}
+
+		access(all) fun makeR(): @R {
+			return <- create R()
+		}
+
+		access(all) fun makeNested(): @Nested {
+			return <- create Nested()
+		}
+	`
+	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+		code,
+		checkerUtils.ParseAndCheckOptions{},
+	)
+
+	require.NoError(t, err)
+
+	inter, err := NewInterpreter(
+		ProgramFromChecker(checker),
+		checker.Location,
+		&Config{
+			Storage: storage,
+			UUIDHandler: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		},
+	)
+
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	rValue, err := inter.Invoke("makeR")
+	require.NoError(t, err)
+	sValue, err := inter.Invoke("makeS")
+	require.NoError(t, err)
+	nestedValue, err := inter.Invoke("makeNested")
+	require.NoError(t, err)
+
+	tests := []struct {
+		Input  Value
+		Output Value
+		Name   string
+	}{
+		{
+			Input:  rValue,
+			Output: rValue,
+			Name:   "R",
+		},
+		{
+			Input:  sValue,
+			Output: sValue,
+			Name:   "S",
+		},
+		{
+			Input:  nestedValue,
+			Output: nestedValue,
+			Name:   "Nested",
+		},
+		{
+			Input: NewEphemeralReferenceValue(inter, UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue)),
+			Output: NewEphemeralReferenceValue(
+				inter,
+				NewEntitlementSetAuthorization(
+					inter,
+					[]common.TypeID{"S.test.E", "S.test.F"},
+					sema.Conjunction,
+				),
+				sValue,
+				inter.MustSemaTypeOfValue(sValue),
+			),
+			Name: "&S",
+		},
+		{
+			Input: NewEphemeralReferenceValue(inter, UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue)),
+			Output: NewEphemeralReferenceValue(
+				inter,
+				NewEntitlementSetAuthorization(
+					inter,
+					[]common.TypeID{"S.test.E", "S.test.G"},
+					sema.Conjunction,
+				),
+				rValue,
+				inter.MustSemaTypeOfValue(rValue),
+			),
+			Name: "&R",
+		},
+		{
+			Input: NewEphemeralReferenceValue(inter, UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue)),
+			Output: NewEphemeralReferenceValue(
+				inter,
+				NewEntitlementSetAuthorization(
+					inter,
+					[]common.TypeID{"S.test.E", "S.test.F"},
+					sema.Conjunction,
+				),
+				nestedValue,
+				inter.MustSemaTypeOfValue(nestedValue),
+			),
+			Name: "&Nested",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			inter.ConvertValueToEntitlements(test.Input)
+			require.Equal(t, test.Input, test.Output)
+		})
+	}
+}

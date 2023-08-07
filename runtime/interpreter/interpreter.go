@@ -5022,6 +5022,53 @@ func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth 
 	return access
 }
 
+func (interpreter *Interpreter) ConvertValueToEntitlements(v Value) {
+	semaType := interpreter.MustSemaTypeOfValue(v)
+	entitledType := sema.ConvertToEntitledType(interpreter, semaType)
+
+	switch v := v.(type) {
+	case *EphemeralReferenceValue:
+		entitledReferenceType := entitledType.(*sema.ReferenceType)
+		staticAuthorization := ConvertSemaAccesstoStaticAuthorization(interpreter, entitledReferenceType.Authorization)
+		v.Authorization = staticAuthorization
+		v.BorrowedType = entitledReferenceType.Type
+		interpreter.ConvertValueToEntitlements(v.Value)
+	case *StorageReferenceValue:
+		entitledReferenceType := entitledType.(*sema.ReferenceType)
+		staticAuthorization := ConvertSemaAccesstoStaticAuthorization(interpreter, entitledReferenceType.Authorization)
+		v.Authorization = staticAuthorization
+		v.BorrowedType = entitledReferenceType.Type
+		// TODO: how to convert stored value
+		// interpreter.convertValueToEntitlements(v.Value)
+	case *SomeValue:
+		interpreter.ConvertValueToEntitlements(v.value)
+	case *CompositeValue:
+		// convert all the fields of this composite value to entitlements
+		v.Walk(interpreter, interpreter.ConvertValueToEntitlements)
+	case *ArrayValue:
+		entitledArrayType := entitledType.(sema.ArrayType)
+		v.semaType = entitledArrayType
+		v.Type = ConvertSemaArrayTypeToStaticArrayType(interpreter, entitledArrayType)
+		// convert all the elements of this array value to entitlements
+		v.Walk(interpreter, interpreter.ConvertValueToEntitlements)
+	case *DictionaryValue:
+		entitledDictionaryType := entitledType.(*sema.DictionaryType)
+		v.semaType = entitledDictionaryType
+		v.Type = ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, entitledDictionaryType)
+		// convert all the elements of this array value to entitlements
+		v.Walk(interpreter, interpreter.ConvertValueToEntitlements)
+	// capabilities should just have their borrow type updated;
+	// we will update their underlying value when the capability is borrowed
+	case *PathCapabilityValue:
+		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
+		v.BorrowType = ConvertSemaToStaticType(interpreter, entitledCapabilityValue.BorrowType)
+	case *IDCapabilityValue:
+		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
+		v.BorrowType = ConvertSemaToStaticType(interpreter, entitledCapabilityValue.BorrowType)
+	}
+
+}
+
 func (interpreter *Interpreter) getElaboration(location common.Location) *sema.Elaboration {
 
 	// Ensure the program for this location is loaded,
