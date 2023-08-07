@@ -666,7 +666,7 @@ func (t *testEmulatorBackendType) newEventsFunction(
 const testEmulatorBackendTypeResetFunctionName = "reset"
 
 const testEmulatorBackendTypeResetFunctionDocString = `
-Resets the state of the blockchain at the given height.
+Resets the state of the blockchain to the given height.
 `
 
 func (t *testEmulatorBackendType) newResetFunction(

@@ -122,7 +122,7 @@ pub contract Test {
             return self.backend.events(type)
         }
 
-        /// Resets the state of the blockchain at the given height.
+        /// Resets the state of the blockchain to the given height.
         ///
         pub fun reset(to height: UInt64) {
             self.backend.reset(to: height)
@@ -168,11 +168,11 @@ pub contract Test {
     /// operations, such as transactions and scripts.
     ///
     pub struct interface Result {
-        /// The resulted status of an executed operation.
+        /// The result status of an executed operation.
         ///
         pub let status: ResultStatus
 
-        /// The optionally resulted error of an executed operation.
+        /// The optional error of an executed operation.
         ///
         pub let error: Error?
     }
@@ -309,7 +309,7 @@ pub contract Test {
         ///
         pub fun events(_ type: Type?): [AnyStruct]
 
-        /// Resets the state of the blockchain at the given height.
+        /// Resets the state of the blockchain to the given height.
         ///
         pub fun reset(to height: UInt64)
     }
@@ -350,9 +350,9 @@ pub contract Test {
         })
     }
 
-    /// Asserts that the result of an executed operation, such as
-    /// scripts & transactions, has errored and the error message
-    /// contains the given sub-string.
+    /// Asserts that the result status of an executed operation, such as
+    /// a script or transaction, has failed and contains the given error
+    /// message.
     ///
     pub fun assertError(_ result: {Result}, errorMessage: String) {
         pre {
