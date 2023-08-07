@@ -4541,6 +4541,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	storage := newUnmeteredInMemoryStorage()
 
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
 	code := `
 		access(all) entitlement E
 		access(all) entitlement F
@@ -4655,6 +4657,67 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name: "&S",
 		},
 		{
+			Input: NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				NewVariableSizedStaticType(inter, NewReferenceStaticType(inter, UnauthorizedAccess, sValue.StaticType(inter))),
+				testAddress,
+				NewEphemeralReferenceValue(inter, UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue)),
+			),
+			Output: NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				NewVariableSizedStaticType(
+					inter,
+					NewReferenceStaticType(inter,
+						UnauthorizedAccess,
+						sValue.StaticType(inter),
+					),
+				),
+				testAddress,
+				NewEphemeralReferenceValue(
+					inter,
+					NewEntitlementSetAuthorization(
+						inter,
+						[]common.TypeID{"S.test.E", "S.test.F"},
+						sema.Conjunction,
+					),
+					sValue,
+					inter.MustSemaTypeOfValue(sValue),
+				),
+			),
+			Name: "[&S]",
+		},
+		{
+			Input: NewDictionaryValue(
+				inter,
+				EmptyLocationRange,
+				NewDictionaryStaticType(inter, PrimitiveStaticTypeInt, NewReferenceStaticType(inter, UnauthorizedAccess, sValue.StaticType(inter))),
+				NewIntValueFromInt64(inter, 0),
+				NewEphemeralReferenceValue(inter, UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue)),
+			),
+			Output: NewDictionaryValue(
+				inter,
+				EmptyLocationRange,
+				NewDictionaryStaticType(inter, PrimitiveStaticTypeInt, NewReferenceStaticType(inter,
+					UnauthorizedAccess,
+					sValue.StaticType(inter),
+				)),
+				NewIntValueFromInt64(inter, 0),
+				NewEphemeralReferenceValue(
+					inter,
+					NewEntitlementSetAuthorization(
+						inter,
+						[]common.TypeID{"S.test.E", "S.test.F"},
+						sema.Conjunction,
+					),
+					sValue,
+					inter.MustSemaTypeOfValue(sValue),
+				),
+			),
+			Name: "{Int: &S}",
+		},
+		{
 			Input: NewEphemeralReferenceValue(inter, UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue)),
 			Output: NewEphemeralReferenceValue(
 				inter,
@@ -4667,6 +4730,32 @@ func TestConvertToEntitledValue(t *testing.T) {
 				inter.MustSemaTypeOfValue(rValue),
 			),
 			Name: "&R",
+		},
+		{
+			Input: NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				NewVariableSizedStaticType(inter, NewReferenceStaticType(inter, UnauthorizedAccess, rValue.StaticType(inter))),
+				testAddress,
+				NewEphemeralReferenceValue(inter, UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue)),
+			),
+			Output: NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				NewVariableSizedStaticType(inter, NewReferenceStaticType(inter, UnauthorizedAccess, rValue.StaticType(inter))),
+				testAddress,
+				NewEphemeralReferenceValue(
+					inter,
+					NewEntitlementSetAuthorization(
+						inter,
+						[]common.TypeID{"S.test.E", "S.test.G"},
+						sema.Conjunction,
+					),
+					rValue,
+					inter.MustSemaTypeOfValue(rValue),
+				),
+			),
+			Name: "[&R]",
 		},
 		{
 			Input: NewEphemeralReferenceValue(inter, UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue)),
@@ -4682,12 +4771,45 @@ func TestConvertToEntitledValue(t *testing.T) {
 			),
 			Name: "&Nested",
 		},
+		{
+			Input: NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				NewVariableSizedStaticType(inter, NewReferenceStaticType(inter, UnauthorizedAccess, nestedValue.StaticType(inter))),
+				testAddress,
+				NewEphemeralReferenceValue(inter, UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue)),
+			),
+			Output: NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				NewVariableSizedStaticType(inter, NewReferenceStaticType(inter, UnauthorizedAccess, nestedValue.StaticType(inter))),
+				testAddress,
+				NewEphemeralReferenceValue(
+					inter,
+					NewEntitlementSetAuthorization(
+						inter,
+						[]common.TypeID{"S.test.E", "S.test.F"},
+						sema.Conjunction,
+					),
+					nestedValue,
+					inter.MustSemaTypeOfValue(nestedValue),
+				),
+			),
+			Name: "[&Nested]",
+		},
+
+		// TODO: after mutability entitlements, add tests for references to arrays and dictionaries
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			inter.ConvertValueToEntitlements(test.Input)
-			require.Equal(t, test.Input, test.Output)
+			switch input := test.Input.(type) {
+			case EquatableValue:
+				require.True(t, input.Equal(inter, EmptyLocationRange, test.Output))
+			default:
+				require.Equal(t, test.Input, test.Output)
+			}
 		})
 	}
 }
