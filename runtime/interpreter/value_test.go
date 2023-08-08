@@ -4797,7 +4797,52 @@ func TestConvertToEntitledValue(t *testing.T) {
 			),
 			Name: "[&Nested]",
 		},
-
+		{
+			Input: NewIDCapabilityValue(
+				inter,
+				0,
+				NewAddressValue(inter, testAddress),
+				NewReferenceStaticType(inter, UnauthorizedAccess, sValue.StaticType(inter)),
+			),
+			Output: NewIDCapabilityValue(
+				inter,
+				0,
+				NewAddressValue(inter, testAddress),
+				NewReferenceStaticType(
+					inter,
+					NewEntitlementSetAuthorization(
+						inter,
+						[]common.TypeID{"S.test.E", "S.test.F"},
+						sema.Conjunction,
+					),
+					sValue.StaticType(inter),
+				),
+			),
+			Name: "Capability<&S>",
+		},
+		{
+			Input: NewIDCapabilityValue(
+				inter,
+				0,
+				NewAddressValue(inter, testAddress),
+				NewReferenceStaticType(inter, UnauthorizedAccess, rValue.StaticType(inter)),
+			),
+			Output: NewIDCapabilityValue(
+				inter,
+				0,
+				NewAddressValue(inter, testAddress),
+				NewReferenceStaticType(
+					inter,
+					NewEntitlementSetAuthorization(
+						inter,
+						[]common.TypeID{"S.test.E", "S.test.G"},
+						sema.Conjunction,
+					),
+					rValue.StaticType(inter),
+				),
+			),
+			Name: "Capability<&R>",
+		},
 		// TODO: after mutability entitlements, add tests for references to arrays and dictionaries
 	}
 
