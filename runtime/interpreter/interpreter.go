@@ -4040,16 +4040,9 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 				staticType := value.StaticType(inter)
 
-				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
-				identifier := string(key.(StringAtreeValue))
-				pathValue := NewPathValue(inter, domain, identifier)
-				runtimeType := NewTypeValue(inter, staticType)
-
 				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
 				valueError := inter.checkValue(
-					address,
-					pathValue,
 					value,
 					staticType,
 					invocation.LocationRange,
@@ -4058,6 +4051,11 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 				if valueError != nil {
 					continue
 				}
+
+				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+				identifier := string(key.(StringAtreeValue))
+				pathValue := NewPathValue(inter, domain, identifier)
+				runtimeType := NewTypeValue(inter, staticType)
 
 				subInvocation := NewInvocation(
 					inter,
@@ -4101,8 +4099,6 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 }
 
 func (interpreter *Interpreter) checkValue(
-	address common.Address,
-	path PathValue,
 	value Value,
 	staticType StaticType,
 	locationRange LocationRange,
@@ -4125,38 +4121,43 @@ func (interpreter *Interpreter) checkValue(
 		}
 	}()
 
-	// TODO:
-	//// Here, the value at the path could be either:
-	////	1) The actual stored value (storage path)
-	////	2) A link to the value at the storage (private/public paths)
-	////
-	//// Therefore, try to find the final path, and try loading the value.
-	//
-	//// However, borrow type is not statically known.
-	//// So take the borrow type from the value itself
-	//
-	//var borrowType StaticType
-	//if _, ok := value.(LinkValue); ok {
-	//	// Link values always have a `CapabilityStaticType` static type.
-	//	borrowType = staticType.(CapabilityStaticType).BorrowType
-	//} else {
-	//	// Reference type with value's type (i.e. `staticType`) as both the borrow type and the referenced type.
-	//	borrowType = NewReferenceStaticType(interpreter, false, staticType, staticType)
-	//}
-	//
-	//var semaType sema.Type
-	//semaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
-	//if valueError != nil {
-	//	return valueError
-	//}
-	//
-	//// This is guaranteed to be a reference type, because `borrowType` is always a reference.
-	//referenceType, ok := semaType.(*sema.ReferenceType)
-	//if !ok {
-	//	panic(errors.NewUnreachableError())
-	//}
-	//
-	//_, valueError = interpreter.checkValueAtPath(address, path, referenceType, locationRange)
+	// Here, the value at the path could be either:
+	//	1) The actual stored value (storage path)
+	//	2) A capability to the value at the storage (private/public paths)
+
+	if idCapability, ok := value.(*IDCapabilityValue); ok {
+		// If, the value is a capability, try to load the value at the capability target.
+		// However, borrow type is not statically known.
+		// So take the borrow type from the value itself
+
+		// Capability values always have a `CapabilityStaticType` static type.
+		borrowType := staticType.(CapabilityStaticType).BorrowType
+
+		var borrowSemaType sema.Type
+		borrowSemaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
+		if valueError != nil {
+			return valueError
+		}
+
+		referenceType, ok := borrowSemaType.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		_ = interpreter.SharedState.Config.IDCapabilityCheckHandler(
+			interpreter,
+			locationRange,
+			idCapability.Address,
+			idCapability.ID,
+			referenceType,
+			referenceType,
+		)
+
+	} else {
+		// For all other values, trying to load the type is sufficient.
+		// Here it is only interested in whether the type can be properly loaded.
+		_, valueError = interpreter.ConvertStaticToSemaType(staticType)
+	}
 
 	return
 }
