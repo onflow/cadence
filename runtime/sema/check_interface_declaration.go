@@ -573,9 +573,7 @@ func (checker *Checker) checkInterfaceConformance(
 					conformanceMember,
 					conflictingInterface,
 					conflictingMember,
-					func() ast.Range {
-						return ast.NewRangeFromPositioned(checker.memoryGauge, interfaceDeclaration.Identifier)
-					},
+					interfaceDeclaration.Identifier,
 				)
 			}
 		}
@@ -588,9 +586,7 @@ func (checker *Checker) checkInterfaceConformance(
 				declarationMember,
 				conformance,
 				conformanceMember,
-				func() ast.Range {
-					return ast.NewRangeFromPositioned(checker.memoryGauge, declarationMember.Identifier)
-				},
+				declarationMember.Identifier,
 			)
 		}
 
@@ -656,7 +652,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	interfaceMember *Member,
 	conflictingInterfaceType *InterfaceType,
 	conflictingMember *Member,
-	getRange func() ast.Range,
+	hasPosition ast.HasPosition,
 ) (isDuplicate bool) {
 
 	reportMemberConflictError := func() {
@@ -666,7 +662,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 			MemberName:               interfaceMember.Identifier.Identifier,
 			MemberKind:               interfaceMember.DeclarationKind,
 			ConflictingMemberKind:    conflictingMember.DeclarationKind,
-			Range:                    getRange(),
+			Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
 		})
 
 		isDuplicate = true
