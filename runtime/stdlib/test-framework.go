@@ -70,7 +70,7 @@ type TestFramework interface {
 		eventType interpreter.StaticType,
 	) interpreter.Value
 
-	Reset()
+	Reset(uint64)
 }
 
 type ScriptResult struct {
