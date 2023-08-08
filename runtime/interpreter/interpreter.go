@@ -5022,7 +5022,10 @@ func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth 
 	return access
 }
 
-func (interpreter *Interpreter) ConvertValueToEntitlements(v Value) {
+// Converts the input value into a version compatible with the new entitlements feature,
+// with the same members/operations accessible on any references as would have been accessible in the past.
+// Modifies the input `v` in place, and also returns a copy of the value
+func (interpreter *Interpreter) ConvertValueToEntitlements(v Value) Value {
 	semaType := interpreter.MustSemaTypeOfValue(v)
 	entitledType := sema.ConvertToEntitledType(interpreter, semaType)
 
@@ -5038,25 +5041,24 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(v Value) {
 		staticAuthorization := ConvertSemaAccesstoStaticAuthorization(interpreter, entitledReferenceType.Authorization)
 		v.Authorization = staticAuthorization
 		v.BorrowedType = entitledReferenceType.Type
-		// TODO: how to convert stored value
-		// interpreter.convertValueToEntitlements(v.Value)
+		// stored value is not converted; instead we will convert it upon load
 	case *SomeValue:
 		interpreter.ConvertValueToEntitlements(v.value)
 	case *CompositeValue:
 		// convert all the fields of this composite value to entitlements
-		v.Walk(interpreter, interpreter.ConvertValueToEntitlements)
+		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v) })
 	case *ArrayValue:
 		entitledArrayType := entitledType.(sema.ArrayType)
 		v.semaType = entitledArrayType
 		v.Type = ConvertSemaArrayTypeToStaticArrayType(interpreter, entitledArrayType)
 		// convert all the elements of this array value to entitlements
-		v.Walk(interpreter, interpreter.ConvertValueToEntitlements)
+		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v) })
 	case *DictionaryValue:
 		entitledDictionaryType := entitledType.(*sema.DictionaryType)
 		v.semaType = entitledDictionaryType
 		v.Type = ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, entitledDictionaryType)
 		// convert all the elements of this array value to entitlements
-		v.Walk(interpreter, interpreter.ConvertValueToEntitlements)
+		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v) })
 	// capabilities should just have their borrow type updated;
 	// we will update their underlying value when the capability is borrowed
 	case *PathCapabilityValue:
@@ -5065,8 +5067,24 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(v Value) {
 	case *IDCapabilityValue:
 		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
 		v.BorrowType = ConvertSemaToStaticType(interpreter, entitledCapabilityValue.BorrowType)
+	case TypeValue:
+		if v.Type == nil {
+			return v
+		}
+		// convert the static type of the value
+		return NewTypeValue(
+			interpreter,
+			ConvertSemaToStaticType(
+				interpreter,
+				sema.ConvertToEntitledType(
+					interpreter,
+					interpreter.MustConvertStaticToSemaType(v.Type),
+				),
+			),
+		)
 	}
 
+	return v
 }
 
 func (interpreter *Interpreter) getElaboration(location common.Location) *sema.Elaboration {

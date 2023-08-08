@@ -4847,13 +4847,25 @@ func TestConvertToEntitledValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		var runtimeTypeTest struct {
+			Input  Value
+			Output Value
+			Name   string
+		}
+		runtimeTypeTest.Input = NewTypeValue(nil, test.Input.StaticType(inter))
+		runtimeTypeTest.Output = NewTypeValue(nil, test.Output.StaticType(inter))
+		runtimeTypeTest.Name = "runtime type " + test.Name
+
+		tests = append(tests, runtimeTypeTest)
+	}
+
+	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			inter.ConvertValueToEntitlements(test.Input)
-			switch input := test.Input.(type) {
+			switch output := inter.ConvertValueToEntitlements(test.Input).(type) {
 			case EquatableValue:
-				require.True(t, input.Equal(inter, EmptyLocationRange, test.Output))
+				require.True(t, output.Equal(inter, EmptyLocationRange, test.Output))
 			default:
-				require.Equal(t, test.Input, test.Output)
+				require.Equal(t, output, test.Output)
 			}
 		})
 	}
