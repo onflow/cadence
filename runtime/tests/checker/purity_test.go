@@ -238,7 +238,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -264,7 +264,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -306,7 +306,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -333,7 +333,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -344,243 +344,10 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		)
 	})
 
-	t.Run("copy", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.copy<Int>(from: /storage/foo)
-          }
-        `)
-		require.NoError(t, err)
-	})
-
-	t.Run("borrow", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.borrow<&Int>(from: /storage/foo)
-          }
-        `)
-		require.NoError(t, err)
-	})
-
-	t.Run("check", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.check<Int>(from: /storage/foo)
-          }
-        `)
-		require.NoError(t, err)
-	})
-
-	t.Run("get contract", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.contracts.get(name: "")
-          }
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("borrow contract", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.contracts.borrow<&Int>(name: "")
-          }
-        `)
-		require.NoError(t, err)
-	})
-
-	t.Run("get keys", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.keys.get(keyIndex: 0)
-          }
-        `)
-		require.NoError(t, err)
-	})
-
-	t.Run("save", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.save(3, to: /storage/foo)
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(
-			t,
-			ast.Range{
-				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
-				EndPos:   ast.Position{Offset: 78, Line: 3, Column: 50},
-			},
-			errs[0].(*sema.PurityError).Range,
-		)
-	})
-
-	t.Run("load", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.load<Int>(from: /storage/foo)
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(
-			t,
-			ast.Range{
-				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
-				EndPos:   ast.Position{Offset: 82, Line: 3, Column: 54},
-			},
-			errs[0].(*sema.PurityError).Range,
-		)
-	})
-
-	t.Run("type", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.type(at: /storage/foo)
-          }
-        `)
-		require.NoError(t, err)
-	})
-
-	t.Run("add contract", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.contracts.add(name: "", code: [])
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(
-			t,
-			ast.Range{
-				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
-				EndPos:   ast.Position{Offset: 86, Line: 3, Column: 58},
-			},
-			errs[0].(*sema.PurityError).Range,
-		)
-	})
-
-	t.Run("update contract", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.contracts.update__experimental(name: "", code: [])
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(
-			t,
-			ast.Range{
-				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
-				EndPos:   ast.Position{Offset: 103, Line: 3, Column: 75},
-			},
-			errs[0].(*sema.PurityError).Range,
-		)
-	})
-
-	t.Run("remove contract", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.contracts.remove(name: "")
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(
-			t,
-			ast.Range{
-				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
-				EndPos:   ast.Position{Offset: 79, Line: 3, Column: 51},
-			},
-			errs[0].(*sema.PurityError).Range,
-		)
-	})
-
-	t.Run("revoke key", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              authAccount.keys.revoke(keyIndex: 0)
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(
-			t,
-			ast.Range{
-				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
-				EndPos:   ast.Position{Offset: 77, Line: 3, Column: 49},
-			},
-			errs[0].(*sema.PurityError).Range,
-		)
-	})
-
-	t.Run("alias", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheckAccount(t, `
-          view fun foo() {
-              let f = authAccount.contracts.remove
-              f(name: "")
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.PurityError{}, errs[0])
-		assert.Equal(
-			t,
-			ast.Range{
-				StartPos: ast.Position{Offset: 93, Line: 4, Column: 14},
-				EndPos:   ast.Position{Offset: 103, Line: 4, Column: 24},
-			},
-			errs[0].(*sema.PurityError).Range,
-		)
-	})
-
 	t.Run("emit", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           event FooEvent()
 
           view fun foo() {
@@ -602,7 +369,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -626,7 +393,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -696,7 +463,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -781,7 +548,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -808,7 +575,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -866,7 +633,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -895,7 +662,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -925,7 +692,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-		assert.IsType(t, &sema.PurityError{}, errs[1])
+		require.IsType(t, &sema.PurityError{}, errs[1])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -934,6 +701,50 @@ func TestCheckPurityEnforcement(t *testing.T) {
 			},
 			errs[1].(*sema.PurityError).Range,
 		)
+	})
+
+	t.Run("bound function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          struct S {
+              fun f() {}
+          }
+
+          view fun foo() {
+              let f = S().f
+              f()
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(
+			t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 129, Line: 8, Column: 14},
+				EndPos:   ast.Position{Offset: 131, Line: 8, Column: 16},
+			},
+			errs[0].(*sema.PurityError).Range,
+		)
+	})
+
+	t.Run("bound function, view", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          struct S {
+              view fun f() {}
+          }
+
+          view fun foo() {
+              let f = S().f
+              f()
+          }
+        `)
+
+		require.NoError(t, err)
 	})
 }
 
@@ -960,7 +771,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -984,7 +795,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -1019,7 +830,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -1051,7 +862,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -1083,7 +894,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -1114,7 +925,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -1145,7 +956,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -1199,7 +1010,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -1289,7 +1100,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(
 			t,
 			ast.Range{
@@ -1322,7 +1133,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.PurityError{}, errs[0])
+		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t,
 			ast.Range{
 				StartPos: ast.Position{Offset: 126, Line: 8, Column: 19},
@@ -1603,5 +1414,769 @@ func TestCheckConditionPurity(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+}
+
+func TestCheckAuthAccountPurity(t *testing.T) {
+	t.Parallel()
+
+	t.Run("save", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              authAccount.save(3, to: /storage/foo)
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(
+			t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
+				EndPos:   ast.Position{Offset: 78, Line: 3, Column: 50},
+			},
+			errs[0].(*sema.PurityError).Range,
+		)
+	})
+
+	t.Run("type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              authAccount.type(at: /storage/foo)
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("load", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              authAccount.load<Int>(from: /storage/foo)
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(
+			t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
+				EndPos:   ast.Position{Offset: 82, Line: 3, Column: 54},
+			},
+			errs[0].(*sema.PurityError).Range,
+		)
+	})
+
+	t.Run("copy", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              authAccount.copy<Int>(from: /storage/foo)
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              authAccount.borrow<&Int>(from: /storage/foo)
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("check", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              authAccount.check<Int>(from: /storage/foo)
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("forEachPublic", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              authAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                  return true
+              })
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(
+			t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
+				EndPos:   ast.Position{Offset: 156, Line: 5, Column: 15},
+			},
+			errs[0].(*sema.PurityError).Range,
+		)
+	})
+
+	t.Run("forEachPrivate", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              authAccount.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+                  return true
+              })
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(
+			t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
+				EndPos:   ast.Position{Offset: 158, Line: 5, Column: 15},
+			},
+			errs[0].(*sema.PurityError).Range,
+		)
+	})
+
+	t.Run("forEachStored", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              authAccount.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                  return true
+              })
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(
+			t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
+				EndPos:   ast.Position{Offset: 157, Line: 5, Column: 15},
+			},
+			errs[0].(*sema.PurityError).Range,
+		)
+	})
+
+	t.Run("contracts", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("add", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.contracts.add(name: "", code: [])
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 94, Line: 3, Column: 62},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+
+		t.Run("update__experimental", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.contracts.update__experimental(name: "", code: [])
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 111, Line: 3, Column: 79},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+
+		t.Run("get", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.contracts.get(name: "")
+              }
+            `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("remove", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.contracts.remove(name: "")
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 87, Line: 3, Column: 55},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+
+		t.Run("borrow", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.contracts.borrow<&Int>(name: "")
+              }
+            `)
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("keys", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("add", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.keys.add(
+                      publicKey: key,
+                      hashAlgorithm: algo,
+                      weight: 100.0
+                  )
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 3)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 207, Line: 7, Column: 18},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+			assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
+			assert.IsType(t, &sema.NotDeclaredError{}, errs[2])
+		})
+
+		t.Run("get", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.keys.get(keyIndex: 0)
+              }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("revoke", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.keys.revoke(keyIndex: 0)
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 85, Line: 3, Column: 53},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+
+		t.Run("forEach", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.keys.forEach(fun(key: AccountKey): Bool {
+                      return true
+                  })
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 157, Line: 5, Column: 19},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+	})
+
+	t.Run("inbox", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("publish", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.inbox.publish(
+                      cap,
+                      name: "cap",
+                      recipient: 0x1
+                  )
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 194, Line: 7, Column: 18},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+			assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
+		})
+
+		t.Run("unpublish", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.inbox.unpublish<&Int>("cap")
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 89, Line: 3, Column: 57},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+
+		t.Run("claim", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.inbox.claim<&Int>("cap", provider: 0x1)
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 100, Line: 3, Column: 68},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+	})
+
+	t.Run("capabilities", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("get", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.get<&Int>(/public/foo)
+              }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("borrow", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.borrow<&Int>(/public/foo)
+              }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("publish", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.publish(
+                      cap,
+                      at: /public/foo
+                  )
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 167, Line: 6, Column: 18},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+			assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
+		})
+
+		t.Run("unpublish", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.unpublish(/public/foo)
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 96, Line: 3, Column: 64},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+	})
+
+	t.Run("capabilities.storage", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("getController", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.storage.getController(byCapabilityID: 1)
+              }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("getControllers", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.storage.getControllers(forPath: /storage/foo)
+              }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEachController", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.storage.forEachController(
+                      forPath: /storage/foo,
+                      fun (controller: &StorageCapabilityController): Bool {
+                          return true
+                      }
+                  )
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 304, Line: 8, Column: 18},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+
+		t.Run("issue", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.storage.issue<&Int>(/storage/foo)
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 107, Line: 3, Column: 75},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+	})
+
+	t.Run("capabilities.account", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("getController", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.account.getController(byCapabilityID: 1)
+              }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("getControllers", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.account.getControllers()
+              }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEachController", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.account.forEachController(
+                      fun (controller: &AccountCapabilityController): Bool {
+                          return true
+                      }
+                  )
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 259, Line: 7, Column: 18},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+
+		t.Run("issue", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  authAccount.capabilities.account.issue<&AuthAccount>()
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 103, Line: 3, Column: 71},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+	})
+}
+
+func TestCheckPublicAccountPurity(t *testing.T) {
+	t.Parallel()
+
+	t.Run("forEachPublic", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheckAccount(t, `
+          view fun foo() {
+              publicAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                  return true
+              })
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.PurityError{}, errs[0])
+		assert.Equal(
+			t,
+			ast.Range{
+				StartPos: ast.Position{Offset: 42, Line: 3, Column: 14},
+				EndPos:   ast.Position{Offset: 158, Line: 5, Column: 15},
+			},
+			errs[0].(*sema.PurityError).Range,
+		)
+	})
+
+	t.Run("contracts", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("get", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  publicAccount.contracts.get(name: "")
+              }
+            `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("borrow", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  publicAccount.contracts.borrow<&Int>(name: "")
+              }
+            `)
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("keys", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("get", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  publicAccount.keys.get(keyIndex: 0)
+              }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("forEach", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  publicAccount.keys.forEach(fun(key: AccountKey): Bool {
+                      return true
+                  })
+              }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.PurityError{}, errs[0])
+			assert.Equal(
+				t,
+				ast.Range{
+					StartPos: ast.Position{Offset: 50, Line: 3, Column: 18},
+					EndPos:   ast.Position{Offset: 159, Line: 5, Column: 19},
+				},
+				errs[0].(*sema.PurityError).Range,
+			)
+		})
+	})
+
+	t.Run("capabilities", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("get", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  publicAccount.capabilities.get<&Int>(/public/foo)
+              }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("borrow", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t, `
+              view fun foo() {
+                  publicAccount.capabilities.borrow<&Int>(/public/foo)
+              }
+            `)
+			require.NoError(t, err)
+		})
 	})
 }
