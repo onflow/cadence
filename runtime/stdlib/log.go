@@ -61,7 +61,7 @@ func NewLogFunction(logger Logger) StandardLibraryValue {
 				err = logger.ProgramLog(message)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return interpreter.Void

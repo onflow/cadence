@@ -2812,3 +2812,40 @@ func TestCheckResourceReferenceMethodInvocationAfterMove(t *testing.T) {
 	invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 	assert.ErrorAs(t, errs[0], &invalidatedRefError)
 }
+
+func TestCheckReferenceCreationWithInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("invalid reference type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            let foo: AnyStruct? = nil
+            let x = &foo as &Foo
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var notDeclaredError *sema.NotDeclaredError
+		require.ErrorAs(t, errs[0], &notDeclaredError)
+	})
+
+	t.Run("valid non-reference type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Foo {}
+
+            let foo: AnyStruct? = nil
+            let x = &foo as Foo
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var nonReferenceTypeReferenceError *sema.NonReferenceTypeReferenceError
+		require.ErrorAs(t, errs[0], &nonReferenceTypeReferenceError)
+	})
+}

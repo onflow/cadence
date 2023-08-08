@@ -513,20 +513,8 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		var err error
-
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		switch r := r.(type) {
-		case Error,
-			errors.ExternalError,
-			errors.InternalError,
-			errors.UserError:
-			err = r.(error)
-		case error:
-			err = errors.NewUnexpectedErrorFromCause(r)
-		default:
-			err = errors.NewUnexpectedError("%s", r)
-		}
+		err := asCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -553,6 +541,31 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		interpreterErr.StackTrace = interpreter.CallStack()
 
 		onError(interpreterErr)
+	}
+}
+
+func asCadenceError(r any) error {
+	err, isError := r.(error)
+	if !isError {
+		return errors.NewUnexpectedError("%s", r)
+	}
+
+	rootError := err
+
+	for {
+		switch typedError := err.(type) {
+		case Error,
+			errors.ExternalError,
+			errors.InternalError,
+			errors.UserError:
+			return typedError
+		case xerrors.Wrapper:
+			err = typedError.Unwrap()
+		case error:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		default:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		}
 	}
 }
 
@@ -4024,12 +4037,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}()
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
+
 				staticType := value.StaticType(inter)
 
-				// Perform a forced type loading to see if the underlying type is not broken.
+				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
-				typeError := inter.checkTypeLoading(staticType)
-				if typeError != nil {
+				valueError := inter.checkValue(
+					value,
+					staticType,
+					invocation.LocationRange,
+				)
+
+				if valueError != nil {
 					continue
 				}
 
@@ -4079,14 +4098,19 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 	)
 }
 
-func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
+func (interpreter *Interpreter) checkValue(
+	value Value,
+	staticType StaticType,
+	locationRange LocationRange,
+) (valueError error) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			rootError := r
 			for {
 				switch err := r.(type) {
 				case errors.UserError, errors.ExternalError:
-					typeError = err.(error)
+					valueError = err.(error)
 					return
 				case xerrors.Wrapper:
 					r = err.Unwrap()
@@ -4097,8 +4121,43 @@ func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeErr
 		}
 	}()
 
-	// Here it is only interested in whether the type can be properly loaded.
-	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
+	// Here, the value at the path could be either:
+	//	1) The actual stored value (storage path)
+	//	2) A capability to the value at the storage (private/public paths)
+
+	if idCapability, ok := value.(*IDCapabilityValue); ok {
+		// If, the value is a capability, try to load the value at the capability target.
+		// However, borrow type is not statically known.
+		// So take the borrow type from the value itself
+
+		// Capability values always have a `CapabilityStaticType` static type.
+		borrowType := staticType.(CapabilityStaticType).BorrowType
+
+		var borrowSemaType sema.Type
+		borrowSemaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
+		if valueError != nil {
+			return valueError
+		}
+
+		referenceType, ok := borrowSemaType.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		_ = interpreter.SharedState.Config.IDCapabilityCheckHandler(
+			interpreter,
+			locationRange,
+			idCapability.Address,
+			idCapability.ID,
+			referenceType,
+			referenceType,
+		)
+
+	} else {
+		// For all other values, trying to load the type is sufficient.
+		// Here it is only interested in whether the type can be properly loaded.
+		_, valueError = interpreter.ConvertStaticToSemaType(staticType)
+	}
 
 	return
 }

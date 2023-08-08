@@ -3687,6 +3687,584 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		)
 		require.NoError(t, err)
 	})
+
+	t.Run("broken impl, stored with interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+		address := common.MustBytesToAddress([]byte{0x1})
+		accountCodes := map[common.Location][]byte{}
+		ledger := newTestLedger(nil, nil)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		contractIsBroken := false
+
+		deployFoo := DeploymentTransaction("Foo", []byte(`
+            access(all) contract Foo {
+                access(all) struct interface Collection {}
+            }
+        `))
+
+		deployBar := DeploymentTransaction("Bar", []byte(`
+            import Foo from 0x1
+
+            access(all) contract Bar {
+                access(all) struct CollectionImpl: Foo.Collection {}
+            }
+        `))
+
+		newRuntimeInterface := func() Interface {
+			return &testRuntimeInterface{
+				storage: ledger,
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{address}, nil
+				},
+				resolveLocation: singleIdentifierLocationResolver(t),
+				updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+					accountCodes[location] = code
+					return nil
+				},
+				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+					if contractIsBroken && location.Name == "Bar" {
+						// Contract has a semantic error. i.e: Mismatched types at `bar` function
+						return []byte(`
+                        import Foo from 0x1
+
+                        access(all) contract Bar {
+                            access(all) struct CollectionImpl: Foo.Collection {
+                                access(all) var mismatch: Int
+
+                                init() {
+                                    self.mismatch = "hello"
+                                }
+                            }
+                        }`), nil
+					}
+
+					code = accountCodes[location]
+					return code, nil
+				},
+				emitEvent: func(event cadence.Event) error {
+					return nil
+				},
+			}
+		}
+
+		// Deploy `Foo` contract
+
+		runtimeInterface := newRuntimeInterface()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployFoo,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Deploy `Bar` contract
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployBar,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Store values
+
+		runtimeInterface = newRuntimeInterface()
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    import Bar from 0x1
+                    import Foo from 0x1
+
+                    transaction {
+                        prepare(signer: AuthAccount) {
+                            signer.save("Hello, World!", to: /storage/first)
+
+                            var structArray: [{Foo.Collection}] = [Bar.CollectionImpl()]
+                            signer.save(structArray, to: /storage/second)
+
+                            let capA = signer.capabilities.storage.issue<&String>(/storage/first)
+                            signer.capabilities.publish(capA, at: /public/a)
+
+                            let capB = signer.capabilities.storage.issue<&[{Foo.Collection}]>(/storage/second)
+                            signer.capabilities.publish(capB, at: /public/b)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Make the `Bar` contract broken. i.e: `Bar.CollectionImpl` type is broken.
+		contractIsBroken = true
+
+		runtimeInterface = newRuntimeInterface()
+
+		// 1) Iterate through public paths
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    import Foo from 0x1
+
+                    transaction {
+                        prepare(account: AuthAccount) {
+                            var total = 0
+                            var capTaken = false
+
+                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                                total = total + 1
+                                if var cap = account.capabilities.get<&[{Foo.Collection}]>(path) {
+                                    cap.check()
+                                    var refArray = cap.borrow()!
+                                    capTaken = true
+                                }
+
+                                return true
+                            })
+
+                            assert(total == 2)
+                            assert(capTaken)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// 2) Iterate through storage paths
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    import Foo from 0x1
+
+                    transaction {
+                        prepare(account: AuthAccount) {
+                            var total = 0
+
+                            account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                                account.check<[{Foo.Collection}]>(from: path)
+                                total = total + 1
+                                return true
+                            })
+
+                            assert(total == 2)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("broken impl, published with interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+		address := common.MustBytesToAddress([]byte{0x1})
+		accountCodes := map[common.Location][]byte{}
+		ledger := newTestLedger(nil, nil)
+		nextTransactionLocation := newTransactionLocationGenerator()
+		contractIsBroken := false
+
+		deployFoo := DeploymentTransaction("Foo", []byte(`
+            access(all) contract Foo {
+                access(all) resource interface Collection {}
+            }
+        `))
+
+		deployBar := DeploymentTransaction("Bar", []byte(`
+            import Foo from 0x1
+
+            access(all) contract Bar {
+                access(all) resource CollectionImpl: Foo.Collection {}
+
+                access(all) fun getCollection(): @Bar.CollectionImpl {
+                    return <- create Bar.CollectionImpl()
+                }
+            }
+        `))
+
+		newRuntimeInterface := func() Interface {
+			return &testRuntimeInterface{
+				storage: ledger,
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{address}, nil
+				},
+				resolveLocation: singleIdentifierLocationResolver(t),
+				updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+					accountCodes[location] = code
+					return nil
+				},
+				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+					if contractIsBroken && location.Name == "Bar" {
+						// Contract has a semantic error. i.e: Mismatched types at `bar` function
+						return []byte(`
+                        import Foo from 0x1
+
+                        access(all) contract Bar {
+                            access(all) resource CollectionImpl: Foo.Collection {
+                                access(all) var mismatch: Int
+
+                                init() {
+                                    self.mismatch = "hello"
+                                }
+                            }
+                        }`), nil
+					}
+
+					code = accountCodes[location]
+					return code, nil
+				},
+				emitEvent: func(event cadence.Event) error {
+					return nil
+				},
+			}
+		}
+
+		// Deploy ``Foo` contract
+
+		runtimeInterface := newRuntimeInterface()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployFoo,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Deploy `Bar` contract
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployBar,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Store values
+
+		runtimeInterface = newRuntimeInterface()
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    import Bar from 0x1
+                    import Foo from 0x1
+
+                    transaction {
+                        prepare(signer: AuthAccount) {
+                            signer.save("Hello, World!", to: /storage/first)
+                            signer.save(<- Bar.getCollection(), to: /storage/second)
+
+                            let capA = signer.capabilities.storage.issue<&String>(/storage/first)
+                            signer.capabilities.publish(capA, at: /public/a)
+
+                            let capB = signer.capabilities.storage.issue<&{Foo.Collection}>(/storage/second)
+                            signer.capabilities.publish(capB, at: /public/b)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Make the `Bar` contract broken. i.e: `Bar.CollectionImpl` type is broken.
+		contractIsBroken = true
+
+		runtimeInterface = newRuntimeInterface()
+
+		// 1) Iterate through public paths
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    import Foo from 0x1
+
+                    transaction {
+                        prepare(account: AuthAccount) {
+                            var total = 0
+                            var capTaken = false
+
+                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                                total = total + 1
+
+                                if var cap = account.capabilities.get<&{Foo.Collection}>(path) {
+                                    cap.check()
+                                    capTaken = true
+                                }
+
+                                return true
+                            })
+
+                            // Total values iterated should be 1.
+                            // The broken value must be skipped.
+                            assert(total == 1)
+
+                            // Should not reach this path, because the iteration skip the value altogether.
+                            assert(!capTaken)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// 2) Iterate through storage paths
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                    import Foo from 0x1
+
+                    transaction {
+                        prepare(account: AuthAccount) {
+                            var total = 0
+                            var capTaken = false
+
+                            account.forEachStored(fun (path: StoragePath, type: Type): Bool {
+                                account.check<@{Foo.Collection}>(from: path)
+                                total = total + 1
+                                return true
+                            })
+
+                            // Total values iterated should be 1.
+                            // The broken value must be skipped.
+                            assert(total == 1)
+                        }
+                    }
+                `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("published with wrong type", func(t *testing.T) {
+
+		t.Parallel()
+
+		test := func(brokenType bool, t *testing.T) {
+
+			runtime := newTestInterpreterRuntime()
+			address := common.MustBytesToAddress([]byte{0x1})
+			accountCodes := map[common.Location][]byte{}
+			ledger := newTestLedger(nil, nil)
+			nextTransactionLocation := newTransactionLocationGenerator()
+			contractIsBroken := false
+
+			deployFoo := DeploymentTransaction("Foo", []byte(`
+            access(all) contract Foo {
+                access(all) resource interface Collection {}
+            }
+        `))
+
+			deployBar := DeploymentTransaction("Bar", []byte(`
+            import Foo from 0x1
+
+            access(all) contract Bar {
+                access(all) resource CollectionImpl: Foo.Collection {}
+
+                access(all) fun getCollection(): @Bar.CollectionImpl {
+                    return <- create Bar.CollectionImpl()
+                }
+            }
+        `))
+
+			newRuntimeInterface := func() Interface {
+				return &testRuntimeInterface{
+					storage: ledger,
+					getSigningAccounts: func() ([]Address, error) {
+						return []Address{address}, nil
+					},
+					resolveLocation: singleIdentifierLocationResolver(t),
+					updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+						accountCodes[location] = code
+						return nil
+					},
+					getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+						if contractIsBroken && location.Name == "Bar" {
+							// Contract has a semantic error. i.e: Mismatched types at `bar` function
+							return []byte(`
+                        import Foo from 0x1
+
+                        access(all) contract Bar {
+                            access(all) resource CollectionImpl: Foo.Collection {
+                                access(all) var mismatch: Int
+
+                                init() {
+                                    self.mismatch = "hello"
+                                }
+                            }
+                        }`), nil
+						}
+
+						code = accountCodes[location]
+						return code, nil
+					},
+					emitEvent: func(event cadence.Event) error {
+						return nil
+					},
+				}
+			}
+
+			// Deploy ``Foo` contract
+
+			runtimeInterface := newRuntimeInterface()
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: deployFoo,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			// Deploy `Bar` contract
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: deployBar,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			// Store values
+
+			runtimeInterface = newRuntimeInterface()
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: []byte(`
+                    import Bar from 0x1
+                    import Foo from 0x1
+
+                    transaction {
+                        prepare(signer: AuthAccount) {
+                            signer.save("Hello, World!", to: /storage/first)
+                            signer.save(<- Bar.getCollection(), to: /storage/second)
+
+                            let capA = signer.capabilities.storage.issue<&String>(/storage/first)
+                            signer.capabilities.publish(capA, at: /public/a)
+
+                            let capB = signer.capabilities.storage.issue<&String>(/storage/second)
+                            signer.capabilities.publish(capB, at: /public/b)
+                        }
+                    }
+                `),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			// Make the `Bar` contract broken. i.e: `Bar.CollectionImpl` type is broken.
+			contractIsBroken = brokenType
+
+			runtimeInterface = newRuntimeInterface()
+
+			// Iterate through public paths
+
+			// If the type is broken, iterator should only find 1 value.
+			// Otherwise, it should find all values (2).
+			count := 2
+			if brokenType {
+				count = 1
+			}
+
+			err = runtime.ExecuteTransaction(
+				Script{
+					Source: []byte(fmt.Sprintf(`
+                    import Foo from 0x1
+
+                    transaction {
+                        prepare(account: AuthAccount) {
+                            var total = 0
+                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                                var cap = account.capabilities.get<&String>(path)!
+                                cap.check()
+                                total = total + 1
+                                return true
+                            })
+
+                            // The broken value must be skipped.
+                            assert(total == %d)
+                        }
+                    }
+                `,
+						count,
+					)),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+		}
+
+		t.Run("broken type in storage", func(t *testing.T) {
+			test(true, t)
+		})
+
+		t.Run("valid type in storage", func(t *testing.T) {
+			test(false, t)
+		})
+	})
 }
 
 func TestRuntimeStorageIteration2(t *testing.T) {
