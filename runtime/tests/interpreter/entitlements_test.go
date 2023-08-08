@@ -591,16 +591,30 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			entitlement X
 			entitlement Y
 
-			fun test(): Bool {
-				account.save(3, to: /storage/foo)
-				let capX = account.getCapability<auth(X, Y) &Int>(/public/foo)
-				let upCap = capX as Capability<auth(X) &Int>
+			fun test(capXY: Capability<auth(X, Y) &Int>): Bool {
+				let upCap = capXY as Capability<auth(X) &Int>
 				return upCap as? Capability<auth(X, Y) &Int> == nil
 			}
 			`,
-			sema.Config{})
+			sema.Config{},
+		)
 
-		value, err := inter.Invoke("test")
+		capXY := interpreter.NewIDCapabilityValue(
+			nil,
+			interpreter.NewUnmeteredUInt64Value(1),
+			address,
+			interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"S.test.X", "S.test.Y"},
+					sema.Conjunction,
+				),
+				interpreter.PrimitiveStaticTypeInt,
+			),
+		)
+
+		value, err := inter.Invoke("test", capXY)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
@@ -623,31 +637,32 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			`
 			entitlement X
 
-			fun test(): Capability {
-				account.save(3, to: /storage/foo)
-				let capX = account.getCapability<auth(X) &Int>(/public/foo)
+			fun test(capX: Capability<auth(X) &Int>): Capability {
 				let upCap = capX as Capability
 				return (upCap as? Capability<auth(X) &Int>)!
 			}
 			`,
-			sema.Config{})
+			sema.Config{},
+		)
 
-		value, err := inter.Invoke("test")
+		capX := interpreter.NewIDCapabilityValue(
+			nil,
+			interpreter.NewUnmeteredUInt64Value(1),
+			address,
+			interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
+				interpreter.PrimitiveStaticTypeInt,
+			),
+		)
+
+		value, err := inter.Invoke("test", capX)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewPathCapabilityValue(
-				nil,
-				address,
-				interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"),
-				interpreter.NewReferenceStaticType(
-					nil,
-					interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
-					interpreter.PrimitiveStaticTypeInt,
-				),
-			),
+			capX,
 			value,
 		)
 	})
@@ -928,268 +943,6 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			value,
-		)
-	})
-
-}
-
-func TestInterpretCapabilityEntitlements(t *testing.T) {
-	t.Parallel()
-
-	t.Run("can borrow with supertype", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): &R {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.borrow<auth(X | Y) &R>()!
-			}
-			`,
-			sema.Config{},
-		)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("cannot borrow with supertype then downcast", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): &R? {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.borrow<auth(X | Y) &R>()! as? auth(X, Y) &R
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NilOptionalValue,
-			value,
-		)
-	})
-
-	t.Run("can borrow with two types", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): &R {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				cap.borrow<auth(X | Y) &R>()! as? auth(X, Y) &R
-				return cap.borrow<auth(X, Y) &R>()! as! auth(X, Y) &R
-			}
-			`,
-			sema.Config{},
-		)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("upcast runtime entitlements", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			struct S {}
-			fun test(): Bool {
-				let s = S()
-				account.save(s, to: /storage/foo)
-				account.link<auth(X) &S>(/public/foo, target: /storage/foo)
-				let cap: Capability<auth(X) &S> = account.getCapability<auth(X) &S>(/public/foo)
-				let runtimeType = cap.getType() 
-				let upcastCap = cap as Capability<&S> 
-				let upcastRuntimeType = upcastCap.getType() 
-				return runtimeType == upcastRuntimeType 
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.FalseValue,
-			value,
-		)
-	})
-
-	t.Run("upcast runtime type", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			struct S {}
-			fun test(): Bool {
-				let s = S()
-				account.save(s, to: /storage/foo)
-				account.link<&S>(/public/foo, target: /storage/foo)
-				let cap: Capability<&S> = account.getCapability<&S>(/public/foo)
-				let runtimeType = cap.getType() 
-				let upcastCap = cap as Capability<&AnyStruct> 
-				let upcastRuntimeType = upcastCap.getType() 
-				return runtimeType == upcastRuntimeType 
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
-	})
-
-	t.Run("can check with supertype", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): Bool {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.check<auth(X | Y) &R>()
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
-	})
-
-	t.Run("cannot borrow with subtype", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): &R {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.borrow<auth(X, Y) &R>()!
-			}
-			`,
-			sema.Config{},
-		)
-
-		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		var nilErr interpreter.ForceNilError
-		require.ErrorAs(t, err, &nilErr)
-	})
-
-	t.Run("cannot check with subtype", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): Bool {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.check<auth(X, Y) &R>()
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.FalseValue,
 			value,
 		)
 	})

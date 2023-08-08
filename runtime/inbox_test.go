@@ -40,7 +40,7 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
 		}
@@ -129,7 +129,7 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				signer.inbox.publish(cap, name: "foo", recipient: 0x2)
 			}
 		}
@@ -208,7 +208,7 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
 		}
@@ -297,7 +297,7 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
 		}
@@ -391,7 +391,7 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
 		}
@@ -518,7 +518,7 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
 		}
@@ -622,7 +622,7 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
 		}
@@ -710,7 +710,7 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
+func TestAccountInboxPublishClaimWrongName(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -723,7 +723,7 @@ func TestAccountInboxPublishClaimWrongPath(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
 		}
@@ -825,7 +825,7 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
 		}
@@ -952,7 +952,7 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 		transaction {
 			prepare(signer: AuthAccount) {
 				signer.save([3], to: /storage/foo)
-				let cap = signer.link<&[Int]>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
 		}

@@ -432,29 +432,7 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	checker.checkTopLevelDeclarationsValidity(declarations)
 
-	var rejectAllowAccountLinkingPragma bool
-
 	for _, declaration := range declarations {
-
-		// A pragma declaration #allowAccountLinking determines
-		// if the program is allowed to use account linking.
-		//
-		// It must appear as a top-level declaration (i.e. not nested in the program),
-		// and must appear before all other declarations (i.e. at the top of the program).
-		//
-		// This is a temporary feature, which is planned to get replaced by capability controllers,
-		// and a new Account type with entitlements.
-
-		if pragmaDeclaration, isPragma := declaration.(*ast.PragmaDeclaration); isPragma {
-			if IsAllowAccountLinkingPragma(pragmaDeclaration) {
-				if rejectAllowAccountLinkingPragma {
-					checker.reportInvalidNonHeaderPragma(pragmaDeclaration)
-				}
-				continue
-			}
-		}
-
-		rejectAllowAccountLinkingPragma = true
 
 		// Skip import declarations, they are already handled above
 		if _, isImport := declaration.(*ast.ImportDeclaration); isImport {
@@ -2584,25 +2562,4 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 			},
 		)
 	}
-}
-
-func (checker *Checker) isAvailableMember(expressionType Type, identifier string) bool {
-	switch expressionType {
-	case AuthAccountType:
-		switch identifier {
-		case AuthAccountTypeLinkAccountFunctionName:
-			return checker.Config.AccountLinkingEnabled
-
-		case AuthAccountTypeCapabilitiesFieldName:
-			return checker.Config.CapabilityControllersEnabled
-		}
-
-	case PublicAccountType:
-		switch identifier {
-		case PublicAccountTypeCapabilitiesFieldName:
-			return checker.Config.CapabilityControllersEnabled
-		}
-	}
-
-	return true
 }

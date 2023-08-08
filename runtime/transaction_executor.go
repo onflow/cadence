@@ -251,8 +251,6 @@ func (executor *interpreterTransactionExecutor) transactionExecutionFunction(
 			err = internalErr
 		})
 
-		inter.ConfigureAccountLinkingAllowed()
-
 		values, err := validateArgumentParams(
 			inter,
 			executor.environment,

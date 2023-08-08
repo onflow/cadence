@@ -314,7 +314,7 @@ func TestInterpretTransactions(t *testing.T) {
 				interpreter.TrueValue,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 			},
-			arrayElements(inter, values.(*interpreter.ArrayValue)),
+			ArrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
 	})
 }
