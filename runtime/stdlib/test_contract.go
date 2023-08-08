@@ -75,7 +75,8 @@ var testTypeAssertFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
-	RequiredArgumentCount: sema.RequiredArgumentCount(1),
+	// `message` parameter is optional
+	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
 var testTypeAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -132,7 +133,6 @@ var testTypeAssertEqualFunctionType = &sema.FunctionType{
 			),
 		},
 	},
-	RequiredArgumentCount: sema.RequiredArgumentCount(2),
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
@@ -195,7 +195,8 @@ var testTypeFailFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
-	RequiredArgumentCount: sema.RequiredArgumentCount(0),
+	// `message` parameter is optional
+	Arity: &sema.Arity{Min: 0, Max: 1},
 }
 
 var testTypeFailFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -280,7 +281,14 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) interpreter.Func
 			)
 
 			if !result {
-				panic(AssertionError{})
+				message := fmt.Sprintf(
+					"given value is: %s",
+					value,
+				)
+				panic(AssertionError{
+					Message:       message,
+					LocationRange: invocation.LocationRange,
+				})
 			}
 
 			return interpreter.Void
@@ -903,7 +911,6 @@ func newTestTypeExpectFailureFunctionType() *sema.FunctionType {
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
 			sema.VoidType,
 		),
-		RequiredArgumentCount: sema.RequiredArgumentCount(2),
 	}
 }
 

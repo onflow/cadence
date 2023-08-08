@@ -705,7 +705,8 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", newTestAuthAccountValue(meter, randomAddressValue()))
+		addressValue := newRandomValueGenerator().randomAddressValue()
+		_, err := inter.Invoke("main", newTestAuthAccountValue(meter, addressValue))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -724,7 +725,8 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", newTestPublicAccountValue(meter, randomAddressValue()))
+		addressValue := newRandomValueGenerator().randomAddressValue()
+		_, err := inter.Invoke("main", newTestPublicAccountValue(meter, addressValue))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -8423,7 +8425,7 @@ func TestInterpretASTMetering(t *testing.T) {
                 k()                                      // identifier, invocation
                 var l = c ? 1 : 2                        // conditional, identifier, integer x2
                 var m = d as AnyStruct                   // casting, identifier
-                var n = &d as &AnyStruct                 // reference, casting, identifier
+                var n = &d as &AnyStruct?                // reference, casting, identifier
                 var o = d!                               // force, identifier
                 var p = /public/somepath                 // path
             }

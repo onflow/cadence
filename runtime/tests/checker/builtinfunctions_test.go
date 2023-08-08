@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -32,9 +33,11 @@ func TestCheckToString(t *testing.T) {
 
 	t.Parallel()
 
-	for _, numberOrAddressType := range append(
-		sema.AllNumberTypes[:],
-		sema.TheAddressType,
+	for _, numberOrAddressType := range common.Concat(
+		sema.AllNumberTypes,
+		[]sema.Type{
+			sema.TheAddressType,
+		},
 	) {
 
 		ty := numberOrAddressType
@@ -127,8 +130,8 @@ func TestCheckAddressFromBytes(t *testing.T) {
 
 	runInvalidCase(t, "[\"abc\"]", &sema.TypeMismatchError{})
 	runInvalidCase(t, "1", &sema.TypeMismatchError{})
-	runInvalidCase(t, "[1], [2, 3, 4]", &sema.ArgumentCountError{})
-	runInvalidCase(t, "", &sema.ArgumentCountError{})
+	runInvalidCase(t, "[1], [2, 3, 4]", &sema.ExcessiveArgumentsError{})
+	runInvalidCase(t, "", &sema.InsufficientArgumentsError{})
 	runInvalidCase(t, "typo: [1]", &sema.IncorrectArgumentLabelError{})
 }
 
@@ -177,8 +180,8 @@ func TestCheckAddressFromString(t *testing.T) {
 
 	runInvalidCase(t, "[1232]", &sema.TypeMismatchError{})
 	runInvalidCase(t, "1", &sema.TypeMismatchError{})
-	runInvalidCase(t, "\"0x1\", \"0x2\"", &sema.ArgumentCountError{})
-	runInvalidCase(t, "", &sema.ArgumentCountError{})
+	runInvalidCase(t, "\"0x1\", \"0x2\"", &sema.ExcessiveArgumentsError{})
+	runInvalidCase(t, "", &sema.InsufficientArgumentsError{})
 	runInvalidCase(t, "typo: \"0x1\"", &sema.IncorrectArgumentLabelError{})
 }
 
@@ -259,8 +262,8 @@ func TestCheckFromBigEndianBytes(t *testing.T) {
 			runValidCase(t, ty, "[1, 2, 100, 4, 45, 12]")
 
 			runInvalidCase(t, ty, "\"abcd\"", &sema.TypeMismatchError{})
-			runInvalidCase(t, ty, "", &sema.ArgumentCountError{})
-			runInvalidCase(t, ty, "[1], [2, 4]", &sema.ArgumentCountError{})
+			runInvalidCase(t, ty, "", &sema.InsufficientArgumentsError{})
+			runInvalidCase(t, ty, "[1], [2, 4]", &sema.ExcessiveArgumentsError{})
 			runInvalidCase(t, ty, "typo: [1]", &sema.IncorrectArgumentLabelError{})
 		}
 	}

@@ -1114,7 +1114,7 @@ func GetFieldsMappedByName(v HasFields) map[string]Value {
 // DecodeFields decodes a HasFields into a struct
 func DecodeFields(hasFields HasFields, s interface{}) error {
 	v := reflect.ValueOf(s)
-	if v.Kind() != reflect.Ptr {
+	if !v.IsValid() || v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
 		return fmt.Errorf("s must be a pointer to a struct")
 	}
 

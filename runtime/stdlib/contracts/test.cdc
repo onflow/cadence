@@ -122,10 +122,10 @@ pub contract Test {
             return self.backend.events(type)
         }
 
-        /// Resets the state of the blockchain.
+        /// Resets the state of the blockchain to the given height.
         ///
-        pub fun reset() {
-            self.backend.reset()
+        pub fun reset(to height: UInt64) {
+            self.backend.reset(to: height)
         }
     }
 
@@ -168,9 +168,13 @@ pub contract Test {
     /// operations, such as transactions and scripts.
     ///
     pub struct interface Result {
-        /// The resulted status of an executed operation.
+        /// The result status of an executed operation.
         ///
         pub let status: ResultStatus
+
+        /// The optional error of an executed operation.
+        ///
+        pub let error: Error?
     }
 
     /// The result of a transaction execution.
@@ -305,9 +309,9 @@ pub contract Test {
         ///
         pub fun events(_ type: Type?): [AnyStruct]
 
-        /// Resets the state of the blockchain.
+        /// Resets the state of the blockchain to the given height.
         ///
-        pub fun reset()
+        pub fun reset(to height: UInt64)
     }
 
     /// Returns a new matcher that negates the test of the given matcher.
@@ -344,6 +348,30 @@ pub contract Test {
         return Matcher(test: fun (value: AnyStruct): Bool {
             return value == nil
         })
+    }
+
+    /// Asserts that the result status of an executed operation, such as
+    /// a script or transaction, has failed and contains the given error
+    /// message.
+    ///
+    pub fun assertError(_ result: {Result}, errorMessage: String) {
+        pre {
+            result.status == ResultStatus.failed: "no error was found"
+        }
+
+        var found = false
+        let msg = result.error!.message
+        let msgLength = msg.length - errorMessage.length + 1
+        var i = 0
+        while i < msgLength {
+            if msg.slice(from: i, upTo: i + errorMessage.length) == errorMessage {
+                found = true
+                break
+            }
+            i = i + 1
+        }
+
+        assert(found, message: "the error message did not contain the given sub-string")
     }
 
 }

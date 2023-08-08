@@ -431,6 +431,10 @@ func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
 		errors.WrapPanic(func() {
 			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
 		})
+
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
 		return
 	}
 }
@@ -560,6 +564,11 @@ func (e *interpreterEnvironment) getProgram(
 			if panicErr != nil {
 				return nil, panicErr
 			}
+
+			if err != nil {
+				err = interpreter.WrappedExternalError(err)
+			}
+
 			return
 		})
 	})
@@ -577,6 +586,11 @@ func (e *interpreterEnvironment) getCode(location common.Location) (code []byte,
 			code, err = e.runtimeInterface.GetCode(location)
 		})
 	}
+
+	if err != nil {
+		err = interpreter.WrappedExternalError(err)
+	}
+
 	return
 }
 
@@ -745,6 +759,10 @@ func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 		errors.WrapPanic(func() {
 			uuid, err = e.runtimeInterface.GenerateUUID()
 		})
+
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
 		return
 	}
 }
@@ -941,7 +959,7 @@ func (e *interpreterEnvironment) newOnMeterComputation() interpreter.OnMeterComp
 			err = e.runtimeInterface.MeterComputation(compKind, intensity)
 		})
 		if err != nil {
-			panic(err)
+			panic(interpreter.WrappedExternalError(err))
 		}
 	}
 }

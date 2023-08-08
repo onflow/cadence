@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -881,19 +882,6 @@ func (ContainerMutatedDuringIterationError) Error() string {
 	return "resource container modified during iteration"
 }
 
-// ReentrantResourceDestructionError
-type ReentrantResourceDestructionError struct {
-	LocationRange
-}
-
-var _ errors.UserError = ReentrantResourceDestructionError{}
-
-func (ReentrantResourceDestructionError) IsUserError() {}
-
-func (ReentrantResourceDestructionError) Error() string {
-	return "re-entrant destruction of resource"
-}
-
 // InvalidHexByteError
 type InvalidHexByteError struct {
 	LocationRange
@@ -987,4 +975,36 @@ func (AccountLinkingForbiddenError) IsUserError() {}
 
 func (e AccountLinkingForbiddenError) Error() string {
 	return "account linking is not allowed"
+}
+
+// RecursiveTransferError
+type RecursiveTransferError struct {
+	LocationRange
+}
+
+var _ errors.UserError = RecursiveTransferError{}
+
+func (RecursiveTransferError) IsUserError() {}
+
+func (RecursiveTransferError) Error() string {
+	return "recursive transfer of value"
+}
+
+func WrappedExternalError(err error) error {
+	switch err := err.(type) {
+	case
+		// If the error is a go-runtime error, don't wrap.
+		// These are crashers.
+		runtime.Error,
+
+		// If the error is already a cadence error, then avoid redundant wrapping.
+		errors.InternalError,
+		errors.UserError,
+		errors.ExternalError,
+		Error:
+		return err
+
+	default:
+		return errors.NewExternalError(err)
+	}
 }

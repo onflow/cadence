@@ -253,7 +253,11 @@ func (a *VariableActivations) Find(name string) *Variable {
 
 // Depth returns the depth (size) of the activation stack.
 func (a *VariableActivations) Depth() int {
-	return len(a.activations)
+	current := a.Current()
+	if current == nil {
+		return 0
+	}
+	return current.Depth
 }
 
 type variableDeclaration struct {

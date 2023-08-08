@@ -16,27 +16,21 @@
  * limitations under the License.
  */
 
-package analysis
+package common
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
-)
+func Concat[T any](slices ...[]T) []T {
+	var length int
 
-type SuggestedFix = sema.SuggestedFix
+	for _, slice := range slices {
+		length += len(slice)
+	}
 
-type TextEdit = sema.TextEdit
+	result := make([]T, length)
 
-type Diagnostic struct {
-	Location         common.Location
-	Category         string
-	Message          string
-	SecondaryMessage string
-	SuggestedFixes   []SuggestedFix
-	ast.Range
-}
+	var offset int
+	for _, slice := range slices {
+		offset += copy(result[offset:], slice)
+	}
 
-func (d Diagnostic) SuggestFixes(_ string) []SuggestedFix {
-	return d.SuggestedFixes
+	return result
 }

@@ -21,6 +21,7 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -58,9 +59,12 @@ var BasicAccesses = []Access{
 	AccessPublicSettable,
 }
 
-var AllAccesses = append(BasicAccesses[:],
-	AccessContract,
-	AccessAccount,
+var AllAccesses = common.Concat(
+	BasicAccesses,
+	[]Access{
+		AccessContract,
+		AccessAccount,
+	},
 )
 
 func (a Access) Keyword() string {

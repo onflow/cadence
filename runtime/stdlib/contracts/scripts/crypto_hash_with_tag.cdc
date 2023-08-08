@@ -1,4 +1,4 @@
-import Crypto from "Crypto"
+import "Crypto"
 
 pub fun main(): Bool {
     let hash = Crypto.hashWithTag(
