@@ -4565,9 +4565,6 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(v Value) {
 		v.Walk(interpreter, interpreter.ConvertValueToEntitlements)
 	// capabilities should just have their borrow type updated;
 	// we will update their underlying value when the capability is borrowed
-	case *PathCapabilityValue:
-		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
-		v.BorrowType = ConvertSemaToStaticType(interpreter, entitledCapabilityValue.BorrowType)
 	case *IDCapabilityValue:
 		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
 		v.BorrowType = ConvertSemaToStaticType(interpreter, entitledCapabilityValue.BorrowType)
