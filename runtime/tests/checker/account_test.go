@@ -1219,9 +1219,9 @@ func TestPublicAccountContracts(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
-		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t, "add", notDeclaredError.Name)
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errors[0], &invalidAccessErr)
+		assert.Equal(t, "add", invalidAccessErr.Name)
 	})
 
 	t.Run("update contract", func(t *testing.T) {
@@ -1234,24 +1234,24 @@ func TestPublicAccountContracts(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
-		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t, "update", notDeclaredError.Name)
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errors[0], &invalidAccessErr)
+		assert.Equal(t, "update", invalidAccessErr.Name)
 	})
 
 	t.Run("remove contract", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract {
+            fun test(): DeployedContract? {
                 return publicAccount.contracts.remove(name: "foo")
             }
 	    `)
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
-		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t, "remove", notDeclaredError.Name)
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errors[0], &invalidAccessErr)
+		assert.Equal(t, "remove", invalidAccessErr.Name)
 	})
 
 }
@@ -1280,7 +1280,6 @@ func TestCheckAccountPaths(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			let publicPaths: [PublicPath] = authAccount.storage.publicPaths
-			let privatePaths: [PrivatePath] = authAccount.storage.privatePaths
 			let storagePaths: [StoragePath] = authAccount.storage.storagePaths
 		`,
 		)
@@ -1293,7 +1292,6 @@ func TestCheckAccountPaths(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			let publicPaths: [Path] = authAccount.storage.publicPaths
-			let privatePaths: [CapabilityPath] = authAccount.storage.privatePaths
 			let storagePaths: [Path] = authAccount.storage.storagePaths
 		`,
 		)
@@ -1305,7 +1303,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths: [PublicPath] = authAccount.storage.privatePaths
+			let paths: [PublicPath] = authAccount.storage.storagePaths
 		`,
 		)
 
