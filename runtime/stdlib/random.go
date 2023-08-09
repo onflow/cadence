@@ -62,8 +62,7 @@ func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryVal
 					if err != nil {
 						panic(interpreter.WrappedExternalError(err))
 					}
-					rand := binary.LittleEndian.Uint64(buffer[:])
-					return rand
+					return binary.LittleEndian.Uint64(buffer[:])
 				},
 			)
 		},
