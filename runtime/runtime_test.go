@@ -198,7 +198,7 @@ type testRuntimeInterface struct {
 	programParsed      func(location Location, duration time.Duration)
 	programChecked     func(location Location, duration time.Duration)
 	programInterpreted func(location Location, duration time.Duration)
-	unsafeRandom       func() (uint64, error)
+	readRandom         func([]byte) error
 	verifySignature    func(
 		signature []byte,
 		tag string,
@@ -513,11 +513,11 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block stdlib.Blo
 	return block, true, nil
 }
 
-func (i *testRuntimeInterface) UnsafeRandom() (uint64, error) {
-	if i.unsafeRandom == nil {
-		return 0, nil
+func (i *testRuntimeInterface) ReadRandom(buffer []byte) error {
+	if i.readRandom == nil {
+		return nil
 	}
-	return i.unsafeRandom()
+	return i.readRandom(buffer)
 }
 
 func (i *testRuntimeInterface) VerifySignature(
@@ -4752,8 +4752,9 @@ func TestRuntimeUnsafeRandom(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		unsafeRandom: func() (uint64, error) {
-			return 7558174677681708339, nil
+		readRandom: func(buffer []byte) error {
+			binary.LittleEndian.PutUint64(buffer, 7558174677681708339)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
