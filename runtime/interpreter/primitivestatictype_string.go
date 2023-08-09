@@ -69,18 +69,18 @@ func _() {
 	_ = x[PrimitiveStaticTypeAuthAccountAccountCapabilities-102]
 	_ = x[PrimitiveStaticTypeAuthAccountCapabilities-103]
 	_ = x[PrimitiveStaticTypePublicAccountCapabilities-104]
-	_ = x[PrimitiveStaticTypeAccount-110]
-	_ = x[PrimitiveStaticTypeAccountContracts-111]
-	_ = x[PrimitiveStaticTypeAccountKeys-112]
-	_ = x[PrimitiveStaticTypeAccountInbox-113]
-	_ = x[PrimitiveStaticTypeAccountStorageCapabilities-114]
-	_ = x[PrimitiveStaticTypeAccountAccountCapabilities-115]
-	_ = x[PrimitiveStaticTypeAccountCapabilities-116]
-	_ = x[PrimitiveStaticTypeAccountStorage-117]
-	_ = x[PrimitiveStaticType_Count-118]
+	_ = x[PrimitiveStaticTypeAccount-105]
+	_ = x[PrimitiveStaticTypeAccount_Contracts-106]
+	_ = x[PrimitiveStaticTypeAccount_Keys-107]
+	_ = x[PrimitiveStaticTypeAccount_Inbox-108]
+	_ = x[PrimitiveStaticTypeAccount_StorageCapabilities-109]
+	_ = x[PrimitiveStaticTypeAccount_AccountCapabilities-110]
+	_ = x[PrimitiveStaticTypeAccount_Capabilities-111]
+	_ = x[PrimitiveStaticTypeAccount_Storage-112]
+	_ = x[PrimitiveStaticType_Count-113]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Word128Word256Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilitiesAccountAccountContractsAccountKeysAccountInboxAccountStorageCapabilitiesAccountAccountCapabilitiesAccountCapabilitiesAccountStorage_Count"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Word128Word256Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilitiesAccountAccount_ContractsAccount_KeysAccount_InboxAccount_StorageCapabilitiesAccount_AccountCapabilitiesAccount_CapabilitiesAccount_Storage_Count"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:   _PrimitiveStaticType_name[0:7],
@@ -144,15 +144,15 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	102: _PrimitiveStaticType_name[549:579],
 	103: _PrimitiveStaticType_name[579:602],
 	104: _PrimitiveStaticType_name[602:627],
-	110: _PrimitiveStaticType_name[627:634],
-	111: _PrimitiveStaticType_name[634:650],
-	112: _PrimitiveStaticType_name[650:661],
-	113: _PrimitiveStaticType_name[661:673],
-	114: _PrimitiveStaticType_name[673:699],
-	115: _PrimitiveStaticType_name[699:725],
-	116: _PrimitiveStaticType_name[725:744],
-	117: _PrimitiveStaticType_name[744:758],
-	118: _PrimitiveStaticType_name[758:764],
+	105: _PrimitiveStaticType_name[627:634],
+	106: _PrimitiveStaticType_name[634:651],
+	107: _PrimitiveStaticType_name[651:663],
+	108: _PrimitiveStaticType_name[663:676],
+	109: _PrimitiveStaticType_name[676:703],
+	110: _PrimitiveStaticType_name[703:730],
+	111: _PrimitiveStaticType_name[730:750],
+	112: _PrimitiveStaticType_name[750:765],
+	113: _PrimitiveStaticType_name[765:771],
 }
 
 func (i PrimitiveStaticType) String() string {

@@ -28,7 +28,7 @@ import (
 // Account.StorageCapabilities
 
 var account_StorageCapabilitiesTypeID = sema.Account_StorageCapabilitiesType.ID()
-var account_StorageCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccountStorageCapabilities // unmetered
+var account_StorageCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_StorageCapabilities // unmetered
 var account_StorageCapabilitiesFieldNames []string = nil
 
 func NewAccountStorageCapabilitiesValue(

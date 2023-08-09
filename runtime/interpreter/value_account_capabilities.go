@@ -28,7 +28,7 @@ import (
 // Account.Capabilities
 
 var account_CapabilitiesTypeID = sema.AccountCapabilitiesType.ID()
-var account_CapabilitiesStaticType StaticType = PrimitiveStaticTypeAccountCapabilities
+var account_CapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_Capabilities
 
 func NewAccountCapabilitiesValue(
 	gauge common.MemoryGauge,

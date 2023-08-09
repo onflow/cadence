@@ -28,7 +28,7 @@ import (
 // Account.Contracts
 
 var account_ContractsTypeID = sema.Account_ContractsType.ID()
-var account_ContractsStaticType StaticType = PrimitiveStaticTypeAccountContracts // unmetered
+var account_ContractsStaticType StaticType = PrimitiveStaticTypeAccount_Contracts // unmetered
 var account_ContractsFieldNames []string = nil
 
 type ContractNamesGetter func(interpreter *Interpreter, locationRange LocationRange) *ArrayValue

@@ -28,7 +28,7 @@ import (
 // Account.AccountCapabilities
 
 var account_AccountCapabilitiesTypeID = sema.Account_AccountCapabilitiesType.ID()
-var account_AccountCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccountAccountCapabilities // unmetered
+var account_AccountCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_AccountCapabilities // unmetered
 var account_AccountCapabilitiesFieldNames []string = nil
 
 func NewAccountAccountCapabilitiesValue(

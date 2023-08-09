@@ -28,7 +28,7 @@ import (
 // Account.Keys
 
 var account_KeysTypeID = sema.Account_KeysType.ID()
-var account_KeysStaticType StaticType = PrimitiveStaticTypeAccountKeys
+var account_KeysStaticType StaticType = PrimitiveStaticTypeAccount_Keys
 
 // NewAccountKeysValue constructs an Account.Keys value.
 func NewAccountKeysValue(
