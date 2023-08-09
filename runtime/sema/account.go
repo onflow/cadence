@@ -22,7 +22,31 @@ package sema
 
 var AccountTypeAnnotation = NewTypeAnnotation(AccountType)
 
-var AccountReferenceType = &ReferenceType{Type: AccountType}
+var AccountReferenceType = &ReferenceType{
+	Authorization: UnauthorizedAccess,
+	Type:          AccountType,
+}
+
+var AccountReferenceTypeAnnotation = NewTypeAnnotation(AccountReferenceType)
+
+// FullyEntitledAccountReferenceType represents the type
+//
+//	auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account
+var FullyEntitledAccountReferenceType = &ReferenceType{
+	Authorization: NewEntitlementSetAccess(
+		[]*EntitlementType{
+			StorageType,
+			ContractsType,
+			KeysType,
+			InboxType,
+			CapabilitiesType,
+		},
+		Conjunction,
+	),
+	Type: AccountType,
+}
+
+var FullyEntitledAccountReferenceTypeAnnotation = NewTypeAnnotation(FullyEntitledAccountReferenceType)
 
 func init() {
 	Account_ContractsTypeAddFunctionType.Arity = &Arity{Min: 2}
