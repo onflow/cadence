@@ -8367,8 +8367,7 @@ func TestInvalidatedResourceUse(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var destroyedResourceErr interpreter.DestroyedResourceError
-	require.ErrorAs(t, err, &destroyedResourceErr)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 
 }
 
@@ -9254,4 +9253,125 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 	// Returned error MUST be a user error.
 	// It can NOT be an internal error.
 	assertRuntimeErrorIsUserError(t, err)
+}
+
+func BenchmarkRuntimeResourceTracking(b *testing.B) {
+
+	runtime := newTestInterpreterRuntime()
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+
+	accountCodes := map[Location][]byte{}
+
+	signerAccount := contractsAddress
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(b),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(runtimeInterface, b)
+	}
+
+	environment := NewBaseInterpreterEnvironment(Config{})
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"Foo",
+				[]byte(`
+                    access(all) contract Foo {
+                        access(all) resource R {}
+
+                        access(all) fun getResourceArray(): @[R] {
+                            var resourceArray: @[R] <- []
+                            var i = 0
+                            while i < 1000 {
+                                resourceArray.append(<- create R())
+                                i = i + 1
+                            }
+                            return <- resourceArray
+                        }
+                    }
+                `),
+			),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(b, err)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+                import Foo from 0x1
+
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        signer.save(<- Foo.getResourceArray(), to: /storage/r)
+                    }
+                }
+            `),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(b, err)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+                import Foo from 0x1
+
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        // When the array is loaded from storage, all elements are also loaded.
+                        // So all moves of this resource will check for tracking of all elements aas well.
+
+                        var array1 <- signer.load<@[Foo.R]>(from: /storage/r)!
+                        var array2 <- array1
+                        var array3 <- array2
+                        var array4 <- array3
+                        var array5 <- array4
+                        destroy array5
+                    }
+                }
+            `),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(b, err)
 }
