@@ -4945,11 +4945,12 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			switch output := inter.ConvertValueToEntitlements(test.Input).(type) {
+			inter.ConvertValueToEntitlements(test.Input)
+			switch input := test.Input.(type) {
 			case EquatableValue:
-				require.True(t, output.Equal(inter, EmptyLocationRange, test.Output))
+				require.True(t, input.Equal(inter, EmptyLocationRange, test.Output))
 			default:
-				require.Equal(t, output, test.Output)
+				require.Equal(t, input, test.Output)
 			}
 		})
 	}
