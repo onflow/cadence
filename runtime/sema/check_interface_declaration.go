@@ -52,7 +52,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		true,
 	)
 
-	inheritedMembers := map[string]*Member{}
+	inheritedMembers := map[string][]*Member{}
 	inheritedTypes := map[string]Type{}
 
 	for _, conformance := range interfaceType.EffectiveInterfaceConformances() {
@@ -549,7 +549,7 @@ func (checker *Checker) checkInterfaceConformance(
 	interfaceDeclaration *ast.InterfaceDeclaration,
 	interfaceType *InterfaceType,
 	conformance *InterfaceType,
-	inheritedMembers map[string]*Member,
+	inheritedMembersByName map[string][]*Member,
 	inheritedNestedTypes map[string]Type,
 ) {
 
@@ -564,17 +564,18 @@ func (checker *Checker) checkInterfaceConformance(
 		var isDuplicate bool
 
 		// Check if the members coming from other conformances have conflicts.
-		if conflictingMember, ok := inheritedMembers[name]; ok {
-			conflictingInterface := conflictingMember.ContainerType.(*InterfaceType)
-			isDuplicate = checker.checkDuplicateInterfaceMember(
-				conformance,
-				conformanceMember,
-				conflictingInterface,
-				conflictingMember,
-				func() ast.Range {
-					return ast.NewRangeFromPositioned(checker.memoryGauge, interfaceDeclaration.Identifier)
-				},
-			)
+		inheritedMembers, ok := inheritedMembersByName[name]
+		if ok {
+			for _, conflictingMember := range inheritedMembers {
+				conflictingInterface := conflictingMember.ContainerType.(*InterfaceType)
+				isDuplicate = checker.checkDuplicateInterfaceMember(
+					conformance,
+					conformanceMember,
+					conflictingInterface,
+					conflictingMember,
+					interfaceDeclaration.Identifier,
+				)
+			}
 		}
 
 		// Check if the members coming from the current declaration have conflicts.
@@ -585,15 +586,14 @@ func (checker *Checker) checkInterfaceConformance(
 				declarationMember,
 				conformance,
 				conformanceMember,
-				func() ast.Range {
-					return ast.NewRangeFromPositioned(checker.memoryGauge, declarationMember.Identifier)
-				},
+				declarationMember.Identifier,
 			)
 		}
 
 		// Add to the inherited members list, only if it's not a duplicated, to avoid redundant errors.
 		if !isDuplicate {
-			inheritedMembers[name] = conformanceMember
+			inheritedMembers = append(inheritedMembers, conformanceMember)
+			inheritedMembersByName[name] = inheritedMembers
 		}
 	})
 
@@ -652,7 +652,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	interfaceMember *Member,
 	conflictingInterfaceType *InterfaceType,
 	conflictingMember *Member,
-	getRange func() ast.Range,
+	hasPosition ast.HasPosition,
 ) (isDuplicate bool) {
 
 	reportMemberConflictError := func() {
@@ -662,23 +662,47 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 			MemberName:               interfaceMember.Identifier.Identifier,
 			MemberKind:               interfaceMember.DeclarationKind,
 			ConflictingMemberKind:    conflictingMember.DeclarationKind,
-			Range:                    getRange(),
+			Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
 		})
 
 		isDuplicate = true
 	}
 
 	// Check if the two members have identical signatures.
-	// If yes, they are allowed, but subject to the conditions below.
 	// If not, report an error.
 	if !checker.memberSatisfied(interfaceType, interfaceMember, conflictingMember) {
 		reportMemberConflictError()
 		return
 	}
 
-	if interfaceMember.HasImplementation || conflictingMember.HasImplementation {
-		reportMemberConflictError()
-		return
+	// If yes, they are allowed, but subject to the conditions below.
+	// - Can have at-most one default implementation
+	// - A default implementation can only co-exist with a function with conditions
+	// i.e. Considering three possibilities for the conflicting functions:
+	//   (1) Declaration only: `fun foo()`
+	//   (2) Conditions only:  `fun foo() { pre{} }`
+	//   (3) Default funcs:    `fun foo() { ... }`
+	//
+	// Having conflicting identical functions with:
+	//  - (1) and (1) - OK
+	//  - (1) and (2) - OK
+	//  - (1) and (3) - Not OK
+	//  - (2) and (2) - OK
+	//  - (2) and (3) - OK
+	//  - (3) and (3) - Not OK
+
+	if interfaceMember.HasImplementation {
+		if conflictingMember.HasImplementation || !conflictingMember.HasConditions {
+			reportMemberConflictError()
+			return
+		}
+	}
+
+	if conflictingMember.HasImplementation {
+		if !interfaceMember.HasConditions {
+			reportMemberConflictError()
+			return
+		}
 	}
 
 	return

@@ -114,14 +114,6 @@ type OnMeterComputationFunc func(
 	intensity uint,
 )
 
-// OnAccountLinkedFunc is a function that is triggered when an account is linked by the program.
-type OnAccountLinkedFunc func(
-	inter *Interpreter,
-	locationRange LocationRange,
-	address AddressValue,
-	path PathValue,
-) error
-
 // IDCapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
 type IDCapabilityBorrowHandlerFunc func(
 	inter *Interpreter,
@@ -521,20 +513,8 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		var err error
-
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		switch r := r.(type) {
-		case Error,
-			errors.ExternalError,
-			errors.InternalError,
-			errors.UserError:
-			err = r.(error)
-		case error:
-			err = errors.NewUnexpectedErrorFromCause(r)
-		default:
-			err = errors.NewUnexpectedError("%s", r)
-		}
+		err := asCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -561,6 +541,31 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		interpreterErr.StackTrace = interpreter.CallStack()
 
 		onError(interpreterErr)
+	}
+}
+
+func asCadenceError(r any) error {
+	err, isError := r.(error)
+	if !isError {
+		return errors.NewUnexpectedError("%s", r)
+	}
+
+	rootError := err
+
+	for {
+		switch typedError := err.(type) {
+		case Error,
+			errors.ExternalError,
+			errors.InternalError,
+			errors.UserError:
+			return typedError
+		case xerrors.Wrapper:
+			err = typedError.Unwrap()
+		case error:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		default:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		}
 	}
 }
 
@@ -2116,15 +2121,6 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
 
 			switch capability := value.(type) {
-			case *PathCapabilityValue:
-				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
-				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
-				return NewPathCapabilityValue(
-					interpreter,
-					capability.Address,
-					capability.Path,
-					borrowType,
-				)
 			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
@@ -2167,7 +2163,6 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				return NewAccountReferenceValue(
 					interpreter,
 					ref.Address,
-					ref.SourcePath,
 					unwrappedTargetType.Type,
 				)
 
@@ -4042,12 +4037,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}()
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
+
 				staticType := value.StaticType(inter)
 
-				// Perform a forced type loading to see if the underlying type is not broken.
+				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
-				typeError := inter.checkTypeLoading(staticType)
-				if typeError != nil {
+				valueError := inter.checkValue(
+					value,
+					staticType,
+					invocation.LocationRange,
+				)
+
+				if valueError != nil {
 					continue
 				}
 
@@ -4097,14 +4098,19 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 	)
 }
 
-func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
+func (interpreter *Interpreter) checkValue(
+	value Value,
+	staticType StaticType,
+	locationRange LocationRange,
+) (valueError error) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			rootError := r
 			for {
 				switch err := r.(type) {
 				case errors.UserError, errors.ExternalError:
-					typeError = err.(error)
+					valueError = err.(error)
 					return
 				case xerrors.Wrapper:
 					r = err.Unwrap()
@@ -4115,8 +4121,43 @@ func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeErr
 		}
 	}()
 
-	// Here it is only interested in whether the type can be properly loaded.
-	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
+	// Here, the value at the path could be either:
+	//	1) The actual stored value (storage path)
+	//	2) A capability to the value at the storage (private/public paths)
+
+	if idCapability, ok := value.(*IDCapabilityValue); ok {
+		// If, the value is a capability, try to load the value at the capability target.
+		// However, borrow type is not statically known.
+		// So take the borrow type from the value itself
+
+		// Capability values always have a `CapabilityStaticType` static type.
+		borrowType := staticType.(CapabilityStaticType).BorrowType
+
+		var borrowSemaType sema.Type
+		borrowSemaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
+		if valueError != nil {
+			return valueError
+		}
+
+		referenceType, ok := borrowSemaType.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		_ = interpreter.SharedState.Config.IDCapabilityCheckHandler(
+			interpreter,
+			locationRange,
+			idCapability.Address,
+			idCapability.ID,
+			referenceType,
+			referenceType,
+		)
+
+	} else {
+		// For all other values, trying to load the type is sufficient.
+		// Here it is only interested in whether the type can be properly loaded.
+		_, valueError = interpreter.ConvertStaticToSemaType(staticType)
+	}
 
 	return
 }
@@ -4404,548 +4445,9 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 	)
 }
 
-func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.AuthAccountTypeLinkFunctionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			targetPath, ok := invocation.Arguments[1].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
-			newCapabilityIdentifier := newCapabilityPath.Identifier
-
-			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
-
-			if interpreter.StoredValueExists(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-			) {
-				return Nil
-			}
-
-			// Write new value
-
-			borrowStaticType := ConvertSemaToStaticType(interpreter, borrowType)
-
-			// Note that this will be metered twice if Atree validation is enabled.
-			pathLink := NewPathLinkValue(interpreter, targetPath, borrowStaticType)
-
-			interpreter.WriteStored(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-				pathLink,
-			)
-
-			return NewSomeValueNonCopying(
-				interpreter,
-				NewPathCapabilityValue(
-					interpreter,
-					addressValue,
-					newCapabilityPath,
-					borrowStaticType,
-				),
-			)
-
-		},
-	)
-}
-
 var AuthAccountReferenceStaticType = ReferenceStaticType{
 	ReferencedType: PrimitiveStaticTypeAuthAccount,
 	Authorization:  UnauthorizedAccess,
-}
-
-// Linking
-//
-// When linking to a path with the `AuthAccount.link function`,
-// an interpreter.PathLink (formerly Link) is stored in storage.
-//
-// When linking to an account with the new AuthAccount.linkAccount function,
-// an interpreter.AccountLink is stored in the account.
-//
-// In both cases, when acquiring a capability, e.g. using getCapability,
-// a PathCapabilityValue is returned.
-// This is because in both cases, we are looking up a path in an account.
-// Depending on what is stored in the path, PathLink or AccountLink,
-// we return a respective reference value, a StorageReferenceValue for PathLink
-// (after following the links to the final target),
-// or an AccountReferenceValue for an AccountLink.
-//
-// Again, in both cases for StorageReferenceValue and AccountReferenceValue,
-// for each use, e.g. member access,
-// we dereference/check that the link still exists after the capability was borrowed.
-
-func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.AuthAccountTypeLinkAccountFunctionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			if !interpreter.SharedState.Config.AccountLinkingAllowed {
-				panic(AccountLinkingForbiddenError{
-					LocationRange: invocation.LocationRange,
-				})
-			}
-
-			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
-			newCapabilityIdentifier := newCapabilityPath.Identifier
-
-			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
-
-			if interpreter.StoredValueExists(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-			) {
-				return Nil
-			}
-
-			accountLinkValue := NewAccountLinkValue(interpreter)
-
-			interpreter.WriteStored(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-				accountLinkValue,
-			)
-
-			onAccountLinked := interpreter.SharedState.Config.OnAccountLinked
-			if onAccountLinked != nil {
-				err := onAccountLinked(
-					interpreter,
-					invocation.LocationRange,
-					addressValue,
-					newCapabilityPath,
-				)
-				if err != nil {
-					panic(err)
-				}
-			}
-
-			return NewSomeValueNonCopying(
-				interpreter,
-				NewPathCapabilityValue(
-					interpreter,
-					addressValue,
-					newCapabilityPath,
-					AuthAccountReferenceStaticType,
-				),
-			)
-
-		},
-	)
-}
-
-func (interpreter *Interpreter) accountGetLinkTargetFunction(
-	functionType *sema.FunctionType,
-	addressValue AddressValue,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		functionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			capabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := capabilityPath.Domain.Identifier()
-			identifier := capabilityPath.Identifier
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-
-			if value == nil {
-				return Nil
-			}
-
-			link, ok := value.(PathLinkValue)
-			if !ok {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(
-				interpreter,
-				link.TargetPath,
-			)
-		},
-	)
-}
-
-func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.AuthAccountTypeUnlinkFunctionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			capabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := capabilityPath.Domain.Identifier()
-			identifier := capabilityPath.Identifier
-
-			// Write new value
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			interpreter.WriteStored(
-				address,
-				domain,
-				storageMapKey,
-				nil,
-			)
-
-			return Void
-		},
-	)
-}
-
-func (interpreter *Interpreter) pathCapabilityBorrowFunction(
-	addressValue AddressValue,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.CapabilityTypeBorrowFunctionType(borrowType),
-		func(invocation Invocation) Value {
-
-			interpreter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				borrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-			}
-
-			if borrowType == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			target, authorization, err :=
-				interpreter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					borrowType,
-					true,
-					locationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			var reference ReferenceValue
-
-			switch target := target.(type) {
-			case nil:
-				reference = nil
-
-			case AccountCapabilityTarget:
-				reference = NewAccountReferenceValue(
-					interpreter,
-					address,
-					pathValue,
-					borrowType.Type,
-				)
-
-			case PathCapabilityTarget:
-				targetPath := PathValue(target)
-
-				storageReference := NewStorageReferenceValue(
-					interpreter,
-					authorization,
-					address,
-					targetPath,
-					borrowType.Type,
-				)
-
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				value, err := storageReference.dereference(interpreter, locationRange)
-				if err != nil {
-					panic(err)
-				}
-				if value != nil {
-					reference = storageReference
-				}
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			if reference == nil {
-				return Nil
-			}
-			return NewSomeValueNonCopying(interpreter, reference)
-		},
-	)
-}
-
-func (interpreter *Interpreter) pathCapabilityCheckFunction(
-	addressValue AddressValue,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.CapabilityTypeCheckFunctionType(borrowType),
-		func(invocation Invocation) Value {
-
-			interpreter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				borrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-			}
-
-			if borrowType == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			target, authorized, err :=
-				interpreter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					borrowType,
-					true,
-					locationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			if target == nil {
-				return FalseValue
-			}
-
-			switch target := target.(type) {
-			case AccountCapabilityTarget:
-				return TrueValue
-
-			case PathCapabilityTarget:
-				targetPath := PathValue(target)
-
-				reference := NewStorageReferenceValue(
-					interpreter,
-					authorized,
-					address,
-					targetPath,
-					borrowType.Type,
-				)
-
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				return AsBoolValue(
-					reference.ReferencedValue(interpreter, invocation.LocationRange, false) != nil,
-				)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		},
-	)
-}
-
-func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
-	address common.Address,
-	path PathValue,
-	wantedBorrowType *sema.ReferenceType,
-	checkTargetExists bool,
-	locationRange LocationRange,
-) (
-	target CapabilityTarget,
-	authorization Authorization,
-	err error,
-) {
-
-	seenPaths := map[PathValue]struct{}{}
-	paths := []PathValue{path}
-
-	for {
-		// Detect cyclic links
-
-		if _, ok := seenPaths[path]; ok {
-			return nil, UnauthorizedAccess, CyclicLinkError{
-				Address:       address,
-				Paths:         paths,
-				LocationRange: locationRange,
-			}
-		} else {
-			seenPaths[path] = struct{}{}
-		}
-
-		domain := path.Domain.Identifier()
-		identifier := path.Identifier
-
-		storageMapKey := StringStorageMapKey(identifier)
-
-		switch path.Domain {
-		case common.PathDomainStorage:
-
-			if checkTargetExists &&
-				!interpreter.StoredValueExists(address, domain, storageMapKey) {
-				return nil, UnauthorizedAccess, nil
-			}
-
-			return PathCapabilityTarget(path),
-				ConvertSemaAccesstoStaticAuthorization(interpreter, wantedBorrowType.Authorization),
-				nil
-
-		case common.PathDomainPublic,
-			common.PathDomainPrivate:
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-			if value == nil {
-				return nil, UnauthorizedAccess, nil
-			}
-
-			switch value := value.(type) {
-			case PathLinkValue:
-				allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
-
-				if !sema.IsSubType(allowedType, wantedBorrowType) {
-					return nil, UnauthorizedAccess, nil
-				}
-
-				targetPath := value.TargetPath
-				paths = append(paths, targetPath)
-				path = targetPath
-
-			case AccountLinkValue:
-				if !interpreter.IsSubTypeOfSemaType(
-					AuthAccountReferenceStaticType,
-					wantedBorrowType,
-				) {
-					return nil, UnauthorizedAccess, nil
-				}
-
-				return AccountCapabilityTarget(address),
-					UnauthorizedAccess,
-					nil
-
-			case *IDCapabilityValue:
-
-				// For backwards-compatibility, follow ID capability values
-				// which are published in the public or private domain
-
-				capabilityBorrowType, ok :=
-					interpreter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				reference := interpreter.SharedState.Config.IDCapabilityBorrowHandler(
-					interpreter,
-					locationRange,
-					value.Address,
-					value.ID,
-					wantedBorrowType,
-					capabilityBorrowType,
-				)
-				if reference == nil {
-					return nil, UnauthorizedAccess, nil
-				}
-
-				switch reference := reference.(type) {
-				case *StorageReferenceValue:
-					address = reference.TargetStorageAddress
-					targetPath := reference.TargetPath
-					paths = append(paths, targetPath)
-					path = targetPath
-
-				case *AccountReferenceValue:
-					return AccountCapabilityTarget(reference.Address),
-						UnauthorizedAccess,
-						nil
-
-				default:
-					return nil, UnauthorizedAccess, nil
-				}
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		}
-	}
 }
 
 func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.EntitlementType, error) {
@@ -5699,34 +5201,6 @@ func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atr
 
 func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
-}
-
-// ConfigureAccountLinkingAllowed configures if execution is allowed to use account linking,
-// depending on the occurrence of the pragma declaration #allowAccountLinking.
-//
-// The pragma declaration must appear as a top-level declaration (i.e. not nested in the program),
-// and must appear before all other declarations (i.e. at the top of the program).
-//
-// This requirement is also checked statically.
-//
-// This is a temporary feature, which is planned to get replaced by capability controllers,
-// and a new Account type with entitlements.
-func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
-	config := interpreter.SharedState.Config
-
-	config.AccountLinkingAllowed = false
-
-	declarations := interpreter.Program.Program.Declarations()
-	if len(declarations) < 1 {
-		return
-	}
-
-	pragmaDeclaration, isPragma := declarations[0].(*ast.PragmaDeclaration)
-	if !isPragma || !sema.IsAllowAccountLinkingPragma(pragmaDeclaration) {
-		return
-	}
-
-	config.AccountLinkingAllowed = true
 }
 
 func (interpreter *Interpreter) idCapabilityBorrowFunction(

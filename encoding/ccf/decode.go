@@ -1398,38 +1398,17 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 		return nil, err
 	}
 
-	// Decode ID or path.
-	nextType, err = d.dec.NextType()
+	// Decode ID.
+
+	id, err := d.decodeUInt64()
 	if err != nil {
 		return nil, err
 	}
 
-	if nextType == cbor.UintType {
-		// Decode ID.
-
-		id, err := d.decodeUInt64()
-		if err != nil {
-			return nil, err
-		}
-
-		return cadence.NewMeteredIDCapability(
-			d.gauge,
-			id.(cadence.UInt64),
-			address.(cadence.Address),
-			typ.BorrowType,
-		), nil
-	}
-
-	// Decode path.
-	path, err := d.decodePath()
-	if err != nil {
-		return nil, err
-	}
-
-	return cadence.NewMeteredPathCapability(
+	return cadence.NewMeteredIDCapability(
 		d.gauge,
+		id.(cadence.UInt64),
 		address.(cadence.Address),
-		path.(cadence.Path),
 		typ.BorrowType,
 	), nil
 }

@@ -593,9 +593,6 @@ func (e *Encoder) encodeValue(
 		// If x.StaticType is nil, type value is encoded as nil.
 		return e.encodeNullableTypeValue(v.StaticType, ccfTypeIDByCadenceType{})
 
-	case cadence.PathCapability:
-		return e.encodePathCapability(v)
-
 	case cadence.IDCapability:
 		return e.encodeIDCapability(v)
 
@@ -1107,34 +1104,6 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 
 	// element 1: identifier as CBOR tstr.
 	return e.enc.EncodeString(x.Identifier)
-}
-
-// encodePathCapability encodes cadence.PathCapability as
-// language=CDDL
-// path-capability-value = [
-//
-//	address: address-value,
-//	path: path-value
-//
-// ]
-func (e *Encoder) encodePathCapability(capability cadence.PathCapability) error {
-	// Encode array head with length 2.
-	err := e.enc.EncodeRawBytes([]byte{
-		// array, 2 items follow
-		0x82,
-	})
-	if err != nil {
-		return err
-	}
-
-	// element 0: address
-	err = e.encodeAddress(capability.Address)
-	if err != nil {
-		return err
-	}
-
-	// element 1: path
-	return e.encodePath(capability.Path)
 }
 
 // encodeIDCapability encodes cadence.IDCapability as

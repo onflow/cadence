@@ -127,7 +127,6 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		MemoryGauge:                          e,
 		BaseActivation:                       e.baseActivation,
 		OnEventEmitted:                       e.newOnEventEmittedHandler(),
-		OnAccountLinked:                      e.newOnAccountLinkedHandler(),
 		InjectedCompositeFieldsHandler:       e.newInjectedCompositeFieldsHandler(),
 		UUIDHandler:                          e.newUUIDHandler(),
 		ContractValueHandler:                 e.newContractValueHandler(),
@@ -162,9 +161,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		LocationHandler:                  e.newLocationHandler(),
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
-		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
 		AttachmentsEnabled:               e.config.AttachmentsEnabled,
-		CapabilityControllersEnabled:     e.config.CapabilityControllersEnabled,
 	}
 }
 
@@ -427,6 +424,10 @@ func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
 		errors.WrapPanic(func() {
 			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
 		})
+
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
 		return
 	}
 }
@@ -556,6 +557,11 @@ func (e *interpreterEnvironment) getProgram(
 			if panicErr != nil {
 				return nil, panicErr
 			}
+
+			if err != nil {
+				err = interpreter.WrappedExternalError(err)
+			}
+
 			return
 		})
 	})
@@ -573,6 +579,11 @@ func (e *interpreterEnvironment) getCode(location common.Location) (code []byte,
 			code, err = e.runtimeInterface.GetCode(location)
 		})
 	}
+
+	if err != nil {
+		err = interpreter.WrappedExternalError(err)
+	}
+
 	return
 }
 
@@ -741,6 +752,10 @@ func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 		errors.WrapPanic(func() {
 			uuid, err = e.runtimeInterface.GenerateUUID()
 		})
+
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
 		return
 	}
 }
@@ -760,26 +775,6 @@ func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventE
 			e.runtimeInterface.EmitEvent,
 		)
 
-		return nil
-	}
-}
-
-func (e *interpreterEnvironment) newOnAccountLinkedHandler() interpreter.OnAccountLinkedFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		addressValue interpreter.AddressValue,
-		pathValue interpreter.PathValue,
-	) error {
-		e.EmitEvent(
-			inter,
-			stdlib.AccountLinkedEventType,
-			[]interpreter.Value{
-				addressValue,
-				pathValue,
-			},
-			locationRange,
-		)
 		return nil
 	}
 }
@@ -937,7 +932,7 @@ func (e *interpreterEnvironment) newOnMeterComputation() interpreter.OnMeterComp
 			err = e.runtimeInterface.MeterComputation(compKind, intensity)
 		})
 		if err != nil {
-			panic(err)
+			panic(interpreter.WrappedExternalError(err))
 		}
 	}
 }
