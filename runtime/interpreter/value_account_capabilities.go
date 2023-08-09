@@ -37,17 +37,15 @@ func NewAuthAccountCapabilitiesValue(
 	borrowFunction FunctionValue,
 	publishFunction FunctionValue,
 	unpublishFunction FunctionValue,
-	migrateLinkFunction FunctionValue,
 	storageCapabilitiesConstructor func() Value,
 	accountCapabilitiesConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
-		sema.AuthAccountCapabilitiesTypeGetFunctionName:         getFunction,
-		sema.AuthAccountCapabilitiesTypeBorrowFunctionName:      borrowFunction,
-		sema.AuthAccountCapabilitiesTypePublishFunctionName:     publishFunction,
-		sema.AuthAccountCapabilitiesTypeUnpublishFunctionName:   unpublishFunction,
-		sema.AuthAccountCapabilitiesTypeMigrateLinkFunctionName: migrateLinkFunction,
+		sema.AuthAccountCapabilitiesTypeGetFunctionName:       getFunction,
+		sema.AuthAccountCapabilitiesTypeBorrowFunctionName:    borrowFunction,
+		sema.AuthAccountCapabilitiesTypePublishFunctionName:   publishFunction,
+		sema.AuthAccountCapabilitiesTypeUnpublishFunctionName: unpublishFunction,
 	}
 
 	var storageCapabilities Value
