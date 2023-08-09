@@ -2181,7 +2181,7 @@ func TestGetAuthAccount(t *testing.T) {
 		script := []byte(`
             access(all) fun main(): UInt64 {
                 let acc = getAuthAccount(0x02)
-                return acc.storageUsed
+                return acc.storage.used
             }
         `)
 
@@ -2297,7 +2297,7 @@ func TestGetAuthAccount(t *testing.T) {
             transaction {
                 prepare() {
                     let acc = getAuthAccount(0x02)
-                    log(acc.storageUsed)
+                    log(acc.storage.used)
                 }
             }
         `)

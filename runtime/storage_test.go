@@ -218,9 +218,9 @@ func TestRuntimeAccountStorage(t *testing.T) {
 	script := []byte(`
       transaction {
         prepare(signer: AuthAccount) {
-           let before = signer.storageUsed
+           let before = signer.storage.used
            signer.save(42, to: /storage/answer)
-           let after = signer.storageUsed
+           let after = signer.storage.used
            log(after != before)
         }
       }
@@ -1853,7 +1853,7 @@ func TestRuntimeStorageUsed(t *testing.T) {
             var count = 0
             for address in addresses {
                 let account = getAccount(address)
-                var x = account.storageUsed
+                var x = account.storage.used
             }
         }
     `)
@@ -3391,7 +3391,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                     transaction {
                         prepare(account: AuthAccount) {
                             var total = 0
-                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                            account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                                 account.capabilities.borrow<&AnyStruct>(path)!
                                 total = total + 1
                                 return true
@@ -3524,7 +3524,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                     transaction {
                         prepare(account: AuthAccount) {
                             var total = 0
-                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                            account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                                 account.capabilities.borrow<&AnyStruct>(path)!
                                 total = total + 1
                                 return true
@@ -3668,7 +3668,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                     transaction {
                         prepare(account: AuthAccount) {
                             var total = 0
-                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                            account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                                 account.capabilities.borrow<&AnyStruct>(path)!
                                 total = total + 1
                                 return true
@@ -3829,7 +3829,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                             var total = 0
                             var capTaken = false
 
-                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                            account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                                 total = total + 1
                                 if var cap = account.capabilities.get<&[{Foo.Collection}]>(path) {
                                     cap.check()
@@ -4025,7 +4025,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                             var total = 0
                             var capTaken = false
 
-                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                            account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                                 total = total + 1
 
                                 if var cap = account.capabilities.get<&{Foo.Collection}>(path) {
@@ -4235,7 +4235,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                     transaction {
                         prepare(account: AuthAccount) {
                             var total = 0
-                            account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                            account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                                 var cap = account.capabilities.get<&String>(path)!
                                 cap.check()
                                 total = total + 1
@@ -4334,12 +4334,12 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
               access(all)
               fun getStoragePaths(): [StoragePath] {
-                  return self.account.storagePaths
+                  return self.account.storage.storagePaths
               }
 
               access(all)
               fun getPublicPaths(): [PublicPath] {
-                  return getAccount(self.account.address).publicPaths
+                  return getAccount(self.account.address).storage.publicPaths
               }
           }
         `
@@ -4521,7 +4521,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
               account.capabilities.publish(capE, at: /public/e)
 
               var total = 0
-              pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+              pubAccount.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                   if type == Type<Capability<&S>>() {
                       total = total + pubAccount.capabilities.borrow<&S>(path)!.value
                   }
@@ -4584,7 +4584,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
               account.capabilities.publish(capE, at: /public/e)
 
               var total = 0
-              pubAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+              pubAccount.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                   total = total + 1
                   return true
               })
@@ -4644,7 +4644,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
               account.capabilities.publish(capE, at: /public/e)
 
               var total = 0
-              account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+              account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                   if type == Type<Capability<&S>>() {
                       total = total + account.capabilities.borrow<&S>(path)!.value
                   }
@@ -4699,7 +4699,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
               account.capabilities.publish(capA, at: /public/a)
 
               var total = 0
-              account.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+              account.storage.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
                   total = total + 1
                   return true
               })
@@ -5148,7 +5148,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
                       let capB = account.capabilities.storage.issue<&String>(/storage/foo2)
                       account.capabilities.publish(capB, at: /public/foo2)
 
-                      account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                      account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                           if type == Type<Capability<&String>>() {
                               account.save("bar", to: /storage/foo3)
                               return %t
@@ -5354,7 +5354,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
                       let capB = account.capabilities.storage.issue<&String>(/storage/foo2)
                       account.capabilities.publish(capB, at: /public/foo2)
 
-                      account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                      account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                           if type == Type<Capability<&String>>() {
                               account.capabilities.storage.issue<&Int>(/storage/foo1)
                               return %t
@@ -5402,7 +5402,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
                       let capB = account.capabilities.storage.issue<&String>(/storage/foo2)
                       account.capabilities.publish(capB, at: /public/foo2)
 
-                      account.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+                      account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                           if type == Type<Capability<&String>>() {
                               account.capabilities.unpublish(/public/foo1)
                               return %t

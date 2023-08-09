@@ -28,24 +28,25 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestCheckBasic(t *testing.T) {
+func TestCheckAttachmentBasic(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t,
-		`attachment Test for AnyStruct {}`,
-	)
+	_, err := ParseAndCheck(t, `
+      attachment Test for AnyStruct {}
+    `)
 
 	require.NoError(t, err)
 }
 
-func TestCheckRedeclare(t *testing.T) {
+func TestCheckAttachmentRedeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t,
-		`struct R {} 
-		 attachment R for AnyStruct {}`,
+	_, err := ParseAndCheck(t, `
+      struct R {}
+
+      attachment R for AnyStruct {}`,
 	)
 
 	errs := RequireCheckerErrors(t, err, 2)
@@ -55,15 +56,15 @@ func TestCheckRedeclare(t *testing.T) {
 	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 }
 
-func TestCheckRedeclareInContract(t *testing.T) {
+func TestCheckAttachmentRedeclareInContract(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t,
-		`contract C {
-			attachment C for AnyStruct {}
-		}`,
-	)
+	_, err := ParseAndCheck(t, `
+        contract C {
+		    attachment C for AnyStruct {}
+		}
+    `)
 
 	errs := RequireCheckerErrors(t, err, 2)
 
@@ -72,7 +73,7 @@ func TestCheckRedeclareInContract(t *testing.T) {
 	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 }
 
-func TestCheckBaseType(t *testing.T) {
+func TestCheckAttachmentBaseType(t *testing.T) {
 
 	t.Parallel()
 
@@ -141,7 +142,7 @@ func TestCheckBaseType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anystruct", func(t *testing.T) {
+	t.Run("AnyStruct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -153,7 +154,7 @@ func TestCheckBaseType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anyresource", func(t *testing.T) {
+	t.Run("AnyResource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -318,12 +319,12 @@ func TestCheckBaseType(t *testing.T) {
 	})
 }
 
-func TestCheckBuiltin(t *testing.T) {
+func TestCheckAttachmentBuiltin(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t,
-		`attachment Test for AuthAccount {}`,
+		`attachment Test for Account {}`,
 	)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -331,7 +332,7 @@ func TestCheckBuiltin(t *testing.T) {
 	assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
 }
 
-func TestCheckNestedBaseType(t *testing.T) {
+func TestCheckAttachmentNestedBaseType(t *testing.T) {
 
 	t.Parallel()
 
@@ -481,7 +482,7 @@ func TestCheckNestedBaseType(t *testing.T) {
 	})
 }
 
-func TestCheckTypeRequirement(t *testing.T) {
+func TestCheckAttachmentTypeRequirement(t *testing.T) {
 
 	t.Parallel()
 
@@ -688,7 +689,7 @@ func TestCheckTypeRequirement(t *testing.T) {
 	})
 }
 
-func TestCheckWithMembers(t *testing.T) {
+func TestCheckAttachmentWithMembers(t *testing.T) {
 
 	t.Parallel()
 
@@ -863,7 +864,7 @@ func TestCheckWithMembers(t *testing.T) {
 	})
 }
 
-func TestCheckConformance(t *testing.T) {
+func TestCheckAttachmentConformance(t *testing.T) {
 
 	t.Parallel()
 
@@ -1069,7 +1070,7 @@ func TestCheckConformance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anyresource base, resource conformance", func(t *testing.T) {
+	t.Run("AnyResource base, resource conformance", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1082,7 +1083,7 @@ func TestCheckConformance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anystruct base, struct conformance", func(t *testing.T) {
+	t.Run("AnyStruct base, struct conformance", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1095,7 +1096,7 @@ func TestCheckConformance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anystruct base, resource conformance", func(t *testing.T) {
+	t.Run("AnyStruct base, resource conformance", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1110,7 +1111,7 @@ func TestCheckConformance(t *testing.T) {
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 	})
 
-	t.Run("anyresource base, struct conformance", func(t *testing.T) {
+	t.Run("AnyResource base, struct conformance", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1164,7 +1165,7 @@ func TestCheckConformance(t *testing.T) {
 	})
 }
 
-func TestCheckBase(t *testing.T) {
+func TestCheckAttachmentBase(t *testing.T) {
 
 	t.Parallel()
 
@@ -1339,7 +1340,7 @@ func TestCheckBase(t *testing.T) {
 	})
 }
 
-func TestCheckBaseScoping(t *testing.T) {
+func TestCheckAttachmentBaseScoping(t *testing.T) {
 
 	t.Parallel()
 
@@ -1428,7 +1429,7 @@ func TestCheckBaseScoping(t *testing.T) {
 	})
 }
 
-func TestCheckBaseTyping(t *testing.T) {
+func TestCheckAttachmentBaseTyping(t *testing.T) {
 
 	t.Parallel()
 
@@ -1503,7 +1504,7 @@ func TestCheckBaseTyping(t *testing.T) {
 	})
 }
 
-func TestCheckSelfTyping(t *testing.T) {
+func TestCheckAttachmentSelfTyping(t *testing.T) {
 
 	t.Parallel()
 
@@ -1730,7 +1731,7 @@ func TestCheckAttachmentType(t *testing.T) {
 	})
 }
 
-func TestCheckIllegalInit(t *testing.T) {
+func TestCheckAttachmentIllegalInit(t *testing.T) {
 
 	t.Parallel()
 
@@ -1768,7 +1769,7 @@ func TestCheckIllegalInit(t *testing.T) {
 	})
 }
 
-func TestCheckAttachNonAttachment(t *testing.T) {
+func TestCheckAttachmentAttachNonAttachment(t *testing.T) {
 
 	t.Parallel()
 
@@ -1883,7 +1884,7 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 	})
 }
 
-func TestCheckAttachToNonComposite(t *testing.T) {
+func TestCheckAttachmentAttachToNonComposite(t *testing.T) {
 
 	t.Parallel()
 
@@ -1925,7 +1926,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
 	})
 
-	t.Run("non-composite nonresource", func(t *testing.T) {
+	t.Run("non-composite non-resource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2059,7 +2060,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 	})
 }
 
-func TestCheckAttach(t *testing.T) {
+func TestCheckAttachmentAttach(t *testing.T) {
 
 	t.Parallel()
 
@@ -2173,7 +2174,7 @@ func TestCheckAttach(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("cannot attach directly to anystruct", func(t *testing.T) {
+	t.Run("cannot attach directly to AnyStruct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2192,7 +2193,7 @@ func TestCheckAttach(t *testing.T) {
 		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
 	})
 
-	t.Run("cannot attach directly to anyresource", func(t *testing.T) {
+	t.Run("cannot attach directly to AnyResource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2349,7 +2350,7 @@ func TestCheckAttach(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("resource anystruct mismatch", func(t *testing.T) {
+	t.Run("resource AnyStruct mismatch", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2368,7 +2369,7 @@ func TestCheckAttach(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("struct anyresource mismatch", func(t *testing.T) {
+	t.Run("struct AnyResource mismatch", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2409,7 +2410,7 @@ func TestCheckAttach(t *testing.T) {
 	})
 }
 
-func TestCheckAttachToIntersectionType(t *testing.T) {
+func TestCheckAttachmentAttachToIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
@@ -2512,7 +2513,7 @@ func TestCheckAttachToIntersectionType(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("attach anystruct interface to struct interface", func(t *testing.T) {
+	t.Run("attach AnyStruct interface to struct interface", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2551,7 +2552,7 @@ func TestCheckAttachToIntersectionType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach anyresource interface to resource interface", func(t *testing.T) {
+	t.Run("attach AnyResource interface to resource interface", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2611,7 +2612,7 @@ func TestCheckAttachToIntersectionType(t *testing.T) {
 	})
 }
 
-func TestCheckAttachWithArguments(t *testing.T) {
+func TestCheckAttachmentAttachWithArguments(t *testing.T) {
 
 	t.Parallel()
 
@@ -2740,7 +2741,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 	})
 }
 
-func TestCheckAttachInvalidType(t *testing.T) {
+func TestCheckAttachmentAttachInvalidType(t *testing.T) {
 
 	t.Parallel()
 
@@ -2759,7 +2760,7 @@ func TestCheckAttachInvalidType(t *testing.T) {
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
-func TestCheckAnyAttachmentTypes(t *testing.T) {
+func TestCheckAttachmentAnyAttachmentTypes(t *testing.T) {
 
 	type TestCase struct {
 		subType         string
@@ -2877,7 +2878,7 @@ func TestCheckAnyAttachmentTypes(t *testing.T) {
 	})
 }
 
-func TestCheckRemove(t *testing.T) {
+func TestCheckAttachmentRemove(t *testing.T) {
 
 	t.Parallel()
 
@@ -2934,7 +2935,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 
-	t.Run("struct with anystruct base", func(t *testing.T) {
+	t.Run("struct with AnyStruct base", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2988,7 +2989,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("resource with anyresource base", func(t *testing.T) {
+	t.Run("resource with AnyResource base", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3064,7 +3065,7 @@ func TestCheckRemove(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("noncomposite base", func(t *testing.T) {
+	t.Run("non-composite base", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3082,7 +3083,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("cannot remove from anystruct", func(t *testing.T) {
+	t.Run("cannot remove from AnyStruct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3099,7 +3100,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("cannot remove from anyresource", func(t *testing.T) {
+	t.Run("cannot remove from AnyResource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3117,7 +3118,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("noncomposite base anystruct declaration", func(t *testing.T) {
+	t.Run("non-composite base any-struct declaration", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3171,7 +3172,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove nondeclared", func(t *testing.T) {
+	t.Run("remove non-declared", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3261,7 +3262,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove anystruct", func(t *testing.T) {
+	t.Run("remove AnyStruct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3278,7 +3279,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove anyresource", func(t *testing.T) {
+	t.Run("remove AnyResource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3296,7 +3297,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove anystructattachment", func(t *testing.T) {
+	t.Run("remove AnyStructAttachment", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3313,7 +3314,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove anyresourceattachment", func(t *testing.T) {
+	t.Run("remove AnyResourceAttachment", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3333,7 +3334,7 @@ func TestCheckRemove(t *testing.T) {
 
 }
 
-func TestCheckRemoveFromIntersection(t *testing.T) {
+func TestCheckAttachmentRemoveFromIntersection(t *testing.T) {
 
 	t.Parallel()
 
@@ -3413,7 +3414,7 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("struct base anystruct intersection", func(t *testing.T) {
+	t.Run("struct base AnyStruct intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3432,7 +3433,7 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("resource base anyresource intersection", func(t *testing.T) {
+	t.Run("resource base AnyResource intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3452,7 +3453,7 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("interface base anystruct intersection", func(t *testing.T) {
+	t.Run("interface base AnyStruct intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3469,7 +3470,7 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("interface base anyresource intersection", func(t *testing.T) {
+	t.Run("interface base AnyResource intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3506,7 +3507,7 @@ func TestCheckRemoveFromIntersection(t *testing.T) {
 	})
 }
 
-func TestCheckAccessAttachment(t *testing.T) {
+func TestCheckAttachmentAccessAttachment(t *testing.T) {
 
 	t.Parallel()
 
@@ -3830,7 +3831,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 	})
 }
 
-func TestCheckAccessAttachmentIntersection(t *testing.T) {
+func TestCheckAttachmentAccessAttachmentIntersection(t *testing.T) {
 
 	t.Parallel()
 
@@ -3884,7 +3885,7 @@ func TestCheckAccessAttachmentIntersection(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("intersection anystruct base", func(t *testing.T) {
+	t.Run("intersection AnyStruct base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -3899,7 +3900,7 @@ func TestCheckAccessAttachmentIntersection(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("intersection anystruct base interface", func(t *testing.T) {
+	t.Run("intersection AnyStruct base interface", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4336,7 +4337,7 @@ func TestCheckAttachmentsNotEnabled(t *testing.T) {
 	})
 }
 
-func TestCheckForEachAttachment(t *testing.T) {
+func TestCheckAttachmentForEachAttachment(t *testing.T) {
 
 	t.Parallel()
 
@@ -4465,7 +4466,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("not on anystruct", func(t *testing.T) {
+	t.Run("not on AnyStruct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4481,7 +4482,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
 
-	t.Run("not on anyresource", func(t *testing.T) {
+	t.Run("not on AnyResource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4498,7 +4499,7 @@ func TestCheckForEachAttachment(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
 
-	t.Run("not on anyresourceAttachment", func(t *testing.T) {
+	t.Run("not on AnyResourceAttachment", func(t *testing.T) {
 
 		t.Parallel()
 

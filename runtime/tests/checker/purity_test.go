@@ -1513,7 +1513,7 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t, `
           view fun foo() {
-              authAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+              authAccount.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                   return true
               })
           }
@@ -1537,7 +1537,7 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t, `
           view fun foo() {
-              authAccount.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
+              authAccount.storage.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
                   return true
               })
           }
@@ -1605,12 +1605,12 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 			)
 		})
 
-		t.Run("update__experimental", func(t *testing.T) {
+		t.Run("update", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheckAccount(t, `
               view fun foo() {
-                  authAccount.contracts.update__experimental(name: "", code: [])
+                  authAccount.contracts.update(name: "", code: [])
               }
             `)
 
@@ -2069,7 +2069,7 @@ func TestCheckPublicAccountPurity(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t, `
           view fun foo() {
-              publicAccount.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+              publicAccount.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                   return true
               })
           }

@@ -831,7 +831,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 		code := []byte(`
             transaction {
                 prepare(signer: AuthAccount) {
-                    signer.storageUsed
+                    signer.storage.used
                 }
             }
         `)
@@ -916,7 +916,7 @@ func TestStorageCommitsMetering(t *testing.T) {
             transaction {
                 prepare(signer: AuthAccount) {
                     signer.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
-                    signer.storageUsed
+                    signer.storage.used
                 }
             }
         `)

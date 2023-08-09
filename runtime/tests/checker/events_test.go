@@ -297,28 +297,10 @@ func TestCheckAccountEventParameter(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("AuthAccount", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-          contract Test {
-              event Account(account: AuthAccount)
-          }
-        `)
-		require.NoError(t, err)
-	})
-
-	t.Run("PublicAccount", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-          contract Test {
-              event Account(account: PublicAccount)
-          }
-        `)
-		require.NoError(t, err)
-	})
-
+	_, err := ParseAndCheck(t, `
+      contract Test {
+          event AccountEvent(account: &Account)
+      }
+    `)
+	require.NoError(t, err)
 }

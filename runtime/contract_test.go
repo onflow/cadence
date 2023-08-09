@@ -95,7 +95,7 @@ func TestRuntimeContract(t *testing.T) {
                          log(contract1?.name)
                          log(contract1?.code)
 
-                         let contract2 = signer.contracts.update__experimental(name: %[1]q, code: "%[2]s".decodeHex())
+                         let contract2 = signer.contracts.update(name: %[1]q, code: "%[2]s".decodeHex())
                          log(contract2.name)
                          log(contract2.code)
 

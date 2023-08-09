@@ -886,7 +886,7 @@ func TestCheckMemberAccess(t *testing.T) {
 	t.Run("all member types", func(t *testing.T) {
 		t.Parallel()
 
-		test := func(tt *testing.T, typeName string) {
+		test := func(t *testing.T, typeName string) {
 			code := fmt.Sprintf(`
                 struct Foo {
                     var a: %[1]s?
@@ -923,6 +923,9 @@ func TestCheckMemberAccess(t *testing.T) {
 		// Test all built-in composite types
 		for i := interpreter.PrimitiveStaticTypeAuthAccount; i < interpreter.PrimitiveStaticType_Count; i++ {
 			semaType := i.SemaType()
+			if semaType == nil {
+				continue
+			}
 			types = append(types, semaType.QualifiedString())
 		}
 

@@ -47,8 +47,8 @@ func ParseAndCheckAccountWithConfig(t *testing.T, code string, config sema.Confi
 	}
 
 	baseValueActivation = sema.NewVariableActivation(baseValueActivation)
-	baseValueActivation.DeclareValue(constantDeclaration("authAccount", sema.AuthAccountType))
-	baseValueActivation.DeclareValue(constantDeclaration("publicAccount", sema.PublicAccountType))
+	baseValueActivation.DeclareValue(constantDeclaration("authAccount", sema.FullyEntitledAccountReferenceType))
+	baseValueActivation.DeclareValue(constantDeclaration("publicAccount", sema.AccountReferenceType))
 	config.BaseValueActivation = baseValueActivation
 
 	return ParseAndCheckWithOptions(t,
@@ -91,7 +91,7 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let r <- create R()
-                          authAccount.save(<-r, to: /%s/r)
+                          authAccount.storage.save(<-r, to: /%s/r)
                       }
                     `,
 					domainIdentifier,
@@ -118,7 +118,7 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let s = S()
-                          authAccount.save(s, to: /%s/s)
+                          authAccount.storage.save(s, to: /%s/s)
                       }
                     `,
 					domainIdentifier,
@@ -159,7 +159,7 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let r <- create R()
-                          authAccount.save<@R>(<-r, to: /%s/r)
+                          authAccount.storage.save<@R>(<-r, to: /%s/r)
                       }
                     `,
 					domainIdentifier,
@@ -186,7 +186,7 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let s = S()
-                          authAccount.save<S>(s, to: /%s/s)
+                          authAccount.storage.save<S>(s, to: /%s/s)
                       }
                     `,
 					domainIdentifier,
@@ -229,7 +229,7 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let r <- create R()
-                          authAccount.save<@T>(<-r, to: /%s/r)
+                          authAccount.storage.save<@T>(<-r, to: /%s/r)
                       }
                     `,
 					domainIdentifier,
@@ -264,7 +264,7 @@ func TestCheckAccount_save(t *testing.T) {
 
                       fun test() {
                           let s = S()
-                          authAccount.save<T>(s, to: /%s/s)
+                          authAccount.storage.save<T>(s, to: /%s/s)
                       }
                     `,
 					domainIdentifier,
@@ -312,7 +312,7 @@ func TestCheckAccount_save(t *testing.T) {
                       }
 
                       fun test() {
-                          authAccount.save<fun(): Int>(one, to: /%s/one)
+                          authAccount.storage.save<fun(): Int>(one, to: /%s/one)
                       }
                     `,
 					domainIdentifier,
@@ -343,7 +343,7 @@ func TestCheckAccount_save(t *testing.T) {
                       }
 
                       fun test() {
-                          authAccount.save(one, to: /%s/one)
+                          authAccount.storage.save(one, to: /%s/one)
                       }
                     `,
 					domainIdentifier,
@@ -383,7 +383,7 @@ func TestCheckAccount_typeAt(t *testing.T) {
 			checker, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
 					`
-						let t: Type = authAccount.type(at: /%s/r)!
+						let t: Type = authAccount.storage.type(at: /%s/r)!
 					`,
 					domain.Identifier(),
 				),
@@ -428,7 +428,7 @@ func TestCheckAccount_load(t *testing.T) {
 			_, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
 					`
-                      let s = authAccount.load(from: /%s/s)
+                      let s = authAccount.storage.load(from: /%s/s)
                     `,
 					domain.Identifier(),
 				),
@@ -468,7 +468,7 @@ func TestCheckAccount_load(t *testing.T) {
 						`
                           resource R {}
 
-                          let r <- authAccount.load<@R>(from: /%s/r)
+                          let r <- authAccount.storage.load<@R>(from: /%s/r)
                         `,
 						domain.Identifier(),
 					),
@@ -504,7 +504,7 @@ func TestCheckAccount_load(t *testing.T) {
 						`
                           struct S {}
 
-                          let s = authAccount.load<S>(from: /%s/s)
+                          let s = authAccount.storage.load<S>(from: /%s/s)
                         `,
 						domain.Identifier(),
 					),
@@ -558,7 +558,7 @@ func TestCheckAccount_copy(t *testing.T) {
 					`
                       struct S {}
 
-                      let s = authAccount.copy(from: /%s/s)
+                      let s = authAccount.storage.copy(from: /%s/s)
                     `,
 					domain.Identifier(),
 				),
@@ -598,7 +598,7 @@ func TestCheckAccount_copy(t *testing.T) {
 						`
                           struct S {}
 
-                          let s = authAccount.copy<S>(from: /%s/s)
+                          let s = authAccount.storage.copy<S>(from: /%s/s)
                         `,
 						domain.Identifier(),
 					),
@@ -633,7 +633,7 @@ func TestCheckAccount_copy(t *testing.T) {
 						`
                           resource R {}
 
-                          let r <- authAccount.copy<@R>(from: /%s/r)
+                          let r <- authAccount.storage.copy<@R>(from: /%s/r)
                         `,
 						domain.Identifier(),
 					),
@@ -682,7 +682,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
 						`
-                          let r = authAccount.borrow(from: /%s/r)
+                          let r = authAccount.storage.borrow(from: /%s/r)
                         `,
 						domain.Identifier(),
 					),
@@ -708,7 +708,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
 						`
-                          let s = authAccount.borrow(from: /%s/s)
+                          let s = authAccount.storage.borrow(from: /%s/s)
                         `,
 						domain.Identifier(),
 					),
@@ -753,7 +753,7 @@ func TestCheckAccount_borrow(t *testing.T) {
                           resource R {}
 						  entitlement X
 
-                          let r = authAccount.borrow<%s &R>(from: /%s/r)
+                          let r = authAccount.storage.borrow<%s &R>(from: /%s/r)
                         `,
 						authKeyword,
 						domain.Identifier(),
@@ -801,7 +801,7 @@ func TestCheckAccount_borrow(t *testing.T) {
                           struct S {}
 						  entitlement X
 
-                          let s = authAccount.borrow<%s &S>(from: /%s/s)
+                          let s = authAccount.storage.borrow<%s &S>(from: /%s/s)
                         `,
 						authKeyword,
 						domain.Identifier(),
@@ -860,7 +860,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 						`
                           resource R {}
 
-                          let r <- authAccount.borrow<@R>(from: /%s/r)
+                          let r <- authAccount.storage.borrow<@R>(from: /%s/r)
                         `,
 						domain.Identifier(),
 					),
@@ -888,7 +888,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 						`
                           struct S {}
 
-                          let s = authAccount.borrow<S>(from: /%s/s)
+                          let s = authAccount.storage.borrow<S>(from: /%s/s)
                         `,
 						domain.Identifier(),
 					),
@@ -986,8 +986,8 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 	} {
 
 		for _, fieldName := range []string{
-			"storageUsed",
-			"storageCapacity",
+			"storage.used",
+			"storage.capacity",
 		} {
 
 			testName := fmt.Sprintf(
@@ -1031,7 +1031,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	t.Run("contracts type", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-          let contracts: AuthAccount.Contracts = authAccount.contracts
+          let contracts: &Account.Contracts = authAccount.contracts
 	    `)
 
 		require.NoError(t, err)
@@ -1114,7 +1114,7 @@ func TestAuthAccountContracts(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract {
-                return authAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
+                return authAccount.contracts.update(name: "foo", code: "012".decodeHex())
             }
 	    `)
 
@@ -1141,7 +1141,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	t.Run("contracts type", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
-            let contracts: PublicAccount.Contracts = publicAccount.contracts
+            let contracts: &Account.Contracts = publicAccount.contracts
 	    `)
 
 		require.NoError(t, err)
@@ -1228,7 +1228,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `
             fun test(): DeployedContract {
-                return publicAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
+                return publicAccount.contracts.update(name: "foo", code: "012".decodeHex())
             }
 	    `)
 
@@ -1236,7 +1236,7 @@ func TestPublicAccountContracts(t *testing.T) {
 
 		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
 		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
-		assert.Equal(t, "update__experimental", notDeclaredError.Name)
+		assert.Equal(t, "update", notDeclaredError.Name)
 	})
 
 	t.Run("remove contract", func(t *testing.T) {
@@ -1263,7 +1263,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths = authAccount.StoragePaths
+			let paths = authAccount.storage.StoragePaths
 		`,
 		)
 
@@ -1279,9 +1279,9 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let publicPaths: [PublicPath] = authAccount.publicPaths
-			let privatePaths: [PrivatePath] = authAccount.privatePaths
-			let storagePaths: [StoragePath] = authAccount.storagePaths
+			let publicPaths: [PublicPath] = authAccount.storage.publicPaths
+			let privatePaths: [PrivatePath] = authAccount.storage.privatePaths
+			let storagePaths: [StoragePath] = authAccount.storage.storagePaths
 		`,
 		)
 
@@ -1292,9 +1292,9 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let publicPaths: [Path] = authAccount.publicPaths
-			let privatePaths: [CapabilityPath] = authAccount.privatePaths
-			let storagePaths: [Path] = authAccount.storagePaths
+			let publicPaths: [Path] = authAccount.storage.publicPaths
+			let privatePaths: [CapabilityPath] = authAccount.storage.privatePaths
+			let storagePaths: [Path] = authAccount.storage.storagePaths
 		`,
 		)
 
@@ -1305,7 +1305,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths: [PublicPath] = authAccount.privatePaths
+			let paths: [PublicPath] = authAccount.storage.privatePaths
 		`,
 		)
 
@@ -1317,7 +1317,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths: [PublicPath] = publicAccount.publicPaths
+			let paths: [PublicPath] = publicAccount.storage.publicPaths
 		`,
 		)
 
@@ -1328,7 +1328,7 @@ func TestCheckAccountPaths(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t,
 			`
-			let paths: [Path] = publicAccount.publicPaths
+			let paths: [Path] = publicAccount.storage.publicPaths
 		`,
 		)
 
@@ -1338,7 +1338,7 @@ func TestCheckAccountPaths(t *testing.T) {
 	t.Run("publicAccount iteration", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheckAccount(t, `	
-          let paths: [PublicPath] = publicAccount.publicPaths
+          let paths: [PublicPath] = publicAccount.storage.publicPaths
 		`)
 
 		require.NoError(t, err)
@@ -1349,9 +1349,9 @@ func TestCheckAccountPaths(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				let paths = authAccount.storagePaths
+				let paths = authAccount.storage.storagePaths
 				for storagePath in paths {
-					let t = authAccount.type(at: storagePath)
+					let t = authAccount.storage.type(at: storagePath)
 				}
 			}
 		`,
@@ -1370,7 +1370,7 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				publicAccount.forEachPublic(fun (path: PublicPath, type:Type): Bool {
+				publicAccount.storage.forEachPublic(fun (path: PublicPath, type:Type): Bool {
 					return true
 				})
 			}
@@ -1385,7 +1385,7 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				publicAccount.forEachPublic(fun (foo: PublicPath, bar:Type): Bool {
+				publicAccount.storage.forEachPublic(fun (foo: PublicPath, bar:Type): Bool {
 					return true
 				})
 			}
@@ -1400,7 +1400,7 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				publicAccount.forEachPublic(fun (path: PublicPath, type:Type): Bool {
+				publicAccount.storage.forEachPublic(fun (path: PublicPath, type:Type): Bool {
 					return 3
 				})
 			}
@@ -1416,7 +1416,7 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				publicAccount.forEachPublic(fun (path: PublicPath, type:Type): Void {})
+				publicAccount.storage.forEachPublic(fun (path: PublicPath, type:Type): Void {})
 			}
 			`,
 		)
@@ -1430,7 +1430,7 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				publicAccount.forEachPublic(fun (path: StoragePath, type:Type): Void {})
+				publicAccount.storage.forEachPublic(fun (path: StoragePath, type:Type): Void {})
 			}
 			`,
 		)
@@ -1444,7 +1444,7 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				publicAccount.forEachPublic(fun (path: PublicPath, type:Int): Void {})
+				publicAccount.storage.forEachPublic(fun (path: PublicPath, type:Int): Void {})
 			}
 			`,
 		)
@@ -1458,7 +1458,7 @@ func TestCheckPublicAccountIteration(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
 			fun test() {
-				publicAccount.forEachPublic(fun (path: CapabilityPath, type:Type): Void {})
+				publicAccount.storage.forEachPublic(fun (path: CapabilityPath, type:Type): Void {})
 			}
 			`,
 		)

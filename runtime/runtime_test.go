@@ -4995,8 +4995,8 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
               log(ref1.owner?.address)
               log(ref1.owner?.balance)
               log(ref1.owner?.availableBalance)
-              log(ref1.owner?.storageUsed)
-              log(ref1.owner?.storageCapacity)
+              log(ref1.owner?.storage.used)
+              log(ref1.owner?.storage.capacity)
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
@@ -5004,8 +5004,8 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
               log(ref2.owner?.address)
               log(ref2.owner?.balance)
               log(ref2.owner?.availableBalance)
-              log(ref2.owner?.storageUsed)
-              log(ref2.owner?.storageCapacity)
+              log(ref2.owner?.storage.used)
+              log(ref2.owner?.storage.capacity)
               ref2.logOwnerAddress()
           }
       }
@@ -5108,16 +5108,16 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 			"0x0000000000000001", // ref1.owner?.address
 			"123.00000000",       // ref2.owner?.balance
 			"1523.00000000",      // ref2.owner?.availableBalance
-			"120",                // ref1.owner?.storageUsed
-			"1245",               // ref1.owner?.storageCapacity
+			"120",                // ref1.owner?.storage.used
+			"1245",               // ref1.owner?.storage.capacity
 
 			"0x0000000000000001",
 
 			"0x0000000000000001", // ref2.owner?.address
 			"123.00000000",       // ref2.owner?.balance
 			"1523.00000000",      // ref2.owner?.availableBalance
-			"120",                // ref2.owner?.storageUsed
-			"1245",               // ref2.owner?.storageCapacity
+			"120",                // ref2.owner?.storage.used
+			"1245",               // ref2.owner?.storage.capacity
 
 			"0x0000000000000001",
 		},

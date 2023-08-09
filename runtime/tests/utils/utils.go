@@ -129,7 +129,7 @@ func UpdateTransaction(name string, contract []byte) []byte {
           transaction {
 
               prepare(signer: AuthAccount) {
-                  signer.contracts.update__experimental(name: "%s", code: "%s".decodeHex())
+                  signer.contracts.update(name: "%s", code: "%s".decodeHex())
               }
           }
         `,

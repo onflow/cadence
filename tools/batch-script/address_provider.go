@@ -47,7 +47,7 @@ const endOfAccountsError = "get storage used failed"
 
 const accountStorageUsageScript = `
 access(all) fun main(address: Address): UInt64 {
-  return getAccount(address).storageUsed
+  return getAccount(address).storage.used
 }
 `
 
