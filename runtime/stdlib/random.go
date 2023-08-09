@@ -54,15 +54,15 @@ func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryVal
 			return interpreter.NewUInt64Value(
 				invocation.Interpreter,
 				func() uint64 {
-					buffer := make([]byte, 8)
+					var buffer [8]byte
 					var err error
 					errors.WrapPanic(func() {
-						err = generator.ReadRandom(buffer)
+						err = generator.ReadRandom(buffer[:])
 					})
 					if err != nil {
 						panic(interpreter.WrappedExternalError(err))
 					}
-					rand := binary.LittleEndian.Uint64(buffer)
+					rand := binary.LittleEndian.Uint64(buffer[:])
 					return rand
 				},
 			)
