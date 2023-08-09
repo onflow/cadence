@@ -25,5 +25,6 @@ var AccountTypeAnnotation = NewTypeAnnotation(AccountType)
 var AccountReferenceType = &ReferenceType{Type: AccountType}
 
 func init() {
-	Account_ContractsTypeAddFunctionType.RequiredArgumentCount = RequiredArgumentCount(2)
+	Account_ContractsTypeAddFunctionType.Arity = &Arity{Min: 2}
+
 }

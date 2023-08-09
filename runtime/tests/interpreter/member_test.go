@@ -217,11 +217,11 @@ func TestInterpretMemberAccessType(t *testing.T) {
                         }
                     }
 
-                    fun get(si: AnyStruct{SI}) {
+                    fun get(si: {SI}) {
                         si.foo
                     }
 
-                    fun set(si: AnyStruct{SI}) {
+                    fun set(si: {SI}) {
                         si.foo = 2
                     }
                 `)
@@ -264,11 +264,11 @@ func TestInterpretMemberAccessType(t *testing.T) {
                         }
                     }
 
-                    fun get(si: AnyStruct{SI}) {
+                    fun get(si: {SI}) {
                         si.foo
                     }
 
-                    fun set(si: AnyStruct{SI}) {
+                    fun set(si: {SI}) {
                         si.foo = 3
                     }
                 `)
@@ -310,7 +310,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
                         }
                     }
 
-                    fun get(si: AnyStruct{SI}?) {
+                    fun get(si: {SI}?) {
                         si?.foo
                     }
                 `)
@@ -353,7 +353,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
                         }
                     }
 
-                    fun get(si: AnyStruct{SI}?) {
+                    fun get(si: {SI}?) {
                         si?.foo
                     }
                 `)

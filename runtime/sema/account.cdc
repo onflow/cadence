@@ -390,7 +390,7 @@ struct Account {
 
         /// Issue/create a new account capability.
         access(IssueAccountCapabilityController)
-        fun issue<T: &Account{}>(): Capability<T>
+        fun issue<T: &Account>(): Capability<T>
     }
 }
 

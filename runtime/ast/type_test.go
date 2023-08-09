@@ -1247,17 +1247,12 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 	)
 }
 
-func TestRestrictedType_Doc(t *testing.T) {
+func TestIntersectionType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &RestrictedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		Restrictions: []*NominalType{
+	ty := &IntersectionType{
+		Types: []*NominalType{
 			{
 				Identifier: Identifier{
 					Identifier: "CD",
@@ -1273,7 +1268,6 @@ func TestRestrictedType_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Concat{
-			prettier.Text("AB"),
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("{"),
@@ -1295,17 +1289,12 @@ func TestRestrictedType_Doc(t *testing.T) {
 	)
 }
 
-func TestRestrictedType_String(t *testing.T) {
+func TestIntersectionType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &RestrictedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		Restrictions: []*NominalType{
+	ty := &IntersectionType{
+		Types: []*NominalType{
 			{
 				Identifier: Identifier{
 					Identifier: "CD",
@@ -1320,23 +1309,17 @@ func TestRestrictedType_String(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"AB{CD, EF}",
+		"{CD, EF}",
 		ty.String(),
 	)
 }
 
-func TestRestrictedType_MarshalJSON(t *testing.T) {
+func TestIntersectionType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &RestrictedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-				Pos:        Position{Offset: 1, Line: 2, Column: 3},
-			},
-		},
-		Restrictions: []*NominalType{
+	ty := &IntersectionType{
+		Types: []*NominalType{
 			{
 				Identifier: Identifier{
 					Identifier: "CD",
@@ -1363,18 +1346,8 @@ func TestRestrictedType_MarshalJSON(t *testing.T) {
 		// language=json
 		`
         {
-            "Type": "RestrictedType",
-            "RestrictedType": {
-                "Type": "NominalType",
-                "Identifier": {
-                    "Identifier": "AB",
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                    "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
-                },
-                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
-            },
-            "Restrictions": [
+            "Type": "IntersectionType",
+            "Types": [
                 {
                     "Type": "NominalType",
                     "Identifier": {

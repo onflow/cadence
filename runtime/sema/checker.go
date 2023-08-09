@@ -243,7 +243,9 @@ func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
 	scope := checker.CurrentPurityScope()
 	if scope.EnforcePurity {
 		checker.report(
-			&PurityError{Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation)},
+			&PurityError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation),
+			},
 		)
 	}
 }
@@ -371,16 +373,7 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	// Therefore, this is done in two steps.
 
 	for _, declaration := range program.InterfaceDeclarations() {
-		checker.declareInterfaceType(declaration)
-	}
-
-	for _, declaration := range program.InterfaceDeclarations() {
-		interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
-
-		// Resolve conformances
-		interfaceType.ExplicitInterfaceConformances =
-			checker.explicitInterfaceConformances(declaration, interfaceType)
-
+		interfaceType := checker.declareInterfaceType(declaration)
 		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
 
@@ -391,6 +384,13 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		// *after* the full container chain is fully set up
 
 		VisitThisAndNested(compositeType, registerInElaboration)
+	}
+
+	// Resolve conformances
+	for _, declaration := range program.InterfaceDeclarations() {
+		interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
+		interfaceType.ExplicitInterfaceConformances =
+			checker.explicitInterfaceConformances(declaration, interfaceType)
 	}
 
 	for _, declaration := range program.AttachmentDeclarations() {
@@ -859,8 +859,8 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	case *ast.ReferenceType:
 		return checker.convertReferenceType(t)
 
-	case *ast.RestrictedType:
-		return checker.convertRestrictedType(t)
+	case *ast.IntersectionType:
+		return checker.convertIntersectionType(t)
 
 	case *ast.InstantiationType:
 		return checker.convertInstantiationType(t)
@@ -873,55 +873,54 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	panic(&astTypeConversionError{invalidASTType: t})
 }
 
-func CheckRestrictedType(
+func CheckIntersectionType(
 	memoryGauge common.MemoryGauge,
-	restrictedType Type,
-	restrictions []*InterfaceType,
-	report func(func(*ast.RestrictedType) error),
+	types []*InterfaceType,
+	report func(func(*ast.IntersectionType) error),
 ) Type {
-	restrictionRanges := make(map[*InterfaceType]func(*ast.RestrictedType) ast.Range, len(restrictions))
-	restrictionsCompositeKind := common.CompositeKindUnknown
+	intersectionRanges := make(map[*InterfaceType]func(*ast.IntersectionType) ast.Range, len(types))
+	intersectionsCompositeKind := common.CompositeKindUnknown
 	memberSet := map[string]*InterfaceType{}
 
-	for i, restrictionInterfaceType := range restrictions {
-		restrictionCompositeKind := restrictionInterfaceType.CompositeKind
+	for i, interfaceType := range types {
+		interfaceCompositeKind := interfaceType.CompositeKind
 
-		if restrictionsCompositeKind == common.CompositeKindUnknown {
-			restrictionsCompositeKind = restrictionCompositeKind
+		if intersectionsCompositeKind == common.CompositeKindUnknown {
+			intersectionsCompositeKind = interfaceCompositeKind
 
-		} else if restrictionCompositeKind != restrictionsCompositeKind {
-			report(func(t *ast.RestrictedType) error {
-				return &RestrictionCompositeKindMismatchError{
-					CompositeKind:         restrictionCompositeKind,
-					PreviousCompositeKind: restrictionsCompositeKind,
-					Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i]),
+		} else if interfaceCompositeKind != intersectionsCompositeKind {
+			report(func(t *ast.IntersectionType) error {
+				return &IntersectionCompositeKindMismatchError{
+					CompositeKind:         interfaceCompositeKind,
+					PreviousCompositeKind: intersectionsCompositeKind,
+					Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
 				}
 			})
 		}
 
-		// The restriction must not be duplicated
+		// The intersection must not be duplicated
 
-		if _, exists := restrictionRanges[restrictionInterfaceType]; exists {
-			report(func(t *ast.RestrictedType) error {
-				return &InvalidRestrictionTypeDuplicateError{
-					Type:  restrictionInterfaceType,
-					Range: ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i]),
+		if _, exists := intersectionRanges[interfaceType]; exists {
+			report(func(t *ast.IntersectionType) error {
+				return &InvalidIntersectionTypeDuplicateError{
+					Type:  interfaceType,
+					Range: ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
 				}
 			})
 
 		} else {
-			restrictionRanges[restrictionInterfaceType] =
-				func(t *ast.RestrictedType) ast.Range {
-					return ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i])
+			intersectionRanges[interfaceType] =
+				func(t *ast.IntersectionType) ast.Range {
+					return ast.NewRangeFromPositioned(memoryGauge, t.Types[i])
 				}
 		}
 
-		// The restrictions may not have clashing members
+		// The intersections may not have clashing members
 
 		// TODO: also include interface conformances' members
 		//   once interfaces can have conformances
 
-		restrictionInterfaceType.Members.Foreach(func(name string, member *Member) {
+		interfaceType.Members.Foreach(func(name string, member *Member) {
 			if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
 
 				// If there is an overlap in members, ensure the members have the same type
@@ -939,92 +938,45 @@ func CheckRestrictedType(
 					!previousMemberType.IsInvalidType() &&
 					!memberType.Equal(previousMemberType) {
 
-					report(func(t *ast.RestrictedType) error {
-						return &RestrictionMemberClashError{
+					report(func(t *ast.IntersectionType) error {
+						return &IntersectionMemberClashError{
 							Name:                  name,
-							RedeclaringType:       restrictionInterfaceType,
+							RedeclaringType:       interfaceType,
 							OriginalDeclaringType: previousDeclaringInterfaceType,
-							Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i]),
+							Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
 						}
 					})
 				}
 			} else {
-				memberSet[name] = restrictionInterfaceType
+				memberSet[name] = interfaceType
 			}
 		})
 	}
 
-	var hadExplicitType = restrictedType != nil
+	// If no intersection type is given, infer `AnyResource`/`AnyStruct`
+	// based on the composite kind of the intersections.
 
-	if !hadExplicitType {
-		// If no restricted type is given, infer `AnyResource`/`AnyStruct`
-		// based on the composite kind of the restrictions.
+	switch intersectionsCompositeKind {
+	case common.CompositeKindUnknown:
+		// If no intersection type is given, and also no intersections,
+		// the type is ambiguous.
 
-		switch restrictionsCompositeKind {
-		case common.CompositeKindUnknown:
-			// If no restricted type is given, and also no restrictions,
-			// the type is ambiguous.
-
-			restrictedType = InvalidType
-
-			report(func(t *ast.RestrictedType) error {
-				return &AmbiguousRestrictedTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
-			})
-
-		case common.CompositeKindResource:
-			restrictedType = AnyResourceType
-
-		case common.CompositeKindStructure:
-			restrictedType = AnyStructType
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-	}
-
-	// The restricted type must be a composite type
-	// or `AnyResource`/`AnyStruct`
-
-	reportInvalidRestrictedType := func() {
-		report(func(t *ast.RestrictedType) error {
-			return &InvalidRestrictedTypeError{
-				Type:  restrictedType,
-				Range: ast.NewRangeFromPositioned(memoryGauge, t.Type),
-			}
+		report(func(t *ast.IntersectionType) error {
+			return &AmbiguousIntersectionTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
 		})
+		return InvalidType
+
+	case common.CompositeKindResource, common.CompositeKindStructure:
+		break
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
 	var compositeType *CompositeType
 
-	if !restrictedType.IsInvalidType() {
-
-		if typeResult, ok := restrictedType.(*CompositeType); ok {
-			switch typeResult.Kind {
-
-			case common.CompositeKindResource,
-				common.CompositeKindStructure:
-
-				compositeType = typeResult
-
-			default:
-				reportInvalidRestrictedType()
-			}
-		} else {
-
-			switch restrictedType {
-			case AnyResourceType, AnyStructType, AnyType:
-				break
-
-			default:
-				if hadExplicitType {
-					reportInvalidRestrictedType()
-				}
-			}
-		}
-	}
-
-	// If the restricted type is a composite type,
-	// check that the restrictions are conformances
+	// If the intersection type is a composite type,
+	// check that the intersections are conformances
 
 	if compositeType != nil {
 
@@ -1032,77 +984,66 @@ func CheckRestrictedType(
 
 		conformances := compositeType.EffectiveInterfaceConformanceSet()
 
-		for _, restriction := range restrictions {
-			// The restriction must be an explicit or implicit conformance
-			// of the composite (restricted type)
+		for _, intersectedType := range types {
+			// The intersected type must be an explicit or implicit conformance
+			// of the composite (intersection type)
 
-			if !conformances.Contains(restriction) {
-				report(func(t *ast.RestrictedType) error {
-					return &InvalidNonConformanceRestrictionError{
-						Type:  restriction,
-						Range: restrictionRanges[restriction](t),
+			if !conformances.Contains(intersectedType) {
+				report(func(t *ast.IntersectionType) error {
+					return &InvalidNonConformanceIntersectionError{
+						Type:  intersectedType,
+						Range: intersectionRanges[intersectedType](t),
 					}
 				})
 			}
 		}
 	}
-	return restrictedType
+
+	return &IntersectionType{Types: types}
 }
 
-func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
-	var restrictedType Type
+func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
+	// Convert the intersected types
 
-	// Convert the restricted type, if any
+	var intersectedTypes []*InterfaceType
 
-	if t.Type != nil {
-		restrictedType = checker.ConvertType(t.Type)
-	}
+	for _, intersectedType := range t.Types {
+		intersectedResult := checker.ConvertType(intersectedType)
 
-	// Convert the restrictions
+		// The intersected type must be a resource or structure interface type
 
-	var restrictions []*InterfaceType
-
-	for _, restriction := range t.Restrictions {
-		restrictionResult := checker.ConvertType(restriction)
-
-		// The restriction must be a resource or structure interface type
-
-		restrictionInterfaceType, ok := restrictionResult.(*InterfaceType)
-		restrictionCompositeKind := common.CompositeKindUnknown
+		intersectedInterfaceType, ok := intersectedResult.(*InterfaceType)
+		intersectedCompositeKind := common.CompositeKindUnknown
 		if ok {
-			restrictionCompositeKind = restrictionInterfaceType.CompositeKind
+			intersectedCompositeKind = intersectedInterfaceType.CompositeKind
 		}
-		if !ok || (restrictionCompositeKind != common.CompositeKindResource &&
-			restrictionCompositeKind != common.CompositeKindStructure) {
+		if !ok || (intersectedCompositeKind != common.CompositeKindResource &&
+			intersectedCompositeKind != common.CompositeKindStructure) {
 
-			if !restrictionResult.IsInvalidType() {
-				checker.report(&InvalidRestrictionTypeError{
-					Type:  restrictionResult,
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, restriction),
+			if !intersectedResult.IsInvalidType() {
+				checker.report(&InvalidIntersectedTypeError{
+					Type:  intersectedResult,
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, intersectedType),
 				})
 			}
 
 			// NOTE: ignore this invalid type
-			// and do not add it to the restrictions result
+			// and do not add it to the intersected result
 			continue
 		}
 
-		restrictions = append(restrictions, restrictionInterfaceType)
+		intersectedTypes = append(intersectedTypes, intersectedInterfaceType)
 	}
 
-	restrictedType = CheckRestrictedType(
+	intersectionType := CheckIntersectionType(
 		checker.memoryGauge,
-		restrictedType,
-		restrictions,
-		func(getError func(*ast.RestrictedType) error) {
+		intersectedTypes,
+		func(getError func(*ast.IntersectionType) error) {
 			checker.report(getError(t))
 		},
 	)
 
-	return &RestrictedType{
-		Type:         restrictedType,
-		Restrictions: restrictions,
-	}
+	return intersectionType
 }
 
 func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
@@ -2276,71 +2217,6 @@ func (checker *Checker) checkVariableMove(expression ast.Expression) {
 	}
 }
 
-func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) PostConditionsRewrite {
-
-	var beforeStatements []ast.Statement
-
-	var rewrittenPostConditions []*ast.Condition
-
-	count := len(postConditions)
-	if count > 0 {
-		rewrittenPostConditions = make([]*ast.Condition, count)
-
-		beforeExtractor := checker.beforeExtractor()
-
-		for i, postCondition := range postConditions {
-
-			// copy condition and set expression to rewritten one
-			newPostCondition := *postCondition
-
-			testExtraction := beforeExtractor.ExtractBefore(postCondition.Test)
-
-			extractedExpressions := testExtraction.ExtractedExpressions
-
-			newPostCondition.Test = testExtraction.RewrittenExpression
-
-			if postCondition.Message != nil {
-				messageExtraction := beforeExtractor.ExtractBefore(postCondition.Message)
-
-				newPostCondition.Message = messageExtraction.RewrittenExpression
-
-				extractedExpressions = append(
-					extractedExpressions,
-					messageExtraction.ExtractedExpressions...,
-				)
-			}
-
-			for _, extractedExpression := range extractedExpressions {
-				expression := extractedExpression.Expression
-				startPos := expression.StartPosition()
-
-				// NOTE: no need to check the before statements or update elaboration here:
-				// The before statements are visited/checked later
-				variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
-				variableDeclaration.StartPos = startPos
-				variableDeclaration.Identifier = extractedExpression.Identifier
-				variableDeclaration.Transfer = ast.NewTransfer(
-					checker.memoryGauge,
-					ast.TransferOperationCopy,
-					startPos,
-				)
-				variableDeclaration.Value = expression
-
-				beforeStatements = append(beforeStatements,
-					variableDeclaration,
-				)
-			}
-
-			rewrittenPostConditions[i] = &newPostCondition
-		}
-	}
-
-	return PostConditionsRewrite{
-		BeforeStatements:        beforeStatements,
-		RewrittenPostConditions: rewrittenPostConditions,
-	}
-}
-
 func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos ast.HasPosition) {
 
 	switch typeAnnotation.TypeAnnotationState() {
@@ -2378,7 +2254,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 }
 
 func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
-	rewrittenType, rewritten := ty.RewriteWithRestrictedTypes()
+	rewrittenType, rewritten := ty.RewriteWithIntersectionTypes()
 	if rewritten {
 		checker.report(
 			&InvalidInterfaceTypeError{

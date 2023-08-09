@@ -360,7 +360,7 @@ func TestCheckContractNestedDeclarationOrderOutsideInside(t *testing.T) {
 
 		annotationType := "R"
 		if isInterface {
-			annotationType = "AnyResource{R}"
+			annotationType = "{R}"
 		}
 
 		t.Run(interfaceKeyword, func(t *testing.T) {
@@ -525,21 +525,21 @@ func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
 							switch firstKind {
 							case common.CompositeKindResource:
 								firstQualifiedTypeAnnotation = fmt.Sprintf(
-									"AnyResource{%s}",
+									"{%s}",
 									firstQualifiedTypeAnnotation,
 								)
 								firstLocalTypeAnnotation = fmt.Sprintf(
-									"AnyResource{%s}",
+									"{%s}",
 									firstLocalTypeAnnotation,
 								)
 
 							case common.CompositeKindStructure:
 								firstQualifiedTypeAnnotation = fmt.Sprintf(
-									"AnyStruct{%s}",
+									"{%s}",
 									firstQualifiedTypeAnnotation,
 								)
 								firstLocalTypeAnnotation = fmt.Sprintf(
-									"AnyStruct{%s}",
+									"{%s}",
 									firstLocalTypeAnnotation,
 								)
 
@@ -552,21 +552,21 @@ func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
 							switch secondKind {
 							case common.CompositeKindResource:
 								secondQualifiedTypeAnnotation = fmt.Sprintf(
-									"AnyResource{%s}",
+									"{%s}",
 									secondQualifiedTypeAnnotation,
 								)
 								secondLocalTypeAnnotation = fmt.Sprintf(
-									"AnyResource{%s}",
+									"{%s}",
 									secondLocalTypeAnnotation,
 								)
 
 							case common.CompositeKindStructure:
 								secondQualifiedTypeAnnotation = fmt.Sprintf(
-									"AnyStruct{%s}",
+									"{%s}",
 									secondQualifiedTypeAnnotation,
 								)
 								secondLocalTypeAnnotation = fmt.Sprintf(
-									"AnyStruct{%s}",
+									"{%s}",
 									secondLocalTypeAnnotation,
 								)
 							}

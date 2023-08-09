@@ -2709,16 +2709,15 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
-	t.Run("with static restricted type", func(t *testing.T) {
+	t.Run("with static intersection type", func(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 			// language=json
@@ -2727,12 +2726,9 @@ func TestEncodeType(t *testing.T) {
                 "type": "Type",
                 "value": {
                   "staticType": {
-                    "kind": "Restriction",
-                    "typeID": "Int{String}",
-                    "type": {
-                      "kind": "Int"
-                    },
-                    "restrictions": [
+                    "kind": "Intersection",
+                    "typeID": "{String}",
+                    "types": [
                       {
                         "kind": "String"
                       }

@@ -6,9 +6,9 @@ access(all) contract Test {
     ///
     access(all) struct Blockchain {
 
-        access(all) let backend: AnyStruct{BlockchainBackend}
+        access(all) let backend: {BlockchainBackend}
 
-        init(backend: AnyStruct{BlockchainBackend}) {
+        init(backend: {BlockchainBackend}) {
             self.backend = backend
         }
 

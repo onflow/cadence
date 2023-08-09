@@ -1,4 +1,4 @@
-import Crypto from "Crypto"
+import "Crypto"
 
 access(self) fun main(): Bool {
     let keyList = Crypto.KeyList()

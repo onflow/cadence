@@ -32,6 +32,40 @@ import (
 	cadenceErrors "github.com/onflow/cadence/runtime/errors"
 )
 
+// HasMsgPrefix returns true if the msg prefix (first few bytes)
+// matches currently implemented top-level CCF messages:
+// -  ccf-typedef-and-value-message
+// -  ccf-type-and-value-message
+// WARNING: For simplicity and performance, this does not check
+// if msg is actually a CCF message, or well-formed, or valid.
+func HasMsgPrefix(msg []byte) bool {
+
+	// Top level CCF messages are CBOR tag (tag number: CBORTagTypeDefAndValue | CBORTagTypeAndValue, content: array of 2 elements).
+	// Minimum size is 5 bytes: top level tag number (2 bytes) + min size for array of 2 elements (3 bytes).
+	const minTopLevelMsgSize = 5
+
+	if len(msg) < minTopLevelMsgSize {
+		return false
+	}
+
+	// There are 3 top messages defined in CCF specs:
+	// language=CDDL
+	// ccf-message = (
+	//   ccf-typedef-message
+	//   / ccf-typedef-and-value-message
+	//   / ccf-type-and-value-message
+	// )
+	//
+	// Since ccf-typedef-message isn't implemented yet,
+	// check for these two messages:
+	// - ccf-typedef-and-value-message
+	// - ccf-type-and-valu8e-message
+
+	return msg[0] == 0xd8 && // 0xd8 is major type 6, semantic tag
+		(msg[1] == CBORTagTypeDefAndValue || msg[1] == CBORTagTypeAndValue) &&
+		msg[2] == 0x82 // 0x82 is CBOR array head of 2 elements
+}
+
 // defaultCBORDecMode
 //
 // See https://github.com/fxamacker/cbor:
@@ -106,8 +140,8 @@ type DecOptions struct {
 	// EnforceSortCompositeFields specifies how decoder should enforce sort order of compsite fields.
 	EnforceSortCompositeFields EnforceSortMode
 
-	// EnforceSortRestrictedTypes specifies how decoder should enforce sort order of restricted types.
-	EnforceSortRestrictedTypes EnforceSortMode
+	// EnforceSortIntersectionTypes specifies how decoder should enforce sort order of restricted types.
+	EnforceSortIntersectionTypes EnforceSortMode
 
 	// CBORDecMode will default to defaultCBORDecMode if nil.  The decoding mode contains
 	// immutable decoding options (cbor.DecOptions) and is safe for concurrent use.
@@ -134,15 +168,15 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	if !opts.EnforceSortCompositeFields.valid() {
 		return nil, fmt.Errorf("ccf: invalid EnforceSortCompositeFields %d", opts.EnforceSortCompositeFields)
 	}
-	if !opts.EnforceSortRestrictedTypes.valid() {
-		return nil, fmt.Errorf("ccf: invalid EnforceSortRestrictedTypes %d", opts.EnforceSortRestrictedTypes)
+	if !opts.EnforceSortIntersectionTypes.valid() {
+		return nil, fmt.Errorf("ccf: invalid EnforceSortRestrictedTypes %d", opts.EnforceSortIntersectionTypes)
 	}
 	if opts.CBORDecMode == nil {
 		opts.CBORDecMode = defaultCBORDecMode
 	}
 	return &decMode{
 		enforceSortCompositeFields: opts.EnforceSortCompositeFields,
-		enforceSortRestrictedTypes: opts.EnforceSortRestrictedTypes,
+		enforceSortRestrictedTypes: opts.EnforceSortIntersectionTypes,
 		cborDecMode:                opts.CBORDecMode,
 	}, nil
 }
@@ -1397,7 +1431,7 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 //	/ contract-interface-type-value
 //	/ function-type-value
 //	/ reference-type-value
-//	/ restricted-type-value
+//	/ intersection-type-value
 //	/ capability-type-value
 //	/ type-value-ref
 func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
@@ -1433,8 +1467,8 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 	case CBORTagReferenceTypeValue:
 		return d.decodeReferenceType(visited, d.decodeTypeValue)
 
-	case CBORTagRestrictedTypeValue:
-		return d.decodeRestrictedType(visited, d.decodeNullableTypeValue, d.decodeTypeValue)
+	case CBORTagIntersectionTypeValue:
+		return d.decodeIntersectionType(visited, d.decodeNullableTypeValue, d.decodeTypeValue)
 
 	case CBORTagFunctionTypeValue:
 		return d.decodeFunctionTypeValue(visited)

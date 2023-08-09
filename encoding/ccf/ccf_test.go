@@ -41,13 +41,13 @@ import (
 )
 
 var deterministicEncMode, _ = ccf.EncOptions{
-	SortCompositeFields: ccf.SortBytewiseLexical,
-	SortRestrictedTypes: ccf.SortBytewiseLexical,
+	SortCompositeFields:   ccf.SortBytewiseLexical,
+	SortIntersectionTypes: ccf.SortBytewiseLexical,
 }.EncMode()
 
 var deterministicDecMode, _ = ccf.DecOptions{
-	EnforceSortCompositeFields: ccf.EnforceSortBytewiseLexical,
-	EnforceSortRestrictedTypes: ccf.EnforceSortBytewiseLexical,
+	EnforceSortCompositeFields:   ccf.EnforceSortBytewiseLexical,
+	EnforceSortIntersectionTypes: ccf.EnforceSortBytewiseLexical,
 }.DecMode()
 
 type encodeTest struct {
@@ -6631,11 +6631,11 @@ func TestEncodeEnum(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleEnum)
 }
 
-func TestEncodeValueOfRestrictedType(t *testing.T) {
+func TestEncodeValueOfIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("nil restricted type", func(t *testing.T) {
+	t.Run("nil intersection type", func(t *testing.T) {
 		hasCountInterfaceType := cadence.NewResourceInterfaceType(
 			common.NewStringLocation(nil, "test"),
 			"HasCount",
@@ -6660,8 +6660,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 			nil,
 		)
 
-		countSumRestrictedType := cadence.NewRestrictedType(
-			nil,
+		countSumIntersectionType := cadence.NewIntersectionType(
 			[]cadence.Type{
 				hasCountInterfaceType,
 				hasSumInterfaceType,
@@ -6675,7 +6674,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 					cadence.NewInt(2),
 				},
 			).WithType(statsType),
-		}).WithType(cadence.NewVariableSizedArrayType(countSumRestrictedType))
+		}).WithType(cadence.NewVariableSizedArrayType(countSumIntersectionType))
 
 		expectedStatsType := cadence.NewResourceType(
 			common.NewStringLocation(nil, "test"),
@@ -6687,8 +6686,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 			nil,
 		)
 
-		expectedCountSumRestrictedType := cadence.NewRestrictedType(
-			nil,
+		expectedCountSumIntersectionType := cadence.NewIntersectionType(
 			[]cadence.Type{
 				hasSumInterfaceType,
 				hasCountInterfaceType,
@@ -6702,7 +6700,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 					cadence.NewInt(1),
 				},
 			).WithType(expectedStatsType),
-		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumIntersectionType))
 
 		testEncodeAndDecodeEx(
 			t,
@@ -6804,12 +6802,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 				// tag
 				0xd8, ccf.CBORTagVarsizedArrayType,
 				// tag
-				0xd8, ccf.CBORTagRestrictedType,
-				// array, 2 items follow
-				0x82,
-				// type
-				// null
-				0xf6,
+				0xd8, ccf.CBORTagIntersectionType,
 				// array, 2 items follow
 				0x82,
 				// tag
@@ -6854,7 +6847,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 		)
 	})
 
-	t.Run("resource restricted type", func(t *testing.T) {
+	t.Run("resource intersection type", func(t *testing.T) {
 		t.Parallel()
 
 		hasCountInterfaceType := cadence.NewResourceInterfaceType(
@@ -6881,8 +6874,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 			nil,
 		)
 
-		countSumRestrictedType := cadence.NewRestrictedType(
-			statsType,
+		countSumIntersectionType := cadence.NewIntersectionType(
 			[]cadence.Type{
 				hasCountInterfaceType,
 				hasSumInterfaceType,
@@ -6896,7 +6888,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 					cadence.NewInt(2),
 				},
 			).WithType(statsType),
-		}).WithType(cadence.NewVariableSizedArrayType(countSumRestrictedType))
+		}).WithType(cadence.NewVariableSizedArrayType(countSumIntersectionType))
 
 		expectedStatsType := cadence.NewResourceType(
 			common.NewStringLocation(nil, "test"),
@@ -6908,8 +6900,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 			nil,
 		)
 
-		expectedCountSumRestrictedType := cadence.NewRestrictedType(
-			expectedStatsType,
+		expectedCountSumIntersectionType := cadence.NewIntersectionType(
 			[]cadence.Type{
 				hasSumInterfaceType,
 				hasCountInterfaceType,
@@ -6923,7 +6914,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 					cadence.NewInt(1),
 				},
 			).WithType(expectedStatsType),
-		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumIntersectionType))
 
 		testEncodeAndDecodeEx(
 			t,
@@ -7025,14 +7016,7 @@ func TestEncodeValueOfRestrictedType(t *testing.T) {
 				// tag
 				0xd8, ccf.CBORTagVarsizedArrayType,
 				// tag
-				0xd8, ccf.CBORTagRestrictedType,
-				// array, 2 items follow
-				0x82,
-				// type
-				// tag
-				0xd8, ccf.CBORTagTypeRef,
-				// bytes, 0 byte follows
-				0x40,
+				0xd8, ccf.CBORTagIntersectionType,
 				// array, 2 items follow
 				0x82,
 				// tag
@@ -9462,19 +9446,13 @@ func TestEncodeType(t *testing.T) {
 		)
 	})
 
-	t.Run("with static nil restricted type", func(t *testing.T) {
+	t.Run("with static nil intersection type", func(t *testing.T) {
 		t.Parallel()
 
-		testEncodeAndDecode(
-			t,
-			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{},
-				},
-			},
+		encodedData :=
 			[]byte{
 				// language=json, format=json-cdc
-				// {"value":{"staticType":{"kind":"Restriction","type":"","restrictions":[]}},"type":"Type"}
+				// {"value":{"staticType":{"kind":"Intersection","type":"","types":[]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
 				// 130([137(41), 191([null, []])])
@@ -9489,81 +9467,62 @@ func TestEncodeType(t *testing.T) {
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagRestrictedTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// null
-				0xf6,
+				0xd8, ccf.CBORTagIntersectionTypeValue,
 				// array, 0 element follows
 				0x80,
-			},
-		)
+			}
+
+		_, err := ccf.Decode(nil, encodedData)
+		require.Error(t, err)
+		assert.Equal(t, "ccf: failed to decode: unexpected empty intersection type", err.Error())
+
 	})
 
-	t.Run("with static no restricted type", func(t *testing.T) {
+	t.Run("with static no intersection type", func(t *testing.T) {
+		t.Parallel()
+
+		encodedData := []byte{
+			// language=json, format=json-cdc
+			// {"value":{"staticType":{"kind":"Intersection","typeID":"Int{String}","type":{"kind":"Int"},"types":[]}},"type":"Type"}
+			//
+			// language=edn, format=ccf
+			// 130([137(41), 191([185(4), []])])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 elements follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Meta type ID (41)
+			0x18, 0x29,
+			// tag
+			0xd8, ccf.CBORTagIntersectionTypeValue,
+			// array, 0 element follows
+			0x80,
+		}
+
+		_, err := ccf.Decode(nil, encodedData)
+		require.Error(t, err)
+		assert.Equal(t, "ccf: failed to decode: unexpected empty intersection type", err.Error())
+	})
+
+	t.Run("with static intersection type", func(t *testing.T) {
 		t.Parallel()
 
 		testEncodeAndDecodeEx(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{},
-					Type:         cadence.IntType{},
-				},
-			},
-			[]byte{
-				// language=json, format=json-cdc
-				// {"value":{"staticType":{"kind":"Restriction","typeID":"Int{String}","type":{"kind":"Int"},"restrictions":[]}},"type":"Type"}
-				//
-				// language=edn, format=ccf
-				// 130([137(41), 191([185(4), []])])
-				//
-				// language=cbor, format=ccf
-				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleType,
-				// Meta type ID (41)
-				0x18, 0x29,
-				// tag
-				0xd8, ccf.CBORTagRestrictedTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
-				// Int type ID (4)
-				0x04,
-				// array, 0 element follows
-				0x80,
-			},
-			// Expected decoded RestrictedType doesn't have type ID.
-			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{},
-					Type:         cadence.IntType{},
-				},
-			},
-		)
-	})
-
-	t.Run("with static restricted type", func(t *testing.T) {
-		t.Parallel()
-
-		testEncodeAndDecodeEx(
-			t,
-			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 			[]byte{
 				// language=json, format=json-cdc
-				// {"type":"Type","value":{"staticType": { "kind": "Restriction", "typeID":"Int{String}", "type" : {"kind" : "Int"}, "restrictions" : [ {"kind" : "String"} ]} } }
+				// {"type":"Type","value":{"staticType": { "kind": "Intersection", "typeID":"Int{String}", "type" : {"kind" : "Int"}, "types" : [ {"kind" : "String"} ]} } }
 				//
 				// language=edn, format=ccf
 				// 130([137(41), 191([185(4), [185(1)]])])
@@ -9578,13 +9537,7 @@ func TestEncodeType(t *testing.T) {
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagRestrictedTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
-				// Int type ID (4)
-				0x04,
+				0xd8, ccf.CBORTagIntersectionTypeValue,
 				// array, 1 element follows
 				0x81,
 				// tag
@@ -9592,36 +9545,34 @@ func TestEncodeType(t *testing.T) {
 				// String type ID (1)
 				0x01,
 			},
-			// Expected decoded RestrictedType doesn't have type ID.
+			// Expected decoded IntersectionType doesn't have type ID.
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 		)
 
 	})
 
-	t.Run("with static 2 restricted types", func(t *testing.T) {
+	t.Run("with static 2 intersection types", func(t *testing.T) {
 		t.Parallel()
 
 		testEncodeAndDecodeEx(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						cadence.NewAnyStructType(),
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 			[]byte{
 				// language=json, format=json-cdc
-				// {"value":{"staticType":{"kind":"Restriction","typeID":"Int{AnyStruct, String}","type":{"kind":"Int"},"restrictions":[{"kind":"AnyStruct"},{"kind":"String"}]}},"type":"Type"}
+				// {"value":{"staticType":{"kind":"Intersection","typeID":"Int{AnyStruct, String}","type":{"kind":"Int"},"types":[{"kind":"AnyStruct"},{"kind":"String"}]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
 				// 130([137(41), 191([185(4), [185(1), 185(39)]])])
@@ -9636,13 +9587,7 @@ func TestEncodeType(t *testing.T) {
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagRestrictedTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
-				// Int type ID (4)
-				0x04,
+				0xd8, ccf.CBORTagIntersectionTypeValue,
 				// array, 2 element follows
 				0x82,
 				// tag
@@ -9654,29 +9599,27 @@ func TestEncodeType(t *testing.T) {
 				// AnyStruct type ID (39)
 				0x18, 0x27,
 			},
-			// Expected decoded RestrictedType has sorted restrictions and no type ID.
+			// Expected decoded IntersectionType has sorted types and no type ID.
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						cadence.StringType{},
 						cadence.NewAnyStructType(),
 					},
-					Type: cadence.IntType{},
 				},
 			},
 		)
 	})
 
-	t.Run("with static 3 restricted types", func(t *testing.T) {
+	t.Run("with static 3 intersected types", func(t *testing.T) {
 		t.Parallel()
 
-		// restrictedType is generated by fuzzer.
+		// intersectionType is generated by fuzzer.
 		testEncodeAndDecodeEx(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Type: cadence.TheAnyStructType,
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						cadence.NewStructInterfaceType(
 							common.NewAddressLocation(nil, common.Address{0x01}, "TypeA"),
 							"TypeA",
@@ -9700,7 +9643,7 @@ func TestEncodeType(t *testing.T) {
 			},
 			[]byte{
 				// language=json, format=json-cdc
-				// {"value":{"staticType":{"kind":"Restriction","typeID":"","type":{"kind":"AnyStruct"},"restrictions":[{"type":"","kind":"StructInterface","typeID":"A.0100000000000000.TypeA","fields":[],"initializers":[]},{"type":"","kind":"StructInterface","typeID":"A.0100000000000000.TypeB","fields":[],"initializers":[]},{"type":"","kind":"StructInterface","typeID":"I.LocationC.TypeC","fields":[],"initializers":[]}]}},"type":"Type"}
+				// {"value":{"staticType":{"kind":"Intersection","typeID":"","type":{"kind":"AnyStruct"},"types":[{"type":"","kind":"StructInterface","typeID":"A.0100000000000000.TypeA","fields":[],"initializers":[]},{"type":"","kind":"StructInterface","typeID":"A.0100000000000000.TypeB","fields":[],"initializers":[]},{"type":"","kind":"StructInterface","typeID":"I.LocationC.TypeC","fields":[],"initializers":[]}]}},"type":"Type"}
 				//
 				// language=edn, format=ccf
 				// 130([137(41), 191([185(39), [224([h'', "I.LocationC.TypeC", null, [], []]), 224([h'01', "A.0100000000000000.TypeA", null, [], []]), 224([h'02', "A.0100000000000000.TypeB", null, [], []])]])])
@@ -9715,14 +9658,8 @@ func TestEncodeType(t *testing.T) {
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagRestrictedTypeValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleTypeValue,
-				// AnyStruct type ID (39)
-				0x18, 0x27,
-				// 3 sorted restrictions
+				0xd8, ccf.CBORTagIntersectionTypeValue,
+				// 3 sorted types
 				// array, 3 element follows
 				0x83,
 				// tag
@@ -9787,11 +9724,10 @@ func TestEncodeType(t *testing.T) {
 				// array, 0 element follows
 				0x80,
 			},
-			// Expected decoded RestrictedType has sorted restrictions and no type ID.
+			// Expected decoded IntersectionType has sorted types and no type ID.
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Type: cadence.TheAnyStructType,
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						cadence.NewStructInterfaceType(
 							common.IdentifierLocation("LocationC"),
 							"TypeC",
@@ -11570,6 +11506,8 @@ func testEncode(t *testing.T, val cadence.Value, expectedCBOR []byte) (actualCBO
 }
 
 func testDecode(t *testing.T, actualCBOR []byte, expectedVal cadence.Value) {
+	require.True(t, ccf.HasMsgPrefix(actualCBOR))
+
 	decodedVal, err := deterministicDecMode.Decode(nil, actualCBOR)
 	require.NoError(t, err)
 	assert.Equal(
@@ -13996,7 +13934,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "null restriction in restricted type value",
+			name: "null type in intersection type value",
 			// Data is generated by fuzzer.
 			data: []byte{
 				// language=edn, format=ccf
@@ -14012,7 +13950,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// Meta type ID (41)
 				0x18, 0x29,
 				// tag
-				0xd8, ccf.CBORTagRestrictedTypeValue,
+				0xd8, ccf.CBORTagIntersectionTypeValue,
 				// array, 2 items follow
 				0x82,
 				// tag
@@ -14036,7 +13974,7 @@ func TestDecodeInvalidData(t *testing.T) {
 				// initializers
 				// array, 0 item follows
 				0x80,
-				// restrictions
+				// types
 				// array, 1 item follows
 				0x81,
 				// nil
@@ -14079,7 +14017,7 @@ func TestDecodeInvalidData(t *testing.T) {
 	}
 }
 
-func TestEncodeValueOfRestrictedInterface(t *testing.T) {
+func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 
 	t.Parallel()
 
@@ -14092,7 +14030,7 @@ func TestEncodeValueOfRestrictedInterface(t *testing.T) {
 		}
 
 		struct MiddleStruct {
-		    var field: AnyStruct{Interface}
+		    var field: {Interface}
 		}
 
 		struct interface Interface {}
@@ -14103,7 +14041,7 @@ func TestEncodeValueOfRestrictedInterface(t *testing.T) {
 
 		OuterStruct {
 		    field: MiddleStruct {
-		        field: InnerStruct{}   // <-- here the value is the implementation, for the restricted type.
+		        field: InnerStruct{}   // <-- here the value is the implementation, for the intersection type.
 		    }
 		}
 	*/
@@ -14120,8 +14058,8 @@ func TestEncodeValueOfRestrictedInterface(t *testing.T) {
 		"MiddleStruct",
 		[]cadence.Field{
 			{
-				Type: cadence.NewRestrictedType(
-					cadence.TheAnyStructType, []cadence.Type{interfaceType}),
+				Type: cadence.NewIntersectionType(
+					[]cadence.Type{interfaceType}),
 				Identifier: "field",
 			},
 		},
@@ -14251,13 +14189,7 @@ func TestEncodeValueOfRestrictedInterface(t *testing.T) {
 			// "field"
 			0x66, 0x69, 0x65, 0x6c, 0x64,
 			// tag
-			0xd8, ccf.CBORTagRestrictedType,
-			// array, 2 item follows
-			0x82,
-			// tag
-			0xd8, ccf.CBORTagSimpleType,
-			// AnyStruct type ID (39)
-			0x18, 0x27,
+			0xd8, ccf.CBORTagIntersectionType,
 			// array, 1 item follows
 			0x81,
 			// tag
@@ -14387,15 +14319,15 @@ func TestCyclicReferenceValue(t *testing.T) {
 func TestSortOptions(t *testing.T) {
 	// Test sorting of:
 	// - composite fields ("count", "sum")
-	// - restricted types ("HasCount", "HasSum")
+	// - Intersection types ("HasCount", "HasSum")
 
 	sortFieldsEncMode, err := ccf.EncOptions{
 		SortCompositeFields: ccf.SortBytewiseLexical,
 	}.EncMode()
 	require.NoError(t, err)
 
-	sortRestrictedTypesEncMode, err := ccf.EncOptions{
-		SortRestrictedTypes: ccf.SortBytewiseLexical,
+	sortIntersectionTypesEncMode, err := ccf.EncOptions{
+		SortIntersectionTypes: ccf.SortBytewiseLexical,
 	}.EncMode()
 	require.NoError(t, err)
 
@@ -14404,8 +14336,8 @@ func TestSortOptions(t *testing.T) {
 	}.DecMode()
 	require.NoError(t, err)
 
-	enforceSortedRestrictedTypesDecMode, err := ccf.DecOptions{
-		EnforceSortRestrictedTypes: ccf.EnforceSortBytewiseLexical,
+	enforceSortedIntersectionTypesDecMode, err := ccf.DecOptions{
+		EnforceSortIntersectionTypes: ccf.EnforceSortBytewiseLexical,
 	}.DecMode()
 	require.NoError(t, err)
 
@@ -14433,8 +14365,7 @@ func TestSortOptions(t *testing.T) {
 		nil,
 	)
 
-	countSumRestrictedType := cadence.NewRestrictedType(
-		nil,
+	countSumIntersectionType := cadence.NewIntersectionType(
 		[]cadence.Type{
 			hasCountInterfaceType,
 			hasSumInterfaceType,
@@ -14448,7 +14379,7 @@ func TestSortOptions(t *testing.T) {
 				cadence.NewInt(2),
 			},
 		).WithType(statsType),
-	}).WithType(cadence.NewVariableSizedArrayType(countSumRestrictedType))
+	}).WithType(cadence.NewVariableSizedArrayType(countSumIntersectionType))
 
 	t.Run("no sort", func(t *testing.T) {
 		expectedStatsType := cadence.NewResourceType(
@@ -14461,8 +14392,7 @@ func TestSortOptions(t *testing.T) {
 			nil,
 		)
 
-		expectedCountSumRestrictedType := cadence.NewRestrictedType(
-			nil,
+		expectedCountSumIntersectionType := cadence.NewIntersectionType(
 			[]cadence.Type{
 				hasCountInterfaceType,
 				hasSumInterfaceType,
@@ -14476,7 +14406,7 @@ func TestSortOptions(t *testing.T) {
 					cadence.NewInt(2),
 				},
 			).WithType(expectedStatsType),
-		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumIntersectionType))
 
 		expectedCBOR := []byte{
 			// language=json, format=json-cdc
@@ -14575,12 +14505,7 @@ func TestSortOptions(t *testing.T) {
 			// tag
 			0xd8, ccf.CBORTagVarsizedArrayType,
 			// tag
-			0xd8, ccf.CBORTagRestrictedType,
-			// array, 2 items follow
-			0x82,
-			// type
-			// null
-			0xf6,
+			0xd8, ccf.CBORTagIntersectionType,
 			// array, 2 items follow
 			0x82,
 			// tag
@@ -14640,8 +14565,8 @@ func TestSortOptions(t *testing.T) {
 		_, err = enforceSortedFieldsDecMode.Decode(nil, actualCBOR)
 		require.Error(t, err)
 
-		// Decode value enforcing sorting of restricted types should return error.
-		_, err = enforceSortedRestrictedTypesDecMode.Decode(nil, actualCBOR)
+		// Decode value enforcing sorting of Intersection types should return error.
+		_, err = enforceSortedIntersectionTypesDecMode.Decode(nil, actualCBOR)
 		require.Error(t, err)
 	})
 
@@ -14656,8 +14581,7 @@ func TestSortOptions(t *testing.T) {
 			nil,
 		)
 
-		expectedCountSumRestrictedType := cadence.NewRestrictedType(
-			nil,
+		expectedCountSumIntersectionType := cadence.NewIntersectionType(
 			[]cadence.Type{
 				hasCountInterfaceType,
 				hasSumInterfaceType,
@@ -14671,7 +14595,7 @@ func TestSortOptions(t *testing.T) {
 					cadence.NewInt(1),
 				},
 			).WithType(expectedStatsType),
-		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumIntersectionType))
 
 		expectedCBOR := []byte{
 			// language=json, format=json-cdc
@@ -14770,12 +14694,7 @@ func TestSortOptions(t *testing.T) {
 			// tag
 			0xd8, ccf.CBORTagVarsizedArrayType,
 			// tag
-			0xd8, ccf.CBORTagRestrictedType,
-			// array, 2 items follow
-			0x82,
-			// type
-			// null
-			0xf6,
+			0xd8, ccf.CBORTagIntersectionType,
 			// array, 2 items follow
 			0x82,
 			// tag
@@ -14835,12 +14754,12 @@ func TestSortOptions(t *testing.T) {
 		_, err = ccf.Decode(nil, actualCBOR)
 		require.NoError(t, err)
 
-		// Decode value enforcing sorting of restricted types should return error.
-		_, err = enforceSortedRestrictedTypesDecMode.Decode(nil, actualCBOR)
+		// Decode value enforcing sorting of Intersection types should return error.
+		_, err = enforceSortedIntersectionTypesDecMode.Decode(nil, actualCBOR)
 		require.Error(t, err)
 	})
 
-	t.Run("sort restricted types only", func(t *testing.T) {
+	t.Run("sort Intersection types only", func(t *testing.T) {
 		expectedStatsType := cadence.NewResourceType(
 			common.NewStringLocation(nil, "test"),
 			"Stats",
@@ -14851,8 +14770,7 @@ func TestSortOptions(t *testing.T) {
 			nil,
 		)
 
-		expectedCountSumRestrictedType := cadence.NewRestrictedType(
-			nil,
+		expectedCountSumIntersectionType := cadence.NewIntersectionType(
 			[]cadence.Type{
 				hasSumInterfaceType,
 				hasCountInterfaceType,
@@ -14866,7 +14784,7 @@ func TestSortOptions(t *testing.T) {
 					cadence.NewInt(2),
 				},
 			).WithType(expectedStatsType),
-		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumIntersectionType))
 
 		expectedCBOR := []byte{
 			// language=json, format=json-cdc
@@ -14965,12 +14883,7 @@ func TestSortOptions(t *testing.T) {
 			// tag
 			0xd8, ccf.CBORTagVarsizedArrayType,
 			// tag
-			0xd8, ccf.CBORTagRestrictedType,
-			// array, 2 items follow
-			0x82,
-			// type
-			// null
-			0xf6,
+			0xd8, ccf.CBORTagIntersectionType,
 			// array, 2 items follow
 			0x82,
 			// tag
@@ -15012,13 +14925,13 @@ func TestSortOptions(t *testing.T) {
 			0x02,
 		}
 
-		// Encode value with sorted restricted types.
-		actualCBOR, err := sortRestrictedTypesEncMode.Encode(val)
+		// Encode value with sorted Intersection types.
+		actualCBOR, err := sortIntersectionTypesEncMode.Encode(val)
 		require.NoError(t, err)
 		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
-		// Decode value enforcing sorting of restricted types.
-		decodedVal, err := enforceSortedRestrictedTypesDecMode.Decode(nil, actualCBOR)
+		// Decode value enforcing sorting of Intersection types.
+		decodedVal, err := enforceSortedIntersectionTypesDecMode.Decode(nil, actualCBOR)
 		require.NoError(t, err)
 		assert.Equal(
 			t,
@@ -15046,8 +14959,7 @@ func TestSortOptions(t *testing.T) {
 			nil,
 		)
 
-		expectedCountSumRestrictedType := cadence.NewRestrictedType(
-			nil,
+		expectedCountSumIntersectionType := cadence.NewIntersectionType(
 			[]cadence.Type{
 				hasSumInterfaceType,
 				hasCountInterfaceType,
@@ -15061,7 +14973,7 @@ func TestSortOptions(t *testing.T) {
 					cadence.NewInt(1),
 				},
 			).WithType(expectedStatsType),
-		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumRestrictedType))
+		}).WithType(cadence.NewVariableSizedArrayType(expectedCountSumIntersectionType))
 
 		expectedCBOR := []byte{
 			// language=json, format=json-cdc
@@ -15160,12 +15072,7 @@ func TestSortOptions(t *testing.T) {
 			// tag
 			0xd8, ccf.CBORTagVarsizedArrayType,
 			// tag
-			0xd8, ccf.CBORTagRestrictedType,
-			// array, 2 items follow
-			0x82,
-			// type
-			// null
-			0xf6,
+			0xd8, ccf.CBORTagIntersectionType,
 			// array, 2 items follow
 			0x82,
 			// tag
@@ -15207,12 +15114,12 @@ func TestSortOptions(t *testing.T) {
 			0x01,
 		}
 
-		// Encode value with sorted composite fields and restricted types.
+		// Encode value with sorted composite fields and Intersection types.
 		actualCBOR, err := deterministicEncMode.Encode(val)
 		require.NoError(t, err)
 		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
 
-		// Decode value enforcing sorting of composite fields and restricted types.
+		// Decode value enforcing sorting of composite fields and Intersection types.
 		decodedVal, err := deterministicDecMode.Decode(nil, actualCBOR)
 		require.NoError(t, err)
 		assert.Equal(
@@ -15229,8 +15136,8 @@ func TestSortOptions(t *testing.T) {
 		_, err = enforceSortedFieldsDecMode.Decode(nil, actualCBOR)
 		require.NoError(t, err)
 
-		// Decode value enforcing sorting of restricted types should return no error.
-		_, err = enforceSortedRestrictedTypesDecMode.Decode(nil, actualCBOR)
+		// Decode value enforcing sorting of Intersection types should return no error.
+		_, err = enforceSortedIntersectionTypesDecMode.Decode(nil, actualCBOR)
 		require.NoError(t, err)
 	})
 }
@@ -15243,7 +15150,7 @@ func TestInvalidEncodingOptions(t *testing.T) {
 	require.Error(t, err)
 
 	opts = ccf.EncOptions{
-		SortRestrictedTypes: 100,
+		SortIntersectionTypes: 100,
 	}
 	_, err = opts.EncMode()
 	require.Error(t, err)
@@ -15257,8 +15164,37 @@ func TestInvalidDecodingOptions(t *testing.T) {
 	require.Error(t, err)
 
 	opts = ccf.DecOptions{
-		EnforceSortRestrictedTypes: 100,
+		EnforceSortIntersectionTypes: 100,
 	}
 	_, err = opts.DecMode()
 	require.Error(t, err)
+}
+
+func TestHasMsgPrefix(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		msg      []byte
+		expected bool
+	}
+
+	testCases := []testCase{
+		{name: "empty", msg: nil, expected: false},
+		{name: "too short", msg: []byte{0x00}, expected: false},
+		{name: "too short", msg: []byte{0x18, 0x18}, expected: false},
+		{name: "not CCF", msg: []byte{'a', 'b', 'c', 'd', 'e'}, expected: false},
+		{name: "not CCF", msg: []byte{0x1a, 0x00, 0x0f, 0x42, 0x40}, expected: false},
+		{name: "not CCF", msg: []byte{0xd8, 0x01, 0x82, 0x00, 0x00}, expected: false},
+		{name: "not implemented", msg: []byte{0xd8, ccf.CBORTagTypeDef, 0x82, 0x00, 0x00}, expected: false},
+		{name: "ccf-typedef-and-value-message", msg: []byte{0xd8, ccf.CBORTagTypeDefAndValue, 0x82, 0x00, 0x00}, expected: true},
+		{name: "ccf-type-and-value-message", msg: []byte{0xd8, ccf.CBORTagTypeAndValue, 0x82, 0xd8, ccf.CBORTagSimpleType, 0x18, 0x32, 0xf6}, expected: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, ccf.HasMsgPrefix(tc.msg))
+		})
+	}
 }

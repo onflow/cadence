@@ -369,10 +369,9 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
       let test = makeKittyIdGetter()
     `)
 
-	errs := RequireCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidFunctionWithResult(t *testing.T) {

@@ -200,181 +200,43 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 			return FailableCastCanSucceed(typedSubType.Type, typedSuperType.Type)
 		}
 
-	case *RestrictedType:
+	case *IntersectionType:
 
 		switch typedSubType := subType.(type) {
-		case *RestrictedType:
-
-			restrictedSuperType := typedSuperType.Type
-			switch restrictedSuperType {
-
-			case AnyResourceType:
-				// A restricted type `T{Us}`
-				// is a subtype of a restricted type `AnyResource{Vs}`:
-				//
-				// When `T == AnyResource || T == Any`:
-				// if the run-time type conforms to `Vs`
-				//
-				// When `T != AnyResource && T != Any`:
-				// if `T` conforms to `Vs`.
-				// `Us` and `Vs` do *not* have to be subsets.
-
-				switch typedSubType.Type {
-				case AnyResourceType, AnyType:
-					return true
-				default:
-					if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
-
-						return IsSubType(typedInnerSubType, restrictedSuperType) &&
-							typedSuperType.EffectiveRestrictionSet().
-								IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
-					}
-				}
-
-			case AnyStructType:
-				// A restricted type `T{Us}`
-				// is a subtype of a restricted type `AnyStruct{Vs}`:
-				//
-				// When `T == AnyStruct || T == Any`: if the run-time type conforms to `Vs`
-				//
-				// When `T != AnyStruct && T != Any`: if `T` conforms to `Vs`.
-				// `Us` and `Vs` do *not* have to be subsets.
-
-				switch typedSubType.Type {
-				case AnyStructType, AnyType:
-					return true
-				default:
-					if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
-
-						return IsSubType(typedInnerSubType, restrictedSuperType) &&
-							typedSuperType.EffectiveRestrictionSet().
-								IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
-					}
-				}
-
-			case AnyType:
-				// A restricted type `T{Us}`
-				// is a subtype of a restricted type `Any{Vs}`:
-				//
-				// When `T == AnyResource || T == AnyStruct || T == Any`:
-				// if the run-time type conforms to `Vs`
-				//
-				// When `T != AnyResource && T != AnyStruct && T != Any`:
-				// if `T` conforms to `Vs`.
-				// `Us` and `Vs` do *not* have to be subsets.
-
-				switch typedSubType.Type {
-				case AnyResourceType, AnyStructType, AnyType:
-					return true
-				default:
-					if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
-
-						return IsSubType(typedInnerSubType, restrictedSuperType) &&
-							typedSuperType.EffectiveRestrictionSet().
-								IsSubsetOf(typedInnerSubType.EffectiveInterfaceConformanceSet())
-					}
-				}
-
-			default:
-
-				// A restricted type `T{Us}`
-				// is a subtype of a restricted type `V{Ws}`:
-				//
-				// When `T == AnyResource || T == AnyStruct || T == Any`:
-				// if the run-time type is `V`.
-				//
-				// When `T != AnyResource && T != AnyStruct && T != Any`:
-				// if `T == V`.
-				// `Us` and `Ws` do *not* have to be subsets:
-				// The owner may freely restrict and unrestrict.
-
-				switch typedSubType.Type {
-				case AnyResourceType, AnyStructType, AnyType:
-					return true
-				default:
-					return typedSubType.Type.Equal(typedSuperType.Type)
-				}
-			}
+		case *IntersectionType:
+			// A intersection type `{Us}`
+			// is a subtype of a intersection type `{Vs}`:
+			// if the run-time type conforms to `Vs`
+			// `Us` and `Vs` do *not* have to be subsets.
+			return true
 
 		case *CompositeType:
 
-			switch typedSuperType.Type {
-			case AnyResourceType, AnyStructType, AnyType:
+			// A type `T` is a subtype of a intersection type `{Us}`:
+			//
+			// When `T != AnyResource && T != AnyStruct && T != Any`:
+			// if `T` conforms to `Us`.
 
-				// An unrestricted type `T`
-				// is a subtype of a restricted type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
-				//
-				// When `T != AnyResource && T != AnyStruct && T != Any`:
-				// if `T` is a subtype of the restricted supertype,
-				// and `T` conforms to `Us`.
-
-				return IsSubType(typedSubType, typedSuperType.Type) &&
-					typedSuperType.EffectiveRestrictionSet().
-						IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
-
-			default:
-
-				// An unrestricted type `T`
-				// is a subtype of a restricted type `U{Vs}`:
-				//
-				// When `T != AnyResource && T != AnyStruct && T != Any`:
-				// if `T == U`.
-
-				return typedSubType.Equal(typedSuperType.Type)
-			}
+			return typedSuperType.EffectiveIntersectionSet().
+				IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 
 		}
 
 		switch subType {
 		case AnyResourceType, AnyStructType, AnyType:
+			// A type `T` is a subtype of a intersection type `{Us}`:
+			// if the run-time type conforms to `Vs`
 
-			switch typedSuperType.Type {
-			case AnyResourceType, AnyStructType, AnyType:
-
-				// An unrestricted type `T`
-				// is a subtype of a restricted type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
-				//
-				// When `T == AnyResource || T == AnyStruct` || T == Any`:
-				// if the run-time type conforms to `Vs`
-
-				return true
-
-			default:
-
-				// An unrestricted type `T`
-				// is a subtype of a restricted type `U{Vs}`:
-				//
-				// When `T == AnyResource || T == AnyStruct || T == Any`:
-				// if the run-time type is U.
-
-				// NOTE: inverse!
-
-				return IsSubType(typedSuperType.Type, subType)
-			}
+			return true
 		}
 
 	case *CompositeType:
+		switch subType.(type) {
+		case *IntersectionType:
 
-		switch typedSubType := subType.(type) {
-		case *RestrictedType:
-
-			// A restricted type `T{Us}`
-			// is a subtype of an unrestricted type `V`:
-			//
-			// When `T == AnyResource || T == AnyStruct || T == Any`:
+			// A intersection type `{Us}` is a subtype of a type `V`:
 			// if the run-time type is V.
-			//
-			// When `T != AnyResource && T != AnyStruct && T != Any`:
-			// if `T == V`.
-			// The owner may freely unrestrict.
-
-			switch typedSubType.Type {
-			case AnyResourceType, AnyStructType, AnyType:
-				return true
-
-			default:
-				return typedSubType.Type.Equal(typedSuperType)
-			}
+			return true
 		}
 
 	}
@@ -382,14 +244,13 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 	switch superType {
 	case AnyResourceType, AnyStructType:
 
-		// A restricted type `T{Us}`
-		// or unrestricted type `T`
-		// is a subtype of the type `AnyResource` / `AnyStruct`:
-		// if `T` is `AnyType`, or `T` is a subtype of `AnyResource` / `AnyStruct`.
+		// A intersection type `{Us}` or a type `T` s a subtype of the type `AnyResource` / `AnyStruct`:
+		// if `T` is `AnyType`, or `T` is a subtype of `AnyResource` / `AnyStruct`, or if `Us` are subtypes of `AnyResource` / `AnyStruct`
 
 		innerSubtype := subType
-		if restrictedSubType, ok := subType.(*RestrictedType); ok {
-			innerSubtype = restrictedSubType.Type
+		if intersectionSubType, ok := subType.(*IntersectionType); ok {
+			// because the intersection's types are guaranteed to be the same kind, we only need to check the first one
+			innerSubtype = intersectionSubType.Types[0]
 		}
 
 		return innerSubtype == AnyType ||

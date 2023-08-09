@@ -799,7 +799,8 @@ func TestRuntimeAttachmentStorage(t *testing.T) {
 	          let r <- create R()
 	          let r2 <- attach A() to <-r
 	          authAccount.save(<-r2, to: /storage/foo)
-	          let cap = authAccount.capabilities.storage.issue<&R>(/storage/foo)
+	          let cap = authAccount.capabilities.storage
+                  .issue<&R>(/storage/foo)
               authAccount.capabilities.publish(cap, at: /public/foo)
 
 	          let ref = pubAccount.capabilities.borrow<&R>(/public/foo)!
@@ -849,10 +850,11 @@ func TestRuntimeAttachmentStorage(t *testing.T) {
 	          let r <- create R()
 	          let r2 <- attach A() to <-r
 	          authAccount.save(<-r2, to: /storage/foo)
-	          let cap = authAccount.capabilities.storage.issue<&R{I}>(/storage/foo)
+	          let cap = authAccount.capabilities.storage
+                    .issue<&{I}>(/storage/foo)
               authAccount.capabilities.publish(cap, at: /public/foo)
 
-	          let ref = pubAccount.capabilities.borrow<&R{I}>(/public/foo)!
+	          let ref = pubAccount.capabilities.borrow<&{I}>(/public/foo)!
 	          return ref[A]?.foo()!
 	      }
 	    `

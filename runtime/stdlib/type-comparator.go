@@ -20,7 +20,6 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 var _ ast.TypeEqualityChecker = &TypeComparator{}
@@ -92,37 +91,19 @@ func (c *TypeComparator) CheckDictionaryTypeEquality(expected *ast.DictionaryTyp
 	return expected.ValueType.CheckEqual(foundDictionaryType.ValueType, c)
 }
 
-func (c *TypeComparator) CheckRestrictedTypeEquality(expected *ast.RestrictedType, found ast.Type) error {
-	foundRestrictedType, ok := found.(*ast.RestrictedType)
+func (c *TypeComparator) CheckIntersectionTypeEquality(expected *ast.IntersectionType, found ast.Type) error {
+	foundIntersectionType, ok := found.(*ast.IntersectionType)
 	if !ok {
 		return newTypeMismatchError(expected, found)
 	}
 
-	if expected.Type == nil {
-		if !isAnyStructOrAnyResourceType(foundRestrictedType.Type) {
-			return newTypeMismatchError(expected, found)
-		}
-		// else go on to check type restrictions
-	} else if foundRestrictedType.Type == nil {
-		if !isAnyStructOrAnyResourceType(expected.Type) {
-			return newTypeMismatchError(expected, found)
-		}
-		// else go on to check type restrictions
-	} else {
-		// both are not nil
-		err := expected.Type.CheckEqual(foundRestrictedType.Type, c)
-		if err != nil {
-			return newTypeMismatchError(expected, found)
-		}
-	}
-
-	if len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
+	if len(expected.Types) != len(foundIntersectionType.Types) {
 		return newTypeMismatchError(expected, found)
 	}
 
-	for index, expectedRestriction := range expected.Restrictions {
-		foundRestriction := foundRestrictedType.Restrictions[index]
-		err := expectedRestriction.CheckEqual(foundRestriction, c)
+	for index, expectedIntersectedType := range expected.Types {
+		foundType := foundIntersectionType.Types[index]
+		err := expectedIntersectedType.CheckEqual(foundType, c)
 		if err != nil {
 			return newTypeMismatchError(expected, found)
 		}
@@ -238,25 +219,6 @@ func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 		}
 	}
 	return true
-}
-
-func isAnyStructOrAnyResourceType(astType ast.Type) bool {
-	// If the restricted type is not stated, then it is either AnyStruct or AnyResource
-	if astType == nil {
-		return true
-	}
-
-	nominalType, ok := astType.(*ast.NominalType)
-	if !ok {
-		return false
-	}
-
-	switch nominalType.Identifier.Identifier {
-	case sema.AnyStructType.Name, sema.AnyResourceType.Name:
-		return true
-	default:
-		return false
-	}
 }
 
 func newTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismatchError {

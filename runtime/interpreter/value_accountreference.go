@@ -230,6 +230,7 @@ func (v *AccountReferenceValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)

@@ -328,6 +328,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 		atree.Address{},
 		false,
 		nil,
+		nil,
 	)
 
 	iterable, ok := transferredValue.(IterableValue)

@@ -415,12 +415,15 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	if argumentCount != parameterCount {
 
-		// if the function has defined optional parameters,
-		// then the provided arguments must be equal to or greater than
-		// the number of required parameters.
-		if functionType.RequiredArgumentCount == nil ||
-			argumentCount < *functionType.RequiredArgumentCount {
+		if argumentCount < functionType.Arity.MinCount(parameterCount) {
+			return nil, ArgumentCountError{
+				ParameterCount: parameterCount,
+				ArgumentCount:  argumentCount,
+			}
+		}
 
+		maxCount := functionType.Arity.MaxCount(parameterCount)
+		if maxCount != nil && argumentCount > *maxCount {
 			return nil, ArgumentCountError{
 				ParameterCount: parameterCount,
 				ArgumentCount:  argumentCount,
@@ -510,20 +513,8 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		var err error
-
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		switch r := r.(type) {
-		case Error,
-			errors.ExternalError,
-			errors.InternalError,
-			errors.UserError:
-			err = r.(error)
-		case error:
-			err = errors.NewUnexpectedErrorFromCause(r)
-		default:
-			err = errors.NewUnexpectedError("%s", r)
-		}
+		err := asCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -550,6 +541,31 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		interpreterErr.StackTrace = interpreter.CallStack()
 
 		onError(interpreterErr)
+	}
+}
+
+func asCadenceError(r any) error {
+	err, isError := r.(error)
+	if !isError {
+		return errors.NewUnexpectedError("%s", r)
+	}
+
+	rootError := err
+
+	for {
+		switch typedError := err.(type) {
+		case Error,
+			errors.ExternalError,
+			errors.InternalError,
+			errors.UserError:
+			return typedError
+		case xerrors.Wrapper:
+			err = typedError.Unwrap()
+		case error:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		default:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		}
 	}
 }
 
@@ -753,7 +769,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 		return result.Value
 	}
 
-	interpreter.visitConditions(preConditions)
+	interpreter.visitConditions(preConditions, ast.ConditionKindPre)
 
 	var returnValue Value
 
@@ -778,7 +794,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 		)
 	}
 
-	interpreter.visitConditions(postConditions)
+	interpreter.visitConditions(postConditions, ast.ConditionKindPost)
 
 	return returnValue
 }
@@ -835,40 +851,56 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
 }
 
-func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
+func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
 	for _, condition := range conditions {
-		interpreter.visitCondition(condition)
+		interpreter.visitCondition(condition, kind)
 	}
 }
 
-func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
+func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast.ConditionKind) {
 
-	// Evaluate the condition as a statement, so we get position information in case of an error
+	switch condition := condition.(type) {
+	case *ast.TestCondition:
+		// Evaluate the condition as a statement, so we get position information in case of an error
+		statement := ast.NewExpressionStatement(interpreter, condition.Test)
 
-	statement := ast.NewExpressionStatement(interpreter, condition.Test)
+		result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-	result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+		value, ok := result.Value.(BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-	value, valueOk := result.Value.(BoolValue)
+		if value {
+			return
+		}
 
-	if ok && valueOk && bool(value) {
-		return
+		messageExpression := condition.Message
+		var message string
+		if messageExpression != nil {
+			messageValue := interpreter.evalExpression(messageExpression)
+			message = messageValue.(*StringValue).Str
+		}
+
+		panic(ConditionError{
+			ConditionKind: kind,
+			Message:       message,
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: statement,
+			},
+		})
+
+	case *ast.EmitCondition:
+		interpreter.evalStatement((*ast.EmitStatement)(condition))
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
-	var message string
-	if condition.Message != nil {
-		messageValue := interpreter.evalExpression(condition.Message)
-		message = messageValue.(*StringValue).Str
-	}
-
-	panic(ConditionError{
-		ConditionKind: condition.Kind,
-		Message:       message,
-		LocationRange: LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: condition.Test,
-		},
-	})
 }
 
 // declareVariable declares a variable in the latest scope
@@ -1731,6 +1763,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		locationRange,
 		atree.Address{},
 		false,
+		nil,
 		nil,
 	)
 
@@ -3395,10 +3428,10 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"RestrictedType",
+		"IntersectionType",
 		NewUnmeteredHostFunctionValue(
-			sema.RestrictedTypeFunctionType,
-			restrictedTypeFunction,
+			sema.IntersectionTypeFunctionType,
+			intersectionTypeFunction,
 		),
 	)
 }
@@ -3574,79 +3607,62 @@ func functionTypeFunction(invocation Invocation) Value {
 	return NewUnmeteredTypeValue(functionStaticType)
 }
 
-func restrictedTypeFunction(invocation Invocation) Value {
-	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
+func intersectionTypeFunction(invocation Invocation) Value {
+	intersectionIDs, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	var staticRestrictions []InterfaceStaticType
-	var semaRestrictions []*sema.InterfaceType
+	var staticIntersections []InterfaceStaticType
+	var semaIntersections []*sema.InterfaceType
 
-	count := restrictionIDs.Count()
+	count := intersectionIDs.Count()
 	if count > 0 {
-		staticRestrictions = make([]InterfaceStaticType, 0, count)
-		semaRestrictions = make([]*sema.InterfaceType, 0, count)
+		staticIntersections = make([]InterfaceStaticType, 0, count)
+		semaIntersections = make([]*sema.InterfaceType, 0, count)
 
-		var invalidRestrictionID bool
-		restrictionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
+		var invalidIntersectionID bool
+		intersectionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
 			typeIDValue, ok := typeID.(*StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+			intersectedInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
 			if err != nil {
-				invalidRestrictionID = true
+				invalidIntersectionID = true
 				return true
 			}
 
-			staticRestrictions = append(
-				staticRestrictions,
-				ConvertSemaToStaticType(invocation.Interpreter, restrictionInterface).(InterfaceStaticType),
+			staticIntersections = append(
+				staticIntersections,
+				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(InterfaceStaticType),
 			)
-			semaRestrictions = append(semaRestrictions, restrictionInterface)
+			semaIntersections = append(semaIntersections, intersectedInterface)
 
 			// Continue iteration
 			return true
 		})
 
-		// If there are any invalid restrictions,
+		// If there are any invalid interfaces,
 		// then return nil
-		if invalidRestrictionID {
+		if invalidIntersectionID {
 			return Nil
 		}
 	}
 
-	var semaType sema.Type
-	var err error
-
-	switch typeID := invocation.Arguments[0].(type) {
-	case NilValue:
-		semaType = nil
-	case *SomeValue:
-		innerValue := typeID.InnerValue(invocation.Interpreter, invocation.LocationRange)
-		semaType, err = lookupComposite(invocation.Interpreter, innerValue.(*StringValue).Str)
-		if err != nil {
-			return Nil
-		}
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	var invalidRestrictedType bool
-	ty := sema.CheckRestrictedType(
+	var invalidIntersectionType bool
+	sema.CheckIntersectionType(
 		invocation.Interpreter,
-		semaType,
-		semaRestrictions,
-		func(_ func(*ast.RestrictedType) error) {
-			invalidRestrictedType = true
+		semaIntersections,
+		func(_ func(*ast.IntersectionType) error) {
+			invalidIntersectionType = true
 		},
 	)
 
-	// If the restricted type would have failed to type-check statically,
+	// If the intersection type would have failed to type-check statically,
 	// then return nil
-	if invalidRestrictedType {
+	if invalidIntersectionType {
 		return Nil
 	}
 
@@ -3654,10 +3670,9 @@ func restrictedTypeFunction(invocation Invocation) Value {
 		invocation.Interpreter,
 		NewTypeValue(
 			invocation.Interpreter,
-			NewRestrictedStaticType(
+			NewIntersectionStaticType(
 				invocation.Interpreter,
-				ConvertSemaToStaticType(invocation.Interpreter, ty),
-				staticRestrictions,
+				staticIntersections,
 			),
 		),
 	)
@@ -4022,12 +4037,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}()
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
+
 				staticType := value.StaticType(inter)
 
-				// Perform a forced type loading to see if the underlying type is not broken.
+				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
-				typeError := inter.checkTypeLoading(staticType)
-				if typeError != nil {
+				valueError := inter.checkValue(
+					value,
+					staticType,
+					invocation.LocationRange,
+				)
+
+				if valueError != nil {
 					continue
 				}
 
@@ -4077,14 +4098,19 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 	)
 }
 
-func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
+func (interpreter *Interpreter) checkValue(
+	value Value,
+	staticType StaticType,
+	locationRange LocationRange,
+) (valueError error) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			rootError := r
 			for {
 				switch err := r.(type) {
 				case errors.UserError, errors.ExternalError:
-					typeError = err.(error)
+					valueError = err.(error)
 					return
 				case xerrors.Wrapper:
 					r = err.Unwrap()
@@ -4095,8 +4121,43 @@ func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeErr
 		}
 	}()
 
-	// Here it is only interested in whether the type can be properly loaded.
-	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
+	// Here, the value at the path could be either:
+	//	1) The actual stored value (storage path)
+	//	2) A capability to the value at the storage (private/public paths)
+
+	if idCapability, ok := value.(*IDCapabilityValue); ok {
+		// If, the value is a capability, try to load the value at the capability target.
+		// However, borrow type is not statically known.
+		// So take the borrow type from the value itself
+
+		// Capability values always have a `CapabilityStaticType` static type.
+		borrowType := staticType.(CapabilityStaticType).BorrowType
+
+		var borrowSemaType sema.Type
+		borrowSemaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
+		if valueError != nil {
+			return valueError
+		}
+
+		referenceType, ok := borrowSemaType.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		_ = interpreter.SharedState.Config.IDCapabilityCheckHandler(
+			interpreter,
+			locationRange,
+			idCapability.Address,
+			idCapability.ID,
+			referenceType,
+			referenceType,
+		)
+
+	} else {
+		// For all other values, trying to load the type is sufficient.
+		// Here it is only interested in whether the type can be properly loaded.
+		_, valueError = interpreter.ConvertStaticToSemaType(staticType)
+	}
 
 	return
 }
@@ -4143,6 +4204,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				locationRange,
 				atree.Address(address),
 				true,
+				nil,
 				nil,
 			)
 
@@ -4266,6 +4328,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				locationRange,
 				atree.Address{},
 				false,
+				nil,
 				nil,
 			)
 
@@ -4819,18 +4882,20 @@ func (interpreter *Interpreter) checkReferencedResourceNotMovedOrDestroyed(
 	referencedValue Value,
 	locationRange LocationRange,
 ) {
-	resourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
-	if !ok {
-		return
-	}
 
-	if resourceKindedValue.IsDestroyed() {
+	// First check if the referencedValue is a resource.
+	// This is to handle optionals, since optionals does not
+	// belong to `ReferenceTrackedResourceKindedValue`
+
+	resourceKindedValue, ok := referencedValue.(ResourceKindedValue)
+	if ok && resourceKindedValue.IsDestroyed() {
 		panic(DestroyedResourceError{
 			LocationRange: locationRange,
 		})
 	}
 
-	if resourceKindedValue.IsStaleResource(interpreter) {
+	referenceTrackedResourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
+	if ok && referenceTrackedResourceKindedValue.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceReferenceError{
 			LocationRange: locationRange,
 		})
