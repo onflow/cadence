@@ -23,7 +23,6 @@ type StandardLibraryHandler interface {
 	UnsafeRandomGenerator
 	BlockAtHeightProvider
 	CurrentBlockProvider
-	PublicAccountHandler
 	AccountCreator
 	PublicKeyValidator
 	PublicKeySignatureVerifier
@@ -44,7 +43,7 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		NewGetBlockFunction(handler),
 		NewGetCurrentBlockFunction(handler),
 		NewGetAccountFunction(handler),
-		NewAuthAccountConstructor(handler),
+		NewAccountConstructor(handler),
 		NewPublicKeyConstructor(handler, handler, handler),
 		NewBLSContract(nil, handler),
 		NewHashAlgorithmConstructor(handler),
