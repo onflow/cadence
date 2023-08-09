@@ -342,7 +342,7 @@ func TestInterpretStringAccess(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		&interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
 		result,
 	)
 }
@@ -362,7 +362,7 @@ func TestInterpretCharacterLiteralType(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
+		&interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeCharacter},
 		result,
 	)
 }
@@ -382,7 +382,7 @@ func TestInterpretOneCharacterStringLiteralType(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
+		&interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
 		result,
 	)
 }
@@ -402,7 +402,7 @@ func TestInterpretCharacterLiteralTypeNoAnnotation(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
+		&interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeString},
 		result,
 	)
 }

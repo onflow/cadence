@@ -4383,7 +4383,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := TypeValue{
+		value := &TypeValue{
 			Type: ConvertSemaToPrimitiveStaticType(nil, sema.BoolType),
 		}
 
@@ -4410,7 +4410,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := TypeValue{
+		value := &TypeValue{
 			Type: ConvertSemaToPrimitiveStaticType(nil, sema.IntType),
 		}
 
@@ -4437,7 +4437,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := TypeValue{
+		value := &TypeValue{
 			Type: nil,
 		}
 
@@ -4468,7 +4468,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
 
-		expected := TypeValue{
+		expected := &TypeValue{
 			Type: NewCompositeStaticTypeComputeTypeID(
 				nil,
 				common.AddressLocation{},

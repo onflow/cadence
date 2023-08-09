@@ -231,7 +231,7 @@ func exportValueWithInterpreter(
 		return exportAccountLinkValue(inter), nil
 	case interpreter.PathValue:
 		return exportPathValue(inter, v)
-	case interpreter.TypeValue:
+	case *interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
 	case *interpreter.IDCapabilityValue:
 		return exportIDCapabilityValue(v, inter)
@@ -634,7 +634,7 @@ func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) (cadence
 	)
 }
 
-func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
+func exportTypeValue(v *interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
 	var typ sema.Type
 	if v.Type != nil {
 		typ = inter.MustConvertStaticToSemaType(v.Type)
@@ -1130,7 +1130,7 @@ func (i valueImporter) importPathValue(v cadence.Path) interpreter.PathValue {
 	)
 }
 
-func (i valueImporter) importTypeValue(v cadence.Type) (interpreter.TypeValue, error) {
+func (i valueImporter) importTypeValue(v cadence.Type) (*interpreter.TypeValue, error) {
 	inter := i.inter
 
 	typ := ImportType(inter, v)

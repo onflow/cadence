@@ -2329,12 +2329,12 @@ func TestTypeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			TypeValue{
+			(&TypeValue{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
+			}).Equal(
 				inter,
 				EmptyLocationRange,
-				TypeValue{
+				&TypeValue{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -2348,12 +2348,12 @@ func TestTypeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			TypeValue{
+			(&TypeValue{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
+			}).Equal(
 				inter,
 				EmptyLocationRange,
-				TypeValue{
+				&TypeValue{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -2367,9 +2367,9 @@ func TestTypeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			TypeValue{
+			(&TypeValue{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
+			}).Equal(
 				inter,
 				EmptyLocationRange,
 				NewUnmeteredStringValue("String"),
@@ -4689,6 +4689,43 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name: "[&S]",
 		},
 		{
+			Input: NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				NewVariableSizedStaticType(inter, PrimitiveStaticTypeMetaType),
+				testAddress,
+				NewTypeValue(
+					inter,
+					NewEphemeralReferenceValue(
+						inter,
+						UnauthorizedAccess,
+						sValue,
+						inter.MustSemaTypeOfValue(sValue),
+					).StaticType(inter),
+				),
+			),
+			Output: NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				NewVariableSizedStaticType(inter, PrimitiveStaticTypeMetaType),
+				testAddress,
+				NewTypeValue(
+					inter,
+					NewEphemeralReferenceValue(
+						inter,
+						NewEntitlementSetAuthorization(
+							inter,
+							[]common.TypeID{"S.test.E", "S.test.F"},
+							sema.Conjunction,
+						),
+						sValue,
+						inter.MustSemaTypeOfValue(sValue),
+					).StaticType(inter),
+				),
+			),
+			Name: "[Type]",
+		},
+		{
 			Input: NewDictionaryValue(
 				inter,
 				EmptyLocationRange,
@@ -4716,6 +4753,40 @@ func TestConvertToEntitledValue(t *testing.T) {
 				),
 			),
 			Name: "{Int: &S}",
+		},
+		{
+			Input: NewDictionaryValue(
+				inter,
+				EmptyLocationRange,
+				NewDictionaryStaticType(inter, PrimitiveStaticTypeInt, PrimitiveStaticTypeMetaType),
+				NewIntValueFromInt64(inter, 0),
+				NewTypeValue(
+					inter,
+					NewEphemeralReferenceValue(
+						inter,
+						UnauthorizedAccess,
+						sValue,
+						inter.MustSemaTypeOfValue(sValue),
+					).StaticType(inter),
+				),
+			),
+			Output: NewDictionaryValue(
+				inter,
+				EmptyLocationRange,
+				NewDictionaryStaticType(inter, PrimitiveStaticTypeInt, PrimitiveStaticTypeMetaType),
+				NewIntValueFromInt64(inter, 0),
+				NewTypeValue(inter,
+					NewEphemeralReferenceValue(
+						inter,
+						NewEntitlementSetAuthorization(
+							inter,
+							[]common.TypeID{"S.test.E", "S.test.F"},
+							sema.Conjunction,
+						), sValue, inter.MustSemaTypeOfValue(sValue),
+					).StaticType(inter),
+				),
+			),
+			Name: "{Int: Type}",
 		},
 		{
 			Input: NewEphemeralReferenceValue(inter, UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue)),
@@ -4852,11 +4923,24 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Output Value
 			Name   string
 		}
-		runtimeTypeTest.Input = NewTypeValue(nil, test.Input.StaticType(inter))
-		runtimeTypeTest.Output = NewTypeValue(nil, test.Output.StaticType(inter))
+		runtimeTypeTest.Input = NewTypeValue(inter, test.Input.Clone(inter).StaticType(inter))
+		runtimeTypeTest.Output = NewTypeValue(inter, test.Output.Clone(inter).StaticType(inter))
 		runtimeTypeTest.Name = "runtime type " + test.Name
 
 		tests = append(tests, runtimeTypeTest)
+	}
+
+	for _, test := range tests {
+		var optionalValueTest struct {
+			Input  Value
+			Output Value
+			Name   string
+		}
+		optionalValueTest.Input = NewSomeValueNonCopying(inter, test.Input.Clone(inter))
+		optionalValueTest.Output = NewSomeValueNonCopying(inter, test.Output.Clone(inter))
+		optionalValueTest.Name = "optional " + test.Name
+
+		tests = append(tests, optionalValueTest)
 	}
 
 	for _, test := range tests {

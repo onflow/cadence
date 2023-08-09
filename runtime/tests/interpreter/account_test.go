@@ -327,7 +327,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.TypeValue{
+				&interpreter.TypeValue{
 					Type: interpreter.CompositeStaticType{
 						Location:            TestLocation,
 						QualifiedIdentifier: "R",
@@ -350,7 +350,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t,
 			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.TypeValue{
+				&interpreter.TypeValue{
 					Type: interpreter.CompositeStaticType{
 						Location:            TestLocation,
 						QualifiedIdentifier: "S",

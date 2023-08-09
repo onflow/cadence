@@ -20,7 +20,7 @@ package interpreter
 
 type Visitor interface {
 	VisitSimpleCompositeValue(interpreter *Interpreter, value *SimpleCompositeValue)
-	VisitTypeValue(interpreter *Interpreter, value TypeValue)
+	VisitTypeValue(interpreter *Interpreter, value *TypeValue)
 	VisitVoidValue(interpreter *Interpreter, value VoidValue)
 	VisitBoolValue(interpreter *Interpreter, value BoolValue)
 	VisitStringValue(interpreter *Interpreter, value *StringValue)
@@ -71,7 +71,7 @@ type Visitor interface {
 
 type EmptyVisitor struct {
 	SimpleCompositeValueVisitor             func(interpreter *Interpreter, value *SimpleCompositeValue)
-	TypeValueVisitor                        func(interpreter *Interpreter, value TypeValue)
+	TypeValueVisitor                        func(interpreter *Interpreter, value *TypeValue)
 	VoidValueVisitor                        func(interpreter *Interpreter, value VoidValue)
 	BoolValueVisitor                        func(interpreter *Interpreter, value BoolValue)
 	CharacterValueVisitor                   func(interpreter *Interpreter, value CharacterValue)
@@ -129,7 +129,7 @@ func (v EmptyVisitor) VisitSimpleCompositeValue(interpreter *Interpreter, value 
 	v.SimpleCompositeValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitTypeValue(interpreter *Interpreter, value TypeValue) {
+func (v EmptyVisitor) VisitTypeValue(interpreter *Interpreter, value *TypeValue) {
 	if v.TypeValueVisitor == nil {
 		return
 	}

@@ -124,7 +124,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		valueDeclaration := stdlib.StandardLibraryValue{
 			Name: "unknownType",
 			Type: sema.MetaType,
-			Value: interpreter.TypeValue{
+			Value: &interpreter.TypeValue{
 				Type: nil,
 			},
 			Kind: common.DeclarationKindConstant,
@@ -167,7 +167,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			{
 				Name: "unknownType1",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
+				Value: &interpreter.TypeValue{
 					Type: nil,
 				},
 				Kind: common.DeclarationKindConstant,
@@ -175,7 +175,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			{
 				Name: "unknownType2",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
+				Value: &interpreter.TypeValue{
 					Type: nil,
 				},
 				Kind: common.DeclarationKindConstant,
@@ -264,7 +264,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			{
 				Name: "unknownType",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
+				Value: &interpreter.TypeValue{
 					Type: nil,
 				},
 				Kind: common.DeclarationKindConstant,
@@ -397,7 +397,7 @@ func TestInterpretIsInstance(t *testing.T) {
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name: "unknownType",
 		Type: sema.MetaType,
-		Value: interpreter.TypeValue{
+		Value: &interpreter.TypeValue{
 			Type: nil,
 		},
 		Kind: common.DeclarationKindConstant,
@@ -537,7 +537,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name: "unknownType",
 		Type: sema.MetaType,
-		Value: interpreter.TypeValue{
+		Value: &interpreter.TypeValue{
 			Type: nil,
 		},
 		Kind: common.DeclarationKindConstant,
@@ -585,7 +585,7 @@ func TestInterpretGetType(t *testing.T) {
                   return "abc".getType()
               }
             `,
-			result: interpreter.TypeValue{
+			result: &interpreter.TypeValue{
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
@@ -596,7 +596,7 @@ func TestInterpretGetType(t *testing.T) {
                   return (1).getType()
               }
             `,
-			result: interpreter.TypeValue{
+			result: &interpreter.TypeValue{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
@@ -612,7 +612,7 @@ func TestInterpretGetType(t *testing.T) {
                   return res
               }
             `,
-			result: interpreter.TypeValue{
+			result: &interpreter.TypeValue{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "R"),
 			},
 		},
@@ -630,7 +630,7 @@ func TestInterpretGetType(t *testing.T) {
                   return optRef.getType()
               }
             `,
-			result: interpreter.TypeValue{
+			result: &interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
@@ -653,7 +653,7 @@ func TestInterpretGetType(t *testing.T) {
                   return optRef.getType()
               }
             `,
-			result: interpreter.TypeValue{
+			result: &interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						// Reference was converted
@@ -677,7 +677,7 @@ func TestInterpretGetType(t *testing.T) {
                   return optRef.getType()
               }
             `,
-			result: interpreter.TypeValue{
+			result: &interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
@@ -703,7 +703,7 @@ func TestInterpretGetType(t *testing.T) {
                   return optRef.getType()
               }
             `,
-			result: interpreter.TypeValue{
+			result: &interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						// Reference was converted
@@ -730,7 +730,7 @@ func TestInterpretGetType(t *testing.T) {
                   return optRef.getType()
               }
             `,
-			result: interpreter.TypeValue{
+			result: &interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
@@ -746,7 +746,7 @@ func TestInterpretGetType(t *testing.T) {
                   return [1, 3].getType()
               }
             `,
-			result: interpreter.TypeValue{
+			result: &interpreter.TypeValue{
 				Type: interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
