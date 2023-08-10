@@ -17420,7 +17420,7 @@ func attachmentReferenceAuthorization(
 	if err != nil {
 		return nil, err
 	}
-	return ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentReferenceAccess), nil
+	return ConvertSemaAccessToStaticAuthorization(interpreter, attachmentReferenceAccess), nil
 }
 
 func attachmentBaseAuthorization(
@@ -17434,7 +17434,7 @@ func attachmentBaseAuthorization(
 			SetKind:      sema.Conjunction,
 			Entitlements: attachmentType.RequiredEntitlements,
 		}
-		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
+		auth = ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
 	}
 	return auth
 }
@@ -17449,7 +17449,7 @@ func attachmentBaseAndSelfValues(
 
 	var attachmentReferenceAuth Authorization = UnauthorizedAccess
 	if attachmentType.AttachmentEntitlementAccess != nil {
-		attachmentReferenceAuth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
+		attachmentReferenceAuth = ConvertSemaAccessToStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
 	}
 
 	// in attachment functions, self is a reference value

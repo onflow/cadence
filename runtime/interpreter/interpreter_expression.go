@@ -273,7 +273,7 @@ func (interpreter *Interpreter) getEffectiveAuthorization(referenceType *sema.Re
 		return interpreter.SharedState.currentEntitlementMappedValue
 	}
 
-	return ConvertSemaAccesstoStaticAuthorization(interpreter, referenceType.Authorization)
+	return ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization)
 }
 
 func (interpreter *Interpreter) checkMemberAccess(
@@ -1388,7 +1388,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 			SetKind:      sema.Conjunction,
 			Entitlements: attachmentType.RequiredEntitlements,
 		}
-		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
+		auth = ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
 	}
 
 	var baseValue Value = NewEphemeralReferenceValue(

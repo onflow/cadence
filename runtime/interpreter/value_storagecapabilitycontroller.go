@@ -269,9 +269,13 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 ) ReferenceValue {
+	authorization := ConvertSemaAccessToStaticAuthorization(
+		interpreter,
+		resultBorrowType.Authorization,
+	)
 	return NewStorageReferenceValue(
 		interpreter,
-		ConvertSemaAccesstoStaticAuthorization(interpreter, resultBorrowType.Authorization),
+		authorization,
 		capabilityAddress,
 		v.TargetPath,
 		resultBorrowType.Type,

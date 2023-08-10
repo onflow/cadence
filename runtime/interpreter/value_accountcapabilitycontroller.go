@@ -238,9 +238,15 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 ) ReferenceValue {
-	return NewAccountReferenceValue(
+	account := interpreter.SharedState.Config.AuthAccountHandler(AddressValue(capabilityAddress))
+	authorization := ConvertSemaAccessToStaticAuthorization(
 		interpreter,
-		capabilityAddress,
+		resultBorrowType.Authorization,
+	)
+	return NewEphemeralReferenceValue(
+		interpreter,
+		authorization,
+		account,
 		resultBorrowType.Type,
 	)
 }

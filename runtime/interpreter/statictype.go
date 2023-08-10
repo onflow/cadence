@@ -815,7 +815,7 @@ func ConvertSemaDictionaryTypeToStaticDictionaryType(
 	)
 }
 
-func ConvertSemaAccesstoStaticAuthorization(
+func ConvertSemaAccessToStaticAuthorization(
 	memoryGauge common.MemoryGauge,
 	access sema.Access,
 ) Authorization {
@@ -846,7 +846,7 @@ func ConvertSemaReferenceTypeToStaticReferenceType(
 ) ReferenceStaticType {
 	return NewReferenceStaticType(
 		memoryGauge,
-		ConvertSemaAccesstoStaticAuthorization(memoryGauge, t.Authorization),
+		ConvertSemaAccessToStaticAuthorization(memoryGauge, t.Authorization),
 		ConvertSemaToStaticType(memoryGauge, t.Type),
 	)
 }

@@ -822,7 +822,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 					SetKind:      sema.Conjunction,
 					Entitlements: supportedEntitlements,
 				}
-				auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
+				auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
 			}
 		}
 		return auth
@@ -1316,7 +1316,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					// the constructor can only be called when in possession of the base resource
 					// if the attachment is declared with access(all) access, then self is unauthorized
 					if attachmentType.AttachmentEntitlementAccess != nil {
-						auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
+						auth = ConvertSemaAccessToStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
 					}
 					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType)
 
@@ -1817,7 +1817,7 @@ func (interpreter *Interpreter) convertStaticType(
 		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
 			return NewReferenceStaticType(
 				interpreter,
-				ConvertSemaAccesstoStaticAuthorization(interpreter, targetReferenceType.Authorization),
+				ConvertSemaAccessToStaticAuthorization(interpreter, targetReferenceType.Authorization),
 				valueStaticType.ReferencedType,
 			)
 		}
@@ -2145,7 +2145,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *EphemeralReferenceValue:
 				return NewEphemeralReferenceValue(
 					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.Value,
 					unwrappedTargetType.Type,
 				)
@@ -2153,16 +2153,9 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *StorageReferenceValue:
 				return NewStorageReferenceValue(
 					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.TargetStorageAddress,
 					ref.TargetPath,
-					unwrappedTargetType.Type,
-				)
-
-			case *AccountReferenceValue:
-				return NewAccountReferenceValue(
-					interpreter,
-					ref.Address,
 					unwrappedTargetType.Type,
 				)
 
@@ -4378,7 +4371,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 			reference := NewStorageReferenceValue(
 				interpreter,
-				ConvertSemaAccesstoStaticAuthorization(interpreter, referenceType.Authorization),
+				ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization),
 				address,
 				path,
 				referenceType.Type,
@@ -4734,9 +4727,9 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 			if err != nil {
 				panic(err)
 			}
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, imageAccess)
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, imageAccess)
 		default:
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess.Codomain())
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, mappedAccess.Codomain())
 		}
 
 		switch refValue := resultValue.(type) {

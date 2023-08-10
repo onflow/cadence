@@ -5128,7 +5128,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
 				var auth interpreter.Authorization = interpreter.UnauthorizedAccess
 				if authorized {
-					auth = interpreter.ConvertSemaAccesstoStaticAuthorization(
+					auth = interpreter.ConvertSemaAccessToStaticAuthorization(
 						invocation.Interpreter,
 						sema.NewEntitlementSetAccess(
 							[]*sema.EntitlementType{getType("E").(*sema.EntitlementType)},
