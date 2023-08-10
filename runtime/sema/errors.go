@@ -3036,7 +3036,7 @@ func (*InvalidAccessError) IsUserError() {}
 
 func (e *InvalidAccessError) Error() string {
 	return fmt.Sprintf(
-		"cannot access `%s`: %s requires %s authorization",
+		"cannot access `%s`: %s requires (%s) authorization",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.Description(),
