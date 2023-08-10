@@ -28,7 +28,7 @@ import (
 // Account
 
 var accountTypeID = sema.AccountType.ID()
-var accountStaticType StaticType = PrimitiveStaticTypeAuthAccount // unmetered
+var accountStaticType StaticType = PrimitiveStaticTypeAccount // unmetered
 var accountFieldNames = []string{
 	sema.AccountTypeAddressFieldName,
 	sema.AccountTypeContractsFieldName,
