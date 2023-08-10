@@ -5106,7 +5106,7 @@ func TestCheckInvalidResourceInterfaceOwnerField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
      resource interface Test {
-         let owner: PublicAccount
+         let owner: &Account
      }
    `)
 
