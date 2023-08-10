@@ -1629,7 +1629,9 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             entitlement mapping M {}
 
-            let x = storage.borrow<auth(M) &Int>(from: /storage/foo)
+            fun test(storage: auth(Storage) &Account.Storage) {
+                let x = storage.borrow<auth(M) &Int>(from: /storage/foo)
+            }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -2981,7 +2983,9 @@ func TestCheckEntitlementTypeAnnotation(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             entitlement E
 
-            let e = storage.load<E>(from: /storage/foo)
+            fun test(storage: auth(Storage) &Account.Storage) {
+                let e = storage.load<E>(from: /storage/foo)
+            }
         `)
 
 		errs := RequireCheckerErrors(t, err, 2)
@@ -3221,7 +3225,9 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             entitlement mapping E {}
 
-            let e = storage.load<E>(from: /storage/foo)
+            fun test(storage: auth(Storage) &Account.Storage) {
+                let e = storage.load<E>(from: /storage/foo)
+            }
         `)
 
 		errs := RequireCheckerErrors(t, err, 2)
