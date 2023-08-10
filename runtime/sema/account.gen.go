@@ -166,6 +166,7 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 const Account_StorageTypeTypeFunctionName = "type"
 
 var Account_StorageTypeTypeFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Label:          "at",
@@ -240,6 +241,7 @@ var Account_StorageTypeCopyFunctionTypeParameterT = &TypeParameter{
 }
 
 var Account_StorageTypeCopyFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		Account_StorageTypeCopyFunctionTypeParameterT,
 	},
@@ -282,6 +284,7 @@ var Account_StorageTypeCheckFunctionTypeParameterT = &TypeParameter{
 }
 
 var Account_StorageTypeCheckFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		Account_StorageTypeCheckFunctionTypeParameterT,
 	},
@@ -316,6 +319,7 @@ var Account_StorageTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var Account_StorageTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		Account_StorageTypeBorrowFunctionTypeParameterT,
 	},
@@ -640,6 +644,7 @@ Returns the deployed contract for the updated contract.
 const Account_ContractsTypeGetFunctionName = "get"
 
 var Account_ContractsTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "name",
@@ -694,6 +699,7 @@ var Account_ContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var Account_ContractsTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		Account_ContractsTypeBorrowFunctionTypeParameterT,
 	},
@@ -823,6 +829,7 @@ Returns the added key.
 const Account_KeysTypeGetFunctionName = "get"
 
 var Account_KeysTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "keyIndex",
@@ -1161,6 +1168,7 @@ var Account_CapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 }
 
 var Account_CapabilitiesTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		Account_CapabilitiesTypeGetFunctionTypeParameterT,
 	},
@@ -1200,6 +1208,7 @@ var Account_CapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var Account_CapabilitiesTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		Account_CapabilitiesTypeBorrowFunctionTypeParameterT,
 	},
@@ -1356,6 +1365,7 @@ func init() {
 const Account_StorageCapabilitiesTypeGetControllerFunctionName = "getController"
 
 var Account_StorageCapabilitiesTypeGetControllerFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "byCapabilityID",
@@ -1381,6 +1391,7 @@ Returns nil if the ID does not reference an existing storage capability.
 const Account_StorageCapabilitiesTypeGetControllersFunctionName = "getControllers"
 
 var Account_StorageCapabilitiesTypeGetControllersFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "forPath",
@@ -1544,6 +1555,7 @@ func init() {
 const Account_AccountCapabilitiesTypeGetControllerFunctionName = "getController"
 
 var Account_AccountCapabilitiesTypeGetControllerFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "byCapabilityID",
@@ -1569,6 +1581,7 @@ Returns nil if the ID does not reference an existing account capability.
 const Account_AccountCapabilitiesTypeGetControllersFunctionName = "getControllers"
 
 var Account_AccountCapabilitiesTypeGetControllersFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
 			Type: &ReferenceType{

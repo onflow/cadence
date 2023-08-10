@@ -68,7 +68,7 @@ struct Account {
         ///
         /// The path must be a storage path, i.e., only the domain `storage` is allowed.
         access(all)
-        fun type(at path: StoragePath): Type?
+        view fun type(at path: StoragePath): Type?
 
         /// Loads an object from the account's storage which is stored under the given path,
         /// or nil if no object is stored under the given path.
@@ -101,7 +101,7 @@ struct Account {
         ///
         /// The path must be a storage path, i.e., only the domain `storage` is allowed.
         access(all)
-        fun copy<T: AnyStruct>(from: StoragePath): T?
+        view fun copy<T: AnyStruct>(from: StoragePath): T?
 
         /// Returns true if the object in account storage under the given path satisfies the given type,
         /// i.e. could be borrowed using the given type.
@@ -109,7 +109,8 @@ struct Account {
         /// The given type must not necessarily be exactly the same as the type of the     borrowed object.
         ///
         /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-        access(all) fun check<T: Any>(from: StoragePath): Bool
+        access(all)
+        view fun check<T: Any>(from: StoragePath): Bool
 
         /// Returns a reference to an object in storage without removing it from storage.
         ///
@@ -122,7 +123,7 @@ struct Account {
         ///
         /// The path must be a storage path, i.e., only the domain `storage` is allowed
         access(BorrowValue)
-        fun borrow<T: &Any>(from: StoragePath): T?
+        view fun borrow<T: &Any>(from: StoragePath): T?
 
         /// Iterate over all the public paths of an account,
         /// passing each path and type in turn to the provided callback function.
@@ -208,7 +209,7 @@ struct Account {
         ///
         /// Returns nil if no contract/contract interface with the given name exists in the account.
         access(all)
-        fun get(name: String): DeployedContract?
+        view fun get(name: String): DeployedContract?
 
         /// Removes the contract/contract interface from the account which has the given name, if any.
         ///
@@ -223,7 +224,7 @@ struct Account {
         /// Returns nil if no contract with the given name exists in the account,
         /// or if the contract does not conform to the given type.
         access(all)
-        fun borrow<T: &Any>(name: String): T?
+        view fun borrow<T: &Any>(name: String): T?
     }
 
     access(all)
@@ -243,7 +244,7 @@ struct Account {
         ///
         /// Revoked keys are always returned, but they have `isRevoked` field set to true.
         access(all)
-        fun get(keyIndex: Int): AccountKey?
+        view fun get(keyIndex: Int): AccountKey?
 
         /// Marks the key at the given index revoked, but does not delete it.
         ///
@@ -306,13 +307,13 @@ struct Account {
         /// Returns nil if the capability does not exist,
         /// or if the given type is not a supertype of the capability's borrow type.
         access(all)
-        fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+        view fun get<T: &Any>(_ path: PublicPath): Capability<T>?
 
         /// Borrows the capability at the given public path.
         /// Returns nil if the capability does not exist, or cannot be borrowed using the given type.
         /// The function is equivalent to `get(path)?.borrow()`.
         access(all)
-        fun borrow<T: &Any>(_ path: PublicPath): T?
+        view fun borrow<T: &Any>(_ path: PublicPath): T?
 
         /// Publish the capability at the given public path.
         ///
@@ -337,11 +338,11 @@ struct Account {
         ///
         /// Returns nil if the ID does not reference an existing storage capability.
         access(GetStorageCapabilityController)
-        fun getController(byCapabilityID: UInt64): &StorageCapabilityController?
+        view fun getController(byCapabilityID: UInt64): &StorageCapabilityController?
 
         /// Get all storage capability controllers for capabilities that target this storage path
         access(GetStorageCapabilityController)
-        fun getControllers(forPath: StoragePath): [&StorageCapabilityController]
+        view fun getControllers(forPath: StoragePath): [&StorageCapabilityController]
 
         /// Iterate over all storage capability controllers for capabilities that target this storage path,
         /// passing a reference to each controller to the provided callback function.
@@ -370,11 +371,11 @@ struct Account {
         ///
         /// Returns nil if the ID does not reference an existing account capability.
         access(GetAccountCapabilityController)
-        fun getController(byCapabilityID: UInt64): &AccountCapabilityController?
+        view fun getController(byCapabilityID: UInt64): &AccountCapabilityController?
 
         /// Get all capability controllers for all account capabilities.
         access(GetAccountCapabilityController)
-        fun getControllers(): [&AccountCapabilityController]
+        view fun getControllers(): [&AccountCapabilityController]
 
         /// Iterate over all account capability controllers for all account capabilities,
         /// passing a reference to each controller to the provided callback function.
