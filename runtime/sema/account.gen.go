@@ -489,8 +489,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_StorageType,
 			newEntitlementAccess(
-				[]Type{SaveValueType},
-				Conjunction,
+				[]Type{StorageType, SaveValueType},
+				Disjunction,
 			),
 			Account_StorageTypeSaveFunctionName,
 			Account_StorageTypeSaveFunctionType,
@@ -506,8 +506,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_StorageType,
 			newEntitlementAccess(
-				[]Type{LoadValueType},
-				Conjunction,
+				[]Type{StorageType, LoadValueType},
+				Disjunction,
 			),
 			Account_StorageTypeLoadFunctionName,
 			Account_StorageTypeLoadFunctionType,
@@ -530,8 +530,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_StorageType,
 			newEntitlementAccess(
-				[]Type{BorrowValueType},
-				Conjunction,
+				[]Type{StorageType, BorrowValueType},
+				Disjunction,
 			),
 			Account_StorageTypeBorrowFunctionName,
 			Account_StorageTypeBorrowFunctionType,
@@ -751,8 +751,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_ContractsType,
 			newEntitlementAccess(
-				[]Type{AddContractType},
-				Conjunction,
+				[]Type{ContractsType, AddContractType},
+				Disjunction,
 			),
 			Account_ContractsTypeAddFunctionName,
 			Account_ContractsTypeAddFunctionType,
@@ -761,8 +761,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_ContractsType,
 			newEntitlementAccess(
-				[]Type{UpdateContractType},
-				Conjunction,
+				[]Type{ContractsType, UpdateContractType},
+				Disjunction,
 			),
 			Account_ContractsTypeUpdateFunctionName,
 			Account_ContractsTypeUpdateFunctionType,
@@ -778,8 +778,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_ContractsType,
 			newEntitlementAccess(
-				[]Type{RemoveContractType},
-				Conjunction,
+				[]Type{ContractsType, RemoveContractType},
+				Disjunction,
 			),
 			Account_ContractsTypeRemoveFunctionName,
 			Account_ContractsTypeRemoveFunctionType,
@@ -930,8 +930,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_KeysType,
 			newEntitlementAccess(
-				[]Type{AddKeyType},
-				Conjunction,
+				[]Type{KeysType, AddKeyType},
+				Disjunction,
 			),
 			Account_KeysTypeAddFunctionName,
 			Account_KeysTypeAddFunctionType,
@@ -947,8 +947,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_KeysType,
 			newEntitlementAccess(
-				[]Type{RevokeKeyType},
-				Conjunction,
+				[]Type{KeysType, RevokeKeyType},
+				Disjunction,
 			),
 			Account_KeysTypeRevokeFunctionName,
 			Account_KeysTypeRevokeFunctionType,
@@ -1108,8 +1108,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_InboxType,
 			newEntitlementAccess(
-				[]Type{PublishInboxCapabilityType},
-				Conjunction,
+				[]Type{InboxType, PublishInboxCapabilityType},
+				Disjunction,
 			),
 			Account_InboxTypePublishFunctionName,
 			Account_InboxTypePublishFunctionType,
@@ -1118,8 +1118,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_InboxType,
 			newEntitlementAccess(
-				[]Type{UnpublishInboxCapabilityType},
-				Conjunction,
+				[]Type{InboxType, UnpublishInboxCapabilityType},
+				Disjunction,
 			),
 			Account_InboxTypeUnpublishFunctionName,
 			Account_InboxTypeUnpublishFunctionType,
@@ -1128,8 +1128,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_InboxType,
 			newEntitlementAccess(
-				[]Type{ClaimInboxCapabilityType},
-				Conjunction,
+				[]Type{InboxType, ClaimInboxCapabilityType},
+				Disjunction,
 			),
 			Account_InboxTypeClaimFunctionName,
 			Account_InboxTypeClaimFunctionType,
@@ -1339,8 +1339,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_CapabilitiesType,
 			newEntitlementAccess(
-				[]Type{PublishCapabilityType},
-				Conjunction,
+				[]Type{CapabilitiesType, PublishCapabilityType},
+				Disjunction,
 			),
 			Account_CapabilitiesTypePublishFunctionName,
 			Account_CapabilitiesTypePublishFunctionType,
@@ -1349,8 +1349,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_CapabilitiesType,
 			newEntitlementAccess(
-				[]Type{UnpublishCapabilityType},
-				Conjunction,
+				[]Type{CapabilitiesType, UnpublishCapabilityType},
+				Disjunction,
 			),
 			Account_CapabilitiesTypeUnpublishFunctionName,
 			Account_CapabilitiesTypeUnpublishFunctionType,
@@ -1509,8 +1509,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_StorageCapabilitiesType,
 			newEntitlementAccess(
-				[]Type{GetStorageCapabilityControllerType},
-				Conjunction,
+				[]Type{CapabilitiesType, StorageCapabilitiesType, GetStorageCapabilityControllerType},
+				Disjunction,
 			),
 			Account_StorageCapabilitiesTypeGetControllerFunctionName,
 			Account_StorageCapabilitiesTypeGetControllerFunctionType,
@@ -1519,8 +1519,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_StorageCapabilitiesType,
 			newEntitlementAccess(
-				[]Type{GetStorageCapabilityControllerType},
-				Conjunction,
+				[]Type{CapabilitiesType, StorageCapabilitiesType, GetStorageCapabilityControllerType},
+				Disjunction,
 			),
 			Account_StorageCapabilitiesTypeGetControllersFunctionName,
 			Account_StorageCapabilitiesTypeGetControllersFunctionType,
@@ -1529,8 +1529,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_StorageCapabilitiesType,
 			newEntitlementAccess(
-				[]Type{GetStorageCapabilityControllerType},
-				Conjunction,
+				[]Type{CapabilitiesType, StorageCapabilitiesType, GetStorageCapabilityControllerType},
+				Disjunction,
 			),
 			Account_StorageCapabilitiesTypeForEachControllerFunctionName,
 			Account_StorageCapabilitiesTypeForEachControllerFunctionType,
@@ -1539,8 +1539,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_StorageCapabilitiesType,
 			newEntitlementAccess(
-				[]Type{IssueStorageCapabilityControllerType},
-				Conjunction,
+				[]Type{CapabilitiesType, StorageCapabilitiesType, IssueStorageCapabilityControllerType},
+				Disjunction,
 			),
 			Account_StorageCapabilitiesTypeIssueFunctionName,
 			Account_StorageCapabilitiesTypeIssueFunctionType,
@@ -1681,8 +1681,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_AccountCapabilitiesType,
 			newEntitlementAccess(
-				[]Type{GetAccountCapabilityControllerType},
-				Conjunction,
+				[]Type{CapabilitiesType, AccountCapabilitiesType, GetAccountCapabilityControllerType},
+				Disjunction,
 			),
 			Account_AccountCapabilitiesTypeGetControllerFunctionName,
 			Account_AccountCapabilitiesTypeGetControllerFunctionType,
@@ -1691,8 +1691,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_AccountCapabilitiesType,
 			newEntitlementAccess(
-				[]Type{GetAccountCapabilityControllerType},
-				Conjunction,
+				[]Type{CapabilitiesType, AccountCapabilitiesType, GetAccountCapabilityControllerType},
+				Disjunction,
 			),
 			Account_AccountCapabilitiesTypeGetControllersFunctionName,
 			Account_AccountCapabilitiesTypeGetControllersFunctionType,
@@ -1701,8 +1701,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_AccountCapabilitiesType,
 			newEntitlementAccess(
-				[]Type{GetAccountCapabilityControllerType},
-				Conjunction,
+				[]Type{CapabilitiesType, AccountCapabilitiesType, GetAccountCapabilityControllerType},
+				Disjunction,
 			),
 			Account_AccountCapabilitiesTypeForEachControllerFunctionName,
 			Account_AccountCapabilitiesTypeForEachControllerFunctionType,
@@ -1711,8 +1711,8 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_AccountCapabilitiesType,
 			newEntitlementAccess(
-				[]Type{IssueAccountCapabilityControllerType},
-				Conjunction,
+				[]Type{CapabilitiesType, AccountCapabilitiesType, IssueAccountCapabilityControllerType},
+				Disjunction,
 			),
 			Account_AccountCapabilitiesTypeIssueFunctionName,
 			Account_AccountCapabilitiesTypeIssueFunctionType,
