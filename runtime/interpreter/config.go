@@ -27,8 +27,6 @@ type Config struct {
 	Storage     Storage
 	// ImportLocationHandler is used to handle imports of locations
 	ImportLocationHandler ImportLocationHandlerFunc
-	// PublicAccountHandler is used to handle accounts
-	PublicAccountHandler PublicAccountHandlerFunc
 	// OnInvokedFunctionReturn is triggered when an invoked function returned
 	OnInvokedFunctionReturn OnInvokedFunctionReturnFunc
 	// OnRecordTrace is triggered when a trace is recorded
@@ -45,8 +43,8 @@ type Config struct {
 	OnEventEmitted OnEventEmittedFunc
 	// OnFunctionInvocation is triggered when a function invocation is about to be executed
 	OnFunctionInvocation OnFunctionInvocationFunc
-	// AuthAccountHandler is used to handle accounts
-	AuthAccountHandler AuthAccountHandlerFunc
+	// AccountHandler is used to handle accounts
+	AccountHandler AccountHandlerFunc
 	// UUIDHandler is used to handle the generation of UUIDs
 	UUIDHandler UUIDHandlerFunc
 	// CompositeTypeHandler is used to load composite types

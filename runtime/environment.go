@@ -131,8 +131,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		UUIDHandler:                          e.newUUIDHandler(),
 		ContractValueHandler:                 e.newContractValueHandler(),
 		ImportLocationHandler:                e.newImportLocationHandler(),
-		PublicAccountHandler:                 e.newPublicAccountHandler(),
-		AuthAccountHandler:                   e.newAuthAccountHandler(),
+		AccountHandler:                       e.newAuthAccountHandler(),
 		OnRecordTrace:                        e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:                 e.newCompositeTypeHandler(),
@@ -650,15 +649,9 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 	}
 }
 
-func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
+func (e *interpreterEnvironment) newAuthAccountHandler() interpreter.AccountHandlerFunc {
 	return func(address interpreter.AddressValue) interpreter.Value {
-		return stdlib.NewPublicAccountValue(e, e, address)
-	}
-}
-
-func (e *interpreterEnvironment) newAuthAccountHandler() interpreter.AuthAccountHandlerFunc {
-	return func(address interpreter.AddressValue) interpreter.Value {
-		return stdlib.NewAuthAccountValue(e, e, address)
+		return stdlib.NewAccountValue(e, e, address)
 	}
 }
 

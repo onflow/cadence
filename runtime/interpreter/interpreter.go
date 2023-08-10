@@ -156,15 +156,9 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
-// AuthAccountHandlerFunc is a function that handles retrieving an auth account at a given address.
-// The account returned must be of type `AuthAccount`.
-type AuthAccountHandlerFunc func(
-	address AddressValue,
-) Value
-
-// PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
-// The account returned must be of type `PublicAccount`.
-type PublicAccountHandlerFunc func(
+// AccountHandlerFunc is a function that handles retrieving an auth account at a given address.
+// The account returned must be of type `Account`.
+type AccountHandlerFunc func(
 	address AddressValue,
 ) Value
 

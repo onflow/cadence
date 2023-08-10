@@ -222,6 +222,14 @@ func NewAccountReferenceValue(
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 	// TODO: interpreter.NewEphemeralReferenceValue(
+	return NewAccountValue(gauge, handler, addressValue)
+}
+
+func NewAccountValue(
+	gauge common.MemoryGauge,
+	handler AccountHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
 
 	return interpreter.NewAccountValue(
 		gauge,

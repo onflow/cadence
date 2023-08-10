@@ -130,7 +130,7 @@ func testAccountWithErrorHandler(
 				BaseActivation:                       baseActivation,
 				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
 				InvalidatedResourceValidationEnabled: true,
-				AuthAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
+				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
 					return newTestAuthAccountValue(nil, address)
 				},
 			},

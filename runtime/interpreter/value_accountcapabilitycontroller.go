@@ -238,7 +238,17 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 ) ReferenceValue {
-	account := interpreter.SharedState.Config.AuthAccountHandler(AddressValue(capabilityAddress))
+	config := interpreter.SharedState.Config
+
+	account := config.AccountHandler(AddressValue(capabilityAddress))
+
+	// Account must be of `Account` type.
+	interpreter.ExpectType(
+		account,
+		sema.AccountType,
+		EmptyLocationRange,
+	)
+
 	authorization := ConvertSemaAccessToStaticAuthorization(
 		interpreter,
 		resultBorrowType.Authorization,

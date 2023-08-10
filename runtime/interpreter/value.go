@@ -16450,12 +16450,23 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange Loca
 
 	config := interpreter.SharedState.Config
 
-	ownerAccount := config.PublicAccountHandler(AddressValue(address))
+	ownerAccount := config.AccountHandler(AddressValue(address))
 
-	// Owner must be of `PublicAccount` type.
-	interpreter.ExpectType(ownerAccount, sema.AccountReferenceType, locationRange)
+	// Owner must be of `Account` type.
+	interpreter.ExpectType(
+		ownerAccount,
+		sema.AccountType,
+		locationRange,
+	)
 
-	return NewSomeValueNonCopying(interpreter, ownerAccount)
+	reference := NewEphemeralReferenceValue(
+		interpreter,
+		UnauthorizedAccess,
+		ownerAccount,
+		sema.AccountReferenceType,
+	)
+
+	return NewSomeValueNonCopying(interpreter, reference)
 }
 
 func (v *CompositeValue) RemoveMember(
