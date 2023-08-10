@@ -916,8 +916,6 @@ func TestCheckMemberAccess(t *testing.T) {
 		types := []string{
 			"Bar",
 			"{I}",
-			"AnyStruct",
-			"Block",
 		}
 
 		// Test all built-in composite types
@@ -925,10 +923,15 @@ func TestCheckMemberAccess(t *testing.T) {
 			if !ty.IsDefined() {
 				continue
 			}
+
 			semaType := ty.SemaType()
-			if semaType == nil {
+			if semaType == nil ||
+				!semaType.ContainFieldsOrElements() ||
+				semaType.IsResourceType() {
+
 				continue
 			}
+
 			types = append(types, semaType.QualifiedString())
 		}
 
