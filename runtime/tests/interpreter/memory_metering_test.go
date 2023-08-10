@@ -697,7 +697,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(a: AuthAccount) {
+            access(all) fun main(a: &Account) {
             
             }
         `
@@ -706,7 +706,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
 		addressValue := newRandomValueGenerator().randomAddressValue()
-		_, err := inter.Invoke("main", newTestAuthAccountValue(meter, addressValue))
+		_, err := inter.Invoke("main", newTestAccountValue(meter, addressValue))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -717,7 +717,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(a: PublicAccount) {
+            access(all) fun main(a: &Account) {
             
             }
         `
@@ -726,7 +726,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
 		addressValue := newRandomValueGenerator().randomAddressValue()
-		_, err := inter.Invoke("main", newTestPublicAccountValue(meter, addressValue))
+		_, err := inter.Invoke("main", newTestAccountValue(meter, addressValue))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -6669,15 +6669,15 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 		script := `
               resource R {}
 
-              access(all) fun main(account: AuthAccount) {
-                  account.borrow<&R>(from: /storage/r)
+              access(all) fun main(account: auth(Storage) &Account) {
+                  account.storage.borrow<&R>(from: /storage/r)
               }
             `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
+		account := newTestAccountValue(meter, interpreter.AddressValue{})
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -7797,13 +7797,13 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 		script := `
             struct S {}
 
-            access(all) fun main(account: AuthAccount) {
+            access(all) fun main(account: &Account) {
                 let s = CompositeType("")
             }
         `
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
+		account := newTestAccountValue(meter, interpreter.AddressValue{})
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -7814,14 +7814,14 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 		script = `
             struct S {}
 
-            access(all) fun main(account: AuthAccount) {
+            access(all) fun main(account: &Account) {
                 let s = CompositeType("S.test.S")
             }
         `
 
 		meter = newTestMemoryGauge()
 		inter = parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-		account = newTestAuthAccountValue(meter, interpreter.AddressValue{})
+		account = newTestAccountValue(meter, interpreter.AddressValue{})
 		_, err = inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -8601,16 +8601,16 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	script := `
         resource R {}
 
-        access(all) fun main(account: AuthAccount) {
+        access(all) fun main(account: auth(Storage) &Account) {
             let r <- create R()
-            account.save(<-r, to: /storage/r)
+            account.storage.save(<-r, to: /storage/r)
         }
     `
 
 	meter := newTestMemoryGauge()
 	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-	account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
+	account := newTestAccountValue(meter, interpreter.AddressValue{})
 	_, err := inter.Invoke("main", account)
 	require.NoError(t, err)
 

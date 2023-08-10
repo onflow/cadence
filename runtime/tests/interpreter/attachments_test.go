@@ -1463,7 +1463,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r3 <- r2
                 let a2 = r3[A]!
                 a2.setID(5)
-                authAccount.save(<-r3, to: /storage/foo)
+                authAccounstorage.t.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
                 return a.id
@@ -1549,7 +1549,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r3 <- r2
                 let a2 = r3.r[A]!
                 a2.setID(5)
-                authAccount.save(<-r3, to: /storage/foo)
+                authAccount.storage.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
                 return a.id
@@ -1602,7 +1602,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
                 var r2 <- r
                 r2.setID(5)
-                authAccount.save(<-r2, to: /storage/foo)
+                authAccount.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
             }`,
 			sema.Config{
@@ -1687,7 +1687,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r2 <- r
                 let a = r2[A]!
                 a.setID(5)
-                authAccount.save(<-r2, to: /storage/foo)
+                authAccount.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
             }`,
 			sema.Config{

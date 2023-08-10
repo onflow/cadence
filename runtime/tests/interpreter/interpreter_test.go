@@ -8443,7 +8443,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 					_ common.CompositeKind,
 				) map[string]interpreter.Value {
 					return map[string]interpreter.Value{
-						"account": newTestAuthAccountValue(inter, addressValue),
+						"account": newTestAccountValue(inter, addressValue),
 					}
 				},
 			},
@@ -8961,9 +8961,9 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
           let r <- create R()
           addresses.append(r.owner?.address)
 
-          account.save(<-r, to: /storage/r)
+          account.storage.save(<-r, to: /storage/r)
 
-          let ref = account.borrow<&R>(from: /storage/r)
+          let ref = account.storage.borrow<&R>(from: /storage/r)
           addresses.append(ref?.owner?.address)
 
           return addresses
@@ -8976,9 +8976,10 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	}
 
 	valueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "account",
-		Type:  sema.AuthAccountType,
-		Value: newTestAuthAccountValue(nil, interpreter.AddressValue(address)),
+		Name: "account",
+		Type: sema.AccountReferenceType,
+		// TODO: reference, use stdlib
+		Value: newTestAccountValue(nil, interpreter.AddressValue(address)),
 		Kind:  common.DeclarationKindConstant,
 	}
 
@@ -8996,8 +8997,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			},
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
-				PublicAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return newTestPublicAccountValue(nil, address)
+				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
+					return newTestAccountValue(nil, address)
 				},
 			},
 		},
@@ -9024,148 +9025,6 @@ func newPanicFunctionValue(gauge common.MemoryGauge) *interpreter.HostFunctionVa
 		stdlib.PanicFunction.Type.(*sema.FunctionType),
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
-		},
-	)
-}
-
-func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
-	panicFunctionValue := newPanicFunctionValue(gauge)
-	return interpreter.NewAuthAccountValue(
-		gauge,
-		addressValue,
-		returnZeroUFix64,
-		returnZeroUFix64,
-		returnZeroUInt64,
-		returnZeroUInt64,
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountContractsValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func(
-					inter *interpreter.Interpreter,
-					locationRange interpreter.LocationRange,
-				) *interpreter.ArrayValue {
-					return interpreter.NewArrayValue(
-						inter,
-						locationRange,
-						interpreter.VariableSizedStaticType{
-							Type: interpreter.PrimitiveStaticTypeString,
-						},
-						common.ZeroAddress,
-					)
-				},
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountKeysValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func() interpreter.UInt64Value {
-					panic(errors.NewUnreachableError())
-				},
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountInboxValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountCapabilitiesValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func() interpreter.Value {
-					return interpreter.NewAuthAccountStorageCapabilitiesValue(
-						gauge,
-						addressValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-					)
-				},
-				func() interpreter.Value {
-					return interpreter.NewAuthAccountAccountCapabilitiesValue(
-						gauge,
-						addressValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-					)
-				},
-			)
-		},
-	)
-}
-
-func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
-
-	panicFunctionValue := newPanicFunctionValue(gauge)
-
-	return interpreter.NewPublicAccountValue(
-		gauge,
-		addressValue,
-		returnZeroUFix64,
-		returnZeroUFix64,
-		returnZeroUInt64,
-		returnZeroUInt64,
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountKeysValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				interpreter.AccountKeysCountGetter(func() interpreter.UInt64Value {
-					panic(errors.NewUnreachableError())
-				}),
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountContractsValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func(
-					inter *interpreter.Interpreter,
-					locationRange interpreter.LocationRange,
-				) *interpreter.ArrayValue {
-					return interpreter.NewArrayValue(
-						inter,
-						interpreter.EmptyLocationRange,
-						interpreter.VariableSizedStaticType{
-							Type: interpreter.PrimitiveStaticTypeString,
-						},
-						common.ZeroAddress,
-					)
-				},
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountCapabilitiesValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-			)
 		},
 	)
 }
@@ -10647,9 +10506,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:     "account reference",
-			typeName: "AuthAccount",
+			typeName: "&Account",
 			code: `
-		      let ref = &account as &AuthAccount
+		      let ref = account
 		    `,
 		},
 	}
@@ -10677,8 +10536,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 				name:     fmt.Sprintf("storage reference%s", testNameSuffix),
 				typeName: "S",
 				code: fmt.Sprintf(`
-                      account.save(S(), to: /storage/s)
-                      let ref = account.borrow<%s &S>(from: /storage/s)!
+                      account.storage.save(S(), to: /storage/s)
+                      let ref = account.storage.borrow<%s &S>(from: /storage/s)!
                     `,
 					authKeyword,
 				),

@@ -694,8 +694,8 @@ func TestInterpretGetType(t *testing.T) {
 			code: `
 			  entitlement X
 			  fun getStorageReference(): auth(X) &Int {
-				account.save(1, to: /storage/foo)
-				return account.borrow<auth(X) &Int>(from: /storage/foo)!
+				account.storage.save(1, to: /storage/foo)
+				return account.storage.borrow<auth(X) &Int>(from: /storage/foo)!
 			}
               fun test(): Type {
                   let ref = getStorageReference()
@@ -721,8 +721,8 @@ func TestInterpretGetType(t *testing.T) {
 			code: `
 			  entitlement X
 			  fun getStorageReference(): auth(X) &Int {
-			      account.save(1, to: /storage/foo)
-				  return account.borrow<auth(X) &Int>(from: /storage/foo)!
+			      account.storage.save(1, to: /storage/foo)
+				  return account.storage.borrow<auth(X) &Int>(from: /storage/foo)!
 			  }
               fun test(): Type {
                   let ref = getStorageReference()

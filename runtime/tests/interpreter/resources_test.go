@@ -2371,8 +2371,8 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
           }
 
           fun test() {
-              account.save(<-{0 : <-create R()}, to: /storage/x)
-              let collection = account.borrow<auth(Removable) &{Int: R}>(from: /storage/x)!
+              account.storage.save(<-{0 : <-create R()}, to: /storage/x)
+              let collection = account.storage.borrow<auth(Removable) &{Int: R}>(from: /storage/x)!
 
               let resourceRef = collection[0]!
               let token <- collection.remove(key: 0)
@@ -2409,8 +2409,8 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
           }
 
           fun test() {
-              account.save(<-[<-create R()], to: /storage/x)
-              let collection = account.borrow<auth(Removable) &[R?]>(from: /storage/x)!
+              account.storage.save(<-[<-create R()], to: /storage/x)
+              let collection = account.storage.borrow<auth(Removable) &[R?]>(from: /storage/x)!
 
               let resourceRef = collection[0]!
               let token <- collection.remove(at: 0)

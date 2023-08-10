@@ -909,16 +909,16 @@ func TestDictionaryMutation(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             struct S {}
 
-            fun test(owner: PublicAccount) {
-                let funcs: {String: fun(PublicAccount, [UInt64]): [S]} = {}
+            fun test(owner: &Account) {
+                let funcs: {String: fun(&Account, [UInt64]): [S]} = {}
 
-                funcs["test"] = fun (owner: PublicAccount, ids: [UInt64]): [S] { return [] }
+                funcs["test"] = fun (owner: &Account, ids: [UInt64]): [S] { return [] }
 
                 funcs["test"]!(owner: owner, ids: [1])
             }
         `)
 
-		owner := newTestPublicAccountValue(
+		owner := newTestAccountValue(
 			inter,
 			interpreter.NewUnmeteredAddressValueFromBytes(common.Address{0x1}.Bytes()),
 		)

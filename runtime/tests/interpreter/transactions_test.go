@@ -226,7 +226,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
           transaction {
-            prepare(signer: AuthAccount) {}
+            prepare(signer: &Account) {}
           }
         `)
 
@@ -244,17 +244,17 @@ func TestInterpretTransactions(t *testing.T) {
           }
 
           transaction {
-            prepare(signer: AuthAccount) {}
+            prepare(signer: &Account) {}
 
             execute {}
           }
         `)
 
-		signer1 := newTestAuthAccountValue(
+		signer1 := newTestAccountValue(
 			nil,
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
 		)
-		signer2 := newTestAuthAccountValue(
+		signer2 := newTestAccountValue(
 			nil,
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
 		)
@@ -277,7 +277,7 @@ func TestInterpretTransactions(t *testing.T) {
 
           transaction(x: Int, y: Bool) {
 
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
               values.append(signer.address)
               values.append(y)
               values.append(x)
@@ -291,7 +291,7 @@ func TestInterpretTransactions(t *testing.T) {
 		}
 
 		prepareArguments := []interpreter.Value{
-			newTestAuthAccountValue(
+			newTestAccountValue(
 				nil,
 				interpreter.AddressValue{},
 			),

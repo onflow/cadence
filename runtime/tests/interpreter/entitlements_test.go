@@ -248,8 +248,8 @@ func TestInterpretEntitledReferences(t *testing.T) {
 			resource R {}
 			fun test(): auth(X) &R {
 				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				return account.borrow<auth(X) &R>(from: /storage/foo)!
+				account.storage.save(<-r, to: /storage/foo)
+				return account.storage.borrow<auth(X) &R>(from: /storage/foo)!
 			}
 			`,
 			sema.Config{},
@@ -1338,8 +1338,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		}
 		fun test(): auth(Y) &Int {
 			let s = S()
-			account.save(s, to: /storage/foo)
-			let ref = account.borrow<auth(X) &S>(from: /storage/foo)
+			account.storage.save(s, to: /storage/foo)
+			let ref = account.storage.borrow<auth(X) &S>(from: /storage/foo)
 			let i = ref?.foo()
 			return i!
 		}
@@ -2351,8 +2351,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			access(M) attachment A for R {}
 			fun test(): auth(F, G) &A {
 				let r <- attach A() to <-create R()
-				account.save(<-r, to: /storage/foo)
-				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
+				account.storage.save(<-r, to: /storage/foo)
+				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
 				return ref[A]!
 			}
 		`, sema.Config{
@@ -2400,8 +2400,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			}
 			fun test(): auth(F, G, Y, Z) &A {
 				let r <- attach A() to <-create R()
-				account.save(<-r, to: /storage/foo)
-				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
+				account.storage.save(<-r, to: /storage/foo)
+				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
 				return ref[A]!.entitled()
 			}
 		`, sema.Config{
@@ -2450,8 +2450,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			}
 			fun test(): auth(X) &R {
 				let r <- attach A() to <-create R() with (X)
-				account.save(<-r, to: /storage/foo)
-				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
+				account.storage.save(<-r, to: /storage/foo)
+				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
 				return ref[A]!.entitled()
 			}
 		`, sema.Config{

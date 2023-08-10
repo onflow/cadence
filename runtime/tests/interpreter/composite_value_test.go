@@ -183,7 +183,7 @@ func TestInterpretContractTransfer(t *testing.T) {
               contract C {}
 
               fun test() {
-                  authAccount.save(%s, to: /storage/c)
+                  authAccount.storage.save(%s, to: /storage/c)
               }
 		    `,
 			value,

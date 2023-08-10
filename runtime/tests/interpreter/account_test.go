@@ -79,9 +79,10 @@ func testAccountWithErrorHandler(
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "authAccount",
-		Type:  sema.AuthAccountType,
-		Value: newTestAuthAccountValue(nil, address),
+		Name: "authAccount",
+		Type: sema.FullyEntitledAccountReferenceType,
+		// TODO: reference, use stdlib
+		Value: newTestAccountValue(nil, address),
 		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
@@ -89,9 +90,10 @@ func testAccountWithErrorHandler(
 	// `pubAccount`
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "pubAccount",
-		Type:  sema.PublicAccountType,
-		Value: newTestPublicAccountValue(nil, address),
+		Name: "pubAccount",
+		Type: sema.AccountReferenceType,
+		// TODO: reference, use stdlib
+		Value: newTestAccountValue(nil, address),
 		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
@@ -131,7 +133,7 @@ func testAccountWithErrorHandler(
 				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
 				InvalidatedResourceValidationEnabled: true,
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return newTestAuthAccountValue(nil, address)
+					return newTestAccountValue(nil, address)
 				},
 			},
 			HandleCheckerError: checkerErrorHandler,
@@ -171,7 +173,7 @@ func returnZeroUFix64() interpreter.UFix64Value {
 	return interpreter.NewUnmeteredUFix64Value(0)
 }
 
-func TestInterpretAuthAccount_save(t *testing.T) {
+func TestInterpretAccountStorageSave(t *testing.T) {
 
 	t.Parallel()
 
@@ -190,7 +192,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
               fun test() {
                   let r <- create R()
-                  account.save(<-r, to: /storage/r)
+                  account.storage.save(<-r, to: /storage/r)
               }
             `,
 			sema.Config{},
@@ -236,7 +238,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
               fun test() {
                   let s = S()
-                  account.save(s, to: /storage/s)
+                  account.storage.save(s, to: /storage/s)
               }
             `,
 			sema.Config{},
@@ -269,7 +271,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccount_type(t *testing.T) {
+func TestInterpretAccountStorageType(t *testing.T) {
 
 	t.Parallel()
 
@@ -290,17 +292,17 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 
               fun saveR() {
                 let r <- create R()
-                account.save(<-r, to: /storage/x)
+                account.storage.save(<-r, to: /storage/x)
               }
 
               fun saveS() {
                 let s = S()
-                destroy account.load<@R>(from: /storage/x)
-                 account.save(s, to: /storage/x)
+                destroy account.storage.load<@R>(from: /storage/x)
+                account.storage.save(s, to: /storage/x)
               }
 
               fun typeAt(): AnyStruct {
-                return account.type(at: /storage/x)
+                return account.storage.type(at: /storage/x)
               }
             `,
 			sema.Config{},
@@ -361,7 +363,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccount_load(t *testing.T) {
+func TestInterpretAccountStorageLoad(t *testing.T) {
 
 	t.Parallel()
 
@@ -382,15 +384,15 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
               fun save() {
                   let r <- create R()
-                  account.save(<-r, to: /storage/r)
+                  account.storage.save(<-r, to: /storage/r)
               }
 
               fun loadR(): @R? {
-                  return <-account.load<@R>(from: /storage/r)
+                  return <-account.storage.load<@R>(from: /storage/r)
               }
 
               fun loadR2(): @R2? {
-                  return <-account.load<@R2>(from: /storage/r)
+                  return <-account.storage.load<@R2>(from: /storage/r)
               }
             `,
 			sema.Config{},
@@ -465,15 +467,15 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
               fun save() {
                   let s = S()
-                  account.save(s, to: /storage/s)
+                  account.storage.save(s, to: /storage/s)
               }
 
               fun loadS(): S? {
-                  return account.load<S>(from: /storage/s)
+                  return account.storage.load<S>(from: /storage/s)
               }
 
               fun loadS2(): S2? {
-                  return account.load<S2>(from: /storage/s)
+                  return account.storage.load<S2>(from: /storage/s)
               }
             `,
 			sema.Config{},
@@ -532,7 +534,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccount_copy(t *testing.T) {
+func TestInterpretAccountStorageCopy(t *testing.T) {
 
 	t.Parallel()
 
@@ -543,15 +545,15 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
       fun save() {
           let s = S()
-          account.save(s, to: /storage/s)
+          account.storage.save(s, to: /storage/s)
       }
 
       fun copyS(): S? {
-          return account.copy<S>(from: /storage/s)
+          return account.storage.copy<S>(from: /storage/s)
       }
 
       fun copyS2(): S2? {
-          return account.copy<S2>(from: /storage/s)
+          return account.storage.copy<S2>(from: /storage/s)
       }
     `
 
@@ -629,7 +631,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccount_borrow(t *testing.T) {
+func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 	t.Parallel()
 
@@ -662,7 +664,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
               fun save() {
                   let r <- create R()
-                  account.save(<-r, to: /storage/r)
+                  account.storage.save(<-r, to: /storage/r)
               }
 
 			  fun checkR(): Bool {
@@ -670,11 +672,11 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			  }
 
               fun borrowR(): &R? {
-                  return account.borrow<&R>(from: /storage/r)
+                  return account.storage.borrow<&R>(from: /storage/r)
               }
 
               fun foo(): Int {
-                  return account.borrow<&R>(from: /storage/r)!.foo
+                  return account.storage.borrow<&R>(from: /storage/r)!.foo
               }
 
 			  fun checkR2(): Bool {
@@ -682,7 +684,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			  }
 
               fun borrowR2(): &R2? {
-                  return account.borrow<&R2>(from: /storage/r)
+                  return account.storage.borrow<&R2>(from: /storage/r)
               }
 
 			  fun checkR2WithInvalidPath(): Bool {
@@ -690,13 +692,13 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			  }
 
               fun changeAfterBorrow(): Int {
-                 let ref = account.borrow<&R>(from: /storage/r)!
+                 let ref = account.storage.borrow<&R>(from: /storage/r)!
 
-                 let r <- account.load<@R>(from: /storage/r)
+                 let r <- account.storage.load<@R>(from: /storage/r)
                  destroy r
 
                  let r2 <- create R2()
-                 account.save(<-r2, to: /storage/r)
+                 account.storage.save(<-r2, to: /storage/r)
 
                  return ref.foo
               }
@@ -843,7 +845,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
               fun save() {
                   let s = S()
-                  account.save(s, to: /storage/s)
+                  account.storage.save(s, to: /storage/s)
               }
 
 			  fun checkS(): Bool {
@@ -851,11 +853,11 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			  }
 
               fun borrowS(): &S? {
-                  return account.borrow<&S>(from: /storage/s)
+                  return account.storage.borrow<&S>(from: /storage/s)
               }
 
               fun foo(): Int {
-                  return account.borrow<&S>(from: /storage/s)!.foo
+                  return account.storage.borrow<&S>(from: /storage/s)!.foo
               }
 			 
 			  fun checkS2(): Bool {
@@ -863,25 +865,25 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			  }
              
 			  fun borrowS2(): &S2? {
-                  return account.borrow<&S2>(from: /storage/s)
+                  return account.storage.borrow<&S2>(from: /storage/s)
               }
 
               fun changeAfterBorrow(): Int {
-                 let ref = account.borrow<&S>(from: /storage/s)!
+                 let ref = account.storage.borrow<&S>(from: /storage/s)!
 
                  // remove stored value
-                 account.load<S>(from: /storage/s)
+                 account.storage.load<S>(from: /storage/s)
 
                  let s2 = S2()
-                 account.save(s2, to: /storage/s)
+                 account.storage.save(s2, to: /storage/s)
 
                  return ref.foo
               }
 
               fun invalidBorrowS(): &S2? {
                   let s = S()
-                  account.save(s, to: /storage/another_s)
-                  let borrowedS = account.borrow<&AnyStruct>(from: /storage/another_s)
+                  account.storage.save(s, to: /storage/another_s)
+                  let borrowedS = account.storage.borrow<&AnyStruct>(from: /storage/another_s)
                   return borrowedS as! &S2?
               }
             `,
@@ -998,106 +1000,82 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 func TestInterpretAccountBalanceFields(t *testing.T) {
 	t.Parallel()
 
-	for accountType, auth := range map[string]bool{
-		"AuthAccount":   true,
-		"PublicAccount": false,
+	for _, fieldName := range []string{
+		"balance",
+		"availableBalance",
 	} {
 
-		for _, fieldName := range []string{
-			"balance",
-			"availableBalance",
-		} {
+		t.Run(fieldName, func(t *testing.T) {
 
-			testName := fmt.Sprintf(
-				"%s.%s",
-				accountType,
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+			code := fmt.Sprintf(
+				`
+                  fun test(): UFix64 {
+                      return account.%s
+                  }
+                `,
 				fieldName,
 			)
+			inter, _ := testAccount(
+				t,
+				address,
+				auth,
+				code,
+				sema.Config{},
+			)
 
-			t.Run(testName, func(t *testing.T) {
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
 
-				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-				code := fmt.Sprintf(
-					`
-                          fun test(): UFix64 {
-                              return account.%s
-                          }
-                        `,
-					fieldName,
-				)
-				inter, _ := testAccount(
-					t,
-					address,
-					auth,
-					code,
-					sema.Config{},
-				)
-
-				value, err := inter.Invoke("test")
-				require.NoError(t, err)
-
-				AssertValuesEqual(
-					t,
-					inter,
-					interpreter.NewUnmeteredUFix64Value(0),
-					value,
-				)
-			})
-		}
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredUFix64Value(0),
+				value,
+			)
+		})
 	}
 }
 
 func TestInterpretAccount_StorageFields(t *testing.T) {
 	t.Parallel()
 
-	for accountType, auth := range map[string]bool{
-		"AuthAccount":   true,
-		"PublicAccount": false,
+	for _, fieldName := range []string{
+		"used",
+		"capacity",
 	} {
 
-		for _, fieldName := range []string{
-			"storageUsed",
-			"storageCapacity",
-		} {
+		t.Run(fieldName, func(t *testing.T) {
 
-			testName := fmt.Sprintf(
-				"%s.%s",
-				accountType,
+			code := fmt.Sprintf(
+				`
+                          fun test(): UInt64 {
+                              return account.storage.%s
+                          }
+                        `,
 				fieldName,
 			)
 
-			t.Run(testName, func(t *testing.T) {
+			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-				code := fmt.Sprintf(
-					`
-                          fun test(): UInt64 {
-                              return account.%s
-                          }
-                        `,
-					fieldName,
-				)
+			inter, _ := testAccount(
+				t,
+				address,
+				auth,
+				code,
+				sema.Config{},
+			)
 
-				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
 
-				inter, _ := testAccount(
-					t,
-					address,
-					auth,
-					code,
-					sema.Config{},
-				)
-
-				value, err := inter.Invoke("test")
-				require.NoError(t, err)
-
-				AssertValuesEqual(
-					t,
-					inter,
-					interpreter.NewUnmeteredUInt64Value(0),
-					value,
-				)
-			})
-		}
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredUInt64Value(0),
+				value,
+			)
+		})
 	}
 }
