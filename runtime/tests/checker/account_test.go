@@ -63,9 +63,23 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 	return ParseAndCheckAccountWithConfig(t, code, sema.Config{})
 }
 
-func TestCheckAccount_save(t *testing.T) {
+func TestCheckAccountStorageSave(t *testing.T) {
 
 	t.Parallel()
+
+	t.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(storage: &Account.Storage) {
+              storage.save(1, to: /storage/foo)
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
 
 	testImplicitTypeArgument := func(domain common.PathDomain) {
 
@@ -84,14 +98,14 @@ func TestCheckAccount_save(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       resource R {}
 
-                      fun test() {
+                      fun test(storage: auth(Storage) &Account.Storage) {
                           let r <- create R()
-                          authAccount.storage.save(<-r, to: /%s/r)
+                          storage.save(<-r, to: /%s/r)
                       }
                     `,
 					domainIdentifier,
@@ -111,14 +125,14 @@ func TestCheckAccount_save(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       struct S {}
 
-                      fun test() {
+                      fun test(storage: auth(Storage) &Account.Storage) {
                           let s = S()
-                          authAccount.storage.save(s, to: /%s/s)
+                          storage.save(s, to: /%s/s)
                       }
                     `,
 					domainIdentifier,
@@ -152,14 +166,14 @@ func TestCheckAccount_save(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       resource R {}
 
-                      fun test() {
+                      fun test(storage: auth(Storage) &Account.Storage) {
                           let r <- create R()
-                          authAccount.storage.save<@R>(<-r, to: /%s/r)
+                          storage.save<@R>(<-r, to: /%s/r)
                       }
                     `,
 					domainIdentifier,
@@ -179,14 +193,14 @@ func TestCheckAccount_save(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       struct S {}
 
-                      fun test() {
+                      fun test(storage: auth(Storage) &Account.Storage) {
                           let s = S()
-                          authAccount.storage.save<S>(s, to: /%s/s)
+                          storage.save<S>(s, to: /%s/s)
                       }
                     `,
 					domainIdentifier,
@@ -220,16 +234,16 @@ func TestCheckAccount_save(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       resource R {}
 
                       resource T {}
 
-                      fun test() {
+                      fun test(storage: auth(Storage) &Account.Storage) {
                           let r <- create R()
-                          authAccount.storage.save<@T>(<-r, to: /%s/r)
+                          storage.save<@T>(<-r, to: /%s/r)
                       }
                     `,
 					domainIdentifier,
@@ -255,16 +269,16 @@ func TestCheckAccount_save(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       struct S {}
 
                       struct T {}
 
-                      fun test() {
+                      fun test(storage: auth(Storage) &Account.Storage) {
                           let s = S()
-                          authAccount.storage.save<T>(s, to: /%s/s)
+                          storage.save<T>(s, to: /%s/s)
                       }
                     `,
 					domainIdentifier,
@@ -304,15 +318,15 @@ func TestCheckAccount_save(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       fun one(): Int {
                           return 1
                       }
 
-                      fun test() {
-                          authAccount.storage.save<fun(): Int>(one, to: /%s/one)
+                      fun test(storage: auth(Storage) &Account.Storage) {
+                          storage.save<fun(): Int>(one, to: /%s/one)
                       }
                     `,
 					domainIdentifier,
@@ -335,15 +349,15 @@ func TestCheckAccount_save(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       fun one(): Int {
                           return 1
                       }
 
-                      fun test() {
-                          authAccount.storage.save(one, to: /%s/one)
+                      fun test(storage: auth(Storage) &Account.Storage) {
+                          storage.save(one, to: /%s/one)
                       }
                     `,
 					domainIdentifier,
@@ -371,7 +385,7 @@ func TestCheckAccount_save(t *testing.T) {
 	}
 }
 
-func TestCheckAccount_typeAt(t *testing.T) {
+func TestCheckAccountStorageType(t *testing.T) {
 
 	t.Parallel()
 
@@ -380,23 +394,19 @@ func TestCheckAccount_typeAt(t *testing.T) {
 
 			t.Parallel()
 
-			checker, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-						let t: Type = authAccount.storage.type(at: /%s/r)!
-					`,
+                      fun test(storage: &Account.Storage) {
+                          let t: Type = storage.type(at: /%s/r)!
+                      }
+                    `,
 					domain.Identifier(),
 				),
 			)
 
 			if domain == common.PathDomainStorage {
-
 				require.NoError(t, err)
-
-				typ := RequireGlobalValue(t, checker.Elaboration, "t")
-
-				require.Equal(t, sema.MetaType, typ)
-
 			} else {
 				errs := RequireCheckerErrors(t, err, 1)
 
@@ -410,9 +420,23 @@ func TestCheckAccount_typeAt(t *testing.T) {
 	}
 }
 
-func TestCheckAccount_load(t *testing.T) {
+func TestCheckAccountStorageLoad(t *testing.T) {
 
 	t.Parallel()
+
+	t.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(storage: &Account.Storage) {
+              storage.load<Int>(from: /storage/foo)
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
 
 	testMissingTypeArguments := func(domain common.PathDomain) {
 
@@ -425,10 +449,12 @@ func TestCheckAccount_load(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      let s = authAccount.storage.load(from: /%s/s)
+                      fun test(storage: auth(Storage) &Account.Storage) {
+                          let s = storage.load(from: /%s/s)
+                      }
                     `,
 					domain.Identifier(),
 				),
@@ -463,31 +489,22 @@ func TestCheckAccount_load(t *testing.T) {
 
 				t.Parallel()
 
-				checker, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           resource R {}
 
-                          let r <- authAccount.storage.load<@R>(from: /%s/r)
+                          fun test(storage: auth(Storage) &Account.Storage) {
+                               let r: @R? <- storage.load<@R>(from: /%s/r)
+                               destroy r
+                          }
                         `,
 						domain.Identifier(),
 					),
 				)
 
 				if domain == common.PathDomainStorage {
-
 					require.NoError(t, err)
-
-					rType := RequireGlobalType(t, checker.Elaboration, "R")
-					rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
-
-					require.Equal(t,
-						&sema.OptionalType{
-							Type: rType,
-						},
-						rValueType,
-					)
-
 				} else {
 					errs := RequireCheckerErrors(t, err, 1)
 
@@ -499,30 +516,21 @@ func TestCheckAccount_load(t *testing.T) {
 
 				t.Parallel()
 
-				checker, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           struct S {}
 
-                          let s = authAccount.storage.load<S>(from: /%s/s)
+                          fun test(storage: auth(Storage) &Account.Storage) {
+                              let s: S? = storage.load<S>(from: /%s/s)
+                          }
                         `,
 						domain.Identifier(),
 					),
 				)
 
 				if domain == common.PathDomainStorage {
-
 					require.NoError(t, err)
-
-					sType := RequireGlobalType(t, checker.Elaboration, "S")
-					sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
-
-					require.Equal(t,
-						&sema.OptionalType{
-							Type: sType,
-						},
-						sValueType,
-					)
 				} else {
 					errs := RequireCheckerErrors(t, err, 1)
 
@@ -538,7 +546,7 @@ func TestCheckAccount_load(t *testing.T) {
 	}
 }
 
-func TestCheckAccount_copy(t *testing.T) {
+func TestCheckAccountStorageCopy(t *testing.T) {
 
 	t.Parallel()
 
@@ -553,12 +561,14 @@ func TestCheckAccount_copy(t *testing.T) {
 
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t,
+			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       struct S {}
 
-                      let s = authAccount.storage.copy(from: /%s/s)
+                      fun test(storage: &Account.Storage) {
+                          let s = storage.copy(from: /%s/s)
+                      }
                     `,
 					domain.Identifier(),
 				),
@@ -593,12 +603,14 @@ func TestCheckAccount_copy(t *testing.T) {
 
 				t.Parallel()
 
-				checker, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           struct S {}
 
-                          let s = authAccount.storage.copy<S>(from: /%s/s)
+                          fun test(storage: &Account.Storage) {
+                              let s = storage.copy<S>(from: /%s/s)
+                          }
                         `,
 						domain.Identifier(),
 					),
@@ -606,17 +618,6 @@ func TestCheckAccount_copy(t *testing.T) {
 
 				if domain == common.PathDomainStorage {
 					require.NoError(t, err)
-
-					sType := RequireGlobalType(t, checker.Elaboration, "S")
-					sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
-
-					require.Equal(t,
-						&sema.OptionalType{
-							Type: sType,
-						},
-						sValueType,
-					)
-
 				} else {
 					errs := RequireCheckerErrors(t, err, 1)
 
@@ -628,12 +629,15 @@ func TestCheckAccount_copy(t *testing.T) {
 
 				t.Parallel()
 
-				_, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           resource R {}
 
-                          let r <- authAccount.storage.copy<@R>(from: /%s/r)
+                          fun test(storage: &Account.Storage) {
+                              let r <- storage.copy<@R>(from: /%s/r)
+                              destroy r
+                          }
                         `,
 						domain.Identifier(),
 					),
@@ -660,9 +664,23 @@ func TestCheckAccount_copy(t *testing.T) {
 	}
 }
 
-func TestCheckAccount_borrow(t *testing.T) {
+func TestCheckAccountStorageBorrow(t *testing.T) {
 
 	t.Parallel()
+
+	t.Run("unauthorized", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(storage: &Account.Storage) {
+              let r = storage.borrow<&Int>(from: /storage/foo)
+          }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
 
 	testMissingTypeArgument := func(domain common.PathDomain) {
 
@@ -679,10 +697,12 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 				t.Parallel()
 
-				_, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          let r = authAccount.storage.borrow(from: /%s/r)
+                          fun test(storage: auth(Storage) &Account.Storage) {
+                              let r = storage.borrow(from: /%s/r)
+                          }
                         `,
 						domain.Identifier(),
 					),
@@ -705,10 +725,12 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 				t.Parallel()
 
-				_, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          let s = authAccount.storage.borrow(from: /%s/s)
+                          fun test(storage: auth(Storage) &Account.Storage) {
+                              let s = storage.borrow(from: /%s/s)
+                          }
                         `,
 						domain.Identifier(),
 					),
@@ -747,13 +769,16 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 				t.Parallel()
 
-				checker, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           resource R {}
-						  entitlement X
 
-                          let r = authAccount.storage.borrow<%s &R>(from: /%s/r)
+                          entitlement X
+
+                          fun test(storage: auth(Storage) &Account.Storage) {
+                              let r: %[1]s &R? = storage.borrow<%[1]s &R>(from: /%[2]s/r)
+                          }
                         `,
 						authKeyword,
 						domain.Identifier(),
@@ -761,29 +786,7 @@ func TestCheckAccount_borrow(t *testing.T) {
 				)
 
 				if domain == common.PathDomainStorage {
-
 					require.NoError(t, err)
-
-					rType := RequireGlobalType(t, checker.Elaboration, "R")
-					rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
-
-					xType := RequireGlobalType(t, checker.Elaboration, "X")
-					require.IsType(t, &sema.EntitlementType{}, xType)
-					xEntitlement := xType.(*sema.EntitlementType)
-					var access sema.Access = sema.UnauthorizedAccess
-					if !auth.Equal(sema.UnauthorizedAccess) {
-						access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xEntitlement}, sema.Conjunction)
-					}
-
-					require.Equal(t,
-						&sema.OptionalType{
-							Type: &sema.ReferenceType{
-								Authorization: access,
-								Type:          rType,
-							},
-						},
-						rValueType,
-					)
 				} else {
 					errs := RequireCheckerErrors(t, err, 1)
 
@@ -795,13 +798,16 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 				t.Parallel()
 
-				checker, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           struct S {}
-						  entitlement X
 
-                          let s = authAccount.storage.borrow<%s &S>(from: /%s/s)
+                          entitlement X
+
+                          fun test(storage: auth(Storage) &Account.Storage) {
+                              let s: %[1]s &S? = storage.borrow<%[1]s &S>(from: /%[2]s/s)
+                          }
                         `,
 						authKeyword,
 						domain.Identifier(),
@@ -810,27 +816,6 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 				if domain == common.PathDomainStorage {
 					require.NoError(t, err)
-
-					sType := RequireGlobalType(t, checker.Elaboration, "S")
-					sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
-
-					xType := RequireGlobalType(t, checker.Elaboration, "X")
-					require.IsType(t, &sema.EntitlementType{}, xType)
-					xEntitlement := xType.(*sema.EntitlementType)
-					var access sema.Access = sema.UnauthorizedAccess
-					if !auth.Equal(sema.UnauthorizedAccess) {
-						access = sema.NewEntitlementSetAccess([]*sema.EntitlementType{xEntitlement}, sema.Conjunction)
-					}
-
-					require.Equal(t,
-						&sema.OptionalType{
-							Type: &sema.ReferenceType{
-								Authorization: access,
-								Type:          sType,
-							},
-						},
-						sValueType,
-					)
 				} else {
 					errs := RequireCheckerErrors(t, err, 1)
 
@@ -855,12 +840,15 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 				t.Parallel()
 
-				_, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           resource R {}
 
-                          let r <- authAccount.storage.borrow<@R>(from: /%s/r)
+                          fun test(storage: auth(Storage) &Account.Storage) {
+                              let r <- storage.borrow<@R>(from: /%s/r)
+                              destroy r
+                          }
                         `,
 						domain.Identifier(),
 					),
@@ -883,12 +871,14 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 				t.Parallel()
 
-				_, err := ParseAndCheckAccount(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           struct S {}
 
-                          let s = authAccount.storage.borrow<S>(from: /%s/s)
+                          fun test(storage: auth(Storage) &Account.Storage) {
+                              let s = storage.borrow<S>(from: /%s/s)
+                          }
                         `,
 						domain.Identifier(),
 					),
@@ -930,292 +920,149 @@ func TestCheckAccount_borrow(t *testing.T) {
 	}
 }
 
-func TestCheckAccount_BalanceFields(t *testing.T) {
+func TestCheckAccountBalanceFields(t *testing.T) {
 	t.Parallel()
 
-	for accountType, accountVariable := range map[string]string{
-		"AuthAccount":   "authAccount",
-		"PublicAccount": "publicAccount",
+	for _, fieldName := range []string{
+		"balance",
+		"availableBalance",
 	} {
 
-		for _, fieldName := range []string{
-			"balance",
-			"availableBalance",
-		} {
+		t.Run(fieldName, func(t *testing.T) {
 
-			testName := fmt.Sprintf(
-				"%s.%s",
-				accountType,
+			code := fmt.Sprintf(
+				`
+                  fun test(account: &Account): UFix64 {
+                      return account.%s
+                  }
+                `,
 				fieldName,
 			)
-
-			t.Run(testName, func(t *testing.T) {
-
-				code := fmt.Sprintf(
-					`
-	                      fun test(): UFix64 {
-	                          return %s.%s
-	                      }
-
-                          let amount = test()
-	                    `,
-					accountVariable,
-					fieldName,
-				)
-				checker, err := ParseAndCheckAccount(
-					t,
-					code,
-				)
-
-				require.NoError(t, err)
-
-				amountType := RequireGlobalValue(t, checker.Elaboration, "amount")
-
-				assert.Equal(t, sema.UFix64Type, amountType)
-			})
-		}
+			_, err := ParseAndCheck(t, code)
+			require.NoError(t, err)
+		})
 	}
 }
 
-func TestCheckAccount_StorageFields(t *testing.T) {
+func TestCheckAccountStorageFields(t *testing.T) {
 	t.Parallel()
 
-	for accountType, accountVariable := range map[string]string{
-		"AuthAccount":   "authAccount",
-		"PublicAccount": "publicAccount",
+	for _, fieldName := range []string{
+		"used",
+		"capacity",
 	} {
 
-		for _, fieldName := range []string{
-			"storage.used",
-			"storage.capacity",
-		} {
+		t.Run(fieldName, func(t *testing.T) {
 
-			testName := fmt.Sprintf(
-				"%s.%s",
-				accountType,
+			code := fmt.Sprintf(
+				`
+                  fun test(storage: &Account.Storage): UInt64 {
+                      return storage.%s
+                  }
+                `,
 				fieldName,
 			)
 
-			t.Run(testName, func(t *testing.T) {
+			_, err := ParseAndCheck(t, code)
 
-				code := fmt.Sprintf(
-					`
-	                      fun test(): UInt64 {
-	                          return %s.%s
-	                      }
-
-                          let amount = test()
-	                    `,
-					accountVariable,
-					fieldName,
-				)
-				checker, err := ParseAndCheckAccount(
-					t,
-					code,
-				)
-
-				require.NoError(t, err)
-
-				amountType := RequireGlobalValue(t, checker.Elaboration, "amount")
-
-				assert.Equal(t, sema.UInt64Type, amountType)
-			})
-		}
+			require.NoError(t, err)
+		})
 	}
 }
 
-func TestAuthAccountContracts(t *testing.T) {
+func TestCheckAccountContractsNames(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("contracts type", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-          let contracts: &Account.Contracts = authAccount.contracts
-	    `)
+	t.Run("read", func(t *testing.T) {
 
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(contracts: &Account.Contracts) {
+              let names: &[String] = contracts.names
+          }
+        `)
 		require.NoError(t, err)
 	})
 
-	t.Run("contracts names", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-          let names: [String] = authAccount.contracts.names
-	    `)
+	t.Run("assign", func(t *testing.T) {
 
-		require.NoError(t, err)
-	})
-
-	t.Run("update contracts names", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                authAccount.contracts.names = ["foo"]
-            }
-	    `)
+
+		_, err := ParseAndCheck(t, `
+          fun test(contracts: &Account.Contracts) {
+              contracts.names = &["foo"]
+          }
+        `)
 
 		errors := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
 	})
-
-	t.Run("get contract", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract {
-                return authAccount.contracts.get(name: "foo")!
-            }
-	    `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("borrow contract", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            contract C {}
-
-            fun test(): &C {
-                return authAccount.contracts.borrow<&C>(name: "foo")!
-            }
-	    `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("invalid borrow contract: missing type argument", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            contract C {}
-
-            fun test(): &AnyStruct {
-                return authAccount.contracts.borrow(name: "foo")!
-            }
-	    `)
-
-		errors := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
-	})
-
-	t.Run("add contract", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract {
-                return authAccount.contracts.add(name: "foo", code: "012".decodeHex())
-            }
-	    `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("update contract", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract {
-                return authAccount.contracts.update(name: "foo", code: "012".decodeHex())
-            }
-	    `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("remove contract", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract {
-                return authAccount.contracts.remove(name: "foo")!
-            }
-	    `)
-
-		require.NoError(t, err)
-	})
-
 }
 
-func TestPublicAccountContracts(t *testing.T) {
+func TestCheckAccountContractsGet(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("contracts type", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            let contracts: &Account.Contracts = publicAccount.contracts
-	    `)
+	_, err := ParseAndCheck(t, `
+      fun test(contracts: &Account.Contracts): DeployedContract {
+          return contracts.get(name: "foo")!
+      }
+    `)
 
-		require.NoError(t, err)
-	})
+	require.NoError(t, err)
 
-	t.Run("contracts names", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            let names: [String] = publicAccount.contracts.names
-	    `)
+}
 
-		require.NoError(t, err)
-	})
+func TestCheckAccountContractsBorrow(t *testing.T) {
 
-	t.Run("update contracts names", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test() {
-                publicAccount.contracts.names = ["foo"]
-            }
-	    `)
-
-		errors := RequireCheckerErrors(t, err, 2)
-
-		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
-		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
-	})
-
-	t.Run("get contract", func(t *testing.T) {
-		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract {
-                return publicAccount.contracts.get(name: "foo")!
-            }
-	    `)
-
-		require.NoError(t, err)
-	})
+	t.Parallel()
 
 	t.Run("borrow contract", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
+
+		_, err := ParseAndCheck(t, `
             contract C {}
 
-            fun test(): &C {
-                return publicAccount.contracts.borrow<&C>(name: "foo")!
+            fun test(contracts: &Account.Contracts): &C {
+                return contracts.borrow<&C>(name: "foo")!
             }
-	    `)
-
+        `)
 		require.NoError(t, err)
 	})
 
 	t.Run("invalid borrow contract: missing type argument", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
+
+		_, err := ParseAndCheck(t, `
             contract C {}
 
-            fun test(): &AnyStruct {
-                return publicAccount.contracts.borrow(name: "foo")!
+            fun test(contracts: &Account.Contracts): &AnyStruct {
+                return contracts.borrow(name: "foo")!
             }
-	    `)
+        `)
 
 		errors := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errors[0])
 	})
+}
 
-	t.Run("add contract", func(t *testing.T) {
+func TestCheckAccountContractsAdd(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("unauthorized", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract {
-                return publicAccount.contracts.add(name: "foo", code: "012".decodeHex())
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: &Account.Contracts): DeployedContract {
+                return contracts.add(name: "foo", code: "012".decodeHex())
             }
-	    `)
+        `)
 
 		errors := RequireCheckerErrors(t, err, 1)
 
@@ -1224,11 +1071,28 @@ func TestPublicAccountContracts(t *testing.T) {
 		assert.Equal(t, "add", invalidAccessErr.Name)
 	})
 
-	t.Run("update contract", func(t *testing.T) {
+	t.Run("authorized", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract {
-                return publicAccount.contracts.update(name: "foo", code: "012".decodeHex())
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: auth(Contracts) &Account.Contracts): DeployedContract {
+                return contracts.add(name: "foo", code: "012".decodeHex())
+            }
+        `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckAccountContractsUpdate(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: &Account.Contracts): DeployedContract {
+                return contracts.update(name: "foo", code: "012".decodeHex())
             }
         `)
 
@@ -1239,11 +1103,28 @@ func TestPublicAccountContracts(t *testing.T) {
 		assert.Equal(t, "update", invalidAccessErr.Name)
 	})
 
-	t.Run("remove contract", func(t *testing.T) {
+	t.Run("authorized", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheckAccount(t, `
-            fun test(): DeployedContract? {
-                return publicAccount.contracts.remove(name: "foo")
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: auth(Contracts) &Account.Contracts): DeployedContract {
+                return contracts.update(name: "foo", code: "012".decodeHex())
+            }
+        `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckAccountContractsRemove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: &Account.Contracts): DeployedContract? {
+                return contracts.remove(name: "foo")
             }
         `)
 
@@ -1254,6 +1135,16 @@ func TestPublicAccountContracts(t *testing.T) {
 		assert.Equal(t, "remove", invalidAccessErr.Name)
 	})
 
+	t.Run("authorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: auth(Contracts) &Account.Contracts): DeployedContract? {
+                return contracts.remove(name: "foo")
+            }
+        `)
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckAccountStoragePaths(t *testing.T) {
