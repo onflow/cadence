@@ -1699,10 +1699,10 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t,
+		_, err := ParseAndCheck(t,
 			`
             access(all) fun test() {
-                authAccount.save(<-[<-create R()], to: /storage/a)
+                storage.save(<-[<-create R()], to: /storage/a)
 
                 let collectionRef = authAccount.borrow<&[R]>(from: /storage/a)!
                 let ref = collectionRef[0]

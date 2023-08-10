@@ -27,41 +27,8 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
-
-func ParseAndCheckAccountWithConfig(t *testing.T, code string, config sema.Config) (*sema.Checker, error) {
-
-	constantDeclaration := func(name string, ty sema.Type) stdlib.StandardLibraryValue {
-		return stdlib.StandardLibraryValue{
-			Name: name,
-			Type: ty,
-			Kind: common.DeclarationKindConstant,
-		}
-	}
-
-	baseValueActivation := config.BaseValueActivation
-	if baseValueActivation == nil {
-		baseValueActivation = sema.BaseValueActivation
-	}
-
-	baseValueActivation = sema.NewVariableActivation(baseValueActivation)
-	baseValueActivation.DeclareValue(constantDeclaration("authAccount", sema.FullyEntitledAccountReferenceType))
-	baseValueActivation.DeclareValue(constantDeclaration("publicAccount", sema.AccountReferenceType))
-	config.BaseValueActivation = baseValueActivation
-
-	return ParseAndCheckWithOptions(t,
-		code,
-		ParseAndCheckOptions{
-			Config: &config,
-		},
-	)
-}
-
-func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
-	return ParseAndCheckAccountWithConfig(t, code, sema.Config{})
-}
 
 func TestCheckAccountStorageSave(t *testing.T) {
 

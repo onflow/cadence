@@ -706,7 +706,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("bound function", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           struct S {
               fun f() {}
           }
@@ -733,7 +733,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 	t.Run("bound function, view", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           struct S {
               view fun f() {}
           }
@@ -1423,9 +1423,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 	t.Run("save", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
-              authAccount.save(3, to: /storage/foo)
+              storage.save(3, to: /storage/foo)
           }
         `)
 
@@ -1445,9 +1445,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 	t.Run("type", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
-              authAccount.type(at: /storage/foo)
+              storage.type(at: /storage/foo)
           }
         `)
 		require.NoError(t, err)
@@ -1456,9 +1456,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 	t.Run("load", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
-              authAccount.load<Int>(from: /storage/foo)
+              storage.load<Int>(from: /storage/foo)
           }
         `)
 
@@ -1478,9 +1478,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 	t.Run("copy", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
-              authAccount.copy<Int>(from: /storage/foo)
+              storage.copy<Int>(from: /storage/foo)
           }
         `)
 		require.NoError(t, err)
@@ -1489,9 +1489,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 	t.Run("borrow", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
-              authAccount.borrow<&Int>(from: /storage/foo)
+              storage.borrow<&Int>(from: /storage/foo)
           }
         `)
 		require.NoError(t, err)
@@ -1500,9 +1500,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 	t.Run("check", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
-              authAccount.check<Int>(from: /storage/foo)
+              storage.check<Int>(from: /storage/foo)
           }
         `)
 		require.NoError(t, err)
@@ -1511,9 +1511,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 	t.Run("forEachPublic", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
-              authAccount.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+              storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                   return true
               })
           }
@@ -1535,7 +1535,7 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 	t.Run("forEachPrivate", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
               authAccount.storage.forEachPrivate(fun (path: PrivatePath, type: Type): Bool {
                   return true
@@ -1559,9 +1559,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 	t.Run("forEachStored", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
-              authAccount.forEachStored(fun (path: StoragePath, type: Type): Bool {
+              storage.forEachStored(fun (path: StoragePath, type: Type): Bool {
                   return true
               })
           }
@@ -1586,9 +1586,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("add", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.contracts.add(name: "", code: [])
+                  contracts.add(name: "", code: [])
               }
             `)
 
@@ -1608,9 +1608,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("update", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.contracts.update(name: "", code: [])
+                  contracts.update(name: "", code: [])
               }
             `)
 
@@ -1630,9 +1630,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("get", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.contracts.get(name: "")
+                  contracts.get(name: "")
               }
             `)
 
@@ -1642,9 +1642,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("remove", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.contracts.remove(name: "")
+                  contracts.remove(name: "")
               }
             `)
 
@@ -1664,9 +1664,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("borrow", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.contracts.borrow<&Int>(name: "")
+                  contracts.borrow<&Int>(name: "")
               }
             `)
 			require.NoError(t, err)
@@ -1679,9 +1679,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("add", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.keys.add(
+                  keys.add(
                       publicKey: key,
                       hashAlgorithm: algo,
                       weight: 100.0
@@ -1707,9 +1707,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("get", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.keys.get(keyIndex: 0)
+                  keys.get(keyIndex: 0)
               }
             `)
 			require.NoError(t, err)
@@ -1718,9 +1718,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("revoke", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.keys.revoke(keyIndex: 0)
+                  keys.revoke(keyIndex: 0)
               }
             `)
 
@@ -1740,9 +1740,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("forEach", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.keys.forEach(fun(key: AccountKey): Bool {
+                  keys.forEach(fun(key: AccountKey): Bool {
                       return true
                   })
               }
@@ -1768,9 +1768,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("publish", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.inbox.publish(
+                  inbox.publish(
                       cap,
                       name: "cap",
                       recipient: 0x1
@@ -1795,9 +1795,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("unpublish", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.inbox.unpublish<&Int>("cap")
+                  inbox.unpublish<&Int>("cap")
               }
             `)
 
@@ -1817,9 +1817,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("claim", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.inbox.claim<&Int>("cap", provider: 0x1)
+                  inbox.claim<&Int>("cap", provider: 0x1)
               }
             `)
 
@@ -1843,9 +1843,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("get", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.get<&Int>(/public/foo)
+                  capabilities.get<&Int>(/public/foo)
               }
             `)
 			require.NoError(t, err)
@@ -1854,9 +1854,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("borrow", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.borrow<&Int>(/public/foo)
+                  capabilities.borrow<&Int>(/public/foo)
               }
             `)
 			require.NoError(t, err)
@@ -1865,9 +1865,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("publish", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.publish(
+                  capabilities.publish(
                       cap,
                       at: /public/foo
                   )
@@ -1891,9 +1891,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("unpublish", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.unpublish(/public/foo)
+                  capabilities.unpublish(/public/foo)
               }
             `)
 
@@ -1917,9 +1917,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("getController", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.storage.getController(byCapabilityID: 1)
+                  capabilities.storage.getController(byCapabilityID: 1)
               }
             `)
 			require.NoError(t, err)
@@ -1928,9 +1928,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("getControllers", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.storage.getControllers(forPath: /storage/foo)
+                  capabilities.storage.getControllers(forPath: /storage/foo)
               }
             `)
 			require.NoError(t, err)
@@ -1939,9 +1939,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("forEachController", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.storage.forEachController(
+                  capabilities.storage.forEachController(
                       forPath: /storage/foo,
                       fun (controller: &StorageCapabilityController): Bool {
                           return true
@@ -1966,9 +1966,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("issue", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.storage.issue<&Int>(/storage/foo)
+                  capabilities.storage.issue<&Int>(/storage/foo)
               }
             `)
 
@@ -1992,9 +1992,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("getController", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.account.getController(byCapabilityID: 1)
+                  capabilities.account.getController(byCapabilityID: 1)
               }
             `)
 			require.NoError(t, err)
@@ -2003,9 +2003,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("getControllers", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.account.getControllers()
+                  capabilities.account.getControllers()
               }
             `)
 			require.NoError(t, err)
@@ -2014,9 +2014,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("forEachController", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.account.forEachController(
+                  capabilities.account.forEachController(
                       fun (controller: &AccountCapabilityController): Bool {
                           return true
                       }
@@ -2040,9 +2040,9 @@ func TestCheckAuthAccountPurity(t *testing.T) {
 		t.Run("issue", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  authAccount.capabilities.account.issue<&AuthAccount>()
+                  capabilities.account.issue<&AuthAccount>()
               }
             `)
 
@@ -2067,9 +2067,9 @@ func TestCheckPublicAccountPurity(t *testing.T) {
 	t.Run("forEachPublic", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t, `
+		_, err := ParseAndCheck(t, `
           view fun foo() {
-              publicAccount.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
+              storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                   return true
               })
           }
@@ -2094,9 +2094,9 @@ func TestCheckPublicAccountPurity(t *testing.T) {
 		t.Run("get", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  publicAccount.contracts.get(name: "")
+                  contracts.get(name: "")
               }
             `)
 
@@ -2106,9 +2106,9 @@ func TestCheckPublicAccountPurity(t *testing.T) {
 		t.Run("borrow", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  publicAccount.contracts.borrow<&Int>(name: "")
+                  contracts.borrow<&Int>(name: "")
               }
             `)
 			require.NoError(t, err)
@@ -2121,9 +2121,9 @@ func TestCheckPublicAccountPurity(t *testing.T) {
 		t.Run("get", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  publicAccount.keys.get(keyIndex: 0)
+                  keys.get(keyIndex: 0)
               }
             `)
 			require.NoError(t, err)
@@ -2132,9 +2132,9 @@ func TestCheckPublicAccountPurity(t *testing.T) {
 		t.Run("forEach", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  publicAccount.keys.forEach(fun(key: AccountKey): Bool {
+                  keys.forEach(fun(key: AccountKey): Bool {
                       return true
                   })
               }
@@ -2160,9 +2160,9 @@ func TestCheckPublicAccountPurity(t *testing.T) {
 		t.Run("get", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  publicAccount.capabilities.get<&Int>(/public/foo)
+                  capabilities.get<&Int>(/public/foo)
               }
             `)
 			require.NoError(t, err)
@@ -2171,9 +2171,9 @@ func TestCheckPublicAccountPurity(t *testing.T) {
 		t.Run("borrow", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheckAccount(t, `
+			_, err := ParseAndCheck(t, `
               view fun foo() {
-                  publicAccount.capabilities.borrow<&Int>(/public/foo)
+                  capabilities.borrow<&Int>(/public/foo)
               }
             `)
 			require.NoError(t, err)
