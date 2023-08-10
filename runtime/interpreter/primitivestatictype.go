@@ -191,20 +191,31 @@ const (
 	_
 	_
 	_
+	// Deprecated: PrimitiveStaticTypeAuthAccount only exists for migration purposes.
 	PrimitiveStaticTypeAuthAccount
+	// Deprecated: PrimitiveStaticTypePublicAccount only exists for migration purposes.
 	PrimitiveStaticTypePublicAccount
 	PrimitiveStaticTypeDeployedContract
+	// Deprecated: PrimitiveStaticTypeAuthAccountContracts only exists for migration purposes.
 	PrimitiveStaticTypeAuthAccountContracts
+	// Deprecated: PrimitiveStaticTypePublicAccountContracts only exists for migration purposes.
 	PrimitiveStaticTypePublicAccountContracts
+	// Deprecated: PrimitiveStaticTypeAuthAccountKeys only exists for migration purposes.
 	PrimitiveStaticTypeAuthAccountKeys
+	// Deprecated: PrimitiveStaticTypePublicAccountKeys only exists for migration purposes.
 	PrimitiveStaticTypePublicAccountKeys
 	PrimitiveStaticTypeAccountKey
+	// Deprecated: PrimitiveStaticTypeAuthAccountInbox only exists for migration purposes.
 	PrimitiveStaticTypeAuthAccountInbox
 	PrimitiveStaticTypeStorageCapabilityController
 	PrimitiveStaticTypeAccountCapabilityController
+	// Deprecated: PrimitiveStaticTypeAuthAccountStorageCapabilities only exists for migration purposes.
 	PrimitiveStaticTypeAuthAccountStorageCapabilities
+	// Deprecated: PrimitiveStaticTypeAuthAccountAccountCapabilities only exists for migration purposes.
 	PrimitiveStaticTypeAuthAccountAccountCapabilities
+	// Deprecated: PrimitiveStaticTypeAuthAccountCapabilities only exists for migration purposes.
 	PrimitiveStaticTypeAuthAccountCapabilities
+	// Deprecated: PrimitiveStaticTypePublicAccountCapabilities only exists for migration purposes.
 	PrimitiveStaticTypePublicAccountCapabilities
 	PrimitiveStaticTypeAccount
 	PrimitiveStaticTypeAccount_Contracts
@@ -440,27 +451,18 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypeAccountCapabilityController:
 		return sema.AccountCapabilityControllerType
 
-	case PrimitiveStaticTypeAuthAccount:
-		return nil
-	case PrimitiveStaticTypePublicAccount:
-		return nil
-	case PrimitiveStaticTypeAuthAccountContracts:
-		return nil
-	case PrimitiveStaticTypePublicAccountContracts:
-		return nil
-	case PrimitiveStaticTypeAuthAccountKeys:
-		return nil
-	case PrimitiveStaticTypePublicAccountKeys:
-		return nil
-	case PrimitiveStaticTypeAuthAccountInbox:
-		return nil
-	case PrimitiveStaticTypeAuthAccountStorageCapabilities:
-		return nil
-	case PrimitiveStaticTypeAuthAccountAccountCapabilities:
-		return nil
-	case PrimitiveStaticTypeAuthAccountCapabilities:
-		return nil
-	case PrimitiveStaticTypePublicAccountCapabilities:
+	case PrimitiveStaticTypeAuthAccount,
+		PrimitiveStaticTypePublicAccount,
+		PrimitiveStaticTypeAuthAccountContracts,
+		PrimitiveStaticTypePublicAccountContracts,
+		PrimitiveStaticTypeAuthAccountKeys,
+		PrimitiveStaticTypePublicAccountKeys,
+		PrimitiveStaticTypeAuthAccountInbox,
+		PrimitiveStaticTypeAuthAccountStorageCapabilities,
+		PrimitiveStaticTypeAuthAccountAccountCapabilities,
+		PrimitiveStaticTypeAuthAccountCapabilities,
+		PrimitiveStaticTypePublicAccountCapabilities:
+		// These types are deprecated, and only exist for migration purposes
 		return nil
 
 	case PrimitiveStaticTypeAccount:
@@ -483,6 +485,11 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 	default:
 		panic(errors.NewUnexpectedError("missing case for %s", i))
 	}
+}
+
+func (t PrimitiveStaticType) IsDefined() bool {
+	_, ok := _PrimitiveStaticType_map[t]
+	return ok
 }
 
 // ConvertSemaToPrimitiveStaticType converts a `sema.Type` to a `PrimitiveStaticType`.
@@ -619,7 +626,7 @@ func ConvertSemaToPrimitiveStaticType(
 		return PrimitiveStaticTypeAccount_StorageCapabilities
 	case sema.Account_AccountCapabilitiesType:
 		return PrimitiveStaticTypeAccount_AccountCapabilities
-	case sema.AccountCapabilitiesType:
+	case sema.Account_CapabilitiesType:
 		return PrimitiveStaticTypeAccount_Capabilities
 	case sema.Account_StorageType:
 		return PrimitiveStaticTypeAccount_Storage

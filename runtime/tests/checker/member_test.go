@@ -921,8 +921,11 @@ func TestCheckMemberAccess(t *testing.T) {
 		}
 
 		// Test all built-in composite types
-		for i := interpreter.PrimitiveStaticTypeAuthAccount; i < interpreter.PrimitiveStaticType_Count; i++ {
-			semaType := i.SemaType()
+		for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
+			if !ty.IsDefined() {
+				continue
+			}
+			semaType := ty.SemaType()
 			if semaType == nil {
 				continue
 			}

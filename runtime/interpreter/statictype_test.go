@@ -961,7 +961,7 @@ func TestStaticTypeConversion(t *testing.T) {
 
 	testFunctionType := &sema.FunctionType{}
 
-	tests := []struct {
+	type testCase struct {
 		name         string
 		semaType     sema.Type
 		staticType   StaticType
@@ -980,7 +980,9 @@ func TestStaticTypeConversion(t *testing.T) {
 			*sema.CompositeType,
 			error,
 		)
-	}{
+	}
+
+	tests := []testCase{
 		{
 			name:       "Void",
 			semaType:   sema.VoidType,
@@ -1215,42 +1217,30 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType:   sema.PrivatePathType,
 			staticType: PrimitiveStaticTypePrivatePath,
 		},
-
 		{
-			name:       "AuthAccount",
-			semaType:   sema.AuthAccountType,
-			staticType: PrimitiveStaticTypeAuthAccount,
+			name:       "Account",
+			semaType:   sema.AccountType,
+			staticType: PrimitiveStaticTypeAccount,
 		},
-		{
-			name:       "PublicAccount",
-			semaType:   sema.PublicAccountType,
-			staticType: PrimitiveStaticTypePublicAccount,
-		},
-
 		{
 			name:       "DeployedContract",
 			semaType:   sema.DeployedContractType,
 			staticType: PrimitiveStaticTypeDeployedContract,
 		},
 		{
-			name:       "AuthAccount.Contracts",
-			semaType:   sema.AuthAccountContractsType,
-			staticType: PrimitiveStaticTypeAuthAccountContracts,
+			name:       "Account.Storage",
+			semaType:   sema.Account_StorageType,
+			staticType: PrimitiveStaticTypeAccount_Storage,
 		},
 		{
-			name:       "PublicAccount.Contracts",
-			semaType:   sema.PublicAccountContractsType,
-			staticType: PrimitiveStaticTypePublicAccountContracts,
+			name:       "Account.Contracts",
+			semaType:   sema.Account_ContractsType,
+			staticType: PrimitiveStaticTypeAccount_Contracts,
 		},
 		{
-			name:       "AuthAccount.Keys",
-			semaType:   sema.AuthAccountKeysType,
-			staticType: PrimitiveStaticTypeAuthAccountKeys,
-		},
-		{
-			name:       "PublicAccount.Keys",
-			semaType:   sema.PublicAccountKeysType,
-			staticType: PrimitiveStaticTypePublicAccountKeys,
+			name:       "Account.Keys",
+			semaType:   sema.Account_KeysType,
+			staticType: PrimitiveStaticTypeAccount_Keys,
 		},
 		{
 			name:       "AccountKey",
@@ -1258,9 +1248,34 @@ func TestStaticTypeConversion(t *testing.T) {
 			staticType: PrimitiveStaticTypeAccountKey,
 		},
 		{
-			name:       "AuthAccount.Inbox",
-			semaType:   sema.AuthAccountInboxType,
-			staticType: PrimitiveStaticTypeAuthAccountInbox,
+			name:       "Account.Inbox",
+			semaType:   sema.Account_InboxType,
+			staticType: PrimitiveStaticTypeAccount_Inbox,
+		},
+		{
+			name:       "Account.Capabilities",
+			semaType:   sema.Account_CapabilitiesType,
+			staticType: PrimitiveStaticTypeAccount_Capabilities,
+		},
+		{
+			name:       "Account.StorageCapabilities",
+			semaType:   sema.Account_StorageCapabilitiesType,
+			staticType: PrimitiveStaticTypeAccount_StorageCapabilities,
+		},
+		{
+			name:       "Account.AccountCapabilities",
+			semaType:   sema.Account_AccountCapabilitiesType,
+			staticType: PrimitiveStaticTypeAccount_AccountCapabilities,
+		},
+		{
+			name:       "StorageCapabilityController",
+			semaType:   sema.StorageCapabilityControllerType,
+			staticType: PrimitiveStaticTypeStorageCapabilityController,
+		},
+		{
+			name:       "AccountCapabilityController",
+			semaType:   sema.AccountCapabilityControllerType,
+			staticType: PrimitiveStaticTypeAccountCapabilityController,
 		},
 
 		{
@@ -1374,18 +1389,79 @@ func TestStaticTypeConversion(t *testing.T) {
 				Type: testFunctionType,
 			},
 		},
+
+		// Deprecated primitive static types, only exist for migration purposes
+		{
+			name:       "AuthAccount",
+			semaType:   nil,
+			staticType: PrimitiveStaticTypeAuthAccount,
+		},
+		{
+			name:       "PublicAccount",
+			semaType:   nil,
+			staticType: PrimitiveStaticTypePublicAccount,
+		},
+		{
+			name:       "AuthAccountContracts",
+			staticType: PrimitiveStaticTypeAuthAccountContracts,
+			semaType:   nil,
+		},
+		{
+			name:       "PublicAccountContracts",
+			staticType: PrimitiveStaticTypePublicAccountContracts,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccountKeys",
+			staticType: PrimitiveStaticTypeAuthAccountKeys,
+			semaType:   nil,
+		},
+		{
+			name:       "PublicAccountKeys",
+			staticType: PrimitiveStaticTypePublicAccountKeys,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccountInbox",
+			staticType: PrimitiveStaticTypeAuthAccountInbox,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccountStorageCapabilities",
+			staticType: PrimitiveStaticTypeAuthAccountStorageCapabilities,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccountAccountCapabilities",
+			staticType: PrimitiveStaticTypeAuthAccountAccountCapabilities,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccountCapabilities",
+			staticType: PrimitiveStaticTypeAuthAccountCapabilities,
+			semaType:   nil,
+		},
+		{
+			name:       "PublicAccountCapabilities",
+			staticType: PrimitiveStaticTypePublicAccountCapabilities,
+			semaType:   nil,
+		},
 	}
 
-	for _, test := range tests {
+	test := func(test testCase) {
 		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
 
 			// Test sema to static
 
-			convertedStaticType := ConvertSemaToStaticType(nil, test.semaType)
-			require.Equal(t,
-				test.staticType,
-				convertedStaticType,
-			)
+			if test.semaType != nil {
+				convertedStaticType := ConvertSemaToStaticType(nil, test.semaType)
+				require.Equal(t,
+					test.staticType,
+					convertedStaticType,
+				)
+			}
 
 			// Test static to sema
 
@@ -1430,4 +1506,21 @@ func TestStaticTypeConversion(t *testing.T) {
 			)
 		})
 	}
+
+	testedStaticTypes := map[StaticType]struct{}{}
+
+	for _, testCase := range tests {
+		testedStaticTypes[testCase.staticType] = struct{}{}
+		test(testCase)
+	}
+
+	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+		if _, ok := testedStaticTypes[ty]; !ok {
+			t.Errorf("missing test case for primitive static type %s", ty)
+		}
+	}
+
 }
