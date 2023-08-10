@@ -1931,6 +1931,26 @@ var AccountMappingType = &EntitlementMapType{
 	Identifier: "AccountMapping",
 	Relations: []EntitlementRelation{
 		EntitlementRelation{
+			Input:  StorageType,
+			Output: StorageType,
+		},
+		EntitlementRelation{
+			Input:  ContractsType,
+			Output: ContractsType,
+		},
+		EntitlementRelation{
+			Input:  KeysType,
+			Output: KeysType,
+		},
+		EntitlementRelation{
+			Input:  InboxType,
+			Output: InboxType,
+		},
+		EntitlementRelation{
+			Input:  CapabilitiesType,
+			Output: CapabilitiesType,
+		},
+		EntitlementRelation{
 			Input:  SaveValueType,
 			Output: SaveValueType,
 		},
@@ -2052,6 +2072,18 @@ var AccountMappingType = &EntitlementMapType{
 var CapabilitiesMappingType = &EntitlementMapType{
 	Identifier: "CapabilitiesMapping",
 	Relations: []EntitlementRelation{
+		EntitlementRelation{
+			Input:  CapabilitiesType,
+			Output: CapabilitiesType,
+		},
+		EntitlementRelation{
+			Input:  StorageCapabilitiesType,
+			Output: StorageCapabilitiesType,
+		},
+		EntitlementRelation{
+			Input:  AccountCapabilitiesType,
+			Output: AccountCapabilitiesType,
+		},
 		EntitlementRelation{
 			Input:  GetStorageCapabilityControllerType,
 			Output: GetStorageCapabilityControllerType,

@@ -447,6 +447,12 @@ entitlement IssueAccountCapabilityController
 entitlement mapping AccountMapping {
     // TODO: include Identity
 
+    Storage -> Storage
+    Contracts -> Contracts
+    Keys -> Keys
+    Inbox -> Inbox
+    Capabilities -> Capabilities
+
     SaveValue -> SaveValue
     LoadValue -> LoadValue
     BorrowValue -> BorrowValue
@@ -493,6 +499,11 @@ entitlement mapping AccountMapping {
 
 entitlement mapping CapabilitiesMapping {
     // TODO: include Identity
+
+    Capabilities -> Capabilities
+
+    StorageCapabilities -> StorageCapabilities
+    AccountCapabilities -> AccountCapabilities
 
     GetStorageCapabilityController -> GetStorageCapabilityController
     IssueStorageCapabilityController -> IssueStorageCapabilityController
