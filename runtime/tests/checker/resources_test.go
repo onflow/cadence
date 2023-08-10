@@ -5087,9 +5087,9 @@ func TestCheckInvalidResourceOwnerField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       resource Test {
-          let owner: PublicAccount
+          let owner: &Account
 
-          init(owner: PublicAccount) {
+          init(owner: &Account) {
               self.owner = owner
           }
       }
@@ -5152,7 +5152,7 @@ func TestCheckResourceOwnerFieldUse(t *testing.T) {
 	_, err := ParseAndCheck(t, `
      resource Test {
 
-         fun test(): PublicAccount? {
+         fun test(): &Account? {
              return self.owner
          }
      }
@@ -5184,7 +5184,7 @@ func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
 	_, err := ParseAndCheck(t, `
      resource Test {
 
-         init(owner: PublicAccount) {
+         init(owner: &Account) {
              self.owner = owner
          }
      }
