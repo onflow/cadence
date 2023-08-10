@@ -228,7 +228,7 @@ func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 	panic(errors.NewUnreachableError())
 }
 
-func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
+func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Account capability controllers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -272,7 +272,7 @@ func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 	)
 }
 
-func (controller *AccountCapabilityControllerValue) newSetTagFunction(
+func (v *AccountCapabilityControllerValue) newSetTagFunction(
 	inter *Interpreter,
 ) *HostFunctionValue {
 	return NewHostFunctionValue(
@@ -284,8 +284,8 @@ func (controller *AccountCapabilityControllerValue) newSetTagFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			controller.tag = newTagValue
-			controller.SetTag(newTagValue)
+			v.tag = newTagValue
+			v.SetTag(newTagValue)
 
 			return Void
 		},
