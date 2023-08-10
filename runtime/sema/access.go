@@ -434,33 +434,37 @@ func newEntitlementAccess(
 	var setEntitlements []*EntitlementType
 	var mapEntitlement *EntitlementMapType
 
-	for i, entitlement := range entitlements {
+	for _, entitlement := range entitlements {
 		switch entitlement := entitlement.(type) {
 		case *EntitlementType:
-			if i == 0 {
-				setEntitlements = append(setEntitlements, entitlement)
-			} else if len(setEntitlements) == 0 {
+			if mapEntitlement != nil {
 				panic(errors.NewDefaultUserError("mixed entitlement types"))
 			}
 
+			setEntitlements = append(setEntitlements, entitlement)
+
 		case *EntitlementMapType:
-			if i == 0 {
-				mapEntitlement = entitlement
-			} else {
+			if len(setEntitlements) > 0 {
+				panic(errors.NewDefaultUserError("mixed entitlement types"))
+			}
+
+			if mapEntitlement != nil {
 				panic(errors.NewDefaultUserError("extra entitlement map type"))
 			}
+
+			mapEntitlement = entitlement
 
 		default:
 			panic(errors.NewDefaultUserError("invalid entitlement type: %T", entitlement))
 		}
 	}
 
-	if mapEntitlement != nil {
-		return NewEntitlementMapAccess(mapEntitlement)
-	}
-
 	if len(setEntitlements) > 0 {
 		return NewEntitlementSetAccess(setEntitlements, setKind)
+	}
+
+	if mapEntitlement != nil {
+		return NewEntitlementMapAccess(mapEntitlement)
 	}
 
 	panic(errors.NewDefaultUserError("neither map entitlement nor set entitlements given"))
