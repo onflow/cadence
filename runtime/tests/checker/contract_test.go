@@ -35,17 +35,18 @@ func TestCheckInvalidContractAccountField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       contract Test {
-          let account: AuthAccount
+          let account: &Account
 
-          init(account: AuthAccount) {
+          init(account: &Account) {
               self.account = account
           }
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckInvalidContractInterfaceAccountField(t *testing.T) {
@@ -54,7 +55,7 @@ func TestCheckInvalidContractInterfaceAccountField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       contract interface Test {
-          let account: AuthAccount
+          let account: &Account
       }
     `)
 
@@ -132,15 +133,16 @@ func TestCheckInvalidContractAccountFieldInitialization(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       contract Test {
 
-          init(account: AuthAccount) {
+          init(account: &Account) {
               self.account = account
           }
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckInvalidContractAccountFieldAccess(t *testing.T) {
