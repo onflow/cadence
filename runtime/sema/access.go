@@ -455,7 +455,7 @@ func newEntitlementAccess(
 			mapEntitlement = entitlement
 
 		default:
-			panic(errors.NewDefaultUserError("invalid entitlement type: %T", entitlement))
+			panic(errors.NewDefaultUserError("invalid entitlement type: %s", entitlement))
 		}
 	}
 

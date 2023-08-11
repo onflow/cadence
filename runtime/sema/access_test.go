@@ -26,63 +26,155 @@ import (
 
 func TestNewEntitlementAccess(t *testing.T) {
 
-	assert.PanicsWithError(t,
-		"neither map entitlement nor set entitlements given",
-		func() {
-			newEntitlementAccess(nil, Conjunction)
-		},
-	)
+	t.Parallel()
 
-	assert.PanicsWithError(t,
-		"mixed entitlement types",
-		func() {
-			newEntitlementAccess(
-				[]Type{
-					IdentityMappingType,
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		assert.PanicsWithError(t,
+			"neither map entitlement nor set entitlements given",
+			func() {
+				newEntitlementAccess(nil, Conjunction)
+			},
+		)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		assert.PanicsWithError(t,
+			"invalid entitlement type: Void",
+			func() {
+				newEntitlementAccess([]Type{VoidType}, Conjunction)
+			},
+		)
+	})
+
+	t.Run("map + entitlement", func(t *testing.T) {
+		t.Parallel()
+
+		assert.PanicsWithError(t,
+			"mixed entitlement types",
+			func() {
+				newEntitlementAccess(
+					[]Type{
+						IdentityMappingType,
+						MutableEntitlement,
+					},
+					Conjunction,
+				)
+			},
+		)
+	})
+
+	t.Run("entitlement + map", func(t *testing.T) {
+		t.Parallel()
+
+		assert.PanicsWithError(t,
+			"mixed entitlement types",
+			func() {
+				newEntitlementAccess(
+					[]Type{
+						MutableEntitlement,
+						IdentityMappingType,
+					},
+					Conjunction,
+				)
+			},
+		)
+	})
+
+	t.Run("single entitlement", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t,
+			NewEntitlementSetAccess(
+				[]*EntitlementType{
 					MutableEntitlement,
 				},
 				Conjunction,
-			)
-		},
-	)
-
-	assert.PanicsWithError(t,
-		"extra entitlement map type",
-		func() {
+			),
 			newEntitlementAccess(
 				[]Type{
 					MutableEntitlement,
-					IdentityMappingType,
 				},
 				Conjunction,
-			)
-		},
-	)
+			),
+		)
+	})
 
-	assert.Equal(t,
-		NewEntitlementSetAccess(
-			[]*EntitlementType{
-				MutableEntitlement,
-			},
-			Conjunction,
-		),
-		newEntitlementAccess(
-			[]Type{
-				MutableEntitlement,
-			},
-			Conjunction,
-		),
-	)
+	t.Run("two entitlements, conjunction", func(t *testing.T) {
+		t.Parallel()
 
-	assert.Equal(t,
-		NewEntitlementMapAccess(
-			IdentityMappingType,
-		),
-		newEntitlementAccess(
-			[]Type{
+		assert.Equal(t,
+			NewEntitlementSetAccess(
+				[]*EntitlementType{
+					MutableEntitlement,
+					InsertableEntitlement,
+				},
+				Conjunction,
+			),
+			newEntitlementAccess(
+				[]Type{
+					MutableEntitlement,
+					InsertableEntitlement,
+				},
+				Conjunction,
+			),
+		)
+	})
+
+	t.Run("two entitlements, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t,
+			NewEntitlementSetAccess(
+				[]*EntitlementType{
+					MutableEntitlement,
+					InsertableEntitlement,
+				},
+				Disjunction,
+			),
+			newEntitlementAccess(
+				[]Type{
+					MutableEntitlement,
+					InsertableEntitlement,
+				},
+				Disjunction,
+			),
+		)
+	})
+
+	t.Run("single map", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t,
+			NewEntitlementMapAccess(
 				IdentityMappingType,
+			),
+			newEntitlementAccess(
+				[]Type{
+					IdentityMappingType,
+				},
+				Conjunction,
+			),
+		)
+	})
+
+	t.Run("two maps", func(t *testing.T) {
+		t.Parallel()
+
+		assert.PanicsWithError(t,
+			"extra entitlement map type",
+			func() {
+				newEntitlementAccess(
+					[]Type{
+						IdentityMappingType,
+						AccountMappingType,
+					},
+					Conjunction,
+				)
 			},
-			Conjunction,
-		),
-	)
+		)
+	})
 }
