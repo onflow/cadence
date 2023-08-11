@@ -206,10 +206,28 @@ func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 
 			gauge := invocation.Interpreter
 
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			ty := typeParameterPair.Value
+
+			referenceType, ok := ty.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
+				gauge,
+				referenceType.Authorization,
+			)
+
 			return NewAccountReferenceValue(
 				gauge,
 				handler,
 				accountAddress,
+				authorization,
 			)
 		},
 	)
