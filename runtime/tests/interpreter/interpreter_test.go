@@ -8980,7 +8980,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name:  "account",
-		Type:  sema.AccountReferenceType,
+		Type:  sema.FullyEntitledAccountReferenceType,
 		Value: account,
 		Kind:  common.DeclarationKindConstant,
 	}
@@ -10508,7 +10508,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:     "account reference",
-			typeName: "&Account",
+			typeName: "Account",
 			code: `
 		      let ref = account
 		    `,

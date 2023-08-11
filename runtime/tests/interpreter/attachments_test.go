@@ -1463,7 +1463,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r3 <- r2
                 let a2 = r3[A]!
                 a2.setID(5)
-                authAccounstorage.t.save(<-r3, to: /storage/foo)
+                authAccount.storage.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
                 return a.id
