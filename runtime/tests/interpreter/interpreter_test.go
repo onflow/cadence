@@ -8441,20 +8441,15 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 					_ common.CompositeKind,
 				) map[string]interpreter.Value {
 
-					access := interpreter.ConvertSemaAccessToStaticAuthorization(
-						inter,
-						sema.FullyEntitledAccountAccess,
-					)
-
 					accountRef := stdlib.NewAccountReferenceValue(
 						nil,
 						nil,
 						addressValue,
-						access,
+						interpreter.FullyEntitledAccountAccess,
 					)
 
 					return map[string]interpreter.Value{
-						"account": accountRef,
+						sema.ContractAccountFieldName: accountRef,
 					}
 				},
 			},
@@ -8991,7 +8986,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			nil,
 			nil,
 			interpreter.AddressValue(address),
-			interpreter.ConvertSemaAccessToStaticAuthorization(nil, sema.FullyEntitledAccountAccess),
+			interpreter.FullyEntitledAccountAccess,
 		),
 		Kind: common.DeclarationKindConstant,
 	}

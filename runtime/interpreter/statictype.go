@@ -488,6 +488,8 @@ type Unauthorized struct{}
 
 var UnauthorizedAccess Authorization = Unauthorized{}
 
+var FullyEntitledAccountAccess = ConvertSemaAccessToStaticAuthorization(nil, sema.FullyEntitledAccountAccess)
+
 func (Unauthorized) isAuthorization() {}
 
 func (Unauthorized) String() string {
@@ -749,19 +751,19 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		)
 
 	case *sema.IntersectionType:
-		var intersectedTypess []InterfaceStaticType
+		var intersectedTypes []InterfaceStaticType
 		typeCount := len(t.Types)
 		if typeCount > 0 {
-			intersectedTypess = make([]InterfaceStaticType, typeCount)
+			intersectedTypes = make([]InterfaceStaticType, typeCount)
 
 			for i, typ := range t.Types {
-				intersectedTypess[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, typ)
+				intersectedTypes[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, typ)
 			}
 		}
 
 		return NewIntersectionStaticType(
 			memoryGauge,
-			intersectedTypess,
+			intersectedTypes,
 		)
 
 	case *sema.ReferenceType:

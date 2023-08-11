@@ -386,7 +386,7 @@ func testAccountWithErrorHandler(
 		Type: sema.FullyEntitledAccountReferenceType,
 		Value: interpreter.NewEphemeralReferenceValue(
 			nil,
-			interpreter.ConvertSemaAccessToStaticAuthorization(nil, sema.FullyEntitledAccountAccess),
+			interpreter.FullyEntitledAccountAccess,
 			account,
 			sema.AccountType,
 		),

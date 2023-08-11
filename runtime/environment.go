@@ -63,8 +63,7 @@ type Environment interface {
 		error,
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
-	NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value
-	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
+	NewAccountValue(address interpreter.AddressValue) interpreter.Value
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
@@ -93,10 +92,9 @@ var _ stdlib.Logger = &interpreterEnvironment{}
 var _ stdlib.UnsafeRandomGenerator = &interpreterEnvironment{}
 var _ stdlib.BlockAtHeightProvider = &interpreterEnvironment{}
 var _ stdlib.CurrentBlockProvider = &interpreterEnvironment{}
-var _ stdlib.PublicAccountHandler = &interpreterEnvironment{}
+var _ stdlib.AccountHandler = &interpreterEnvironment{}
 var _ stdlib.AccountCreator = &interpreterEnvironment{}
 var _ stdlib.EventEmitter = &interpreterEnvironment{}
-var _ stdlib.AuthAccountHandler = &interpreterEnvironment{}
 var _ stdlib.PublicKeyValidator = &interpreterEnvironment{}
 var _ stdlib.PublicKeySignatureVerifier = &interpreterEnvironment{}
 var _ stdlib.BLSPoPVerifier = &interpreterEnvironment{}
@@ -131,7 +129,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		UUIDHandler:                          e.newUUIDHandler(),
 		ContractValueHandler:                 e.newContractValueHandler(),
 		ImportLocationHandler:                e.newImportLocationHandler(),
-		AccountHandler:                       e.newAuthAccountHandler(),
+		AccountHandler:                       e.NewAccountValue,
 		OnRecordTrace:                        e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:                 e.newCompositeTypeHandler(),
@@ -197,14 +195,6 @@ func (e *interpreterEnvironment) Configure(
 func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseValueActivation.DeclareValue(valueDeclaration)
 	interpreter.Declare(e.baseActivation, valueDeclaration)
-}
-
-func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
-	return stdlib.NewAuthAccountValue(e, e, address)
-}
-
-func (e *interpreterEnvironment) NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value {
-	return stdlib.NewPublicAccountValue(e, e, address)
 }
 
 func (e *interpreterEnvironment) MeterMemory(usage common.MemoryUsage) error {
@@ -649,10 +639,8 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 	}
 }
 
-func (e *interpreterEnvironment) newAuthAccountHandler() interpreter.AccountHandlerFunc {
-	return func(address interpreter.AddressValue) interpreter.Value {
-		return stdlib.NewAccountValue(e, e, address)
-	}
+func (e *interpreterEnvironment) NewAccountValue(address interpreter.AddressValue) interpreter.Value {
+	return stdlib.NewAccountValue(e, e, address)
 }
 
 func (e *interpreterEnvironment) ValidatePublicKey(publicKey *stdlib.PublicKey) error {
@@ -802,10 +790,11 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 				)
 
 				return map[string]interpreter.Value{
-					sema.ContractAccountFieldName: stdlib.NewAuthAccountValue(
+					sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
 						inter,
 						e,
 						addressValue,
+						interpreter.FullyEntitledAccountAccess,
 					),
 				}
 			}
