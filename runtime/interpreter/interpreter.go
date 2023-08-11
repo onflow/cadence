@@ -3955,7 +3955,12 @@ func (interpreter *Interpreter) domainPaths(address common.Address, domain commo
 	return paths
 }
 
-func (interpreter *Interpreter) accountPaths(addressValue AddressValue, locationRange LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
+func (interpreter *Interpreter) accountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+	domain common.PathDomain,
+	pathType StaticType,
+) *ArrayValue {
 	address := addressValue.ToAddress()
 	values := interpreter.domainPaths(address, domain)
 	return NewArrayValue(
@@ -3969,10 +3974,6 @@ func (interpreter *Interpreter) accountPaths(addressValue AddressValue, location
 
 func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
 	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainPublic, PrimitiveStaticTypePublicPath)
-}
-
-func (interpreter *Interpreter) privateAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainPrivate, PrimitiveStaticTypePrivatePath)
 }
 
 func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {

@@ -236,8 +236,12 @@ func NewAccountValue(
 		addressValue,
 		newAccountBalanceGetFunction(gauge, handler, addressValue),
 		newAccountAvailableBalanceGetFunction(gauge, handler, addressValue),
-		newStorageUsedGetFunction(handler, addressValue),
-		newStorageCapacityGetFunction(handler, addressValue),
+		func() interpreter.Value {
+			// TODO:
+			//newStorageUsedGetFunction(handler, addressValue),
+			//newStorageCapacityGetFunction(handler, addressValue),
+			return nil
+		},
 		func() interpreter.Value {
 			return newAccountContractsValue(
 				gauge,

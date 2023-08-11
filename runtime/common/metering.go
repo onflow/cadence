@@ -250,6 +250,7 @@ var (
 	AccountAccountCapabilitiesStringMemoryUsage       = NewRawStringMemoryUsage(len("Account.AccountCapabilities()"))
 	AccountCapabilitiesStringMemoryUsage = NewRawStringMemoryUsage(len("Account.Capabilities()"))
 	AccountInboxStringMemoryUsage        = NewRawStringMemoryUsage(len("Account.Inbox()"))
+	AccountStorageStringMemoryUsage        = NewRawStringMemoryUsage(len("Account.Storage()"))
 	IDCapabilityValueStringMemoryUsage   = NewRawStringMemoryUsage(len("Capability<>(address: , id: )"))
 	StorageCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("StorageCapabilityController(borrowType: , capabilityID: , target: )"))
 	AccountCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("AccountCapabilityController(borrowType: , capabilityID: )"))

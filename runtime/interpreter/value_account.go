@@ -31,6 +31,7 @@ var accountTypeID = sema.AccountType.ID()
 var accountStaticType StaticType = PrimitiveStaticTypeAccount // unmetered
 var accountFieldNames = []string{
 	sema.AccountTypeAddressFieldName,
+	sema.AccountTypeStorageFieldName,
 	sema.AccountTypeContractsFieldName,
 	sema.AccountTypeKeysFieldName,
 	sema.AccountTypeInboxFieldName,
@@ -43,8 +44,7 @@ func NewAccountValue(
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
-	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
+	storageConstructor func() Value,
 	contractsConstructor func() Value,
 	keysConstructor func() Value,
 	inboxConstructor func() Value,
@@ -55,6 +55,7 @@ func NewAccountValue(
 		sema.AccountTypeAddressFieldName: address,
 	}
 
+	var storage Value
 	var contracts Value
 	var keys Value
 	var inbox Value
@@ -62,6 +63,12 @@ func NewAccountValue(
 
 	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
+		case sema.AccountTypeStorageFieldName:
+			if storage == nil {
+				storage = storageConstructor()
+			}
+			return storage
+
 		case sema.AccountTypeContractsFieldName:
 			if contracts == nil {
 				contracts = contractsConstructor()
@@ -91,92 +98,6 @@ func NewAccountValue(
 
 		case sema.AccountTypeAvailableBalanceFieldName:
 			return accountAvailableBalanceGet()
-
-			// TODO: refactor storage members to Account.Storage value
-			//
-			//case sema.AuthAccountTypePublicPathsFieldName:
-			//	return inter.publicAccountPaths(address, locationRange)
-			//
-			//case sema.AuthAccountTypePrivatePathsFieldName:
-			//	return inter.privateAccountPaths(address, locationRange)
-			//
-			//case sema.AuthAccountTypeStoragePathsFieldName:
-			//	return inter.storageAccountPaths(address, locationRange)
-			//
-			//case sema.AuthAccountTypeForEachPublicFunctionName:
-			//	if forEachPublicFunction == nil {
-			//		forEachPublicFunction = inter.newStorageIterationFunction(
-			//			sema.AuthAccountTypeForEachPublicFunctionType,
-			//			address,
-			//			common.PathDomainPublic,
-			//			sema.PublicPathType,
-			//		)
-			//	}
-			//	return forEachPublicFunction
-			//
-			//case sema.AuthAccountTypeForEachPrivateFunctionName:
-			//	if forEachPrivateFunction == nil {
-			//		forEachPrivateFunction = inter.newStorageIterationFunction(
-			//			sema.AuthAccountTypeForEachPrivateFunctionType,
-			//			address,
-			//			common.PathDomainPrivate,
-			//			sema.PrivatePathType,
-			//		)
-			//	}
-			//	return forEachPrivateFunction
-			//
-			//case sema.AuthAccountTypeForEachStoredFunctionName:
-			//	if forEachStoredFunction == nil {
-			//		forEachStoredFunction = inter.newStorageIterationFunction(
-			//			sema.AuthAccountTypeForEachStoredFunctionType,
-			//			address,
-			//			common.PathDomainStorage,
-			//			sema.StoragePathType,
-			//		)
-			//	}
-			//	return forEachStoredFunction
-			//
-			//case sema.AuthAccountTypeStorageUsedFieldName:
-			//	return storageUsedGet(inter)
-			//
-			//case sema.AuthAccountTypeStorageCapacityFieldName:
-			//	return storageCapacityGet(inter)
-			//
-			//case sema.AuthAccountTypeTypeFunctionName:
-			//	if typeFunction == nil {
-			//		typeFunction = inter.authAccountTypeFunction(address)
-			//	}
-			//	return typeFunction
-			//
-			//case sema.AuthAccountTypeLoadFunctionName:
-			//	if loadFunction == nil {
-			//		loadFunction = inter.authAccountLoadFunction(address)
-			//	}
-			//	return loadFunction
-			//
-			//case sema.AuthAccountTypeCopyFunctionName:
-			//	if copyFunction == nil {
-			//		copyFunction = inter.authAccountCopyFunction(address)
-			//	}
-			//	return copyFunction
-			//
-			//case sema.AuthAccountTypeSaveFunctionName:
-			//	if saveFunction == nil {
-			//		saveFunction = inter.authAccountSaveFunction(address)
-			//	}
-			//	return saveFunction
-			//
-			//case sema.AuthAccountTypeBorrowFunctionName:
-			//	if borrowFunction == nil {
-			//		borrowFunction = inter.authAccountBorrowFunction(address)
-			//	}
-			//	return borrowFunction
-			//
-			//case sema.AuthAccountTypeCheckFunctionName:
-			//	if checkFunction == nil {
-			//		checkFunction = inter.authAccountCheckFunction(address)
-			//	}
-			//	return checkFunction
 		}
 
 		return nil
