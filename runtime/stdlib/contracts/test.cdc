@@ -23,7 +23,7 @@ access(all) contract Test {
         /// The transaction is paid by the service account.
         /// The returned account can be used to sign and authorize transactions.
         ///
-        access(all) fun createAccount(): Account {
+        access(all) fun createAccount(): TestAccount {
             return self.backend.createAccount()
         }
 
@@ -78,7 +78,7 @@ access(all) contract Test {
         access(all) fun deployContract(
             name: String,
             code: String,
-            account: Account,
+            account: TestAccount,
             arguments: [AnyStruct]
         ): Error? {
             return self.backend.deployContract(
@@ -105,7 +105,7 @@ access(all) contract Test {
         /// Returns the service account of the blockchain. Can be used to sign
         /// transactions with this account.
         ///
-        access(all) fun serviceAccount(): Account {
+        access(all) fun serviceAccount(): TestAccount {
             return self.backend.serviceAccount()
         }
 
@@ -209,9 +209,9 @@ access(all) contract Test {
         }
     }
 
-    /// Account represents info about the account created on the blockchain.
+    /// TestAccount represents info about the account created on the blockchain.
     ///
-    access(all) struct Account {
+    access(all) struct TestAccount {
         access(all) let address: Address
         access(all) let publicKey: PublicKey
 
@@ -237,10 +237,10 @@ access(all) contract Test {
     access(all) struct Transaction {
         access(all) let code: String
         access(all) let authorizers: [Address]
-        access(all) let signers: [Account]
+        access(all) let signers: [TestAccount]
         access(all) let arguments: [AnyStruct]
 
-        init(code: String, authorizers: [Address], signers: [Account], arguments: [AnyStruct]) {
+        init(code: String, authorizers: [Address], signers: [TestAccount], arguments: [AnyStruct]) {
             self.code = code
             self.authorizers = authorizers
             self.signers = signers
@@ -261,7 +261,7 @@ access(all) contract Test {
         /// The transaction is paid by the service account.
         /// The returned account can be used to sign and authorize transactions.
         ///
-        access(all) fun createAccount(): Account
+        access(all) fun createAccount(): TestAccount
 
         /// Add a transaction to the current block.
         ///
@@ -282,7 +282,7 @@ access(all) contract Test {
         access(all) fun deployContract(
             name: String,
             code: String,
-            account: Account,
+            account: TestAccount,
             arguments: [AnyStruct]
         ): Error?
 
@@ -298,7 +298,7 @@ access(all) contract Test {
         /// Returns the service account of the blockchain. Can be used to sign
         /// transactions with this account.
         ///
-        access(all) fun serviceAccount(): Account
+        access(all) fun serviceAccount(): TestAccount
 
         /// Returns all events emitted from the blockchain, optionally filtered
         /// by type.
