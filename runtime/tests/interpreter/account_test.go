@@ -670,7 +670,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
               }
 
 			  fun checkR(): Bool {
-				  return account.check<@R>(from: /storage/r)
+				  return account.storage.check<@R>(from: /storage/r)
 			  }
 
               fun borrowR(): &R? {
@@ -682,7 +682,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
               }
 
 			  fun checkR2(): Bool {
-				  return account.check<@R2>(from: /storage/r)
+				  return account.storage.check<@R2>(from: /storage/r)
 			  }
 
               fun borrowR2(): &R2? {
@@ -690,7 +690,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
               }
 
 			  fun checkR2WithInvalidPath(): Bool {
-				  return account.check<@R2>(from: /storage/wrongpath)
+				  return account.storage.check<@R2>(from: /storage/wrongpath)
 			  }
 
               fun changeAfterBorrow(): Int {
@@ -851,7 +851,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
               }
 
 			  fun checkS(): Bool {
-				  return account.check<S>(from: /storage/s)
+				  return account.storage.check<S>(from: /storage/s)
 			  }
 
               fun borrowS(): &S? {
@@ -863,7 +863,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
               }
 			 
 			  fun checkS2(): Bool {
-				  return account.check<S2>(from: /storage/s)
+				  return account.storage.check<S2>(from: /storage/s)
 			  }
              
 			  fun borrowS2(): &S2? {
