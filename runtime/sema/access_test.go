@@ -59,7 +59,7 @@ func TestNewEntitlementAccess(t *testing.T) {
 				newEntitlementAccess(
 					[]Type{
 						IdentityMappingType,
-						MutableEntitlement,
+						MutateEntitlement,
 					},
 					Conjunction,
 				)
@@ -75,7 +75,7 @@ func TestNewEntitlementAccess(t *testing.T) {
 			func() {
 				newEntitlementAccess(
 					[]Type{
-						MutableEntitlement,
+						MutateEntitlement,
 						IdentityMappingType,
 					},
 					Conjunction,
@@ -90,13 +90,13 @@ func TestNewEntitlementAccess(t *testing.T) {
 		assert.Equal(t,
 			NewEntitlementSetAccess(
 				[]*EntitlementType{
-					MutableEntitlement,
+					MutateEntitlement,
 				},
 				Conjunction,
 			),
 			newEntitlementAccess(
 				[]Type{
-					MutableEntitlement,
+					MutateEntitlement,
 				},
 				Conjunction,
 			),
@@ -109,15 +109,15 @@ func TestNewEntitlementAccess(t *testing.T) {
 		assert.Equal(t,
 			NewEntitlementSetAccess(
 				[]*EntitlementType{
-					MutableEntitlement,
-					InsertableEntitlement,
+					MutateEntitlement,
+					InsertEntitlement,
 				},
 				Conjunction,
 			),
 			newEntitlementAccess(
 				[]Type{
-					MutableEntitlement,
-					InsertableEntitlement,
+					MutateEntitlement,
+					InsertEntitlement,
 				},
 				Conjunction,
 			),
@@ -130,15 +130,15 @@ func TestNewEntitlementAccess(t *testing.T) {
 		assert.Equal(t,
 			NewEntitlementSetAccess(
 				[]*EntitlementType{
-					MutableEntitlement,
-					InsertableEntitlement,
+					MutateEntitlement,
+					InsertEntitlement,
 				},
 				Disjunction,
 			),
 			newEntitlementAccess(
 				[]Type{
-					MutableEntitlement,
-					InsertableEntitlement,
+					MutateEntitlement,
+					InsertEntitlement,
 				},
 				Disjunction,
 			),

@@ -3077,6 +3077,46 @@ func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	)
 }
 
+// UnauthorizedReferenceAssignmentError
+
+type UnauthorizedReferenceAssignmentError struct {
+	RequiredAccess [2]Access
+	FoundAccess    Access
+	ast.Range
+}
+
+var _ SemanticError = &UnauthorizedReferenceAssignmentError{}
+var _ errors.UserError = &UnauthorizedReferenceAssignmentError{}
+var _ errors.SecondaryError = &UnauthorizedReferenceAssignmentError{}
+
+func (*UnauthorizedReferenceAssignmentError) isSemanticError() {}
+
+func (*UnauthorizedReferenceAssignmentError) IsUserError() {}
+
+func (e *UnauthorizedReferenceAssignmentError) Error() string {
+	var foundAccess string
+	if e.FoundAccess == UnauthorizedAccess {
+		foundAccess = "non-auth"
+	} else {
+		foundAccess = fmt.Sprintf("(%s)", e.FoundAccess.Description())
+	}
+
+	return fmt.Sprintf(
+		"invalid assignment: can only assign to a reference with (%s) or (%s) access, but found a %s reference",
+		e.RequiredAccess[0].Description(),
+		e.RequiredAccess[1].Description(),
+		foundAccess,
+	)
+}
+
+func (e *UnauthorizedReferenceAssignmentError) SecondaryError() string {
+	return fmt.Sprintf(
+		"consider taking a reference with `%s` or `%s` access",
+		e.RequiredAccess[0].Description(),
+		e.RequiredAccess[1].Description(),
+	)
+}
+
 // InvalidCharacterLiteralError
 
 type InvalidCharacterLiteralError struct {

@@ -4709,10 +4709,17 @@ func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string)
 	return &member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
 }
 
-func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAccess *sema.Access, resultValue Value) Value {
+func (interpreter *Interpreter) mapMemberValueAuthorization(
+	self Value,
+	memberAccess *sema.Access,
+	resultValue Value,
+	resultingType sema.Type,
+) Value {
+
 	if memberAccess == nil {
 		return resultValue
 	}
+
 	if mappedAccess, isMappedAccess := (*memberAccess).(sema.EntitlementMapAccess); isMappedAccess {
 		var auth Authorization
 		switch selfValue := self.(type) {
@@ -4723,8 +4730,18 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 				panic(err)
 			}
 			auth = ConvertSemaAccessToStaticAuthorization(interpreter, imageAccess)
+
 		default:
-			auth = ConvertSemaAccessToStaticAuthorization(interpreter, mappedAccess.Codomain())
+			var access sema.Access
+			if mappedAccess.Type == sema.IdentityMappingType {
+				access = sema.AllSupportedEntitlements(resultingType)
+			}
+
+			if access == nil {
+				access = mappedAccess.Codomain()
+			}
+
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
 		}
 
 		switch refValue := resultValue.(type) {
@@ -4739,15 +4756,21 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 	return resultValue
 }
 
-func (interpreter *Interpreter) getMemberWithAuthMapping(self Value, locationRange LocationRange, identifier string) Value {
+func (interpreter *Interpreter) getMemberWithAuthMapping(
+	self Value,
+	locationRange LocationRange,
+	identifier string,
+	memberAccessInfo sema.MemberAccessInfo,
+) Value {
+
 	result := interpreter.getMember(self, locationRange, identifier)
 	if result == nil {
 		return nil
 	}
 	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
-	// on the runtime authorizations of the acccessing reference or composite
+	// on the runtime authorizations of the accessing reference or composite
 	memberAccess := interpreter.getAccessOfMember(self, identifier)
-	return interpreter.mapMemberValueAuthorization(self, memberAccess, result)
+	return interpreter.mapMemberValueAuthorization(self, memberAccess, result, memberAccessInfo.ResultingType)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.

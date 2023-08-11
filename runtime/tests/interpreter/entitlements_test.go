@@ -2656,16 +2656,16 @@ func TestInterpretBuiltinEntitlements(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
         struct S {
-            access(Mutable) fun foo() {}
-            access(Insertable) fun bar() {}
-            access(Removable) fun baz() {}
+            access(Mutate) fun foo() {}
+            access(Insert) fun bar() {}
+            access(Remove) fun baz() {}
         }
 
         fun main() {
             let s = S()
-            let mutableRef = &s as auth(Mutable) &S
-            let insertableRef = &s as auth(Insertable) &S
-            let removableRef = &s as auth(Removable) &S
+            let mutableRef = &s as auth(Mutate) &S
+            let insertableRef = &s as auth(Insert) &S
+            let removableRef = &s as auth(Remove) &S
         }
     `)
 
@@ -2739,14 +2739,14 @@ func TestInterpretIdentityMapping(t *testing.T) {
             fun main() {
                 let s = S()
 
-                let mutableRef = &s as auth(Mutable) &S
-                let ref1: auth(Mutable) &AnyStruct = mutableRef.foo()
+                let mutableRef = &s as auth(Mutate) &S
+                let ref1: auth(Mutate) &AnyStruct = mutableRef.foo()
 
-                let insertableRef = &s as auth(Insertable) &S
-                let ref2: auth(Insertable) &AnyStruct = insertableRef.foo()
+                let insertableRef = &s as auth(Insert) &S
+                let ref2: auth(Insert) &AnyStruct = insertableRef.foo()
 
-                let removableRef = &s as auth(Removable) &S
-                let ref3: auth(Removable) &AnyStruct = removableRef.foo()
+                let removableRef = &s as auth(Remove) &S
+                let ref3: auth(Remove) &AnyStruct = removableRef.foo()
             }
         `)
 
@@ -2768,11 +2768,71 @@ func TestInterpretIdentityMapping(t *testing.T) {
             fun main() {
                 let s = S()
 
-                let ref1 = &s as auth(Insertable | Removable) &S
-                let resultRef1: auth(Insertable | Removable) &AnyStruct = ref1.foo()
+                let ref1 = &s as auth(Insert | Remove) &S
+                let resultRef1: auth(Insert | Remove) &AnyStruct = ref1.foo()
 
-                let ref2 = &s as auth(Insertable, Removable) &S
-                let resultRef2: auth(Insertable, Removable) &AnyStruct = ref2.foo()
+                let ref2 = &s as auth(Insert, Remove) &S
+                let resultRef2: auth(Insert, Remove) &AnyStruct = ref2.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("owned value, with entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            struct X {
+               access(A | B) var s: String
+               init() {
+                   self.s = "hello"
+               }
+               access(C) fun foo() {}
+            }
+
+            struct Y {
+
+                // Reference
+                access(Identity) var x1: auth(Identity) &X
+
+                // Optional reference
+                access(Identity) var x2: auth(Identity) &X?
+
+                // Function returning a reference
+                access(Identity) fun getX(): auth(Identity) &X {
+                    let x = X()
+                    return &x as auth(Identity) &X
+                }
+
+                // Function returning an optional reference
+                access(Identity) fun getOptionalX(): auth(Identity) &X? {
+                    let x: X? = X()
+                    return &x as auth(Identity) &X?
+                }
+
+                init() {
+                    let x = X()
+                    self.x1 = &x as auth(A, B, C) &X
+                    self.x2 = nil
+                }
+            }
+
+            fun main() {
+                let y = Y()
+
+                let ref1: auth(A, B, C) &X = y.x1
+
+                let ref2: auth(A, B, C) &X? = y.x2
+
+                let ref3: auth(A, B, C) &X = y.getX()
+
+                let ref4: auth(A, B, C) &X? = y.getOptionalX()
             }
         `)
 

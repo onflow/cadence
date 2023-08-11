@@ -1,6 +1,6 @@
 
-entitlement Mutable
+entitlement Mutate
 
-entitlement Insertable
+entitlement Insert
 
-entitlement Removable
+entitlement Remove

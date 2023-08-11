@@ -312,11 +312,34 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 	return variable.Type
 }
 
+var mutableEntitledAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{MutateEntitlement},
+	Disjunction,
+)
+
+var insertableAndRemovableEntitledAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{InsertEntitlement, RemoveEntitlement},
+	Conjunction,
+)
+
 func (checker *Checker) visitIndexExpressionAssignment(
 	indexExpression *ast.IndexExpression,
 ) (elementType Type) {
 
 	elementType = checker.visitIndexExpression(indexExpression, true)
+
+	indexExprTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
+	indexedRefType, isReference := referenceType(indexExprTypes.IndexedType)
+
+	if isReference &&
+		!mutableEntitledAccess.PermitsAccess(indexedRefType.Authorization) &&
+		!insertableAndRemovableEntitledAccess.PermitsAccess(indexedRefType.Authorization) {
+		checker.report(&UnauthorizedReferenceAssignmentError{
+			RequiredAccess: [2]Access{mutableEntitledAccess, insertableAndRemovableEntitledAccess},
+			FoundAccess:    indexedRefType.Authorization,
+			Range:          ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
+		})
+	}
 
 	if elementType == nil {
 		return InvalidType

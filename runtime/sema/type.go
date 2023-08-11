@@ -1889,6 +1889,7 @@ const UFix64TypeMaxFractional = fixedpoint.UFix64TypeMaxFractional
 
 type ArrayType interface {
 	ValueIndexableType
+	EntitlementSupportingType
 	isArrayType()
 }
 
@@ -1963,12 +1964,18 @@ Available if the array element type is not resource-kinded.
 `
 
 var insertableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{InsertableEntitlement, MutableEntitlement},
+	[]*EntitlementType{
+		InsertEntitlement,
+		MutateEntitlement,
+	},
 	Disjunction,
 )
 
 var removableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{RemovableEntitlement, MutableEntitlement},
+	[]*EntitlementType{
+		RemoveEntitlement,
+		MutateEntitlement,
+	},
 	Disjunction,
 )
 
@@ -2418,6 +2425,7 @@ type VariableSizedType struct {
 var _ Type = &VariableSizedType{}
 var _ ArrayType = &VariableSizedType{}
 var _ ValueIndexableType = &VariableSizedType{}
+var _ EntitlementSupportingType = &VariableSizedType{}
 
 func NewVariableSizedType(memoryGauge common.MemoryGauge, typ Type) *VariableSizedType {
 	common.UseMemory(memoryGauge, common.VariableSizedSemaTypeMemoryUsage)
@@ -2559,6 +2567,18 @@ func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 	}
 }
 
+func (t *VariableSizedType) SupportedEntitlements() *EntitlementOrderedSet {
+	return arrayDictionaryEntitlements
+}
+
+var arrayDictionaryEntitlements = func() *EntitlementOrderedSet {
+	set := orderedmap.New[EntitlementOrderedSet](3)
+	set.Set(MutateEntitlement, struct{}{})
+	set.Set(InsertEntitlement, struct{}{})
+	set.Set(RemoveEntitlement, struct{}{})
+	return set
+}()
+
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
 	Type                Type
@@ -2570,6 +2590,7 @@ type ConstantSizedType struct {
 var _ Type = &ConstantSizedType{}
 var _ ArrayType = &ConstantSizedType{}
 var _ ValueIndexableType = &ConstantSizedType{}
+var _ EntitlementSupportingType = &ConstantSizedType{}
 
 func NewConstantSizedType(memoryGauge common.MemoryGauge, typ Type, size int64) *ConstantSizedType {
 	common.UseMemory(memoryGauge, common.ConstantSizedSemaTypeMemoryUsage)
@@ -2717,6 +2738,10 @@ func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 		Type: newInnerType,
 		Size: t.Size,
 	}
+}
+
+func (t *ConstantSizedType) SupportedEntitlements() *EntitlementOrderedSet {
+	return arrayDictionaryEntitlements
 }
 
 // Parameter
@@ -5238,6 +5263,7 @@ type DictionaryType struct {
 
 var _ Type = &DictionaryType{}
 var _ ValueIndexableType = &DictionaryType{}
+var _ EntitlementSupportingType = &DictionaryType{}
 
 func NewDictionaryType(memoryGauge common.MemoryGauge, keyType, valueType Type) *DictionaryType {
 	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
@@ -5666,6 +5692,10 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 		KeyType:   newKeyType,
 		ValueType: newValueType,
 	}
+}
+
+func (t *DictionaryType) SupportedEntitlements() *EntitlementOrderedSet {
+	return arrayDictionaryEntitlements
 }
 
 // ReferenceType represents the reference to a value

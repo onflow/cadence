@@ -723,7 +723,9 @@ func TestCheckMutationThroughInnerReference(t *testing.T) {
               }
         `,
 		)
-		require.NoError(t, err)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
 }
 
