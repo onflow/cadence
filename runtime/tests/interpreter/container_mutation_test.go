@@ -918,9 +918,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
             }
         `)
 
-		// TODO: use stdlib
-		assert.FailNow(t, "TODO")
-		var owner interpreter.Value = nil
+		owner := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
 
 		_, err := inter.Invoke("test", owner)
 		require.NoError(t, err)

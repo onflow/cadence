@@ -705,9 +705,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		// TODO: use stdlib
-		assert.FailNow(t, "TODO")
-		var account interpreter.Value = nil
+		account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
 
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
@@ -728,9 +726,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		// TODO: use stdlib
-		assert.FailNow(t, "TODO")
-		var account interpreter.Value = nil
+		account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
 
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
@@ -6683,9 +6679,7 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		// TODO: use stdlib
-		assert.FailNow(t, "TODO")
-		var account interpreter.Value = nil
+		account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
 
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
@@ -7801,23 +7795,19 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 	t.Run("creation", func(t *testing.T) {
 		t.Parallel()
 
-		// TODO: use stdlib
-		assert.FailNow(t, "TODO")
-		var account interpreter.Value = nil
-
 		// Raw string count with empty location
 
 		script := `
             struct S {}
 
-            access(all) fun main(account: &Account) {
+            access(all) fun main() {
                 let s = CompositeType("")
             }
         `
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", account)
+		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
 		emptyLocationStringCount := meter.getMemory(common.MemoryKindRawString)
@@ -7827,7 +7817,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 		script = `
             struct S {}
 
-            access(all) fun main(account: &Account) {
+            access(all) fun main() {
                 let s = CompositeType("S.test.S")
             }
         `
@@ -7835,7 +7825,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 		meter = newTestMemoryGauge()
 		inter = parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err = inter.Invoke("main", account)
+		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
 		testLocationStringCount := meter.getMemory(common.MemoryKindRawString)
@@ -8623,9 +8613,11 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	meter := newTestMemoryGauge()
 	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-	// TODO: use stdlib
-	assert.FailNow(t, "TODO")
-	var account interpreter.Value = nil
+	account := stdlib.NewAccountReferenceValue(
+		nil,
+		nil,
+		interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1})),
+	)
 
 	_, err := inter.Invoke("main", account)
 	require.NoError(t, err)

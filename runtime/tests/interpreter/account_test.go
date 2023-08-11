@@ -374,9 +374,8 @@ func testAccountWithErrorHandler(
 	*interpreter.Interpreter,
 	func() map[storageKey]interpreter.Value,
 ) {
-	// TODO: use stdlib
-	var account interpreter.Value = nil
-	assert.FailNow(t, "TODO")
+
+	account := stdlib.NewAccountReferenceValue(nil, nil, address)
 
 	var valueDeclarations []stdlib.StandardLibraryValue
 
@@ -466,14 +465,6 @@ func testAccountWithErrorHandler(
 		return accountValues
 	}
 	return inter, getAccountValues
-}
-
-func returnZeroUInt64(_ *interpreter.Interpreter) interpreter.UInt64Value {
-	return interpreter.NewUnmeteredUInt64Value(0)
-}
-
-func returnZeroUFix64() interpreter.UFix64Value {
-	return interpreter.NewUnmeteredUFix64Value(0)
 }
 
 func TestInterpretAccountStorageSave(t *testing.T) {
@@ -1346,7 +1337,7 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
 	}
 }
 
-func TestInterpretAccount_StorageFields(t *testing.T) {
+func TestInterpretAccountStorageFields(t *testing.T) {
 	t.Parallel()
 
 	for _, auth := range []bool{true, false} {

@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -250,9 +251,8 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		// TODO: use stdlib
-		assert.FailNow(t, "TODO")
-		var signer1, signer2 interpreter.Value = nil, nil
+		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
+		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2})
 
 		// first transaction
 		err := inter.InvokeTransaction(0, signer1)
@@ -285,16 +285,14 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.TrueValue,
 		}
 
-		// TODO: use stdlib
-		assert.FailNow(t, "TODO")
-		var account interpreter.Value = nil
+		account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
 
 		prepareArguments := []interpreter.Value{account}
 
 		arguments = append(arguments, prepareArguments...)
 
 		err := inter.InvokeTransaction(0, arguments...)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		values := inter.Globals.Get("values").GetValue()
 

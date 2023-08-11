@@ -8443,9 +8443,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 					_ common.CompositeKind,
 				) map[string]interpreter.Value {
 
-					// TODO: use stdlib
-					assert.FailNow(t, "TODO")
-					var account interpreter.Value = nil
+					account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
 
 					return map[string]interpreter.Value{
 						"account": account,
@@ -8976,13 +8974,9 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
     `
 	// `authAccount`
 
-	address := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
+	address := common.MustBytesToAddress([]byte{0x1})
 
-	// TODO: use stdlib
-	assert.FailNow(t, "TODO")
-	var account interpreter.Value = nil
+	account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue(address))
 
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name:  "account",
@@ -9006,11 +9000,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					// TODO: use stdlib
-					assert.FailNow(t, "TODO")
-					var account interpreter.Value = nil
-
-					return account
+					return stdlib.NewAccountReferenceValue(nil, nil, address)
 				},
 			},
 		},
