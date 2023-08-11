@@ -33,9 +33,14 @@ func TestPrimitiveStaticTypeSemaTypeConversion(t *testing.T) {
 			t.Parallel()
 
 			semaType := ty.SemaType()
+
+			// Some primitive static types are deprecated,
+			// and only exist for migration purposes,
+			// so do not have an equivalent sema type
 			if semaType == nil {
 				return
 			}
+
 			ty2 := ConvertSemaToPrimitiveStaticType(nil, semaType)
 			require.True(t, ty2.Equal(ty))
 		})

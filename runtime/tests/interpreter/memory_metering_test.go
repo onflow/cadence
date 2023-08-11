@@ -705,8 +705,11 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		addressValue := newRandomValueGenerator().randomAddressValue()
-		_, err := inter.Invoke("main", newTestAccountValue(meter, addressValue))
+		// TODO: use stdlib
+		assert.FailNow(t, "TODO")
+		var account interpreter.Value = nil
+
+		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -725,8 +728,11 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		addressValue := newRandomValueGenerator().randomAddressValue()
-		_, err := inter.Invoke("main", newTestAccountValue(meter, addressValue))
+		// TODO: use stdlib
+		assert.FailNow(t, "TODO")
+		var account interpreter.Value = nil
+
+		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -6677,7 +6683,10 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		account := newTestAccountValue(meter, interpreter.AddressValue{})
+		// TODO: use stdlib
+		assert.FailNow(t, "TODO")
+		var account interpreter.Value = nil
+
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -7792,6 +7801,10 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 	t.Run("creation", func(t *testing.T) {
 		t.Parallel()
 
+		// TODO: use stdlib
+		assert.FailNow(t, "TODO")
+		var account interpreter.Value = nil
+
 		// Raw string count with empty location
 
 		script := `
@@ -7803,7 +7816,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
         `
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-		account := newTestAccountValue(meter, interpreter.AddressValue{})
+
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -7821,7 +7834,7 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 
 		meter = newTestMemoryGauge()
 		inter = parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-		account = newTestAccountValue(meter, interpreter.AddressValue{})
+
 		_, err = inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -8610,7 +8623,10 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	meter := newTestMemoryGauge()
 	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-	account := newTestAccountValue(meter, interpreter.AddressValue{})
+	// TODO: use stdlib
+	assert.FailNow(t, "TODO")
+	var account interpreter.Value = nil
+
 	_, err := inter.Invoke("main", account)
 	require.NoError(t, err)
 
@@ -9028,12 +9044,20 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				continue
 			}
 
+			semaType := primitiveStaticType.SemaType()
+
+			// Some primitive static types are deprecated,
+			// and only exist for migration purposes,
+			// so do not have an equivalent sema type
+			if semaType == nil {
+				continue
+			}
+
 			script := fmt.Sprintf(`
                 access(all) fun main() {
                     log(Type<%s>())
                 }`,
-				sema.NewTypeAnnotation(primitiveStaticType.SemaType()).
-					QualifiedString(),
+				sema.NewTypeAnnotation(semaType).QualifiedString(),
 			)
 
 			testStaticTypeStringConversion(t, script)

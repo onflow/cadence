@@ -8442,8 +8442,13 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 					_ string,
 					_ common.CompositeKind,
 				) map[string]interpreter.Value {
+
+					// TODO: use stdlib
+					assert.FailNow(t, "TODO")
+					var account interpreter.Value = nil
+
 					return map[string]interpreter.Value{
-						"account": newTestAccountValue(inter, addressValue),
+						"account": account,
 					}
 				},
 			},
@@ -8975,11 +8980,14 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 	}
 
+	// TODO: use stdlib
+	assert.FailNow(t, "TODO")
+	var account interpreter.Value = nil
+
 	valueDeclaration := stdlib.StandardLibraryValue{
-		Name: "account",
-		Type: sema.AccountReferenceType,
-		// TODO: reference, use stdlib
-		Value: newTestAccountValue(nil, interpreter.AddressValue(address)),
+		Name:  "account",
+		Type:  sema.AccountReferenceType,
+		Value: account,
 		Kind:  common.DeclarationKindConstant,
 	}
 
@@ -8998,7 +9006,11 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return newTestAccountValue(nil, address)
+					// TODO: use stdlib
+					assert.FailNow(t, "TODO")
+					var account interpreter.Value = nil
+
+					return account
 				},
 			},
 		},

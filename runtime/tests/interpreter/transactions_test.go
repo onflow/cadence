@@ -250,14 +250,9 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		signer1 := newTestAccountValue(
-			nil,
-			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
-		)
-		signer2 := newTestAccountValue(
-			nil,
-			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
-		)
+		// TODO: use stdlib
+		assert.FailNow(t, "TODO")
+		var signer1, signer2 interpreter.Value = nil, nil
 
 		// first transaction
 		err := inter.InvokeTransaction(0, signer1)
@@ -290,12 +285,11 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.TrueValue,
 		}
 
-		prepareArguments := []interpreter.Value{
-			newTestAccountValue(
-				nil,
-				interpreter.AddressValue{},
-			),
-		}
+		// TODO: use stdlib
+		assert.FailNow(t, "TODO")
+		var account interpreter.Value = nil
+
+		prepareArguments := []interpreter.Value{account}
 
 		arguments = append(arguments, prepareArguments...)
 

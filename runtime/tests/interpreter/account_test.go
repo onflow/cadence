@@ -73,16 +73,18 @@ func testAccountWithErrorHandler(
 	*interpreter.Interpreter,
 	func() map[storageKey]interpreter.Value,
 ) {
+	// TODO: use stdlib
+	var account interpreter.Value = nil
+	assert.FailNow(t, "TODO")
 
 	var valueDeclarations []stdlib.StandardLibraryValue
 
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "authAccount",
-		Type: sema.FullyEntitledAccountReferenceType,
-		// TODO: reference, use stdlib
-		Value: newTestAccountValue(nil, address),
+		Name:  "authAccount",
+		Type:  sema.FullyEntitledAccountReferenceType,
+		Value: account,
 		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
@@ -90,10 +92,9 @@ func testAccountWithErrorHandler(
 	// `pubAccount`
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "pubAccount",
-		Type: sema.AccountReferenceType,
-		// TODO: reference, use stdlib
-		Value: newTestAccountValue(nil, address),
+		Name:  "pubAccount",
+		Type:  sema.AccountReferenceType,
+		Value: account,
 		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
@@ -133,7 +134,8 @@ func testAccountWithErrorHandler(
 				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
 				InvalidatedResourceValidationEnabled: true,
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return newTestAccountValue(nil, address)
+					// TODO: use stdlib
+					return nil
 				},
 			},
 			HandleCheckerError: checkerErrorHandler,
@@ -1000,82 +1002,92 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 func TestInterpretAccountBalanceFields(t *testing.T) {
 	t.Parallel()
 
-	for _, fieldName := range []string{
-		"balance",
-		"availableBalance",
-	} {
+	for _, auth := range []bool{true, false} {
 
-		t.Run(fieldName, func(t *testing.T) {
+		for _, fieldName := range []string{
+			"balance",
+			"availableBalance",
+		} {
 
-			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+			testName := fmt.Sprintf("%s, auth: %v", fieldName, auth)
 
-			code := fmt.Sprintf(
-				`
-                  fun test(): UFix64 {
-                      return account.%s
-                  }
-                `,
-				fieldName,
-			)
-			inter, _ := testAccount(
-				t,
-				address,
-				auth,
-				code,
-				sema.Config{},
-			)
+			t.Run(testName, func(t *testing.T) {
 
-			value, err := inter.Invoke("test")
-			require.NoError(t, err)
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.NewUnmeteredUFix64Value(0),
-				value,
-			)
-		})
+				code := fmt.Sprintf(
+					`
+                      fun test(): UFix64 {
+                          return account.%s
+                      }
+                    `,
+					fieldName,
+				)
+				inter, _ := testAccount(
+					t,
+					address,
+					auth,
+					code,
+					sema.Config{},
+				)
+
+				value, err := inter.Invoke("test")
+				require.NoError(t, err)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.NewUnmeteredUFix64Value(0),
+					value,
+				)
+			})
+		}
 	}
 }
 
 func TestInterpretAccount_StorageFields(t *testing.T) {
 	t.Parallel()
 
-	for _, fieldName := range []string{
-		"used",
-		"capacity",
-	} {
+	for _, auth := range []bool{true, false} {
 
-		t.Run(fieldName, func(t *testing.T) {
+		for _, fieldName := range []string{
+			"used",
+			"capacity",
+		} {
 
-			code := fmt.Sprintf(
-				`
-                          fun test(): UInt64 {
-                              return account.storage.%s
-                          }
-                        `,
-				fieldName,
-			)
+			testName := fmt.Sprintf("%s, auth: %v", fieldName, auth)
 
-			address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+			t.Run(testName, func(t *testing.T) {
 
-			inter, _ := testAccount(
-				t,
-				address,
-				auth,
-				code,
-				sema.Config{},
-			)
+				code := fmt.Sprintf(
+					`
+                      fun test(): UInt64 {
+                          return account.storage.%s
+                      }
+                    `,
+					fieldName,
+				)
 
-			value, err := inter.Invoke("test")
-			require.NoError(t, err)
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.NewUnmeteredUInt64Value(0),
-				value,
-			)
-		})
+				inter, _ := testAccount(
+					t,
+					address,
+					auth,
+					code,
+					sema.Config{},
+				)
+
+				value, err := inter.Invoke("test")
+				require.NoError(t, err)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.NewUnmeteredUInt64Value(0),
+					value,
+				)
+			})
+		}
 	}
 }

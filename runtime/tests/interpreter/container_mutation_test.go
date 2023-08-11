@@ -918,14 +918,12 @@ func TestDictionaryMutation(t *testing.T) {
             }
         `)
 
-		owner := newTestAccountValue(
-			inter,
-			interpreter.NewUnmeteredAddressValueFromBytes(common.Address{0x1}.Bytes()),
-		)
+		// TODO: use stdlib
+		assert.FailNow(t, "TODO")
+		var owner interpreter.Value = nil
 
 		_, err := inter.Invoke("test", owner)
 		require.NoError(t, err)
-
 	})
 }
 
