@@ -80,8 +80,7 @@ type AccountHandler interface {
 	AccountIDGenerator
 	BalanceProvider
 	AvailableBalanceProvider
-	StorageUsedProvider
-	StorageCapacityProvider
+	AccountStorageHandler
 	AccountKeysHandler
 	AccountContractsHandler
 }
@@ -237,10 +236,11 @@ func NewAccountValue(
 		newAccountBalanceGetFunction(gauge, handler, addressValue),
 		newAccountAvailableBalanceGetFunction(gauge, handler, addressValue),
 		func() interpreter.Value {
-			// TODO:
-			//newStorageUsedGetFunction(handler, addressValue),
-			//newStorageCapacityGetFunction(handler, addressValue),
-			return nil
+			return newAccountStorageValue(
+				gauge,
+				handler,
+				addressValue,
+			)
 		},
 		func() interpreter.Value {
 			return newAccountContractsValue(
@@ -323,6 +323,24 @@ func newAccountContractsValue(
 			handler,
 			addressValue,
 		),
+	)
+}
+
+type AccountStorageHandler interface {
+	StorageUsedProvider
+	StorageCapacityProvider
+}
+
+func newAccountStorageValue(
+	gauge common.MemoryGauge,
+	handler AccountStorageHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewAccountStorageValue(
+		gauge,
+		addressValue,
+		newStorageUsedGetFunction(handler, addressValue),
+		newStorageCapacityGetFunction(handler, addressValue),
 	)
 }
 
