@@ -197,7 +197,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		)
 	})
 
-
 	t.Run("resource, shift statement, index expression", func(t *testing.T) {
 
 		t.Parallel()
