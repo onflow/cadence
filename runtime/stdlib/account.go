@@ -219,9 +219,15 @@ func NewAccountReferenceValue(
 	gauge common.MemoryGauge,
 	handler AccountHandler,
 	addressValue interpreter.AddressValue,
+	authorization interpreter.Authorization,
 ) interpreter.Value {
-	// TODO: interpreter.NewEphemeralReferenceValue(
-	return NewAccountValue(gauge, handler, addressValue)
+	account := NewAccountValue(gauge, handler, addressValue)
+	return interpreter.NewEphemeralReferenceValue(
+		gauge,
+		authorization,
+		account,
+		sema.AccountReferenceType,
+	)
 }
 
 func NewAccountValue(
@@ -1979,6 +1985,7 @@ func NewGetAccountFunction(handler AccountHandler) StandardLibraryValue {
 				invocation.Interpreter,
 				handler,
 				accountAddress,
+				interpreter.UnauthorizedAccess,
 			)
 		},
 	)

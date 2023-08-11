@@ -29,21 +29,26 @@ var AccountReferenceType = &ReferenceType{
 
 var AccountReferenceTypeAnnotation = NewTypeAnnotation(AccountReferenceType)
 
+// FullyEntitledAccountAccess represents
+//
+//	auth(Storage, Contracts, Keys, Inbox, Capabilities)
+var FullyEntitledAccountAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{
+		StorageType,
+		ContractsType,
+		KeysType,
+		InboxType,
+		CapabilitiesType,
+	},
+	Conjunction,
+)
+
 // FullyEntitledAccountReferenceType represents the type
 //
 //	auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account
 var FullyEntitledAccountReferenceType = &ReferenceType{
-	Authorization: NewEntitlementSetAccess(
-		[]*EntitlementType{
-			StorageType,
-			ContractsType,
-			KeysType,
-			InboxType,
-			CapabilitiesType,
-		},
-		Conjunction,
-	),
-	Type: AccountType,
+	Authorization: FullyEntitledAccountAccess,
+	Type:          AccountType,
 }
 
 var FullyEntitledAccountReferenceTypeAnnotation = NewTypeAnnotation(FullyEntitledAccountReferenceType)
