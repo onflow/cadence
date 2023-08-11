@@ -195,6 +195,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	}
 
 	// Export before committing storage
+
 	exportableValue := newExportableValue(value, inter)
 	result, err := exportValue(
 		exportableValue,
@@ -228,8 +229,6 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 			err = internalErr
 		})
 
-		inter.ConfigureAccountLinkingAllowed()
-
 		values, err := validateArgumentParams(
 			inter,
 			executor.environment,
@@ -241,6 +240,6 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 			return nil, err
 		}
 
-		return inter.Invoke("main", values...)
+		return inter.Invoke(sema.FunctionEntryPointName, values...)
 	}
 }

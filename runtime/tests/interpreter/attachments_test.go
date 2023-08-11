@@ -1092,7 +1092,7 @@ func TestInterpretAttachmentNameConflict(t *testing.T) {
 	})
 }
 
-func TestInterpretAttachmentRestrictedType(t *testing.T) {
+func TestInterpretAttachmentIntersectionType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {
@@ -1162,7 +1162,7 @@ func TestInterpretAttachmentRestrictedType(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
 
-	t.Run("constructor on restricted", func(t *testing.T) {
+	t.Run("constructor on intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1233,134 +1233,6 @@ func TestInterpretAttachmentRestrictedType(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
 
-}
-
-func TestInterpretAttachmentStorage(t *testing.T) {
-	t.Parallel()
-
-	t.Run("save and load", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, `
-            resource R {}
-            attachment A for R {
-                fun foo(): Int { return 3 }
-            }
-            fun test(): Int {
-                let r <- create R()
-                let r2 <- attach A() to <-r
-                authAccount.save(<-r2, to: /storage/foo)
-                let r3 <- authAccount.load<@R>(from: /storage/foo)!
-                let i = r3[A]?.foo()!
-                destroy r3
-                return i
-            }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
-	})
-
-	t.Run("save and borrow", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, `
-            resource R {}
-            attachment A for R {
-                fun foo(): Int { return 3 }
-            }
-            fun test(): Int {
-                let r <- create R()
-                let r2 <- attach A() to <-r
-                authAccount.save(<-r2, to: /storage/foo)
-                let r3 = authAccount.borrow<&R>(from: /storage/foo)!
-                let i = r3[A]?.foo()!
-                return i
-            }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
-	})
-
-	t.Run("capability", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, `
-            resource R {}
-            attachment A for R {
-                fun foo(): Int { return 3 }
-            }
-            fun test(): Int {
-                let r <- create R()
-                let r2 <- attach A() to <-r
-                authAccount.save(<-r2, to: /storage/foo)
-                authAccount.link<&R>(/public/foo, target: /storage/foo)
-                let cap = pubAccount.getCapability<&R>(/public/foo)!
-                let i = cap.borrow()![A]?.foo()!
-                return i
-            }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
-	})
-
-	t.Run("capability interface", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, `
-            resource R: I {}
-            resource interface I {}
-            attachment A for I {
-                fun foo(): Int { return 3 }
-            }
-            fun test(): Int {
-                let r <- create R()
-                let r2 <- attach A() to <-r
-                authAccount.save(<-r2, to: /storage/foo)
-                authAccount.link<&R{I}>(/public/foo, target: /storage/foo)
-                let cap = pubAccount.getCapability<&R{I}>(/public/foo)!
-                let i = cap.borrow()![A]?.foo()!
-                return i
-            }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
-	})
 }
 
 func TestInterpretAttachmentDestructor(t *testing.T) {

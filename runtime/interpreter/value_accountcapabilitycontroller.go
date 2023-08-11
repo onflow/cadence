@@ -160,6 +160,7 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -240,8 +241,6 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	return NewAccountReferenceValue(
 		interpreter,
 		capabilityAddress,
-		// NOTE: no source path, not a path capability (linking API)
-		EmptyPathValue,
 		resultBorrowType.Type,
 	)
 }

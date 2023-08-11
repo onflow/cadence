@@ -117,35 +117,14 @@ const TestTypeTestCapIntFieldDocString = `
 This is a test parameterized capability field.
 `
 
-const TestTypeTestRestrictedWithoutTypeFieldName = "testRestrictedWithoutType"
+const TestTypeTestIntersectionWithoutTypeFieldName = "testIntersectionWithoutType"
 
-var TestTypeTestRestrictedWithoutTypeFieldType = &RestrictedType{
-	Restrictions: []*InterfaceType{BarType, BazType},
+var TestTypeTestIntersectionWithoutTypeFieldType = &IntersectionType{
+	Types: []*InterfaceType{BarType, BazType},
 }
 
-const TestTypeTestRestrictedWithoutTypeFieldDocString = `
-This is a test restricted type (without type) field.
-`
-
-const TestTypeTestRestrictedWithTypeFieldName = "testRestrictedWithType"
-
-var TestTypeTestRestrictedWithTypeFieldType = &RestrictedType{
-	Type:         FooType,
-	Restrictions: []*InterfaceType{BarType, BazType},
-}
-
-const TestTypeTestRestrictedWithTypeFieldDocString = `
-This is a test restricted type (with type) field.
-`
-
-const TestTypeTestRestrictedWithoutRestrictionsFieldName = "testRestrictedWithoutRestrictions"
-
-var TestTypeTestRestrictedWithoutRestrictionsFieldType = &RestrictedType{
-	Type: FooType,
-}
-
-const TestTypeTestRestrictedWithoutRestrictionsFieldDocString = `
-This is a test restricted type (without restrictions) field.
+const TestTypeTestIntersectionWithoutTypeFieldDocString = `
+This is a test intersection type (without type) field.
 `
 
 const TestTypeName = "Test"
@@ -251,25 +230,9 @@ func init() {
 				t,
 				ast.AccessAll,
 				ast.VariableKindConstant,
-				TestTypeTestRestrictedWithoutTypeFieldName,
-				TestTypeTestRestrictedWithoutTypeFieldType,
-				TestTypeTestRestrictedWithoutTypeFieldDocString,
-			),
-			NewUnmeteredFieldMember(
-				t,
-				ast.AccessAll,
-				ast.VariableKindConstant,
-				TestTypeTestRestrictedWithTypeFieldName,
-				TestTypeTestRestrictedWithTypeFieldType,
-				TestTypeTestRestrictedWithTypeFieldDocString,
-			),
-			NewUnmeteredFieldMember(
-				t,
-				ast.AccessAll,
-				ast.VariableKindConstant,
-				TestTypeTestRestrictedWithoutRestrictionsFieldName,
-				TestTypeTestRestrictedWithoutRestrictionsFieldType,
-				TestTypeTestRestrictedWithoutRestrictionsFieldDocString,
+				TestTypeTestIntersectionWithoutTypeFieldName,
+				TestTypeTestIntersectionWithoutTypeFieldType,
+				TestTypeTestIntersectionWithoutTypeFieldDocString,
 			),
 		})
 	}

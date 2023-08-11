@@ -114,14 +114,6 @@ type OnMeterComputationFunc func(
 	intensity uint,
 )
 
-// OnAccountLinkedFunc is a function that is triggered when an account is linked by the program.
-type OnAccountLinkedFunc func(
-	inter *Interpreter,
-	locationRange LocationRange,
-	address AddressValue,
-	path PathValue,
-) error
-
 // IDCapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
 type IDCapabilityBorrowHandlerFunc func(
 	inter *Interpreter,
@@ -423,12 +415,15 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	if argumentCount != parameterCount {
 
-		// if the function has defined optional parameters,
-		// then the provided arguments must be equal to or greater than
-		// the number of required parameters.
-		if functionType.RequiredArgumentCount == nil ||
-			argumentCount < *functionType.RequiredArgumentCount {
+		if argumentCount < functionType.Arity.MinCount(parameterCount) {
+			return nil, ArgumentCountError{
+				ParameterCount: parameterCount,
+				ArgumentCount:  argumentCount,
+			}
+		}
 
+		maxCount := functionType.Arity.MaxCount(parameterCount)
+		if maxCount != nil && argumentCount > *maxCount {
 			return nil, ArgumentCountError{
 				ParameterCount: parameterCount,
 				ArgumentCount:  argumentCount,
@@ -518,20 +513,8 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		var err error
-
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		switch r := r.(type) {
-		case Error,
-			errors.ExternalError,
-			errors.InternalError,
-			errors.UserError:
-			err = r.(error)
-		case error:
-			err = errors.NewUnexpectedErrorFromCause(r)
-		default:
-			err = errors.NewUnexpectedError("%s", r)
-		}
+		err := asCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -558,6 +541,31 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		interpreterErr.StackTrace = interpreter.CallStack()
 
 		onError(interpreterErr)
+	}
+}
+
+func asCadenceError(r any) error {
+	err, isError := r.(error)
+	if !isError {
+		return errors.NewUnexpectedError("%s", r)
+	}
+
+	rootError := err
+
+	for {
+		switch typedError := err.(type) {
+		case Error,
+			errors.ExternalError,
+			errors.InternalError,
+			errors.UserError:
+			return typedError
+		case xerrors.Wrapper:
+			err = typedError.Unwrap()
+		case error:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		default:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		}
 	}
 }
 
@@ -761,7 +769,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 		return result.Value
 	}
 
-	interpreter.visitConditions(preConditions)
+	interpreter.visitConditions(preConditions, ast.ConditionKindPre)
 
 	var returnValue Value
 
@@ -786,7 +794,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 		)
 	}
 
-	interpreter.visitConditions(postConditions)
+	interpreter.visitConditions(postConditions, ast.ConditionKindPost)
 
 	return returnValue
 }
@@ -843,40 +851,56 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
 }
 
-func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
+func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
 	for _, condition := range conditions {
-		interpreter.visitCondition(condition)
+		interpreter.visitCondition(condition, kind)
 	}
 }
 
-func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
+func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast.ConditionKind) {
 
-	// Evaluate the condition as a statement, so we get position information in case of an error
+	switch condition := condition.(type) {
+	case *ast.TestCondition:
+		// Evaluate the condition as a statement, so we get position information in case of an error
+		statement := ast.NewExpressionStatement(interpreter, condition.Test)
 
-	statement := ast.NewExpressionStatement(interpreter, condition.Test)
+		result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-	result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+		value, ok := result.Value.(BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-	value, valueOk := result.Value.(BoolValue)
+		if value {
+			return
+		}
 
-	if ok && valueOk && bool(value) {
-		return
+		messageExpression := condition.Message
+		var message string
+		if messageExpression != nil {
+			messageValue := interpreter.evalExpression(messageExpression)
+			message = messageValue.(*StringValue).Str
+		}
+
+		panic(ConditionError{
+			ConditionKind: kind,
+			Message:       message,
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: statement,
+			},
+		})
+
+	case *ast.EmitCondition:
+		interpreter.evalStatement((*ast.EmitStatement)(condition))
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
-	var message string
-	if condition.Message != nil {
-		messageValue := interpreter.evalExpression(condition.Message)
-		message = messageValue.(*StringValue).Str
-	}
-
-	panic(ConditionError{
-		ConditionKind: condition.Kind,
-		Message:       message,
-		LocationRange: LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: condition.Test,
-		},
-	})
 }
 
 // declareVariable declares a variable in the latest scope
@@ -1740,6 +1764,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		atree.Address{},
 		false,
 		nil,
+		nil,
 	)
 
 	targetType = interpreter.substituteMappedEntitlements(targetType)
@@ -2096,15 +2121,6 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
 
 			switch capability := value.(type) {
-			case *PathCapabilityValue:
-				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
-				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
-				return NewPathCapabilityValue(
-					interpreter,
-					capability.Address,
-					capability.Path,
-					borrowType,
-				)
 			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
@@ -2147,7 +2163,6 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				return NewAccountReferenceValue(
 					interpreter,
 					ref.Address,
-					ref.SourcePath,
 					unwrappedTargetType.Type,
 				)
 
@@ -3413,10 +3428,10 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"RestrictedType",
+		"IntersectionType",
 		NewUnmeteredHostFunctionValue(
-			sema.RestrictedTypeFunctionType,
-			restrictedTypeFunction,
+			sema.IntersectionTypeFunctionType,
+			intersectionTypeFunction,
 		),
 	)
 }
@@ -3592,79 +3607,62 @@ func functionTypeFunction(invocation Invocation) Value {
 	return NewUnmeteredTypeValue(functionStaticType)
 }
 
-func restrictedTypeFunction(invocation Invocation) Value {
-	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
+func intersectionTypeFunction(invocation Invocation) Value {
+	intersectionIDs, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	var staticRestrictions []InterfaceStaticType
-	var semaRestrictions []*sema.InterfaceType
+	var staticIntersections []InterfaceStaticType
+	var semaIntersections []*sema.InterfaceType
 
-	count := restrictionIDs.Count()
+	count := intersectionIDs.Count()
 	if count > 0 {
-		staticRestrictions = make([]InterfaceStaticType, 0, count)
-		semaRestrictions = make([]*sema.InterfaceType, 0, count)
+		staticIntersections = make([]InterfaceStaticType, 0, count)
+		semaIntersections = make([]*sema.InterfaceType, 0, count)
 
-		var invalidRestrictionID bool
-		restrictionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
+		var invalidIntersectionID bool
+		intersectionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
 			typeIDValue, ok := typeID.(*StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+			intersectedInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
 			if err != nil {
-				invalidRestrictionID = true
+				invalidIntersectionID = true
 				return true
 			}
 
-			staticRestrictions = append(
-				staticRestrictions,
-				ConvertSemaToStaticType(invocation.Interpreter, restrictionInterface).(InterfaceStaticType),
+			staticIntersections = append(
+				staticIntersections,
+				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(InterfaceStaticType),
 			)
-			semaRestrictions = append(semaRestrictions, restrictionInterface)
+			semaIntersections = append(semaIntersections, intersectedInterface)
 
 			// Continue iteration
 			return true
 		})
 
-		// If there are any invalid restrictions,
+		// If there are any invalid interfaces,
 		// then return nil
-		if invalidRestrictionID {
+		if invalidIntersectionID {
 			return Nil
 		}
 	}
 
-	var semaType sema.Type
-	var err error
-
-	switch typeID := invocation.Arguments[0].(type) {
-	case NilValue:
-		semaType = nil
-	case *SomeValue:
-		innerValue := typeID.InnerValue(invocation.Interpreter, invocation.LocationRange)
-		semaType, err = lookupComposite(invocation.Interpreter, innerValue.(*StringValue).Str)
-		if err != nil {
-			return Nil
-		}
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	var invalidRestrictedType bool
-	ty := sema.CheckRestrictedType(
+	var invalidIntersectionType bool
+	sema.CheckIntersectionType(
 		invocation.Interpreter,
-		semaType,
-		semaRestrictions,
-		func(_ func(*ast.RestrictedType) error) {
-			invalidRestrictedType = true
+		semaIntersections,
+		func(_ func(*ast.IntersectionType) error) {
+			invalidIntersectionType = true
 		},
 	)
 
-	// If the restricted type would have failed to type-check statically,
+	// If the intersection type would have failed to type-check statically,
 	// then return nil
-	if invalidRestrictedType {
+	if invalidIntersectionType {
 		return Nil
 	}
 
@@ -3672,10 +3670,9 @@ func restrictedTypeFunction(invocation Invocation) Value {
 		invocation.Interpreter,
 		NewTypeValue(
 			invocation.Interpreter,
-			NewRestrictedStaticType(
+			NewIntersectionStaticType(
 				invocation.Interpreter,
-				ConvertSemaToStaticType(invocation.Interpreter, ty),
-				staticRestrictions,
+				staticIntersections,
 			),
 		),
 	)
@@ -4040,12 +4037,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}()
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
+
 				staticType := value.StaticType(inter)
 
-				// Perform a forced type loading to see if the underlying type is not broken.
+				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
-				typeError := inter.checkTypeLoading(staticType)
-				if typeError != nil {
+				valueError := inter.checkValue(
+					value,
+					staticType,
+					invocation.LocationRange,
+				)
+
+				if valueError != nil {
 					continue
 				}
 
@@ -4095,14 +4098,19 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 	)
 }
 
-func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
+func (interpreter *Interpreter) checkValue(
+	value Value,
+	staticType StaticType,
+	locationRange LocationRange,
+) (valueError error) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			rootError := r
 			for {
 				switch err := r.(type) {
 				case errors.UserError, errors.ExternalError:
-					typeError = err.(error)
+					valueError = err.(error)
 					return
 				case xerrors.Wrapper:
 					r = err.Unwrap()
@@ -4113,8 +4121,43 @@ func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeErr
 		}
 	}()
 
-	// Here it is only interested in whether the type can be properly loaded.
-	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
+	// Here, the value at the path could be either:
+	//	1) The actual stored value (storage path)
+	//	2) A capability to the value at the storage (private/public paths)
+
+	if idCapability, ok := value.(*IDCapabilityValue); ok {
+		// If, the value is a capability, try to load the value at the capability target.
+		// However, borrow type is not statically known.
+		// So take the borrow type from the value itself
+
+		// Capability values always have a `CapabilityStaticType` static type.
+		borrowType := staticType.(CapabilityStaticType).BorrowType
+
+		var borrowSemaType sema.Type
+		borrowSemaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
+		if valueError != nil {
+			return valueError
+		}
+
+		referenceType, ok := borrowSemaType.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		_ = interpreter.SharedState.Config.IDCapabilityCheckHandler(
+			interpreter,
+			locationRange,
+			idCapability.Address,
+			idCapability.ID,
+			referenceType,
+			referenceType,
+		)
+
+	} else {
+		// For all other values, trying to load the type is sufficient.
+		// Here it is only interested in whether the type can be properly loaded.
+		_, valueError = interpreter.ConvertStaticToSemaType(staticType)
+	}
 
 	return
 }
@@ -4161,6 +4204,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				locationRange,
 				atree.Address(address),
 				true,
+				nil,
 				nil,
 			)
 
@@ -4285,6 +4329,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				atree.Address{},
 				false,
 				nil,
+				nil,
 			)
 
 			// Remove the value from storage,
@@ -4400,548 +4445,9 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 	)
 }
 
-func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.AuthAccountTypeLinkFunctionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			targetPath, ok := invocation.Arguments[1].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
-			newCapabilityIdentifier := newCapabilityPath.Identifier
-
-			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
-
-			if interpreter.StoredValueExists(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-			) {
-				return Nil
-			}
-
-			// Write new value
-
-			borrowStaticType := ConvertSemaToStaticType(interpreter, borrowType)
-
-			// Note that this will be metered twice if Atree validation is enabled.
-			pathLink := NewPathLinkValue(interpreter, targetPath, borrowStaticType)
-
-			interpreter.WriteStored(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-				pathLink,
-			)
-
-			return NewSomeValueNonCopying(
-				interpreter,
-				NewPathCapabilityValue(
-					interpreter,
-					addressValue,
-					newCapabilityPath,
-					borrowStaticType,
-				),
-			)
-
-		},
-	)
-}
-
 var AuthAccountReferenceStaticType = ReferenceStaticType{
 	ReferencedType: PrimitiveStaticTypeAuthAccount,
 	Authorization:  UnauthorizedAccess,
-}
-
-// Linking
-//
-// When linking to a path with the `AuthAccount.link function`,
-// an interpreter.PathLink (formerly Link) is stored in storage.
-//
-// When linking to an account with the new AuthAccount.linkAccount function,
-// an interpreter.AccountLink is stored in the account.
-//
-// In both cases, when acquiring a capability, e.g. using getCapability,
-// a PathCapabilityValue is returned.
-// This is because in both cases, we are looking up a path in an account.
-// Depending on what is stored in the path, PathLink or AccountLink,
-// we return a respective reference value, a StorageReferenceValue for PathLink
-// (after following the links to the final target),
-// or an AccountReferenceValue for an AccountLink.
-//
-// Again, in both cases for StorageReferenceValue and AccountReferenceValue,
-// for each use, e.g. member access,
-// we dereference/check that the link still exists after the capability was borrowed.
-
-func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.AuthAccountTypeLinkAccountFunctionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			if !interpreter.SharedState.Config.AccountLinkingAllowed {
-				panic(AccountLinkingForbiddenError{
-					LocationRange: invocation.LocationRange,
-				})
-			}
-
-			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
-			newCapabilityIdentifier := newCapabilityPath.Identifier
-
-			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
-
-			if interpreter.StoredValueExists(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-			) {
-				return Nil
-			}
-
-			accountLinkValue := NewAccountLinkValue(interpreter)
-
-			interpreter.WriteStored(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-				accountLinkValue,
-			)
-
-			onAccountLinked := interpreter.SharedState.Config.OnAccountLinked
-			if onAccountLinked != nil {
-				err := onAccountLinked(
-					interpreter,
-					invocation.LocationRange,
-					addressValue,
-					newCapabilityPath,
-				)
-				if err != nil {
-					panic(err)
-				}
-			}
-
-			return NewSomeValueNonCopying(
-				interpreter,
-				NewPathCapabilityValue(
-					interpreter,
-					addressValue,
-					newCapabilityPath,
-					AuthAccountReferenceStaticType,
-				),
-			)
-
-		},
-	)
-}
-
-func (interpreter *Interpreter) accountGetLinkTargetFunction(
-	functionType *sema.FunctionType,
-	addressValue AddressValue,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		functionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			capabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := capabilityPath.Domain.Identifier()
-			identifier := capabilityPath.Identifier
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-
-			if value == nil {
-				return Nil
-			}
-
-			link, ok := value.(PathLinkValue)
-			if !ok {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(
-				interpreter,
-				link.TargetPath,
-			)
-		},
-	)
-}
-
-func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.AuthAccountTypeUnlinkFunctionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			capabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := capabilityPath.Domain.Identifier()
-			identifier := capabilityPath.Identifier
-
-			// Write new value
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			interpreter.WriteStored(
-				address,
-				domain,
-				storageMapKey,
-				nil,
-			)
-
-			return Void
-		},
-	)
-}
-
-func (interpreter *Interpreter) pathCapabilityBorrowFunction(
-	addressValue AddressValue,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.CapabilityTypeBorrowFunctionType(borrowType),
-		func(invocation Invocation) Value {
-
-			interpreter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				borrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-			}
-
-			if borrowType == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			target, authorization, err :=
-				interpreter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					borrowType,
-					true,
-					locationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			var reference ReferenceValue
-
-			switch target := target.(type) {
-			case nil:
-				reference = nil
-
-			case AccountCapabilityTarget:
-				reference = NewAccountReferenceValue(
-					interpreter,
-					address,
-					pathValue,
-					borrowType.Type,
-				)
-
-			case PathCapabilityTarget:
-				targetPath := PathValue(target)
-
-				storageReference := NewStorageReferenceValue(
-					interpreter,
-					authorization,
-					address,
-					targetPath,
-					borrowType.Type,
-				)
-
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				value, err := storageReference.dereference(interpreter, locationRange)
-				if err != nil {
-					panic(err)
-				}
-				if value != nil {
-					reference = storageReference
-				}
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			if reference == nil {
-				return Nil
-			}
-			return NewSomeValueNonCopying(interpreter, reference)
-		},
-	)
-}
-
-func (interpreter *Interpreter) pathCapabilityCheckFunction(
-	addressValue AddressValue,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.CapabilityTypeCheckFunctionType(borrowType),
-		func(invocation Invocation) Value {
-
-			interpreter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				borrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-			}
-
-			if borrowType == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			target, authorized, err :=
-				interpreter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					borrowType,
-					true,
-					locationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			if target == nil {
-				return FalseValue
-			}
-
-			switch target := target.(type) {
-			case AccountCapabilityTarget:
-				return TrueValue
-
-			case PathCapabilityTarget:
-				targetPath := PathValue(target)
-
-				reference := NewStorageReferenceValue(
-					interpreter,
-					authorized,
-					address,
-					targetPath,
-					borrowType.Type,
-				)
-
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				return AsBoolValue(
-					reference.ReferencedValue(interpreter, invocation.LocationRange, false) != nil,
-				)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		},
-	)
-}
-
-func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
-	address common.Address,
-	path PathValue,
-	wantedBorrowType *sema.ReferenceType,
-	checkTargetExists bool,
-	locationRange LocationRange,
-) (
-	target CapabilityTarget,
-	authorization Authorization,
-	err error,
-) {
-
-	seenPaths := map[PathValue]struct{}{}
-	paths := []PathValue{path}
-
-	for {
-		// Detect cyclic links
-
-		if _, ok := seenPaths[path]; ok {
-			return nil, UnauthorizedAccess, CyclicLinkError{
-				Address:       address,
-				Paths:         paths,
-				LocationRange: locationRange,
-			}
-		} else {
-			seenPaths[path] = struct{}{}
-		}
-
-		domain := path.Domain.Identifier()
-		identifier := path.Identifier
-
-		storageMapKey := StringStorageMapKey(identifier)
-
-		switch path.Domain {
-		case common.PathDomainStorage:
-
-			if checkTargetExists &&
-				!interpreter.StoredValueExists(address, domain, storageMapKey) {
-				return nil, UnauthorizedAccess, nil
-			}
-
-			return PathCapabilityTarget(path),
-				ConvertSemaAccesstoStaticAuthorization(interpreter, wantedBorrowType.Authorization),
-				nil
-
-		case common.PathDomainPublic,
-			common.PathDomainPrivate:
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-			if value == nil {
-				return nil, UnauthorizedAccess, nil
-			}
-
-			switch value := value.(type) {
-			case PathLinkValue:
-				allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
-
-				if !sema.IsSubType(allowedType, wantedBorrowType) {
-					return nil, UnauthorizedAccess, nil
-				}
-
-				targetPath := value.TargetPath
-				paths = append(paths, targetPath)
-				path = targetPath
-
-			case AccountLinkValue:
-				if !interpreter.IsSubTypeOfSemaType(
-					AuthAccountReferenceStaticType,
-					wantedBorrowType,
-				) {
-					return nil, UnauthorizedAccess, nil
-				}
-
-				return AccountCapabilityTarget(address),
-					UnauthorizedAccess,
-					nil
-
-			case *IDCapabilityValue:
-
-				// For backwards-compatibility, follow ID capability values
-				// which are published in the public or private domain
-
-				capabilityBorrowType, ok :=
-					interpreter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				reference := interpreter.SharedState.Config.IDCapabilityBorrowHandler(
-					interpreter,
-					locationRange,
-					value.Address,
-					value.ID,
-					wantedBorrowType,
-					capabilityBorrowType,
-				)
-				if reference == nil {
-					return nil, UnauthorizedAccess, nil
-				}
-
-				switch reference := reference.(type) {
-				case *StorageReferenceValue:
-					address = reference.TargetStorageAddress
-					targetPath := reference.TargetPath
-					paths = append(paths, targetPath)
-					path = targetPath
-
-				case *AccountReferenceValue:
-					return AccountCapabilityTarget(reference.Address),
-						UnauthorizedAccess,
-						nil
-
-				default:
-					return nil, UnauthorizedAccess, nil
-				}
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		}
-	}
 }
 
 func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.EntitlementType, error) {
@@ -5398,18 +4904,20 @@ func (interpreter *Interpreter) checkReferencedResourceNotMovedOrDestroyed(
 	referencedValue Value,
 	locationRange LocationRange,
 ) {
-	resourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
-	if !ok {
-		return
-	}
 
-	if resourceKindedValue.IsDestroyed() {
+	// First check if the referencedValue is a resource.
+	// This is to handle optionals, since optionals does not
+	// belong to `ReferenceTrackedResourceKindedValue`
+
+	resourceKindedValue, ok := referencedValue.(ResourceKindedValue)
+	if ok && resourceKindedValue.IsDestroyed() {
 		panic(DestroyedResourceError{
 			LocationRange: locationRange,
 		})
 	}
 
-	if resourceKindedValue.IsStaleResource(interpreter) {
+	referenceTrackedResourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
+	if ok && referenceTrackedResourceKindedValue.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceReferenceError{
 			LocationRange: locationRange,
 		})
@@ -5592,25 +5100,66 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	values[value] = struct{}{}
 }
 
-func (interpreter *Interpreter) updateReferencedResource(
-	currentStorageID atree.StorageID,
-	newStorageID atree.StorageID,
-	updateFunc func(value ReferenceTrackedResourceKindedValue),
-) {
-	values := interpreter.SharedState.referencedResourceKindedValues[currentStorageID]
+func (interpreter *Interpreter) invalidateReferencedResources(value Value, destroyed bool) {
+	// skip non-resource typed values
+	if !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	var storageID atree.StorageID
+
+	switch value := value.(type) {
+	case *CompositeValue:
+		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) {
+			interpreter.invalidateReferencedResources(fieldValue, destroyed)
+		})
+		storageID = value.StorageID()
+	case *DictionaryValue:
+		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
+			interpreter.invalidateReferencedResources(value, destroyed)
+			return true
+		})
+		storageID = value.StorageID()
+	case *ArrayValue:
+		value.IterateLoaded(interpreter, func(element Value) (resume bool) {
+			interpreter.invalidateReferencedResources(element, destroyed)
+			return true
+		})
+		storageID = value.StorageID()
+	case *SomeValue:
+		interpreter.invalidateReferencedResources(value.value, destroyed)
+		return
+	default:
+		// skip non-container typed values.
+		return
+	}
+
+	values := interpreter.SharedState.referencedResourceKindedValues[storageID]
 	if values == nil {
 		return
 	}
+
 	for value := range values { //nolint:maprange
-		updateFunc(value)
+		switch value := value.(type) {
+		case *CompositeValue:
+			value.dictionary = nil
+			value.isDestroyed = destroyed
+		case *DictionaryValue:
+			value.dictionary = nil
+			value.isDestroyed = destroyed
+		case *ArrayValue:
+			value.array = nil
+			value.isDestroyed = destroyed
+		default:
+			panic(errors.NewUnreachableError())
+		}
 	}
 
-	// If the move is to a new location, then the resources are already cleared via the update function above.
-	// So no need to track those stale resources anymore.
-	if newStorageID != currentStorageID {
-		interpreter.SharedState.referencedResourceKindedValues[newStorageID] = values
-		interpreter.SharedState.referencedResourceKindedValues[currentStorageID] = nil
-	}
+	// The old resource instances are already cleared/invalidated above.
+	// So no need to track those stale resources anymore. We will not need to update/clear them again.
+	// Therefore, remove them from the mapping.
+	// This is only to allow GC. No impact to the behavior.
+	delete(interpreter.SharedState.referencedResourceKindedValues, storageID)
 }
 
 // startResourceTracking starts tracking the life-span of a resource.
@@ -5745,34 +5294,6 @@ func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atr
 
 func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
-}
-
-// ConfigureAccountLinkingAllowed configures if execution is allowed to use account linking,
-// depending on the occurrence of the pragma declaration #allowAccountLinking.
-//
-// The pragma declaration must appear as a top-level declaration (i.e. not nested in the program),
-// and must appear before all other declarations (i.e. at the top of the program).
-//
-// This requirement is also checked statically.
-//
-// This is a temporary feature, which is planned to get replaced by capability controllers,
-// and a new Account type with entitlements.
-func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
-	config := interpreter.SharedState.Config
-
-	config.AccountLinkingAllowed = false
-
-	declarations := interpreter.Program.Program.Declarations()
-	if len(declarations) < 1 {
-		return
-	}
-
-	pragmaDeclaration, isPragma := declarations[0].(*ast.PragmaDeclaration)
-	if !isPragma || !sema.IsAllowAccountLinkingPragma(pragmaDeclaration) {
-		return
-	}
-
-	config.AccountLinkingAllowed = true
 }
 
 func (interpreter *Interpreter) idCapabilityBorrowFunction(

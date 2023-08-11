@@ -1686,54 +1686,6 @@ func TestEncodeContract(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
 }
 
-func TestEncodePathLink(t *testing.T) {
-
-	t.Parallel()
-
-	testEncode(
-		t,
-		cadence.NewPathLink(
-			cadence.Path{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			"Bar",
-		),
-		// language=json
-		`
-          {
-            "type": "Link",
-            "value": {
-              "targetPath": {
-                "type": "Path",
-                "value": {
-                  "domain": "storage",
-                  "identifier": "foo"
-                }
-              },
-              "borrowType": "Bar"
-            }
-          }
-        `,
-	)
-}
-
-func TestEncodeAccountLink(t *testing.T) {
-
-	t.Parallel()
-
-	testEncode(
-		t,
-		cadence.NewAccountLink(),
-		// language=json
-		`
-          {
-            "type": "AccountLink"
-          }
-        `,
-	)
-}
-
 func TestEncodeSimpleTypes(t *testing.T) {
 
 	t.Parallel()
@@ -2757,16 +2709,15 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
-	t.Run("with static restricted type", func(t *testing.T) {
+	t.Run("with static intersection type", func(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
-					Restrictions: []cadence.Type{
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
 						cadence.StringType{},
 					},
-					Type: cadence.IntType{},
 				},
 			},
 			// language=json
@@ -2775,12 +2726,9 @@ func TestEncodeType(t *testing.T) {
                 "type": "Type",
                 "value": {
                   "staticType": {
-                    "kind": "Restriction",
-                    "typeID": "Int{String}",
-                    "type": {
-                      "kind": "Int"
-                    },
-                    "restrictions": [
+                    "kind": "Intersection",
+                    "typeID": "{String}",
+                    "types": [
                       {
                         "kind": "String"
                       }
@@ -2806,70 +2754,31 @@ func TestEncodeType(t *testing.T) {
 	})
 }
 
-func TestEncodeCapability(t *testing.T) {
+func TestEncodeIDCapability(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("path", func(t *testing.T) {
-
-		path, err := cadence.NewPath(common.PathDomainPublic, "foo")
-		require.NoError(t, err)
-
-		testEncodeAndDecode(
-			t,
-			cadence.NewPathCapability(
-				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				path,
-				cadence.IntType{},
-			),
-			// language=json
-			`
-              {
-                "type": "Capability",
-                "value": {
-                  "path": {
-                    "type": "Path",
-                    "value": {
-                      "domain": "public",
-                      "identifier": "foo"
-                    }
-                  },
-                  "borrowType": {
-                    "kind": "Int"
-                  },
-                  "address": "0x0000000102030405"
-                }
-              }
-            `,
-		)
-	})
-
-	t.Run("ID", func(t *testing.T) {
-
-		t.Parallel()
-
-		testEncodeAndDecode(
-			t,
-			cadence.NewIDCapability(
-				6,
-				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				cadence.IntType{},
-			),
-			// language=json
-			`
-              {
-                "type": "Capability",
-                "value": {
-                  "borrowType": {
-                    "kind": "Int"
-                  },
-                  "address": "0x0000000102030405",
-                  "id": "6"
-                }
-              }
-            `,
-		)
-	})
+	testEncodeAndDecode(
+		t,
+		cadence.NewIDCapability(
+			6,
+			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			cadence.IntType{},
+		),
+		// language=json
+		`
+          {
+            "type": "Capability",
+            "value": {
+              "borrowType": {
+                "kind": "Int"
+              },
+              "address": "0x0000000102030405",
+              "id": "6"
+            }
+          }
+        `,
+	)
 }
 
 func TestDecodeFixedPoints(t *testing.T) {

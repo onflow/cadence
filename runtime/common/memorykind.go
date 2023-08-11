@@ -40,9 +40,6 @@ const (
 	MemoryKindTypeValue
 	MemoryKindPathValue
 	MemoryKindIDCapabilityValue
-	MemoryKindPathCapabilityValue
-	MemoryKindPathLinkValue
-	MemoryKindAccountLinkValue
 	MemoryKindStorageReferenceValue
 	MemoryKindAccountReferenceValue
 	MemoryKindEphemeralReferenceValue
@@ -73,8 +70,7 @@ const (
 	MemoryKindConstantSizedStaticType
 	MemoryKindDictionaryStaticType
 	MemoryKindOptionalStaticType
-	MemoryKindRestrictedStaticType
-	MemoryKindUnauthorizedStaticAccess
+	MemoryKindIntersectionStaticType
 	MemoryKindEntitlementSetStaticAccess
 	MemoryKindEntitlementMapStaticAccess
 	MemoryKindReferenceStaticType
@@ -106,12 +102,9 @@ const (
 	MemoryKindCadenceContractValueSize
 	MemoryKindCadenceEnumValueBase
 	MemoryKindCadenceEnumValueSize
-	MemoryKindCadencePathLinkValue
-	MemoryKindCadenceAccountLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceIDCapabilityValue
-	MemoryKindCadencePathCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
@@ -134,7 +127,7 @@ const (
 	MemoryKindCadenceEntitlementSetAccess
 	MemoryKindCadenceEntitlementMapAccess
 	MemoryKindCadenceReferenceType
-	MemoryKindCadenceRestrictedType
+	MemoryKindCadenceIntersectionType
 	MemoryKindCadenceCapabilityType
 	MemoryKindCadenceEnumType
 
@@ -231,7 +224,7 @@ const (
 	MemoryKindNominalType
 	MemoryKindOptionalType
 	MemoryKindReferenceType
-	MemoryKindRestrictedType
+	MemoryKindIntersectionType
 	MemoryKindVariableSizedType
 
 	MemoryKindPosition
@@ -246,7 +239,7 @@ const (
 	MemoryKindConstantSizedSemaType
 	MemoryKindDictionarySemaType
 	MemoryKindOptionalSemaType
-	MemoryKindRestrictedSemaType
+	MemoryKindIntersectionSemaType
 	MemoryKindReferenceSemaType
 	MemoryKindEntitlementSemaType
 	MemoryKindEntitlementMapSemaType

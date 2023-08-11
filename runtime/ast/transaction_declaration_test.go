@@ -141,8 +141,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			},
 		},
 		PreConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: true,
 				},
@@ -169,8 +168,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			},
 		},
 		PostConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: false,
 				},
@@ -407,8 +405,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			},
 		},
 		PreConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: true,
 				},
@@ -435,8 +432,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			},
 		},
 		PostConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: false,
 				},

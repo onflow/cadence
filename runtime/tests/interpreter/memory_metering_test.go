@@ -705,7 +705,8 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", newTestAuthAccountValue(meter, randomAddressValue()))
+		addressValue := newRandomValueGenerator().randomAddressValue()
+		_, err := inter.Invoke("main", newTestAuthAccountValue(meter, addressValue))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -724,7 +725,8 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", newTestPublicAccountValue(meter, randomAddressValue()))
+		addressValue := newRandomValueGenerator().randomAddressValue()
+		_, err := inter.Invoke("main", newTestPublicAccountValue(meter, addressValue))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -6964,121 +6966,17 @@ func TestInterpretPathValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretPathCapabilityValueMetering(t *testing.T) {
+func TestInterpretIDCapabilityValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-            resource R {}
-
-            access(all) fun main(account: AuthAccount) {
-                let r <- create R()
-                account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/cap, target: /storage/r)
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathCapabilityValue))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPathValue))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
-	})
-
-	t.Run("array element", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            resource R {}
-
-            access(all) fun main(account: AuthAccount) {
-                let r <- create R()
-                account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/cap, target: /storage/r)
-
-                let y = [x]
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCapabilityStaticType))
-	})
-}
-
-// TODO: IDCapability
-
-func TestInterpretPathLinkValueMetering(t *testing.T) {
-	t.Parallel()
-
-	t.Run("creation", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            resource R {}
-
-            access(all) fun main(account: AuthAccount) {
-                account.link<&R>(/public/cap, target: /private/p)
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		// Metered twice only when Atree validation is enabled.
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPathLinkValue))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
-	})
-}
-
-func TestInterpretAccountLinkValueMetering(t *testing.T) {
-	t.Parallel()
-
-	t.Run("creation", func(t *testing.T) {
-		t.Parallel()
-
-		const script = `
-          #allowAccountLinking
-
-          access(all) fun main(account: AuthAccount) {
-              account.linkAccount(/private/cap)
-          }
-        `
-
 		meter := newTestMemoryGauge()
 
-		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
-			t,
-			script,
-			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					AccountLinkingEnabled: true,
-				},
-			},
-			meter,
-		)
-		require.NoError(t, err)
+		_ = interpreter.NewIDCapabilityValue(meter, 1, interpreter.AddressValue{}, nil)
 
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err = inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		// Metered twice only when Atree validation is enabled.
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAccountLinkValue))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindReferenceStaticType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIDCapabilityValue))
 	})
 }
 
@@ -8034,18 +7932,17 @@ func TestInterpretIdentifierMetering(t *testing.T) {
 func TestInterpretInterfaceStaticType(t *testing.T) {
 	t.Parallel()
 
-	t.Run("RestrictedType", func(t *testing.T) {
+	t.Run("IntersectionType", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
             struct interface I {}
 
             access(all) fun main() {
-                let type = Type<AnyStruct{I}>()
+                let type = Type<{I}>()
 
-                RestrictedType(
-                    identifier: type.identifier,
-                    restrictions: [type.identifier]
+                IntersectionType(
+                    types: [type.identifier]
                 )
             }
         `
@@ -8057,7 +7954,7 @@ func TestInterpretInterfaceStaticType(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInterfaceStaticType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindRestrictedStaticType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIntersectionStaticType))
 	})
 }
 
@@ -8423,7 +8320,7 @@ func TestInterpretASTMetering(t *testing.T) {
                 k()                                      // identifier, invocation
                 var l = c ? 1 : 2                        // conditional, identifier, integer x2
                 var m = d as AnyStruct                   // casting, identifier
-                var n = &d as &AnyStruct                 // reference, casting, identifier
+                var n = &d as &AnyStruct?                // reference, casting, identifier
                 var o = d!                               // force, identifier
                 var p = /public/somepath                 // path
             }
@@ -8483,7 +8380,7 @@ func TestInterpretASTMetering(t *testing.T) {
                 }
 
                 var g = &a as &Int                                 // reference type
-                var h: AnyStruct{foo} = bar()                      // restricted type
+                var h: {foo} = bar()                      // intersection type
                 var i: Capability<&bar>? = nil                     // instantiation type
             }
 
@@ -8502,10 +8399,10 @@ func TestInterpretASTMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindDictionaryType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindFunctionType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindInstantiationType))
-		assert.Equal(t, uint64(16), meter.getMemory(common.MemoryKindNominalType))
+		assert.Equal(t, uint64(15), meter.getMemory(common.MemoryKindNominalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceType))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindRestrictedType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIntersectionType))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindVariableSizedType))
 
 		assert.Equal(t, uint64(14), meter.getMemory(common.MemoryKindTypeAnnotation))
@@ -8671,7 +8568,7 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 
 		script := `
             access(all) fun main() {
-                let a: {Int: AnyStruct{Foo}} = {}           // dictionary + restricted
+                let a: {Int: {Foo}} = {}           // dictionary + intersection
                 let b: [&Int] = []                          // variable-sized + reference
                 let c: [Int?; 2] = [1, 2]                   // constant-sized + optional
                 let d: [Capability<&Bar>] = []             //  capability + variable-sized + reference
@@ -8692,7 +8589,7 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariableSizedSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindConstantSizedSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalSemaType))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindRestrictedSemaType))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindIntersectionSemaType))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindReferenceSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCapabilitySemaType))
 	})
@@ -8707,8 +8604,6 @@ func TestInterpretStorageMapMetering(t *testing.T) {
         access(all) fun main(account: AuthAccount) {
             let r <- create R()
             account.save(<-r, to: /storage/r)
-            account.link<&R>(/public/cap, target: /storage/r)
-            account.borrow<&R>(from: /storage/r)
         }
     `
 
@@ -8719,8 +8614,8 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	_, err := inter.Invoke("main", account)
 	require.NoError(t, err)
 
-	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindStorageMap))
-	assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindStorageKey))
+	assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageMap))
+	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindStorageKey))
 }
 
 func TestInterpretValueStringConversion(t *testing.T) {
@@ -9025,34 +8920,6 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		testValueStringConversion(t, script)
 	})
 
-	t.Run("path Capability", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            access(all) fun main(a: Capability<&{Foo}>) {
-                log(a)
-            }
-
-            struct interface Foo {}
-            struct Bar: Foo {}
-        `
-
-		testValueStringConversion(t,
-			script,
-			interpreter.NewUnmeteredPathCapabilityValue(
-				interpreter.AddressValue{1},
-				interpreter.PathValue{
-					Domain:     common.PathDomainPublic,
-					Identifier: "somepath",
-				},
-				interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Bar",
-					TypeID:              "S.test.Bar",
-				},
-			))
-	})
-
 	t.Run("ID Capability", func(t *testing.T) {
 		t.Parallel()
 
@@ -9258,12 +9125,12 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		testStaticTypeStringConversion(t, script)
 	})
 
-	t.Run("Restricted type", func(t *testing.T) {
+	t.Run("Intersection type", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
             access(all) fun main() {
-                log(Type<AnyStruct{Foo}>())
+                log(Type<{Foo}>())
             }
 
             struct interface Foo {}

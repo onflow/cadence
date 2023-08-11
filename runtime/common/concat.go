@@ -16,18 +16,21 @@
  * limitations under the License.
  */
 
-package format
+package common
 
-import (
-	"fmt"
-)
+func Concat[T any](slices ...[]T) []T {
+	var length int
 
-func PathLink(ty string, targetPath string) string {
-	return fmt.Sprintf(
-		"PathLink<%s>(%s)",
-		ty,
-		targetPath,
-	)
+	for _, slice := range slices {
+		length += len(slice)
+	}
+
+	result := make([]T, length)
+
+	var offset int
+	for _, slice := range slices {
+		offset += copy(result[offset:], slice)
+	}
+
+	return result
 }
-
-const AccountLink = "AccountLink()"

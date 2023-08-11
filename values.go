@@ -2051,82 +2051,6 @@ func (v Contract) GetFieldValues() []Value {
 	return v.Fields
 }
 
-// PathLink
-
-type PathLink struct {
-	TargetPath Path
-	// TODO: a future version might want to export the whole type
-	BorrowType string
-}
-
-var _ Value = PathLink{}
-
-func NewPathLink(targetPath Path, borrowType string) PathLink {
-	return PathLink{
-		TargetPath: targetPath,
-		BorrowType: borrowType,
-	}
-}
-
-func NewMeteredPathLink(gauge common.MemoryGauge, targetPath Path, borrowType string) PathLink {
-	common.UseMemory(gauge, common.CadencePathLinkValueMemoryUsage)
-	return NewPathLink(targetPath, borrowType)
-}
-
-func (PathLink) isValue() {}
-
-func (v PathLink) Type() Type {
-	return nil
-}
-
-func (v PathLink) MeteredType(_ common.MemoryGauge) Type {
-	return v.Type()
-}
-
-func (v PathLink) ToGoValue() any {
-	return nil
-}
-
-func (v PathLink) String() string {
-	return format.PathLink(
-		v.BorrowType,
-		v.TargetPath.String(),
-	)
-}
-
-// AccountLink
-
-type AccountLink struct{}
-
-var _ Value = AccountLink{}
-
-func NewAccountLink() AccountLink {
-	return AccountLink{}
-}
-
-func NewMeteredAccountLink(gauge common.MemoryGauge) AccountLink {
-	common.UseMemory(gauge, common.CadenceAccountLinkValueMemoryUsage)
-	return NewAccountLink()
-}
-
-func (AccountLink) isValue() {}
-
-func (v AccountLink) Type() Type {
-	return nil
-}
-
-func (v AccountLink) MeteredType(_ common.MemoryGauge) Type {
-	return v.Type()
-}
-
-func (v AccountLink) ToGoValue() any {
-	return nil
-}
-
-func (v AccountLink) String() string {
-	return format.AccountLink
-}
-
 // Path
 
 type Path struct {
@@ -2145,6 +2069,14 @@ func NewPath(domain common.PathDomain, identifier string) (Path, error) {
 		Domain:     domain,
 		Identifier: identifier,
 	}, nil
+}
+
+func MustNewPath(domain common.PathDomain, identifier string) Path {
+	path, err := NewPath(domain, identifier)
+	if err != nil {
+		panic(err)
+	}
+	return path
 }
 
 func NewMeteredPath(gauge common.MemoryGauge, domain common.PathDomain, identifier string) (Path, error) {
@@ -2224,72 +2156,6 @@ func (v TypeValue) String() string {
 type Capability interface {
 	Value
 	isCapability()
-}
-
-// PathCapability
-
-type PathCapability struct {
-	BorrowType Type
-	Path       Path
-	Address    Address
-}
-
-var _ Value = PathCapability{}
-var _ Capability = PathCapability{}
-
-func NewPathCapability(
-	address Address,
-	path Path,
-	borrowType Type,
-) PathCapability {
-	return PathCapability{
-		Path:       path,
-		Address:    address,
-		BorrowType: borrowType,
-	}
-}
-
-func NewMeteredPathCapability(
-	gauge common.MemoryGauge,
-	address Address,
-	path Path,
-	borrowType Type,
-) PathCapability {
-	common.UseMemory(gauge, common.CadencePathCapabilityValueMemoryUsage)
-	return NewPathCapability(
-		address,
-		path,
-		borrowType,
-	)
-}
-
-func (PathCapability) isValue() {}
-
-func (PathCapability) isCapability() {}
-
-func (v PathCapability) Type() Type {
-	return NewCapabilityType(v.BorrowType)
-}
-
-func (v PathCapability) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredCapabilityType(gauge, v.BorrowType)
-}
-
-func (PathCapability) ToGoValue() any {
-	return nil
-}
-
-func (v PathCapability) String() string {
-	var borrowType string
-	if v.BorrowType != nil {
-		borrowType = v.BorrowType.ID()
-	}
-
-	return format.PathCapability(
-		borrowType,
-		v.Address.String(),
-		v.Path.String(),
-	)
 }
 
 // IDCapability

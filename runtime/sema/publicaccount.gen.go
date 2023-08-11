@@ -98,67 +98,6 @@ const PublicAccountTypePublicPathsFieldDocString = `
 All public paths of this account.
 `
 
-const PublicAccountTypeGetCapabilityFunctionName = "getCapability"
-
-var PublicAccountTypeGetCapabilityFunctionTypeParameterT = &TypeParameter{
-	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
-	},
-}
-
-var PublicAccountTypeGetCapabilityFunctionType = &FunctionType{
-	TypeParameters: []*TypeParameter{
-		PublicAccountTypeGetCapabilityFunctionTypeParameterT,
-	},
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "path",
-			TypeAnnotation: NewTypeAnnotation(PublicPathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		MustInstantiate(
-			&CapabilityType{},
-			&GenericType{
-				TypeParameter: PublicAccountTypeGetCapabilityFunctionTypeParameterT,
-			},
-		),
-	),
-}
-
-const PublicAccountTypeGetCapabilityFunctionDocString = `
-**DEPRECATED**: Use ` + "`capabilities.get`" + ` instead.
-
-Returns the capability at the given public path.
-`
-
-const PublicAccountTypeGetLinkTargetFunctionName = "getLinkTarget"
-
-var PublicAccountTypeGetLinkTargetFunctionType = &FunctionType{
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "path",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: PathType,
-		},
-	),
-}
-
-const PublicAccountTypeGetLinkTargetFunctionDocString = `
-**DEPRECATED**
-
-Returns the target path of the capability at the given public or private path,
-or nil if there exists no capability at the given path.
-`
-
 const PublicAccountTypeForEachPublicFunctionName = "forEachPublic"
 
 var PublicAccountTypeForEachPublicFunctionType = &FunctionType{
@@ -213,6 +152,7 @@ The names of all contracts deployed in the account.
 const PublicAccountContractsTypeGetFunctionName = "get"
 
 var PublicAccountContractsTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "name",
@@ -243,6 +183,7 @@ var PublicAccountContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var PublicAccountContractsTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		PublicAccountContractsTypeBorrowFunctionTypeParameterT,
 	},
@@ -314,6 +255,7 @@ func init() {
 const PublicAccountKeysTypeGetFunctionName = "get"
 
 var PublicAccountKeysTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "keyIndex",
@@ -427,6 +369,7 @@ var PublicAccountCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 }
 
 var PublicAccountCapabilitiesTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		PublicAccountCapabilitiesTypeGetFunctionTypeParameterT,
 	},
@@ -464,6 +407,7 @@ var PublicAccountCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var PublicAccountCapabilitiesTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		PublicAccountCapabilitiesTypeBorrowFunctionTypeParameterT,
 	},
@@ -614,20 +558,6 @@ func init() {
 			PublicAccountTypePublicPathsFieldName,
 			PublicAccountTypePublicPathsFieldType,
 			PublicAccountTypePublicPathsFieldDocString,
-		),
-		NewUnmeteredFunctionMember(
-			PublicAccountType,
-			ast.AccessAll,
-			PublicAccountTypeGetCapabilityFunctionName,
-			PublicAccountTypeGetCapabilityFunctionType,
-			PublicAccountTypeGetCapabilityFunctionDocString,
-		),
-		NewUnmeteredFunctionMember(
-			PublicAccountType,
-			ast.AccessAll,
-			PublicAccountTypeGetLinkTargetFunctionName,
-			PublicAccountTypeGetLinkTargetFunctionType,
-			PublicAccountTypeGetLinkTargetFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			PublicAccountType,

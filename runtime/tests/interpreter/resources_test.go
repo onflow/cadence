@@ -2352,7 +2352,7 @@ func TestInterpretResourceFunctionInvocationAfterDestruction(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {

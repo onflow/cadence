@@ -430,22 +430,9 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 
 				checker, err := ParseAndCheck(t, code)
 
-				// NOTE: type mismatch is only tested when both kinds are not contracts
-				// (which can not be passed by value)
+				errs := RequireCheckerErrors(t, err, 1)
 
-				if firstKind != common.CompositeKindContract &&
-					secondKind != common.CompositeKindContract {
-
-					errs := RequireCheckerErrors(t, err, 2)
-
-					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-					assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-
-				} else {
-					errs := RequireCheckerErrors(t, err, 1)
-
-					assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-				}
+				assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 
 				require.NotNil(t, checker)
 
@@ -1968,9 +1955,8 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 			Parameters: []sema.Parameter{
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(
-						&sema.RestrictedType{
-							Type: sema.AnyStructType,
-							Restrictions: []*sema.InterfaceType{
+						&sema.IntersectionType{
+							Types: []*sema.InterfaceType{
 								iType,
 							},
 						},
@@ -1980,9 +1966,8 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				&sema.DictionaryType{
 					KeyType: sema.IntType,
-					ValueType: &sema.RestrictedType{
-						Type: sema.AnyStructType,
-						Restrictions: []*sema.InterfaceType{
+					ValueType: &sema.IntersectionType{
+						Types: []*sema.InterfaceType{
 							iType,
 						},
 					},
@@ -3434,12 +3419,30 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
+	})
 
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	t.Run("default impl in super, condition in child, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct C: B {}
+        `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("default impl in super, declaration in child", func(t *testing.T) {
@@ -3509,12 +3512,30 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
+	})
 
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	t.Run("default impl in child, condition in parent, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface B: A {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct C: B {}
+        `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("default impl in child, declaration in parent", func(t *testing.T) {
@@ -3688,14 +3709,10 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             struct interface C: A, B {}
         `)
 
-		// TODO: Should be no error once https://github.com/onflow/flips/pull/83 is added.
-		errs := RequireCheckerErrors(t, err, 1)
-
-		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &interfaceMemberConflictError)
+		require.NoError(t, err)
 	})
 
-	t.Run("default impl in one path and condition in another, in concrete type", func(t *testing.T) {
+	t.Run("default impl in first and condition in second, in concrete type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3717,14 +3734,206 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             struct D: C {}
         `)
 
-		// TODO: Should be no error once https://github.com/onflow/flips/pull/83 is added.
-		errs := RequireCheckerErrors(t, err, 2)
+		require.NoError(t, err)
+	})
 
-		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &interfaceMemberConflictError)
+	t.Run("condition in first and default impl in second, in concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: B, A {}
+
+            struct D: C {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("conditions in both parent and child", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface Bar: Foo {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("condition in parent", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface Bar: Foo {
+                access(all) fun hello()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("condition in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                access(all) fun hello()
+            }
+
+            struct interface Bar: Foo {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("conditions from two paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: A, B {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("conditions from two paths, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: A, B {}
+
+            struct D: C {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all three formats of function, interface type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello()
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface D: A, B, C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("all three formats of function, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello()
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct D: A, B, C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
 
 		defaultFunctionConflictError := &sema.DefaultFunctionConflictError{}
-		require.ErrorAs(t, errs[1], &defaultFunctionConflictError)
+		require.ErrorAs(t, errs[0], &defaultFunctionConflictError)
 	})
 }
 
@@ -4110,6 +4319,72 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
 }
 
+func TestInheritedInterfaceMembers(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inherited interface field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			let foo: String
+		}
+		resource interface B: A {}
+		resource C: B {
+			let foo: String
+			init() {
+				self.foo = ""
+			}
+		}
+		fun test() {
+			let c: @{B} <- create C()
+			c.foo
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			fun foo ()
+		}
+		resource interface B: A {}
+		fun test(c: @{B}) {
+			c.foo()
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("doubly inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			fun foo ()
+		}
+		resource interface B: A {}
+		resource interface C: B {}
+		fun test(c: @{C}) {
+			c.foo()
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
 func TestCheckInterfaceEventsInheritance(t *testing.T) {
 
 	t.Parallel()
@@ -4175,28 +4450,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("restricted composite type subtyping", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            struct interface A {}
-
-            struct interface B: A  {}
-
-            struct S: B {}
-
-
-            fun foo(): {A} {
-                var s: S{B} = S()
-                return s
-            }
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("restricted anystruct type subtyping", func(t *testing.T) {
+	t.Run("intersection type subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4257,7 +4511,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attachment on restricted type", func(t *testing.T) {
+	t.Run("attachment on intersection type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4342,7 +4596,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted anystruct reference subtyping", func(t *testing.T) {
+	t.Run("intersection anystruct reference subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4357,13 +4611,13 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             // Case I: &{B, C} is a subtype of &{B}
             fun foo(): &{B} {
-                var s: S{B, C} = S()
+                var s: {B, C} = S()
                 return &s as &{B, C}
             }
 
             // Case II: &{B} is a subtype of &{A}
             fun bar(): &{A} {
-               var s: S{B} = S()
+               var s: {B} = S()
                return &s as &{B}
             }
         `)
@@ -4371,7 +4625,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted composite type reference subtyping", func(t *testing.T) {
+	t.Run("intersection composite type reference subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4385,22 +4639,22 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
             struct S: B, C {}
 
             // Case I: &S{B, C} is a subtype of &S{B}
-            fun foo(): &S{B} {
-                var s: S{B, C} = S()
-                return &s as &S{B, C}
+            fun foo(): &{B} {
+                var s: {B, C} = S()
+                return &s as &{B, C}
             }
 
-            // Case II: &S{B} is a subtype of &S{A}
-            fun bar(): &S{A} {
-               var s: S{B} = S()
-               return &s as &S{B}
+            // Case II: &{B} is a subtype of &S{A}
+            fun bar(): &{A} {
+               var s: {B} = S()
+               return &s as &{B}
             }
         `)
 
 		require.NoError(t, err)
 	})
 
-	t.Run("multi-restricted composite type reference subtyping", func(t *testing.T) {
+	t.Run("multi-intersection composite type reference subtyping", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4413,19 +4667,216 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             struct S: B, C {}
 
-            // Case I: &S{B, C} is a subtype of &S{B}
-            fun foo(): &S{B} {
-                var s: S{B, C} = S()
-                return &s as &S{B, C}
+            // Case I: &{B, C} is a subtype of &{B}
+            fun foo(): &{B} {
+                var s: {B, C} = S()
+                return &s as &{B, C}
             }
 
-            // Case II: &S{B, C} is also a subtype of &S{A}
-            fun bar(): &S{A} {
-               var s: S{B, C} = S()
-               return &s as &S{B, C}
+            // Case II: &{B, C} is also a subtype of &{A}
+            fun bar(): &{A} {
+               var s: {B, C} = S()
+               return &s as &{B, C}
             }
         `)
 
 		require.NoError(t, err)
 	})
+}
+
+func TestNestedInterfaceInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("mixed top level", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		resource interface Y: C.X {}
+        contract C {
+			resource interface X {}
+		}	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed top level interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		resource interface Y: C.X {}
+        contract interface C {
+			resource interface X {}
+		}	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract C {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+			resource ConcreteResource: MiddleInterface {}
+		 
+			fun createR(): @{TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract reverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract C {
+			resource ConcreteResource: MiddleInterface {}
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		 
+			fun createR(): @{TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract interface C {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+		 
+			fun createR(m: @{MiddleInterface}): @{TopInterface} {
+				return <-m
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all in one contract interface reverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+        contract interface C {
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		 
+			fun createR(m: @{MiddleInterface}): @{TopInterface} {
+				return <-m
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract interface CI {
+			resource interface TopInterface {}
+			resource interface MiddleInterface: TopInterface {}
+		}
+        contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+		 
+			fun createR(): @{CI.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		 }	
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inverse order", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{CI.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract interface CI {
+			resource interface MiddleInterface: TopInterface {}
+			resource interface TopInterface {}
+		}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{C1.TopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract interface CI {
+				resource interface MiddleInterface: C1.TopInterface {}
+		}
+		contract C1 {
+			resource interface TopInterface {}
+		}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("mixed with top levels", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t,
+			`
+		contract C {
+			resource ConcreteResource: CI.MiddleInterface {}
+			
+			fun createR(): @{SuperTopInterface} {
+				return <-create ConcreteResource()
+			}
+		}	
+		contract C1 {
+			resource interface TopInterface: SuperTopInterface {}
+		}
+		contract interface CI {
+				resource interface MiddleInterface: C1.TopInterface {}
+		}
+		resource interface SuperTopInterface {}
+        `,
+		)
+
+		require.NoError(t, err)
+	})
+
 }

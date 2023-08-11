@@ -134,7 +134,7 @@ func TestCheckIsInstance(t *testing.T) {
 			code: `
               let result = (1).isInstance(Type<Int>(), Type<Int>())
             `,
-			expectedErrorType: &sema.ArgumentCountError{},
+			expectedErrorType: &sema.ExcessiveArgumentsError{},
 		},
 	}
 
@@ -209,7 +209,7 @@ func TestCheckIsSubtype(t *testing.T) {
 			code: `
               let result = Type<Int>().isSubtype()
             `,
-			expectedErrorType: &sema.ArgumentCountError{},
+			expectedErrorType: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "isSubtype argument must be named",
@@ -223,7 +223,7 @@ func TestCheckIsSubtype(t *testing.T) {
 			code: `
               let result = Type<Int>().isSubtype(of: Type<Int?>(), Type<Int?>())
             `,
-			expectedErrorType: &sema.ArgumentCountError{},
+			expectedErrorType: &sema.ExcessiveArgumentsError{},
 		},
 	}
 
