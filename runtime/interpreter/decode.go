@@ -309,17 +309,8 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagPathValue:
 			storable, err = d.decodePath()
 
-		case CBORTagPathCapabilityValue:
-			storable, err = d.decodePathCapability()
-
 		case CBORTagIDCapabilityValue:
 			storable, err = d.decodeIDCapability()
-
-		case CBORTagPathLinkValue:
-			storable, err = d.decodePathLink()
-
-		case CBORTagAccountLinkValue:
-			storable, err = d.decodeAccountLink()
 
 		case CBORTagPublishedValue:
 			storable, err = d.decodePublishedValue()
@@ -926,96 +917,6 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 	), nil
 }
 
-func (d StorableDecoder) decodePathCapability() (*PathCapabilityValue, error) {
-
-	const expectedLength = encodedPathCapabilityValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, errors.NewUnexpectedError(
-				"invalid capability encoding: expected [%d]any, got %s",
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return nil, err
-	}
-
-	if size != expectedLength {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability encoding: expected [%d]any, got [%d]any",
-			expectedLength,
-			size,
-		)
-	}
-
-	// address
-
-	// Decode address at array index encodedPathCapabilityValueAddressFieldKey
-	var num uint64
-	num, err = d.decoder.DecodeTagNumber()
-	if err != nil {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability address: %w",
-			err,
-		)
-	}
-	if num != CBORTagAddressValue {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability address: wrong tag %d",
-			num,
-		)
-	}
-	address, err := d.decodeAddress()
-	if err != nil {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability address: %w",
-			err,
-		)
-	}
-
-	// path
-
-	// Decode path at array index encodedPathCapabilityValuePathFieldKey
-	pathStorable, err := d.decodeStorable()
-	if err != nil {
-		return nil, errors.NewUnexpectedError("invalid capability path: %w", err)
-	}
-	pathValue, ok := pathStorable.(PathValue)
-	if !ok {
-		return nil, errors.NewUnexpectedError("invalid capability path: invalid type %T", pathValue)
-	}
-
-	// Decode borrow type at array index encodedPathCapabilityValueBorrowTypeFieldKey
-
-	// borrow type (optional, for backwards compatibility)
-	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
-	// Later an optional type parameter, the borrow type, was added to it,
-	// which specifies as what type the capability should be borrowed.
-	//
-	// The decoding must be backwards-compatible and support both capability values
-	// with a borrow type and ones without
-
-	var borrowType StaticType
-
-	// Optional borrow type can be CBOR nil.
-	err = d.decoder.DecodeNil()
-	if _, ok := err.(*cbor.WrongTypeError); ok {
-		borrowType, err = d.DecodeStaticType()
-	}
-	if err != nil {
-		return nil, errors.NewUnexpectedError("invalid capability borrow type encoding: %w", err)
-	}
-
-	return NewPathCapabilityValue(
-		d.memoryGauge,
-		address,
-		pathValue,
-		borrowType,
-	), nil
-}
-
 func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 
 	const expectedLength = encodedIDCapabilityValueLength
@@ -1216,62 +1117,6 @@ func (d StorableDecoder) decodeAccountCapabilityController() (*AccountCapability
 	), nil
 }
 
-func (d StorableDecoder) decodePathLink() (PathLinkValue, error) {
-
-	const expectedLength = encodedPathLinkValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return EmptyPathLinkValue, errors.NewUnexpectedError(
-				"invalid link encoding: expected [%d]any, got %s",
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return EmptyPathLinkValue, err
-	}
-
-	if size != expectedLength {
-		return EmptyPathLinkValue, errors.NewUnexpectedError(
-			"invalid link encoding: expected [%d]any, got [%d]any",
-			expectedLength,
-			size,
-		)
-	}
-
-	// Decode path at array index encodedPathLinkValueTargetPathFieldKey
-	num, err := d.decoder.DecodeTagNumber()
-	if err != nil {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
-	}
-	if num != CBORTagPathValue {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
-	}
-	pathValue, err := d.decodePath()
-	if err != nil {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
-	}
-
-	// Decode type at array index encodedPathLinkValueTypeFieldKey
-	staticType, err := d.DecodeStaticType()
-	if err != nil {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link type encoding: %w", err)
-	}
-
-	return NewPathLinkValue(d.memoryGauge, pathValue, staticType), nil
-}
-
-func (d StorableDecoder) decodeAccountLink() (AccountLinkValue, error) {
-	common.UseMemory(d.memoryGauge, common.AccountLinkValueMemoryUsage)
-	err := d.decoder.Skip()
-	if err != nil {
-		return AccountLinkValue{}, err
-	}
-
-	return AccountLinkValue{}, nil
-}
-
 func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
 
 	const expectedLength = encodedPublishedValueLength
@@ -1428,8 +1273,8 @@ func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	case CBORTagDictionaryStaticType:
 		return d.decodeDictionaryStaticType()
 
-	case CBORTagRestrictedStaticType:
-		return d.decodeRestrictedStaticType()
+	case CBORTagIntersectionStaticType:
+		return d.decodeIntersectionStaticType()
 
 	case CBORTagCapabilityStaticType:
 		return d.decodeCapabilityStaticType()
@@ -1832,15 +1677,15 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	return NewDictionaryStaticType(d.memoryGauge, keyType, valueType), nil
 }
 
-func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
-	const expectedLength = encodedRestrictedStaticTypeLength
+func (d TypeDecoder) decodeIntersectionStaticType() (StaticType, error) {
+	const expectedLength = encodedIntersectionStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, errors.NewUnexpectedError(
-				"invalid restricted static type encoding: expected [%d]any, got %s",
+				"invalid intersection static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1850,77 +1695,93 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 
 	if arraySize != expectedLength {
 		return nil, errors.NewUnexpectedError(
-			"invalid restricted static type encoding: expected [%d]any, got [%d]any",
+			"invalid intersection static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
 		)
 	}
 
-	// Decode restricted type at array index encodedRestrictedStaticTypeTypeFieldKey
-	restrictedType, err := d.DecodeStaticType()
+	var legacyRestrictedType StaticType
+
+	t, err := d.decoder.NextType()
 	if err != nil {
-		return nil, errors.NewUnexpectedError(
-			"invalid restricted static type key type encoding: %w",
-			err,
-		)
+		return nil, err
 	}
 
-	// Decode restrictions at array index encodedRestrictedStaticTypeRestrictionsFieldKey
-	restrictionSize, err := d.decoder.DecodeArrayHead()
+	if t == cbor.NilType {
+		err = d.decoder.DecodeNil()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Decode intersection type at array index encodedIntersectionStaticTypeLegacyTypeFieldKey
+		legacyRestrictedType, err = d.DecodeStaticType()
+		if err != nil {
+			return nil, errors.NewUnexpectedError(
+				"invalid intersection static type key type encoding: %w",
+				err,
+			)
+		}
+	}
+
+	// Decode intersected types at array index encodedIntersectionStaticTypeTypesFieldKey
+	intersectionSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, errors.NewUnexpectedError(
-				"invalid restricted static type restrictions encoding: %s",
+				"invalid intersection static type intersections encoding: %s",
 				e.ActualType.String(),
 			)
 		}
 		return nil, err
 	}
 
-	var restrictions []InterfaceStaticType
-	if restrictionSize > 0 {
-		restrictions = make([]InterfaceStaticType, restrictionSize)
-		for i := 0; i < int(restrictionSize); i++ {
+	var intersections []InterfaceStaticType
+	if intersectionSize > 0 {
+		intersections = make([]InterfaceStaticType, intersectionSize)
+		for i := 0; i < int(intersectionSize); i++ {
 
 			number, err := d.decoder.DecodeTagNumber()
 			if err != nil {
 				if e, ok := err.(*cbor.WrongTypeError); ok {
 					return nil, errors.NewUnexpectedError(
-						"invalid restricted static type restriction encoding: expected CBOR tag, got %s",
+						"invalid intersection static type intersection encoding: expected CBOR tag, got %s",
 						e.ActualType.String(),
 					)
 				}
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: %w",
+					"invalid intersection static type intersection encoding: %w",
 					err,
 				)
 			}
 
 			if number != CBORTagInterfaceStaticType {
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: expected CBOR tag %d, got %d",
+					"invalid intersection static type intersection encoding: expected CBOR tag %d, got %d",
 					CBORTagInterfaceStaticType,
 					number,
 				)
 			}
 
-			restriction, err := d.decodeInterfaceStaticType()
+			intersectedType, err := d.decodeInterfaceStaticType()
 			if err != nil {
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: %w",
+					"invalid intersection static type intersection encoding: %w",
 					err,
 				)
 			}
 
-			restrictions[i] = restriction
+			intersections[i] = intersectedType
 		}
 	}
 
-	return NewRestrictedStaticType(
+	staticType := NewIntersectionStaticType(
 		d.memoryGauge,
-		restrictedType,
-		restrictions,
-	), nil
+		intersections,
+	)
+	staticType.LegacyType = legacyRestrictedType
+
+	return staticType, nil
 }
 
 func (d TypeDecoder) decodeCapabilityStaticType() (StaticType, error) {

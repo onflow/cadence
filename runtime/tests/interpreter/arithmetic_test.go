@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -723,9 +724,9 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 
 	// Verify all test cases exist
 
-	for _, ty := range append(
-		sema.AllSignedIntegerTypes[:],
-		sema.AllSignedFixedPointTypes...,
+	for _, ty := range common.Concat(
+		sema.AllSignedIntegerTypes,
+		sema.AllSignedFixedPointTypes,
 	) {
 
 		testCase, ok := testCases[ty]
@@ -749,9 +750,9 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		}
 	}
 
-	for _, ty := range append(
-		sema.AllUnsignedIntegerTypes[:],
-		sema.AllUnsignedFixedPointTypes...,
+	for _, ty := range common.Concat(
+		sema.AllUnsignedIntegerTypes,
+		sema.AllUnsignedFixedPointTypes,
 	) {
 
 		if strings.HasPrefix(ty.String(), "Word") {

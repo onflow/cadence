@@ -160,6 +160,40 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
+
+	t.Run("inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+          struct interface I {
+              fun test(): Int {
+				return 3
+			  }
+          }
+
+          struct interface J: I {}
+
+		  struct S: J {}
+
+		  fun foo(_ s: {J}): Int {
+			return s.test()
+		  }
+
+          fun main(): Int {
+			return foo(S())
+          }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
 }
 
 func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
@@ -882,4 +916,38 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		// The post-conditions of the interfaces are executed after that, with the reversed depth-first pre-order.
 		assert.Equal(t, []string{"A", "D", "F", "E", "C", "B"}, logs)
 	})
+}
+
+func TestRuntimeNestedInterfaceCast(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+	access(all) contract C {
+		access(all) resource interface TopInterface {}
+		access(all) resource interface MiddleInterface: TopInterface {}
+		access(all) resource ConcreteResource: MiddleInterface {}
+	 
+		access(all) fun createMiddleInterface(): @{MiddleInterface} {
+			return <-create ConcreteResource()
+		}
+	 }
+
+	 access(all) fun main() {
+		let x <- C.createMiddleInterface()
+		let y <- x as! @{C.TopInterface}
+		destroy y
+	 }
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{},
+			Config: &interpreter.Config{
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
 }

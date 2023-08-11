@@ -197,6 +197,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		)
 	})
 
+
 	t.Run("resource, shift statement, index expression", func(t *testing.T) {
 
 		t.Parallel()
@@ -2352,7 +2353,7 @@ func TestInterpretResourceFunctionInvocationAfterDestruction(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {

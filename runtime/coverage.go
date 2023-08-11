@@ -206,12 +206,12 @@ func (r *CoverageReport) InspectProgram(location Location, program *ast.Program)
 				if isFunctionBlock {
 					if functionBlock.PreConditions != nil {
 						for _, condition := range *functionBlock.PreConditions {
-							recordLine(condition.Test)
+							recordLine(condition.CodeElement())
 						}
 					}
 					if functionBlock.PostConditions != nil {
 						for _, condition := range *functionBlock.PostConditions {
-							recordLine(condition.Test)
+							recordLine(condition.CodeElement())
 						}
 					}
 				}

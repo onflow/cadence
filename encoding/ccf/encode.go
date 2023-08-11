@@ -94,20 +94,20 @@ type EncOptions struct {
 	// SortCompositeFields specifies sort order of Cadence composite fields.
 	SortCompositeFields SortMode
 
-	// SortRestrictedTypes specifies sort order of Cadence restricted types.
-	SortRestrictedTypes SortMode
+	// SortIntersectionTypes specifies sort order of Cadence intersection types.
+	SortIntersectionTypes SortMode
 }
 
 // EventsEncMode is CCF encoding mode for events which contains
 // immutable CCF encoding options.  It is safe for concurrent use.
 var EventsEncMode = &encMode{
-	sortCompositeFields: SortNone,
-	sortRestrictedTypes: SortNone,
+	sortCompositeFields:   SortNone,
+	sortIntersectionTypes: SortNone,
 }
 
 type encMode struct {
-	sortCompositeFields SortMode
-	sortRestrictedTypes SortMode
+	sortCompositeFields   SortMode
+	sortIntersectionTypes SortMode
 }
 
 // EncMode returns CCF encoding mode, which contains immutable encoding options
@@ -116,12 +116,12 @@ func (opts EncOptions) EncMode() (EncMode, error) {
 	if !opts.SortCompositeFields.valid() {
 		return nil, fmt.Errorf("ccf: invalid SortCompositeFields %d", opts.SortCompositeFields)
 	}
-	if !opts.SortRestrictedTypes.valid() {
-		return nil, fmt.Errorf("ccf: invalid SortRestrictedTypes %d", opts.SortRestrictedTypes)
+	if !opts.SortIntersectionTypes.valid() {
+		return nil, fmt.Errorf("ccf: invalid SortIntersectionTypes %d", opts.SortIntersectionTypes)
 	}
 	return &encMode{
-		sortCompositeFields: opts.SortCompositeFields,
-		sortRestrictedTypes: opts.SortRestrictedTypes,
+		sortCompositeFields:   opts.SortCompositeFields,
+		sortIntersectionTypes: opts.SortIntersectionTypes,
 	}, nil
 }
 
@@ -592,9 +592,6 @@ func (e *Encoder) encodeValue(
 		//
 		// If x.StaticType is nil, type value is encoded as nil.
 		return e.encodeNullableTypeValue(v.StaticType, ccfTypeIDByCadenceType{})
-
-	case cadence.PathCapability:
-		return e.encodePathCapability(v)
 
 	case cadence.IDCapability:
 		return e.encodeIDCapability(v)
@@ -1109,34 +1106,6 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 	return e.enc.EncodeString(x.Identifier)
 }
 
-// encodePathCapability encodes cadence.PathCapability as
-// language=CDDL
-// path-capability-value = [
-//
-//	address: address-value,
-//	path: path-value
-//
-// ]
-func (e *Encoder) encodePathCapability(capability cadence.PathCapability) error {
-	// Encode array head with length 2.
-	err := e.enc.EncodeRawBytes([]byte{
-		// array, 2 items follow
-		0x82,
-	})
-	if err != nil {
-		return err
-	}
-
-	// element 0: address
-	err = e.encodeAddress(capability.Address)
-	if err != nil {
-		return err
-	}
-
-	// element 1: path
-	return e.encodePath(capability.Path)
-}
-
 // encodeIDCapability encodes cadence.IDCapability as
 // language=CDDL
 // id-capability-value = [
@@ -1230,7 +1199,7 @@ func (e *Encoder) encodeFunction(typ *cadence.FunctionType, visited ccfTypeIDByC
 //	/ contract-interface-type-value
 //	/ function-type-value
 //	/ reference-type-value
-//	/ restricted-type-value
+//	/ intersection-type-value
 //	/ capability-type-value
 //	/ type-value-ref
 //
@@ -1297,8 +1266,8 @@ func (e *Encoder) encodeTypeValue(typ cadence.Type, visited ccfTypeIDByCadenceTy
 	case *cadence.ReferenceType:
 		return e.encodeReferenceTypeValue(typ, visited)
 
-	case *cadence.RestrictedType:
-		return e.encodeRestrictedTypeValue(typ, visited)
+	case *cadence.IntersectionType:
+		return e.encodeIntersectionTypeValue(typ, visited)
 
 	case *cadence.CapabilityType:
 		return e.encodeCapabilityTypeValue(typ, visited)
@@ -1430,18 +1399,18 @@ func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited c
 	)
 }
 
-// encodeRestrictedTypeValue encodes cadence.RestrictedType as
+// encodeIntersectionTypeValue encodes cadence.IntersectionType as
 // language=CDDL
-// restricted-type-value =
+// intersection-type-value =
 //
-//	; cbor-tag-restricted-type-value
+//	; cbor-tag-intersection-type-value
 //	#6.191([
 //	  type: type-value / nil,
-//	  restrictions: [* type-value]
+//	  types: [* type-value]
 //	])
-func (e *Encoder) encodeRestrictedTypeValue(typ *cadence.RestrictedType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagRestrictedTypeValue}
-	return e.encodeRestrictedTypeWithRawTag(
+func (e *Encoder) encodeIntersectionTypeValue(typ *cadence.IntersectionType, visited ccfTypeIDByCadenceType) error {
+	rawTagNum := []byte{0xd8, CBORTagIntersectionTypeValue}
+	return e.encodeIntersectionTypeWithRawTag(
 		typ,
 		visited,
 		e.encodeNullableTypeValue,

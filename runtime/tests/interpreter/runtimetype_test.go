@@ -561,7 +561,7 @@ func TestInterpretReferenceType(t *testing.T) {
 	)
 }
 
-func TestInterpretRestrictedType(t *testing.T) {
+func TestInterpretIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
@@ -575,32 +575,24 @@ func TestInterpretRestrictedType(t *testing.T) {
         access(all) let foo : Int
       }
 
-      let a = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.R"])!
-      let b = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S"])!
+      let a = IntersectionType(types: ["S.test.R"])!
+      let b = IntersectionType(types: ["S.test.S"])!
 
-      let c = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.R"])
-      let d = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.S"])
-      let e = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S2"])
+	  let c = IntersectionType(types: [])
 
-      let f = RestrictedType(identifier: "S.test.B", restrictions: ["X"])
-      let g = RestrictedType(identifier: "S.test.N", restrictions: ["S.test.S2"])
+      let f = IntersectionType(types: ["X"])
 
-      let h = Type<@A{R}>()
-      let i = Type<B{S}>()
+      let h = Type<@{R}>()
+      let i = Type<{S}>()
 
-      let j = RestrictedType(identifier: nil, restrictions: ["S.test.R"])!
-      let k = RestrictedType(identifier: nil, restrictions: ["S.test.S"])!
+      let j = IntersectionType(types: ["S.test.R", "S.test.S" ])
+      let k = IntersectionType(types: ["S.test.S", "S.test.S2"])!
     `)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "A",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.A",
-				},
-				Restrictions: []interpreter.InterfaceStaticType{
+			Type: &interpreter.IntersectionStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "R",
 						Location:            utils.TestLocation,
@@ -612,14 +604,14 @@ func TestInterpretRestrictedType(t *testing.T) {
 	)
 
 	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("c").GetValue(),
+	)
+
+	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "B",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.B",
-				},
-				Restrictions: []interpreter.InterfaceStaticType{
+			Type: &interpreter.IntersectionStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "S",
 						Location:            utils.TestLocation,
@@ -631,27 +623,20 @@ func TestInterpretRestrictedType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyResource,
-				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-					},
-				},
-			},
-		},
+		interpreter.Nil,
 		inter.Globals.Get("j").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
-				Restrictions: []interpreter.InterfaceStaticType{
+			Type: &interpreter.IntersectionStaticType{
+				Types: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "S",
+						Location:            utils.TestLocation,
+					},
+					{
+						QualifiedIdentifier: "S2",
 						Location:            utils.TestLocation,
 					},
 				},
@@ -662,27 +647,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("e").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
 		inter.Globals.Get("f").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("g").GetValue(),
 	)
 
 	assert.Equal(t,

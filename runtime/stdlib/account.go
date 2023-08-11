@@ -123,7 +123,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 						address, err = creator.CreateAccount(payerAddress)
 					})
 					if err != nil {
-						panic(err)
+						panic(interpreter.WrappedExternalError(err))
 					}
 
 					return
@@ -341,7 +341,7 @@ func newAccountBalanceGetFunction(
 				balance, err = provider.GetAccountBalance(address)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return
@@ -370,7 +370,7 @@ func newAccountAvailableBalanceGetFunction(
 				balance, err = provider.GetAccountAvailableBalance(address)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return
@@ -409,7 +409,7 @@ func newStorageUsedGetFunction(
 					capacity, err = provider.GetStorageUsed(address)
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 				return capacity
 			},
@@ -448,7 +448,7 @@ func newStorageCapacityGetFunction(
 					capacity, err = provider.GetStorageCapacity(address)
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 				return capacity
 			},
@@ -505,7 +505,7 @@ func newAccountKeysAddFunction(
 				accountKey, err = handler.AddAccountKey(address, publicKey, hashAlgo, weight)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			handler.EmitEvent(
@@ -576,7 +576,7 @@ func newAccountKeysGetFunction(
 			})
 
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -660,7 +660,7 @@ func newAccountKeysForEachFunction(
 			})
 
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			var accountKey *AccountKey
@@ -670,7 +670,7 @@ func newAccountKeysForEachFunction(
 					accountKey, err = provider.GetAccountKey(address, int(index))
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 
 				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -724,7 +724,7 @@ func newAccountKeysCountGetter(
 			if err != nil {
 				// The provider might not be able to fetch the number of account keys
 				// e.g. when the account does not exist
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return count
@@ -768,7 +768,7 @@ func newAccountKeysRevokeFunction(
 				accountKey, err = handler.RevokeAccountKey(address, index)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -917,6 +917,7 @@ func newAuthAccountInboxPublishFunction(
 				atree.Address(provider),
 				true,
 				nil,
+				nil,
 			)
 
 			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
@@ -982,6 +983,7 @@ func newAuthAccountInboxUnpublishFunction(
 				locationRange,
 				atree.Address{},
 				true,
+				nil,
 				nil,
 			)
 
@@ -1068,6 +1070,7 @@ func newAuthAccountInboxClaimFunction(
 				atree.Address{},
 				true,
 				nil,
+				nil,
 			)
 
 			inter.WriteStored(
@@ -1133,7 +1136,7 @@ func newAccountContractsGetNamesFunction(
 			names, err = provider.GetAccountContractNames(address)
 		})
 		if err != nil {
-			panic(err)
+			panic(interpreter.WrappedExternalError(err))
 		}
 
 		values := make([]interpreter.Value, len(names))
@@ -1198,7 +1201,7 @@ func newAccountContractsGetFunction(
 				code, err = provider.GetAccountContractCode(location)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			if len(code) > 0 {
@@ -1264,7 +1267,7 @@ func newAccountContractsBorrowFunction(
 				code, err = handler.GetAccountContractCode(location)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 			if len(code) == 0 {
 				return interpreter.Nil
@@ -1706,7 +1709,7 @@ func updateAccountContractCode(
 		err = handler.UpdateAccountContractCode(location, code)
 	})
 	if err != nil {
-		return err
+		return interpreter.WrappedExternalError(err)
 	}
 
 	if createContract {
@@ -1863,7 +1866,7 @@ func newAuthAccountContractsRemoveFunction(
 				code, err = handler.GetAccountContractCode(location)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			// Only remove the contract code, remove the contract value, and emit an event,
@@ -1891,7 +1894,7 @@ func newAuthAccountContractsRemoveFunction(
 					err = handler.RemoveAccountContractCode(location)
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 
 				// NOTE: the contract recording function delays the write
@@ -2127,7 +2130,6 @@ func newAuthAccountCapabilitiesValue(
 		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, true),
 		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
 		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
-		newAuthAccountCapabilitiesMigrateLinkFunction(gauge, idGenerator, addressValue),
 		func() interpreter.Value {
 			return newAuthAccountStorageCapabilitiesValue(
 				gauge,
@@ -2421,7 +2423,7 @@ func issueStorageCapabilityController(
 		capabilityID, err = idGenerator.GenerateAccountID(address)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 	if capabilityID == 0 {
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
@@ -2503,7 +2505,7 @@ func issueAccountCapabilityController(
 		capabilityID, err = idGenerator.GenerateAccountID(address)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 	if capabilityID == 0 {
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
@@ -3035,9 +3037,6 @@ func newAuthAccountCapabilitiesPublishFunction(
 			case *interpreter.IDCapabilityValue:
 				capabilityValue = firstValue
 
-			case *interpreter.PathCapabilityValue:
-				panic(errors.NewDefaultUserError("cannot publish linked capability"))
-
 			default:
 				panic(errors.NewUnreachableError())
 			}
@@ -3077,6 +3076,7 @@ func newAuthAccountCapabilitiesPublishFunction(
 				locationRange,
 				atree.Address(address),
 				true,
+				nil,
 				nil,
 			).(*interpreter.IDCapabilityValue)
 			if !ok {
@@ -3134,9 +3134,6 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 			case *interpreter.IDCapabilityValue:
 				capabilityValue = readValue
 
-			case interpreter.LinkValue:
-				panic(errors.NewDefaultUserError("cannot unpublish linked capability"))
-
 			default:
 				panic(errors.NewUnreachableError())
 			}
@@ -3146,6 +3143,7 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 				locationRange,
 				atree.Address{},
 				true,
+				nil,
 				nil,
 			).(*interpreter.IDCapabilityValue)
 			if !ok {
@@ -3160,153 +3158,6 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 			)
 
 			return interpreter.NewSomeValueNonCopying(inter, capabilityValue)
-		},
-	)
-}
-
-func newAuthAccountCapabilitiesMigrateLinkFunction(
-	gauge common.MemoryGauge,
-	idGenerator AccountIDGenerator,
-	addressValue interpreter.AddressValue,
-) *interpreter.HostFunctionValue {
-	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		sema.AuthAccountCapabilitiesTypeMigrateLinkFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// Get path argument
-
-			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := pathValue.Domain.Identifier()
-			identifier := pathValue.Identifier
-
-			// Read stored link, if any
-
-			storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-			readValue := inter.ReadStored(address, domain, storageMapKey)
-			if readValue == nil {
-				return interpreter.Nil
-			}
-
-			var borrowStaticType interpreter.ReferenceStaticType
-
-			switch readValue := readValue.(type) {
-			case *interpreter.IDCapabilityValue:
-				// Already migrated
-				return interpreter.Nil
-
-			case interpreter.PathLinkValue:
-				borrowStaticType, ok = readValue.Type.(interpreter.ReferenceStaticType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-			case interpreter.AccountLinkValue:
-				borrowStaticType = interpreter.AuthAccountReferenceStaticType
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			borrowType, ok := inter.MustConvertStaticToSemaType(borrowStaticType).(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			// Get target
-
-			target, _, err :=
-				inter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					// Use top-most type to follow link all the way to final target
-					&sema.ReferenceType{
-						Type:          sema.AnyType,
-						Authorization: sema.UnauthorizedAccess,
-					},
-					false,
-					locationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			// Issue appropriate capability controller
-
-			var capabilityID interpreter.UInt64Value
-
-			switch target := target.(type) {
-			case nil:
-				return interpreter.Nil
-
-			case interpreter.PathCapabilityTarget:
-
-				targetPath := interpreter.PathValue(target)
-
-				capabilityID, _ = issueStorageCapabilityController(
-					inter,
-					locationRange,
-					idGenerator,
-					address,
-					borrowType,
-					targetPath,
-				)
-
-			case interpreter.AccountCapabilityTarget:
-
-				capabilityID, _ = issueAccountCapabilityController(
-					inter,
-					locationRange,
-					idGenerator,
-					address,
-					borrowType,
-				)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			// Publish: overwrite link value with capability,
-			// for both public and private links.
-			//
-			// Private links need to be replaced,
-			// because another link might target it.
-
-			capabilityValue := interpreter.NewIDCapabilityValue(
-				inter,
-				capabilityID,
-				addressValue,
-				borrowStaticType,
-			)
-
-			capabilityValue, ok = capabilityValue.Transfer(
-				inter,
-				locationRange,
-				atree.Address(address),
-				true,
-				nil,
-			).(*interpreter.IDCapabilityValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			inter.WriteStored(
-				address,
-				domain,
-				storageMapKey,
-				capabilityValue,
-			)
-
-			return interpreter.NewSomeValueNonCopying(inter, capabilityID)
 		},
 	)
 }
@@ -3531,10 +3382,6 @@ func newAccountCapabilitiesGetFunction(
 			switch readValue := readValue.(type) {
 			case *interpreter.IDCapabilityValue:
 				readCapabilityValue = readValue
-
-			case interpreter.LinkValue:
-				// TODO: return PathCapabilityValue?
-				return interpreter.Nil
 
 			default:
 				panic(errors.NewUnreachableError())

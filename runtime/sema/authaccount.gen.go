@@ -243,6 +243,7 @@ var AuthAccountTypeCopyFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountTypeCopyFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountTypeCopyFunctionTypeParameterT,
 	},
@@ -288,6 +289,7 @@ var AuthAccountTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountTypeBorrowFunctionTypeParameterT,
 	},
@@ -327,6 +329,7 @@ var AuthAccountTypeCheckFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountTypeCheckFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountTypeCheckFunctionTypeParameterT,
 	},
@@ -348,179 +351,6 @@ i.e. could be borrowed using the given type.
 The given type must not necessarily be exactly the same as the type of the borrowed object.
 
 The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed.
-`
-
-const AuthAccountTypeLinkFunctionName = "link"
-
-var AuthAccountTypeLinkFunctionTypeParameterT = &TypeParameter{
-	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
-	},
-}
-
-var AuthAccountTypeLinkFunctionType = &FunctionType{
-	TypeParameters: []*TypeParameter{
-		AuthAccountTypeLinkFunctionTypeParameterT,
-	},
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "newCapabilityPath",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-		},
-		{
-			Identifier:     "target",
-			TypeAnnotation: NewTypeAnnotation(PathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: MustInstantiate(
-				&CapabilityType{},
-				&GenericType{
-					TypeParameter: AuthAccountTypeLinkFunctionTypeParameterT,
-				},
-			),
-		},
-	),
-}
-
-const AuthAccountTypeLinkFunctionDocString = `
-**DEPRECATED**: Instead, use ` + "`capabilities.storage.issue`" + `, and ` + "`capabilities.publish`" + ` if the path is public.
-
-Creates a capability at the given public or private path,
-which targets the given public, private, or storage path.
-
-The target path leads to the object that will provide the functionality defined by this capability.
-
-The given type defines how the capability can be borrowed, i.e., how the stored value can be accessed.
-
-Returns nil if a link for the given capability path already exists, or the newly created capability if not.
-
-It is not necessary for the target path to lead to a valid object; the target path could be empty,
-or could lead to an object which does not provide the necessary type interface:
-The link function does **not** check if the target path is valid/exists at the time the capability is created
-and does **not** check if the target value conforms to the given type.
-
-The link is latent.
-
-The target value might be stored after the link is created,
-and the target value might be moved out after the link has been created.
-`
-
-const AuthAccountTypeLinkAccountFunctionName = "linkAccount"
-
-var AuthAccountTypeLinkAccountFunctionType = &FunctionType{
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "newCapabilityPath",
-			TypeAnnotation: NewTypeAnnotation(PrivatePathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: MustInstantiate(
-				&CapabilityType{},
-				&ReferenceType{
-					Type:          AuthAccountType,
-					Authorization: UnauthorizedAccess,
-				},
-			),
-		},
-	),
-}
-
-const AuthAccountTypeLinkAccountFunctionDocString = `
-**DEPRECATED**: Use ` + "`capabilities.account.issue`" + ` instead.
-
-Creates a capability at the given public or private path which targets this account.
-
-Returns nil if a link for the given capability path already exists, or the newly created capability if not.
-`
-
-const AuthAccountTypeGetCapabilityFunctionName = "getCapability"
-
-var AuthAccountTypeGetCapabilityFunctionTypeParameterT = &TypeParameter{
-	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
-	},
-}
-
-var AuthAccountTypeGetCapabilityFunctionType = &FunctionType{
-	TypeParameters: []*TypeParameter{
-		AuthAccountTypeGetCapabilityFunctionTypeParameterT,
-	},
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "path",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		MustInstantiate(
-			&CapabilityType{},
-			&GenericType{
-				TypeParameter: AuthAccountTypeGetCapabilityFunctionTypeParameterT,
-			},
-		),
-	),
-}
-
-const AuthAccountTypeGetCapabilityFunctionDocString = `
-**DEPRECATED**: Use ` + "`capabilities.get`" + ` instead.
-
-Returns the capability at the given private or public path.
-`
-
-const AuthAccountTypeGetLinkTargetFunctionName = "getLinkTarget"
-
-var AuthAccountTypeGetLinkTargetFunctionType = &FunctionType{
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "path",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: PathType,
-		},
-	),
-}
-
-const AuthAccountTypeGetLinkTargetFunctionDocString = `
-**DEPRECATED**: Use ` + "`capabilities.storage.getController`" + ` and ` + "`StorageCapabilityController.target()`" + `.
-
-Returns the target path of the capability at the given public or private path,
-or nil if there exists no capability at the given path.
-`
-
-const AuthAccountTypeUnlinkFunctionName = "unlink"
-
-var AuthAccountTypeUnlinkFunctionType = &FunctionType{
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "path",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
-	),
-}
-
-const AuthAccountTypeUnlinkFunctionDocString = `
-**DEPRECATED**: Use ` + "`capabilities.unpublish`" + ` instead if the path is public.
-
-Removes the capability at the given public or private path.
 `
 
 const AuthAccountTypeForEachPublicFunctionName = "forEachPublic"
@@ -745,6 +575,7 @@ Returns the deployed contract for the updated contract.
 const AuthAccountContractsTypeGetFunctionName = "get"
 
 var AuthAccountContractsTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "name",
@@ -799,6 +630,7 @@ var AuthAccountContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountContractsTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountContractsTypeBorrowFunctionTypeParameterT,
 	},
@@ -919,6 +751,7 @@ Returns the added key.
 const AuthAccountKeysTypeGetFunctionName = "get"
 
 var AuthAccountKeysTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "keyIndex",
@@ -1242,6 +1075,7 @@ var AuthAccountCapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountCapabilitiesTypeGetFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountCapabilitiesTypeGetFunctionTypeParameterT,
 	},
@@ -1281,6 +1115,7 @@ var AuthAccountCapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 }
 
 var AuthAccountCapabilitiesTypeBorrowFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	TypeParameters: []*TypeParameter{
 		AuthAccountCapabilitiesTypeBorrowFunctionTypeParameterT,
 	},
@@ -1357,38 +1192,6 @@ Returns the capability if one was published at the path.
 Returns nil if no capability was published at the path.
 `
 
-const AuthAccountCapabilitiesTypeMigrateLinkFunctionName = "migrateLink"
-
-var AuthAccountCapabilitiesTypeMigrateLinkFunctionType = &FunctionType{
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "newCapabilityPath",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: UInt64Type,
-		},
-	),
-}
-
-const AuthAccountCapabilitiesTypeMigrateLinkFunctionDocString = `
-**DEPRECATED**: This function only exists temporarily to aid in the migration of links.
-This function will not be part of the final Capability Controller API.
-
-Migrates the link at the given path to a capability controller.
-Returns the capability ID of the newly issued controller.
-Returns nil if the migration fails,
-e.g. when the path does not lead to a storage path.
-
-Does not migrate intermediate links of the chain.
-
-Returns the ID of the issued capability controller, if any.
-Returns nil if migration fails.
-`
-
 const AuthAccountCapabilitiesTypeName = "Capabilities"
 
 var AuthAccountCapabilitiesType = func() *CompositeType {
@@ -1448,13 +1251,6 @@ func init() {
 			AuthAccountCapabilitiesTypeUnpublishFunctionType,
 			AuthAccountCapabilitiesTypeUnpublishFunctionDocString,
 		),
-		NewUnmeteredFunctionMember(
-			AuthAccountCapabilitiesType,
-			ast.AccessAll,
-			AuthAccountCapabilitiesTypeMigrateLinkFunctionName,
-			AuthAccountCapabilitiesTypeMigrateLinkFunctionType,
-			AuthAccountCapabilitiesTypeMigrateLinkFunctionDocString,
-		),
 	}
 
 	AuthAccountCapabilitiesType.Members = MembersAsMap(members)
@@ -1464,6 +1260,7 @@ func init() {
 const AuthAccountStorageCapabilitiesTypeGetControllerFunctionName = "getController"
 
 var AuthAccountStorageCapabilitiesTypeGetControllerFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "byCapabilityID",
@@ -1489,6 +1286,7 @@ Returns nil if the ID does not reference an existing storage capability.
 const AuthAccountStorageCapabilitiesTypeGetControllersFunctionName = "getControllers"
 
 var AuthAccountStorageCapabilitiesTypeGetControllersFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "forPath",
@@ -1640,6 +1438,7 @@ func init() {
 const AuthAccountAccountCapabilitiesTypeGetControllerFunctionName = "getController"
 
 var AuthAccountAccountCapabilitiesTypeGetControllerFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Identifier:     "byCapabilityID",
@@ -1665,6 +1464,7 @@ Returns nil if the ID does not reference an existing account capability.
 const AuthAccountAccountCapabilitiesTypeGetControllersFunctionName = "getControllers"
 
 var AuthAccountAccountCapabilitiesTypeGetControllersFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
 			Type: &ReferenceType{
@@ -1723,9 +1523,7 @@ const AuthAccountAccountCapabilitiesTypeIssueFunctionName = "issue"
 var AuthAccountAccountCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: &RestrictedType{
-			Type: AuthAccountType,
-		},
+		Type:          AuthAccountType,
 		Authorization: UnauthorizedAccess,
 	},
 }
@@ -1955,41 +1753,6 @@ func init() {
 			AuthAccountTypeCheckFunctionName,
 			AuthAccountTypeCheckFunctionType,
 			AuthAccountTypeCheckFunctionDocString,
-		),
-		NewUnmeteredFunctionMember(
-			AuthAccountType,
-			ast.AccessAll,
-			AuthAccountTypeLinkFunctionName,
-			AuthAccountTypeLinkFunctionType,
-			AuthAccountTypeLinkFunctionDocString,
-		),
-		NewUnmeteredFunctionMember(
-			AuthAccountType,
-			ast.AccessAll,
-			AuthAccountTypeLinkAccountFunctionName,
-			AuthAccountTypeLinkAccountFunctionType,
-			AuthAccountTypeLinkAccountFunctionDocString,
-		),
-		NewUnmeteredFunctionMember(
-			AuthAccountType,
-			ast.AccessAll,
-			AuthAccountTypeGetCapabilityFunctionName,
-			AuthAccountTypeGetCapabilityFunctionType,
-			AuthAccountTypeGetCapabilityFunctionDocString,
-		),
-		NewUnmeteredFunctionMember(
-			AuthAccountType,
-			ast.AccessAll,
-			AuthAccountTypeGetLinkTargetFunctionName,
-			AuthAccountTypeGetLinkTargetFunctionType,
-			AuthAccountTypeGetLinkTargetFunctionDocString,
-		),
-		NewUnmeteredFunctionMember(
-			AuthAccountType,
-			ast.AccessAll,
-			AuthAccountTypeUnlinkFunctionName,
-			AuthAccountTypeUnlinkFunctionType,
-			AuthAccountTypeUnlinkFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			AuthAccountType,

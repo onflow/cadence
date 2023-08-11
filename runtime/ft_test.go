@@ -371,18 +371,16 @@ access(all) contract FlowToken: FungibleToken {
         // Create a public capability to the stored Vault that only exposes
         // the 'deposit' method through the 'Receiver' interface
         //
-        adminAccount.link<&FlowToken.Vault{FungibleToken.Receiver}>(
-            /public/flowTokenReceiver,
-            target: /storage/flowTokenVault
-        )
+        let receiverCap = adminAccount.capabilities.storage
+            .issue<&FlowToken.Vault>(/storage/flowTokenVault)
+        adminAccount.capabilities.publish(receiverCap, at: /public/flowTokenReceiver)
 
         // Create a public capability to the stored Vault that only exposes
         // the 'balance' field through the 'Balance' interface
         //
-        adminAccount.link<&FlowToken.Vault{FungibleToken.Balance}>(
-            /public/flowTokenBalance,
-            target: /storage/flowTokenVault
-        )
+        let balanceCap = adminAccount.capabilities.storage
+            .issue<&FlowToken.Vault>(/storage/flowTokenVault)
+        adminAccount.capabilities.publish(balanceCap, at: /public/flowTokenBalance)
 
         let admin <- create Administrator()
         adminAccount.save(<-admin, to: /storage/flowTokenAdmin)
@@ -407,14 +405,14 @@ transaction {
 
             // Create a public capability to the Vault that only exposes
             // the deposit function through the Receiver interface
-            signer.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+            signer.link<&FlowToken.Vault>(
                 /public/flowTokenReceiver,
                 target: /storage/flowTokenVault
             )
 
             // Create a public capability to the Vault that only exposes
             // the balance field through the Balance interface
-            signer.link<&FlowToken.Vault{FungibleToken.Balance}>(
+            signer.link<&FlowToken.Vault>(
                 /public/flowTokenBalance,
                 target: /storage/flowTokenVault
             )
@@ -494,7 +492,7 @@ access(all) fun main(account: Address): UFix64 {
 
     let vaultRef = getAccount(account)
         .getCapability(/public/flowTokenBalance)
-        .borrow<&FlowToken.Vault{FungibleToken.Balance}>()
+        .borrow<&FlowToken.Vault>()
         ?? panic("Could not borrow Balance reference to the Vault")
 
     return vaultRef.balance

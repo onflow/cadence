@@ -111,33 +111,33 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey           = "type"
-	kindKey           = "kind"
-	valueKey          = "value"
-	keyKey            = "key"
-	nameKey           = "name"
-	fieldsKey         = "fields"
-	initializersKey   = "initializers"
-	idKey             = "id"
-	targetPathKey     = "targetPath"
-	borrowTypeKey     = "borrowType"
-	domainKey         = "domain"
-	identifierKey     = "identifier"
-	staticTypeKey     = "staticType"
-	addressKey        = "address"
-	pathKey           = "path"
-	authorizationKey  = "authorization"
-	entitlementsKey   = "entitlements"
-	sizeKey           = "size"
-	typeIDKey         = "typeID"
-	restrictionsKey   = "restrictions"
-	labelKey          = "label"
-	parametersKey     = "parameters"
-	typeParametersKey = "typeParameters"
-	returnKey         = "return"
-	typeBoundKey      = "typeBound"
-	purityKey         = "purity"
-	functionTypeKey   = "functionType"
+	typeKey              = "type"
+	kindKey              = "kind"
+	valueKey             = "value"
+	keyKey               = "key"
+	nameKey              = "name"
+	fieldsKey            = "fields"
+	initializersKey      = "initializers"
+	idKey                = "id"
+	targetPathKey        = "targetPath"
+	borrowTypeKey        = "borrowType"
+	domainKey            = "domain"
+	identifierKey        = "identifier"
+	staticTypeKey        = "staticType"
+	addressKey           = "address"
+	pathKey              = "path"
+	authorizationKey     = "authorization"
+	entitlementsKey      = "entitlements"
+	sizeKey              = "size"
+	typeIDKey            = "typeID"
+	intersectionTypesKey = "types"
+	labelKey             = "label"
+	parametersKey        = "parameters"
+	typeParametersKey    = "typeParameters"
+	returnKey            = "return"
+	typeBoundKey         = "typeBound"
+	purityKey            = "purity"
+	functionTypeKey      = "functionType"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -1153,22 +1153,18 @@ func (d *Decoder) decodeNominalType(
 	return result
 }
 
-func (d *Decoder) decodeRestrictedType(
-	typeValue any,
-	restrictionsValue []any,
+func (d *Decoder) decodeIntersectionType(
+	intersectionValue []any,
 	results typeDecodingResults,
 ) cadence.Type {
-	typ := d.decodeType(typeValue, results)
-
-	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
-	for _, restriction := range restrictionsValue {
-		restrictions = append(restrictions, d.decodeType(restriction, results))
+	types := make([]cadence.Type, 0, len(intersectionValue))
+	for _, typ := range intersectionValue {
+		types = append(types, d.decodeType(typ, results))
 	}
 
-	return cadence.NewMeteredRestrictedType(
+	return cadence.NewMeteredIntersectionType(
 		d.gauge,
-		typ,
-		restrictions,
+		types,
 	)
 }
 
@@ -1204,12 +1200,10 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			purity = "impure"
 		}
 		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, purity, results)
-	case "Restriction":
-		restrictionsValue := obj.Get(restrictionsKey)
-		typeValue := obj.Get(typeKey)
-		return d.decodeRestrictedType(
-			typeValue,
-			toSlice(restrictionsValue),
+	case "Intersection":
+		intersectionValue := obj.Get(intersectionTypesKey)
+		return d.decodeIntersectionType(
+			toSlice(intersectionValue),
 			results,
 		)
 	case "Optional":
@@ -1383,26 +1377,12 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
-	if id, ok := obj[idKey]; ok {
-		return cadence.NewMeteredIDCapability(
-			d.gauge,
-			d.decodeUInt64(id),
-			d.decodeAddress(obj.Get(addressKey)),
-			d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
-		)
-	} else {
-		path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
-		if !ok {
-			panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
-		}
-
-		return cadence.NewMeteredPathCapability(
-			d.gauge,
-			d.decodeAddress(obj.Get(addressKey)),
-			path,
-			d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
-		)
-	}
+	return cadence.NewMeteredIDCapability(
+		d.gauge,
+		d.decodeUInt64(obj.Get(idKey)),
+		d.decodeAddress(obj.Get(addressKey)),
+		d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+	)
 }
 
 // JSON types

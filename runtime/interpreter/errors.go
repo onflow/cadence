@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -460,34 +461,6 @@ func (e OverwriteError) Error() string {
 		"failed to save object: path %s in account %s already stores an object",
 		e.Path,
 		e.Address,
-	)
-}
-
-// CyclicLinkError
-type CyclicLinkError struct {
-	LocationRange
-	Paths   []PathValue
-	Address common.Address
-}
-
-var _ errors.UserError = CyclicLinkError{}
-
-func (CyclicLinkError) IsUserError() {}
-
-func (e CyclicLinkError) Error() string {
-	var builder strings.Builder
-	for i, path := range e.Paths {
-		if i > 0 {
-			builder.WriteString(" -> ")
-		}
-		builder.WriteString(path.String())
-	}
-	paths := builder.String()
-
-	return fmt.Sprintf(
-		"cyclic link in account %s: %s",
-		e.Address.ShortHexWithPrefix(),
-		paths,
 	)
 }
 
@@ -975,17 +948,34 @@ func (e InvalidAttachmentOperationTargetError) Error() string {
 	)
 }
 
-// AccountLinkingForbiddenError is the error which is reported
-// when a user uses the account link function,
-// but account linking is not allowed
-type AccountLinkingForbiddenError struct {
+// RecursiveTransferError
+type RecursiveTransferError struct {
 	LocationRange
 }
 
-var _ errors.UserError = AccountLinkingForbiddenError{}
+var _ errors.UserError = RecursiveTransferError{}
 
-func (AccountLinkingForbiddenError) IsUserError() {}
+func (RecursiveTransferError) IsUserError() {}
 
-func (e AccountLinkingForbiddenError) Error() string {
-	return "account linking is not allowed"
+func (RecursiveTransferError) Error() string {
+	return "recursive transfer of value"
+}
+
+func WrappedExternalError(err error) error {
+	switch err := err.(type) {
+	case
+		// If the error is a go-runtime error, don't wrap.
+		// These are crashers.
+		runtime.Error,
+
+		// If the error is already a cadence error, then avoid redundant wrapping.
+		errors.InternalError,
+		errors.UserError,
+		errors.ExternalError,
+		Error:
+		return err
+
+	default:
+		return errors.NewExternalError(err)
+	}
 }

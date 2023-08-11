@@ -392,82 +392,78 @@ var NilStaticType = OptionalStaticType{
 	Type: PrimitiveStaticTypeNever,
 }
 
-// RestrictedStaticType
+// IntersectionStaticType
 
-type RestrictedStaticType struct {
-	Type         StaticType
-	Restrictions []InterfaceStaticType
+type IntersectionStaticType struct {
+	Types      []InterfaceStaticType
+	LegacyType StaticType
 }
 
-var _ StaticType = &RestrictedStaticType{}
+var _ StaticType = &IntersectionStaticType{}
 
-func NewRestrictedStaticType(
+func NewIntersectionStaticType(
 	memoryGauge common.MemoryGauge,
-	staticType StaticType,
-	restrictions []InterfaceStaticType,
-) *RestrictedStaticType {
-	common.UseMemory(memoryGauge, common.RestrictedStaticTypeMemoryUsage)
+	types []InterfaceStaticType,
+) *IntersectionStaticType {
+	common.UseMemory(memoryGauge, common.IntersectionStaticTypeMemoryUsage)
 
-	return &RestrictedStaticType{
-		Type:         staticType,
-		Restrictions: restrictions,
+	return &IntersectionStaticType{
+		Types: types,
 	}
 }
 
 // NOTE: must be pointer receiver, as static types get used in type values,
 // which are used as keys in maps when exporting.
 // Key types in Go maps must be (transitively) hashable types,
-// and slices are not, but `Restrictions` is one.
-func (*RestrictedStaticType) isStaticType() {}
+// and slices are not, but `Types` is one.
+func (*IntersectionStaticType) isStaticType() {}
 
-func (RestrictedStaticType) elementSize() uint {
+func (IntersectionStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (t *RestrictedStaticType) String() string {
-	var restrictions []string
+func (t *IntersectionStaticType) String() string {
+	var types []string
 
-	count := len(t.Restrictions)
+	count := len(t.Types)
 	if count > 0 {
-		restrictions = make([]string, count)
+		types = make([]string, count)
 
-		for i, restriction := range t.Restrictions {
-			restrictions[i] = restriction.String()
+		for i, typ := range t.Types {
+			types[i] = typ.String()
 		}
 	}
 
-	return fmt.Sprintf("%s{%s}", t.Type, strings.Join(restrictions, ", "))
+	return fmt.Sprintf("{%s}", strings.Join(types, ", "))
 }
 
-func (t *RestrictedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	restrictions := make([]string, len(t.Restrictions))
+func (t *IntersectionStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	types := make([]string, len(t.Types))
 
-	for i, restriction := range t.Restrictions {
-		restrictions[i] = restriction.MeteredString(memoryGauge)
+	for i, typ := range t.Types {
+		types[i] = typ.MeteredString(memoryGauge)
 	}
 
 	// len = (comma + space) x (n - 1)
 	// To handle n == 0:
 	// 		len = (comma + space) x n
 	//
-	l := len(restrictions)*2 + 2
+	l := len(types)*2 + 2
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 
-	typeStr := t.Type.MeteredString(memoryGauge)
-
-	return fmt.Sprintf("%s{%s}", typeStr, strings.Join(restrictions, ", "))
+	return fmt.Sprintf("{%s}", strings.Join(types, ", "))
 }
 
-func (t *RestrictedStaticType) Equal(other StaticType) bool {
-	otherRestrictedType, ok := other.(*RestrictedStaticType)
-	if !ok || len(t.Restrictions) != len(otherRestrictedType.Restrictions) {
+func (t *IntersectionStaticType) Equal(other StaticType) bool {
+	otherIntersectionType, ok := other.(*IntersectionStaticType)
+	if !ok || len(t.Types) != len(otherIntersectionType.Types) {
 		return false
 	}
 
 outer:
-	for _, restriction := range t.Restrictions {
-		for _, otherRestriction := range otherRestrictedType.Restrictions {
-			if restriction.Equal(otherRestriction) {
+	for _, typ := range t.Types {
+		for _, otherType := range otherIntersectionType.Types {
+			if typ.Equal(otherType) {
 				continue outer
 			}
 		}
@@ -475,7 +471,7 @@ outer:
 		return false
 	}
 
-	return t.Type.Equal(otherRestrictedType.Type)
+	return true
 }
 
 // Authorization
@@ -752,21 +748,20 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 			ConvertSemaToStaticType(memoryGauge, t.Type),
 		)
 
-	case *sema.RestrictedType:
-		var restrictions []InterfaceStaticType
-		restrictionCount := len(t.Restrictions)
-		if restrictionCount > 0 {
-			restrictions = make([]InterfaceStaticType, restrictionCount)
+	case *sema.IntersectionType:
+		var intersectedTypess []InterfaceStaticType
+		typeCount := len(t.Types)
+		if typeCount > 0 {
+			intersectedTypess = make([]InterfaceStaticType, typeCount)
 
-			for i, restriction := range t.Restrictions {
-				restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, restriction)
+			for i, typ := range t.Types {
+				intersectedTypess[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, typ)
 			}
 		}
 
-		return NewRestrictedStaticType(
+		return NewIntersectionStaticType(
 			memoryGauge,
-			ConvertSemaToStaticType(memoryGauge, t.Type),
-			restrictions,
+			intersectedTypess,
 		)
 
 	case *sema.ReferenceType:
@@ -989,37 +984,24 @@ func ConvertStaticToSemaType(
 		}
 		return sema.NewOptionalType(memoryGauge, ty), err
 
-	case *RestrictedStaticType:
-		var restrictions []*sema.InterfaceType
+	case *IntersectionStaticType:
+		var intersectedTypes []*sema.InterfaceType
 
-		restrictionCount := len(t.Restrictions)
-		if restrictionCount > 0 {
-			restrictions = make([]*sema.InterfaceType, restrictionCount)
+		typeCount := len(t.Types)
+		if typeCount > 0 {
+			intersectedTypes = make([]*sema.InterfaceType, typeCount)
 
-			for i, restriction := range t.Restrictions {
-				restrictions[i], err = getInterface(restriction.Location, restriction.QualifiedIdentifier)
+			for i, typ := range t.Types {
+				intersectedTypes[i], err = getInterface(typ.Location, typ.QualifiedIdentifier)
 				if err != nil {
 					return nil, err
 				}
 			}
 		}
 
-		ty, err := ConvertStaticToSemaType(
+		return sema.NewIntersectionType(
 			memoryGauge,
-			t.Type,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		return sema.NewRestrictedType(
-			memoryGauge,
-			ty,
-			restrictions,
+			intersectedTypes,
 		), nil
 
 	case ReferenceStaticType:

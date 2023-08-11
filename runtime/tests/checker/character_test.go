@@ -57,3 +57,20 @@ func TestCheckInvalidCharacterLiteral(t *testing.T) {
 
 	assert.IsType(t, &sema.InvalidCharacterLiteralError{}, errs[0])
 }
+
+func TestCheckCharacterUtf8Field(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+		let a: Character = "a"
+        let x = a.utf8
+	`)
+
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.ByteArrayType,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}

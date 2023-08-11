@@ -521,23 +521,6 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 		value := inter.Globals.Get("ref").GetValue()
 		require.IsType(t, interpreter.Nil, value)
 	})
-
-	t.Run("upcast to optional", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          let i: Int = 1
-          let ref = &i as &Int?
-        `)
-
-		value := inter.Globals.Get("ref").GetValue()
-		require.IsType(t, &interpreter.SomeValue{}, value)
-
-		innerValue := value.(*interpreter.SomeValue).
-			InnerValue(inter, interpreter.EmptyLocationRange)
-		require.IsType(t, &interpreter.EphemeralReferenceValue{}, innerValue)
-	})
 }
 
 func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
@@ -1206,6 +1189,180 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
+
+	t.Run("nested resource in composite", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let id: UInt8  // non resource typed field
+                let bar: @Bar   // resource typed field
+                init() {
+                    self.id = 1
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let baz: @Baz
+                init() {
+                    self.baz <-create Baz()
+                }
+                destroy() {
+                    destroy self.baz
+                }
+            }
+
+            resource Baz {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                var foo <- create Foo()
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var bazRef = getRef(&foo.bar.baz as &Baz)
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                bazRef.id
+
+                destroy foo2
+            }
+
+            fun getRef(_ ref: &Baz): &Baz {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested resource in dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            fun main() {
+                var dict <- {"levelOne": <- {"levelTwo": <- create Foo()}}
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var dictRef = getRef(&dict["levelOne"] as &{String: Foo}?)!
+
+                // Move the outer resource
+                var dict2 <- dict
+
+                // Access the inner moved resource
+                var fooRef = dictRef["levelTwo"]
+
+                destroy dict2
+            }
+
+            fun getRef(_ ref: &{String: Foo}?): &{String: Foo}? {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested resource in array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            fun main() {
+                var array <- [<-[<- create Foo()]]
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var arrayRef = getRef(&array[0] as &[Foo])
+
+                // Move the outer resource
+                var array2 <- array
+
+                // Access the inner moved resource
+                var fooRef = arrayRef[0]
+
+                destroy array2
+            }
+
+            fun getRef(_ ref: &[Foo]): &[Foo] {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested optional resource", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let optionalBar: @Bar?
+                init() {
+                    self.optionalBar <-create Bar()
+                }
+                destroy() {
+                    destroy self.optionalBar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                var foo <- create Foo()
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var barRef = getRef(&foo.optionalBar as &Bar?)
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                barRef!.id
+
+                destroy foo2
+            }
+
+            fun getRef(_ ref: &Bar?): &Bar? {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
 }
 
 func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
@@ -1348,4 +1505,82 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
 	require.Error(t, err)
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+}
+
+func TestInterpretInvalidReferenceToOptionalConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      struct S {
+         fun foo() {}
+      }
+
+      fun main() {
+        let y: AnyStruct? = nil
+        let z: AnyStruct = y
+        let ref = &z as &AnyStruct
+        let s = ref as! &S
+        s.foo()
+      }
+    `)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+}
+
+func TestInterpretReferenceToOptional(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun main(): AnyStruct {
+        let y: Int? = nil
+        let z: AnyStruct = y
+        return &z as &AnyStruct
+      }
+    `)
+
+	value, err := inter.Invoke("main")
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		&interpreter.EphemeralReferenceValue{
+			Value:         interpreter.Nil,
+			BorrowedType:  sema.AnyStructType,
+			Authorization: interpreter.UnauthorizedAccess,
+		},
+		value,
+	)
+}
+
+func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        resource Foo {}
+
+        fun main(): AnyStruct {
+            let y: @Foo? <- create Foo()
+            let z: @AnyResource <- y
+
+            var ref1 = &z as &AnyResource
+
+            var ref2 = returnSameRef(ref1)
+
+            destroy z
+            return ref2
+        }
+
+        fun returnSameRef(_ ref: &AnyResource): &AnyResource {
+            return ref
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
 }

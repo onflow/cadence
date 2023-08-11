@@ -152,6 +152,7 @@ func (f *InterpretedFunctionValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -300,6 +301,7 @@ func (f *HostFunctionValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -389,12 +391,9 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	self := f.Self
 	invocation.Self = self
 	if self != nil {
-		if resource, ok := (*self).(ResourceKindedValue); ok && resource.IsDestroyed() {
-			panic(DestroyedResourceError{
-				LocationRange: invocation.LocationRange,
-			})
-		}
+		invocation.Interpreter.checkReferencedResourceNotMovedOrDestroyed(*self, invocation.LocationRange)
 	}
+
 	invocation.Base = f.Base
 	invocation.BoundAuthorization = f.BoundAuthorization
 	return f.Function.invoke(invocation)
@@ -430,6 +429,7 @@ func (f BoundFunctionValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
