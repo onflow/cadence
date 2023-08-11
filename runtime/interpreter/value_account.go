@@ -86,6 +86,12 @@ func NewAccountValue(
 			}
 			return capabilities
 
+		case sema.AccountTypeBalanceFieldName:
+			return accountBalanceGet()
+
+		case sema.AccountTypeAvailableBalanceFieldName:
+			return accountAvailableBalanceGet()
+
 			// TODO: refactor storage members to Account.Storage value
 			//
 			//case sema.AuthAccountTypePublicPathsFieldName:
@@ -129,12 +135,6 @@ func NewAccountValue(
 			//		)
 			//	}
 			//	return forEachStoredFunction
-			//
-			//case sema.AuthAccountTypeBalanceFieldName:
-			//	return accountBalanceGet()
-			//
-			//case sema.AuthAccountTypeAvailableBalanceFieldName:
-			//	return accountAvailableBalanceGet()
 			//
 			//case sema.AuthAccountTypeStorageUsedFieldName:
 			//	return storageUsedGet(inter)
