@@ -34,7 +34,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func TestArrayMutation(t *testing.T) {
+func TestInterpetArrayMutation(t *testing.T) {
 
 	t.Parallel()
 
@@ -510,7 +510,7 @@ func TestArrayMutation(t *testing.T) {
 	})
 }
 
-func TestDictionaryMutation(t *testing.T) {
+func TestInterpretDictionaryMutation(t *testing.T) {
 
 	t.Parallel()
 

@@ -913,7 +913,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 	}
 }
 
-func TestStringIntegerConversion(t *testing.T) {
+func TestInterpretStringIntegerConversion(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, typ sema.Type) {

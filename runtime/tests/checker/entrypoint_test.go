@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestEntryPointParameters(t *testing.T) {
+func TestCheckEntryPointParameters(t *testing.T) {
 
 	t.Parallel()
 

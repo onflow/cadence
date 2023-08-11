@@ -1504,7 +1504,7 @@ func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
 	}
 }
 
-func TestNilAssignmentToDictionary(t *testing.T) {
+func TestCheckNilAssignmentToDictionary(t *testing.T) {
 
 	t.Parallel()
 

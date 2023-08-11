@@ -4142,7 +4142,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 	})
 }
 
-func TestInterpretAttachmentBaseNonMember(t *testing.T) {
+func TestCheckAttachmentBaseNonMember(t *testing.T) {
 
 	t.Parallel()
 

@@ -468,7 +468,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 	})
 }
 
-func TestAttachExecutionOrdering(t *testing.T) {
+func TestInterpretAttachExecutionOrdering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {

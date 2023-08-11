@@ -9806,7 +9806,7 @@ func BenchmarkNewInterpreter(b *testing.B) {
 	})
 }
 
-func TestHostFunctionStaticType(t *testing.T) {
+func TestInterpretHostFunctionStaticType(t *testing.T) {
 
 	t.Parallel()
 

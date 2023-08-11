@@ -2052,7 +2052,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 	})
 }
 
-func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
+func TestInterpretResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
 
 	t.Parallel()
 

@@ -48,7 +48,7 @@ const compositeMaxFields = 10
 var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
 var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
 
-func TestRandomMapOperations(t *testing.T) {
+func TestInterpretRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -514,7 +514,7 @@ func TestRandomMapOperations(t *testing.T) {
 	})
 }
 
-func TestRandomArrayOperations(t *testing.T) {
+func TestInterpretRandomArrayOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -879,7 +879,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	})
 }
 
-func TestRandomCompositeValueOperations(t *testing.T) {
+func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
