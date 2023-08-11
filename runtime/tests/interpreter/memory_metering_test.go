@@ -693,40 +693,24 @@ func TestInterpretCompositeMetering(t *testing.T) {
 func TestInterpretSimpleCompositeMetering(t *testing.T) {
 	t.Parallel()
 
-	t.Run("auth account", func(t *testing.T) {
+	t.Run("Account", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(a: &Account) {
-            
-            }
+            access(all) fun main(a: &Account) {}
         `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
+		address := common.MustBytesToAddress([]byte{0x1})
 
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValue))
-	})
-
-	t.Run("public account", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            access(all) fun main(a: &Account) {
-            
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
+		account := stdlib.NewAccountReferenceValue(
+			meter,
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.UnauthorizedAccess,
+		)
 
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
@@ -6679,7 +6663,15 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
+		address := common.MustBytesToAddress([]byte{0x1})
+		authorization := interpreter.NewEntitlementSetAuthorization(
+			meter,
+			[]common.TypeID{
+				sema.StorageType.ID(),
+			},
+			sema.Conjunction,
+		)
+		account := stdlib.NewAccountReferenceValue(meter, nil, interpreter.AddressValue(address), authorization)
 
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
@@ -8613,10 +8605,19 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	meter := newTestMemoryGauge()
 	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
+	address := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
+	authorization := interpreter.NewEntitlementSetAuthorization(
+		meter,
+		[]common.TypeID{
+			sema.StorageType.ID(),
+		},
+		sema.Conjunction,
+	)
 	account := stdlib.NewAccountReferenceValue(
+		meter,
 		nil,
-		nil,
-		interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1})),
+		address,
+		authorization,
 	)
 
 	_, err := inter.Invoke("main", account)

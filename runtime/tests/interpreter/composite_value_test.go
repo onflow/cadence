@@ -188,13 +188,7 @@ func TestInterpretContractTransfer(t *testing.T) {
 		    `,
 			value,
 		)
-		inter, _ := testAccount(
-			t,
-			address,
-			true,
-			code,
-			sema.Config{},
-		)
+		inter, _ := testAccount(t, address, true, nil, code, sema.Config{})
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

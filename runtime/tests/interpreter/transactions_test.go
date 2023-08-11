@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
@@ -251,8 +252,8 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
-		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2})
+		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess)
+		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{2}, interpreter.UnauthorizedAccess)
 
 		// first transaction
 		err := inter.InvokeTransaction(0, signer1)
@@ -285,7 +286,14 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.TrueValue,
 		}
 
-		account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		account := stdlib.NewAccountReferenceValue(
+			nil,
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.UnauthorizedAccess,
+		)
 
 		prepareArguments := []interpreter.Value{account}
 
@@ -302,7 +310,7 @@ func TestInterpretTransactions(t *testing.T) {
 			t,
 			inter,
 			[]interpreter.Value{
-				interpreter.AddressValue{},
+				interpreter.AddressValue(address),
 				interpreter.TrueValue,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 			},

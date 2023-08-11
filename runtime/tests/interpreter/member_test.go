@@ -1129,8 +1129,6 @@ func TestInterpretMemberAccess(t *testing.T) {
 			"{I}",
 			"[Int]",
 			"{Bool: String}",
-			"AnyStruct",
-			"Block",
 		}
 
 		// Test all built-in composite types
@@ -1144,6 +1142,12 @@ func TestInterpretMemberAccess(t *testing.T) {
 			// and only exist for migration purposes,
 			// so do not have an equivalent sema type
 			if semaType == nil {
+				continue
+			}
+
+			if !semaType.ContainFieldsOrElements() ||
+				semaType.IsResourceType() {
+
 				continue
 			}
 

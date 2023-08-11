@@ -2357,11 +2357,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccount(
-		t,
-		address,
-		true,
-		`
+	inter, _ := testAccount(t, address, true, nil, `
           resource R {
               access(all) let id: Int
 
@@ -2380,9 +2376,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
               let x = resourceRef.id
               destroy token
           }
-        `,
-		sema.Config{},
-	)
+        `, sema.Config{})
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
@@ -2395,11 +2389,7 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccount(
-		t,
-		address,
-		true,
-		`
+	inter, _ := testAccount(t, address, true, nil, `
           resource R {
               access(all) let id: Int
 
@@ -2418,9 +2408,7 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
               let x = resourceRef.id
               destroy token
           }
-        `,
-		sema.Config{},
-	)
+        `, sema.Config{})
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)

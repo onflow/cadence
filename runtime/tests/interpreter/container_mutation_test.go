@@ -918,7 +918,12 @@ func TestInterpretDictionaryMutation(t *testing.T) {
             }
         `)
 
-		owner := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
+		owner := stdlib.NewAccountReferenceValue(
+			nil,
+			nil,
+			interpreter.AddressValue{1},
+			interpreter.UnauthorizedAccess,
+		)
 
 		_, err := inter.Invoke("test", owner)
 		require.NoError(t, err)

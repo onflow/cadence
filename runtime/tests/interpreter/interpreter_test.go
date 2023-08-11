@@ -8428,9 +8428,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
       access(all) let address2 = Test.test()
     `
 
-	addressValue := interpreter.AddressValue{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
+	addressValue := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
 
 	inter, err := parseCheckAndInterpretWithOptions(t, code,
 		ParseCheckAndInterpretOptions{
@@ -8443,10 +8441,20 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 					_ common.CompositeKind,
 				) map[string]interpreter.Value {
 
-					account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1})
+					access := interpreter.ConvertSemaAccessToStaticAuthorization(
+						inter,
+						sema.FullyEntitledAccountAccess,
+					)
+
+					accountRef := stdlib.NewAccountReferenceValue(
+						nil,
+						nil,
+						addressValue,
+						access,
+					)
 
 					return map[string]interpreter.Value{
-						"account": account,
+						"account": accountRef,
 					}
 				},
 			},
@@ -8976,13 +8984,16 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	account := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue(address))
-
 	valueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "account",
-		Type:  sema.FullyEntitledAccountReferenceType,
-		Value: account,
-		Kind:  common.DeclarationKindConstant,
+		Name: "account",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: stdlib.NewAccountReferenceValue(
+			nil,
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.ConvertSemaAccessToStaticAuthorization(nil, sema.FullyEntitledAccountAccess),
+		),
+		Kind: common.DeclarationKindConstant,
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -9000,7 +9011,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return stdlib.NewAccountReferenceValue(nil, nil, address)
+					return stdlib.NewAccountValue(nil, nil, address)
 				},
 			},
 		},
@@ -10439,11 +10450,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t,
-				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				true,
-				fmt.Sprintf(
-					`
+			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
+				`
                       #allowAccountLinking
 
                       struct S {}
@@ -10460,11 +10468,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-					tc.typeName,
-					tc.code,
-				),
-				sema.Config{},
-			)
+				tc.typeName,
+				tc.code,
+			), sema.Config{})
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -10477,11 +10483,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t,
-				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				true,
-				fmt.Sprintf(
-					`
+			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
+				`
                       #allowAccountLinking
 
                       struct S {}
@@ -10494,11 +10497,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-					tc.typeName,
-					tc.code,
-				),
-				sema.Config{},
-			)
+				tc.typeName,
+				tc.code,
+			), sema.Config{})
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)

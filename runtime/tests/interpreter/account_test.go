@@ -47,6 +47,7 @@ func testAccount(
 	t *testing.T,
 	address interpreter.AddressValue,
 	auth bool,
+	handler stdlib.AccountHandler,
 	code string,
 	checkerConfig sema.Config,
 ) (
@@ -57,6 +58,7 @@ func testAccount(
 		t,
 		address,
 		auth,
+		handler,
 		code,
 		checkerConfig,
 		nil,
@@ -367,35 +369,43 @@ func testAccountWithErrorHandler(
 	t *testing.T,
 	address interpreter.AddressValue,
 	auth bool,
+	handler stdlib.AccountHandler,
 	code string,
 	checkerConfig sema.Config,
 	checkerErrorHandler func(error),
-) (
-	*interpreter.Interpreter,
-	func() map[storageKey]interpreter.Value,
-) {
+) (*interpreter.Interpreter, func() map[storageKey]interpreter.Value) {
 
-	account := stdlib.NewAccountReferenceValue(nil, nil, address)
+	account := stdlib.NewAccountValue(nil, handler, address)
 
 	var valueDeclarations []stdlib.StandardLibraryValue
 
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "authAccount",
-		Type:  sema.FullyEntitledAccountReferenceType,
-		Value: account,
-		Kind:  common.DeclarationKindConstant,
+		Name: "authAccount",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: interpreter.NewEphemeralReferenceValue(
+			nil,
+			interpreter.ConvertSemaAccessToStaticAuthorization(nil, sema.FullyEntitledAccountAccess),
+			account,
+			sema.AccountType,
+		),
+		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
 
 	// `pubAccount`
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "pubAccount",
-		Type:  sema.AccountReferenceType,
-		Value: account,
-		Kind:  common.DeclarationKindConstant,
+		Name: "pubAccount",
+		Type: sema.AccountReferenceType,
+		Value: interpreter.NewEphemeralReferenceValue(
+			nil,
+			interpreter.UnauthorizedAccess,
+			account,
+			sema.AccountType,
+		),
+		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
 
@@ -434,8 +444,7 @@ func testAccountWithErrorHandler(
 				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
 				InvalidatedResourceValidationEnabled: true,
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					// TODO: use stdlib
-					return nil
+					return stdlib.NewAccountValue(nil, nil, address)
 				},
 			},
 			HandleCheckerError: checkerErrorHandler,
@@ -477,20 +486,14 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               resource R {}
 
               fun test() {
                   let r <- create R()
                   account.storage.save(<-r, to: /storage/r)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// Save first value
 
@@ -523,20 +526,14 @@ func TestInterpretAccountStorageSave(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               struct S {}
 
               fun test() {
                   let s = S()
                   account.storage.save(s, to: /storage/s)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// Save first value
 
@@ -575,11 +572,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountStorables := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountStorables := testAccount(t, address, true, nil, `
               struct S {}
 
               resource R {}
@@ -598,9 +591,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
               fun typeAt(): AnyStruct {
                 return account.storage.type(at: /storage/x)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// type empty path is nil
 
@@ -667,11 +658,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               resource R {}
 
               resource R2 {}
@@ -688,9 +675,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
               fun loadR2(): @R2? {
                   return <-account.storage.load<@R2>(from: /storage/r)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		t.Run("save R and load R ", func(t *testing.T) {
 
@@ -750,11 +735,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               struct S {}
 
               struct S2 {}
@@ -771,9 +752,7 @@ func TestInterpretAccountStorageLoad(t *testing.T) {
               fun loadS2(): S2? {
                   return account.storage.load<S2>(from: /storage/s)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		t.Run("save S and load S", func(t *testing.T) {
 
@@ -857,13 +836,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			code,
-			sema.Config{},
-		)
+		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -898,13 +871,7 @@ func TestInterpretAccountStorageCopy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			code,
-			sema.Config{},
-		)
+		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -935,11 +902,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               resource R {
                   let foo: Int
 
@@ -996,9 +959,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
                  return ref.foo
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// save
 
@@ -1116,11 +1077,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               struct S {
                   let foo: Int
 
@@ -1180,9 +1137,7 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
                   let borrowedS = account.storage.borrow<&AnyStruct>(from: /storage/another_s)
                   return borrowedS as! &S2?
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// save
 
@@ -1294,18 +1249,31 @@ func TestInterpretAccountStorageBorrow(t *testing.T) {
 func TestInterpretAccountBalanceFields(t *testing.T) {
 	t.Parallel()
 
+	const availableBalance = 42
+	const balance = 43
+
+	handler := &testAccountHandler{
+
+		getAccountAvailableBalance: func(_ common.Address) (uint64, error) {
+			return availableBalance, nil
+		},
+		getAccountBalance: func(_ common.Address) (uint64, error) {
+			return balance, nil
+		},
+	}
+
 	for _, auth := range []bool{true, false} {
 
-		for _, fieldName := range []string{
-			"balance",
-			"availableBalance",
+		for fieldName, expected := range map[string]uint64{
+			"balance":          balance,
+			"availableBalance": availableBalance,
 		} {
 
 			testName := fmt.Sprintf("%s, auth: %v", fieldName, auth)
 
 			t.Run(testName, func(t *testing.T) {
 
-				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
 				code := fmt.Sprintf(
 					`
@@ -1319,6 +1287,7 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
 					t,
 					address,
 					auth,
+					handler,
 					code,
 					sema.Config{},
 				)
@@ -1329,7 +1298,7 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.NewUnmeteredUFix64Value(0),
+					interpreter.NewUnmeteredUFix64Value(expected),
 					value,
 				)
 			})
@@ -1340,11 +1309,26 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
 func TestInterpretAccountStorageFields(t *testing.T) {
 	t.Parallel()
 
+	const storageUsed = 42
+	const storageCapacity = 43
+
+	handler := &testAccountHandler{
+		commitStorageTemporarily: func(_ *interpreter.Interpreter) error {
+			return nil
+		},
+		getStorageUsed: func(_ common.Address) (uint64, error) {
+			return storageUsed, nil
+		},
+		getStorageCapacity: func(address common.Address) (uint64, error) {
+			return storageCapacity, nil
+		},
+	}
+
 	for _, auth := range []bool{true, false} {
 
-		for _, fieldName := range []string{
-			"used",
-			"capacity",
+		for fieldName, expected := range map[string]uint64{
+			"used":     storageUsed,
+			"capacity": storageCapacity,
 		} {
 
 			testName := fmt.Sprintf("%s, auth: %v", fieldName, auth)
@@ -1360,15 +1344,9 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 					fieldName,
 				)
 
-				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
-				inter, _ := testAccount(
-					t,
-					address,
-					auth,
-					code,
-					sema.Config{},
-				)
+				inter, _ := testAccount(t, address, auth, handler, code, sema.Config{})
 
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
@@ -1376,7 +1354,7 @@ func TestInterpretAccountStorageFields(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.NewUnmeteredUInt64Value(0),
+					interpreter.NewUnmeteredUInt64Value(expected),
 					value,
 				)
 			})

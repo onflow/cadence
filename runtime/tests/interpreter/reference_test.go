@@ -541,11 +541,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -567,10 +563,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
                 // Update the reference
                 ref.setID(2)
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
+            }`, sema.Config{}, errorHandler(t))
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -583,11 +576,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -605,10 +594,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
                 // 'Read' a field from the reference
                 let id = ref.id
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
+            }`, sema.Config{}, errorHandler(t))
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -881,11 +867,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -908,9 +890,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
                 r1Ref.setID(2)
                 destroy r2
-            }`,
-			sema.Config{},
-		)
+            }`, sema.Config{})
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -1383,11 +1363,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -1408,10 +1384,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
                 // Update the reference
                 ref.setID(2)
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
+            }`, sema.Config{}, errorHandler(t))
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

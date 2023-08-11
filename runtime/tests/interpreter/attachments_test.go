@@ -1439,7 +1439,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 access(all) var id: UInt8
@@ -1471,11 +1471,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+		    }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1487,7 +1485,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 fun foo(): Int { return 3 }
@@ -1502,11 +1500,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+		    }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
@@ -1518,7 +1514,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {}
             resource R2 {
                 let r: @R 
@@ -1557,11 +1553,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+		    }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1573,7 +1567,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             access(all) resource R {
                 access(all) var id: UInt8
 
@@ -1604,11 +1598,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 r2.setID(5)
                 authAccount.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
-            }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+            }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1620,7 +1612,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {}
             resource R2 {
                 let r: @R 
@@ -1643,11 +1635,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+		    }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
@@ -1659,7 +1649,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             access(all) resource R {}
 
             var ref: &A? = nil
@@ -1689,11 +1679,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 a.setID(5)
                 authAccount.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
-            }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+            }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
