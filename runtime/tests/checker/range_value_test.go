@@ -323,13 +323,13 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 			t,
 			typeString,
 			fmt.Sprintf("let r = InclusiveRange(%s(1), %s(2))", typeString, differentTypeString),
-			[]interface{}{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}},
+			[]error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}},
 		)
 		runInvalidCase(
 			t,
 			typeString,
 			fmt.Sprintf("let r = InclusiveRange(%s(1), %s(10), step: %s(2))", typeString, typeString, differentTypeString),
-			[]interface{}{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}},
+			[]error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}},
 		)
 
 		// Not enough arguments
@@ -337,7 +337,7 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 			t,
 			typeString,
 			fmt.Sprintf("let r = InclusiveRange(%s(1))", typeString),
-			[]interface{}{&sema.ArgumentCountError{}},
+			[]error{&sema.ArgumentCountError{}},
 		)
 
 		// Label for step not provided
@@ -345,7 +345,7 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 			t,
 			typeString,
 			fmt.Sprintf("let r = InclusiveRange(%s(1), %s(0), %s(10))", typeString, typeString, typeString),
-			[]interface{}{&sema.MissingArgumentLabelError{}},
+			[]error{&sema.MissingArgumentLabelError{}},
 		)
 
 		// Label for start and end provided
@@ -353,13 +353,13 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 			t,
 			typeString,
 			fmt.Sprintf("let r = InclusiveRange(start: %s(1), %s(0))", typeString, typeString),
-			[]interface{}{&sema.IncorrectArgumentLabelError{}},
+			[]error{&sema.IncorrectArgumentLabelError{}},
 		)
 		runInvalidCase(
 			t,
 			typeString,
 			fmt.Sprintf("let r = InclusiveRange(%s(1), end: %s(0))", typeString, typeString),
-			[]interface{}{&sema.IncorrectArgumentLabelError{}},
+			[]error{&sema.IncorrectArgumentLabelError{}},
 		)
 	}
 }
