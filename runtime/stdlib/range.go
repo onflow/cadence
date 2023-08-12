@@ -104,7 +104,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 			})
 		}
 
-		rangeStaticType := interpreter.InclusiveRangeStaticType{ElementType: startStaticType}
+		rangeStaticType := interpreter.NewInclusiveRangeStaticType(invocation.Interpreter, startStaticType)
 		rangeSemaType := sema.NewInclusiveRangeType(invocation.Interpreter, invocation.ArgumentTypes[0])
 
 		if len(invocation.Arguments) > 2 {

@@ -47,7 +47,7 @@ func NewInclusiveRangeValue(
 		if elemSemaTy.Tag().BelongsTo(sema.UnsignedIntegerTypeTag) {
 			panic(InclusiveRangeConstructionError{
 				LocationRange: locationRange,
-				Message:       fmt.Sprintf(
+				Message: fmt.Sprintf(
 					"step value cannot be negative for unsigned integer type %s",
 					elemSemaTy,
 				),
@@ -115,6 +115,7 @@ func NewInclusiveRangeValueWithStep(
 	return createInclusiveRange(
 		interpreter,
 		locationRange,
+		start,
 		end,
 		step,
 		rangeType,
