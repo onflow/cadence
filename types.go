@@ -2595,41 +2595,22 @@ func (t *EnumType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
-// AuthAccountType
-type AuthAccountType struct{}
+// AccountType
+type AccountType struct{}
 
-var TheAuthAccountType = AuthAccountType{}
+var TheAccountType = AccountType{}
 
-func NewAuthAccountType() AuthAccountType {
-	return TheAuthAccountType
+func NewAccountType() AccountType {
+	return TheAccountType
 }
 
-func (AuthAccountType) isType() {}
+func (AccountType) isType() {}
 
-func (AuthAccountType) ID() string {
-	return "AuthAccount"
+func (AccountType) ID() string {
+	return "Account"
 }
 
-func (t AuthAccountType) Equal(other Type) bool {
-	return t == other
-}
-
-// PublicAccountType
-type PublicAccountType struct{}
-
-var ThePublicAccountType = PublicAccountType{}
-
-func NewPublicAccountType() PublicAccountType {
-	return ThePublicAccountType
-}
-
-func (PublicAccountType) isType() {}
-
-func (PublicAccountType) ID() string {
-	return "PublicAccount"
-}
-
-func (t PublicAccountType) Equal(other Type) bool {
+func (t AccountType) Equal(other Type) bool {
 	return t == other
 }
 
@@ -2652,79 +2633,136 @@ func (t DeployedContractType) Equal(other Type) bool {
 	return t == other
 }
 
-// AuthAccountContractsType
-type AuthAccountContractsType struct{}
+// Account_ContractsType
+type Account_ContractsType struct{}
 
-var TheAuthAccountContractsType = AuthAccountContractsType{}
+var TheAccount_ContractsType = Account_ContractsType{}
 
-func NewAuthAccountContractsType() AuthAccountContractsType {
-	return TheAuthAccountContractsType
+func NewAccount_ContractsType() Account_ContractsType {
+	return TheAccount_ContractsType
 }
 
-func (AuthAccountContractsType) isType() {}
+func (Account_ContractsType) isType() {}
 
-func (AuthAccountContractsType) ID() string {
-	return "AuthAccount.Contracts"
+func (Account_ContractsType) ID() string {
+	return "Account.Contracts"
 }
 
-func (t AuthAccountContractsType) Equal(other Type) bool {
+func (t Account_ContractsType) Equal(other Type) bool {
 	return t == other
 }
 
-// PublicAccountContractsType
-type PublicAccountContractsType struct{}
+// Account_KeysType
+type Account_KeysType struct{}
 
-var ThePublicAccountContractsType = PublicAccountContractsType{}
+var TheAccount_KeysType = Account_KeysType{}
 
-func NewPublicAccountContractsType() PublicAccountContractsType {
-	return ThePublicAccountContractsType
+func NewAccount_KeysType() Account_KeysType {
+	return TheAccount_KeysType
 }
 
-func (PublicAccountContractsType) isType() {}
+func (Account_KeysType) isType() {}
 
-func (PublicAccountContractsType) ID() string {
-	return "PublicAccount.Contracts"
+func (Account_KeysType) ID() string {
+	return "Account.Keys"
 }
 
-func (t PublicAccountContractsType) Equal(other Type) bool {
+func (t Account_KeysType) Equal(other Type) bool {
 	return t == other
 }
 
-// AuthAccountKeysType
-type AuthAccountKeysType struct{}
+// Account_StorageType
+type Account_StorageType struct{}
 
-var TheAuthAccountKeysType = AuthAccountKeysType{}
+var TheAccount_StorageType = Account_StorageType{}
 
-func NewAuthAccountKeysType() AuthAccountKeysType {
-	return TheAuthAccountKeysType
+func NewAccount_StorageType() Account_StorageType {
+	return TheAccount_StorageType
 }
 
-func (AuthAccountKeysType) isType() {}
+func (Account_StorageType) isType() {}
 
-func (AuthAccountKeysType) ID() string {
-	return "AuthAccount.Keys"
+func (Account_StorageType) ID() string {
+	return "Account.Storage"
 }
 
-func (t AuthAccountKeysType) Equal(other Type) bool {
+func (t Account_StorageType) Equal(other Type) bool {
 	return t == other
 }
 
-// PublicAccountKeysType
-type PublicAccountKeysType struct{}
+// Account_InboxType
+type Account_InboxType struct{}
 
-var ThePublicAccountKeysType = PublicAccountKeysType{}
+var TheAccount_InboxType = Account_InboxType{}
 
-func NewPublicAccountKeysType() PublicAccountKeysType {
-	return ThePublicAccountKeysType
+func NewAccount_InboxType() Account_InboxType {
+	return TheAccount_InboxType
 }
 
-func (PublicAccountKeysType) isType() {}
+func (Account_InboxType) isType() {}
 
-func (PublicAccountKeysType) ID() string {
-	return "PublicAccount.Keys"
+func (Account_InboxType) ID() string {
+	return "Account.Inbox"
 }
 
-func (t PublicAccountKeysType) Equal(other Type) bool {
+func (t Account_InboxType) Equal(other Type) bool {
+	return t == other
+}
+
+// Account_CapabilitiesType
+type Account_CapabilitiesType struct{}
+
+var TheAccount_CapabilitiesType = Account_CapabilitiesType{}
+
+func NewAccount_CapabilitiesType() Account_CapabilitiesType {
+	return TheAccount_CapabilitiesType
+}
+
+func (Account_CapabilitiesType) isType() {}
+
+func (Account_CapabilitiesType) ID() string {
+	return "Account.Capabilities"
+}
+
+func (t Account_CapabilitiesType) Equal(other Type) bool {
+	return t == other
+}
+
+// Account_StorageCapabilitiesType
+type Account_StorageCapabilitiesType struct{}
+
+var TheAccount_StorageCapabilitiesType = Account_StorageCapabilitiesType{}
+
+func NewAccount_StorageCapabilitiesType() Account_StorageCapabilitiesType {
+	return TheAccount_StorageCapabilitiesType
+}
+
+func (Account_StorageCapabilitiesType) isType() {}
+
+func (Account_StorageCapabilitiesType) ID() string {
+	return "Account.StorageCapabilities"
+}
+
+func (t Account_StorageCapabilitiesType) Equal(other Type) bool {
+	return t == other
+}
+
+// Account_AccountCapabilitiesType
+type Account_AccountCapabilitiesType struct{}
+
+var TheAccount_AccountCapabilitiesType = Account_AccountCapabilitiesType{}
+
+func NewAccount_AccountCapabilitiesType() Account_AccountCapabilitiesType {
+	return TheAccount_AccountCapabilitiesType
+}
+
+func (Account_AccountCapabilitiesType) isType() {}
+
+func (Account_AccountCapabilitiesType) ID() string {
+	return "Account.AccountCapabilities"
+}
+
+func (t Account_AccountCapabilitiesType) Equal(other Type) bool {
 	return t == other
 }
 

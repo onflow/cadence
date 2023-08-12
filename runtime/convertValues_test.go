@@ -1111,14 +1111,9 @@ func TestImportRuntimeType(t *testing.T) {
 			expected: interpreter.PrimitiveStaticTypePrivatePath,
 		},
 		{
-			label:    "AuthAccount",
-			actual:   cadence.AuthAccountType{},
-			expected: interpreter.PrimitiveStaticTypeAuthAccount,
-		},
-		{
-			label:    "PublicAccount",
-			actual:   cadence.PublicAccountType{},
-			expected: interpreter.PrimitiveStaticTypePublicAccount,
+			label:    "Account",
+			actual:   cadence.AccountType{},
+			expected: interpreter.PrimitiveStaticTypeAccount,
 		},
 		{
 			label:    "DeployedContract",
@@ -1126,24 +1121,39 @@ func TestImportRuntimeType(t *testing.T) {
 			expected: interpreter.PrimitiveStaticTypeDeployedContract,
 		},
 		{
-			label:    "AuthAccount.Keys",
-			actual:   cadence.AuthAccountKeysType{},
-			expected: interpreter.PrimitiveStaticTypeAuthAccountKeys,
+			label:    "Account.Storage",
+			actual:   cadence.Account_StorageType{},
+			expected: interpreter.PrimitiveStaticTypeAccount_Storage,
 		},
 		{
-			label:    "PublicAccount.Keys",
-			actual:   cadence.PublicAccountKeysType{},
-			expected: interpreter.PrimitiveStaticTypePublicAccountKeys,
+			label:    "Account.Keys",
+			actual:   cadence.Account_KeysType{},
+			expected: interpreter.PrimitiveStaticTypeAccount_Keys,
 		},
 		{
-			label:    "AuthAccount.Contracts",
-			actual:   cadence.AuthAccountContractsType{},
-			expected: interpreter.PrimitiveStaticTypeAuthAccountContracts,
+			label:    "Account.Contracts",
+			actual:   cadence.Account_ContractsType{},
+			expected: interpreter.PrimitiveStaticTypeAccount_Contracts,
 		},
 		{
-			label:    "PublicAccount.Contracts",
-			actual:   cadence.PublicAccountContractsType{},
-			expected: interpreter.PrimitiveStaticTypePublicAccountContracts,
+			label:    "Account.Inbox",
+			actual:   cadence.Account_InboxType{},
+			expected: interpreter.PrimitiveStaticTypeAccount_Inbox,
+		},
+		{
+			label:    "Account.Capabilities",
+			actual:   cadence.Account_CapabilitiesType{},
+			expected: interpreter.PrimitiveStaticTypeAccount_Capabilities,
+		},
+		{
+			label:    "Account.StorageCapabilities",
+			actual:   cadence.Account_StorageCapabilitiesType{},
+			expected: interpreter.PrimitiveStaticTypeAccount_StorageCapabilities,
+		},
+		{
+			label:    "Account.AccountCapabilities",
+			actual:   cadence.Account_AccountCapabilitiesType{},
+			expected: interpreter.PrimitiveStaticTypeAccount_AccountCapabilities,
 		},
 		{
 			label:    "AccountKey",
@@ -1846,7 +1856,7 @@ func TestExportReferenceValue(t *testing.T) {
 
 		transaction := `
             transaction {
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                     signer.save(1, to: /storage/test)
                     let cap = signer.capabilities.storage.issue<&Int>(/storage/test)
                     signer.capabilities.publish(cap, at: /public/test)

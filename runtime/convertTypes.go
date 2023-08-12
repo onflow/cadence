@@ -165,18 +165,22 @@ func ExportMeteredType(
 			return cadence.TheStringType
 		case sema.AccountKeyType:
 			return cadence.TheAccountKeyType
-		case sema.PublicAccountContractsType:
-			return cadence.ThePublicAccountContractsType
-		case sema.AuthAccountContractsType:
-			return cadence.TheAuthAccountContractsType
-		case sema.PublicAccountKeysType:
-			return cadence.ThePublicAccountKeysType
-		case sema.AuthAccountKeysType:
-			return cadence.TheAuthAccountKeysType
-		case sema.PublicAccountType:
-			return cadence.ThePublicAccountType
-		case sema.AuthAccountType:
-			return cadence.TheAuthAccountType
+		case sema.Account_StorageType:
+			return cadence.TheAccount_StorageType
+		case sema.Account_ContractsType:
+			return cadence.TheAccount_ContractsType
+		case sema.Account_KeysType:
+			return cadence.TheAccount_KeysType
+		case sema.Account_InboxType:
+			return cadence.TheAccount_InboxType
+		case sema.Account_CapabilitiesType:
+			return cadence.TheAccount_CapabilitiesType
+		case sema.Account_StorageCapabilitiesType:
+			return cadence.TheAccount_StorageCapabilitiesType
+		case sema.Account_AccountCapabilitiesType:
+			return cadence.TheAccount_AccountCapabilitiesType
+		case sema.AccountType:
+			return cadence.TheAccountType
 		case sema.DeployedContractType:
 			return cadence.TheDeployedContractType
 		}
@@ -712,18 +716,22 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		return interpreter.NewCapabilityStaticType(memoryGauge, ImportType(memoryGauge, t.BorrowType))
 	case cadence.AccountKeyType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccountKey)
-	case cadence.AuthAccountContractsType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAuthAccountContracts)
-	case cadence.AuthAccountKeysType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAuthAccountKeys)
-	case cadence.AuthAccountType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAuthAccount)
-	case cadence.PublicAccountContractsType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicAccountContracts)
-	case cadence.PublicAccountKeysType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicAccountKeys)
-	case cadence.PublicAccountType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicAccount)
+	case cadence.Account_StorageType:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccount_Storage)
+	case cadence.Account_ContractsType:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccount_Contracts)
+	case cadence.Account_KeysType:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccount_Keys)
+	case cadence.Account_InboxType:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccount_Inbox)
+	case cadence.Account_CapabilitiesType:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccount_Capabilities)
+	case cadence.Account_StorageCapabilitiesType:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccount_StorageCapabilities)
+	case cadence.Account_AccountCapabilitiesType:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccount_AccountCapabilities)
+	case cadence.AccountType:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccount)
 	case cadence.DeployedContractType:
 		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeDeployedContract)
 	default:
