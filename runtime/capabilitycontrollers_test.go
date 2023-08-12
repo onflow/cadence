@@ -64,14 +64,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       access(all) resource S {}
 
                       access(all) fun createAndSaveR(id: Int, storagePath: StoragePath) {
-                          self.account.save(
+                          self.account.storage.save(
                               <-create R(id: id),
                               to: storagePath
                           )
                       }
 
                       access(all) fun createAndSaveS(storagePath: StoragePath) {
-                          self.account.save(
+                          self.account.storage.save(
                               <-create S(),
                               to: storagePath
                           )

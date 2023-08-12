@@ -894,14 +894,14 @@ access(all) contract TopShot: NonFungibleToken {
         self.totalSupply = 0
 
         // Put a new Collection in storage
-        self.account.save<@Collection>(<- create Collection(), to: /storage/MomentCollection)
+        self.account.storage.save<@Collection>(<- create Collection(), to: /storage/MomentCollection)
 
         // create a public capability for the collection
         let cap = self.account.capabilities.storage.issue<&{MomentCollectionPublic}>(/storage/MomentCollection)
         self.account.capabilities.publish(cap, at: /public/MomentCollection)
 
         // Put the Minter in storage
-        self.account.save<@Admin>(<- create Admin(), to: /storage/TopShotAdmin)
+        self.account.storage.save<@Admin>(<- create Admin(), to: /storage/TopShotAdmin)
 
         emit ContractInitialized()
     }
@@ -1068,15 +1068,15 @@ access(all) contract TopshotAdminReceiver {
     // saves it to the account storage of the account
     // where the contract is deployed
     access(all) fun storeAdmin(newAdmin: @TopShot.Admin) {
-        self.account.save(<-newAdmin, to: /storage/TopShotAdmin)
+        self.account.storage.save(<-newAdmin, to: /storage/TopShotAdmin)
     }
     
     init() {
         // Save a copy of the sharded Moment Collection to the account storage
-        if self.account.borrow<&TopShotShardedCollection.ShardedCollection>(from: /storage/ShardedMomentCollection) == nil {
+        if self.account.storage.borrow<&TopShotShardedCollection.ShardedCollection>(from: /storage/ShardedMomentCollection) == nil {
             let collection <- TopShotShardedCollection.createEmptyCollection(numBuckets: 32)
             // Put a new Collection in storage
-            self.account.save(<-collection, to: /storage/ShardedMomentCollection)
+            self.account.storage.save(<-collection, to: /storage/ShardedMomentCollection)
 
             let cap = self.account.capabilities.storage.issue<&{TopShot.MomentCollectionPublic}>(/storage/ShardedMomentCollection)
             self.account.capabilities.publish(cap, at: /public/ShardedMomentCollection)

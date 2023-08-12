@@ -49,7 +49,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
         import Test from 0x1
         transaction {
             prepare(signer: &Account) {
-                signer.save(3, to: /storage/foo)
+                signer.storage.save(3, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X, Test.Y) &Int>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
@@ -141,7 +141,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
         import Test from 0x1
         transaction {
             prepare(signer: &Account) {
-                signer.save(3, to: /storage/foo)
+                signer.storage.save(3, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X, Test.Y) &Int>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
@@ -248,7 +248,7 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
         transaction {
             prepare(signer: &Account) {
                 let r <- Test.createRWithA()
-                signer.save(<-r, to: /storage/foo)
+                signer.storage.save(<-r, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
@@ -346,8 +346,8 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
         access(all) fun main(): &Test.R {
             let r <- Test.createR()
             let authAccount = getAuthAccount(0x1)
-            authAccount.save(<-r, to: /storage/foo)
-            let ref = authAccount.borrow<auth(Test.X) &Test.R>(from: /storage/foo)!
+            authAccount.storage.save(<-r, to: /storage/foo)
+            let ref = authAccount.storage.borrow<auth(Test.X) &Test.R>(from: /storage/foo)!
             return ref
         }
      `)
@@ -527,7 +527,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
         transaction {
             prepare(signer: &Account) {
                 let r <- Test.createR()
-                signer.save(<-r, to: /storage/foo)
+                signer.storage.save(<-r, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
@@ -627,12 +627,12 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
         transaction {
             prepare(signer: &Account) {
                 let r <- Test.createR()
-                signer.save(<-r, to: /storage/foo)
+                signer.storage.save(<-r, to: /storage/foo)
                 let capFoo = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
                 signer.capabilities.publish(capFoo, at: /public/foo)
 
                 let r2 <- Test.createR()
-                signer.save(<-r2, to: /storage/bar)
+                signer.storage.save(<-r2, to: /storage/bar)
                 let capBar = signer.capabilities.storage.issue<auth(Test.Y) &Test.R>(/storage/bar)
                 signer.capabilities.publish(capBar, at: /public/bar)
             }
@@ -739,12 +739,12 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
         transaction {
             prepare(signer: &Account) {
                 let r <- Test.createR()
-                signer.save(<-r, to: /storage/foo)
+                signer.storage.save(<-r, to: /storage/foo)
                 let capFoo = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
                 signer.capabilities.publish(capFoo, at: /public/foo)
 
                 let r2 <- Test.createR()
-                signer.save(<-r2, to: /storage/bar)
+                signer.storage.save(<-r2, to: /storage/bar)
                 let capBar = signer.capabilities.storage.issue<auth(Test.Y) &Test.R>(/storage/bar)
                 signer.capabilities.publish(capBar, at: /public/bar)
             }
@@ -886,7 +886,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let account = getAuthAccount(0x1)
 
               let r <- create R()
-              account.save(<-r, to: /storage/foo)
+              account.storage.save(<-r, to: /storage/foo)
 
               let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
@@ -915,7 +915,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let account = getAuthAccount(0x1)
 
               let r <- create R()
-              account.save(<-r, to: /storage/foo)
+              account.storage.save(<-r, to: /storage/foo)
 
               let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
@@ -947,7 +947,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
                let account = getAuthAccount(0x1)
 
                let r <- create R()
-               account.save(<-r, to: /storage/foo)
+               account.storage.save(<-r, to: /storage/foo)
 
                let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
                account.capabilities.publish(issuedCap, at: /public/foo)
@@ -976,7 +976,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let account = getAuthAccount(0x1)
 
 	          let s = S()
-	          account.save(s, to: /storage/foo)
+	          account.storage.save(s, to: /storage/foo)
 
 	          let issuedCap = account.capabilities.storage.issue<auth(X) &S>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
@@ -1005,7 +1005,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let account = getAuthAccount(0x1)
 
 	          let s = S()
-	          account.save(s, to: /storage/foo)
+	          account.storage.save(s, to: /storage/foo)
 
 	          let issuedCap = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
@@ -1038,7 +1038,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let account = getAuthAccount(0x1)
 
 	          let r <- create R()
-	          account.save(<-r, to: /storage/foo)
+	          account.storage.save(<-r, to: /storage/foo)
 
 	          let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
@@ -1067,7 +1067,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let account = getAuthAccount(0x1)
 
 	          let r <- create R()
-	          account.save(<-r, to: /storage/foo)
+	          account.storage.save(<-r, to: /storage/foo)
 
 	          let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
@@ -1096,7 +1096,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let account = getAuthAccount(0x1)
 
 	          let r <- create R()
-	          account.save(<-r, to: /storage/foo)
+	          account.storage.save(<-r, to: /storage/foo)
 
 	          let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)

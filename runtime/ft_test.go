@@ -366,7 +366,7 @@ access(all) contract FlowToken: FungibleToken {
         // Create the Vault with the total supply of tokens and save it in storage
         //
         let vault <- create Vault(balance: self.totalSupply)
-        adminAccount.save(<-vault, to: /storage/flowTokenVault)
+        adminAccount.storage.save(<-vault, to: /storage/flowTokenVault)
 
         // Create a public capability to the stored Vault that only exposes
         // the 'deposit' method through the 'Receiver' interface
@@ -383,7 +383,7 @@ access(all) contract FlowToken: FungibleToken {
         adminAccount.capabilities.publish(balanceCap, at: /public/flowTokenBalance)
 
         let admin <- create Administrator()
-        adminAccount.save(<-admin, to: /storage/flowTokenAdmin)
+        adminAccount.storage.save(<-admin, to: /storage/flowTokenAdmin)
 
         // Emit an event that shows that the contract was initialized
         emit TokensInitialized(initialSupply: self.totalSupply)
@@ -399,9 +399,9 @@ transaction {
 
     prepare(signer: &Account) {
 
-        if signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
+        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
             // Create a new flowToken Vault and put it in storage
-            signer.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
+            signer.storage.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
 
             // Create a public capability to the Vault that only exposes
             // the deposit function through the Receiver interface
@@ -463,7 +463,7 @@ transaction(amount: UFix64, to: Address) {
     prepare(signer: &Account) {
 
         // Get a reference to the signer's stored vault
-        let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+        let vaultRef = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
 			?? panic("Could not borrow reference to the owner's Vault!")
 
         // Withdraw tokens from the signer's stored vault

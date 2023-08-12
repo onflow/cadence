@@ -872,13 +872,13 @@ func TestStorageCommitsMetering(t *testing.T) {
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
 	})
 
-	t.Run("account save", func(t *testing.T) {
+	t.Run("account.storage.save", func(t *testing.T) {
 		t.Parallel()
 
 		code := []byte(`
             transaction {
                 prepare(signer: &Account) {
-                    signer.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                    signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
                 }
             }
         `)
@@ -915,7 +915,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 		code := []byte(`
             transaction {
                 prepare(signer: &Account) {
-                    signer.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                    signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
                     signer.storage.used
                 }
             }

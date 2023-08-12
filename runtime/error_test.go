@@ -493,7 +493,7 @@ func TestRuntimeDefaultFunctionConflictPrintingError(t *testing.T) {
 			`
               transaction {
                 prepare(signer: &Account) {
-                  let acct = AuthAccount(payer: signer)
+                  let acct = Account(payer: signer)
                   acct.contracts.add(name: "%s", code: "%s".decodeHex())
                 }
               }
@@ -620,7 +620,7 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 			`
               transaction {
                 prepare(signer: &Account) {
-                  let acct = AuthAccount(payer: signer)
+                  let acct = Account(payer: signer)
                   acct.contracts.add(name: "%s", code: "%s".decodeHex())
                 }
               }
