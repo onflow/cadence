@@ -58,12 +58,12 @@ const ( // Cadence simple type IDs
 	TypeStoragePath
 	TypePublicPath
 	TypePrivatePath
-	TypeAuthAccount
-	TypePublicAccount
-	TypeAuthAccountKeys
-	TypePublicAccountKeys
-	TypeAuthAccountContracts
-	TypePublicAccountContracts
+	_ // DO NOT REUSE: was AuthAccount
+	_ // DO NOT REUSE: was PublicAccount
+	_ // DO NOT REUSE: was AuthAccountKeys
+	_ // DO NOT REUSE: was PublicAccountKeys
+	_ // DO NOT REUSE: was AuthAccountContracts
+	_ // DO NOT REUSE: was PublicAccountContracts
 	TypeDeployedContract
 	TypeAccountKey
 	TypeBlock
@@ -231,23 +231,7 @@ func simpleTypeIDByType(typ cadence.Type) (uint64, bool) {
 	case cadence.AccountKeyType:
 		return TypeAccountKey, true
 
-	case cadence.AuthAccountContractsType:
-		return TypeAuthAccountContracts, true
-
-	case cadence.AuthAccountKeysType:
-		return TypeAuthAccountKeys, true
-
-	case cadence.AuthAccountType:
-		return TypeAuthAccount, true
-
-	case cadence.PublicAccountContractsType:
-		return TypePublicAccountContracts, true
-
-	case cadence.PublicAccountKeysType:
-		return TypePublicAccountKeys, true
-
-	case cadence.PublicAccountType:
-		return TypePublicAccount, true
+	// TODO: account-related types
 
 	case cadence.DeployedContractType:
 		return TypeDeployedContract, true

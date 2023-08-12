@@ -1739,12 +1739,8 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		cadence.PublicPathType{},
 		cadence.PrivatePathType{},
 		cadence.AccountKeyType{},
-		cadence.AuthAccountContractsType{},
-		cadence.AuthAccountKeysType{},
-		cadence.AuthAccountType{},
-		cadence.PublicAccountContractsType{},
-		cadence.PublicAccountKeysType{},
-		cadence.PublicAccountType{},
+		// TODO: account-related types
+
 		cadence.DeployedContractType{},
 	} {
 		tests = append(tests, encodeTest{

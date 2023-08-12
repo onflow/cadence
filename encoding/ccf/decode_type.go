@@ -203,23 +203,7 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 	case TypePrivatePath:
 		return cadence.ThePrivatePathType, nil
 
-	case TypeAuthAccount:
-		return cadence.TheAuthAccountType, nil
-
-	case TypePublicAccount:
-		return cadence.ThePublicAccountType, nil
-
-	case TypeAuthAccountKeys:
-		return cadence.TheAuthAccountKeysType, nil
-
-	case TypePublicAccountKeys:
-		return cadence.ThePublicAccountKeysType, nil
-
-	case TypeAuthAccountContracts:
-		return cadence.TheAuthAccountContractsType, nil
-
-	case TypePublicAccountContracts:
-		return cadence.ThePublicAccountContractsType, nil
+	// TODO: account-related types
 
 	case TypeDeployedContract:
 		return cadence.TheDeployedContractType, nil

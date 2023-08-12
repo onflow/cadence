@@ -1332,18 +1332,9 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return cadence.ThePublicPathType
 	case "PrivatePath":
 		return cadence.ThePrivatePathType
-	case "AuthAccount":
-		return cadence.TheAuthAccountType
-	case "PublicAccount":
-		return cadence.ThePublicAccountType
-	case "AuthAccount.Keys":
-		return cadence.TheAuthAccountKeysType
-	case "PublicAccount.Keys":
-		return cadence.ThePublicAccountKeysType
-	case "AuthAccount.Contracts":
-		return cadence.TheAuthAccountContractsType
-	case "PublicAccount.Contracts":
-		return cadence.ThePublicAccountContractsType
+
+	// TODO: account-related types
+
 	case "DeployedContract":
 		return cadence.TheDeployedContractType
 	case "AccountKey":

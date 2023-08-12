@@ -7809,12 +7809,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		{cadence.PublicPathType{}, ccf.TypePublicPath},
 		{cadence.PrivatePathType{}, ccf.TypePrivatePath},
 		{cadence.AccountKeyType{}, ccf.TypeAccountKey},
-		{cadence.AuthAccountContractsType{}, ccf.TypeAuthAccountContracts},
-		{cadence.AuthAccountKeysType{}, ccf.TypeAuthAccountKeys},
-		{cadence.AuthAccountType{}, ccf.TypeAuthAccount},
-		{cadence.PublicAccountContractsType{}, ccf.TypePublicAccountContracts},
-		{cadence.PublicAccountKeysType{}, ccf.TypePublicAccountKeys},
-		{cadence.PublicAccountType{}, ccf.TypePublicAccount},
+		// TODO: account-related types
 		{cadence.DeployedContractType{}, ccf.TypeDeployedContract},
 	} {
 		var w bytes.Buffer
