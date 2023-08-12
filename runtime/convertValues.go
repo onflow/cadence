@@ -380,15 +380,19 @@ func exportCompositeValue(
 		}
 	}
 
+	switch semaType := semaType.(type) {
+	case *sema.CompositeType:
+		break // handled after the type switch.
+	case *sema.InclusiveRangeType:
+		// InclusiveRange is stored as a CompositeValue but isn't a CompositeType.
+		return exportCompositeValueAsInclusiveRange(v, semaType, inter, locationRange, seenReferences)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
 	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok {
-		// InclusiveRange is stored as a CompositeValue but isn't a CompositeType.
-		inclusiveRangeType, ok := semaType.(*sema.InclusiveRangeType)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		return exportCompositeValueAsInclusiveRange(v, inclusiveRangeType, inter, locationRange, seenReferences)
+		panic(errors.NewUnreachableError())
 	}
 
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
