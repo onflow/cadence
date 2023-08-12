@@ -51,7 +51,7 @@ func newContractDeployTransaction(function, name, code string) string {
 
 func newContractAddTransaction(name string, code string) string {
 	return newContractDeployTransaction(
-		sema.AuthAccountContractsTypeAddFunctionName,
+		sema.Account_ContractsTypeAddFunctionName,
 		name,
 		code,
 	)
@@ -74,7 +74,7 @@ func newContractRemovalTransaction(contractName string) string {
                }
            }
        `,
-		sema.AuthAccountContractsTypeRemoveFunctionName,
+		sema.Account_ContractsTypeRemoveFunctionName,
 		contractName,
 	)
 }

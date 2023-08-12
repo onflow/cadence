@@ -3692,7 +3692,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				cadence.BytesToAddress(addressValue.Bytes()),
 			},
 			[]sema.Type{
-				sema.AuthAccountType,
+				sema.FullyEntitledAccountReferenceType,
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -3714,7 +3714,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				cadence.BytesToAddress(addressValue.Bytes()),
 			},
 			[]sema.Type{
-				sema.PublicAccountType,
+				sema.AccountReferenceType,
 			},
 			Context{
 				Interface: runtimeInterface,
