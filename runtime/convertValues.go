@@ -666,15 +666,12 @@ func exportCompositeValueAsInclusiveRange(
 		return cadence.InclusiveRange{}, err
 	}
 
-	inclusiveRange, err := cadence.NewMeteredInclusiveRange(
+	inclusiveRange := cadence.NewMeteredInclusiveRange(
 		inter,
 		startValue,
 		endValue,
 		stepValue,
 	)
-	if err != nil {
-		return cadence.InclusiveRange{}, err
-	}
 
 	t := exportInclusiveRangeType(inter, inclusiveRangeType, map[sema.TypeID]cadence.Type{}).(*cadence.InclusiveRangeType)
 	return inclusiveRange.WithType(t), err

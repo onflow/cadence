@@ -879,18 +879,19 @@ func (d *Decoder) decodeInclusiveRange(valueJSON any) cadence.InclusiveRange {
 	end := obj.GetValue(d, endKey)
 	step := obj.GetValue(d, stepKey)
 
-	value, err := cadence.NewMeteredInclusiveRange(
+	value := cadence.NewMeteredInclusiveRange(
 		d.gauge,
 		start,
 		end,
 		step,
 	)
 
-	if err != nil {
-		panic(errors.NewDefaultUserError("invalid InclusiveRange: %w", err))
-	}
+	// TODO: Ensure that start, end and step have the same type.
 
-	return value
+	return value.WithType(cadence.NewMeteredInclusiveRangeType(
+		d.gauge,
+		start.Type(),
+	))
 }
 
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {

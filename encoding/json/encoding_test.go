@@ -1458,7 +1458,7 @@ func TestEncodeInclusiveRange(t *testing.T) {
 			cadence.NewInt256(10),
 			cadence.NewInt256(20),
 			cadence.NewInt256(5),
-		),
+		).WithType(cadence.NewInclusiveRangeType(cadence.NewInt256Type())),
 		// language=json
 		`
 			{

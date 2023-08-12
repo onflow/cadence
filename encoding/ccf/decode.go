@@ -1357,15 +1357,12 @@ func (d *Decoder) decodeInclusiveRange(typ *cadence.InclusiveRangeType, types *c
 		return nil, err
 	}
 
-	v, err := cadence.NewMeteredInclusiveRange(
+	v := cadence.NewMeteredInclusiveRange(
 		d.gauge,
 		start,
 		end,
 		step,
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	return v.WithType(typ), nil
 }

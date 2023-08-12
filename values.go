@@ -2074,9 +2074,9 @@ func NewInclusiveRange(start, end, step Value) InclusiveRange {
 func NewMeteredInclusiveRange(
 	gauge common.MemoryGauge,
 	start, end, step Value,
-) (InclusiveRange, error) {
+) InclusiveRange {
 	common.UseMemory(gauge, common.CadenceInclusiveRangeValueMemoryUsage)
-	return NewInclusiveRange(start, end, step), nil
+	return NewInclusiveRange(start, end, step)
 }
 
 func (InclusiveRange) isValue() {}

@@ -14564,6 +14564,31 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
+			name: "more than one element type in inclusiverange type value",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([137(41), 194([null, null])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagInclusiveRangeTypeValue,
+				// array, 2 elements follow, expected one
+				0x82,
+				// null
+				0xf6,
+				// null
+				0xf6,
+			},
+		},
+		{
 			name: "nil element type in inclusiverange type value",
 			data: []byte{
 				// language=edn, format=ccf
