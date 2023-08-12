@@ -59,7 +59,15 @@ func NewInclusiveRangeValue(
 		step = negatedStep
 	}
 
-	return createInclusiveRange(interpreter, locationRange, start, end, step, rangeStaticType, rangeSemaType)
+	return createInclusiveRange(
+		interpreter,
+		locationRange,
+		start,
+		end,
+		step,
+		rangeStaticType,
+		rangeSemaType,
+	)
 }
 
 // NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end & step.
