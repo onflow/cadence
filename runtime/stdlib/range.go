@@ -96,9 +96,11 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 		if startStaticType != endStaticType {
 			panic(interpreter.InclusiveRangeConstructionError{
 				LocationRange: locationRange,
-				Message: fmt.Sprintf("start and end are of different types. start: %s and end: %s",
+				Message: fmt.Sprintf(
+					"start and end are of different types. start: %s and end: %s",
 					startStaticType,
-					endStaticType),
+					endStaticType,
+				),
 			})
 		}
 
