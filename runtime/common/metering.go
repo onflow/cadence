@@ -243,7 +243,7 @@ var (
 	SeenReferenceStringMemoryUsage                    = NewRawStringMemoryUsage(3)                   // len(ellipsis)
 	AddressValueStringMemoryUsage                     = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
 	HostFunctionValueStringMemoryUsage                = NewRawStringMemoryUsage(len("Function(...)"))
-	AuthAccountValueStringMemoryUsage                 = NewRawStringMemoryUsage(len("AuthAccount()"))
+	AccountValueStringMemoryUsage                 = NewRawStringMemoryUsage(len("Account()"))
 	AccountContractsStringMemoryUsage           = NewRawStringMemoryUsage(len("Account.Contracts()"))
 	AccountKeysStringMemoryUsage                = NewRawStringMemoryUsage(len("Account.Keys()"))
 	AccountStorageCapabilitiesStringMemoryUsage = NewRawStringMemoryUsage(len("Account.StorageCapabilities()"))

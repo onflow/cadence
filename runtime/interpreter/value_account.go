@@ -106,9 +106,9 @@ func NewAccountValue(
 	var str string
 	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AuthAccountValueStringMemoryUsage)
+			common.UseMemory(memoryGauge, common.AccountValueStringMemoryUsage)
 			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("AuthAccount(%s)", addressStr)
+			str = fmt.Sprintf("Account(%s)", addressStr)
 		}
 		return str
 	}
