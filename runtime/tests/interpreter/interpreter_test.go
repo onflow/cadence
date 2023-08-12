@@ -10742,98 +10742,10 @@ func TestInterpretArrayReverse(t *testing.T) {
 }
 
 func TestInterpretArrayFilter(t *testing.T) {
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-		let xs = [1, 2, 3, 100, 201]
-		let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
-		let emptyVals: [Int] = []
-		let emptyVals_fixed: [Int; 0] = []
-
-		let onlyEven =
-			fun (_ x: Int): Bool {
-				return x % 2 == 0
-			}
-
-		fun filterxs(): [Int] {
-			return xs.filter(onlyEven)
-		}
-		fun originalxs(): [Int] {
-			return xs
-		}
-
-		fun filterxs_fixed(): [Int] {
-			return xs_fixed.filter(onlyEven)
-		}
-		fun originalxs_fixed(): [Int; 5] {
-			return xs_fixed
-		}
-
-		fun filterempty(): [Int] {
-			return emptyVals.filter(onlyEven)
-		}
-		fun originalempty(): [Int] {
-			return emptyVals
-		}
-
-		fun filterempty_fixed(): [Int] {
-			return emptyVals_fixed.filter(onlyEven)
-		}
-		fun originalempty_fixed(): [Int; 0] {
-			return emptyVals_fixed
-		}
-
-		pub struct TestStruct {
-			pub var test: Int
-
-			init(_ t: Int) {
-				self.test = t
-			}
-		}
-
-		let onlyOddStruct =
-			fun (_ x: TestStruct): Bool {
-				return x.test % 2 == 1
-			}
-
-		let sa = [TestStruct(1), TestStruct(2), TestStruct(3)]
-		let sa_fixed: [TestStruct; 3] = [TestStruct(1), TestStruct(2), TestStruct(3)]
-		
-		fun filtersa(): [Int] {
-			let sa_filtered = sa.filter(onlyOddStruct)
-			let res: [Int] = [];
-			for s in sa_filtered {
-				res.append(s.test)
-			}
-			return res
-		}
-		fun originalsa(): [Int] {
-			let res: [Int] = [];
-			for s in sa {
-				res.append(s.test)
-			}
-			return res
-		}
-
-		fun filtersa_fixed(): [Int] {
-			let sa_rev = sa_fixed.filter(onlyOddStruct)
-			let res: [Int] = [];
-			for s in sa_rev {
-				res.append(s.test)
-			}
-			return res
-		}
-		fun originalsa_fixed(): [Int] {
-			let res: [Int] = [];
-			for s in sa_fixed {
-				res.append(s.test)
-			}
-			return res
-		}
-	`)
 
 	runValidCase := func(
 		t *testing.T,
+		inter *interpreter.Interpreter,
 		filterFuncName,
 		originalFuncName string,
 		filteredArray, originalArray *interpreter.ArrayValue,
@@ -10860,77 +10772,305 @@ func TestInterpretArrayFilter(t *testing.T) {
 		)
 	}
 
-	for _, suffix := range []string{"_fixed", ""} {
-		fixed := suffix == "_fixed"
+	t.Run("with variable sized empty array", func(t *testing.T) {
+		t.Parallel()
 
-		var originalArrayType interpreter.ArrayStaticType
-		if fixed {
-			originalArrayType = &interpreter.ConstantSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeInt,
+		inter := parseCheckAndInterpret(t, `
+			let emptyVals: [Int] = []
+
+			let onlyEven =
+				fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			fun filterempty(): [Int] {
+				return emptyVals.filter(onlyEven)
 			}
-		} else {
-			originalArrayType = &interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeInt,
+			fun originalempty(): [Int] {
+				return emptyVals
 			}
-		}
-		// Return type is always variable sized array.
-		var returnArrayType = &interpreter.VariableSizedStaticType{
+		`)
+
+		emptyVarSizedArray := interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+		)
+
+		runValidCase(
+			t,
+			inter,
+			"filterempty",
+			"originalempty",
+			emptyVarSizedArray,
+			emptyVarSizedArray,
+		)
+	})
+
+	t.Run("with variable sized array of integer", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let xs = [1, 2, 3, 100, 201]
+
+			let onlyEven =
+				fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			fun filterxs(): [Int] {
+				return xs.filter(onlyEven)
+			}
+			fun originalxs(): [Int] {
+				return xs
+			}
+		`)
+
+		varSizedArrayType := &interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		}
 
-		setFixedSize := func(size int64) {
-			if fixed {
-				constSized, ok := originalArrayType.(*interpreter.ConstantSizedStaticType)
-				assert.True(t, ok)
-
-				constSized.Size = size
-			}
-		}
-
-		setFixedSize(0)
-		runValidCase(t, "filterempty"+suffix, "originalempty"+suffix,
+		runValidCase(
+			t,
+			inter,
+			"filterxs",
+			"originalxs",
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				returnArrayType,
-				common.ZeroAddress,
-			), interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				originalArrayType,
-				common.ZeroAddress,
-			))
-
-		setFixedSize(5)
-		runValidCase(t, "filterxs"+suffix, "originalxs"+suffix,
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				returnArrayType,
+				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(100),
-			), interpreter.NewArrayValue(
+			),
+			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				originalArrayType,
+				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(3),
 				interpreter.NewUnmeteredIntValueFromInt64(100),
 				interpreter.NewUnmeteredIntValueFromInt64(201),
-			))
+			),
+		)
+	})
 
-		runValidCase(t, "filtersa"+suffix, "originalsa"+suffix,
+	t.Run("with variable sized array of struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			pub struct TestStruct {
+				pub var test: Int
+
+				init(_ t: Int) {
+					self.test = t
+				}
+			}
+
+			let onlyOddStruct =
+				fun (_ x: TestStruct): Bool {
+					return x.test % 2 == 1
+				}
+
+			let sa = [TestStruct(1), TestStruct(2), TestStruct(3)]
+			fun filtersa(): [Int] {
+				let sa_filtered = sa.filter(onlyOddStruct)
+				let res: [Int] = [];
+				for s in sa_filtered {
+					res.append(s.test)
+				}
+				return res
+			}
+			fun originalsa(): [Int] {
+				let res: [Int] = [];
+				for s in sa {
+					res.append(s.test)
+				}
+				return res
+			}
+		`)
+
+		varSizedArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
+		runValidCase(
+			t,
+			inter,
+			"filtersa",
+			"originalsa",
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				returnArrayType,
+				varSizedArrayType,
 				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 				interpreter.NewUnmeteredIntValueFromInt64(3),
-			), interpreter.NewArrayValue(
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				varSizedArrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+		)
+	})
+
+	t.Run("with fixed sized empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let emptyVals_fixed: [Int; 0] = []
+
+			let onlyEven =
+				fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			fun filterempty_fixed(): [Int] {
+				return emptyVals_fixed.filter(onlyEven)
+			}
+			fun originalempty_fixed(): [Int; 0] {
+				return emptyVals_fixed
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"filterempty_fixed",
+			"originalempty_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+					Size: 0,
+				},
+				common.ZeroAddress,
+			),
+		)
+	})
+
+	t.Run("with fixed sized array of integer", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
+
+			let onlyEven =
+				fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			fun filterxs_fixed(): [Int] {
+				return xs_fixed.filter(onlyEven)
+			}
+			fun originalxs_fixed(): [Int; 5] {
+				return xs_fixed
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"filterxs_fixed",
+			"originalxs_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+					Size: 5,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+				interpreter.NewUnmeteredIntValueFromInt64(201),
+			),
+		)
+	})
+
+	t.Run("with fixed sized array of struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			pub struct TestStruct {
+				pub var test: Int
+
+				init(_ t: Int) {
+					self.test = t
+				}
+			}
+
+			let onlyOddStruct =
+				fun (_ x: TestStruct): Bool {
+					return x.test % 2 == 1
+				}
+
+			let sa_fixed: [TestStruct; 3] = [TestStruct(1), TestStruct(2), TestStruct(3)]
+
+			fun filtersa_fixed(): [Int] {
+				let sa_rev = sa_fixed.filter(onlyOddStruct)
+				let res: [Int] = [];
+				for s in sa_rev {
+					res.append(s.test)
+				}
+				return res
+			}
+			fun originalsa_fixed(): [Int] {
+				let res: [Int] = [];
+				for s in sa_fixed {
+					res.append(s.test)
+				}
+				return res
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"filtersa_fixed",
+			"originalsa_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
 				&interpreter.VariableSizedStaticType{
@@ -10940,8 +11080,9 @@ func TestInterpretArrayFilter(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(3),
-			))
-	}
+			),
+		)
+	})
 }
 
 func TestInterpretOptionalReference(t *testing.T) {

@@ -2975,13 +2975,14 @@ func (v *ArrayValue) Filter(
 	procedure FunctionValue,
 ) Value {
 
+	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
 	iterationInvocation := func(arrayElement Value) Invocation {
 		invocation := NewInvocation(
 			interpreter,
 			nil,
 			nil,
 			[]Value{arrayElement},
-			[]sema.Type{v.semaType.ElementType(false)},
+			elementTypeSlice,
 			nil,
 			locationRange,
 		)
