@@ -4433,11 +4433,6 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 	)
 }
 
-var AuthAccountReferenceStaticType = ReferenceStaticType{
-	ReferencedType: PrimitiveStaticTypeAuthAccount,
-	Authorization:  UnauthorizedAccess,
-}
-
 func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.EntitlementType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
 	if err != nil {
