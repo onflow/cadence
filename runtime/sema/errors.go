@@ -3036,7 +3036,7 @@ func (*InvalidAccessError) IsUserError() {}
 
 func (e *InvalidAccessError) Error() string {
 	return fmt.Sprintf(
-		"cannot access `%s`: %s requires (%s) authorization",
+		"cannot access `%s`: %s requires `%s` authorization",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.Description(),
@@ -3063,7 +3063,7 @@ func (*InvalidAssignmentAccessError) IsUserError() {}
 
 func (e *InvalidAssignmentAccessError) Error() string {
 	return fmt.Sprintf(
-		"cannot assign to `%s`: %s has %s access",
+		"cannot assign to `%s`: %s has `%s` access",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.Description(),
