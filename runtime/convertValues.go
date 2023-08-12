@@ -673,7 +673,7 @@ func exportCompositeValueAsInclusiveRange(
 		stepValue,
 	)
 
-	t := exportInclusiveRangeType(inter, inclusiveRangeType, map[sema.TypeID]cadence.Type{}).(*cadence.InclusiveRangeType)
+	t := exportInclusiveRangeType(inter, inclusiveRangeType, map[sema.TypeID]cadence.Type{})
 	return inclusiveRange.WithType(t), err
 }
 

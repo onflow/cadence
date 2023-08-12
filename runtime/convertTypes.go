@@ -408,7 +408,7 @@ func exportInclusiveRangeType(
 	gauge common.MemoryGauge,
 	t *sema.InclusiveRangeType,
 	results map[sema.TypeID]cadence.Type,
-) cadence.Type {
+) *cadence.InclusiveRangeType {
 	convertedMemberType := ExportMeteredType(gauge, t.MemberType, results)
 
 	return cadence.NewMeteredInclusiveRangeType(
