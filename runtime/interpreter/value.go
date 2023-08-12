@@ -16297,7 +16297,15 @@ func NewCompositeValueWithStaticType(
 	address common.Address,
 	staticType StaticType,
 ) *CompositeValue {
-	value := NewCompositeValue(interpreter, locationRange, location, qualifiedIdentifier, kind, fields, address)
+	value := NewCompositeValue(
+		interpreter,
+		locationRange,
+		location,
+		qualifiedIdentifier,
+		kind,
+		fields,
+		address,
+	)
 	value.staticType = staticType
 	return value
 }
