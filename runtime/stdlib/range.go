@@ -115,9 +115,11 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 			if stepStaticType != startStaticType {
 				panic(interpreter.InclusiveRangeConstructionError{
 					LocationRange: locationRange,
-					Message: fmt.Sprintf("step must be of the same type as start and end. start/end: %s and step: %s",
+					Message: fmt.Sprintf(
+						"step must be of the same type as start and end. start/end: %s and step: %s",
 						startStaticType,
-						stepStaticType),
+						stepStaticType,
+					),
 				})
 			}
 
