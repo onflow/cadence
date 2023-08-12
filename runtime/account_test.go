@@ -163,8 +163,8 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 		script := []byte(fmt.Sprintf(`
             transaction {
 
-                prepare(signer: &Account) {
-                    signer.save<%s>(panic(""))
+                prepare(signer: auth(SaveValue) &Account) {
+                    signer.storage.save<%s>(panic(""))
                 }
             }
         `, ty.String()))
@@ -330,7 +330,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(RevokeKey) &Account) {
                         let key = signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
                         assert(key.isRevoked)
                     }
@@ -359,7 +359,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(RevokeKey) &Account) {
                         let key: AccountKey? = signer.keys.revoke(keyIndex: 5)
                         assert(key == nil)
                     }
@@ -376,7 +376,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Nil(t, testEnv.storage.returnedKey)
 	})
 
-	t.Run("get key count", func(t *testing.T) {
+	t.Run("get key count afte revocation", func(t *testing.T) {
 		t.Parallel()
 
 		nextTransactionLocation := newTransactionLocationGenerator()
@@ -385,7 +385,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(RevokeKey) &Account) {
                         assert(signer.keys.count == 1)
 
                         let key = signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
@@ -408,7 +408,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Equal(t, revokedAccountKeyA, testEnv.storage.returnedKey)
 	})
 
-	t.Run("test keys forEach", func(t *testing.T) {
+	t.Run("test keys forEach, after add and revoke", func(t *testing.T) {
 		t.Parallel()
 
 		nextTransactionLocation := newTransactionLocationGenerator()
@@ -417,7 +417,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(Keys) &Account) {
                         signer.keys.add(
                             publicKey: PublicKey(
                                 publicKey: [1, 2, 3],
@@ -474,7 +474,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	const code = `
        transaction(publicKey: [UInt8]) {
-           prepare(signer: &Account) {
+           prepare(signer: auth(AddKey) &Account) {
                let acct = AuthAccount(payer: signer)
                acct.keys.add(
                    publicKey: PublicKey(
@@ -644,7 +644,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 			code: `
               access(all) fun main(): AccountKey? {
                   let acc = getAccount(0x02)
-                  var keys: PublicAccount.Keys = acc.keys
+                  var keys: &Account.Keys = acc.keys
                   return keys.get(keyIndex: 0)
               }
             `,
@@ -1034,7 +1034,7 @@ func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRunt
 		name: "Add key",
 		code: `
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(AddKey) &Account) {
                         let key = PublicKey(
                             publicKey: "010203".decodeHex(),
                             signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
