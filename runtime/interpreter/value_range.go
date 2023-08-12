@@ -98,8 +98,7 @@ func NewInclusiveRangeValueWithStep(
 	// If start < end, step must be > 0
 	// If start > end, step must be < 0
 	// If start == end, step doesn't matter.
-	if (start.Less(interpreter, end, locationRange) && step.Less(interpreter, zeroValue, locationRange)) ||
-		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, zeroValue, locationRange)) {
+	if isSequenceMovingAwayFromEnd(interpreter, locationRange, start, end, step, zeroValue) {
 
 		panic(InclusiveRangeConstructionError{
 			LocationRange: locationRange,
@@ -234,6 +233,18 @@ func getFieldAsIntegerValue(
 			name,
 		),
 	)
+}
+
+func isSequenceMovingAwayFromEnd(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	start IntegerValue,
+	end IntegerValue,
+	step IntegerValue,
+	zeroValue IntegerValue,
+) BoolValue {
+	return (start.Less(interpreter, end, locationRange) && step.Less(interpreter, zeroValue, locationRange)) ||
+		(start.Greater(interpreter, end, locationRange) && step.Greater(interpreter, zeroValue, locationRange))
 }
 
 func convertAndAssertIntegerValue(value Value) IntegerValue {
