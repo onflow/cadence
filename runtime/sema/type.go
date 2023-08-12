@@ -5381,6 +5381,12 @@ const inclusiveRangeTypeStepFieldDocString = `
 The step size of the InclusiveRange sequence
 `
 
+var InclusiveRangeTypeFieldNames = []string{
+	InclusiveRangeTypeStartFieldName,
+	InclusiveRangeTypeEndFieldName,
+	InclusiveRangeTypeStepFieldName,
+}
+
 const InclusiveRangeTypeContainsFunctionName = "contains"
 
 const inclusiveRangeTypeContainsFunctionDocString = `

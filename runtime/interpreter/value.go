@@ -17130,11 +17130,9 @@ func (v *CompositeValue) ConformsToStaticType(
 			return false
 		}
 
-		startValue := v.GetField(interpreter, locationRange, sema.InclusiveRangeTypeStartFieldName)
-		endValue := v.GetField(interpreter, locationRange, sema.InclusiveRangeTypeEndFieldName)
-		stepValue := v.GetField(interpreter, locationRange, sema.InclusiveRangeTypeStepFieldName)
+		for _, fieldName := range sema.InclusiveRangeTypeFieldNames {
+			value := v.GetField(interpreter, locationRange, fieldName)
 
-		for _, value := range []Value{startValue, endValue, stepValue} {
 			fieldStaticType := value.StaticType(interpreter)
 
 			if !interpreter.IsSubTypeOfSemaType(fieldStaticType, inclusiveRangeType.MemberType) {
