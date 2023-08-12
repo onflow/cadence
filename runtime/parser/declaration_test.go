@@ -5010,7 +5010,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 
 		    var x: Int
 
-		    prepare(signer: AuthAccount) {
+		    prepare(signer: &Account) {
 	          x = 0
 			}
 
@@ -5067,11 +5067,18 @@ func TestParseTransactionDeclaration(t *testing.T) {
 										},
 										TypeAnnotation: &ast.TypeAnnotation{
 											IsResource: false,
-											Type: &ast.NominalType{
-												Identifier: ast.Identifier{
-													Identifier: "AuthAccount",
-													Pos:        ast.Position{Offset: 60, Line: 6, Column: 22},
+											Type: &ast.ReferenceType{
+												Type: &ast.NominalType{
+													Identifier: ast.Identifier{
+														Identifier: "Account",
+														Pos: ast.Position{
+															Offset: 61,
+															Line:   6,
+															Column: 23,
+														},
+													},
 												},
+												StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 											},
 											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
 										},
@@ -5080,7 +5087,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 								},
 								Range: ast.Range{
 									StartPos: ast.Position{Offset: 51, Line: 6, Column: 13},
-									EndPos:   ast.Position{Offset: 71, Line: 6, Column: 33},
+									EndPos:   ast.Position{Offset: 68, Line: 6, Column: 30},
 								},
 							},
 							ReturnTypeAnnotation: nil,
@@ -5091,27 +5098,27 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											Target: &ast.IdentifierExpression{
 												Identifier: ast.Identifier{
 													Identifier: "x",
-													Pos:        ast.Position{Offset: 86, Line: 7, Column: 11},
+													Pos:        ast.Position{Offset: 83, Line: 7, Column: 11},
 												},
 											},
 											Transfer: &ast.Transfer{
 												Operation: ast.TransferOperationCopy,
-												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
+												Pos:       ast.Position{Offset: 85, Line: 7, Column: 13},
 											},
 											Value: &ast.IntegerExpression{
 												PositiveLiteral: []byte("0"),
 												Value:           new(big.Int),
 												Base:            10,
 												Range: ast.Range{
-													StartPos: ast.Position{Offset: 90, Line: 7, Column: 15},
-													EndPos:   ast.Position{Offset: 90, Line: 7, Column: 15},
+													StartPos: ast.Position{Offset: 87, Line: 7, Column: 15},
+													EndPos:   ast.Position{Offset: 87, Line: 7, Column: 15},
 												},
 											},
 										},
 									},
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 73, Line: 6, Column: 35},
-										EndPos:   ast.Position{Offset: 95, Line: 8, Column: 3},
+										StartPos: ast.Position{Offset: 70, Line: 6, Column: 32},
+										EndPos:   ast.Position{Offset: 92, Line: 8, Column: 3},
 									},
 								},
 								PreConditions:  nil,
@@ -5128,7 +5135,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 							Access: ast.AccessNotSpecified,
 							Identifier: ast.Identifier{
 								Identifier: "execute",
-								Pos:        ast.Position{Offset: 104, Line: 10, Column: 6},
+								Pos:        ast.Position{Offset: 101, Line: 10, Column: 6},
 							},
 							ReturnTypeAnnotation: nil,
 							FunctionBlock: &ast.FunctionBlock{
@@ -5138,12 +5145,12 @@ func TestParseTransactionDeclaration(t *testing.T) {
 											Target: &ast.IdentifierExpression{
 												Identifier: ast.Identifier{
 													Identifier: "x",
-													Pos:        ast.Position{Offset: 125, Line: 11, Column: 11},
+													Pos:        ast.Position{Offset: 122, Line: 11, Column: 11},
 												},
 											},
 											Transfer: &ast.Transfer{
 												Operation: ast.TransferOperationCopy,
-												Pos:       ast.Position{Offset: 127, Line: 11, Column: 13},
+												Pos:       ast.Position{Offset: 124, Line: 11, Column: 13},
 											},
 											Value: &ast.BinaryExpression{
 												Operation: ast.OperationPlus,
@@ -5152,8 +5159,8 @@ func TestParseTransactionDeclaration(t *testing.T) {
 													Value:           big.NewInt(1),
 													Base:            10,
 													Range: ast.Range{
-														StartPos: ast.Position{Offset: 129, Line: 11, Column: 15},
-														EndPos:   ast.Position{Offset: 129, Line: 11, Column: 15},
+														StartPos: ast.Position{Offset: 126, Line: 11, Column: 15},
+														EndPos:   ast.Position{Offset: 126, Line: 11, Column: 15},
 													},
 												},
 												Right: &ast.IntegerExpression{
@@ -5161,27 +5168,27 @@ func TestParseTransactionDeclaration(t *testing.T) {
 													Value:           big.NewInt(1),
 													Base:            10,
 													Range: ast.Range{
-														StartPos: ast.Position{Offset: 133, Line: 11, Column: 19},
-														EndPos:   ast.Position{Offset: 133, Line: 11, Column: 19},
+														StartPos: ast.Position{Offset: 130, Line: 11, Column: 19},
+														EndPos:   ast.Position{Offset: 130, Line: 11, Column: 19},
 													},
 												},
 											},
 										},
 									},
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 112, Line: 10, Column: 14},
-										EndPos:   ast.Position{Offset: 138, Line: 12, Column: 3},
+										StartPos: ast.Position{Offset: 109, Line: 10, Column: 14},
+										EndPos:   ast.Position{Offset: 135, Line: 12, Column: 3},
 									},
 								},
 								PreConditions:  nil,
 								PostConditions: nil,
 							},
-							StartPos: ast.Position{Offset: 104, Line: 10, Column: 6},
+							StartPos: ast.Position{Offset: 101, Line: 10, Column: 6},
 						},
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
-						EndPos:   ast.Position{Offset: 144, Line: 13, Column: 4},
+						EndPos:   ast.Position{Offset: 141, Line: 13, Column: 4},
 					},
 				},
 			},
