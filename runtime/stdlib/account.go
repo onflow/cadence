@@ -159,7 +159,8 @@ func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
 	)
 }
 
-const getAuthAccountDocString = `
+const getAuthAccountFunctionName = "getAuthAccount"
+const getAuthAccountFunctionDocString = `
 Returns the account for the given address. Only available in scripts
 `
 
@@ -167,17 +168,15 @@ Returns the account for the given address. Only available in scripts
 //
 //	fun getAuthAccount<T: &Account>(_ address: Address): T
 var getAuthAccountFunctionType = func() *sema.FunctionType {
-	t := &sema.TypeParameter{
-		Name: "T",
-		TypeBound: &sema.ReferenceType{
-			Type:          sema.AccountType,
-			Authorization: sema.UnauthorizedAccess,
-		},
+
+	typeParam := &sema.TypeParameter{
+		Name:      "T",
+		TypeBound: sema.AccountReferenceType,
 	}
 
 	return &sema.FunctionType{
 		Purity:         sema.FunctionPurityView,
-		TypeParameters: []*sema.TypeParameter{t},
+		TypeParameters: []*sema.TypeParameter{typeParam},
 		Parameters: []sema.Parameter{
 			{
 				Label:          sema.ArgumentLabelNotRequired,
@@ -187,7 +186,7 @@ var getAuthAccountFunctionType = func() *sema.FunctionType {
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
 			&sema.GenericType{
-				TypeParameter: t,
+				TypeParameter: typeParam,
 			},
 		),
 	}
@@ -195,9 +194,9 @@ var getAuthAccountFunctionType = func() *sema.FunctionType {
 
 func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 	return NewStandardLibraryFunction(
-		"getAuthAccount",
+		getAuthAccountFunctionName,
 		getAuthAccountFunctionType,
-		getAuthAccountDocString,
+		getAuthAccountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
 			if !ok {
