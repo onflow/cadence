@@ -393,9 +393,11 @@ func TestTransactionDeclaration_String(t *testing.T) {
 								Identifier: "signer",
 							},
 							TypeAnnotation: &TypeAnnotation{
-								Type: &NominalType{
-									Identifier: Identifier{
-										Identifier: "AuthAccount",
+								Type: &ReferenceType{
+									Type: &NominalType{
+										Identifier: Identifier{
+											Identifier: "Account",
+										},
 									},
 								},
 							},
@@ -449,7 +451,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
     access(all)
     let f: @F
     
-    prepare(signer: AuthAccount) {}
+    prepare(signer: &Account) {}
     
     pre {
         true:
