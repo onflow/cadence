@@ -17063,9 +17063,8 @@ func (v *CompositeValue) ConformsToStaticType(
 	staticType := v.StaticType(interpreter)
 	semaType := interpreter.MustConvertStaticToSemaType(staticType)
 
-	// CompositeValue is also used for storing types which aren't CompositeStaticType.
-	// E.g. InclusiveRange.
-	if _, ok := staticType.(CompositeStaticType); ok {
+	switch staticType.(type) {
+	case CompositeStaticType:
 		compositeType, ok := semaType.(*sema.CompositeType)
 		if !ok ||
 			v.Kind != compositeType.Kind ||
@@ -17124,7 +17123,10 @@ func (v *CompositeValue) ConformsToStaticType(
 				return false
 			}
 		}
-	} else if _, ok := staticType.(InclusiveRangeStaticType); ok {
+
+	// CompositeValue is also used for storing types which aren't CompositeStaticType.
+	// E.g. InclusiveRange.
+	case InclusiveRangeStaticType:
 		inclusiveRangeType, ok := semaType.(*sema.InclusiveRangeType)
 		if !ok {
 			return false
@@ -17147,6 +17149,9 @@ func (v *CompositeValue) ConformsToStaticType(
 				return false
 			}
 		}
+
+	default:
+		return false
 	}
 
 	return true

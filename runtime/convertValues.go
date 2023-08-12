@@ -382,7 +382,7 @@ func exportCompositeValue(
 
 	switch semaType := semaType.(type) {
 	case *sema.CompositeType:
-		break // handled after the type switch.
+		// Continue.
 	case *sema.InclusiveRangeType:
 		// InclusiveRange is stored as a CompositeValue but isn't a CompositeType.
 		return exportCompositeValueAsInclusiveRange(v, semaType, inter, locationRange, seenReferences)
