@@ -750,7 +750,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
           let transferTokens: @NonFungibleToken.Collection
 
           prepare(signer: auth(Storage) &Account) {
-              let ref = signer.borrow<&TopShot.Collection>(from: /storage/MomentCollection)!
+              let ref = signer.storage.borrow<&TopShot.Collection>(from: /storage/MomentCollection)!
               self.transferTokens <- ref.batchWithdraw(ids: momentIDs)
           }
 
@@ -4514,7 +4514,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
           access(all)
           fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
               let pubAccount = getAccount(0x1)
 
               account.storage.save(S(value: 2), to: /storage/foo)
@@ -4577,7 +4577,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
           access(all)
           fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
               let pubAccount = getAccount(0x1)
 
               account.storage.save(S(value: 2), to: /storage/foo)
@@ -4637,7 +4637,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
           access(all)
           fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
               let pubAccount = getAccount(0x1)
 
               account.storage.save(S(value: 2), to: /storage/foo)
@@ -4700,7 +4700,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
           access(all)
           fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
               let pubAccount = getAccount(0x1)
 
               account.storage.save(S(value: 2), to: /storage/foo)
@@ -4752,7 +4752,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
           access(all)
           fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
               account.storage.save(S(value: 1), to: /storage/foo1)
               account.storage.save(S(value: 2), to: /storage/foo2)
@@ -4806,7 +4806,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
           access(all)
           fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
               var total = 0
               account.forEachStored(fun (path: StoragePath, type: Type): Bool {
@@ -4844,7 +4844,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 		const script2 = `
            access(all)
            fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
               var total = 0
               account.forEachStored(fun (path: StoragePath, type: Type): Bool {
@@ -4894,7 +4894,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
           access(all)
           fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
               account.storage.save(S(value: 1), to: /storage/foo1)
               account.storage.save(S(value: 2), to: /storage/foo2)
@@ -4959,7 +4959,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
           access(all)
           fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
               account.storage.save(S(value: 1), to: /storage/foo1)
               account.storage.save(S(value: 2), to: /storage/foo2)
@@ -5018,7 +5018,7 @@ func TestRuntimeStorageIteration2(t *testing.T) {
 
           access(all)
           fun main(): Int {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
               account.storage.save(1, to: /storage/foo1)
               account.storage.save(2, to: /storage/foo2)
@@ -5102,7 +5102,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun main() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save(2, to: /storage/foo2)
@@ -5149,7 +5149,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun main() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save("", to: /storage/foo2)
@@ -5198,14 +5198,14 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun foo() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.storage.save("bar", to: /storage/foo5)
                   }
 
                   access(all)
                   fun main() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save(2, to: /storage/foo2)
@@ -5252,7 +5252,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun foo() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.forEachStored(fun (path: StoragePath, type: Type): Bool {
                           return true
@@ -5262,7 +5262,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
                   access(all)
                   fun main() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save(2, to: /storage/foo2)
@@ -5309,7 +5309,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun main() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save(2, to: /storage/foo2)
@@ -5355,7 +5355,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun main() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save("", to: /storage/foo2)
@@ -5403,7 +5403,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun main() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save("", to: /storage/foo2)
@@ -5480,7 +5480,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
                   access(all)
                   fun main() {
-                      let account = getAuthAccount(0x1)
+                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save(2, to: /storage/foo2)
@@ -5529,7 +5529,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		const script = `
           access(all)
           fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
               account.storage.save(1, to: /storage/foo1)
               account.storage.save(2, to: /storage/foo2)
@@ -5576,7 +5576,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 
           access(all)
           fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
 	          account.forEachStored(foo)
 	      }
@@ -5612,7 +5612,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 	      access(all)
           fun main() {
 
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage) &Account>(0x1)
 	          let s = S()
 	          account.forEachStored(s.foo)
 	      }

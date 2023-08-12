@@ -1182,7 +1182,7 @@ func TestMeterEncoding(t *testing.T) {
 			Script{
 				Source: []byte(`
                 access(all) fun main() {
-                    let acc = getAuthAccount(0x02)
+                    let acc = getAuthAccount<auth(Storage) &Account>(0x02)
                     var i = 0
                     var f = Foo()
                     while i<1000 {

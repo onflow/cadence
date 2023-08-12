@@ -345,7 +345,7 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
         import Test from 0x1
         access(all) fun main(): &Test.R {
             let r <- Test.createR()
-            let authAccount = getAuthAccount(0x1)
+            let authAccount = getAuthAccount<auth(Storage) &Account>(0x1)
             authAccount.storage.save(<-r, to: /storage/foo)
             let ref = authAccount.storage.borrow<auth(Test.X) &Test.R>(from: /storage/foo)!
             return ref
@@ -883,7 +883,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
           fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
               let r <- create R()
               account.storage.save(<-r, to: /storage/foo)
@@ -912,7 +912,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
           fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
               let r <- create R()
               account.storage.save(<-r, to: /storage/foo)
@@ -944,7 +944,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
 	      fun main() {
-               let account = getAuthAccount(0x1)
+               let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
                let r <- create R()
                account.storage.save(<-r, to: /storage/foo)
@@ -973,7 +973,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
 	      fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
 	          let s = S()
 	          account.storage.save(s, to: /storage/foo)
@@ -1002,7 +1002,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
 	      fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
 	          let s = S()
 	          account.storage.save(s, to: /storage/foo)
@@ -1035,7 +1035,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
 	      fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
 	          let r <- create R()
 	          account.storage.save(<-r, to: /storage/foo)
@@ -1064,7 +1064,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
 	      fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
 	          let r <- create R()
 	          account.storage.save(<-r, to: /storage/foo)
@@ -1093,7 +1093,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
 	      fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
 	          let r <- create R()
 	          account.storage.save(<-r, to: /storage/foo)

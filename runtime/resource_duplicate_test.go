@@ -302,7 +302,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		destroy r2 
 		destroy r3
 
-		let acc = getAuthAccount(0x1)
+		let acc = getAuthAccount<auth(Storage) &Account>(0x1)
 		acc.storage.save(<-dict, to: /storage/foo)
 
 		let ref = acc.borrow<auth(Mutate) &{Int: R}>(from: /storage/foo)!

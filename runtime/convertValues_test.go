@@ -1953,12 +1953,12 @@ func TestExportReferenceValue(t *testing.T) {
 
 		script := `
             access(all) fun main(): &AnyStruct {
-                var acct = getAuthAccount(0x01)
-	            var v:[AnyStruct] = []
+                let acct = getAuthAccount<auth(Storage) &Account>(0x01)
+	            let v: [AnyStruct] = []
 	            acct.storage.save(v, to: /storage/x)
 
-                var ref1 = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
-                var ref2 = acct.storage.borrow<&[AnyStruct]>(from: /storage/x)!
+                let ref1 = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
+                let ref2 = acct.storage.borrow<&[AnyStruct]>(from: /storage/x)!
 
 	            ref1.append(ref2)
 	            return ref1

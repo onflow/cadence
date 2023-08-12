@@ -2096,7 +2096,7 @@ func TestGetAuthAccount(t *testing.T) {
 
 		script := []byte(`
             access(all) fun main(): UInt64 {
-                let acc = getAuthAccount(0x02)
+                let acc = getAccount(0x02)
                 return acc.storage.used
             }
         `)
@@ -2128,7 +2128,7 @@ func TestGetAuthAccount(t *testing.T) {
 
 		script := []byte(`
             access(all) fun main() {
-                let acc = getAuthAccount("")
+                let acc = getAuthAccount<&Account>("")
             }
         `)
 
@@ -2156,7 +2156,7 @@ func TestGetAuthAccount(t *testing.T) {
 
 		script := []byte(`
             access(all) fun main() {
-                let acc = getAuthAccount()
+                let acc = getAuthAccount<&Account>()
             }
         `)
 
@@ -2184,7 +2184,7 @@ func TestGetAuthAccount(t *testing.T) {
 
 		script := []byte(`
             access(all) fun main() {
-                let acc = getAuthAccount(0x1, 0x2)
+                let acc = getAuthAccount<&Account>(0x1, 0x2)
             }
         `)
 
@@ -2212,7 +2212,7 @@ func TestGetAuthAccount(t *testing.T) {
 		script := []byte(`
             transaction {
                 prepare() {
-                    let acc = getAuthAccount(0x02)
+                    let acc = getAuthAccount<&Account>(0x02)
                     log(acc.storage.used)
                 }
             }

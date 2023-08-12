@@ -4964,7 +4964,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 
       transaction {
 
-          prepare(signer: &Account) {
+          prepare(signer: auth(Storage) &Account) {
 
               let r <- Test.createR()
               log(r.owner?.address)
@@ -5195,7 +5195,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 
       transaction {
 
-          prepare(signer: &Account) {
+          prepare(signer: auth(Storage) &Account) {
               let ref1 = signer.storage.borrow<&[Test.R]>(from: /storage/rs)!
               log(ref1[0].owner?.address)
               log(ref1[1].owner?.address)
@@ -5333,7 +5333,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 
       transaction {
 
-          prepare(signer: &Account) {
+          prepare(signer: auth(Storage, Capabilities) &Account) {
 
               let rs <- {
                   "a": <-Test.createR(),
@@ -7032,7 +7032,7 @@ func TestRuntimeInvalidContainerTypeConfusion(t *testing.T) {
           access(all) fun main() {
               let dict: {Int: PublicAccount} = {}
               let ref = &dict as auth(Mutate) &{Int: AnyStruct}
-              ref[0] = getAuthAccount(0x01) as AnyStruct
+              ref[0] = getAuthAccount<&Account>(0x01) as AnyStruct
           }
         `)
 
@@ -7920,7 +7920,8 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
       import Foo from 0x2
 
       access(all) fun main() {
-        getAuthAccount(0x1).borrow<&Foo.Bar>(from: /storage/bar)
+          getAuthAccount<auth(Storage) &Account>(0x1)
+              .borrow<&Foo.Bar>(from: /storage/bar)
       }
     `)
 
