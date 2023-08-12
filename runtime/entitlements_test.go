@@ -48,7 +48,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	transaction1 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 signer.save(3, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X, Test.Y) &Int>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
@@ -59,7 +59,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let ref = signer.capabilities.borrow<auth(Test.X, Test.Y) &Int>(/public/foo)!
                 let downcastRef = ref as! auth(Test.X, Test.Y) &Int
             }
@@ -140,7 +140,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	transaction1 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 signer.save(3, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X, Test.Y) &Int>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
@@ -151,7 +151,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let ref = signer.capabilities.borrow<auth(Test.X) &Int>(/public/foo)!
                 let downcastRef = ref as! auth(Test.X, Test.Y) &Int
             }
@@ -246,7 +246,7 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 	transaction1 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let r <- Test.createRWithA()
                 signer.save(<-r, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
@@ -258,7 +258,7 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let ref = signer.capabilities.borrow<auth(Test.X) &Test.R>(/public/foo)!
                 ref[Test.A]!.foo()
             }
@@ -525,7 +525,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	transaction1 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let r <- Test.createR()
                 signer.save(<-r, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
@@ -537,7 +537,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)!
                 let upCap = capX as Capability<&Test.R>
                 let downCap = upCap as! Capability<auth(Test.X) &Test.R>
@@ -625,7 +625,7 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 	transaction1 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let r <- Test.createR()
                 signer.save(<-r, to: /storage/foo)
                 let capFoo = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
@@ -642,7 +642,7 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)!
                 let capY = signer.capabilities.get<auth(Test.Y) &Test.R>(/public/bar)!
 
@@ -737,7 +737,7 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 	transaction1 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let r <- Test.createR()
                 signer.save(<-r, to: /storage/foo)
                 let capFoo = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
@@ -754,7 +754,7 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)!
                 let capY = signer.capabilities.get<auth(Test.Y) &Test.R>(/public/bar)!
 

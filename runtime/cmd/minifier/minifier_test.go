@@ -40,7 +40,7 @@ transaction(amount: UFix64, to: Address) {
     // The Vault resource that holds the tokens that are being transferred
     let sentVault: @FungibleToken.Vault
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
 
         // Get a reference to the signer's stored vault
         let vaultRef = signer.borrow<&ExampleToken.Vault>(from: /storage/exampleTokenVault)
@@ -70,7 +70,7 @@ const expectedOutput = `import FungibleToken from 0xFUNGIBLETOKENADDRESS
 import ExampleToken from 0xTOKENADDRESS
 transaction(amount: UFix64, to: Address) {
 let sentVault: @FungibleToken.Vault
-prepare(signer: AuthAccount) {
+prepare(signer: &Account) {
 let vaultRef = signer.borrow<&ExampleToken.Vault>(from: /storage/exampleTokenVault)
 ?? panic("Could not borrow reference to the owner's Vault!")
 self.sentVault <- vaultRef.withdraw(amount: amount)

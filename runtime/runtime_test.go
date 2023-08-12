@@ -1049,7 +1049,7 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 
 	script := []byte(`
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           log(signer.address)
         }
       }
@@ -1117,7 +1117,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			label: "Single argument with authorizer",
 			script: `
               transaction(x: Int) {
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                   log(signer.address)
                 }
 
@@ -1936,7 +1936,7 @@ func TestRuntimeStorage(t *testing.T) {
                   import "imported"
 
                   transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                       %s
                     }
                   }
@@ -2011,7 +2011,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
       transaction {
 
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(<-createContainer(), to: /storage/container)
           let cap = signer.capabilities.storage.issue<auth(Insert) &Container>(/storage/container)
           signer.capabilities.publish(cap, at: /public/container)
@@ -2023,7 +2023,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       import "container"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           let publicAccount = getAccount(signer.address)
           let ref = publicAccount.capabilities.borrow<auth(Insert) &Container>(/public/container)!
 
@@ -2038,7 +2038,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       import "container"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           let publicAccount = getAccount(signer.address)
           let ref = publicAccount.capabilities.borrow<auth(Insert) &Container>(/public/container)!
 
@@ -2131,7 +2131,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
       transaction {
 
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(<-createDeepThought(), to: /storage/deepThought)
         }
       }
@@ -2141,7 +2141,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
       import "deep-thought"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           let answer = signer.borrow<&DeepThought>(from: /storage/deepThought)?.answer()
           log(answer ?? 0)
         }
@@ -2222,7 +2222,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
       import "imported"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(<-createNumber(42), to: /storage/number)
         }
       }
@@ -2232,7 +2232,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
       import "imported"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           if let number <- signer.load<@SomeNumber>(from: /storage/number) {
             log(number.n)
             destroy number
@@ -2317,7 +2317,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
       import Y, createY from "imported"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(<-createY(), to: /storage/y)
         }
       }
@@ -2327,7 +2327,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
       import Y from "imported"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           let y <- signer.load<@Y>(from: /storage/y)
           y?.x()
           destroy y
@@ -2398,7 +2398,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 
       transaction {
 
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(<-createR(), to: /storage/r)
         }
       }
@@ -2409,7 +2409,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 
       transaction {
 
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           let ref = signer.borrow<&R>(from: /storage/r)!
           ref.x()
         }
@@ -2486,7 +2486,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 
       transaction {
 
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(<-createR(), to: /storage/r)
           let cap = signer.capabilities.storage.issue<&R>(/storage/r)
           signer.capabilities.publish(cap, at: /public/r)
@@ -2498,7 +2498,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
       import R from "imported"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           let publicAccount = getAccount(signer.address)
           let ref = publicAccount.capabilities.borrow<&R>(/public/r)!
           ref.x()
@@ -2584,7 +2584,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
       import R, createR from "imported2"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(<-createR(), to: /storage/r)
           let cap = signer.capabilities.storage.issue<&{RI}>(/storage/r)
           signer.capabilities.publish(cap, at: /public/r) 
@@ -2601,7 +2601,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
       import R from "imported2"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           let ref = signer.capabilities.borrow<&{RI}>(/public/r)!
           ref.x()
         }
@@ -2985,7 +2985,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
       import X, createX from "imported"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(<-createX(), to: /storage/x)
 
           let ref = signer.borrow<&X>(from: /storage/x)!
@@ -2998,7 +2998,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
       import X from "imported"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           let ref = signer.borrow<&X>(from: /storage/x)!
           log(ref.x)
         }
@@ -3060,7 +3060,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 
 	script := []byte(`
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           log(signer.address)
         }
       }
@@ -3165,7 +3165,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
       import "imported"
 
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(<-createR(), to: /storage/r)
           let cap = signer.capabilities.storage.issue<&R>(/storage/r)
           signer.capabilities.publish(cap, at: /public/r)
@@ -3182,7 +3182,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 
               transaction {
 
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                   log(getAccount(0x%s).capabilities.borrow<&R>(/public/r)!.test())
                 }
               }
@@ -3246,7 +3246,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	script := []byte(`
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           AuthAccount(payer: signer)
         }
       }
@@ -3430,7 +3430,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
                 log("Hello return!")
                 return arg
             }
-            access(all) fun helloAuthAcc(account: AuthAccount) {
+            access(all) fun helloAuthAcc(account: &Account) {
                 log("Hello ".concat(account.address.toString()))
             }
             access(all) fun helloPublicAcc(account: PublicAccount) {
@@ -3759,7 +3759,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 
         transaction {
 
-            prepare(acct: AuthAccount) {
+            prepare(acct: &Account) {
                 log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
             }
         }
@@ -3855,7 +3855,7 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 
         transaction {
 
-            prepare(acct: AuthAccount) {
+            prepare(acct: &Account) {
                 let r <- acct.load<@Test.R>(from: /storage/r)
                 destroy r
             }
@@ -3950,7 +3950,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 
         transaction {
 
-            prepare(acct: AuthAccount) {
+            prepare(acct: &Account) {
                 let r <- acct.load<@AnyResource>(from: /storage/r)
                 destroy r
             }
@@ -4046,7 +4046,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 
         transaction {
 
-            prepare(acct: AuthAccount) {
+            prepare(acct: &Account) {
                 let r <- acct.load<@AnyResource>(from: /storage/r)
                 destroy r
             }
@@ -4253,7 +4253,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
       transaction {
 
-          prepare(acct: AuthAccount) {
+          prepare(acct: &Account) {
 
               let receiverCap = acct.capabilities.storage
                   .issue<&{FungibleToken.Receiver}>(/storage/vault)
@@ -4271,7 +4271,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
       transaction {
 
-          prepare(acct: AuthAccount) {
+          prepare(acct: &Account) {
               let vault <- FungibleToken.createEmptyVault()
 
               acct.save(<-vault, to: /storage/vault)
@@ -4368,7 +4368,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 	deploy := []byte(fmt.Sprintf(
 		`
           transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let acct = AuthAccount(payer: signer)
                 acct.contracts.add(name: "FungibleToken", code: "%s".decodeHex())
             }
@@ -4382,7 +4382,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
       transaction {
 
-          prepare(acct: AuthAccount) {
+          prepare(acct: &Account) {
               let receiverCap = acct.capabilities.storage
                   .issue<&{FungibleToken.Receiver}>(/storage/vault)
               acct.capabilities.publish(receiverCap, at: /public/receiver1)
@@ -4399,7 +4399,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
       transaction {
 
-          prepare(acct: AuthAccount) {
+          prepare(acct: &Account) {
               let vault <- FungibleToken.createEmptyVault()
 
               acct.save(<-vault, to: /storage/vault)
@@ -4490,7 +4490,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		return []byte(fmt.Sprintf(
 			`
               transaction {
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                   let acct = AuthAccount(payer: signer)
                   acct.contracts.add(name: "%s", code: "%s".decodeHex())
                 }
@@ -4538,7 +4538,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
       import TestContract from 0x3
 
       transaction {
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
               signer.save(<-TestContract.createR(), to: /storage/r)
           }
       }
@@ -4556,7 +4556,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
                   // import TestContract from 0x3
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: &Account) {
                           signer.borrow<&{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
                       }
                   }
@@ -4963,7 +4963,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 
       transaction {
 
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
 
               let r <- Test.createR()
               log(r.owner?.address)
@@ -4990,7 +4990,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 
       transaction {
 
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
               let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
               log(ref1.owner?.address)
               log(ref1.owner?.balance)
@@ -5158,7 +5158,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 
       transaction {
 
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
 
               let rs <- [
                   <-Test.createR(),
@@ -5194,7 +5194,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 
       transaction {
 
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
               let ref1 = signer.borrow<&[Test.R]>(from: /storage/rs)!
               log(ref1[0].owner?.address)
               log(ref1[1].owner?.address)
@@ -5332,7 +5332,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 
       transaction {
 
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
 
               let rs <- {
                   "a": <-Test.createR(),
@@ -5368,7 +5368,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 
       transaction {
 
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
               let ref1 = signer.borrow<&{String: Test.R}>(from: /storage/rs)!
               log(ref1["a"]?.owner?.address)
               log(ref1["b"]?.owner?.address)
@@ -5499,7 +5499,7 @@ func TestRuntimeMetrics(t *testing.T) {
       import "imported1"
 
       transaction {
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
               signer.save(generate(), to: /storage/foo)
           }
           execute {}
@@ -5510,7 +5510,7 @@ func TestRuntimeMetrics(t *testing.T) {
       import "imported2"
 
       transaction {
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
               signer.load<[Int]>(from: getPath())
           }
           execute {}
@@ -5674,7 +5674,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
        transaction {
 
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
               log(Test.test)
           }
        }
@@ -5685,7 +5685,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
        transaction {
 
-          prepare(signer: AuthAccount) {
+          prepare(signer: &Account) {
               Test.setTest(2)
           }
        }
@@ -5919,7 +5919,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
                transaction {
 
-                  prepare(signer: AuthAccount) {
+                  prepare(signer: &Account) {
                       signer.save(<-Test.createR(), to: /storage/r)
                   }
                }
@@ -5958,7 +5958,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
+         prepare(signer: &Account) {
              log(signer.borrow<&Test.R>(from: /storage/r)!.test)
          }
       }
@@ -5984,7 +5984,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
+         prepare(signer: &Account) {
              let r = signer.borrow<&Test.R>(from: /storage/r)!
              r.setTest(2)
          }
@@ -6133,7 +6133,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
         import HelloWorld from 0x%s
 
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 assert(HelloWorld.hello() == "Hello, World!")
             }
         }
@@ -6141,7 +6141,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	createAccountTx := []byte(`
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 AuthAccount(payer: signer)
             }
         }
@@ -6266,7 +6266,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
         import HelloWorld from 0x%s
 
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 log(HelloWorld.hello())
             }
         }
@@ -6274,7 +6274,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	createAccountTx := []byte(`
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 AuthAccount(payer: signer)
             }
         }
@@ -6477,7 +6477,7 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
         import HelloWorld from 0x%s
 
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 assert(HelloWorld.hello() == "Hello, World!")
             }
         }
@@ -6485,7 +6485,7 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 
 	createAccountTx := []byte(`
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 AuthAccount(payer: signer)
             }
         }
@@ -7063,7 +7063,7 @@ func TestRuntimeInvalidContainerTypeConfusion(t *testing.T) {
 
 		script := []byte(`
           access(all) fun main() {
-              let dict: {Int: AuthAccount} = {}
+              let dict: {Int: &Account} = {}
               let ref = &dict as auth(Mutate) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
           }
@@ -7591,7 +7591,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
 				fmt.Sprintf(
 					`
                   transaction {
-                      prepare(acc: AuthAccount) {
+                      prepare(acc: &Account) {
                           %s
                       }
                   }
@@ -7682,7 +7682,7 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 		Script{
 			Source: []byte(`
               transaction(args: [AnyStruct]) {
-                prepare(signer: AuthAccount) {}
+                prepare(signer: &Account) {}
               }
             `),
 			Arguments: [][]byte{
@@ -7894,7 +7894,7 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 
       transaction {
 
-          prepare(acct: AuthAccount) {
+          prepare(acct: &Account) {
               acct.save(Foo.Bar(), to: /storage/bar)
           }
       }
@@ -8694,7 +8694,7 @@ func TestRuntimeInvalidRecursiveTransferViaVariableDeclaration(t *testing.T) {
 
       transaction {
 
-          prepare(acct: AuthAccount) {
+          prepare(acct: &Account) {
               var holder <- Test.createHolder(<-[<-Test.dummy(), <-Test.dummy()])
               destroy holder
           }
@@ -8801,7 +8801,7 @@ func TestRuntimeInvalidRecursiveTransferViaFunctionArgument(t *testing.T) {
 
       transaction {
 
-          prepare(acct: AuthAccount) {
+          prepare(acct: &Account) {
               var holder <- Test.createHolder(<-[<-Test.dummy(), <-Test.dummy()])
               destroy holder
           }
@@ -9212,7 +9212,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
         import Foo from 0x1
 
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 signer.save(<- Foo.createR(), to: /storage/r)
                 let cap = signer.capabilities.storage.issue<&Foo.R>(/storage/r)
                 signer.capabilities.publish(cap, at: /public/r)
@@ -9222,7 +9222,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 
 	tx2 := []byte(`
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let cap = signer.capabilities.get<&AnyStruct>(/public/r)!
 				cap.check()
             }
@@ -9398,7 +9398,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
                 import Foo from 0x1
 
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         signer.save(<- Foo.getResourceArray(), to: /storage/r)
                     }
                 }
@@ -9421,7 +9421,7 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
                 import Foo from 0x1
 
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         // When the array is loaded from storage, all elements are also loaded.
                         // So all moves of this resource will check for tracking of all elements aas well.
 

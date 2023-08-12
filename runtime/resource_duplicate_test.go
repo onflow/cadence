@@ -534,7 +534,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 				`
                   transaction {
 
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: &Account) {
                           signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
                       }
                   }
@@ -598,7 +598,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 
         transaction {
 
-          prepare(acct: AuthAccount) {
+          prepare(acct: &Account) {
 
               // Create vault
               let vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?

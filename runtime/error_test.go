@@ -492,7 +492,7 @@ func TestRuntimeDefaultFunctionConflictPrintingError(t *testing.T) {
 		return []byte(fmt.Sprintf(
 			`
               transaction {
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                   let acct = AuthAccount(payer: signer)
                   acct.contracts.add(name: "%s", code: "%s".decodeHex())
                 }
@@ -619,7 +619,7 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 		return []byte(fmt.Sprintf(
 			`
               transaction {
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                   let acct = AuthAccount(payer: signer)
                   acct.contracts.add(name: "%s", code: "%s".decodeHex())
                 }

@@ -67,7 +67,7 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	transaction1 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				let r <- Test.makeRWithA()
 				signer.save(<-r, to: /storage/foo)
 			}
@@ -77,7 +77,7 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	transaction2 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				let r <- signer.load<@Test.R>(from: /storage/foo)!
 				let i = r[Test.A]!.foo()
 				destroy r
@@ -438,7 +438,7 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	transaction1 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				let r <- Test.makeRWithA()
 				signer.save(<-r, to: /storage/foo)
 			}
@@ -448,7 +448,7 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	transaction2 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				let r = signer.borrow<&{Test.I}>(from: /storage/foo)!
 				let a: &Test.A = r[Test.A]!
 				let i = a.foo()
@@ -552,7 +552,7 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	transaction1 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				let r <- Test.makeRWithA()
 				signer.save(<-r, to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&{Test.I}>(/storage/foo)!
@@ -564,7 +564,7 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	transaction2 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				let cap = signer.inbox.claim<&{Test.I}>("foo", provider: 0x1)!
 				let ref = cap.borrow()!
 				let i = ref[Test.A]!.foo()

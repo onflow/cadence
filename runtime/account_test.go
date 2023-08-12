@@ -87,9 +87,8 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-        access(all) fun main(): PublicAccount {
-            let acc = getAccount(0x02)
-            return acc
+        access(all) fun main(): &Account {
+            return getAccount(0x02)
           }
     `)
 
@@ -121,7 +120,7 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-        access(all) fun main(): AuthAccount {
+        access(all) fun main(): &Account {
             let acc = getAuthAccount(0x02)
             return acc
           }
@@ -164,7 +163,7 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 		script := []byte(fmt.Sprintf(`
             transaction {
 
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                     signer.save<%s>(panic(""))
                 }
             }
@@ -267,7 +266,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         let key = signer.keys.get(keyIndex: 0) ?? panic("unexpectedly nil")
                         log(key)
                         assert(!key.isRevoked)
@@ -304,7 +303,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         let key: AccountKey? = signer.keys.get(keyIndex: 5)
                         assert(key == nil)
                     }
@@ -331,7 +330,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         let key = signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
                         assert(key.isRevoked)
                     }
@@ -360,7 +359,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         let key: AccountKey? = signer.keys.revoke(keyIndex: 5)
                         assert(key == nil)
                     }
@@ -386,7 +385,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         assert(signer.keys.count == 1)
 
                         let key = signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
@@ -418,7 +417,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		test := accountKeyTestCase{
 			code: `
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         signer.keys.add(
                             publicKey: PublicKey(
                                 publicKey: [1, 2, 3],
@@ -475,7 +474,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	const code = `
        transaction(publicKey: [UInt8]) {
-           prepare(signer: AuthAccount) {
+           prepare(signer: &Account) {
                let acct = AuthAccount(payer: signer)
                acct.keys.add(
                    publicKey: PublicKey(
@@ -1035,7 +1034,7 @@ func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRunt
 		name: "Add key",
 		code: `
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         let key = PublicKey(
                             publicKey: "010203".decodeHex(),
                             signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
@@ -1524,7 +1523,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		script := []byte(`
             transaction {
-                prepare(acc: AuthAccount) {
+                prepare(acc: &Account) {
                     let deployedContract = acc.contracts.get(name: "foo")
                     assert(deployedContract!.name == "foo")
                 }
@@ -1566,7 +1565,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		script := []byte(`
             transaction {
-                prepare(acc: AuthAccount) {
+                prepare(acc: &Account) {
                     let deployedContract = acc.contracts.get(name: "foo")
                     assert(deployedContract == nil)
                 }
@@ -1679,7 +1678,7 @@ func TestAuthAccountContracts(t *testing.T) {
                   import HelloInterface from 0x42
 
                   transaction {
-                      prepare(acc: AuthAccount) {
+                      prepare(acc: &Account) {
                           let hello = acc.contracts.borrow<&HelloInterface>(name: "Hello")
                           assert(hello?.hello() == "Hello!")
                       }
@@ -1770,7 +1769,7 @@ func TestAuthAccountContracts(t *testing.T) {
                   import HelloInterface from 0x42
 
                   transaction {
-                      prepare(acc: AuthAccount) {
+                      prepare(acc: &Account) {
                           let hello = acc.contracts.borrow<&HelloInterface>(name: "Hello")
                           assert(hello == nil)
                       }
@@ -1806,7 +1805,7 @@ func TestAuthAccountContracts(t *testing.T) {
 			Script{
 				Source: []byte(`
                   transaction {
-                      prepare(acc: AuthAccount) {
+                      prepare(acc: &Account) {
                           let hello = acc.contracts.borrow<&AnyStruct>(name: "Hello")
                           assert(hello == nil)
                       }
@@ -1828,7 +1827,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		script := []byte(`
             transaction {
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                     let names = signer.contracts.names
 
                     assert(names.isInstance(Type<[String]>()))
@@ -1872,7 +1871,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		script := []byte(`
             transaction {
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                     signer.contracts.names[0] = "baz"
                 }
             }
@@ -1908,7 +1907,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		script := []byte(`
             transaction {
-                prepare(signer: AuthAccount) {
+                prepare(signer: &Account) {
                     var namesRef = &signer.contracts.names as auth(Mutate) &[String]
                     namesRef[0] = "baz"
 

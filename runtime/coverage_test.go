@@ -228,7 +228,7 @@ func TestCoverageReportInspectProgramWithLocationFilter(t *testing.T) {
 
 	transaction := []byte(`
 	  transaction(amount: UFix64) {
-	    prepare(account: AuthAccount) {
+	    prepare(account: &Account) {
 	      assert(account.balance >= amount)
 	    }
 	  }

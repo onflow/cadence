@@ -360,7 +360,7 @@ access(all) contract FlowToken: FungibleToken {
         }
     }
 
-    init(adminAccount: AuthAccount) {
+    init(adminAccount: auth(Storage) &Account) {
         self.totalSupply = 0.0
 
         // Create the Vault with the total supply of tokens and save it in storage
@@ -397,7 +397,7 @@ import FlowToken from 0x1
 
 transaction {
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
 
         if signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
             // Create a new flowToken Vault and put it in storage
@@ -429,7 +429,7 @@ transaction(recipient: Address, amount: UFix64) {
     let tokenAdmin: &FlowToken.Administrator
     let tokenReceiver: &{FungibleToken.Receiver}
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
         self.tokenAdmin = signer
             .borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
             ?? panic("Signer is not the token admin")
@@ -460,7 +460,7 @@ transaction(amount: UFix64, to: Address) {
     // The Vault resource that holds the tokens that are being transferred
     let sentVault: @FungibleToken.Vault
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
 
         // Get a reference to the signer's stored vault
         let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
@@ -567,7 +567,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				`
                   transaction {
 
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: &Account) {
                           signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
                       }
                   }

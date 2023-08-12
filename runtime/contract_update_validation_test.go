@@ -38,7 +38,7 @@ func newContractDeployTransaction(function, name, code string) string {
 	return fmt.Sprintf(
 		`
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         signer.contracts.%s(name: "%s", code: "%s".decodeHex())
                     }
                 }
@@ -69,7 +69,7 @@ func newContractRemovalTransaction(contractName string) string {
 	return fmt.Sprintf(
 		`
            transaction {
-               prepare(signer: AuthAccount) {
+               prepare(signer: &Account) {
                    signer.contracts.%s(name: "%s")
                }
            }
@@ -2483,7 +2483,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
               import %s from %s
 
               transaction {
-                  prepare(signer: AuthAccount) {}
+                  prepare(signer: &Account) {}
               }
             `,
 			name,

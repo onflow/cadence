@@ -44,7 +44,7 @@ func TestDeployedContracts(t *testing.T) {
 	script :=
 		`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				let deployedContract = signer.contracts.get(name: "Test")
 				assert(deployedContract!.name == "Test")
 

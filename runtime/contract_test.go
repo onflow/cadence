@@ -62,7 +62,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -89,7 +89,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                  transaction {
-                     prepare(signer: AuthAccount) {
+                     prepare(signer: &Account) {
 
                          let contract1 = signer.contracts.get(name: %[1]q)
                          log(contract1?.name)
@@ -114,7 +114,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -136,7 +136,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -639,7 +639,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: &Account) {
                           signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
                       }
                    }
@@ -708,7 +708,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
           import A from 0x1
 
           transaction {
-              prepare(signer: AuthAccount) {
+              prepare(signer: &Account) {
                   log(A.a())
               }
           }
@@ -733,7 +733,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
          import B from 0x1
 
          transaction {
-             prepare(signer: AuthAccount) {
+             prepare(signer: &Account) {
                  log(B.b())
              }
          }
@@ -758,7 +758,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
           import C from 0x1
 
           transaction {
-              prepare(signer: AuthAccount) {
+              prepare(signer: &Account) {
                   log(C.c())
               }
           }

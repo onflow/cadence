@@ -36,7 +36,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	tx1 := []byte(`
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           signer.save(Type<Int>(), to: /storage/intType)
         }
       }
@@ -44,7 +44,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	tx2 := []byte(`
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: &Account) {
           let intType = signer.load<Type>(from: /storage/intType)
           log(intType?.identifier)
         }
