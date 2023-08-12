@@ -101,7 +101,14 @@ func NewInclusiveRangeValueWithStep(
 		})
 	}
 
-	return createInclusiveRange(interpreter, locationRange, start, end, step, rangeType, rangeSemaType)
+	return createInclusiveRange(
+		interpreter,
+		locationRange,
+		end,
+		step,
+		rangeType,
+		rangeSemaType,
+	)
 }
 
 func createInclusiveRange(
