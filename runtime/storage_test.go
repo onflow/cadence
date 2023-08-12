@@ -713,7 +713,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 
       transaction {
 
-          prepare(signer: auth(Storage) &Account) {
+          prepare(signer: auth(Storage, Capabilities) &Account) {
               signer.storage.save(
                  <-TopShot.createEmptyCollection(),
                  to: /storage/MomentCollection
@@ -1723,7 +1723,7 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 
       transaction {
           prepare(
-              signer1: auth(Storage) &Account, 
+              signer1: auth(Storage) &Account,
               signer2: auth(Storage) &Account
           ) {
               let value <- signer1.storage.load<@Test.R>(from: /storage/test)!
@@ -2123,8 +2123,8 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
           transaction {
 
               prepare(
-                  accountA: auth(Storage) &Account, 
-                  accountB: auth(Storage) &Account
+                  accountA: auth(Storage, Capabilities) &Account,
+                  accountB: auth(Storage, Capabilities) &Account
               ) {
                   let testResource <- TestContract.makeTestResource()
                   let ref1 = &testResource as &TestContract.TestResource
@@ -3234,7 +3234,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                     import Test from 0x1
 
                     transaction {
-                        prepare(signer: &Account) {
+                        prepare(signer: auth(Storage) &Account) {
                             signer.storage.save("Hello, World!", to: /storage/first)
                             signer.storage.save(["one", "two", "three"], to: /storage/second)
                             signer.storage.save(Test.Foo(), to: /storage/third)
@@ -3264,7 +3264,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Script{
 				Source: []byte(`
                     transaction {
-                        prepare(account: &Account) {
+                        prepare(account: auth(Storage) &Account) {
                             var total = 0
                             account.forEachStored(fun (path: StoragePath, type: Type): Bool {
                                 account.storage.borrow<&AnyStruct>(from: path)!
@@ -3358,7 +3358,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                     import Test from 0x1
 
                     transaction {
-                        prepare(signer: &Account) {
+                        prepare(signer: auth(Storage) &Account) {
                             signer.storage.save("Hello, World!", to: /storage/first)
                             signer.storage.save(["one", "two", "three"], to: /storage/second)
                             signer.storage.save(Test.Foo(), to: /storage/third)
@@ -3399,7 +3399,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			Script{
 				Source: []byte(`
                     transaction {
-                        prepare(account: &Account) {
+                        prepare(account: auth(Storage) &Account) {
                             var total = 0
                             account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                                 account.capabilities.borrow<&AnyStruct>(path)!
@@ -3491,7 +3491,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Source: []byte(`
                     import Test from 0x1
                     transaction {
-                        prepare(signer: &Account) {
+                        prepare(signer: auth(Storage, Capabilities) &Account) {
                             signer.storage.save("Hello, World!", to: /storage/first)
                             signer.storage.save(["one", "two", "three"], to: /storage/second)
                             signer.storage.save(Test.Foo(), to: /storage/third)
@@ -3623,7 +3623,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 				Source: []byte(`
                     import Test from 0x1
                     transaction {
-                        prepare(signer: &Account) {
+                        prepare(signer: auth(Storage) &Account) {
                             signer.storage.save("Hello, World!", to: /storage/first)
                             signer.storage.save(["one", "two", "three"], to: /storage/second)
                             signer.storage.save(Test.Foo(), to: /storage/third)
