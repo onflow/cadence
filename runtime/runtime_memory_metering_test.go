@@ -1095,7 +1095,7 @@ func TestMeterEncoding(t *testing.T) {
                 transaction() {
                     prepare(acc: &Account) {
                         var s = "%s"
-                        acc.save(s, to:/storage/some_path)
+                        acc.storage.save(s, to:/storage/some_path)
                     }
                 }`,
 					text,
@@ -1141,7 +1141,7 @@ func TestMeterEncoding(t *testing.T) {
                         var s = "%s"
                         while i<1000 {
                             let path = StoragePath(identifier: "i".concat(i.toString()))!
-                            acc.save(s, to: path)
+                            acc.storage.save(s, to: path)
                             i=i+1
                         }
                     }
@@ -1187,7 +1187,7 @@ func TestMeterEncoding(t *testing.T) {
                     var f = Foo()
                     while i<1000 {
                         let path = StoragePath(identifier: "i".concat(i.toString()))!
-                        acc.save(f, to: path)
+                        acc.storage.save(f, to: path)
                         i=i+1
                     }
                 }

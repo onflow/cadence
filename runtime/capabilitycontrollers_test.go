@@ -270,13 +270,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&AuthAccount> =
-                                          %s.capabilities.get<&AuthAccount>(publicPath)!
+                                      let gotCap: Capability<&Account> =
+                                          %s.capabilities.get<&Account>(publicPath)!
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -348,14 +348,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&AuthAccount> =
-                                          %s.capabilities.get<&AuthAccount>(publicPath)!
-                                      let ref: &AuthAccount = gotCap.borrow()!
+                                      let gotCap: Capability<&Account> =
+                                          %s.capabilities.get<&Account>(publicPath)!
+                                      let ref: &Account = gotCap.borrow()!
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -427,8 +427,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
@@ -501,8 +501,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
@@ -575,14 +575,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
                                       let unpublishedcap = signer.capabilities.unpublish(publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&AuthAccount>? =
-                                          %s.capabilities.get<&AuthAccount>(publicPath)
+                                      let gotCap: Capability<&Account>? =
+                                          %s.capabilities.get<&Account>(publicPath)
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -675,13 +675,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let ref: &AuthAccount =
-                                          %s.capabilities.borrow<&AuthAccount>(publicPath)!
+                                      let ref: &Account =
+                                          %s.capabilities.borrow<&Account>(publicPath)!
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -751,13 +751,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let ref: auth(Test.X) &AuthAccount? =
-                                          %s.capabilities.borrow<auth(Test.X) &AuthAccount>(publicPath)
+                                      let ref: auth(Test.X) &Account? =
+                                          %s.capabilities.borrow<auth(Test.X) &Account>(publicPath)
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -825,8 +825,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
@@ -899,14 +899,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
                                       let unpublishedcap = signer.capabilities.unpublish(publicPath)
 
                                       // Act
-                                      let ref: &AuthAccount? =
-                                          %s.capabilities.borrow<&AuthAccount>(publicPath)
+                                      let ref: &Account? =
+                                          %s.capabilities.borrow<&Account>(publicPath)
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -967,8 +967,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
@@ -1092,8 +1092,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           let controller: &StorageCapabilityController? =
@@ -1510,12 +1510,12 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Act
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap3: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Assert
                           assert(issuedCap1.id == 1)
@@ -1589,12 +1589,12 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap3: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           let controller1: &AccountCapabilityController? =
@@ -1606,13 +1606,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                           // Assert
                           assert(controller1!.capabilityID == 1)
-                          assert(controller1!.borrowType == Type<&AuthAccount>())
+                          assert(controller1!.borrowType == Type<&Account>())
 
                           assert(controller2!.capabilityID == 2)
-                          assert(controller2!.borrowType == Type<&AuthAccount>())
+                          assert(controller2!.borrowType == Type<&Account>())
 
                           assert(controller3!.capabilityID == 3)
-                          assert(controller3!.borrowType == Type<&AuthAccount>())
+                          assert(controller3!.borrowType == Type<&Account>())
                       }
                   }
                 `,
@@ -1633,12 +1633,12 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       prepare(signer: auth(Capabilities) &Account) {
 
                           // Arrange
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap3: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           let controllers: [&AccountCapabilityController] =
@@ -1706,12 +1706,12 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap3: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           let controllers: [&AccountCapabilityController] = []
@@ -1754,10 +1754,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           var stopped = false
@@ -1788,13 +1788,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          signer.capabilities.account.issue<&AuthAccount>()
+                          signer.capabilities.account.issue<&Account>()
 
                           // Act
                           signer.capabilities.account.forEachController(
                               fun (controller: &AccountCapabilityController): Bool {
 
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                                  signer.capabilities.account.issue<&Account>()
 
                                   return true
                               }
@@ -1819,13 +1819,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          signer.capabilities.account.issue<&AuthAccount>()
+                          signer.capabilities.account.issue<&Account>()
 
                           // Act
                           signer.capabilities.account.forEachController(
                               fun (controller: &AccountCapabilityController): Bool {
 
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                                  signer.capabilities.account.issue<&Account>()
 
                                   return false
                               }
@@ -1847,7 +1847,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          signer.capabilities.account.issue<&AuthAccount>()
+                          signer.capabilities.account.issue<&Account>()
 
                           // Act
                           signer.capabilities.account.forEachController(
@@ -1878,7 +1878,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          signer.capabilities.account.issue<&AuthAccount>()
+                          signer.capabilities.account.issue<&Account>()
 
                           // Act
                           signer.capabilities.account.forEachController(
@@ -2391,8 +2391,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
                           let controller1: &AccountCapabilityController =
                               signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
                           let controller2: &AccountCapabilityController =
@@ -2431,8 +2431,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       transaction {
                           prepare(signer: auth(Capabilities) &Account) {
                               // Arrange
-                              let issuedCap: Capability<&AuthAccount> =
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                              let issuedCap: Capability<&Account> =
+                                  signer.capabilities.account.issue<&Account>()
                               let controller: &AccountCapabilityController? =
                                   signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
 
@@ -2466,8 +2466,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       transaction {
                           prepare(signer: auth(Capabilities) &Account) {
                               // Arrange
-                              let issuedCap: Capability<&AuthAccount> =
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                              let issuedCap: Capability<&Account> =
+                                  signer.capabilities.account.issue<&Account>()
                               let controller: &AccountCapabilityController? =
                                   signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
 
@@ -2492,8 +2492,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       transaction {
                           prepare(signer: auth(Capabilities) &Account) {
                               // Arrange
-                              let issuedCap: Capability<&AuthAccount> =
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                              let issuedCap: Capability<&Account> =
+                                  signer.capabilities.account.issue<&Account>()
                               assert(issuedCap.check())
                               assert(issuedCap.borrow() != nil)
 

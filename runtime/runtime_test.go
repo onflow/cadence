@@ -3856,7 +3856,7 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
         transaction {
 
             prepare(acct: &Account) {
-                let r <- acct.load<@Test.R>(from: /storage/r)
+                let r <- acct.storage.load<@Test.R>(from: /storage/r)
                 destroy r
             }
         }
@@ -3951,7 +3951,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
         transaction {
 
             prepare(acct: &Account) {
-                let r <- acct.load<@AnyResource>(from: /storage/r)
+                let r <- acct.storage.load<@AnyResource>(from: /storage/r)
                 destroy r
             }
         }
@@ -4047,7 +4047,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
         transaction {
 
             prepare(acct: &Account) {
-                let r <- acct.load<@AnyResource>(from: /storage/r)
+                let r <- acct.storage.load<@AnyResource>(from: /storage/r)
                 destroy r
             }
         }
@@ -4274,7 +4274,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
           prepare(acct: &Account) {
               let vault <- FungibleToken.createEmptyVault()
 
-              acct.save(<-vault, to: /storage/vault)
+              acct.storage.save(<-vault, to: /storage/vault)
 
               let receiverCap = acct.capabilities.storage
                   .issue<&{FungibleToken.Receiver}>(/storage/vault)
@@ -4402,7 +4402,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
           prepare(acct: &Account) {
               let vault <- FungibleToken.createEmptyVault()
 
-              acct.save(<-vault, to: /storage/vault)
+              acct.storage.save(<-vault, to: /storage/vault)
 
               let receiverCap = acct.capabilities.storage
                   .issue<&{FungibleToken.Receiver}>(/storage/vault)
@@ -5919,7 +5919,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
                transaction {
 
-                  prepare(signer: &Account) {
+                  prepare(signer: auth(Storage) &Account) {
                       signer.storage.save(<-Test.createR(), to: /storage/r)
                   }
                }
@@ -5958,7 +5958,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
       transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              log(signer.storage.borrow<&Test.R>(from: /storage/r)!.test)
          }
       }
@@ -5984,7 +5984,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
       transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let r = signer.storage.borrow<&Test.R>(from: /storage/r)!
              r.setTest(2)
          }
@@ -7575,7 +7575,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
 		{
 			name: "statement + functionInvocation + encoding",
 			code: `
-          acc.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
+          acc.storage.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
         `,
 			ok:        true,
 			hits:      3,
@@ -7895,7 +7895,7 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
       transaction {
 
           prepare(acct: &Account) {
-              acct.save(Foo.Bar(), to: /storage/bar)
+              acct.storage.save(Foo.Bar(), to: /storage/bar)
           }
       }
     `)
@@ -8054,10 +8054,10 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
           let acct = getAuthAccount(address)
           let path = /public/tmp
 
-          let cap = acct.capabilities.account.issue<&AuthAccount>()
+          let cap = acct.capabilities.account.issue<&Account>()
           acct.capabilities.publish(cap, at: path)
 
-          let capType = acct.capabilities.borrow<&AuthAccount>(path)!.getType()
+          let capType = acct.capabilities.borrow<&Account>(path)!.getType()
 
           return Type<AuthAccount>() == capType
       }

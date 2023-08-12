@@ -120,9 +120,8 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
-        access(all) fun main(): &Account {
-            let acc = getAuthAccount(0x02)
-            return acc
+        access(all) fun main(): auth(Storage) &Account {
+            return getAuthAccount<auth(Storage) &Account>(0x02)
           }
     `)
 
@@ -1871,7 +1870,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		script := []byte(`
             transaction {
-                prepare(signer: &Account) {
+                prepare(signer: auth(Mutate) &Account) {
                     signer.contracts.names[0] = "baz"
                 }
             }
@@ -1907,8 +1906,8 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		script := []byte(`
             transaction {
-                prepare(signer: &Account) {
-                    var namesRef = &signer.contracts.names as auth(Mutate) &[String]
+                prepare(signer: auth(Mutate) &Account) {
+                    let namesRef = signer.contracts.names
                     namesRef[0] = "baz"
 
                     assert(signer.contracts.names[0] == "foo")
@@ -2046,7 +2045,7 @@ func TestPublicAccountContracts(t *testing.T) {
 		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
-            access(all) fun main(): [String] {
+            access(all) fun main(): &[String] {
                 let acc = getAccount(0x02)
                 return acc.contracts.names
             }
@@ -2076,88 +2075,6 @@ func TestPublicAccountContracts(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, invoked)
-
-		require.IsType(t, cadence.Array{}, result)
-		array := result.(cadence.Array)
-
-		require.Len(t, array.Values, 2)
-		assert.Equal(t, cadence.String("foo"), array.Values[0])
-		assert.Equal(t, cadence.String("bar"), array.Values[1])
-	})
-
-	t.Run("update names", func(t *testing.T) {
-		t.Parallel()
-
-		rt := newTestInterpreterRuntime()
-
-		script := []byte(`
-            access(all) fun main(): [String] {
-                let acc = getAccount(0x02)
-                acc.contracts.names[0] = "baz"
-                return acc.contracts.names
-            }
-        `)
-
-		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() ([]Address, error) {
-				return []Address{{42}}, nil
-			},
-			getAccountContractNames: func(_ Address) ([]string, error) {
-				return []string{"foo", "bar"}, nil
-			},
-		}
-
-		result, err := rt.ExecuteScript(
-			Script{
-				Source: script,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-		require.NoError(t, err)
-
-		require.IsType(t, cadence.Array{}, result)
-		array := result.(cadence.Array)
-
-		require.Len(t, array.Values, 2)
-		assert.Equal(t, cadence.String("foo"), array.Values[0])
-		assert.Equal(t, cadence.String("bar"), array.Values[1])
-	})
-
-	t.Run("append names", func(t *testing.T) {
-		t.Parallel()
-
-		rt := newTestInterpreterRuntime()
-
-		script := []byte(`
-            access(all) fun main(): [String] {
-                let acc = getAccount(0x02)
-                acc.contracts.names.append("baz")
-                return acc.contracts.names
-            }
-        `)
-
-		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() ([]Address, error) {
-				return []Address{{42}}, nil
-			},
-			getAccountContractNames: func(_ Address) ([]string, error) {
-				return []string{"foo", "bar"}, nil
-			},
-		}
-
-		result, err := rt.ExecuteScript(
-			Script{
-				Source: script,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-		require.NoError(t, err)
 
 		require.IsType(t, cadence.Array{}, result)
 		array := result.(cadence.Array)

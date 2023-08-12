@@ -655,7 +655,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
               let c <- Test.createC()
               c.setRs(key: "a", r: <- Test.createR(1))
 			  c.setRs(key: "b", r: <- Test.createR(2))
-              signer1.save(<-c, to: /storage/c)
+              signer1.storage.save(<-c, to: /storage/c)
           }
       }
    `)
@@ -726,9 +726,9 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
      transaction {
 
          prepare(signer1: &Account, signer2: &Account) {
-             let c <- signer1.load<@Test.C>(from: /storage/c) ?? panic("missing C")
+             let c <- signer1.storage.load<@Test.C>(from: /storage/c) ?? panic("missing C")
              c.setRs(key: "x", r: <- Test.createR(42))
-             signer2.save(<-c, to: /storage/c2)
+             signer2.storage.save(<-c, to: /storage/c2)
          }
      }
    `)

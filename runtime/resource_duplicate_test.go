@@ -303,7 +303,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		destroy r3
 
 		let acc = getAuthAccount(0x1)
-		acc.save(<-dict, to: /storage/foo)
+		acc.storage.save(<-dict, to: /storage/foo)
 
 		let ref = acc.borrow<auth(Mutate) &{Int: R}>(from: /storage/foo)!
 
@@ -607,14 +607,14 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
               Holder.setContent(<-vault)
 
               // Save the contract into storage (invalid, even if same account)
-              acct.save(Holder as AnyStruct, to: /storage/holder)
+              acct.storage.save(Holder as AnyStruct, to: /storage/holder)
 
               // Move vault back out of the contract
               let vault2 <- Holder.swapContent(nil)
               let unwrappedVault2 <- vault2!
 
               // Load the contract back from storage
-              let dupeContract = acct.load<AnyStruct>(from: /storage/holder)! as! Holder
+              let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! Holder
 
               // Move the vault of of the duplicated contract
               let dupeVault <- dupeContract.swapContent(nil)

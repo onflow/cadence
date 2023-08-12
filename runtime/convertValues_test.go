@@ -1856,7 +1856,7 @@ func TestExportReferenceValue(t *testing.T) {
 
 		transaction := `
             transaction {
-                prepare(signer: &Account) {
+                prepare(signer: auth(Storage) &Account) {
                     signer.storage.save(1, to: /storage/test)
                     let cap = signer.capabilities.storage.issue<&Int>(/storage/test)
                     signer.capabilities.publish(cap, at: /public/test)
@@ -1918,9 +1918,9 @@ func TestExportReferenceValue(t *testing.T) {
 
 		script := `
             access(all) fun main(): &AnyStruct {
-                var acct = getAuthAccount(0x01)
+                var acct = getAuthAccount<auth(Storage) &Account>(0x01)
 	            var v:[AnyStruct] = []
-	            acct.save(v, to: /storage/x)
+	            acct.storage.save(v, to: /storage/x)
 
                 var ref = acct.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
 	            ref.append(ref)
@@ -1955,7 +1955,7 @@ func TestExportReferenceValue(t *testing.T) {
             access(all) fun main(): &AnyStruct {
                 var acct = getAuthAccount(0x01)
 	            var v:[AnyStruct] = []
-	            acct.save(v, to: /storage/x)
+	            acct.storage.save(v, to: /storage/x)
 
                 var ref1 = acct.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
                 var ref2 = acct.borrow<&[AnyStruct]>(from: /storage/x)!

@@ -536,14 +536,14 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               entitlement X
 
               init() {
-                  self.cap = self.account.capabilities.account.issue<&AuthAccount>()
+                  self.cap = self.account.capabilities.account.issue<&Account>()
               }
 
               access(all)
               fun test() {
 
                   assert(
-                      self.cap.check<&AuthAccount>(),
+                      self.cap.check<&Account>(),
                       message: "check failed"
                   )
 
@@ -552,7 +552,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                       message: "invalid cap address"
                   )
 
-                  let ref = self.cap.borrow<&AuthAccount>()
+                  let ref = self.cap.borrow<&Account>()
                   assert(
                       ref != nil,
                       message: "borrow failed"
@@ -567,7 +567,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testAuth() {
                   assert(
-                      !self.cap.check<auth(X) &AuthAccount>(),
+                      !self.cap.check<auth(X) &Account>(),
                       message: "invalid check"
                   )
 
@@ -577,7 +577,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   )
 
                   assert(
-                      self.cap.borrow<auth(X) &AuthAccount>() == nil,
+                      self.cap.borrow<auth(X) &Account>() == nil,
                       message: "invalid borrow"
                   )
               }
