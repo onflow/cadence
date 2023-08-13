@@ -321,7 +321,7 @@ func (e *Encoder) encodeInclusiveRangeType(
 	)
 }
 
-// encodeDictTypeWithRawTag encodes cadence.InclusiveRangeType
+// encodeInclusiveRangeTypeWithRawTag encodes cadence.InclusiveRangeType
 // with given tag number and encode type function.
 func (e *Encoder) encodeInclusiveRangeTypeWithRawTag(
 	typ *cadence.InclusiveRangeType,

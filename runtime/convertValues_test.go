@@ -1216,6 +1216,15 @@ func TestImportRuntimeType(t *testing.T) {
 			},
 		},
 		{
+			label: "InclusiveRange",
+			actual: &cadence.InclusiveRangeType{
+				ElementType: cadence.IntType{},
+			},
+			expected: interpreter.InclusiveRangeStaticType{
+				ElementType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
 			label: "Reference",
 			actual: &cadence.ReferenceType{
 				Authorized: false,

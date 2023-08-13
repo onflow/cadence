@@ -1979,18 +1979,18 @@ func TestEncodeType(t *testing.T) {
 			},
 			// language=json
 			`
-              {
-                "type": "Type",
-                "value": {
-                  "staticType": {
-                    "kind": "InclusiveRange",
-                    "element": {
-                      "kind": "Int"
-                    }
-                  }
-                }
-              }
-            `,
+				{
+				"type": "Type",
+				"value": {
+					"staticType": {
+					"kind": "InclusiveRange",
+					"element": {
+						"kind": "Int"
+					}
+					}
+				}
+				}
+			`,
 		)
 
 	})
