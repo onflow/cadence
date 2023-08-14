@@ -6142,7 +6142,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	createAccountTx := []byte(`
         transaction {
-            prepare(signer: &Account) {
+            prepare(signer: auth(BorrowValue) &Account) {
                 Account(payer: signer)
             }
         }
@@ -6275,7 +6275,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	createAccountTx := []byte(`
         transaction {
-            prepare(signer: &Account) {
+            prepare(signer: auth(BorrowValue) &Account) {
                 Account(payer: signer)
             }
         }
@@ -6486,7 +6486,7 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 
 	createAccountTx := []byte(`
         transaction {
-            prepare(signer: &Account) {
+            prepare(signer: auth(BorrowValue) &Account) {
                 Account(payer: signer)
             }
         }

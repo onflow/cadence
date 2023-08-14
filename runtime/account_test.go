@@ -473,7 +473,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	const code = `
        transaction(publicKey: [UInt8]) {
-           prepare(signer: auth(AddKey) &Account) {
+           prepare(signer: auth(BorrowValue) &Account) {
                let acct = Account(payer: signer)
                acct.keys.add(
                    publicKey: PublicKey(
