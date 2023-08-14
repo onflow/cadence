@@ -99,62 +99,64 @@ func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
 		accountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
-			// TODO:
-			panic("TODO")
-			//payer, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
-			//if !ok {
-			//	panic(errors.NewUnreachableError())
-			//}
-			//
-			//inter := invocation.Interpreter
-			//locationRange := invocation.LocationRange
-			//
-			//
-			//inter.ExpectType(payer, ..., locationRange)
-			//
-			//payerValue := payer.GetMember(
-			//	inter,
-			//	locationRange,
-			//	sema.AuthAccountTypeAddressFieldName,
-			//)
-			//if payerValue == nil {
-			//	panic(errors.NewUnexpectedError("payer address is not set"))
-			//}
-			//
-			//payerAddressValue, ok := payerValue.(interpreter.AddressValue)
-			//if !ok {
-			//	panic(errors.NewUnexpectedError("payer address is not address"))
-			//}
-			//
-			//payerAddress := payerAddressValue.ToAddress()
-			//
-			//addressValue := interpreter.NewAddressValueFromConstructor(
-			//	inter,
-			//	func() (address common.Address) {
-			//		var err error
-			//		errors.WrapPanic(func() {
-			//			address, err = creator.CreateAccount(payerAddress)
-			//		})
-			//		if err != nil {
-			//			panic(interpreter.WrappedExternalError(err))
-			//		}
-			//
-			//		return
-			//	},
-			//)
-			//
-			//creator.EmitEvent(
-			//	inter,
-			//	AccountCreatedEventType,
-			//	[]interpreter.Value{addressValue},
-			//	locationRange,
-			//)
-			//
-			//return NewAccountReferenceValue(
-			//	inter,
-			//	creator,
-			//	addressValue,
-			//)
+			payer, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			inter.ExpectType(
+				payer,
+				sema.AccountReferenceType,
+				locationRange,
+			)
+
+			payerValue := payer.GetMember(
+				inter,
+				locationRange,
+				sema.AccountTypeAddressFieldName,
+			)
+			if payerValue == nil {
+				panic(errors.NewUnexpectedError("payer address is not set"))
+			}
+
+			payerAddressValue, ok := payerValue.(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnexpectedError("payer address is not address"))
+			}
+
+			payerAddress := payerAddressValue.ToAddress()
+
+			addressValue := interpreter.NewAddressValueFromConstructor(
+				inter,
+				func() (address common.Address) {
+					var err error
+					errors.WrapPanic(func() {
+						address, err = creator.CreateAccount(payerAddress)
+					})
+					if err != nil {
+						panic(interpreter.WrappedExternalError(err))
+					}
+
+					return
+				},
+			)
+
+			creator.EmitEvent(
+				inter,
+				AccountCreatedEventType,
+				[]interpreter.Value{addressValue},
+				locationRange,
+			)
+
+			return NewAccountReferenceValue(
+				inter,
+				creator,
+				addressValue,
+				interpreter.FullyEntitledAccountAccess,
+			)
 		},
 	)
 }
@@ -243,7 +245,7 @@ func NewAccountReferenceValue(
 		gauge,
 		authorization,
 		account,
-		sema.AccountReferenceType,
+		sema.AccountType,
 	)
 }
 
