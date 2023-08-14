@@ -4296,7 +4296,7 @@ func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
 	t.Members.Foreach(func(_ string, member *Member) {
 		switch access := member.Access.(type) {
-		case EntitlementMapAccess:
+		case *EntitlementMapAccess:
 			set.SetAll(access.Domain().Entitlements)
 		case EntitlementSetAccess:
 			set.SetAll(access.Entitlements)
@@ -5022,7 +5022,7 @@ func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
 	t.Members.Foreach(func(_ string, member *Member) {
 		switch access := member.Access.(type) {
-		case EntitlementMapAccess:
+		case *EntitlementMapAccess:
 			access.Domain().Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 				set.Set(entitlement, struct{}{})
 			})

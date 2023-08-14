@@ -95,10 +95,10 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 	// while the definition of `qux` is not.
 	var attachmentAccess Access = UnauthorizedAccess
 	if attachmentType.AttachmentEntitlementAccess != nil {
-		attachmentAccess = *attachmentType.AttachmentEntitlementAccess
+		attachmentAccess = attachmentType.AttachmentEntitlementAccess
 	}
 
-	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
+	if attachmentAccess, ok := attachmentAccess.(*EntitlementMapAccess); ok {
 		codomain := attachmentAccess.Codomain()
 		attachmentType.Members.Foreach(func(_ string, member *Member) {
 			if memberAccess, ok := member.Access.(EntitlementSetAccess); ok {
@@ -655,8 +655,8 @@ func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclara
 	composite.baseType = checker.convertNominalType(declaration.BaseType)
 
 	attachmentAccess := checker.accessFromAstAccess(declaration.Access)
-	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
-		composite.AttachmentEntitlementAccess = &attachmentAccess
+	if attachmentAccess, ok := attachmentAccess.(*EntitlementMapAccess); ok {
+		composite.AttachmentEntitlementAccess = attachmentAccess
 	}
 
 	// add all the required entitlements to a set for this attachment
@@ -2042,7 +2042,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		fieldAccess := checker.accessFromAstAccess(field.Access)
 
-		if entitlementMapAccess, ok := fieldAccess.(EntitlementMapAccess); ok {
+		if entitlementMapAccess, ok := fieldAccess.(*EntitlementMapAccess); ok {
 			checker.entitlementMappingInScope = entitlementMapAccess.Type
 		}
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)

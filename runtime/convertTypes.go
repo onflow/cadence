@@ -479,7 +479,7 @@ func exportAuthorization(
 		if access.Equal(sema.UnauthorizedAccess) {
 			return cadence.UnauthorizedAccess
 		}
-	case sema.EntitlementMapAccess:
+	case *sema.EntitlementMapAccess:
 		common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindCadenceEntitlementMapAccess))
 		return cadence.EntitlementMapAuthorization{
 			TypeID: access.Type.ID(),
