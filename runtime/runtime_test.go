@@ -8057,7 +8057,7 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 
           let capType = acct.capabilities.borrow<&Account>(path)!.getType()
 
-          return Type<&Account>() == capType
+          return Type<Account>() == capType
       }
     `)
 
