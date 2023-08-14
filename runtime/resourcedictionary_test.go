@@ -106,7 +106,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              signer.storage.save(<-Test.createC(), to: /storage/c)
          }
       }
@@ -169,7 +169,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              c.forceInsert("a", <- Test.createR(1))
              c.forceInsert("b", <- Test.createR(2))
@@ -193,7 +193,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
              log(c.rs["b"]?.value)
@@ -220,7 +220,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              c.rs["b"]?.increment()
 
@@ -251,7 +251,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
 			 destroy c.remove("b")
@@ -466,8 +466,11 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
       transaction {
 
-          prepare(signer: &Account) {
-              signer.storage.save(<-Test.createC(), to: /storage/c)
+          prepare(signer: auth(Storage) &Account) {
+              signer.storage.save(
+                  <-Test.createC(),
+                  to: /storage/c
+              )
           }
       }
    `)
@@ -532,7 +535,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              let c2 <- Test.createC2()
              c2.forceInsert("a", <- Test.createR(1))
@@ -558,7 +561,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              // TODO: use nested optional chaining
              log(c.c2s["x"]?.value(key: "b"))
@@ -638,7 +641,10 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 		`
          transaction {
 
-             prepare(signer1: &Account, signer2: &Account) {
+             prepare(
+                 signer1: auth(Contracts) &Account,
+                 signer2: &Account
+             ) {
                  signer1.contracts.add(name: "Test", code: "%s".decodeHex())
              }
          }
@@ -651,7 +657,10 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
       transaction {
 
-          prepare(signer1: &Account, signer2: &Account) {
+          prepare(
+              signer1: auth(Storage) &Account,
+              signer2: &Account
+          ) {
               let c <- Test.createC()
               c.setRs(key: "a", r: <- Test.createR(1))
 			  c.setRs(key: "b", r: <- Test.createR(2))
@@ -725,7 +734,10 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
      transaction {
 
-         prepare(signer1: &Account, signer2: &Account) {
+         prepare(
+             signer1: auth(Storage) &Account,
+             signer2: auth(Storage) &Account
+         ) {
              let c <- signer1.storage.load<@Test.C>(from: /storage/c) ?? panic("missing C")
              c.setRs(key: "x", r: <- Test.createR(42))
              signer2.storage.save(<-c, to: /storage/c2)
@@ -762,7 +774,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c <- Test.createC()
 			 c.forceInsert("a", <- Test.createR(1))
              c.forceInsert("b", <- Test.createR(2))
@@ -776,7 +788,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
      transaction {
 
-        prepare(signer: &Account) {
+        prepare(signer: auth(Storage) &Account) {
             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
             let r <- c.remove("a")
             destroy r
@@ -789,7 +801,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
      transaction {
 
-        prepare(signer: &Account) {
+        prepare(signer: auth(Storage) &Account) {
             let c <- signer.storage.load<@Test.C>(from: /storage/c)!
             let r <- c.remove("b")
             destroy r
@@ -876,7 +888,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
+func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 
 	t.Parallel()
 
@@ -891,7 +903,7 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c <- Test.createC()
              c.forceInsert("a", <- Test.createR(1))
              c.forceInsert("b", <- Test.createR(2))
@@ -905,7 +917,7 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 
      transaction {
 
-        prepare(signer: &Account) {
+        prepare(signer: auth(Storage) &Account) {
             let c <- signer.storage.load<@Test.C>(from: /storage/c)
             destroy c
         }
@@ -1005,7 +1017,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c <- Test.createC()
 			 c.forceInsert("a", <- Test.createR(1))
              c.forceInsert("b", <- Test.createR(2))
@@ -1019,7 +1031,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
      transaction {
 
-        prepare(signer: &Account) {
+        prepare(signer: auth(Storage) &Account) {
             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
 
             let e1 <- c.insert("c", <-Test.createR(3))
@@ -1038,7 +1050,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
      transaction {
 
-        prepare(signer: &Account) {
+        prepare(signer: auth(Storage) &Account) {
             let c <- signer.storage.load<@Test.C>(from: /storage/c)!
             let e1 <- c.insert("d", <-Test.createR(4))
             assert(e1 == nil)
@@ -1146,7 +1158,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c <- Test.createC()
              signer.storage.save(<-c, to: /storage/c)
          }
@@ -1158,7 +1170,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
      transaction {
 
-        prepare(signer: &Account) {
+        prepare(signer: auth(Storage) &Account) {
             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
 
             let existing <- c.insert("1", <-Test.createR(1))
@@ -1173,9 +1185,12 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
      transaction {
 
-        prepare(signer1: &Account, signer2: &Account) {
-            let c1 = signer1.borrow<&Test.C>(from: /storage/c)!
-            let c2 = signer2.borrow<&Test.C>(from: /storage/c)!
+        prepare(
+            signer1: auth(Storage) &Account,
+            signer2: auth(Storage) &Account
+        ) {
+            let c1 = signer1.storage.borrow<&Test.C>(from: /storage/c)!
+            let c2 = signer2.storage.borrow<&Test.C>(from: /storage/c)!
 
             let r <- c1.remove("1")
 
@@ -1191,7 +1206,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
      transaction {
 
-        prepare(signer: &Account) {
+        prepare(signer: auth(Storage) &Account) {
             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
 
             let r <- c.remove("1")

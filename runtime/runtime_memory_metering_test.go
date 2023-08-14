@@ -877,7 +877,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 
 		code := []byte(`
             transaction {
-                prepare(signer: &Account) {
+                prepare(signer: auth(Storage) &Account) {
                     signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
                 }
             }
@@ -914,7 +914,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 
 		code := []byte(`
             transaction {
-                prepare(signer: &Account) {
+                prepare(signer: auth(Storage) &Account) {
                     signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
                     signer.storage.used
                 }
@@ -1093,7 +1093,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 			Script{
 				Source: []byte(fmt.Sprintf(`
                 transaction() {
-                    prepare(acc: &Account) {
+                    prepare(acc: auth(Storage) &Account) {
                         var s = "%s"
                         acc.storage.save(s, to:/storage/some_path)
                     }
@@ -1136,7 +1136,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 			Script{
 				Source: []byte(fmt.Sprintf(`
                 transaction() {
-                    prepare(acc: &Account) {
+                    prepare(acc: auth(Storage) &Account) {
                         var i = 0
                         var s = "%s"
                         while i<1000 {

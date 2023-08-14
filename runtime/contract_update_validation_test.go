@@ -38,7 +38,7 @@ func newContractDeployTransaction(function, name, code string) string {
 	return fmt.Sprintf(
 		`
                 transaction {
-                    prepare(signer: &Account) {
+                    prepare(signer: auth(Contracts) &Account) {
                         signer.contracts.%s(name: "%s", code: "%s".decodeHex())
                     }
                 }
@@ -69,7 +69,7 @@ func newContractRemovalTransaction(contractName string) string {
 	return fmt.Sprintf(
 		`
            transaction {
-               prepare(signer: &Account) {
+               prepare(signer: auth(RemoveContract) &Account) {
                    signer.contracts.%s(name: "%s")
                }
            }
