@@ -2051,16 +2051,7 @@ const ContractAccountFieldName = "account"
 
 var ContractAccountFieldType = &ReferenceType{
 	Type: AccountType,
-	Authorization: NewEntitlementSetAccess(
-		[]*EntitlementType{
-			StorageType,
-			ContractsType,
-			KeysType,
-			InboxType,
-			CapabilitiesType,
-		},
-		Conjunction,
-	),
+	Authorization: FullyEntitledAccountAccess,
 }
 
 const contractAccountFieldDocString = `
