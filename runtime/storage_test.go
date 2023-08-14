@@ -5097,12 +5097,15 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun main() {
-                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
+                      let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
-                      account.storage.save("", to: /storage/foo2)
+
                       let capA = account.capabilities.storage.issue<&Int>(/storage/foo1)
                       account.capabilities.publish(capA, at: /public/foo1)
+
+                      account.storage.save("", to: /storage/foo2)
+
                       let capB = account.capabilities.storage.issue<&String>(/storage/foo2)
                       account.capabilities.publish(capB, at: /public/foo2)
 
@@ -5303,7 +5306,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun main() {
-                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
+                      let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save("", to: /storage/foo2)
@@ -5351,7 +5354,7 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 				`
                   access(all)
                   fun main() {
-                      let account = getAuthAccount<auth(Storage) &Account>(0x1)
+                      let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
                       account.storage.save(1, to: /storage/foo1)
                       account.storage.save("", to: /storage/foo2)

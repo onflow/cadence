@@ -743,7 +743,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1 
+                              import Test from 0x1
 
                               transaction {
                                   prepare(signer: auth(Capabilities) &Account) {

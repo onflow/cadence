@@ -48,7 +48,7 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 				let deployedContract = signer.contracts.get(name: "Test")
 				assert(deployedContract!.name == "Test")
 
-				let expected: {String: Void} =  
+				let expected: {String: Void} =
 					{ "A.2a00000000000000.Test.A": ()
 					, "A.2a00000000000000.Test.B": ()
 					, "A.2a00000000000000.Test.C": ()

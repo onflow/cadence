@@ -1856,7 +1856,7 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 
 		transaction := `
             transaction {
-                prepare(signer: auth(Storage) &Account) {
+                prepare(signer: auth(Storage, Capabilities) &Account) {
                     signer.storage.save(1, to: /storage/test)
                     let cap = signer.capabilities.storage.issue<&Int>(/storage/test)
                     signer.capabilities.publish(cap, at: /public/test)

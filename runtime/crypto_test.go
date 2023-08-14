@@ -703,8 +703,8 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
         access(all) fun main(rootHash: [UInt8], address: [UInt8], accountProof: [[UInt8]]){
 
         let path = HashAlgorithm.KECCAK_256.hash(address)
-     
-        var nibbles: [UInt8]  = [] 
+
+        var nibbles: [UInt8]  = []
 
         for b in path {
             nibbles.append(b >> 4)
@@ -712,11 +712,11 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
         }
 
         var nibbleIndex = 0
-        var expectedNodeHash = rootHash 
+        var expectedNodeHash = rootHash
 
         for encodedNode in accountProof {
             log(nibbleIndex)
-            let nodeHash = HashAlgorithm.KECCAK_256.hash(encodedNode) 
+            let nodeHash = HashAlgorithm.KECCAK_256.hash(encodedNode)
 
             // verify that expected node hash (from a higher level or given root hash)
             // matches the hash of this level

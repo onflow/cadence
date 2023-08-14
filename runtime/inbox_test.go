@@ -38,7 +38,7 @@ func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
@@ -48,7 +48,7 @@ func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("foo")!
 				log(cap.borrow()![0])
 			}
@@ -127,7 +127,7 @@ func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				signer.inbox.publish(cap, name: "foo", recipient: 0x2)
@@ -137,7 +137,7 @@ func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[String]>("foo")!
 				log(cap.borrow()![0])
 			}
@@ -206,7 +206,7 @@ func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
@@ -216,7 +216,7 @@ func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("bar")
 				log(cap)
 			}
@@ -295,7 +295,7 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
@@ -305,7 +305,7 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("foo")!
 				log(cap.borrow()![0])
 				let cap2 = signer.inbox.unpublish<&[Int]>("foo")
@@ -389,7 +389,7 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
@@ -399,7 +399,7 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 
 	transaction1point5 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("foo")
 				log(cap)
 			}
@@ -408,7 +408,7 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("foo")!
 				log(cap.borrow()![0])
 			}
@@ -516,7 +516,7 @@ func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
@@ -526,7 +526,7 @@ func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)!
 				log(cap.borrow()![0])
 			}
@@ -620,7 +620,7 @@ func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
@@ -630,7 +630,7 @@ func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[String]>("foo", provider: 0x1)!
 				log(cap.borrow()![0])
 			}
@@ -721,7 +721,7 @@ func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
@@ -731,7 +731,7 @@ func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[String]>("bar", provider: 0x1)
 				log(cap)
 			}
@@ -823,7 +823,7 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
@@ -833,7 +833,7 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)!
 				log(cap.borrow()![0])
 			}
@@ -842,7 +842,7 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 
 	transaction3 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)
 				log(cap)
 			}
@@ -950,7 +950,7 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
@@ -960,7 +960,7 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)
 				log(cap)
 			}
@@ -969,7 +969,7 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 
 	transaction3 := []byte(`
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)!
 				log(cap.borrow()![0])
 			}

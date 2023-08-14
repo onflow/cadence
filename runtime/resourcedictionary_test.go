@@ -291,7 +291,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
 			 destroy c.remove("b")
@@ -347,7 +347,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: &Account) {
+         prepare(signer: auth(Storage) &Account) {
              if let c <- signer.storage.load<@Test.C>(from: /storage/c) {
                  log(c.rs["a"]?.value)
                  destroy c

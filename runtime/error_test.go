@@ -192,13 +192,13 @@ func TestRuntimeError(t *testing.T) {
 					panic("42")
 				}
 			}
-		
+
 			access(all) fun createResource(): @Resource{
 				return <- create Resource(
 					s: "argument"
 				)
 			}
-			
+
 			access(all) fun main() {
 				destroy createResource()
 			}
@@ -513,7 +513,7 @@ func TestRuntimeDefaultFunctionConflictPrintingError(t *testing.T) {
           }
 
 		  access(all) resource interface B {
-			access(all) fun foo() 
+			access(all) fun foo()
 		}
       }
     `

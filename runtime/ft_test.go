@@ -360,7 +360,7 @@ access(all) contract FlowToken: FungibleToken {
         }
     }
 
-    init(adminAccount: auth(Storage) &Account) {
+    init(adminAccount: auth(Storage, Capabilities) &Account) {
         self.totalSupply = 0.0
 
         // Create the Vault with the total supply of tokens and save it in storage

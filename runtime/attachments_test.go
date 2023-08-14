@@ -169,7 +169,7 @@ func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		access(all) fun main(): &Test.A? { 
+		access(all) fun main(): &Test.A? {
 			let r <- Test.makeRWithA()
 			var a = r[Test.A]
 
@@ -260,7 +260,7 @@ func TestRuntimeAccountAttachmentExport(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		access(all) fun main(): &Test.A? { 
+		access(all) fun main(): &Test.A? {
 			let r <- Test.makeRWithA()
 			let authAccount = getAuthAccount<auth(Storage) &Account>(0x1)
 			authAccount.storage.save(<-r, to: /storage/foo)
@@ -345,7 +345,7 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		access(all) fun main(): @Test.R { 
+		access(all) fun main(): @Test.R {
 			return <-Test.makeRWithA()
 		}
 	 `)

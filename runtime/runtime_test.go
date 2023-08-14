@@ -2587,7 +2587,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
         prepare(signer: auth(Storage, Capabilities) &Account) {
           signer.storage.save(<-createR(), to: /storage/r)
           let cap = signer.capabilities.storage.issue<&{RI}>(/storage/r)
-          signer.capabilities.publish(cap, at: /public/r) 
+          signer.capabilities.publish(cap, at: /public/r)
         }
       }
     `)
@@ -5661,7 +5661,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
           init() {
               self.test = 1
           }
-		  
+
 		  access(all) fun setTest(_ test: Int) {
 			self.test = test
 		  }
@@ -7944,8 +7944,8 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
 	script := []byte(`
     access(all) fun main(): Int {
         // fill lines so the error occurs on lines 9 and 10
-        // 
-        // 
+        //
+        //
         //
         //
         let a = [1,2,3,4]
@@ -7995,8 +7995,8 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
 	script := []byte(`
     access(all) fun main(): String {
         // fill lines so the error occurs on lines 9 and 10
-        // 
-        // 
+        //
+        //
         //
         //
         let a = [1,2,3,4]

@@ -917,8 +917,8 @@ access(all) contract TopShotShardedCollection {
 
     // ShardedCollection stores a dictionary of TopShot Collections
     // A Moment is stored in the field that corresponds to its id % numBuckets
-    access(all) resource ShardedCollection: TopShot.MomentCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic { 
-        
+    access(all) resource ShardedCollection: TopShot.MomentCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
+
         // Dictionary of topshot collections
         access(all) var collections: @{UInt64: TopShot.Collection}
 
@@ -940,7 +940,7 @@ access(all) contract TopShotShardedCollection {
             }
         }
 
-        // withdraw removes a Moment from one of the Collections 
+        // withdraw removes a Moment from one of the Collections
         // and moves it to the caller
         access(all) fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
             post {
@@ -951,7 +951,7 @@ access(all) contract TopShotShardedCollection {
 
             // Withdraw the moment
             let token <- self.collections[bucket]?.withdraw(withdrawID: withdrawID)!
-            
+
             return <-token
         }
 
@@ -963,7 +963,7 @@ access(all) contract TopShotShardedCollection {
         //          that were withdrawn
         access(all) fun batchWithdraw(ids: [UInt64]): @NonFungibleToken.Collection {
             var batchCollection <- TopShot.createEmptyCollection()
-            
+
             // Iterate through the ids and withdraw them from the Collection
             for id in ids {
                 batchCollection.deposit(token: <-self.withdraw(withdrawID: id))
@@ -1064,13 +1064,13 @@ import TopShotShardedCollection from 0x0b2a3299cc857e29
 
 access(all) contract TopshotAdminReceiver {
 
-    // storeAdmin takes a TopShot Admin resource and 
+    // storeAdmin takes a TopShot Admin resource and
     // saves it to the account storage of the account
     // where the contract is deployed
     access(all) fun storeAdmin(newAdmin: @TopShot.Admin) {
         self.account.storage.save(<-newAdmin, to: /storage/TopShotAdmin)
     }
-    
+
     init() {
         // Save a copy of the sharded Moment Collection to the account storage
         if self.account.storage.borrow<&TopShotShardedCollection.ShardedCollection>(from: /storage/ShardedMomentCollection) == nil {
