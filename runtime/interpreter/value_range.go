@@ -27,6 +27,7 @@ import (
 )
 
 // NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end with default value of step.
+// NOTE: Assumes that the values start and end are of the same static type.
 func NewInclusiveRangeValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
@@ -74,6 +75,7 @@ func NewInclusiveRangeValue(
 }
 
 // NewInclusiveRangeValue constructs an InclusiveRange value with the provided start, end & step.
+// NOTE: Assumes that the values start, end and step are of the same static type.
 func NewInclusiveRangeValueWithStep(
 	interpreter *Interpreter,
 	locationRange LocationRange,
@@ -84,7 +86,7 @@ func NewInclusiveRangeValueWithStep(
 	rangeSemaType *sema.InclusiveRangeType,
 ) *CompositeValue {
 
-	zeroValue := GetValueForIntegerType(0, rangeType.ElementType)
+	zeroValue := GetValueForIntegerType(0, start.StaticType(interpreter))
 
 	// Validate that the step is non-zero.
 	if step.Equal(interpreter, locationRange, zeroValue) {
@@ -198,11 +200,8 @@ func rangeContains(
 		return TrueValue
 	}
 
-	greaterThanStart := needleValue.Greater(interpreter, start, locationRange)
-	greaterThanend := needleValue.Greater(interpreter, end, locationRange)
-
-	if greaterThanStart == greaterThanend {
-		// If needle is greater or smaller than both start & end, then it is outside the range.
+	// Exclusive check since we already checked for boundaries above.
+	if !isNeedleBetweenStartEndExclusive(interpreter, locationRange, needleValue, start, end) {
 		result = false
 	} else {
 		// needle is in between start and end.
@@ -233,6 +232,20 @@ func getFieldAsIntegerValue(
 			name,
 		),
 	)
+}
+
+func isNeedleBetweenStartEndExclusive(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	needleValue IntegerValue,
+	start IntegerValue,
+	end IntegerValue,
+) bool {
+	greaterThanStart := needleValue.Greater(interpreter, start, locationRange)
+	greaterThanEnd := needleValue.Greater(interpreter, end, locationRange)
+
+	// needle is in between start and end values if is greater than one and smaller than the other.
+	return bool(greaterThanStart) != bool(greaterThanEnd)
 }
 
 func isSequenceMovingAwayFromEnd(

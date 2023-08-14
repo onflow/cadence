@@ -639,12 +639,11 @@ func exportCompositeValueAsInclusiveRange(
 		panic(errors.NewUnreachableError())
 	}
 
-	getField := func(fieldName string) (cadence.Value, error) {
+	getNonComputedField := func(fieldName string) (cadence.Value, error) {
 		fieldValue := compositeValue.GetField(inter, locationRange, fieldName)
-		if fieldValue == nil && compositeValue.ComputedFields != nil {
-			if computedField, ok := compositeValue.ComputedFields[fieldName]; ok {
-				fieldValue = computedField(inter, locationRange)
-			}
+		if fieldValue == nil {
+			// Bug if the field is absent.
+			panic(errors.NewUnreachableError())
 		}
 
 		return exportValueWithInterpreter(
@@ -655,17 +654,17 @@ func exportCompositeValueAsInclusiveRange(
 		)
 	}
 
-	startValue, err := getField(sema.InclusiveRangeTypeStartFieldName)
+	startValue, err := getNonComputedField(sema.InclusiveRangeTypeStartFieldName)
 	if err != nil {
 		return cadence.InclusiveRange{}, err
 	}
 
-	endValue, err := getField(sema.InclusiveRangeTypeEndFieldName)
+	endValue, err := getNonComputedField(sema.InclusiveRangeTypeEndFieldName)
 	if err != nil {
 		return cadence.InclusiveRange{}, err
 	}
 
-	stepValue, err := getField(sema.InclusiveRangeTypeStepFieldName)
+	stepValue, err := getNonComputedField(sema.InclusiveRangeTypeStepFieldName)
 	if err != nil {
 		return cadence.InclusiveRange{}, err
 	}
@@ -1459,48 +1458,68 @@ func (i valueImporter) importInclusiveRangeValue(
 	*interpreter.CompositeValue,
 	error,
 ) {
+	// start, end and step. The order matters.
+	members := make([]interpreter.IntegerValue, 3)
+
+	var memberType sema.Type
 
 	inclusiveRangeType, ok := expectedType.(*sema.InclusiveRangeType)
-	if !ok {
-		return nil, errors.NewDefaultUserError(
-			"cannot import InclusiveRange: expected InclusiveRangeType, got '%s'",
-			expectedType.ID(),
-		)
+	if ok {
+		memberType = inclusiveRangeType.MemberType
+
+		// The inner type must be an integer.
+		if !memberType.Tag().BelongsTo(sema.IntegerTypeTag) {
+			return nil, errors.NewDefaultUserError(
+				"cannot import inclusiverange: member type must be an integer",
+			)
+		}
 	}
 
-	expectedMemberType := inclusiveRangeType.MemberType
 	inter := i.inter
 	locationRange := i.locationRange
 
-	startValue, err := i.importValue(v.Start, expectedMemberType)
-	if err != nil {
-		return nil, err
-	}
-	startInteger, ok := startValue.(interpreter.IntegerValue)
-	if !ok {
-		return nil, err
+	// import members.
+	for index, value := range []cadence.Value{v.Start, v.End, v.Step} {
+		importedValue, err := i.importValue(value, memberType)
+		if err != nil {
+			return nil, err
+		}
+		importedIntegerValue, ok := importedValue.(interpreter.IntegerValue)
+		if !ok {
+			return nil, err
+		}
+
+		members[index] = importedIntegerValue
 	}
 
-	stepValue, err := i.importValue(v.Step, expectedMemberType)
-	if err != nil {
-		return nil, err
-	}
-	stepInteger, ok := stepValue.(interpreter.IntegerValue)
-	if !ok {
-		return nil, err
+	// start, end and step. The order matters.
+	memberTypes := make([]sema.Type, 3)
+	memberStaticTypes := make([]interpreter.StaticType, 3)
+
+	for i, member := range members {
+		memberStaticTypes[i] = member.StaticType(inter)
+		memberType, err := inter.ConvertStaticToSemaType(memberStaticTypes[i])
+		if err != nil {
+			return nil, err
+		}
+		memberTypes[i] = memberType
 	}
 
-	endValue, err := i.importValue(v.End, expectedMemberType)
-	if err != nil {
-		return nil, err
-	}
-	endInteger, ok := endValue.(interpreter.IntegerValue)
-	if !ok {
-		return nil, err
+	// start, end and step must have the same static type.
+	if memberStaticTypes[0] != memberStaticTypes[1] || memberStaticTypes[0] != memberStaticTypes[2] {
+		return nil, errors.NewDefaultUserError(
+			"cannot import inclusiverange: start, end and step must be of the same type",
+		)
 	}
 
-	staticType := interpreter.ConvertSemaToStaticType(inter, inclusiveRangeType)
-	inclusiveRangeStaticType, ok := staticType.(interpreter.InclusiveRangeStaticType)
+	if inclusiveRangeType == nil {
+		inclusiveRangeType = sema.NewInclusiveRangeType(
+			inter,
+			memberTypes[0],
+		)
+	}
+
+	inclusiveRangeStaticType, ok := interpreter.ConvertSemaToStaticType(inter, inclusiveRangeType).(interpreter.InclusiveRangeStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -1508,9 +1527,9 @@ func (i valueImporter) importInclusiveRangeValue(
 	return interpreter.NewInclusiveRangeValueWithStep(
 		inter,
 		locationRange,
-		startInteger,
-		endInteger,
-		stepInteger,
+		members[0],
+		members[1],
+		members[2],
 		inclusiveRangeStaticType,
 		inclusiveRangeType,
 	), nil
