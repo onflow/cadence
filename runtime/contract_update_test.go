@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestContractUpdateWithDependencies(t *testing.T) {
+func TestRuntimeContractUpdateWithDependencies(t *testing.T) {
 	t.Parallel()
 
 	runtime := newTestInterpreterRuntime()
@@ -212,7 +212,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestContractUpdateWithPrecedingIdentifiers(t *testing.T) {
+func TestRuntimeContractUpdateWithPrecedingIdentifiers(t *testing.T) {
 	t.Parallel()
 
 	runtime := newTestInterpreterRuntime()

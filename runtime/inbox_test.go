@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence"
 )
 
-func TestAccountInboxPublishUnpublish(t *testing.T) {
+func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -116,7 +116,7 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 	)
 }
 
-func TestAccountInboxUnpublishWrongType(t *testing.T) {
+func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -195,7 +195,7 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 	)
 }
 
-func TestAccountInboxUnpublishAbsent(t *testing.T) {
+func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -284,7 +284,7 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 	)
 }
 
-func TestAccountInboxUnpublishRemove(t *testing.T) {
+func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -378,7 +378,7 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 	)
 }
 
-func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
+func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -505,7 +505,7 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaim(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -609,7 +609,7 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaimWrongType(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -710,7 +710,7 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaimWrongName(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -812,7 +812,7 @@ func TestAccountInboxPublishClaimWrongName(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaimRemove(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -939,7 +939,7 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)

@@ -475,7 +475,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 	}
 }
 
-func TestBLSVerifyPoP(t *testing.T) {
+func TestRuntimeBLSVerifyPoP(t *testing.T) {
 
 	t.Parallel()
 
@@ -534,7 +534,7 @@ func TestBLSVerifyPoP(t *testing.T) {
 	assert.True(t, called)
 }
 
-func TestBLSAggregateSignatures(t *testing.T) {
+func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
 
@@ -599,7 +599,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 	assert.True(t, called)
 }
 
-func TestBLSAggregatePublicKeys(t *testing.T) {
+func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
@@ -693,7 +693,7 @@ func getCadenceValueArrayFromHexStr(t *testing.T, inp string) cadence.Value {
 // and should not be used as a sample code for Merkle Proof Verification,
 // for proper verification you need extra steps such as checking if the leaf content matches
 // what you're expecting and etc...
-func TestTraversingMerkleProof(t *testing.T) {
+func TestRuntimeTraversingMerkleProof(t *testing.T) {
 
 	t.Parallel()
 

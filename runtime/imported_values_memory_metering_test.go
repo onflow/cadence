@@ -38,7 +38,7 @@ func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) 
 	}
 }
 
-func TestImportedValueMemoryMetering(t *testing.T) {
+func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -406,7 +406,7 @@ func (testMemoryError) Error() string {
 	return "memory limit exceeded"
 }
 
-func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
+func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 
 	t.Parallel()
 
@@ -529,7 +529,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 	}
 }
 
-func TestScriptDecodedLocationMetering(t *testing.T) {
+func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 
 	t.Parallel()
 

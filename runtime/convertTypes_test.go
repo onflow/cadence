@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestExportRecursiveType(t *testing.T) {
+func TestRuntimeExportRecursiveType(t *testing.T) {
 
 	t.Parallel()
 

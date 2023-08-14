@@ -30,7 +30,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestRLPDecodeString(t *testing.T) {
+func TestRuntimeRLPDecodeString(t *testing.T) {
 
 	t.Parallel()
 
@@ -173,7 +173,7 @@ func TestRLPDecodeString(t *testing.T) {
 	}
 }
 
-func TestRLPDecodeList(t *testing.T) {
+func TestRuntimeRLPDecodeList(t *testing.T) {
 
 	t.Parallel()
 

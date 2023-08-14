@@ -36,7 +36,7 @@ func newTestInterpreterRuntimeWithAttachments() testInterpreterRuntime {
 	return rt
 }
 
-func TestAccountAttachmentSaveAndLoad(t *testing.T) {
+func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -67,7 +67,7 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	transaction1 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage) &Account) {
 				let r <- Test.makeRWithA()
 				signer.storage.save(<-r, to: /storage/foo)
 			}
@@ -77,7 +77,7 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	transaction2 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: &Account) {
+			prepare(signer: auth(Storage) &Account) {
 				let r <- signer.storage.load<@Test.R>(from: /storage/foo)!
 				let i = r[Test.A]!.foo()
 				destroy r
@@ -147,7 +147,7 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	require.Equal(t, []string{"3"}, logs)
 }
 
-func TestAccountAttachmentExportFailure(t *testing.T) {
+func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -237,7 +237,7 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
 
-func TestAccountAttachmentExport(t *testing.T) {
+func TestRuntimeAccountAttachmentExport(t *testing.T) {
 
 	t.Parallel()
 
@@ -322,7 +322,7 @@ func TestAccountAttachmentExport(t *testing.T) {
 	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Optional).Value.String())
 }
 
-func TestAccountAttachedExport(t *testing.T) {
+func TestRuntimeAccountAttachedExport(t *testing.T) {
 
 	t.Parallel()
 
@@ -404,7 +404,7 @@ func TestAccountAttachedExport(t *testing.T) {
 	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Resource).Fields[1].String())
 }
 
-func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
+func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -518,7 +518,7 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	require.Equal(t, []string{"3"}, logs)
 }
 
-func TestAccountAttachmentCapability(t *testing.T) {
+func TestRuntimeAccountAttachmentCapability(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)

@@ -68,7 +68,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 	newPublicAccountKeys := func() cadence.Struct {
 		return cadence.Struct{
 			StructType: &cadence.StructType{
-				QualifiedIdentifier: "PublicAccount.Keys",
+				QualifiedIdentifier: "Account.Keys",
 				Fields:              []cadence.Field{},
 			},
 			Fields: []cadence.Value{},
@@ -1018,7 +1018,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			}: []byte(`
                access(all) contract C {
                    access(all) struct Foo {
-                      access(all) var nonImportableField: PublicAccount.Keys?
+                      access(all) var nonImportableField: &Account.Keys?
 
                       init() {
                           self.nonImportableField = nil
@@ -1048,7 +1048,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			}: []byte(`
                access(all) contract C {
                     access(all) struct Foo: Bar {
-                        access(all) var nonImportableField: PublicAccount.Keys?
+                        access(all) var nonImportableField: &Account.Keys?
                         init() {
                             self.nonImportableField = nil
                         }
@@ -1079,7 +1079,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		err := executeTransaction(t, script, nil, newPublicAccountKeys())
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
+		assert.Contains(t, err.Error(), "cannot import value of type &Account.Keys")
 	})
 
 	t.Run("Invalid native struct in array", func(t *testing.T) {
@@ -1098,7 +1098,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
+		assert.Contains(t, err.Error(), "cannot import value of type &Account.Keys")
 	})
 
 	t.Run("invalid HashAlgorithm", func(t *testing.T) {

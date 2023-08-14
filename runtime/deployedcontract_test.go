@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestDeployedContracts(t *testing.T) {
+func TestRuntimeDeployedContracts(t *testing.T) {
 	t.Parallel()
 
 	contractCode := `

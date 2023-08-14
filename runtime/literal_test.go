@@ -31,7 +31,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestParseLiteral(t *testing.T) {
+func TestRuntimeParseLiteral(t *testing.T) {
 	t.Parallel()
 
 	t.Run("String, valid literal", func(t *testing.T) {
@@ -690,7 +690,7 @@ func TestParseLiteral(t *testing.T) {
 	}
 }
 
-func TestParseLiteralArgumentList(t *testing.T) {
+func TestRuntimeParseLiteralArgumentList(t *testing.T) {
 	t.Parallel()
 
 	t.Run("invalid", func(t *testing.T) {

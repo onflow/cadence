@@ -38,7 +38,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestExportValue(t *testing.T) {
+func TestRuntimeExportValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -556,7 +556,7 @@ func TestExportValue(t *testing.T) {
 
 }
 
-func TestImportValue(t *testing.T) {
+func TestRuntimeImportValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -876,7 +876,7 @@ func assertUserError(t *testing.T, err error) {
 	)
 }
 
-func TestImportRuntimeType(t *testing.T) {
+func TestRuntimeImportRuntimeType(t *testing.T) {
 	t.Parallel()
 
 	type importTest struct {
@@ -1375,7 +1375,7 @@ func TestImportRuntimeType(t *testing.T) {
 	}
 }
 
-func TestExportIntegerValuesFromScript(t *testing.T) {
+func TestRuntimeExportIntegerValuesFromScript(t *testing.T) {
 
 	t.Parallel()
 
@@ -1405,7 +1405,7 @@ func TestExportIntegerValuesFromScript(t *testing.T) {
 	}
 }
 
-func TestExportFixedPointValuesFromScript(t *testing.T) {
+func TestRuntimeExportFixedPointValuesFromScript(t *testing.T) {
 
 	t.Parallel()
 
@@ -1444,7 +1444,7 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 	}
 }
 
-func TestExportAddressValue(t *testing.T) {
+func TestRuntimeExportAddressValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1462,7 +1462,7 @@ func TestExportAddressValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportStructValue(t *testing.T) {
+func TestRuntimeExportStructValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1496,7 +1496,7 @@ func TestExportStructValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportResourceValue(t *testing.T) {
+func TestRuntimeExportResourceValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1525,7 +1525,7 @@ func TestExportResourceValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportResourceArrayValue(t *testing.T) {
+func TestRuntimeExportResourceArrayValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1580,7 +1580,7 @@ func TestExportResourceArrayValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportResourceDictionaryValue(t *testing.T) {
+func TestRuntimeExportResourceDictionaryValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1645,7 +1645,7 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportNestedResourceValueFromScript(t *testing.T) {
+func TestRuntimeExportNestedResourceValueFromScript(t *testing.T) {
 
 	t.Parallel()
 
@@ -1721,7 +1721,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportEventValue(t *testing.T) {
+func TestRuntimeExportEventValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1794,7 +1794,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 	return value
 }
 
-func TestExportReferenceValue(t *testing.T) {
+func TestRuntimeExportReferenceValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1985,7 +1985,7 @@ func TestExportReferenceValue(t *testing.T) {
 	})
 }
 
-func TestExportTypeValue(t *testing.T) {
+func TestRuntimeExportTypeValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -2130,7 +2130,7 @@ func TestExportTypeValue(t *testing.T) {
 
 }
 
-func TestExportIDCapabilityValue(t *testing.T) {
+func TestRuntimeExportIDCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -2212,7 +2212,7 @@ func TestExportIDCapabilityValue(t *testing.T) {
 	})
 }
 
-func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
+func TestRuntimeExportCompositeValueWithFunctionValueField(t *testing.T) {
 
 	t.Parallel()
 
@@ -2270,7 +2270,7 @@ func TestExportCompositeValueWithFunctionValueField(t *testing.T) {
 //go:embed test-export-json-deterministic.txt
 var exportJsonDeterministicExpected string
 
-func TestExportJsonDeterministic(t *testing.T) {
+func TestRuntimeExportJsonDeterministic(t *testing.T) {
 	t.Parallel()
 
 	// exported order of field in a dictionary depends on the execution ,
@@ -3874,7 +3874,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 	})
 }
 
-func TestTypeValueImport(t *testing.T) {
+func TestRuntimeTypeValueImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -3972,7 +3972,7 @@ func TestTypeValueImport(t *testing.T) {
 	})
 }
 
-func TestIDCapabilityValueImport(t *testing.T) {
+func TestRuntimeIDCapabilityValueImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -5038,7 +5038,7 @@ func newUnmeteredInMemoryStorage() interpreter.Storage {
 	return interpreter.NewInMemoryStorage(nil)
 }
 
-func TestNestedStructArgPassing(t *testing.T) {
+func TestRuntimeNestedStructArgPassing(t *testing.T) {
 	t.Parallel()
 
 	t.Run("valid", func(t *testing.T) {
@@ -5182,7 +5182,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 	})
 }
 
-func TestDestroyedResourceReferenceExport(t *testing.T) {
+func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 	t.Parallel()
 
 	rt := newTestInterpreterRuntimeWithAttachments()

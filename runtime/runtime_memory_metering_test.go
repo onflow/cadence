@@ -53,7 +53,7 @@ func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 	return g.meter[kind]
 }
 
-func TestInterpreterAddressLocationMetering(t *testing.T) {
+func TestRuntimeInterpreterAddressLocationMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -102,7 +102,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 	})
 }
 
-func TestInterpreterElaborationImportMetering(t *testing.T) {
+func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -202,7 +202,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 	}
 }
 
-func TestCadenceValueAndTypeMetering(t *testing.T) {
+func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -759,7 +759,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 	})
 }
 
-func TestLogFunctionStringConversionMetering(t *testing.T) {
+func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -821,7 +821,7 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 	assert.Equal(t, diffOfActualLen, diffOfMeteredAmount)
 }
 
-func TestStorageCommitsMetering(t *testing.T) {
+func TestRuntimeStorageCommitsMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -957,7 +957,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 	})
 }
 
-func TestMemoryMeteringErrors(t *testing.T) {
+func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 	t.Parallel()
 
@@ -1064,7 +1064,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 	})
 }
 
-func TestMeterEncoding(t *testing.T) {
+func TestRuntimeMeterEncoding(t *testing.T) {
 
 	t.Parallel()
 

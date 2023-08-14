@@ -1511,7 +1511,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 }
 
-func TestAuthAccountContracts(t *testing.T) {
+func TestRuntimeAuthAccountContracts(t *testing.T) {
 
 	t.Parallel()
 
@@ -1896,7 +1896,10 @@ func TestAuthAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
 
 	t.Run("update names through reference", func(t *testing.T) {
@@ -1935,11 +1938,14 @@ func TestAuthAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.NoError(t, err)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
 }
 
-func TestPublicAccountContracts(t *testing.T) {
+func TestRuntimePublicAccountContracts(t *testing.T) {
 
 	t.Parallel()
 
@@ -2085,7 +2091,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	})
 }
 
-func TestGetAuthAccount(t *testing.T) {
+func TestRuntimeGetAuthAccount(t *testing.T) {
 
 	t.Parallel()
 

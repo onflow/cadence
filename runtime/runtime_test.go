@@ -4964,7 +4964,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 
       transaction {
 
-          prepare(signer: auth(Storage) &Account) {
+          prepare(signer: auth(Storage, Capabilities) &Account) {
 
               let r <- Test.createR()
               log(r.owner?.address)
@@ -4991,13 +4991,13 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 
       transaction {
 
-          prepare(signer: &Account) {
+          prepare(signer: auth(Storage) &Account) {
               let ref1 = signer.storage.borrow<&Test.R>(from: /storage/r)!
               log(ref1.owner?.address)
               log(ref1.owner?.balance)
               log(ref1.owner?.availableBalance)
-              log(ref1.owner?.storage.used)
-              log(ref1.owner?.storage.capacity)
+              log(ref1.owner?.storage?.used)
+              log(ref1.owner?.storage?.capacity)
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
@@ -5005,8 +5005,8 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
               log(ref2.owner?.address)
               log(ref2.owner?.balance)
               log(ref2.owner?.availableBalance)
-              log(ref2.owner?.storage.used)
-              log(ref2.owner?.storage.capacity)
+              log(ref2.owner?.storage?.used)
+              log(ref2.owner?.storage?.capacity)
               ref2.logOwnerAddress()
           }
       }
@@ -5369,7 +5369,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 
       transaction {
 
-          prepare(signer: &Account) {
+          prepare(signer: auth(Storage) &Account) {
               let ref1 = signer.storage.borrow<&{String: Test.R}>(from: /storage/rs)!
               log(ref1["a"]?.owner?.address)
               log(ref1["b"]?.owner?.address)
@@ -5500,7 +5500,7 @@ func TestRuntimeMetrics(t *testing.T) {
       import "imported1"
 
       transaction {
-          prepare(signer: &Account) {
+          prepare(signer: auth(Storage) &Account) {
               signer.storage.save(generate(), to: /storage/foo)
           }
           execute {}
@@ -5511,7 +5511,7 @@ func TestRuntimeMetrics(t *testing.T) {
       import "imported2"
 
       transaction {
-          prepare(signer: &Account) {
+          prepare(signer: auth(Storage) &Account) {
               signer.storage.load<[Int]>(from: getPath())
           }
           execute {}
@@ -7019,20 +7019,20 @@ func TestRuntimePanics(t *testing.T) {
 
 }
 
-func TestRuntimeInvalidContainerTypeConfusion(t *testing.T) {
+func TestRuntimeAccountsInDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("invalid: auth account used as public account", func(t *testing.T) {
+	t.Run("store auth account reference", func(t *testing.T) {
 		t.Parallel()
 
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
           access(all) fun main() {
-              let dict: {Int: PublicAccount} = {}
+              let dict: {Int: &Account} = {}
               let ref = &dict as auth(Mutate) &{Int: AnyStruct}
-              ref[0] = getAuthAccount<&Account>(0x01) as AnyStruct
+              ref[0] = getAuthAccount<auth(Storage) &Account>(0x01) as AnyStruct
           }
         `)
 
@@ -7048,15 +7048,10 @@ func TestRuntimeInvalidContainerTypeConfusion(t *testing.T) {
 			},
 		)
 
-		RequireError(t, err)
-
-		assertRuntimeErrorIsUserError(t, err)
-
-		var typeErr interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &typeErr)
+		require.NoError(t, err)
 	})
 
-	t.Run("invalid: public account used as auth account", func(t *testing.T) {
+	t.Run("invalid: public account reference stored as auth account reference", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -7064,7 +7059,7 @@ func TestRuntimeInvalidContainerTypeConfusion(t *testing.T) {
 
 		script := []byte(`
           access(all) fun main() {
-              let dict: {Int: &Account} = {}
+              let dict: {Int: auth(Storage) &Account} = {}
               let ref = &dict as auth(Mutate) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
           }
@@ -7090,7 +7085,7 @@ func TestRuntimeInvalidContainerTypeConfusion(t *testing.T) {
 		require.ErrorAs(t, err, &typeErr)
 	})
 
-	t.Run("valid: public account used as public account", func(t *testing.T) {
+	t.Run("public account reference storage as public account reference", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -7098,7 +7093,7 @@ func TestRuntimeInvalidContainerTypeConfusion(t *testing.T) {
 
 		script := []byte(`
           access(all) fun main() {
-              let dict: {Int: PublicAccount} = {}
+              let dict: {Int: &Account} = {}
               let ref = &dict as auth(Mutate) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
           }
@@ -7921,7 +7916,7 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 
       access(all) fun main() {
           getAuthAccount<auth(Storage) &Account>(0x1)
-              .borrow<&Foo.Bar>(from: /storage/bar)
+              .storage.borrow<&Foo.Bar>(from: /storage/bar)
       }
     `)
 
@@ -8250,7 +8245,7 @@ func TestRuntimeFlowEventTypes(t *testing.T) {
 	)
 }
 
-func TestInvalidatedResourceUse(t *testing.T) {
+func TestRuntimeInvalidatedResourceUse(t *testing.T) {
 
 	t.Parallel()
 
@@ -8441,7 +8436,7 @@ func TestInvalidatedResourceUse(t *testing.T) {
 
 }
 
-func TestInvalidatedResourceUse2(t *testing.T) {
+func TestRuntimeInvalidatedResourceUse2(t *testing.T) {
 
 	t.Parallel()
 

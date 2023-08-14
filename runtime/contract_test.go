@@ -62,7 +62,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: &Account) {
+                      prepare(signer: auth(AddContract) &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -89,7 +89,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                  transaction {
-                     prepare(signer: &Account) {
+                     prepare(signer: auth(UpdateContract) &Account) {
 
                          let contract1 = signer.contracts.get(name: %[1]q)
                          log(contract1?.name)
@@ -114,7 +114,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: &Account) {
+                      prepare(signer: auth(RemoveContract) &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -136,7 +136,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: &Account) {
+                      prepare(signer: auth(Contracts) &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)

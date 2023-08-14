@@ -1017,7 +1017,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		testAccount(accountType, accountExpression)
 	}
 
-	t.Run("AuthAccount.StorageCapabilities", func(t *testing.T) {
+	t.Run("Account.StorageCapabilities", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1496,7 +1496,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		})
 	})
 
-	t.Run("AuthAccount.AccountCapabilities", func(t *testing.T) {
+	t.Run("Account.AccountCapabilities", func(t *testing.T) {
 
 		t.Parallel()
 

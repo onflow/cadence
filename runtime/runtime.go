@@ -128,8 +128,9 @@ type Runtime interface {
 	// InvokeContractFunction invokes a contract function with the given arguments.
 	//
 	// This function returns an error if the execution fails.
-	// If the contract function accepts an AuthAccount as a parameter the corresponding argument can be an interpreter.Address.
-	// returns a cadence.Value
+	// If the contract function accepts an &Account as a parameter,
+	// the corresponding argument can be an interpreter.Address.
+	// Returns a cadence.Value
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
