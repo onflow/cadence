@@ -16463,7 +16463,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange Loca
 		interpreter,
 		UnauthorizedAccess,
 		ownerAccount,
-		sema.AccountReferenceType,
+		sema.AccountType,
 	)
 
 	return NewSomeValueNonCopying(interpreter, reference)
