@@ -4383,7 +4383,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
       transaction {
 
-          prepare(acct: &Account) {
+          prepare(acct: auth(Capabilities) &Account) {
               let receiverCap = acct.capabilities.storage
                   .issue<&{FungibleToken.Receiver}>(/storage/vault)
               acct.capabilities.publish(receiverCap, at: /public/receiver1)
@@ -4400,7 +4400,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
       transaction {
 
-          prepare(acct: &Account) {
+          prepare(acct: auth(Storage, Capabilities) &Account) {
               let vault <- FungibleToken.createEmptyVault()
 
               acct.storage.save(<-vault, to: /storage/vault)
@@ -4539,7 +4539,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
       import TestContract from 0x3
 
       transaction {
-          prepare(signer: &Account) {
+          prepare(signer: auth(Storage) &Account) {
               signer.storage.save(<-TestContract.createR(), to: /storage/r)
           }
       }
@@ -4557,8 +4557,9 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
                   // import TestContract from 0x3
 
                   transaction {
-                      prepare(signer: &Account) {
-                          signer.storage.borrow<&{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
+                      prepare(signer: auth(Storage) &Account) {
+                          signer.storage.borrow<&{TestContractInterface.RInterface}>(from: /storage/r)
+                            ?.check(a: %d, b: %d)
                       }
                   }
                 `,
