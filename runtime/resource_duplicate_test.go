@@ -537,7 +537,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 				`
                   transaction {
 
-                      prepare(signer: auth(AddContract) &Account) {
+                      prepare(signer: auth(Storage, Contracts, Capabilities) &Account) {
                           signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
                       }
                   }
