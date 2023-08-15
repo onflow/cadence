@@ -1546,18 +1546,34 @@ func (d TypeDecoder) decodeStaticAuthorization() (Authorization, error) {
 			}
 			return nil, err
 		}
-		var entitlements []common.TypeID
-		if entitlementsSize > 0 {
-			entitlements = make([]common.TypeID, entitlementsSize)
-			for i := 0; i < int(entitlementsSize); i++ {
-				typeID, err := d.decoder.DecodeString()
-				if err != nil {
-					return nil, err
+
+		var setCreationErr error
+
+		entitlementSet := NewEntitlementSetAuthorization(
+			d.memoryGauge,
+			func() (entitlements []common.TypeID) {
+				if entitlementsSize > 0 {
+					entitlements = make([]common.TypeID, entitlementsSize)
+					for i := 0; i < int(entitlementsSize); i++ {
+						typeID, err := d.decoder.DecodeString()
+						if err != nil {
+							setCreationErr = err
+							return nil
+						}
+						entitlements[i] = common.TypeID(typeID)
+					}
 				}
-				entitlements[i] = common.TypeID(typeID)
-			}
+				return
+			},
+			int(entitlementsSize),
+			sema.EntitlementSetKind(setKind),
+		)
+
+		if setCreationErr != nil {
+			return nil, setCreationErr
 		}
-		return NewEntitlementSetAuthorization(d.memoryGauge, entitlements, sema.EntitlementSetKind(setKind)), nil
+
+		return entitlementSet, nil
 	}
 	return nil, errors.NewUnexpectedError("invalid static authorization encoding tag: %d", number)
 }

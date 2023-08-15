@@ -3481,32 +3481,38 @@ func referenceTypeFunction(invocation Invocation) Value {
 	}
 
 	var authorization Authorization = UnauthorizedAccess
-	var entitlements []common.TypeID = make([]common.TypeID, 0, entitlementValues.Count())
 	errInIteration := false
 
-	entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
-		entitlementString, isString := element.(*StringValue)
-		if !isString {
-			errInIteration = true
-			return false
-		}
+	if entitlementValues.Count() > 0 {
+		authorization = NewEntitlementSetAuthorization(
+			invocation.Interpreter,
+			func() []common.TypeID {
+				var entitlements []common.TypeID = make([]common.TypeID, 0, entitlementValues.Count())
+				entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
+					entitlementString, isString := element.(*StringValue)
+					if !isString {
+						errInIteration = true
+						return false
+					}
 
-		_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
-		if err != nil {
-			errInIteration = true
-			return false
-		}
-		entitlements = append(entitlements, common.TypeID(entitlementString.Str))
+					_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
+					if err != nil {
+						errInIteration = true
+						return false
+					}
+					entitlements = append(entitlements, common.TypeID(entitlementString.Str))
 
-		return true
-	})
+					return true
+				})
+				return entitlements
+			},
+			entitlementValues.Count(),
+			sema.Conjunction,
+		)
+	}
 
 	if errInIteration {
 		return Nil
-	}
-
-	if len(entitlements) > 0 {
-		authorization = NewEntitlementSetAuthorization(invocation.Interpreter, entitlements, sema.Conjunction)
 	}
 
 	return NewSomeValueNonCopying(
