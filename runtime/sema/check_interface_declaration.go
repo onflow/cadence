@@ -347,6 +347,35 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	return interfaceType
 }
 
+func (checker *Checker) declareNestedEvent(
+	nestedCompositeDeclaration ast.CompositeLikeDeclaration,
+	eventMembers *orderedmap.OrderedMap[string, *Member],
+	interfaceType Type,
+) {
+	checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration)
+
+	// Declare nested composites' values (constructor/instance) as members of the containing composite
+	identifier := *nestedCompositeDeclaration.DeclarationIdentifier()
+
+	// Find the value declaration
+	nestedCompositeDeclarationVariable :=
+		checker.valueActivations.Find(identifier.Identifier)
+
+	eventMembers.Set(
+		nestedCompositeDeclarationVariable.Identifier,
+		&Member{
+			Identifier:            identifier,
+			Access:                checker.accessFromAstAccess(nestedCompositeDeclaration.DeclarationAccess()),
+			ContainerType:         interfaceType,
+			TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
+			DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
+			VariableKind:          ast.VariableKindConstant,
+			ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
+			IgnoreInSerialization: true,
+			DocString:             nestedCompositeDeclaration.DeclarationDocString(),
+		})
+}
+
 // declareInterfaceMembersAndValue declares the members for the given interface declaration,
 // and recursively for all nested declarations.
 //
@@ -412,34 +441,9 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 			checker.declareInterfaceMembersAndValue(nestedInterfaceDeclaration)
 		}
 
-		declareNestedEvent := func(nestedCompositeDeclaration ast.CompositeLikeDeclaration) {
-			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration)
-
-			// Declare nested composites' values (constructor/instance) as members of the containing composite
-			identifier := *nestedCompositeDeclaration.DeclarationIdentifier()
-
-			// Find the value declaration
-			nestedCompositeDeclarationVariable :=
-				checker.valueActivations.Find(identifier.Identifier)
-
-			eventMembers.Set(
-				nestedCompositeDeclarationVariable.Identifier,
-				&Member{
-					Identifier:            identifier,
-					Access:                checker.accessFromAstAccess(nestedCompositeDeclaration.DeclarationAccess()),
-					ContainerType:         interfaceType,
-					TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
-					DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
-					VariableKind:          ast.VariableKindConstant,
-					ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
-					IgnoreInSerialization: true,
-					DocString:             nestedCompositeDeclaration.DeclarationDocString(),
-				})
-		}
-
 		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
-				declareNestedEvent(nestedCompositeDeclaration)
+				checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
 			}
 		}
 	})()
