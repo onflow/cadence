@@ -4580,7 +4580,7 @@ func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
 	switch access := e.AttachmentAccessModifier.(type) {
 	case PrimitiveAccess:
 		return "attachments declared with `access(all)` access do not support entitlements on their members"
-	case EntitlementMapAccess:
+	case *EntitlementMapAccess:
 		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
 			e.InvalidEntitlement.QualifiedIdentifier(),
 			access.Type.QualifiedIdentifier())

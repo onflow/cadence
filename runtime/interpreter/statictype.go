@@ -818,7 +818,7 @@ func ConvertSemaAccessToStaticAuthorization(
 		})
 		return NewEntitlementSetAuthorization(memoryGauge, entitlements, access.SetKind)
 
-	case sema.EntitlementMapAccess:
+	case *sema.EntitlementMapAccess:
 		typeId := access.Type.ID()
 		return NewEntitlementMapAuthorization(memoryGauge, typeId)
 	}

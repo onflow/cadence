@@ -1730,7 +1730,7 @@ func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.
 	return ty.Map(interpreter, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
 		switch refType := t.(type) {
 		case *sema.ReferenceType:
-			if _, isMappedAuth := refType.Authorization.(sema.EntitlementMapAccess); isMappedAuth {
+			if _, isMappedAuth := refType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
 				return sema.NewReferenceType(
 					interpreter,
 					refType.Type,
@@ -4741,7 +4741,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 		return resultValue
 	}
 
-	if mappedAccess, isMappedAccess := (*memberAccess).(sema.EntitlementMapAccess); isMappedAccess {
+	if mappedAccess, isMappedAccess := (*memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
 		var auth Authorization
 		switch selfValue := self.(type) {
 		case AuthorizedValue:

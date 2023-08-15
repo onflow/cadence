@@ -268,7 +268,7 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 }
 
 func (interpreter *Interpreter) getEffectiveAuthorization(referenceType *sema.ReferenceType) Authorization {
-	_, isMapped := referenceType.Authorization.(sema.EntitlementMapAccess)
+	_, isMapped := referenceType.Authorization.(*sema.EntitlementMapAccess)
 
 	if isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
 		return interpreter.SharedState.currentEntitlementMappedValue
