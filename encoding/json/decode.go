@@ -1174,6 +1174,9 @@ type typeDecodingResults map[string]cadence.Type
 var simpleTypes = func() map[string]cadence.Type {
 	typeMap := make(map[string]cadence.Type, interpreter.PrimitiveStaticType_Count)
 
+	// Bytes is not a primitive static type
+	typeMap["Bytes"] = cadence.TheBytesType
+
 	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
 		if !ty.IsDefined() {
 			continue
