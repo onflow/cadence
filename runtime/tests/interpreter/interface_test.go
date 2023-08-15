@@ -119,6 +119,40 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 			array.Get(inter, interpreter.EmptyLocationRange, 1),
 		)
 	})
+
+	t.Run("inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+          struct interface I {
+              fun test(): Int {
+				return 3
+			  }
+          }
+
+          struct interface J: I {}
+
+		  struct S: J {}
+
+		  fun foo(_ s: {J}): Int {
+			return s.test()
+		  }
+
+          fun main(): Int {
+			return foo(S())
+          }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
 }
 
 func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {

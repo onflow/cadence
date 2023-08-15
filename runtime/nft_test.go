@@ -897,7 +897,8 @@ access(all) contract TopShot: NonFungibleToken {
         self.account.save<@Collection>(<- create Collection(), to: /storage/MomentCollection)
 
         // create a public capability for the collection
-        self.account.link<&{MomentCollectionPublic}>(/public/MomentCollection, target: /storage/MomentCollection)
+        let cap = self.account.capabilities.storage.issue<&{MomentCollectionPublic}>(/storage/MomentCollection)
+        self.account.capabilities.publish(cap, at: /public/MomentCollection)
 
         // Put the Minter in storage
         self.account.save<@Admin>(<- create Admin(), to: /storage/TopShotAdmin)
@@ -1077,7 +1078,8 @@ access(all) contract TopshotAdminReceiver {
             // Put a new Collection in storage
             self.account.save(<-collection, to: /storage/ShardedMomentCollection)
 
-            self.account.link<&{TopShot.MomentCollectionPublic}>(/public/MomentCollection, target: /storage/ShardedMomentCollection)
+            let cap = self.account.capabilities.storage.issue<&{TopShot.MomentCollectionPublic}>(/storage/ShardedMomentCollection)
+            self.account.capabilities.publish(cap, at: /public/ShardedMomentCollection)
         }
     }
 }

@@ -195,11 +195,11 @@ const (
 	// Storage
 
 	CBORTagPathValue
-	CBORTagPathCapabilityValue
+	_ // DO NOT REPLACE! used to be used for path capabilities
 	_ // DO NOT REPLACE! used to be used for storage references
-	CBORTagPathLinkValue
+	_ // DO NOT REPLACE! used to be used for path links
 	CBORTagPublishedValue
-	CBORTagAccountLinkValue
+	_ // DO NOT REPLACE! used to be used for account links
 	CBORTagStorageCapabilityControllerValue
 	CBORTagAccountCapabilityControllerValue
 	CBORTagIDCapabilityValue
@@ -764,62 +764,6 @@ func (v PathValue) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedPathCapabilityValueAddressFieldKey    uint64 = 0
-	// encodedPathCapabilityValuePathFieldKey       uint64 = 1
-	// encodedPathCapabilityValueBorrowTypeFieldKey uint64 = 2
-
-	// !!! *WARNING* !!!
-	//
-	// encodedPathCapabilityValueLength MUST be updated when new element is added.
-	// It is used to verify encoded capability length during decoding.
-	encodedPathCapabilityValueLength = 3
-)
-
-// Encode encodes PathCapabilityValue as
-//
-//	cbor.Tag{
-//				Number: CBORTagPathCapabilityValue,
-//				Content: []any{
-//						encodedPathCapabilityValueAddressFieldKey:    AddressValue(v.Address),
-//						encodedPathCapabilityValuePathFieldKey:       PathValue(v.Path),
-//						encodedPathCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
-//					},
-//	}
-func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
-	// Encode tag number and array head
-	err := e.CBOR.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, CBORTagPathCapabilityValue,
-		// array, 3 items follow
-		0x83,
-	})
-	if err != nil {
-		return err
-	}
-
-	// Encode address at array index encodedPathCapabilityValueAddressFieldKey
-	err = v.Address.Encode(e)
-	if err != nil {
-		return err
-	}
-
-	// Encode path at array index encodedPathCapabilityValuePathFieldKey
-	err = v.Path.Encode(e)
-	if err != nil {
-		return err
-	}
-
-	// Encode borrow type at array index encodedPathCapabilityValueBorrowTypeFieldKey
-
-	if v.BorrowType == nil {
-		return e.CBOR.EncodeNil()
-	} else {
-		return v.BorrowType.Encode(e.CBOR)
-	}
-}
-
-// NOTE: NEVER change, only add/increment; ensure uint64
-const (
 	// encodedIDCapabilityValueAddressFieldKey    uint64 = 0
 	// encodedIDCapabilityValueIDFieldKey         uint64 = 1
 	// encodedIDCapabilityValueBorrowTypeFieldKey uint64 = 2
@@ -986,65 +930,6 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 	default:
 		return errors.NewUnexpectedError("unsupported location: %T", l)
 	}
-}
-
-// NOTE: NEVER change, only add/increment; ensure uint64
-const (
-	// encodedPathLinkValueTargetPathFieldKey uint64 = 0
-	// encodedPathLinkValueTypeFieldKey       uint64 = 1
-
-	// !!! *WARNING* !!!
-	//
-	// encodedPathLinkValueLength MUST be updated when new element is added.
-	// It is used to verify encoded link length during decoding.
-	encodedPathLinkValueLength = 2
-)
-
-// Encode encodes PathLinkValue as
-//
-//	cbor.Tag{
-//				Number: CBORTagPathLinkValue,
-//				Content: []any{
-//					encodedPathLinkValueTargetPathFieldKey: PathValue(v.TargetPath),
-//					encodedPathLinkValueTypeFieldKey:       StaticType(v.Type),
-//				},
-//	}
-func (v PathLinkValue) Encode(e *atree.Encoder) error {
-	// Encode tag number and array head
-	err := e.CBOR.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, CBORTagPathLinkValue,
-		// array, 2 items follow
-		0x82,
-	})
-	if err != nil {
-		return err
-	}
-	// Encode path at array index encodedPathLinkValueTargetPathFieldKey
-	err = v.TargetPath.Encode(e)
-	if err != nil {
-		return err
-	}
-	// Encode type at array index encodedPathLinkValueTypeFieldKey
-	return v.Type.Encode(e.CBOR)
-}
-
-// cborAccountLinkValue represents the CBOR value:
-//
-//	cbor.Tag{
-//		Number: CBORTagAccountLinkValue,
-//		Content: nil
-//	}
-var cborAccountLinkValue = []byte{
-	// tag
-	0xd8, CBORTagAccountLinkValue,
-	// null
-	0xf6,
-}
-
-// Encode writes a value of type AccountValue to the encoder
-func (AccountLinkValue) Encode(e *atree.Encoder) error {
-	return e.CBOR.EncodeRawBytes(cborAccountLinkValue)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

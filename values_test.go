@@ -342,22 +342,6 @@ func newValueTestCases() map[string]valueTestCase {
 			},
 			string: "S.test.FooAttachment(bar: 1)",
 		},
-		"PathLink": {
-			value: NewPathLink(
-				Path{
-					Domain:     common.PathDomainStorage,
-					Identifier: "foo",
-				},
-				"Int",
-			),
-			string: "PathLink<Int>(/storage/foo)",
-			noType: true,
-		},
-		"AccountLink": {
-			value:  NewAccountLink(),
-			string: "AccountLink()",
-			noType: true,
-		},
 		"StoragePath": {
 			value: Path{
 				Domain:     common.PathDomainStorage,
@@ -386,30 +370,6 @@ func newValueTestCases() map[string]valueTestCase {
 			value:        TypeValue{StaticType: IntType{}},
 			expectedType: NewMetaType(),
 			string:       "Type<Int>()",
-		},
-		"Capability (Path)": {
-			value: NewPathCapability(
-				BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "foo",
-				},
-				IntType{},
-			),
-			expectedType: NewCapabilityType(IntType{}),
-			string:       "Capability<Int>(address: 0x0000000102030405, path: /public/foo)",
-		},
-		"Capability (Path, no borrow type)": {
-			value: NewPathCapability(
-				BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "foo",
-				},
-				nil,
-			),
-			expectedType: NewCapabilityType(nil),
-			string:       "Capability(address: 0x0000000102030405, path: /public/foo)",
 		},
 		"Capability (ID)": {
 			value: NewIDCapability(
@@ -908,24 +868,7 @@ func TestValue_Type(t *testing.T) {
 			}
 
 			if !testCase.noType {
-				// Check if the type is not a duplicate of some other type
-				// i.e: two values can't return the same type.
-				//
-				// Current known exceptions:
-				// - Capability: PathCapabilityValue | IDCapabilityValue
-
-				var ignoreDuplicateType bool
-
-				if _, ok := returnedType.(*CapabilityType); ok {
-					switch value.(type) {
-					case IDCapability, PathCapability:
-						ignoreDuplicateType = true
-					}
-				}
-
-				if !ignoreDuplicateType {
-					require.NotContains(t, checkedTypes, returnedType)
-				}
+				require.NotContains(t, checkedTypes, returnedType)
 				checkedTypes[returnedType] = struct{}{}
 			}
 		})

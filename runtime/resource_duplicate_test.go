@@ -67,10 +67,10 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 	
 	// --- this code actually makes use of the vuln ---
 	access(all) resource DummyResource {
-		access(all) var dictRef: &{Bool: AnyResource};
-		access(all) var arrRef: &[Vault];
+		access(all) var dictRef: auth(Mutate) &{Bool: AnyResource};
+		access(all) var arrRef: auth(Mutate) &[Vault];
 		access(all) var victim: @Vault;
-		init(dictRef: &{Bool: AnyResource}, arrRef: &[Vault], victim: @Vault) {
+		init(dictRef: auth(Mutate) &{Bool: AnyResource}, arrRef: auth(Mutate) &[Vault], victim: @Vault) {
 			self.dictRef = dictRef;
 			self.arrRef = arrRef;
 			self.victim <- victim;
@@ -85,8 +85,8 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 	access(all) fun duplicateResource(victim1: @Vault, victim2: @Vault): @[Vault]{
 		let arr : @[Vault] <- [];
 		let dict: @{Bool: DummyResource} <- { }
-		let ref = &dict as &{Bool: AnyResource};
-		let arrRef = &arr as &[Vault];
+		let ref = &dict as auth(Mutate) &{Bool: AnyResource};
+		let arrRef = &arr as auth(Mutate) &[Vault];
 	
 		var v1: @DummyResource? <- create DummyResource(dictRef: ref, arrRef: arrRef, victim: <- victim1);
 		dict[false] <-> v1;
@@ -168,7 +168,12 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+
+		errs := checker.RequireCheckerErrors(t, checkerErr, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("simplified", func(t *testing.T) {
@@ -178,9 +183,9 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		script := `
 		access(all) resource Vault {
             access(all) var balance: UFix64
-            access(all) var dictRef: &{Bool: Vault};
+            access(all) var dictRef: auth(Mutate) &{Bool: Vault};
 
-            init(balance: UFix64, _ dictRef: &{Bool: Vault}) {
+            init(balance: UFix64, _ dictRef: auth(Mutate) &{Bool: Vault}) {
                 self.balance = balance
                 self.dictRef = dictRef;
             }
@@ -203,7 +208,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
         access(all) fun main(): UFix64 {
 
             let dict: @{Bool: Vault} <- { }
-            let dictRef = &dict as &{Bool: Vault};
+            let dictRef = &dict as auth(Mutate) &{Bool: Vault};
 
             var v1 <- create Vault(balance: 1000.0, dictRef); // This will be duplicated
             var v2 <- create Vault(balance: 1.0, dictRef); // This will be lost
@@ -268,10 +273,11 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		var checkerErr *sema.CheckerError
 		require.ErrorAs(t, err, &checkerErr)
 
-		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+		errs := checker.RequireCheckerErrors(t, checkerErr, 3)
 
-		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[0])
-
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[2])
 	})
 
 	t.Run("forEachKey", func(t *testing.T) {
@@ -299,7 +305,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		let acc = getAuthAccount(0x1)
 		acc.save(<-dict, to: /storage/foo)
 
-		let ref = acc.borrow<&{Int: R}>(from: /storage/foo)!
+		let ref = acc.borrow<auth(Mutate) &{Int: R}>(from: /storage/foo)!
 
 		ref.forEachKey(fun(i: Int): Bool {
 			var r4: @R? <- create R()
@@ -355,7 +361,8 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 			},
 		)
 
-		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("array", func(t *testing.T) {
@@ -365,9 +372,9 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
 		script := `
 		access(all) resource Vault {
             access(all) var balance: UFix64
-            access(all) var arrRef: &[Vault]
+            access(all) var arrRef: auth(Mutate) &[Vault]
 
-            init(balance: UFix64, _ arrRef: &[Vault]) {
+            init(balance: UFix64, _ arrRef: auth(Mutate) &[Vault]) {
                 self.balance = balance
                 self.arrRef = arrRef;
             }
@@ -390,7 +397,7 @@ func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
         access(all) fun main(): UFix64 {
 
             let arr: @[Vault] <- []
-            let arrRef = &arr as &[Vault];
+            let arrRef = &arr as auth(Mutate) &[Vault];
 
             var v1 <- create Vault(balance: 1000.0, arrRef); // This will be duplicated
             var v2 <- create Vault(balance: 1.0, arrRef); // This will be lost

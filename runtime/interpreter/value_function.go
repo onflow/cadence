@@ -391,12 +391,9 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	self := f.Self
 	invocation.Self = self
 	if self != nil {
-		if resource, ok := (*self).(ResourceKindedValue); ok && resource.IsDestroyed() {
-			panic(DestroyedResourceError{
-				LocationRange: invocation.LocationRange,
-			})
-		}
+		invocation.Interpreter.checkReferencedResourceNotMovedOrDestroyed(*self, invocation.LocationRange)
 	}
+
 	invocation.Base = f.Base
 	invocation.BoundAuthorization = f.BoundAuthorization
 	return f.Function.invoke(invocation)

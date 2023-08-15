@@ -9400,6 +9400,24 @@ func TestCheckConditionalResourceCreationAndReturn(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckIndexExpressionResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun test() {
+          let rs <- [<-create R()]
+          rs[0]
+          destroy rs
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+}
+
 func TestCheckResourceWithFunction(t *testing.T) {
 
 	t.Parallel()

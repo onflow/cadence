@@ -59,7 +59,7 @@ func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryVal
 						rand, err = generator.UnsafeRandom()
 					})
 					if err != nil {
-						panic(err)
+						panic(interpreter.WrappedExternalError(err))
 					}
 					return rand
 				},

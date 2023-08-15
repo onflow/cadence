@@ -1235,134 +1235,6 @@ func TestInterpretAttachmentIntersectionType(t *testing.T) {
 
 }
 
-func TestInterpretAttachmentStorage(t *testing.T) {
-	t.Parallel()
-
-	t.Run("save and load", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, `
-            resource R {}
-            attachment A for R {
-                fun foo(): Int { return 3 }
-            }
-            fun test(): Int {
-                let r <- create R()
-                let r2 <- attach A() to <-r
-                authAccount.save(<-r2, to: /storage/foo)
-                let r3 <- authAccount.load<@R>(from: /storage/foo)!
-                let i = r3[A]?.foo()!
-                destroy r3
-                return i
-            }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
-	})
-
-	t.Run("save and borrow", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, `
-            resource R {}
-            attachment A for R {
-                fun foo(): Int { return 3 }
-            }
-            fun test(): Int {
-                let r <- create R()
-                let r2 <- attach A() to <-r
-                authAccount.save(<-r2, to: /storage/foo)
-                let r3 = authAccount.borrow<&R>(from: /storage/foo)!
-                let i = r3[A]?.foo()!
-                return i
-            }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
-	})
-
-	t.Run("capability", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, `
-            resource R {}
-            attachment A for R {
-                fun foo(): Int { return 3 }
-            }
-            fun test(): Int {
-                let r <- create R()
-                let r2 <- attach A() to <-r
-                authAccount.save(<-r2, to: /storage/foo)
-                authAccount.link<&R>(/public/foo, target: /storage/foo)
-                let cap = pubAccount.getCapability<&R>(/public/foo)!
-                let i = cap.borrow()![A]?.foo()!
-                return i
-            }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
-	})
-
-	t.Run("capability interface", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t, address, true, `
-            resource R: I {}
-            resource interface I {}
-            attachment A for I {
-                fun foo(): Int { return 3 }
-            }
-            fun test(): Int {
-                let r <- create R()
-                let r2 <- attach A() to <-r
-                authAccount.save(<-r2, to: /storage/foo)
-                authAccount.link<&{I}>(/public/foo, target: /storage/foo)
-                let cap = pubAccount.getCapability<&{I}>(/public/foo)!
-                let i = cap.borrow()![A]?.foo()!
-                return i
-            }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
-	})
-}
-
 func TestInterpretAttachmentDestructor(t *testing.T) {
 
 	t.Parallel()
@@ -1583,7 +1455,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             fun test(): UInt8 {
                 let r <- create R()
                 let r2 <- attach A() to <-r
-                let a = r2[A]!
+                let a = returnSameRef(r2[A]!)
 
 
                 // Move the resource after taking a reference to the attachment.
@@ -1595,7 +1467,11 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
                 // Access the attachment filed from the previous reference.
                 return a.id
-            }`,
+            }
+
+		    access(all) fun returnSameRef(_ ref: &A): &A {
+		        return ref
+		    }`,
 			sema.Config{
 				AttachmentsEnabled: true,
 			},
@@ -1619,13 +1495,17 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             fun test() {
                 let r <- create R()
                 let r2 <- attach A() to <-r
-                let a = r2[A]!
+                let a = returnSameRef(r2[A]!)
                 destroy r2
                 let i = a.foo()
             }
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
+
+		    access(all) fun returnSameRef(_ ref: &A): &A {
+		        return ref
+		    }`,
+			sema.Config{
+				AttachmentsEnabled: true,
+			},
 		)
 
 		_, err := inter.Invoke("test")
@@ -1662,7 +1542,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             }
             fun test(): UInt8 {
                 let r2 <- create R2(r: <-attach A() to <-create R())
-                let a = r2.r[A]!
+                let a = returnSameRef(r2.r[A]!)
 
                 // Move the resource after taking a reference to the attachment.
                 // Then update the field of the attachment.
@@ -1673,7 +1553,11 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
                 // Access the attachment filed from the previous reference.
                 return a.id
-            }`,
+            }
+
+		    access(all) fun returnSameRef(_ ref: &A): &A {
+		        return ref
+		    }`,
 			sema.Config{
 				AttachmentsEnabled: true,
 			},
@@ -1752,14 +1636,17 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
             }
             fun test() {
                 let r2 <- create R2(r: <-attach A() to <-create R())
-                let a = r2.r[A]!
+                let a = returnSameRef(r2.r[A]!)
                 destroy r2
                 let i = a.foo()
             }
-        
-        `, sema.Config{
-			AttachmentsEnabled: true,
-		},
+
+		    access(all) fun returnSameRef(_ ref: &A): &A {
+		        return ref
+		    }`,
+			sema.Config{
+				AttachmentsEnabled: true,
+			},
 		)
 
 		_, err := inter.Invoke("test")

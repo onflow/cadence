@@ -264,8 +264,7 @@ func (checker *Checker) recordReference(targetVariable *Variable, expr ast.Expre
 		return
 	}
 
-	unwrappedVarType := UnwrapOptionalType(targetVariable.Type)
-	if _, isReferenceType := unwrappedVarType.(*ReferenceType); !isReferenceType {
+	if _, isReference := referenceType(targetVariable.Type); !isReference {
 		return
 	}
 
@@ -287,6 +286,16 @@ func (checker *Checker) referencedVariables(expr ast.Expression) (variables []*V
 			variableRefExpr = rootVariableOfExpression(refExpr.Expression)
 		case *ast.IdentifierExpression:
 			variableRefExpr = &refExpr.Identifier
+		case *ast.IndexExpression:
+			// If it is a reference expression, then find the "root variable".
+			// As nested resources cannot be tracked, at least track the "root" if possible.
+			// For example, for an expression `a[b][c]`, the "root variable" is `a`.
+			variableRefExpr = rootVariableOfExpression(refExpr.TargetExpression)
+		case *ast.MemberExpression:
+			// If it is a reference expression, then find the "root variable".
+			// As nested resources cannot be tracked, at least track the "root" if possible.
+			// For example, for an expression `a.b.c`, the "root variable" is `a`.
+			variableRefExpr = rootVariableOfExpression(refExpr.Expression)
 		default:
 			continue
 		}
@@ -373,7 +382,11 @@ func referenceExpressions(expr ast.Expression) []ast.Expression {
 		}
 
 		return refExpressions
-	case *ast.IdentifierExpression:
+	case *ast.IdentifierExpression,
+		*ast.IndexExpression,
+		*ast.MemberExpression:
+		// For all these expressions, we reach here only if the expression's type is a reference.
+		// Hence, no need to check it here again.
 		return []ast.Expression{expr}
 	default:
 		return nil

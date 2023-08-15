@@ -1451,10 +1451,23 @@ func TestRuntimePublicKey(t *testing.T) {
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
 
-		_, err := executeScript(script, runtimeInterface)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		value, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
 
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		expected := cadence.Struct{
+			StructType: PublicKeyType,
+			Fields: []cadence.Value{
+				// Public key (bytes)
+				newBytesValue([]byte{1, 2}),
+
+				// Signature Algo
+				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+			},
+		}
+
+		expected = cadence.ValueWithCachedTypeID(expected)
+
+		assert.Equal(t, expected, value)
 	})
 
 	t.Run("raw-key reference mutability", func(t *testing.T) {
@@ -1467,7 +1480,7 @@ func TestRuntimePublicKey(t *testing.T) {
                 signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
             )
 
-            var publickeyRef = &publicKey.publicKey as &[UInt8]
+            var publickeyRef = &publicKey.publicKey as auth(Mutate) &[UInt8]
             publickeyRef[0] = 3
 
             return publicKey
@@ -1885,9 +1898,7 @@ func TestAuthAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		errs := checker.RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("update names through reference", func(t *testing.T) {
@@ -1898,7 +1909,7 @@ func TestAuthAccountContracts(t *testing.T) {
 		script := []byte(`
             transaction {
                 prepare(signer: AuthAccount) {
-                    var namesRef = &signer.contracts.names as &[String]
+                    var namesRef = &signer.contracts.names as auth(Mutate) &[String]
                     namesRef[0] = "baz"
 
                     assert(signer.contracts.names[0] == "foo")
@@ -2097,7 +2108,7 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		}
 
-		_, err := rt.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
@@ -2106,9 +2117,14 @@ func TestPublicAccountContracts(t *testing.T) {
 				Location:  common.ScriptLocation{},
 			},
 		)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
 
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		require.IsType(t, cadence.Array{}, result)
+		array := result.(cadence.Array)
+
+		require.Len(t, array.Values, 2)
+		assert.Equal(t, cadence.String("foo"), array.Values[0])
+		assert.Equal(t, cadence.String("bar"), array.Values[1])
 	})
 
 	t.Run("append names", func(t *testing.T) {
@@ -2133,7 +2149,7 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		}
 
-		_, err := rt.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
@@ -2142,9 +2158,14 @@ func TestPublicAccountContracts(t *testing.T) {
 				Location:  common.ScriptLocation{},
 			},
 		)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
 
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		require.IsType(t, cadence.Array{}, result)
+		array := result.(cadence.Array)
+
+		require.Len(t, array.Values, 2)
+		assert.Equal(t, cadence.String("foo"), array.Values[0])
+		assert.Equal(t, cadence.String("bar"), array.Values[1])
 	})
 }
 
@@ -2307,569 +2328,4 @@ type fakeError struct{}
 
 func (fakeError) Error() string {
 	return "fake error for testing"
-}
-
-func TestRuntimeAccountLink(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("disabled, missing pragma", func(t *testing.T) {
-
-		t.Parallel()
-
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.AccountLinkingEnabled = false
-
-		address := common.MustBytesToAddress([]byte{0x1})
-
-		accountCodes := map[Location][]byte{}
-		var logs []string
-
-		signerAccount := address
-
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
-				accountCodes[location] = code
-				return nil
-			},
-			log: func(message string) {
-				logs = append(logs, message)
-			},
-		}
-
-		nextTransactionLocation := newTransactionLocationGenerator()
-
-		// Set up account
-
-		setupTransaction := []byte(`
-          transaction {
-              prepare(acct: AuthAccount) {
-                  acct.linkAccount(/public/foo)
-              }
-          }
-        `)
-
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: setupTransaction,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.Error(t, err)
-
-		assert.ErrorContains(t, err, "value of type `AuthAccount` has no member `linkAccount`")
-	})
-
-	t.Run("enabled, missing pragma", func(t *testing.T) {
-
-		t.Parallel()
-
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.AccountLinkingEnabled = true
-
-		address := common.MustBytesToAddress([]byte{0x1})
-
-		accountCodes := map[Location][]byte{}
-		var logs []string
-
-		signerAccount := address
-
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-
-				return accountCodes[location], nil
-			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
-				accountCodes[location] = code
-				return nil
-			},
-			log: func(message string) {
-				logs = append(logs, message)
-			},
-		}
-
-		nextTransactionLocation := newTransactionLocationGenerator()
-
-		// Set up account
-
-		setupTransaction := []byte(`
-          transaction {
-              prepare(acct: AuthAccount) {
-                  acct.linkAccount(/private/foo)
-              }
-          }
-        `)
-
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: setupTransaction,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.Error(t, err)
-
-		var accountLinkingForbiddenErr interpreter.AccountLinkingForbiddenError
-		assert.ErrorAs(t, err, &accountLinkingForbiddenErr)
-	})
-
-	t.Run("publish and claim", func(t *testing.T) {
-
-		t.Parallel()
-
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.AccountLinkingEnabled = true
-
-		address1 := common.MustBytesToAddress([]byte{0x1})
-		address2 := common.MustBytesToAddress([]byte{0x2})
-
-		accountCodes := map[Location][]byte{}
-		var logs []string
-		var events []cadence.Event
-
-		signerAccount := address1
-
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
-				accountCodes[location] = code
-				return nil
-			},
-			log: func(message string) {
-				logs = append(logs, message)
-			},
-			emitEvent: func(event cadence.Event) error {
-				events = append(events, event)
-				return nil
-			},
-		}
-
-		nextTransactionLocation := newTransactionLocationGenerator()
-
-		// Set up account
-
-		setupTransaction := []byte(`
-          #allowAccountLinking
-
-          transaction {
-              prepare(acct: AuthAccount) {
-                  let cap = acct.linkAccount(/private/foo)!
-                  log(acct.inbox.publish(cap, name: "foo", recipient: 0x2))
-              }
-          }
-        `)
-
-		signerAccount = address1
-
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: setupTransaction,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.NoError(t, err)
-
-		require.Len(t, events, 2)
-
-		require.Equal(t,
-			string(stdlib.AccountLinkedEventType.ID()),
-			events[0].EventType.ID(),
-		)
-		require.Equal(t,
-			[]cadence.Value{
-				cadence.NewAddress(common.MustBytesToAddress([]byte{0x1})),
-				cadence.Path{
-					Domain:     common.PathDomainPrivate,
-					Identifier: "foo",
-				},
-			},
-			events[0].Fields,
-		)
-
-		require.Equal(t,
-			string(stdlib.AccountInboxPublishedEventType.ID()),
-			events[1].EventType.ID(),
-		)
-
-		// Claim
-
-		accessTransaction := []byte(`
-          transaction {
-              prepare(acct: AuthAccount) {
-                  let cap = acct.inbox.claim<&AuthAccount>("foo", provider: 0x1)!
-                  let ref = cap.borrow()!
-                  log(ref.address)
-              }
-          }
-        `)
-
-		signerAccount = address2
-
-		err = runtime.ExecuteTransaction(
-			Script{
-				Source: accessTransaction,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.NoError(t, err)
-
-		require.Equal(t,
-			[]string{"()", "0x0000000000000001"},
-			logs,
-		)
-	})
-
-	t.Run("enabled, contract, missing pragma", func(t *testing.T) {
-
-		t.Parallel()
-
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.AccountLinkingEnabled = true
-
-		address := common.MustBytesToAddress([]byte{0x1})
-
-		accountCodes := map[Location][]byte{}
-		var logs []string
-		var events []cadence.Event
-
-		signerAccount := address
-
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
-				accountCodes[location] = code
-				return nil
-			},
-			log: func(message string) {
-				logs = append(logs, message)
-			},
-			emitEvent: func(event cadence.Event) error {
-				events = append(events, event)
-				return nil
-			},
-		}
-
-		nextTransactionLocation := newTransactionLocationGenerator()
-
-		// Deploy contract
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: DeploymentTransaction(
-					"AccountLinker",
-					[]byte(`
-                      // should have no influence
-                      #allowAccountLinking
-
-                      access(all) contract AccountLinker {
-
-                          access(all) fun link(_ account: AuthAccount) {
-                              account.linkAccount(/private/foo)
-                          }
-                      }
-                    `,
-					),
-				),
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.NoError(t, err)
-
-		// Set up account
-
-		setupTransaction := []byte(`
-          import AccountLinker from 0x1
-
-          transaction {
-              prepare(signer: AuthAccount) {
-                  AccountLinker.link(signer)
-              }
-          }
-        `)
-
-		err = runtime.ExecuteTransaction(
-			Script{
-				Source: setupTransaction,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.Error(t, err)
-
-		var accountLinkingForbiddenErr interpreter.AccountLinkingForbiddenError
-		assert.ErrorAs(t, err, &accountLinkingForbiddenErr)
-	})
-
-	t.Run("enabled, contract, pragma in tx", func(t *testing.T) {
-
-		t.Parallel()
-
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.AccountLinkingEnabled = true
-
-		address := common.MustBytesToAddress([]byte{0x1})
-
-		accountCodes := map[Location][]byte{}
-		var logs []string
-		var events []cadence.Event
-
-		signerAccount := address
-
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
-				accountCodes[location] = code
-				return nil
-			},
-			log: func(message string) {
-				logs = append(logs, message)
-			},
-			emitEvent: func(event cadence.Event) error {
-				events = append(events, event)
-				return nil
-			},
-		}
-
-		nextTransactionLocation := newTransactionLocationGenerator()
-
-		// Deploy contract
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: DeploymentTransaction(
-					"AccountLinker",
-					[]byte(`
-                      access(all) contract AccountLinker {
-
-                          access(all) fun link(_ account: AuthAccount) {
-                              account.linkAccount(/private/foo)
-                          }
-                      }
-                    `,
-					),
-				),
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.NoError(t, err)
-
-		// Set up account
-
-		setupTransaction := []byte(`
-          #allowAccountLinking
-
-          import AccountLinker from 0x1
-
-          transaction {
-              prepare(signer: AuthAccount) {
-                  AccountLinker.link(signer)
-              }
-          }
-        `)
-
-		events = nil
-
-		err = runtime.ExecuteTransaction(
-			Script{
-				Source: setupTransaction,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.NoError(t, err)
-
-		require.Len(t, events, 1)
-
-		require.Equal(t,
-			string(stdlib.AccountLinkedEventType.ID()),
-			events[0].EventType.ID(),
-		)
-		require.Equal(t,
-			[]cadence.Value{
-				cadence.NewAddress(common.MustBytesToAddress([]byte{0x1})),
-				cadence.Path{
-					Domain:     common.PathDomainPrivate,
-					Identifier: "foo",
-				},
-			},
-			events[0].Fields,
-		)
-	})
-
-	t.Run("enabled, contract, pragma in script", func(t *testing.T) {
-
-		t.Parallel()
-
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.AccountLinkingEnabled = true
-
-		address := common.MustBytesToAddress([]byte{0x1})
-
-		accountCodes := map[Location][]byte{}
-		var logs []string
-		var events []cadence.Event
-
-		signerAccount := address
-
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
-				accountCodes[location] = code
-				return nil
-			},
-			log: func(message string) {
-				logs = append(logs, message)
-			},
-			emitEvent: func(event cadence.Event) error {
-				events = append(events, event)
-				return nil
-			},
-		}
-
-		nextTransactionLocation := newTransactionLocationGenerator()
-
-		// Deploy contract
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: DeploymentTransaction(
-					"AccountLinker",
-					[]byte(`
-                      access(all) contract AccountLinker {
-
-                          access(all) fun link(_ account: AuthAccount) {
-                              account.linkAccount(/private/foo)
-                          }
-                      }
-                    `,
-					),
-				),
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.NoError(t, err)
-
-		// Set up account
-
-		setupTransaction := []byte(`
-          #allowAccountLinking
-
-          import AccountLinker from 0x1
-
-          access(all) fun main() {
-              AccountLinker.link(getAuthAccount(0x1))
-          }
-        `)
-
-		events = nil
-
-		_, err = runtime.ExecuteScript(
-			Script{
-				Source: setupTransaction,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-		require.NoError(t, err)
-
-		require.Len(t, events, 1)
-
-		require.Equal(t,
-			string(stdlib.AccountLinkedEventType.ID()),
-			events[0].EventType.ID(),
-		)
-		require.Equal(t,
-			[]cadence.Value{
-				cadence.NewAddress(common.MustBytesToAddress([]byte{0x1})),
-				cadence.Path{
-					Domain:     common.PathDomainPrivate,
-					Identifier: "foo",
-				},
-			},
-			events[0].Fields,
-		)
-	})
-
 }

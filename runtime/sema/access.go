@@ -339,6 +339,11 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 // defined by the map in `e`, producing a new entitlement set of the image of the
 // arguments.
 func (e EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
+
+	if e.Type == IdentityMappingType {
+		return inputs, nil
+	}
+
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map
 	case PrimitiveAccess:

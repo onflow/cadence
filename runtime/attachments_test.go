@@ -21,6 +21,7 @@ package runtime
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -170,9 +171,19 @@ func TestAccountAttachmentExportFailure(t *testing.T) {
 		import Test from 0x1
 		access(all) fun main(): &Test.A? { 
 			let r <- Test.makeRWithA()
-			let a = r[Test.A]
+			var a = r[Test.A]
+
+			// Life span of attachments (references) are validated statically.
+			// This indirection helps to trick the checker and causes to perform the validation at runtime,
+			// which is the intention of this test.
+			a = returnSameRef(a)
+
 			destroy r
 			return a
+		}
+
+		access(all) fun returnSameRef(_ ref: &Test.A?): &Test.A? {
+		    return ref
 		}
 	 `)
 
@@ -544,7 +555,7 @@ func TestAccountAttachmentCapability(t *testing.T) {
 			prepare(signer: AuthAccount) {
 				let r <- Test.makeRWithA()
 				signer.save(<-r, to: /storage/foo)
-				let cap = signer.link<&{Test.I}>(/public/foo, target: /storage/foo)!
+				let cap = signer.capabilities.storage.issue<&{Test.I}>(/storage/foo)!
 				signer.inbox.publish(cap, name: "foo", recipient: 0x2)
 			}
 		}
@@ -644,4 +655,221 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, []string{"3"}, logs)
+}
+
+func TestRuntimeAttachmentStorage(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newRuntime := func() (testInterpreterRuntime, *testRuntimeInterface) {
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.AttachmentsEnabled = true
+
+		accountCodes := map[common.Location][]byte{}
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+		return runtime, runtimeInterface
+	}
+
+	t.Run("save and load", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          resource R {}
+
+          access(all)
+          attachment A for R {
+
+              access(all)
+              fun foo(): Int { return 3 }
+          }
+
+          access(all)
+          fun main(): Int {
+              let authAccount = getAuthAccount(0x1)
+
+              let r <- create R()
+              let r2 <- attach A() to <-r
+              authAccount.save(<-r2, to: /storage/foo)
+              let r3 <- authAccount.load<@R>(from: /storage/foo)!
+              let i = r3[A]?.foo()!
+              destroy r3
+              return i
+          }
+        `
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(3), result)
+	})
+
+	t.Run("save and borrow", func(t *testing.T) {
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+		  access(all)
+	      resource R {}
+
+		  access(all)
+	      attachment A for R {
+
+	          access(all)
+	          fun foo(): Int { return 3 }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let authAccount = getAuthAccount(0x1)
+
+	          let r <- create R()
+	          let r2 <- attach A() to <-r
+	          authAccount.save(<-r2, to: /storage/foo)
+	          let r3 = authAccount.borrow<&R>(from: /storage/foo)!
+	          return r3[A]?.foo()!
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(3), result)
+	})
+
+	t.Run("capability", func(t *testing.T) {
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+		  access(all)
+	      resource R {}
+
+		  access(all)
+	      attachment A for R {
+
+	          access(all)
+	          fun foo(): Int { return 3 }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let authAccount = getAuthAccount(0x1)
+              let pubAccount = getAccount(0x1)
+
+	          let r <- create R()
+	          let r2 <- attach A() to <-r
+	          authAccount.save(<-r2, to: /storage/foo)
+	          let cap = authAccount.capabilities.storage
+                  .issue<&R>(/storage/foo)
+              authAccount.capabilities.publish(cap, at: /public/foo)
+
+	          let ref = pubAccount.capabilities.borrow<&R>(/public/foo)!
+	          return ref[A]?.foo()!
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(3), result)
+	})
+
+	t.Run("capability interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+	      access(all)
+	      resource R: I {}
+
+	      access(all)
+	      resource interface I {}
+
+	      access(all)
+	      attachment A for I {
+
+	          access(all)
+	          fun foo(): Int { return 3 }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let authAccount = getAuthAccount(0x1)
+              let pubAccount = getAccount(0x1)
+
+	          let r <- create R()
+	          let r2 <- attach A() to <-r
+	          authAccount.save(<-r2, to: /storage/foo)
+	          let cap = authAccount.capabilities.storage
+                    .issue<&{I}>(/storage/foo)
+              authAccount.capabilities.publish(cap, at: /public/foo)
+
+	          let ref = pubAccount.capabilities.borrow<&{I}>(/public/foo)!
+	          return ref[A]?.foo()!
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(3), result)
+	})
 }

@@ -2882,12 +2882,30 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
+	})
 
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	t.Run("default impl in super, condition in child, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B: A {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct C: B {}
+        `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("default impl in super, declaration in child", func(t *testing.T) {
@@ -2957,12 +2975,30 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
+	})
 
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	t.Run("default impl in child, condition in parent, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface B: A {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct C: B {}
+        `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("default impl in child, declaration in parent", func(t *testing.T) {
@@ -3136,14 +3172,10 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             struct interface C: A, B {}
         `)
 
-		// TODO: Should be no error once https://github.com/onflow/flips/pull/83 is added.
-		errs := RequireCheckerErrors(t, err, 1)
-
-		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &interfaceMemberConflictError)
+		require.NoError(t, err)
 	})
 
-	t.Run("default impl in one path and condition in another, in concrete type", func(t *testing.T) {
+	t.Run("default impl in first and condition in second, in concrete type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3165,14 +3197,206 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             struct D: C {}
         `)
 
-		// TODO: Should be no error once https://github.com/onflow/flips/pull/83 is added.
-		errs := RequireCheckerErrors(t, err, 2)
+		require.NoError(t, err)
+	})
 
-		interfaceMemberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &interfaceMemberConflictError)
+	t.Run("condition in first and default impl in second, in concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: B, A {}
+
+            struct D: C {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("conditions in both parent and child", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface Bar: Foo {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("condition in parent", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface Bar: Foo {
+                access(all) fun hello()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("condition in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface Foo {
+                access(all) fun hello()
+            }
+
+            struct interface Bar: Foo {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("conditions from two paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: A, B {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("conditions from two paths, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C: A, B {}
+
+            struct D: C {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("all three formats of function, interface type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello()
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct interface D: A, B, C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		memberConflictError := &sema.InterfaceMemberConflictError{}
+		require.ErrorAs(t, errs[0], &memberConflictError)
+		assert.Equal(t, "hello", memberConflictError.MemberName)
+		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
+	})
+
+	t.Run("all three formats of function, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello()
+            }
+
+            struct interface B {
+                access(all) fun hello() {
+                    pre { true }
+                }
+            }
+
+            struct interface C {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct D: A, B, C {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
 
 		defaultFunctionConflictError := &sema.DefaultFunctionConflictError{}
-		require.ErrorAs(t, errs[1], &defaultFunctionConflictError)
+		require.ErrorAs(t, errs[0], &defaultFunctionConflictError)
 	})
 }
 
@@ -3223,6 +3447,72 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+}
+
+func TestInheritedInterfaceMembers(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inherited interface field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			let foo: String
+		}
+		resource interface B: A {}
+		resource C: B {
+			let foo: String
+			init() {
+				self.foo = ""
+			}
+		}
+		fun test() {
+			let c: @{B} <- create C()
+			c.foo
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			fun foo ()
+		}
+		resource interface B: A {}
+		fun test(c: @{B}) {
+			c.foo()
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("doubly inherited interface function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		resource interface A {
+			fun foo ()
+		}
+		resource interface B: A {}
+		resource interface C: B {}
+		fun test(c: @{C}) {
+			c.foo()
+			destroy c
+		}
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckInterfaceEventsInheritance(t *testing.T) {
