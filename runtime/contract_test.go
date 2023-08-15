@@ -810,7 +810,7 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 	transaction1 := []byte(`
 		import TestContract from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				TestContract.foo()
 				TestContract.bar()
 			}
