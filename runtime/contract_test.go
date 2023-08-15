@@ -788,10 +788,10 @@ func TestContractInterfaceEventEmission(t *testing.T) {
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
 		access(all) contract interface TestInterface {
-			access(all) event Foo(x: Int) 
+			access(all) event Foo(x: Int)
 
 			access(all) fun foo() {
-				emit Foo(x: 3) 
+				emit Foo(x: 3)
 			}
 		}
 	`))
@@ -799,10 +799,10 @@ func TestContractInterfaceEventEmission(t *testing.T) {
 	deployTx := DeploymentTransaction("TestContract", []byte(`
 		import TestInterface from 0x1
 		access(all) contract TestContract: TestInterface {
-			access(all) event Foo(x: String, y: Int) 
+			access(all) event Foo(x: String, y: Int)
 
 			access(all) fun bar() {
-				emit Foo(x: "", y: 2) 
+				emit Foo(x: "", y: 2)
 			}
 		}
 	`))
@@ -900,12 +900,15 @@ func TestContractInterfaceConditionEventEmission(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
-		access(all) contract interface TestInterface {
-			access(all) event Foo(x: Int) 
+		access(all)
+        contract interface TestInterface {
+
+			access(all)
+            event Foo(x: Int)
 
 			access(all) fun bar() {
 				post {
-					emit Foo(x: 3) 
+					emit Foo(x: 3)
 				}
 			}
 		}
@@ -913,19 +916,25 @@ func TestContractInterfaceConditionEventEmission(t *testing.T) {
 
 	deployTx := DeploymentTransaction("TestContract", []byte(`
 		import TestInterface from 0x1
-		access(all) contract TestContract: TestInterface {
-			access(all) event Foo(x: String, y: Int) 
 
-			access(all) fun bar() {
-				emit Foo(x: "", y: 2) 
+		access(all)
+        contract TestContract: TestInterface {
+
+			access(all)
+            event Foo(x: String, y: Int)
+
+			access(all)
+            fun bar() {
+				emit Foo(x: "", y: 2)
 			}
 		}
 	`))
 
 	transaction1 := []byte(`
 		import TestContract from 0x1
+
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				TestContract.bar()
 			}
 		}
