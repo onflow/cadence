@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -1170,6 +1171,38 @@ func (d *Decoder) decodeIntersectionType(
 
 type typeDecodingResults map[string]cadence.Type
 
+var simpleTypes = func() map[string]cadence.Type {
+	typeMap := make(map[string]cadence.Type, interpreter.PrimitiveStaticType_Count)
+
+	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+
+		cadenceType := cadence.PrimitiveType(ty)
+		if !encodeAsSimpleType(cadenceType) {
+			continue
+		}
+
+		semaType := ty.SemaType()
+
+		// Some primitive static types are deprecated,
+		// and only exist for migration purposes,
+		// so do not have an equivalent sema type
+		if semaType == nil {
+			continue
+		}
+
+		typeMap[string(semaType.ID())] = cadenceType
+	}
+
+	return typeMap
+}()
+
+func encodeAsSimpleType(primitiveType cadence.PrimitiveType) bool {
+	return primitiveType != cadence.PrimitiveType(interpreter.PrimitiveStaticTypeCapability)
+}
+
 func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence.Type {
 	if valueJSON == "" {
 		return nil
@@ -1240,106 +1273,12 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeAuthorization(obj.Get(authorizationKey)),
 			d.decodeType(obj.Get(typeKey), results),
 		)
-	case "Any":
-		return cadence.AnyType
-	case "AnyStruct":
-		return cadence.AnyStructType
-	case "AnyStructAttachment":
-		return cadence.AnyStructAttachmentType
-	case "AnyResource":
-		return cadence.AnyResourceType
-	case "AnyResourceAttachment":
-		return cadence.AnyResourceAttachmentType
-	case "Type":
-		return cadence.MetaType
-	case "Void":
-		return cadence.VoidType
-	case "Never":
-		return cadence.NeverType
-	case "Bool":
-		return cadence.BoolType
-	case "String":
-		return cadence.StringType
-	case "Character":
-		return cadence.CharacterType
-	case "Bytes":
-		return cadence.TheBytesType
-	case "Address":
-		return cadence.AddressType
-	case "Number":
-		return cadence.NumberType
-	case "SignedNumber":
-		return cadence.SignedNumberType
-	case "Integer":
-		return cadence.IntegerType
-	case "SignedInteger":
-		return cadence.SignedIntegerType
-	case "FixedPoint":
-		return cadence.FixedPointType
-	case "SignedFixedPoint":
-		return cadence.SignedFixedPointType
-	case "Int":
-		return cadence.IntType
-	case "Int8":
-		return cadence.Int8Type
-	case "Int16":
-		return cadence.Int16Type
-	case "Int32":
-		return cadence.Int32Type
-	case "Int64":
-		return cadence.Int64Type
-	case "Int128":
-		return cadence.Int128Type
-	case "Int256":
-		return cadence.Int256Type
-	case "UInt":
-		return cadence.UIntType
-	case "UInt8":
-		return cadence.UInt8Type
-	case "UInt16":
-		return cadence.UInt16Type
-	case "UInt32":
-		return cadence.UInt32Type
-	case "UInt64":
-		return cadence.UInt64Type
-	case "UInt128":
-		return cadence.UInt128Type
-	case "UInt256":
-		return cadence.UInt256Type
-	case "Word8":
-		return cadence.Word8Type
-	case "Word16":
-		return cadence.Word16Type
-	case "Word32":
-		return cadence.Word32Type
-	case "Word64":
-		return cadence.Word64Type
-	case "Word128":
-		return cadence.Word128Type
-	case "Word256":
-		return cadence.Word256Type
-	case "Fix64":
-		return cadence.Fix64Type
-	case "UFix64":
-		return cadence.UFix64Type
-	case "Path":
-		return cadence.PathType
-	case "CapabilityPath":
-		return cadence.CapabilityPathType
-	case "StoragePath":
-		return cadence.StoragePathType
-	case "PublicPath":
-		return cadence.PublicPathType
-	case "PrivatePath":
-		return cadence.PrivatePathType
-
-	// TODO: missing types
-
-	case "DeployedContract":
-		return cadence.DeployedContractType
-	case "Block":
-		return cadence.BlockType
 	default:
+		simpleType, ok := simpleTypes[kindValue]
+		if ok {
+			return simpleType
+		}
+
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))
 		initValue := obj.Get(initializersKey)

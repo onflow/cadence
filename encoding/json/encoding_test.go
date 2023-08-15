@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package json_test
+package json
 
 import (
 	"fmt"
@@ -34,7 +34,6 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -2626,7 +2625,7 @@ func TestEncodeType(t *testing.T) {
 			},
 		}
 
-		decodedValue, err := json.Decode(nil, []byte(encodedValue))
+		decodedValue, err := Decode(nil, []byte(encodedValue))
 		require.NoError(t, err)
 		require.Equal(t, value, decodedValue)
 	})
@@ -2906,7 +2905,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 					// language=json
 					enc := fmt.Sprintf(`{"type": "%s", "value": "%s"}`, ty.ID(), tt.input)
 
-					actual, err := json.Decode(nil, []byte(enc))
+					actual, err := Decode(nil, []byte(enc))
 
 					if tt.check != nil {
 						tt.check(t, actual, err)
@@ -2924,7 +2923,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 		t.Parallel()
 
 		// language=json
-		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1.-1"}`))
+		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": "1.-1"}`))
 		assert.Error(t, err)
 	})
 
@@ -2933,7 +2932,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 		t.Parallel()
 
 		// language=json
-		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1.+1"}`))
+		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": "1.+1"}`))
 		assert.Error(t, err)
 	})
 
@@ -2942,7 +2941,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 		t.Parallel()
 
 		// language=json
-		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": ".1"}`))
+		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": ".1"}`))
 		assert.Error(t, err)
 	})
 
@@ -2951,7 +2950,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 		t.Parallel()
 
 		// language=json
-		_, err := json.Decode(nil, []byte(`{"type": "Fix64", "value": "1."}`))
+		_, err := Decode(nil, []byte(`{"type": "Fix64", "value": "1."}`))
 		assert.Error(t, err)
 	})
 }
@@ -3173,7 +3172,7 @@ func TestEncodePath(t *testing.T) {
 	t.Run("invalid", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := json.Decode(nil, []byte(
+		_, err := Decode(nil, []byte(
 			// language=json
 			`{"type":"Path","value":{"domain":"Storage","identifier":"foo"}}`,
 		))
@@ -3215,7 +3214,7 @@ func TestDecodeInvalidType(t *testing.T) {
             }
           }
         `
-		_, err := json.Decode(nil, []byte(encodedValue))
+		_, err := Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: ``", err.Error())
 	})
@@ -3233,7 +3232,7 @@ func TestDecodeInvalidType(t *testing.T) {
             }
           }
         `
-		_, err := json.Decode(nil, []byte(encodedValue))
+		_, err := Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID `I`: invalid identifier location type ID: missing location", err.Error())
 	})
@@ -3251,7 +3250,7 @@ func TestDecodeInvalidType(t *testing.T) {
             }
           }
         `
-		_, err := json.Decode(nil, []byte(encodedValue))
+		_, err := Decode(nil, []byte(encodedValue))
 		require.Error(t, err)
 		assert.Equal(t, "failed to decode JSON-Cadence value: invalid type ID for built-in: `N.PublicKey`", err.Error())
 	})
@@ -3263,7 +3262,7 @@ func testEncodeAndDecode(t *testing.T, val cadence.Value, expectedJSON string) {
 }
 
 func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSON string) {
-	actualJSONBytes, err := json.Encode(val)
+	actualJSONBytes, err := Encode(val)
 	require.NoError(t, err)
 
 	actualJSON = string(actualJSONBytes)
@@ -3273,8 +3272,8 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSO
 	return actualJSON
 }
 
-func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, options ...json.Option) {
-	decodedVal, err := json.Decode(nil, []byte(actualJSON), options...)
+func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, options ...Option) {
+	decodedVal, err := Decode(nil, []byte(actualJSON), options...)
 	require.NoError(t, err)
 
 	assert.Equal(
@@ -3309,10 +3308,10 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	// Avoid using the `NewMeteredString()` constructor to skip the validation
 	stringValue := cadence.String(nonUTF8String)
 
-	encodedValue, err := json.Encode(stringValue)
+	encodedValue, err := Encode(stringValue)
 	require.NoError(t, err)
 
-	decodedValue, err := json.Decode(nil, encodedValue)
+	decodedValue, err := Decode(nil, encodedValue)
 	require.NoError(t, err)
 
 	// Decoded value must be a valid utf8 string
@@ -3338,7 +3337,7 @@ func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: cadence.TypeID("&Int"),
 			},
-			json.WithAllowUnstructuredStaticTypes(true),
+			WithAllowUnstructuredStaticTypes(true),
 		)
 	})
 
@@ -3346,7 +3345,7 @@ func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := json.Decode(nil, []byte(encoded))
+		_, err := Decode(nil, []byte(encoded))
 		require.Error(t, err)
 	})
 
@@ -3573,4 +3572,50 @@ func TestImportFunctionValue(t *testing.T) {
 		)
 	})
 
+}
+
+func TestSimpleTypes(t *testing.T) {
+	t.Parallel()
+
+	test := func(cadenceType cadence.PrimitiveType, semaType sema.Type) {
+
+		t.Run(semaType.QualifiedString(), func(t *testing.T) {
+			t.Parallel()
+
+			prepared := prepareType(cadenceType, typePreparationResults{})
+			require.IsType(t, jsonSimpleType{}, prepared)
+
+			encoded, err := Encode(cadence.NewTypeValue(cadenceType))
+			require.NoError(t, err)
+
+			decoded, err := Decode(nil, encoded)
+			require.NoError(t, err)
+
+			require.IsType(t, cadence.TypeValue{}, decoded)
+			typeValue := decoded.(cadence.TypeValue)
+			require.Equal(t, cadenceType, typeValue.StaticType)
+		})
+	}
+
+	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+
+		semaType := ty.SemaType()
+
+		// Some primitive static types are deprecated,
+		// and only exist for migration purposes,
+		// so do not have an equivalent sema type
+		if semaType == nil {
+			continue
+		}
+
+		cadenceType := cadence.PrimitiveType(ty)
+		if !encodeAsSimpleType(cadenceType) {
+			continue
+		}
+
+		test(cadenceType, semaType)
+	}
 }
