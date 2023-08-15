@@ -850,6 +850,12 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 					DocString:             nestedCompositeDeclaration.DeclarationDocString(),
 				})
 		}
+		for _, nestedInterfaceDeclaration := range members.Interfaces() {
+			// resolve conformances
+			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
+			nestedInterfaceType.ExplicitInterfaceConformances =
+				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
+		}
 		for _, nestedCompositeDeclaration := range nestedComposites {
 			declareNestedComposite(nestedCompositeDeclaration)
 		}
