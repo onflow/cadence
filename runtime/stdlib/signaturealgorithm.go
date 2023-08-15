@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var signatureAlgorithmTypeID = sema.SignatureAlgorithmType.ID()
 var signatureAlgorithmStaticType interpreter.StaticType = interpreter.NewCompositeStaticType(nil, nil, sema.SignatureAlgorithmTypeName)
 
 func NewSignatureAlgorithmCase(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {

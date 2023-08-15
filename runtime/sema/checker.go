@@ -2050,7 +2050,7 @@ var ResourceUUIDFieldType = UInt64Type
 const ContractAccountFieldName = "account"
 
 var ContractAccountFieldType = &ReferenceType{
-	Type: AccountType,
+	Type:          AccountType,
 	Authorization: FullyEntitledAccountAccess,
 }
 

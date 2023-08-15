@@ -501,7 +501,6 @@ func typeBySimpleTypeID(simpleTypeID uint64) cadence.Type {
 		return cadence.CapabilitiesMappingType
 	case TypeAccountMapping:
 		return cadence.AccountMappingType
-
 	}
 
 	return nil

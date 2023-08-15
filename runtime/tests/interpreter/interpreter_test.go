@@ -33,7 +33,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
@@ -9024,16 +9023,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.AddressValue(address)),
 		},
 		ArrayElements(inter, result.(*interpreter.ArrayValue)),
-	)
-}
-
-func newPanicFunctionValue(gauge common.MemoryGauge) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		stdlib.PanicFunction.Type.(*sema.FunctionType),
-		func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnreachableError())
-		},
 	)
 }
 
