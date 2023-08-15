@@ -5350,18 +5350,20 @@ func (interpreter *Interpreter) checkReferencedResourceNotMovedOrDestroyed(
 	referencedValue Value,
 	locationRange LocationRange,
 ) {
-	resourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
-	if !ok {
-		return
-	}
 
-	if resourceKindedValue.IsDestroyed() {
+	// First check if the referencedValue is a resource.
+	// This is to handle optionals, since optionals does not
+	// belong to `ReferenceTrackedResourceKindedValue`
+
+	resourceKindedValue, ok := referencedValue.(ResourceKindedValue)
+	if ok && resourceKindedValue.IsDestroyed() {
 		panic(DestroyedResourceError{
 			LocationRange: locationRange,
 		})
 	}
 
-	if resourceKindedValue.IsStaleResource(interpreter) {
+	referenceTrackedResourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
+	if ok && referenceTrackedResourceKindedValue.IsStaleResource(interpreter) {
 		panic(InvalidatedResourceReferenceError{
 			LocationRange: locationRange,
 		})

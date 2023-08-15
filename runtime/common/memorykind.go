@@ -74,7 +74,6 @@ const (
 	MemoryKindDictionaryStaticType
 	MemoryKindOptionalStaticType
 	MemoryKindIntersectionStaticType
-	MemoryKindUnauthorizedStaticAccess
 	MemoryKindEntitlementSetStaticAccess
 	MemoryKindEntitlementMapStaticAccess
 	MemoryKindReferenceStaticType
