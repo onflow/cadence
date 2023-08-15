@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -79,14 +80,23 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 
 	checker.checkNestedIdentifiers(declaration.Members)
 
-	// Activate new scope for nested types
+	// Activate new scope for nested types and values
 
 	checker.typeActivations.Enter()
 	defer checker.typeActivations.Leave(declaration.EndPosition)
 
+	checker.enterValueScope()
+	defer checker.leaveValueScope(declaration.EndPosition, false)
+
 	// Declare nested types
 
 	checker.declareInterfaceNestedTypes(declaration)
+
+	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
+			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindComposite)
+		}
+	}
 
 	checker.checkInitializers(
 		declaration.Members.Initializers(),
@@ -146,10 +156,15 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
-		// Composite declarations nested in interface declarations are type requirements,
+		// Non-event composite declarations nested in interface declarations are type requirements,
 		// i.e. they should be checked like interfaces
 
-		checker.visitCompositeLikeDeclaration(nestedComposite, kind)
+		if nestedComposite.Kind() != common.CompositeKindEvent {
+			checker.visitCompositeLikeDeclaration(nestedComposite, kind)
+		} else {
+			// events should be checked like composites, as they are not type requirements
+			checker.visitCompositeLikeDeclaration(nestedComposite, ContainerKindComposite)
+		}
 	}
 
 	for _, nestedAttachments := range declaration.Members.Attachments() {
@@ -342,13 +357,42 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	return interfaceType
 }
 
-// declareInterfaceMembers declares the members for the given interface declaration,
+func (checker *Checker) declareNestedEvent(
+	nestedCompositeDeclaration ast.CompositeLikeDeclaration,
+	eventMembers *orderedmap.OrderedMap[string, *Member],
+	interfaceType Type,
+) {
+	checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindComposite)
+
+	// Declare nested composites' values (constructor/instance) as members of the containing composite
+	identifier := *nestedCompositeDeclaration.DeclarationIdentifier()
+
+	// Find the value declaration
+	nestedCompositeDeclarationVariable :=
+		checker.valueActivations.Find(identifier.Identifier)
+
+	eventMembers.Set(
+		nestedCompositeDeclarationVariable.Identifier,
+		&Member{
+			Identifier:            identifier,
+			Access:                checker.accessFromAstAccess(nestedCompositeDeclaration.DeclarationAccess()),
+			ContainerType:         interfaceType,
+			TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
+			DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
+			VariableKind:          ast.VariableKindConstant,
+			ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
+			IgnoreInSerialization: true,
+			DocString:             nestedCompositeDeclaration.DeclarationDocString(),
+		})
+}
+
+// declareInterfaceMembersAndValue declares the members for the given interface declaration,
 // and recursively for all nested declarations.
 //
 // NOTE: This function assumes that the interface type and the nested declarations' types
 // were previously declared using `declareInterfaceType` and exists
 // in the elaboration's `InterfaceDeclarationTypes` and `InterfaceNestedDeclarations` fields.
-func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclaration) {
+func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.InterfaceDeclaration) {
 
 	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
 	if interfaceType == nil {
@@ -357,62 +401,68 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	compositeKind := declaration.Kind()
 
-	// Activate new scope for nested declarations
+	eventMembers := orderedmap.New[StringMemberOrderedMap](len(declaration.Members.Composites()))
 
-	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave(declaration.EndPosition)
+	(func() { // Activate new scope for nested declarations
 
-	checker.enterValueScope()
-	defer checker.leaveValueScope(declaration.EndPosition, false)
+		checker.typeActivations.Enter()
+		defer checker.typeActivations.Leave(declaration.EndPosition)
 
-	// Declare nested types
+		checker.enterValueScope()
+		defer checker.leaveValueScope(declaration.EndPosition, false)
 
-	checker.declareInterfaceNestedTypes(declaration)
+		// Declare nested types
 
-	// Declare members
+		checker.declareInterfaceNestedTypes(declaration)
 
-	members, fields, origins := checker.defaultMembersAndOrigins(
-		declaration.Members,
-		interfaceType,
-		ContainerKindInterface,
-		declaration.DeclarationKind(),
-	)
+		// Declare members
 
-	if interfaceType.CompositeKind == common.CompositeKindContract {
-		checker.checkMemberStorability(members)
-	}
+		members, fields, origins := checker.defaultMembersAndOrigins(
+			declaration.Members,
+			interfaceType,
+			ContainerKindInterface,
+			declaration.DeclarationKind(),
+		)
 
-	interfaceType.Members = members
-	interfaceType.Fields = fields
-	if checker.PositionInfo != nil {
-		checker.PositionInfo.recordMemberOrigins(interfaceType, origins)
-	}
+		if interfaceType.CompositeKind == common.CompositeKindContract {
+			checker.checkMemberStorability(members)
+		}
 
-	// NOTE: determine initializer parameter types while nested types are in scope,
-	// and after declaring nested types as the initializer may use nested type in parameters
+		interfaceType.Members = members
+		interfaceType.Fields = fields
+		if checker.PositionInfo != nil {
+			checker.PositionInfo.recordMemberOrigins(interfaceType, origins)
+		}
 
-	initializers := declaration.Members.Initializers()
-	interfaceType.InitializerParameters = checker.initializerParameters(initializers)
-	interfaceType.InitializerPurity = checker.initializerPurity(compositeKind, initializers)
+		// NOTE: determine initializer parameter types while nested types are in scope,
+		// and after declaring nested types as the initializer may use nested type in parameters
 
-	// Declare nested declarations' members
+		initializers := declaration.Members.Initializers()
+		interfaceType.InitializerParameters = checker.initializerParameters(initializers)
+		interfaceType.InitializerPurity = checker.initializerPurity(compositeKind, initializers)
 
-	for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
-		// resolve conformances
-		nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
-		nestedInterfaceType.ExplicitInterfaceConformances =
-			checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
+		// Declare nested declarations' members
+		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
+			// resolve conformances
+			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
+			nestedInterfaceType.ExplicitInterfaceConformances =
+				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
 
-		checker.declareInterfaceMembers(nestedInterfaceDeclaration)
-	}
+			checker.declareInterfaceMembersAndValue(nestedInterfaceDeclaration)
+		}
 
-	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-		checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
-	}
+		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
+				checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
+			} else {
+				checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
+			}
+		}
 
-	for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
-		checker.declareAttachmentMembersAndValue(nestedAttachmentDeclaration, ContainerKindInterface)
-	}
+		for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
+			checker.declareAttachmentMembersAndValue(nestedAttachmentDeclaration, ContainerKindInterface)
+		}
+	})()
 }
 
 func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDeclaration) *EntitlementType {
