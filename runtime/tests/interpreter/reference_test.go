@@ -113,7 +113,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: &S1} = {}
-              let dictRef = &dict as &{Int: &AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: &AnyStruct}
 
               let s2 = S2()
               dictRef[0] = &s2 as &AnyStruct
@@ -148,7 +148,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: S1} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = S2()
 
@@ -186,7 +186,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
          fun test(): Int {
              let dict: {Int: &S1} = {}
-             let dictRef = &dict as &{Int: &AnyStruct}
+             let dictRef = &dict as auth(Mutate) &{Int: &AnyStruct}
 
              let s2 = S2()
              dictRef[0] = &s2 as &AnyStruct
@@ -225,7 +225,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
          fun test(): Int {
              let dict: {Int: S1} = {}
-             let dictRef = &dict as &{Int: AnyStruct}
+             let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
              dictRef[0] = S2()
 
@@ -267,7 +267,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
               let s2 = S2()
 
-              let dictRef = &dict as &{Int: &AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: &AnyStruct}
               dictRef[0] = &s2 as &AnyStruct
 
               dict.values[0].value = 1
@@ -308,7 +308,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: S1} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = S2()
 
@@ -340,7 +340,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
               let s2 = S2()
 
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
               dictRef[0] = s2
 
               let x = dict.values[0]
@@ -369,7 +369,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: fun(): Int} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = f2
 
@@ -393,7 +393,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: [UInt8]} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = "not an [UInt8] array, but a String"
 
@@ -417,7 +417,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: [UInt8]} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = "not an [UInt8] array, but a String"
 
@@ -632,11 +632,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target: &[R]) {
+            fun test(target: auth(Mutate) &[R]) {
                 target.append(<- create R())
 
                 // Take reference while in the account
-                let ref = &target[0] as &R
+                let ref = target[0]
 
                 // Move the resource out of the account onto the stack
                 let movedR <- target.remove(at: 0)
@@ -662,7 +662,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutate"},
+				sema.Conjunction,
+			),
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -734,11 +738,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target1: &[R], target2: &[R]) {
+            fun test(target1: auth(Mutate) &[R], target2: auth(Mutate) &[R]) {
                 target1.append(<- create R())
 
                 // Take reference while in the account_1
-                let ref = &target1[0] as &R
+                let ref = target1[0]
 
                 // Move the resource out of the account_1 into the account_2
                 target2.append(<- target1.remove(at: 0))
@@ -762,7 +766,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutate"},
+				sema.Conjunction,
+			),
 			array1,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -781,7 +789,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutate"},
+				sema.Conjunction,
+			),
 			array2,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -810,11 +822,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target: &[R]): Int {
+            fun test(target: auth(Mutate) &[R]): Int {
                 target.append(<- create R())
 
                 // Take reference while in the account
-                let ref = &target[0] as &R
+                let ref = target[0]
 
                 // Move the resource out of the account onto the stack. This should invalidate the reference.
                 let movedR <- target.remove(at: 0)
@@ -847,7 +859,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutate"},
+				sema.Conjunction,
+			),
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -918,11 +934,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
             var ref2: &R? = nil
             var ref3: &R? = nil
 
-            fun setup(collection: &[R]) {
+            fun setup(collection: auth(Mutate) &[R]) {
                 collection.append(<- create R())
 
                 // Take reference while in the account
-                ref1 = &collection[0] as &R
+                ref1 = collection[0]
 
                 // Move the resource out of the account onto the stack. This should invalidate ref1.
                 let movedR <- collection.remove(at: 0)
@@ -937,7 +953,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 collection.append(<- movedR)
 
                 // Take another reference
-                ref3 = &collection[1] as &R
+                ref3 = collection[1]
             }
 
             fun getRef1Id(): Int {
@@ -972,7 +988,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"Mutate"},
+				sema.Conjunction,
+			),
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -1247,7 +1267,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 var dict2 <- dict
 
                 // Access the inner moved resource
-                var fooRef = &dictRef["levelTwo"] as &Foo?
+                var fooRef = dictRef["levelTwo"]
 
                 destroy dict2
             }
@@ -1280,7 +1300,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 var array2 <- array
 
                 // Access the inner moved resource
-                var fooRef = &arrayRef[0] as &Foo
+                var fooRef = arrayRef[0]
 
                 destroy array2
             }

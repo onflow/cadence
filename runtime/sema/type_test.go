@@ -668,7 +668,16 @@ func TestCommonSuperType(t *testing.T) {
 		var tests []testCase
 
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
 			typ := variable.Type
+
 			tests = append(tests, testCase{
 				name: name,
 				types: []Type{
@@ -1770,6 +1779,14 @@ func TestTypeInclusions(t *testing.T) {
 		t.Parallel()
 
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
 			t.Run(name, func(t *testing.T) {
 
 				typ := variable.Type
@@ -1790,6 +1807,14 @@ func TestTypeInclusions(t *testing.T) {
 		t.Parallel()
 
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
 			t.Run(name, func(t *testing.T) {
 
 				typ := variable.Type

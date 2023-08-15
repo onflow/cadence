@@ -1,4 +1,4 @@
-// Code generated from testdata/simple-struct.cdc. DO NOT EDIT.
+// Code generated from entitlements.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -19,18 +19,23 @@
 
 package sema
 
-const TestTypeName = "Test"
+var MutateEntitlement = &EntitlementType{
+	Identifier: "Mutate",
+}
 
-var TestType = &SimpleType{
-	Name:          TestTypeName,
-	QualifiedName: TestTypeName,
-	TypeID:        TestTypeName,
-	tag:           TestTypeTag,
-	IsResource:    false,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    false,
-	ContainFields: false,
+var InsertEntitlement = &EntitlementType{
+	Identifier: "Insert",
+}
+
+var RemoveEntitlement = &EntitlementType{
+	Identifier: "Remove",
+}
+
+func init() {
+	BuiltinEntitlements[MutateEntitlement.Identifier] = MutateEntitlement
+	addToBaseActivation(MutateEntitlement)
+	BuiltinEntitlements[InsertEntitlement.Identifier] = InsertEntitlement
+	addToBaseActivation(InsertEntitlement)
+	BuiltinEntitlements[RemoveEntitlement.Identifier] = RemoveEntitlement
+	addToBaseActivation(RemoveEntitlement)
 }

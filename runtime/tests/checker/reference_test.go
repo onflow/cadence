@@ -790,10 +790,8 @@ func TestCheckReferenceIndexingIfReferencedIndexable(t *testing.T) {
           fun test() {
               let rs <- [<-create R()]
               let ref = &rs as &[R]
-              var other <- create R()
-              ref[0] <-> other
+              ref[0]
               destroy rs
-              destroy other
           }
         `)
 
@@ -811,8 +809,7 @@ func TestCheckReferenceIndexingIfReferencedIndexable(t *testing.T) {
           fun test() {
               let s = [S()]
               let ref = &s as &[S]
-              var other = S()
-              ref[0] <-> other
+              ref[0]
           }
         `)
 
@@ -820,7 +817,7 @@ func TestCheckReferenceIndexingIfReferencedIndexable(t *testing.T) {
 	})
 }
 
-func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
+func TestCheckReferenceResourceLoss(t *testing.T) {
 
 	t.Parallel()
 
@@ -830,17 +827,15 @@ func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
       fun test() {
           let rs <- [<-create R()]
           let ref = &rs as &[R]
-          ref[0]
+          ref[0]  // This result in a reference, so no resource loss
           destroy rs
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	require.NoError(t, err)
 }
 
-func TestCheckInvalidReferenceResourceLoss2(t *testing.T) {
+func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
 
 	t.Parallel()
 
@@ -1710,7 +1705,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 authAccount.save(<-[<-create R()], to: /storage/a)
 
                 let collectionRef = authAccount.borrow<&[R]>(from: /storage/a)!
-                let ref = &collectionRef[0] as &R
+                let ref = collectionRef[0]
 
                 let collection <- authAccount.load<@[R]>(from: /storage/a)!
                 authAccount.save(<- collection, to: /storage/b)
@@ -1838,8 +1833,8 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             access(all) fun test() {
                 var r: @{UInt64: {UInt64: [R]}} <- {}
                 let ref1 = (&r[0] as &{UInt64: [R]}?)!
-                let ref2 = (&ref1[0] as &[R]?)!
-                let ref3 = &ref2[0] as &R
+                let ref2 = ref1[0]!
+                let ref3 = ref2[0]
                 ref3.a
 
                 destroy r
@@ -1858,7 +1853,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("ref to ref invalid", func(t *testing.T) {
+	t.Run("ref to ref invalid, index expr", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1867,13 +1862,62 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             access(all) fun test() {
                 var r: @{UInt64: {UInt64: [R]}} <- {}
                 let ref1 = (&r[0] as &{UInt64: [R]}?)!
-                let ref2 = (&ref1[0] as &[R]?)!
-                let ref3 = &ref2[0] as &R
+                let ref2 = ref1[0]!
+                let ref3 = ref2[0]
                 destroy r
                 ref3.a
             }
 
             access(all) resource R {
+                access(all) let a: Int
+                init() {
+                    self.a = 5
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("ref to ref invalid, member expr", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            access(all) fun test() {
+                var r: @R1 <- create R1()
+                let ref1 = &r as &R1
+                let ref2 = ref1.r2
+                let ref3 = ref2.r3
+                destroy r
+                ref3.a
+            }
+
+            access(all) resource R1 {
+                access(all) let r2: @R2
+                init() {
+                    self.r2 <- create R2()
+                }
+                destroy() {
+                    destroy self.r2
+                }
+            }
+
+            access(all) resource R2 {
+                access(all) let r3: @R3
+                init() {
+                    self.r3 <- create R3()
+                }
+                destroy() {
+                    destroy self.r3
+                }
+            }
+
+            access(all) resource R3 {
                 access(all) let a: Int
                 init() {
                     self.a = 5
@@ -2009,7 +2053,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 access(all) resource R {
                     access(all) fun test() {
                         if let storage = &Test.a[0] as &{UInt64: Test.R}? {
-                            let nftRef = (&storage[0] as &Test.R?)!
+                            let nftRef = storage[0]!
                             nftRef
                         }
                     }
@@ -2066,9 +2110,9 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             access(all) contract Test {
                 access(all) resource R {
                     access(all) fun test(packList: &[Test.R]) {
-                        var i = 0;
+                        var i = 0
                         while i < packList.length {
-                            let pack = &packList[i] as &Test.R;
+                            let pack = packList[i]
                             pack
                             i = i + 1
                         }
@@ -2653,7 +2697,7 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 
           fun test() {
               let rs <- [<-create R()]
-              let ref = &rs as &[R]
+              let ref = &rs as auth(Mutate) &[R]
               let container <- [<-rs]
               ref.insert(at: 1, <-create R())
               destroy container
@@ -2674,7 +2718,7 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 
           fun test() {
               let rs <- [<-create R()]
-              let ref = &rs as &[R]
+              let ref = &rs as auth(Mutate) &[R]
               let container <- [<-rs]
               ref.append(<-create R())
               destroy container
@@ -2704,10 +2748,19 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 4)
+
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
-		assert.ErrorAs(t, errs[1], &invalidatedRefError)
+
+		unauthorizedReferenceAssignmentError := &sema.UnauthorizedReferenceAssignmentError{}
+		assert.ErrorAs(t, errs[1], &unauthorizedReferenceAssignmentError)
+
+		assert.ErrorAs(t, errs[2], &invalidatedRefError)
+
+		typeMismatchError := &sema.TypeMismatchError{}
+		assert.ErrorAs(t, errs[3], &typeMismatchError)
+
 	})
 
 	t.Run("resource array, remove", func(t *testing.T) {
@@ -2719,7 +2772,7 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 
           fun test() {
               let rs <- [<-create R()]
-              let ref = &rs as &[R]
+              let ref = &rs as auth(Mutate) &[R]
               let container <- [<-rs]
               let r <- ref.remove(at: 0)
               destroy container
@@ -2748,9 +2801,12 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+
+		unauthorizedReferenceAssignmentError := &sema.UnauthorizedReferenceAssignmentError{}
+		assert.ErrorAs(t, errs[1], &unauthorizedReferenceAssignmentError)
 	})
 
 	t.Run("resource dictionary, remove", func(t *testing.T) {
@@ -2762,12 +2818,43 @@ func TestCheckReferenceUseAfterCopy(t *testing.T) {
 
           fun test() {
               let rs <- {0: <-create R()}
-              let ref = &rs as &{Int: R}
+              let ref = &rs as auth(Remove) &{Int: R}
               let container <- [<-rs]
               let r <- ref.remove(key: 0)
               destroy container
               destroy r
           }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errs[0], &invalidatedRefError)
+	})
+
+	t.Run("attachments", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            attachment A for R {
+                access(all) var id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun test() {
+                let r <- create R()
+                let r2 <- attach A() to <-r
+
+                let a = r2[A]!
+                destroy r2
+
+                // Access attachment ref, after destroying the resource
+                a.id
+            }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)

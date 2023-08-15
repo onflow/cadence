@@ -32,4 +32,5 @@ var TestType = &SimpleType{
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    true,
+	ContainFields: false,
 }

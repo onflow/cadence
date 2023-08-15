@@ -2013,7 +2013,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
         prepare(signer: AuthAccount) {
           signer.save(<-createContainer(), to: /storage/container)
-          let cap = signer.capabilities.storage.issue<&Container>(/storage/container)
+          let cap = signer.capabilities.storage.issue<auth(Insert) &Container>(/storage/container)
           signer.capabilities.publish(cap, at: /public/container)
         }
       }
@@ -2025,7 +2025,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.capabilities.borrow<&Container>(/public/container)!
+          let ref = publicAccount.capabilities.borrow<auth(Insert) &Container>(/public/container)!
 
           let length = ref.values.length
           ref.appendValue(1)
@@ -2040,7 +2040,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.capabilities.borrow<&Container>(/public/container)!
+          let ref = publicAccount.capabilities.borrow<auth(Insert) &Container>(/public/container)!
 
           let length = ref.values.length
           ref.appendValue(2)
@@ -7022,34 +7022,102 @@ func TestRuntimeInvalidContainerTypeConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	t.Run("invalid: auth account used as public account", func(t *testing.T) {
+		t.Parallel()
 
-	script := []byte(`
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all) fun main() {
+              let dict: {Int: PublicAccount} = {}
+              let ref = &dict as auth(Mutate) &{Int: AnyStruct}
+              ref[0] = getAuthAccount(0x01) as AnyStruct
+          }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		RequireError(t, err)
+
+		assertRuntimeErrorIsUserError(t, err)
+
+		var typeErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &typeErr)
+	})
+
+	t.Run("invalid: public account used as auth account", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
           access(all) fun main() {
               let dict: {Int: AuthAccount} = {}
-              let ref = &dict as &{Int: AnyStruct}
+              let ref = &dict as auth(Mutate) &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
           }
         `)
 
-	runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &testRuntimeInterface{}
 
-	_, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  common.ScriptLocation{},
-		},
-	)
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
 
-	RequireError(t, err)
+		RequireError(t, err)
 
-	assertRuntimeErrorIsUserError(t, err)
+		assertRuntimeErrorIsUserError(t, err)
 
-	var typeErr interpreter.ContainerMutationError
-	require.ErrorAs(t, err, &typeErr)
+		var typeErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &typeErr)
+	})
+
+	t.Run("valid: public account used as public account", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all) fun main() {
+              let dict: {Int: PublicAccount} = {}
+              let ref = &dict as auth(Mutate) &{Int: AnyStruct}
+              ref[0] = getAccount(0x01) as AnyStruct
+          }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+	})
 }
 
 func TestRuntimeStackOverflow(t *testing.T) {

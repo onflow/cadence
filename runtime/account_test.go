@@ -1451,10 +1451,23 @@ func TestRuntimePublicKey(t *testing.T) {
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
 
-		_, err := executeScript(script, runtimeInterface)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		value, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
 
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		expected := cadence.Struct{
+			StructType: PublicKeyType,
+			Fields: []cadence.Value{
+				// Public key (bytes)
+				newBytesValue([]byte{1, 2}),
+
+				// Signature Algo
+				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+			},
+		}
+
+		expected = cadence.ValueWithCachedTypeID(expected)
+
+		assert.Equal(t, expected, value)
 	})
 
 	t.Run("raw-key reference mutability", func(t *testing.T) {
@@ -1467,7 +1480,7 @@ func TestRuntimePublicKey(t *testing.T) {
                 signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
             )
 
-            var publickeyRef = &publicKey.publicKey as &[UInt8]
+            var publickeyRef = &publicKey.publicKey as auth(Mutate) &[UInt8]
             publickeyRef[0] = 3
 
             return publicKey
@@ -1885,9 +1898,7 @@ func TestAuthAccountContracts(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		errs := checker.RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("update names through reference", func(t *testing.T) {
@@ -1898,7 +1909,7 @@ func TestAuthAccountContracts(t *testing.T) {
 		script := []byte(`
             transaction {
                 prepare(signer: AuthAccount) {
-                    var namesRef = &signer.contracts.names as &[String]
+                    var namesRef = &signer.contracts.names as auth(Mutate) &[String]
                     namesRef[0] = "baz"
 
                     assert(signer.contracts.names[0] == "foo")
@@ -2097,7 +2108,7 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		}
 
-		_, err := rt.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
@@ -2106,9 +2117,14 @@ func TestPublicAccountContracts(t *testing.T) {
 				Location:  common.ScriptLocation{},
 			},
 		)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
 
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		require.IsType(t, cadence.Array{}, result)
+		array := result.(cadence.Array)
+
+		require.Len(t, array.Values, 2)
+		assert.Equal(t, cadence.String("foo"), array.Values[0])
+		assert.Equal(t, cadence.String("bar"), array.Values[1])
 	})
 
 	t.Run("append names", func(t *testing.T) {
@@ -2133,7 +2149,7 @@ func TestPublicAccountContracts(t *testing.T) {
 			},
 		}
 
-		_, err := rt.ExecuteScript(
+		result, err := rt.ExecuteScript(
 			Script{
 				Source: script,
 			},
@@ -2142,9 +2158,14 @@ func TestPublicAccountContracts(t *testing.T) {
 				Location:  common.ScriptLocation{},
 			},
 		)
-		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
 
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		require.IsType(t, cadence.Array{}, result)
+		array := result.(cadence.Array)
+
+		require.Len(t, array.Values, 2)
+		assert.Equal(t, cadence.String("foo"), array.Values[0])
+		assert.Equal(t, cadence.String("bar"), array.Values[1])
 	})
 }
 
