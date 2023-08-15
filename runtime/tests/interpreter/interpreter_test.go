@@ -11427,19 +11427,23 @@ func TestInterpretCompositeTypeHandler(t *testing.T) {
 
 	t.Parallel()
 
-	testType := &sema.CompositeType{}
+	testType := interpreter.CompositeStaticType{
+		Location:            stdlib.FlowLocation{},
+		QualifiedIdentifier: "AccountContractAdded",
+		TypeID:              "flow.AccountContractAdded",
+	}
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           fun test(): Type? {
-              return CompositeType("TEST")
+              return CompositeType("flow.AccountContractAdded")
           }
         `,
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
 				CompositeTypeHandler: func(location common.Location, typeID common.TypeID) *sema.CompositeType {
-					if typeID == "TEST" {
-						return testType
+					if _, ok := location.(stdlib.FlowLocation); ok {
+						return stdlib.FlowEventTypes[typeID]
 					}
 
 					return nil
@@ -11452,10 +11456,8 @@ func TestInterpretCompositeTypeHandler(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	testStaticType := interpreter.ConvertSemaToStaticType(nil, testType)
-
 	require.Equal(t,
-		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredTypeValue(testStaticType)),
+		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredTypeValue(testType)),
 		value,
 	)
 }
