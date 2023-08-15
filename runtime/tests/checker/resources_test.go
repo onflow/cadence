@@ -3977,7 +3977,7 @@ func TestCheckInvalidResourceDictionaryKeysForeach(t *testing.T) {
             xs.forEachKey(fun (x: @X): Bool {
                 destroy x
                 return true
-            }) 
+            })
             destroy xs
         }
     `)
@@ -5175,6 +5175,45 @@ func TestCheckResourceInterfaceOwnerFieldUse(t *testing.T) {
    `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckResourceOwnerFieldType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      var owner: &Account? = nil
+
+      resource Test {
+
+          init() {
+              owner = self.owner
+          }
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckResourceOwnerFieldTypeAccess(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+      resource Test {}
+
+      let r <- create Test()
+      let owner = r.owner
+    `)
+
+	require.NoError(t, err)
+
+	ownerType := RequireGlobalValue(t, checker.Elaboration, "owner")
+	require.Equal(t,
+		sema.NewOptionalType(nil, sema.AccountReferenceType),
+		ownerType,
+	)
 }
 
 func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
