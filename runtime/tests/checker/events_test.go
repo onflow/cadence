@@ -322,3 +322,180 @@ func TestCheckAccountEventParameter(t *testing.T) {
 	})
 
 }
+
+func TestCheckDeclareEventInInterface(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("declare", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo()
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("declare and emit", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo(x: String)
+				fun foo() {
+					emit Foo(x: "")
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("declare and emit nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo(x: String)
+
+				resource interface R {
+					fun foo() {
+						emit Foo(x: "")
+					}
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("emit non-declared event", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				fun foo() {
+					pre {
+						emit Foo()
+					}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("declare and emit type mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo(x: String)
+				fun foo() {
+					pre {
+						emit Foo(x: 3)
+					}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("declare and emit qualified", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) contract interface Test {
+				access(all) event Foo()
+			}
+			access(all) contract C {
+				access(all) resource R {
+					access(all) fun emitEvent() {
+						emit Test.Foo()
+					}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("declare and emit in pre-condition", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo()
+				fun foo() {
+					pre {
+						emit Foo()
+					}
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("declare and emit in post-condition", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo()
+				fun foo() {
+					post {
+						emit Foo()
+					}
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("declare does not create a type requirement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo()
+			}
+			contract Impl: Test {}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("impl with different type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface Test {
+				event Foo(y: Int)
+				fun emitEvent() {
+					emit Foo(y: 3)
+				}
+			}
+			contract Impl: Test {
+				event Foo(x: String)
+				fun emitEvent() {
+					emit Foo(x: "")
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+}

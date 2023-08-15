@@ -830,7 +830,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		// Declare nested declarations' members
 
 		for _, nestedInterfaceDeclaration := range members.Interfaces() {
-			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
+			checker.declareInterfaceMembersAndValue(nestedInterfaceDeclaration)
 		}
 
 		// If this composite declaration has nested composite declaration,
@@ -1486,10 +1486,10 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 	conformance.NestedTypes.Foreach(func(name string, typeRequirement Type) {
 
-		// Only nested composite declarations are type requirements of the interface
+		// Only non-event nested composite declarations are type requirements of the interface
 
 		requiredCompositeType, ok := typeRequirement.(*CompositeType)
-		if !ok {
+		if !ok || requiredCompositeType.Kind == common.CompositeKindEvent {
 			return
 		}
 
