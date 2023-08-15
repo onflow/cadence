@@ -396,7 +396,7 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 
 		executeScript(t, script, meter, structValue)
 		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
-		assert.Equal(t, uint64(71), meter[common.MemoryKindRawString])
+		assert.Equal(t, uint64(284), meter[common.MemoryKindRawString])
 	})
 }
 

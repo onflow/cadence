@@ -80,7 +80,12 @@ func NewPrimitiveStaticType(
 //
 // DO *NOT* REPLACE EXISTING TYPES!
 // DO *NOT* ADD NEW TYPES IN BETWEEN!
-
+//
+// NOTE: The following types are not primitive types, but CompositeType-s
+// - HashAlgorithm
+// - SigningAlgorithm
+// - AccountKey
+// - PublicKey
 const (
 	PrimitiveStaticTypeUnknown PrimitiveStaticType = iota
 	PrimitiveStaticTypeVoid
@@ -94,8 +99,8 @@ const (
 	PrimitiveStaticTypeCharacter
 	PrimitiveStaticTypeMetaType
 	PrimitiveStaticTypeBlock
-	_
-	_
+	PrimitiveStaticTypeAnyResourceAttachment
+	PrimitiveStaticTypeAnyStructAttachment
 	_
 	_
 	_
@@ -204,6 +209,7 @@ const (
 	PrimitiveStaticTypeAuthAccountKeys
 	// Deprecated: PrimitiveStaticTypePublicAccountKeys only exists for migration purposes.
 	PrimitiveStaticTypePublicAccountKeys
+	// Deprecated: PrimitiveStaticTypeAccountKey only exists for migration purposes
 	PrimitiveStaticTypeAccountKey
 	// Deprecated: PrimitiveStaticTypeAuthAccountInbox only exists for migration purposes.
 	PrimitiveStaticTypeAuthAccountInbox
@@ -225,6 +231,44 @@ const (
 	PrimitiveStaticTypeAccount_AccountCapabilities
 	PrimitiveStaticTypeAccount_Capabilities
 	PrimitiveStaticTypeAccount_Storage
+	_
+	_
+	_
+	_
+	_
+	PrimitiveStaticTypeMutate
+	PrimitiveStaticTypeInsert
+	PrimitiveStaticTypeRemove
+	PrimitiveStaticTypeIdentity
+	_
+	_
+	_
+	PrimitiveStaticTypeStorage
+	PrimitiveStaticTypeSaveValue
+	PrimitiveStaticTypeLoadValue
+	PrimitiveStaticTypeBorrowValue
+	PrimitiveStaticTypeContracts
+	PrimitiveStaticTypeAddContract
+	PrimitiveStaticTypeUpdateContract
+	PrimitiveStaticTypeRemoveContract
+	PrimitiveStaticTypeKeys
+	PrimitiveStaticTypeAddKey
+	PrimitiveStaticTypeRevokeKey
+	PrimitiveStaticTypeInbox
+	PrimitiveStaticTypePublishInboxCapability
+	PrimitiveStaticTypeUnpublishInboxCapability
+	PrimitiveStaticTypeClaimInboxCapability
+	PrimitiveStaticTypeCapabilities
+	PrimitiveStaticTypeStorageCapabilities
+	PrimitiveStaticTypeAccountCapabilities
+	PrimitiveStaticTypePublishCapability
+	PrimitiveStaticTypeUnpublishCapability
+	PrimitiveStaticTypeGetStorageCapabilityController
+	PrimitiveStaticTypeIssueStorageCapabilityController
+	PrimitiveStaticTypeGetAccountCapabilityController
+	PrimitiveStaticTypeIssueAccountCapabilityController
+	PrimitiveStaticTypeCapabilitiesMapping
+	PrimitiveStaticTypeAccountMapping
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -239,16 +283,23 @@ func (t PrimitiveStaticType) elementSize() uint {
 	case
 		PrimitiveStaticTypeAnyStruct,
 		PrimitiveStaticTypeAnyResource,
-		PrimitiveStaticTypeAny:
+		PrimitiveStaticTypeAny,
+		PrimitiveStaticTypeAnyStructAttachment,
+		PrimitiveStaticTypeAnyResourceAttachment:
 		return UnknownElementSize
+
 	case PrimitiveStaticTypeVoid:
 		return uint(len(cborVoidValue))
+
 	case PrimitiveStaticTypeNever:
 		return cborTagSize + 1
+
 	case PrimitiveStaticTypeBool:
 		return cborTagSize + 1
+
 	case PrimitiveStaticTypeAddress:
 		return cborTagSize + 8 // address length is 8 bytes
+
 	case PrimitiveStaticTypeString,
 		PrimitiveStaticTypeCharacter,
 		PrimitiveStaticTypeMetaType,
@@ -278,14 +329,17 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeUInt8,
 		PrimitiveStaticTypeWord8:
 		return cborTagSize + 2
+
 	case PrimitiveStaticTypeInt16,
 		PrimitiveStaticTypeUInt16,
 		PrimitiveStaticTypeWord16:
 		return cborTagSize + 3
+
 	case PrimitiveStaticTypeInt32,
 		PrimitiveStaticTypeUInt32,
 		PrimitiveStaticTypeWord32:
 		return cborTagSize + 5
+
 	case PrimitiveStaticTypeInt64,
 		PrimitiveStaticTypeUInt64,
 		PrimitiveStaticTypeWord64,
@@ -299,28 +353,70 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeCapabilityPath,
 		PrimitiveStaticTypePublicPath,
 		PrimitiveStaticTypePrivatePath,
-		PrimitiveStaticTypeAuthAccount,
-		PrimitiveStaticTypePublicAccount,
 		PrimitiveStaticTypeDeployedContract,
-		PrimitiveStaticTypeAuthAccountContracts,
-		PrimitiveStaticTypePublicAccountContracts,
-		PrimitiveStaticTypeAuthAccountInbox,
-		PrimitiveStaticTypeAuthAccountKeys,
-		PrimitiveStaticTypePublicAccountKeys,
-		PrimitiveStaticTypeAccountKey,
 		PrimitiveStaticTypeStorageCapabilityController,
 		PrimitiveStaticTypeAccountCapabilityController,
+		PrimitiveStaticTypeAccount,
+		PrimitiveStaticTypeAccount_Contracts,
+		PrimitiveStaticTypeAccount_Keys,
+		PrimitiveStaticTypeAccount_Inbox,
+		PrimitiveStaticTypeAccount_StorageCapabilities,
+		PrimitiveStaticTypeAccount_AccountCapabilities,
+		PrimitiveStaticTypeAccount_Capabilities,
+		PrimitiveStaticTypeAccount_Storage,
+		PrimitiveStaticTypeMutate,
+		PrimitiveStaticTypeInsert,
+		PrimitiveStaticTypeRemove,
+		PrimitiveStaticTypeIdentity,
+		PrimitiveStaticTypeStorage,
+		PrimitiveStaticTypeSaveValue,
+		PrimitiveStaticTypeLoadValue,
+		PrimitiveStaticTypeBorrowValue,
+		PrimitiveStaticTypeContracts,
+		PrimitiveStaticTypeAddContract,
+		PrimitiveStaticTypeUpdateContract,
+		PrimitiveStaticTypeRemoveContract,
+		PrimitiveStaticTypeKeys,
+		PrimitiveStaticTypeAddKey,
+		PrimitiveStaticTypeRevokeKey,
+		PrimitiveStaticTypeInbox,
+		PrimitiveStaticTypePublishInboxCapability,
+		PrimitiveStaticTypeUnpublishInboxCapability,
+		PrimitiveStaticTypeClaimInboxCapability,
+		PrimitiveStaticTypeCapabilities,
+		PrimitiveStaticTypeStorageCapabilities,
+		PrimitiveStaticTypeAccountCapabilities,
+		PrimitiveStaticTypePublishCapability,
+		PrimitiveStaticTypeUnpublishCapability,
+		PrimitiveStaticTypeGetStorageCapabilityController,
+		PrimitiveStaticTypeIssueStorageCapabilityController,
+		PrimitiveStaticTypeGetAccountCapabilityController,
+		PrimitiveStaticTypeIssueAccountCapabilityController,
+		PrimitiveStaticTypeCapabilitiesMapping,
+		PrimitiveStaticTypeAccountMapping:
+		return UnknownElementSize
+
+	case PrimitiveStaticTypeAuthAccount,
+		PrimitiveStaticTypePublicAccount,
+		PrimitiveStaticTypeAuthAccountContracts,
+		PrimitiveStaticTypePublicAccountContracts,
+		PrimitiveStaticTypeAuthAccountKeys,
+		PrimitiveStaticTypePublicAccountKeys,
+		PrimitiveStaticTypeAuthAccountInbox,
 		PrimitiveStaticTypeAuthAccountStorageCapabilities,
 		PrimitiveStaticTypeAuthAccountAccountCapabilities,
 		PrimitiveStaticTypeAuthAccountCapabilities,
-		PrimitiveStaticTypePublicAccountCapabilities:
+		PrimitiveStaticTypePublicAccountCapabilities,
+		PrimitiveStaticTypeAccountKey:
+		// These types are deprecated, and only exist for migration purposes
 		return UnknownElementSize
 	}
-	return UnknownElementSize
+
+	panic(errors.NewUnexpectedError("missing case for %s", t))
 }
 
-func (i PrimitiveStaticType) SemaType() sema.Type {
-	switch i {
+func (t PrimitiveStaticType) SemaType() sema.Type {
+	switch t {
 	case PrimitiveStaticTypeVoid:
 		return sema.VoidType
 
@@ -335,6 +431,12 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 
 	case PrimitiveStaticTypeAnyResource:
 		return sema.AnyResourceType
+
+	case PrimitiveStaticTypeAnyResourceAttachment:
+		return sema.AnyResourceAttachmentType
+
+	case PrimitiveStaticTypeAnyStructAttachment:
+		return sema.AnyStructAttachmentType
 
 	case PrimitiveStaticTypeBool:
 		return sema.BoolType
@@ -444,8 +546,6 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return &sema.CapabilityType{}
 	case PrimitiveStaticTypeDeployedContract:
 		return sema.DeployedContractType
-	case PrimitiveStaticTypeAccountKey:
-		return sema.AccountKeyType
 	case PrimitiveStaticTypeStorageCapabilityController:
 		return sema.StorageCapabilityControllerType
 	case PrimitiveStaticTypeAccountCapabilityController:
@@ -461,7 +561,8 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		PrimitiveStaticTypeAuthAccountStorageCapabilities,
 		PrimitiveStaticTypeAuthAccountAccountCapabilities,
 		PrimitiveStaticTypeAuthAccountCapabilities,
-		PrimitiveStaticTypePublicAccountCapabilities:
+		PrimitiveStaticTypePublicAccountCapabilities,
+		PrimitiveStaticTypeAccountKey:
 		// These types are deprecated, and only exist for migration purposes
 		return nil
 
@@ -482,9 +583,71 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypeAccount_Storage:
 		return sema.Account_StorageType
 
-	default:
-		panic(errors.NewUnexpectedError("missing case for %s", i))
+	case PrimitiveStaticTypeMutate:
+		return sema.MutateType
+	case PrimitiveStaticTypeInsert:
+		return sema.InsertType
+	case PrimitiveStaticTypeRemove:
+		return sema.RemoveType
+	case PrimitiveStaticTypeIdentity:
+		return sema.IdentityType
+
+	case PrimitiveStaticTypeStorage:
+		return sema.StorageType
+	case PrimitiveStaticTypeSaveValue:
+		return sema.SaveValueType
+	case PrimitiveStaticTypeLoadValue:
+		return sema.LoadValueType
+	case PrimitiveStaticTypeBorrowValue:
+		return sema.BorrowValueType
+	case PrimitiveStaticTypeContracts:
+		return sema.ContractsType
+	case PrimitiveStaticTypeAddContract:
+		return sema.AddContractType
+	case PrimitiveStaticTypeUpdateContract:
+		return sema.UpdateContractType
+	case PrimitiveStaticTypeRemoveContract:
+		return sema.RemoveContractType
+	case PrimitiveStaticTypeKeys:
+		return sema.KeysType
+	case PrimitiveStaticTypeAddKey:
+		return sema.AddKeyType
+	case PrimitiveStaticTypeRevokeKey:
+		return sema.RevokeKeyType
+	case PrimitiveStaticTypeInbox:
+		return sema.InboxType
+	case PrimitiveStaticTypePublishInboxCapability:
+		return sema.PublishInboxCapabilityType
+	case PrimitiveStaticTypeUnpublishInboxCapability:
+		return sema.UnpublishInboxCapabilityType
+	case PrimitiveStaticTypeClaimInboxCapability:
+		return sema.ClaimInboxCapabilityType
+	case PrimitiveStaticTypeCapabilities:
+		return sema.CapabilitiesType
+	case PrimitiveStaticTypeStorageCapabilities:
+		return sema.StorageCapabilitiesType
+	case PrimitiveStaticTypeAccountCapabilities:
+		return sema.AccountCapabilitiesType
+	case PrimitiveStaticTypePublishCapability:
+		return sema.PublishCapabilityType
+	case PrimitiveStaticTypeUnpublishCapability:
+		return sema.UnpublishCapabilityType
+	case PrimitiveStaticTypeGetStorageCapabilityController:
+		return sema.GetStorageCapabilityControllerType
+	case PrimitiveStaticTypeIssueStorageCapabilityController:
+		return sema.IssueStorageCapabilityControllerType
+	case PrimitiveStaticTypeGetAccountCapabilityController:
+		return sema.GetAccountCapabilityControllerType
+	case PrimitiveStaticTypeIssueAccountCapabilityController:
+		return sema.IssueAccountCapabilityControllerType
+
+	case PrimitiveStaticTypeCapabilitiesMapping:
+		return sema.CapabilitiesMappingType
+	case PrimitiveStaticTypeAccountMapping:
+		return sema.AccountMappingType
 	}
+
+	panic(errors.NewUnexpectedError("missing case for %s", t))
 }
 
 func (t PrimitiveStaticType) IsDefined() bool {
@@ -603,33 +766,98 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeAnyStruct
 	case sema.AnyResourceType:
 		typ = PrimitiveStaticTypeAnyResource
+	case sema.AnyStructAttachmentType:
+		typ = PrimitiveStaticTypeAnyStructAttachment
+	case sema.AnyResourceAttachmentType:
+		typ = PrimitiveStaticTypeAnyResourceAttachment
 	case sema.BlockType:
 		typ = PrimitiveStaticTypeBlock
 	case sema.DeployedContractType:
 		typ = PrimitiveStaticTypeDeployedContract
-	case sema.AccountKeyType:
-		typ = PrimitiveStaticTypeAccountKey
 	case sema.StorageCapabilityControllerType:
 		typ = PrimitiveStaticTypeStorageCapabilityController
 	case sema.AccountCapabilityControllerType:
 		typ = PrimitiveStaticTypeAccountCapabilityController
 
 	case sema.AccountType:
-		return PrimitiveStaticTypeAccount
+		typ = PrimitiveStaticTypeAccount
 	case sema.Account_ContractsType:
-		return PrimitiveStaticTypeAccount_Contracts
+		typ = PrimitiveStaticTypeAccount_Contracts
 	case sema.Account_KeysType:
-		return PrimitiveStaticTypeAccount_Keys
+		typ = PrimitiveStaticTypeAccount_Keys
 	case sema.Account_InboxType:
-		return PrimitiveStaticTypeAccount_Inbox
+		typ = PrimitiveStaticTypeAccount_Inbox
 	case sema.Account_StorageCapabilitiesType:
-		return PrimitiveStaticTypeAccount_StorageCapabilities
+		typ = PrimitiveStaticTypeAccount_StorageCapabilities
 	case sema.Account_AccountCapabilitiesType:
-		return PrimitiveStaticTypeAccount_AccountCapabilities
+		typ = PrimitiveStaticTypeAccount_AccountCapabilities
 	case sema.Account_CapabilitiesType:
-		return PrimitiveStaticTypeAccount_Capabilities
+		typ = PrimitiveStaticTypeAccount_Capabilities
 	case sema.Account_StorageType:
-		return PrimitiveStaticTypeAccount_Storage
+		typ = PrimitiveStaticTypeAccount_Storage
+
+	case sema.MutateType:
+		typ = PrimitiveStaticTypeMutate
+	case sema.InsertType:
+		typ = PrimitiveStaticTypeInsert
+	case sema.RemoveType:
+		typ = PrimitiveStaticTypeRemove
+	case sema.IdentityType:
+		typ = PrimitiveStaticTypeIdentity
+
+	case sema.StorageType:
+		typ = PrimitiveStaticTypeStorage
+	case sema.SaveValueType:
+		typ = PrimitiveStaticTypeSaveValue
+	case sema.LoadValueType:
+		typ = PrimitiveStaticTypeLoadValue
+	case sema.BorrowValueType:
+		typ = PrimitiveStaticTypeBorrowValue
+	case sema.ContractsType:
+		typ = PrimitiveStaticTypeContracts
+	case sema.AddContractType:
+		typ = PrimitiveStaticTypeAddContract
+	case sema.UpdateContractType:
+		typ = PrimitiveStaticTypeUpdateContract
+	case sema.RemoveContractType:
+		typ = PrimitiveStaticTypeRemoveContract
+	case sema.KeysType:
+		typ = PrimitiveStaticTypeKeys
+	case sema.AddKeyType:
+		typ = PrimitiveStaticTypeAddKey
+	case sema.RevokeKeyType:
+		typ = PrimitiveStaticTypeRevokeKey
+	case sema.InboxType:
+		typ = PrimitiveStaticTypeInbox
+	case sema.PublishInboxCapabilityType:
+		typ = PrimitiveStaticTypePublishInboxCapability
+	case sema.UnpublishInboxCapabilityType:
+		typ = PrimitiveStaticTypeUnpublishInboxCapability
+	case sema.ClaimInboxCapabilityType:
+		typ = PrimitiveStaticTypeClaimInboxCapability
+	case sema.CapabilitiesType:
+		typ = PrimitiveStaticTypeCapabilities
+	case sema.StorageCapabilitiesType:
+		typ = PrimitiveStaticTypeStorageCapabilities
+	case sema.AccountCapabilitiesType:
+		typ = PrimitiveStaticTypeAccountCapabilities
+	case sema.PublishCapabilityType:
+		typ = PrimitiveStaticTypePublishCapability
+	case sema.UnpublishCapabilityType:
+		typ = PrimitiveStaticTypeUnpublishCapability
+	case sema.GetStorageCapabilityControllerType:
+		typ = PrimitiveStaticTypeGetStorageCapabilityController
+	case sema.IssueStorageCapabilityControllerType:
+		typ = PrimitiveStaticTypeIssueStorageCapabilityController
+	case sema.GetAccountCapabilityControllerType:
+		typ = PrimitiveStaticTypeGetAccountCapabilityController
+	case sema.IssueAccountCapabilityControllerType:
+		typ = PrimitiveStaticTypeIssueAccountCapabilityController
+
+	case sema.CapabilitiesMappingType:
+		typ = PrimitiveStaticTypeCapabilitiesMapping
+	case sema.AccountMappingType:
+		typ = PrimitiveStaticTypeAccountMapping
 	}
 
 	switch t := t.(type) {

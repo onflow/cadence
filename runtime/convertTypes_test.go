@@ -77,7 +77,7 @@ func BenchmarkExportType(b *testing.B) {
 		ty := sema.StringType
 
 		exportedType := ExportType(ty, map[sema.TypeID]cadence.Type{})
-		assert.Equal(b, cadence.NewStringType(), exportedType)
+		assert.Equal(b, cadence.StringType, exportedType)
 
 		b.ResetTimer()
 		b.ReportAllocs()

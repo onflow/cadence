@@ -1318,7 +1318,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 							Fields: []cadence.Field{
 								{
 									Identifier: "y",
-									Type:       cadence.StringType{},
+									Type:       cadence.StringType,
 								},
 							},
 						}),
@@ -1368,7 +1368,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 								Fields: []cadence.Field{
 									{
 										Identifier: "y",
-										Type:       cadence.StringType{},
+										Type:       cadence.StringType,
 									},
 								},
 							}),
@@ -1683,7 +1683,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 							Fields: []cadence.Field{
 								{
 									Identifier: "y",
-									Type:       cadence.StringType{},
+									Type:       cadence.StringType,
 								},
 							},
 						}),
@@ -1718,7 +1718,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 								Fields: []cadence.Field{
 									{
 										Identifier: "y",
-										Type:       cadence.StringType{},
+										Type:       cadence.StringType,
 									},
 								},
 							}),
@@ -2776,7 +2776,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 				expected: cadence.Function{
 					FunctionType: cadence.TypeWithCachedTypeID(
 						&cadence.FunctionType{
-							ReturnType: cadence.IntType{},
+							ReturnType: cadence.IntType,
 						},
 					).(*cadence.FunctionType),
 				},
@@ -2803,10 +2803,10 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 								{
 									Label:      sema.ArgumentLabelNotRequired,
 									Identifier: "message",
-									Type:       cadence.StringType{},
+									Type:       cadence.StringType,
 								},
 							},
-							ReturnType: cadence.NeverType{},
+							ReturnType: cadence.NeverType,
 						},
 					).(*cadence.FunctionType),
 				},
@@ -2833,7 +2833,7 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 				expected: cadence.Function{
 					FunctionType: cadence.TypeWithCachedTypeID(
 						&cadence.FunctionType{
-							ReturnType: cadence.VoidType{},
+							ReturnType: cadence.VoidType,
 						},
 					).(*cadence.FunctionType),
 				},
@@ -2876,13 +2876,13 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 						nil,
 					}).WithType(&cadence.VariableSizedArrayType{
 						ElementType: &cadence.ReferenceType{
-							Type:          cadence.AnyStructType{},
+							Type:          cadence.AnyStructType,
 							Authorization: cadence.UnauthorizedAccess,
 						},
 					}),
 				}).WithType(&cadence.VariableSizedArrayType{
 					ElementType: &cadence.ReferenceType{
-						Type:          cadence.AnyStructType{},
+						Type:          cadence.AnyStructType,
 						Authorization: cadence.UnauthorizedAccess,
 					},
 				}),
@@ -3638,7 +3638,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				cadence.NewIDCapability(
 					1,
 					cadence.Address{},
-					cadence.AddressType{}, // this will error during `importValue`
+					cadence.AddressType, // this will error during `importValue`
 				),
 			},
 			[]sema.Type{
@@ -3665,7 +3665,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				cadence.NewIDCapability(
 					42,
 					cadence.Address{},
-					cadence.AddressType{}, // this will error during `importValue`
+					cadence.AddressType, // this will error during `importValue`
 				),
 			},
 			[]sema.Type{
@@ -9440,4 +9440,59 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 		},
 	)
 	require.NoError(b, err)
+}
+
+func TestRuntimeTypesAndConversions(t *testing.T) {
+	t.Parallel()
+
+	test := func(name string, semaType sema.Type) {
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			var staticType interpreter.StaticType
+
+			t.Run("sema -> static", func(t *testing.T) {
+				staticType = interpreter.ConvertSemaToStaticType(nil, semaType)
+				require.NotNil(t, staticType)
+			})
+
+			if staticType != nil {
+				t.Run("static -> sema", func(t *testing.T) {
+
+					t.Parallel()
+
+					inter, err := interpreter.NewInterpreter(nil, nil, &interpreter.Config{})
+					require.NoError(t, err)
+
+					convertedSemaType, err := inter.ConvertStaticToSemaType(staticType)
+					require.NoError(t, err)
+					require.True(t, semaType.Equal(convertedSemaType))
+				})
+			}
+
+			var cadenceType cadence.Type
+
+			t.Run("sema -> cadence", func(t *testing.T) {
+
+				cadenceType = ExportType(semaType, map[sema.TypeID]cadence.Type{})
+				require.NotNil(t, cadenceType)
+			})
+
+			if cadenceType != nil {
+
+				t.Run("cadence -> static", func(t *testing.T) {
+
+					t.Parallel()
+
+					convertedStaticType := ImportType(nil, cadenceType)
+					require.True(t, staticType.Equal(convertedStaticType))
+				})
+			}
+		})
+	}
+
+	for name, ty := range checker.AllBaseSemaTypes() {
+		test(name, ty)
+	}
 }

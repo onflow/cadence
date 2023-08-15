@@ -207,3 +207,19 @@ func RequireGlobalValue(t *testing.T, elaboration *sema.Elaboration, name string
 	require.True(t, ok, "global value '%s' missing", name)
 	return variable.Type
 }
+
+func AllBaseSemaTypes() map[string]sema.Type {
+
+	types := map[string]sema.Type{}
+
+	_ = sema.BaseTypeActivation.ForEach(func(name string, variable *sema.Variable) error {
+		if name == "" {
+			return nil
+		}
+
+		types[name] = variable.Type
+		return nil
+	})
+
+	return types
+}

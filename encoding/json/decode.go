@@ -1241,106 +1241,104 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Any":
-		return cadence.TheAnyType
+		return cadence.AnyType
 	case "AnyStruct":
-		return cadence.TheAnyStructType
+		return cadence.AnyStructType
 	case "AnyStructAttachment":
-		return cadence.TheAnyStructAttachmentType
+		return cadence.AnyStructAttachmentType
 	case "AnyResource":
-		return cadence.TheAnyResourceType
+		return cadence.AnyResourceType
 	case "AnyResourceAttachment":
-		return cadence.TheAnyResourceAttachmentType
+		return cadence.AnyResourceAttachmentType
 	case "Type":
-		return cadence.TheMetaType
+		return cadence.MetaType
 	case "Void":
-		return cadence.TheVoidType
+		return cadence.VoidType
 	case "Never":
-		return cadence.TheNeverType
+		return cadence.NeverType
 	case "Bool":
-		return cadence.TheBoolType
+		return cadence.BoolType
 	case "String":
-		return cadence.TheStringType
+		return cadence.StringType
 	case "Character":
-		return cadence.TheCharacterType
+		return cadence.CharacterType
 	case "Bytes":
 		return cadence.TheBytesType
 	case "Address":
-		return cadence.TheAddressType
+		return cadence.AddressType
 	case "Number":
-		return cadence.TheNumberType
+		return cadence.NumberType
 	case "SignedNumber":
-		return cadence.TheSignedNumberType
+		return cadence.SignedNumberType
 	case "Integer":
-		return cadence.TheIntegerType
+		return cadence.IntegerType
 	case "SignedInteger":
-		return cadence.TheSignedIntegerType
+		return cadence.SignedIntegerType
 	case "FixedPoint":
-		return cadence.TheFixedPointType
+		return cadence.FixedPointType
 	case "SignedFixedPoint":
-		return cadence.TheSignedFixedPointType
+		return cadence.SignedFixedPointType
 	case "Int":
-		return cadence.TheIntType
+		return cadence.IntType
 	case "Int8":
-		return cadence.TheInt8Type
+		return cadence.Int8Type
 	case "Int16":
-		return cadence.TheInt16Type
+		return cadence.Int16Type
 	case "Int32":
-		return cadence.TheInt32Type
+		return cadence.Int32Type
 	case "Int64":
-		return cadence.TheInt64Type
+		return cadence.Int64Type
 	case "Int128":
-		return cadence.TheInt128Type
+		return cadence.Int128Type
 	case "Int256":
-		return cadence.TheInt256Type
+		return cadence.Int256Type
 	case "UInt":
-		return cadence.TheUIntType
+		return cadence.UIntType
 	case "UInt8":
-		return cadence.TheUInt8Type
+		return cadence.UInt8Type
 	case "UInt16":
-		return cadence.TheUInt16Type
+		return cadence.UInt16Type
 	case "UInt32":
-		return cadence.TheUInt32Type
+		return cadence.UInt32Type
 	case "UInt64":
-		return cadence.TheUInt64Type
+		return cadence.UInt64Type
 	case "UInt128":
-		return cadence.TheUInt128Type
+		return cadence.UInt128Type
 	case "UInt256":
-		return cadence.TheUInt256Type
+		return cadence.UInt256Type
 	case "Word8":
-		return cadence.TheWord8Type
+		return cadence.Word8Type
 	case "Word16":
-		return cadence.TheWord16Type
+		return cadence.Word16Type
 	case "Word32":
-		return cadence.TheWord32Type
+		return cadence.Word32Type
 	case "Word64":
-		return cadence.TheWord64Type
+		return cadence.Word64Type
 	case "Word128":
-		return cadence.TheWord128Type
+		return cadence.Word128Type
 	case "Word256":
-		return cadence.TheWord256Type
+		return cadence.Word256Type
 	case "Fix64":
-		return cadence.TheFix64Type
+		return cadence.Fix64Type
 	case "UFix64":
-		return cadence.TheUFix64Type
+		return cadence.UFix64Type
 	case "Path":
-		return cadence.ThePathType
+		return cadence.PathType
 	case "CapabilityPath":
-		return cadence.TheCapabilityPathType
+		return cadence.CapabilityPathType
 	case "StoragePath":
-		return cadence.TheStoragePathType
+		return cadence.StoragePathType
 	case "PublicPath":
-		return cadence.ThePublicPathType
+		return cadence.PublicPathType
 	case "PrivatePath":
-		return cadence.ThePrivatePathType
+		return cadence.PrivatePathType
 
-	// TODO: account-related types
+	// TODO: missing types
 
 	case "DeployedContract":
-		return cadence.TheDeployedContractType
-	case "AccountKey":
-		return cadence.TheAccountKeyType
+		return cadence.DeployedContractType
 	case "Block":
-		return cadence.TheBlockType
+		return cadence.BlockType
 	default:
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))

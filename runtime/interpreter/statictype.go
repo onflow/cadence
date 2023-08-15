@@ -55,7 +55,6 @@ type StaticType interface {
 type CompositeStaticType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	TypeID              common.TypeID
 }
 
 var _ StaticType = CompositeStaticType{}
@@ -64,25 +63,13 @@ func NewCompositeStaticType(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
 	qualifiedIdentifier string,
-	typeID common.TypeID,
 ) CompositeStaticType {
 	common.UseMemory(memoryGauge, common.CompositeStaticTypeMemoryUsage)
 
 	return CompositeStaticType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		TypeID:              typeID,
 	}
-}
-
-func NewCompositeStaticTypeComputeTypeID(
-	memoryGauge common.MemoryGauge,
-	location common.Location,
-	qualifiedIdentifier string,
-) CompositeStaticType {
-	typeID := common.NewTypeIDFromQualifiedName(memoryGauge, location, qualifiedIdentifier)
-
-	return NewCompositeStaticType(memoryGauge, location, qualifiedIdentifier, typeID)
 }
 
 func (CompositeStaticType) isStaticType() {}
@@ -95,19 +82,14 @@ func (t CompositeStaticType) String() string {
 	if t.Location == nil {
 		return t.QualifiedIdentifier
 	}
-	return string(t.TypeID)
+	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
 }
 
 func (t CompositeStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	var amount int
 	if t.Location == nil {
-		amount = len(t.QualifiedIdentifier)
-	} else {
-		amount = len(t.TypeID)
+		return t.QualifiedIdentifier
 	}
-
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(amount))
-	return t.String()
+	return string(t.Location.TypeID(memoryGauge, t.QualifiedIdentifier))
 }
 
 func (t CompositeStaticType) Equal(other StaticType) bool {
@@ -116,7 +98,8 @@ func (t CompositeStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
-	return otherCompositeType.TypeID == t.TypeID
+	return otherCompositeType.Location == t.Location &&
+		otherCompositeType.QualifiedIdentifier == t.QualifiedIdentifier
 }
 
 // InterfaceStaticType
@@ -733,7 +716,7 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 	switch t := t.(type) {
 	case *sema.CompositeType:
-		return NewCompositeStaticType(memoryGauge, t.Location, t.QualifiedIdentifier(), t.ID())
+		return ConvertSemaCompositeTypeToStaticCompositeType(memoryGauge, t)
 
 	case *sema.InterfaceType:
 		return ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, t)
@@ -860,6 +843,13 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(
 	return NewInterfaceStaticType(memoryGauge, t.Location, t.QualifiedIdentifier())
 }
 
+func ConvertSemaCompositeTypeToStaticCompositeType(
+	memoryGauge common.MemoryGauge,
+	t *sema.CompositeType,
+) CompositeStaticType {
+	return NewCompositeStaticType(memoryGauge, t.Location, t.QualifiedIdentifier())
+}
+
 func ConvertStaticAuthorizationToSemaAccess(
 	memoryGauge common.MemoryGauge,
 	auth Authorization,
@@ -875,6 +865,7 @@ func ConvertStaticAuthorizationToSemaAccess(
 			return nil, err
 		}
 		return sema.NewEntitlementMapAccess(entitlement), nil
+
 	case EntitlementSetAuthorization:
 		var entitlements []*sema.EntitlementType
 		err := auth.Entitlements.ForeachWithError(func(id common.TypeID, value struct{}) error {
@@ -890,6 +881,7 @@ func ConvertStaticAuthorizationToSemaAccess(
 		}
 		return sema.NewEntitlementSetAccess(entitlements, auth.SetKind), nil
 	}
+
 	panic(errors.NewUnreachableError())
 }
 
@@ -897,13 +889,13 @@ func ConvertStaticToSemaType(
 	memoryGauge common.MemoryGauge,
 	typ StaticType,
 	getInterface func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error),
-	getComposite func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error),
+	getComposite func(location common.Location, qualifiedIdentifier string) (*sema.CompositeType, error),
 	getEntitlement func(typeID common.TypeID) (*sema.EntitlementType, error),
 	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error),
 ) (_ sema.Type, err error) {
 	switch t := typ.(type) {
 	case CompositeStaticType:
-		return getComposite(t.Location, t.QualifiedIdentifier, t.TypeID)
+		return getComposite(t.Location, t.QualifiedIdentifier)
 
 	case InterfaceStaticType:
 		return getInterface(t.Location, t.QualifiedIdentifier)

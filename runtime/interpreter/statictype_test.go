@@ -179,12 +179,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			NewCompositeStaticTypeComputeTypeID(
+			NewCompositeStaticType(
 				nil,
 				utils.TestLocation,
 				"X",
 			).Equal(
-				NewCompositeStaticTypeComputeTypeID(
+				NewCompositeStaticType(
 					nil,
 					utils.TestLocation,
 					"X",
@@ -198,12 +198,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticTypeComputeTypeID(
+			NewCompositeStaticType(
 				nil,
 				utils.TestLocation,
 				"X",
 			).Equal(
-				NewCompositeStaticTypeComputeTypeID(
+				NewCompositeStaticType(
 					nil,
 					utils.TestLocation,
 					"Y",
@@ -217,12 +217,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticTypeComputeTypeID(
+			NewCompositeStaticType(
 				nil,
 				common.IdentifierLocation("A"),
 				"X",
 			).Equal(
-				NewCompositeStaticTypeComputeTypeID(
+				NewCompositeStaticType(
 					nil,
 					common.IdentifierLocation("B"),
 					"X",
@@ -236,12 +236,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticTypeComputeTypeID(
+			NewCompositeStaticType(
 				nil,
 				common.IdentifierLocation("A"),
 				"X",
 			).Equal(
-				NewCompositeStaticTypeComputeTypeID(
+				NewCompositeStaticType(
 					nil,
 					common.StringLocation("A"),
 					"X",
@@ -255,12 +255,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			NewCompositeStaticTypeComputeTypeID(
+			NewCompositeStaticType(
 				nil,
 				nil,
 				"X",
 			).Equal(
-				NewCompositeStaticTypeComputeTypeID(
+				NewCompositeStaticType(
 					nil,
 					nil,
 					"X",
@@ -274,12 +274,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticTypeComputeTypeID(
+			NewCompositeStaticType(
 				nil,
 				nil,
 				"X",
 			).Equal(
-				NewCompositeStaticTypeComputeTypeID(
+				NewCompositeStaticType(
 					nil,
 					nil,
 					"Y",
@@ -293,12 +293,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticTypeComputeTypeID(
+			NewCompositeStaticType(
 				nil,
 				nil,
 				"X",
 			).Equal(
-				NewCompositeStaticTypeComputeTypeID(
+				NewCompositeStaticType(
 					nil,
 					common.StringLocation("B"),
 					"X",
@@ -312,7 +312,7 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticTypeComputeTypeID(
+			NewCompositeStaticType(
 				nil,
 				nil,
 				"X",
@@ -458,7 +458,7 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 				Location:            nil,
 				QualifiedIdentifier: "X",
 			}.Equal(
-				NewCompositeStaticTypeComputeTypeID(
+				NewCompositeStaticType(
 					nil,
 					nil,
 					"X",
@@ -924,7 +924,7 @@ func TestPrimitiveStaticTypeCount(t *testing.T) {
 	// (before the PrimitiveStaticType_Count of course).
 	// Only update this test if you are certain your change to this enum was to append new types to the end.
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(113), byte(PrimitiveStaticType_Count))
+		require.Equal(t, byte(151), byte(PrimitiveStaticType_Count))
 	})
 }
 
@@ -956,7 +956,6 @@ func TestStaticTypeConversion(t *testing.T) {
 	testCompositeStaticType := CompositeStaticType{
 		Location:            testLocation,
 		QualifiedIdentifier: testCompositeQualifiedIdentifier,
-		TypeID:              "S.test.TestComposite",
 	}
 
 	testFunctionType := &sema.FunctionType{}
@@ -966,6 +965,7 @@ func TestStaticTypeConversion(t *testing.T) {
 		semaType     sema.Type
 		staticType   StaticType
 		getInterface func(
+			t *testing.T,
 			location common.Location,
 			qualifiedIdentifier string,
 		) (
@@ -973,9 +973,9 @@ func TestStaticTypeConversion(t *testing.T) {
 			error,
 		)
 		getComposite func(
+			t *testing.T,
 			location common.Location,
 			qualifiedIdentifier string,
-			typeID common.TypeID,
 		) (
 			*sema.CompositeType,
 			error,
@@ -1243,11 +1243,6 @@ func TestStaticTypeConversion(t *testing.T) {
 			staticType: PrimitiveStaticTypeAccount_Keys,
 		},
 		{
-			name:       "AccountKey",
-			semaType:   sema.AccountKeyType,
-			staticType: PrimitiveStaticTypeAccountKey,
-		},
-		{
 			name:       "Account.Inbox",
 			semaType:   sema.Account_InboxType,
 			staticType: PrimitiveStaticTypeAccount_Inbox,
@@ -1276,6 +1271,182 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "AccountCapabilityController",
 			semaType:   sema.AccountCapabilityControllerType,
 			staticType: PrimitiveStaticTypeAccountCapabilityController,
+		},
+
+		{
+			name:       "AnyResourceAttachment",
+			semaType:   sema.AnyResourceAttachmentType,
+			staticType: PrimitiveStaticTypeAnyResourceAttachment,
+		},
+
+		{
+			name:       "AnyStructAttachment",
+			semaType:   sema.AnyStructAttachmentType,
+			staticType: PrimitiveStaticTypeAnyStructAttachment,
+		},
+		{
+			name:       "AccountKey",
+			semaType:   sema.AccountKeyType,
+			staticType: AccountKeyStaticType,
+			getComposite: func(
+				t *testing.T,
+				location common.Location,
+				qualifiedIdentifier string,
+			) (*sema.CompositeType, error) {
+				require.Nil(t, location)
+				require.Equal(t, "AccountKey", qualifiedIdentifier)
+				return sema.AccountKeyType, nil
+			},
+		},
+		{
+			name:       "Mutate",
+			semaType:   sema.MutateType,
+			staticType: PrimitiveStaticTypeMutate,
+		},
+		{
+			name:       "Insert",
+			semaType:   sema.InsertType,
+			staticType: PrimitiveStaticTypeInsert,
+		},
+		{
+			name:       "Remove",
+			semaType:   sema.RemoveType,
+			staticType: PrimitiveStaticTypeRemove,
+		},
+		{
+			name:       "Storage",
+			semaType:   sema.StorageType,
+			staticType: PrimitiveStaticTypeStorage,
+		},
+		{
+			name:       "SaveValue",
+			semaType:   sema.SaveValueType,
+			staticType: PrimitiveStaticTypeSaveValue,
+		},
+		{
+			name:       "LoadValue",
+			semaType:   sema.LoadValueType,
+			staticType: PrimitiveStaticTypeLoadValue,
+		},
+		{
+			name:       "BorrowValue",
+			semaType:   sema.BorrowValueType,
+			staticType: PrimitiveStaticTypeBorrowValue,
+		},
+		{
+			name:       "Contracts",
+			semaType:   sema.ContractsType,
+			staticType: PrimitiveStaticTypeContracts,
+		},
+		{
+			name:       "AddContract",
+			semaType:   sema.AddContractType,
+			staticType: PrimitiveStaticTypeAddContract,
+		},
+		{
+			name:       "UpdateContract",
+			semaType:   sema.UpdateContractType,
+			staticType: PrimitiveStaticTypeUpdateContract,
+		},
+		{
+			name:       "RemoveContract",
+			semaType:   sema.RemoveContractType,
+			staticType: PrimitiveStaticTypeRemoveContract,
+		},
+		{
+			name:       "Keys",
+			semaType:   sema.KeysType,
+			staticType: PrimitiveStaticTypeKeys,
+		},
+		{
+			name:       "AddKey",
+			semaType:   sema.AddKeyType,
+			staticType: PrimitiveStaticTypeAddKey,
+		},
+		{
+			name:       "RevokeKey",
+			semaType:   sema.RevokeKeyType,
+			staticType: PrimitiveStaticTypeRevokeKey,
+		},
+		{
+			name:       "Inbox",
+			semaType:   sema.InboxType,
+			staticType: PrimitiveStaticTypeInbox,
+		},
+		{
+			name:       "PublishInboxCapability",
+			semaType:   sema.PublishInboxCapabilityType,
+			staticType: PrimitiveStaticTypePublishInboxCapability,
+		},
+		{
+			name:       "UnpublishInboxCapability",
+			semaType:   sema.UnpublishInboxCapabilityType,
+			staticType: PrimitiveStaticTypeUnpublishInboxCapability,
+		},
+		{
+			name:       "ClaimInboxCapability",
+			semaType:   sema.ClaimInboxCapabilityType,
+			staticType: PrimitiveStaticTypeClaimInboxCapability,
+		},
+		{
+			name:       "Capabilities",
+			semaType:   sema.CapabilitiesType,
+			staticType: PrimitiveStaticTypeCapabilities,
+		},
+		{
+			name:       "StorageCapabilities",
+			semaType:   sema.StorageCapabilitiesType,
+			staticType: PrimitiveStaticTypeStorageCapabilities,
+		},
+		{
+			name:       "AccountCapabilities",
+			semaType:   sema.AccountCapabilitiesType,
+			staticType: PrimitiveStaticTypeAccountCapabilities,
+		},
+		{
+			name:       "PublishCapability",
+			semaType:   sema.PublishCapabilityType,
+			staticType: PrimitiveStaticTypePublishCapability,
+		},
+		{
+			name:       "UnpublishCapability",
+			semaType:   sema.UnpublishCapabilityType,
+			staticType: PrimitiveStaticTypeUnpublishCapability,
+		},
+		{
+			name:       "GetStorageCapabilityController",
+			semaType:   sema.GetStorageCapabilityControllerType,
+			staticType: PrimitiveStaticTypeGetStorageCapabilityController,
+		},
+		{
+			name:       "IssueStorageCapabilityController",
+			semaType:   sema.IssueStorageCapabilityControllerType,
+			staticType: PrimitiveStaticTypeIssueStorageCapabilityController,
+		},
+		{
+			name:       "GetAccountCapabilityController",
+			semaType:   sema.GetAccountCapabilityControllerType,
+			staticType: PrimitiveStaticTypeGetAccountCapabilityController,
+		},
+		{
+			name:       "IssueAccountCapabilityController",
+			semaType:   sema.IssueAccountCapabilityControllerType,
+			staticType: PrimitiveStaticTypeIssueAccountCapabilityController,
+		},
+		{
+			name:       "CapabilitiesMapping",
+			semaType:   sema.CapabilitiesMappingType,
+			staticType: PrimitiveStaticTypeCapabilitiesMapping,
+		},
+		{
+			name:       "AccountMapping",
+			semaType:   sema.AccountMappingType,
+			staticType: PrimitiveStaticTypeAccountMapping,
+		},
+		{
+			name:       "Identity",
+			semaType:   sema.IdentityType,
+			staticType: PrimitiveStaticTypeIdentity,
 		},
 
 		{
@@ -1356,7 +1527,11 @@ func TestStaticTypeConversion(t *testing.T) {
 					testInterfaceStaticType,
 				},
 			},
-			getInterface: func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+			getInterface: func(
+				t *testing.T,
+				location common.Location,
+				qualifiedIdentifier string,
+			) (*sema.InterfaceType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testInterfaceQualifiedIdentifier, qualifiedIdentifier)
 				return testInterfaceSemaType, nil
@@ -1366,7 +1541,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "Interface",
 			semaType:   testInterfaceSemaType,
 			staticType: testInterfaceStaticType,
-			getInterface: func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+			getInterface: func(
+				t *testing.T,
+				location common.Location,
+				qualifiedIdentifier string,
+			) (*sema.InterfaceType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testInterfaceQualifiedIdentifier, qualifiedIdentifier)
 				return testInterfaceSemaType, nil
@@ -1376,7 +1555,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "Composite",
 			semaType:   testCompositeSemaType,
 			staticType: testCompositeStaticType,
-			getComposite: func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+			getComposite: func(
+				t *testing.T,
+				location common.Location,
+				qualifiedIdentifier string,
+			) (*sema.CompositeType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testCompositeQualifiedIdentifier, qualifiedIdentifier)
 				return testCompositeSemaType, nil
@@ -1402,48 +1585,53 @@ func TestStaticTypeConversion(t *testing.T) {
 			staticType: PrimitiveStaticTypePublicAccount,
 		},
 		{
-			name:       "AuthAccountContracts",
+			name:       "AuthAccount.Contracts",
 			staticType: PrimitiveStaticTypeAuthAccountContracts,
 			semaType:   nil,
 		},
 		{
-			name:       "PublicAccountContracts",
+			name:       "PublicAccount.Contracts",
 			staticType: PrimitiveStaticTypePublicAccountContracts,
 			semaType:   nil,
 		},
 		{
-			name:       "AuthAccountKeys",
+			name:       "AuthAccount.Keys",
 			staticType: PrimitiveStaticTypeAuthAccountKeys,
 			semaType:   nil,
 		},
 		{
-			name:       "PublicAccountKeys",
+			name:       "PublicAccount.Keys",
 			staticType: PrimitiveStaticTypePublicAccountKeys,
 			semaType:   nil,
 		},
 		{
-			name:       "AuthAccountInbox",
+			name:       "AuthAccount.Inbox",
 			staticType: PrimitiveStaticTypeAuthAccountInbox,
 			semaType:   nil,
 		},
 		{
-			name:       "AuthAccountStorageCapabilities",
+			name:       "AuthAccount.StorageCapabilities",
 			staticType: PrimitiveStaticTypeAuthAccountStorageCapabilities,
 			semaType:   nil,
 		},
 		{
-			name:       "AuthAccountAccountCapabilities",
+			name:       "AuthAccount.AccountCapabilities",
 			staticType: PrimitiveStaticTypeAuthAccountAccountCapabilities,
 			semaType:   nil,
 		},
 		{
-			name:       "AuthAccountCapabilities",
+			name:       "AuthAccount.Capabilities",
 			staticType: PrimitiveStaticTypeAuthAccountCapabilities,
 			semaType:   nil,
 		},
 		{
-			name:       "PublicAccountCapabilities",
+			name:       "PublicAccount.Capabilities",
 			staticType: PrimitiveStaticTypePublicAccountCapabilities,
+			semaType:   nil,
+		},
+		{
+			name:       "AccountKey",
+			staticType: PrimitiveStaticTypeAccountKey,
 			semaType:   nil,
 		},
 	}
@@ -1467,7 +1655,11 @@ func TestStaticTypeConversion(t *testing.T) {
 
 			getInterface := test.getInterface
 			if getInterface == nil {
-				getInterface = func(_ common.Location, _ string) (*sema.InterfaceType, error) {
+				getInterface = func(
+					_ *testing.T,
+					_ common.Location,
+					_ string,
+				) (*sema.InterfaceType, error) {
 					require.FailNow(t, "getInterface should not be called")
 					return nil, nil
 				}
@@ -1475,7 +1667,11 @@ func TestStaticTypeConversion(t *testing.T) {
 
 			getComposite := test.getComposite
 			if getComposite == nil {
-				getComposite = func(_ common.Location, _ string, _ common.TypeID) (*sema.CompositeType, error) {
+				getComposite = func(
+					_ *testing.T,
+					_ common.Location,
+					_ string,
+				) (*sema.CompositeType, error) {
 					require.FailNow(t, "getComposite should not be called")
 					return nil, nil
 				}
@@ -1494,8 +1690,12 @@ func TestStaticTypeConversion(t *testing.T) {
 			convertedSemaType, err := ConvertStaticToSemaType(
 				nil,
 				test.staticType,
-				getInterface,
-				getComposite,
+				func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+					return getInterface(t, location, qualifiedIdentifier)
+				},
+				func(location common.Location, qualifiedIdentifier string) (*sema.CompositeType, error) {
+					return getComposite(t, location, qualifiedIdentifier)
+				},
 				getEntitlement,
 				getEntitlementMap,
 			)

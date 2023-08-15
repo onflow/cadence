@@ -71,8 +71,7 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 				contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
 				// we're only looking at the contract as a whole, so no need to construct a nested path
 				qualifiedIdent := name.Str
-				typeID := common.NewTypeIDFromQualifiedName(innerInter, contractLocation, qualifiedIdent)
-				compositeType, err := innerInter.GetCompositeType(contractLocation, qualifiedIdent, typeID)
+				compositeType, err := innerInter.GetCompositeType(contractLocation, qualifiedIdent)
 				if err != nil {
 					panic(err)
 				}

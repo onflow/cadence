@@ -1965,16 +1965,16 @@ Available if the array element type is not resource-kinded.
 
 var insertableEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{
-		InsertEntitlement,
-		MutateEntitlement,
+		InsertType,
+		MutateType,
 	},
 	Disjunction,
 )
 
 var removableEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{
-		RemoveEntitlement,
-		MutateEntitlement,
+		RemoveType,
+		MutateType,
 	},
 	Disjunction,
 )
@@ -2573,9 +2573,9 @@ func (t *VariableSizedType) SupportedEntitlements() *EntitlementOrderedSet {
 
 var arrayDictionaryEntitlements = func() *EntitlementOrderedSet {
 	set := orderedmap.New[EntitlementOrderedSet](3)
-	set.Set(MutateEntitlement, struct{}{})
-	set.Set(InsertEntitlement, struct{}{})
-	set.Set(RemoveEntitlement, struct{}{})
+	set.Set(MutateType, struct{}{})
+	set.Set(InsertType, struct{}{})
+	set.Set(RemoveType, struct{}{})
 	return set
 }()
 
@@ -3565,7 +3565,7 @@ func init() {
 		addToBaseActivation(ty)
 	}
 
-	addToBaseActivation(IdentityMappingType)
+	addToBaseActivation(IdentityType)
 
 	// The AST contains empty type annotations, resolve them to Void
 
@@ -3590,7 +3590,7 @@ func addToBaseActivation(ty Type) {
 	)
 }
 
-var IdentityMappingType = NewEntitlementMapType(nil, nil, "Identity")
+var IdentityType = NewEntitlementMapType(nil, nil, "Identity")
 
 func baseTypeVariable(name string, ty Type) *Variable {
 	return &Variable{
@@ -3672,7 +3672,7 @@ var AllNumberTypes = common.Concat(
 var BuiltinEntitlements = map[string]*EntitlementType{}
 
 var BuiltinEntitlementMappings = map[string]*EntitlementMapType{
-	IdentityMappingType.QualifiedIdentifier(): IdentityMappingType,
+	IdentityType.QualifiedIdentifier(): IdentityType,
 }
 
 const NumberTypeMinFieldName = "min"

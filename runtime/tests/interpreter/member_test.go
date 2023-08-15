@@ -1136,6 +1136,7 @@ func TestInterpretMemberAccess(t *testing.T) {
 			if !ty.IsDefined() {
 				continue
 			}
+
 			semaType := ty.SemaType()
 
 			// Some primitive static types are deprecated,

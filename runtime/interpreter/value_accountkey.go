@@ -23,7 +23,7 @@ import (
 )
 
 var accountKeyTypeID = sema.AccountKeyType.ID()
-var accountKeyStaticType StaticType = PrimitiveStaticTypeAccountKey // unmetered
+var AccountKeyStaticType StaticType = NewCompositeStaticType(nil, nil, "AccountKey") // unmetered
 var accountKeyFieldNames = []string{
 	sema.AccountKeyKeyIndexFieldName,
 	sema.AccountKeyPublicKeyFieldName,
@@ -52,7 +52,7 @@ func NewAccountKeyValue(
 	return NewSimpleCompositeValue(
 		inter,
 		accountKeyTypeID,
-		accountKeyStaticType,
+		AccountKeyStaticType,
 		accountKeyFieldNames,
 		fields,
 		nil,

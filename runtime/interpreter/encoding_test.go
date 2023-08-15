@@ -3458,7 +3458,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
 
 		expected := TypeValue{
-			Type: NewCompositeStaticTypeComputeTypeID(
+			Type: NewCompositeStaticType(
 				nil,
 				common.AddressLocation{},
 				identifier,
@@ -3494,7 +3494,7 @@ func TestEncodeDecodeStaticType(t *testing.T) {
 
 		t.Parallel()
 
-		ty := NewCompositeStaticTypeComputeTypeID(nil, nil, "PublicKey")
+		ty := NewCompositeStaticType(nil, nil, "PublicKey")
 
 		encoded := cbor.RawMessage{
 			// tag
@@ -3661,7 +3661,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				ReferencedType: NewCompositeStaticTypeComputeTypeID(
+				ReferencedType: NewCompositeStaticType(
 					nil,
 					utils.TestLocation,
 					"SimpleStruct",
@@ -4068,6 +4068,41 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			0xd8, CBORTagPrimitiveStaticType,
 			// unsigned 90
 			0x18, 0x5a,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, Account", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &AccountCapabilityControllerValue{
+			BorrowType: ReferenceStaticType{
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeAccount,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			0xd8, CBORTagPrimitiveStaticType,
+			// unsigned 105
+			0x18, 0x69,
 		)
 
 		testEncodeDecode(t,

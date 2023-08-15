@@ -616,7 +616,6 @@ func TestInterpretAccountStorageType(t *testing.T) {
 					Type: interpreter.CompositeStaticType{
 						Location:            TestLocation,
 						QualifiedIdentifier: "R",
-						TypeID:              "S.test.R",
 					},
 				},
 			),
@@ -639,7 +638,6 @@ func TestInterpretAccountStorageType(t *testing.T) {
 					Type: interpreter.CompositeStaticType{
 						Location:            TestLocation,
 						QualifiedIdentifier: "S",
-						TypeID:              "S.test.S",
 					},
 				},
 			),

@@ -51,11 +51,7 @@ var rlpContractType = func() *sema.CompositeType {
 	return ty
 }()
 
-var rlpContractTypeID = rlpContractType.ID()
-var rlpContractStaticType interpreter.StaticType = interpreter.CompositeStaticType{
-	QualifiedIdentifier: rlpContractType.Identifier,
-	TypeID:              rlpContractTypeID,
-}
+var rlpContractStaticType interpreter.StaticType = interpreter.NewCompositeStaticType(nil, nil, rlpContractType.Identifier)
 
 const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
 

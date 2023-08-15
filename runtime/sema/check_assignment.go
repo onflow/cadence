@@ -313,12 +313,12 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 }
 
 var mutableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{MutateEntitlement},
+	[]*EntitlementType{MutateType},
 	Disjunction,
 )
 
 var insertableAndRemovableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{InsertEntitlement, RemoveEntitlement},
+	[]*EntitlementType{InsertType, RemoveType},
 	Conjunction,
 )
 

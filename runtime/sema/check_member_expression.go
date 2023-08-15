@@ -446,7 +446,7 @@ func (checker *Checker) mapAccess(
 		return checker.mapAccess(mappedAccess, ty.Type, resultingType, accessRange)
 
 	default:
-		if mappedAccess.Type == IdentityMappingType {
+		if mappedAccess.Type == IdentityType {
 			access := AllSupportedEntitlements(resultingType)
 			if access != nil {
 				return true, access

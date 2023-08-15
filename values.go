@@ -68,7 +68,7 @@ func NewMeteredVoid(memoryGauge common.MemoryGauge) Void {
 func (Void) isValue() {}
 
 func (Void) Type() Type {
-	return TheVoidType
+	return VoidType
 }
 
 func (v Void) MeteredType(common.MemoryGauge) Type {
@@ -105,7 +105,7 @@ func (Optional) isValue() {}
 func (o Optional) Type() Type {
 	var innerType Type
 	if o.Value == nil {
-		innerType = TheNeverType
+		innerType = NeverType
 	} else {
 		innerType = o.Value.Type()
 	}
@@ -118,7 +118,7 @@ func (o Optional) Type() Type {
 func (o Optional) MeteredType(gauge common.MemoryGauge) Type {
 	var innerType Type
 	if o.Value == nil {
-		innerType = TheNeverType
+		innerType = NeverType
 	} else {
 		innerType = o.Value.MeteredType(gauge)
 	}
@@ -164,7 +164,7 @@ func NewMeteredBool(memoryGauge common.MemoryGauge, b bool) Bool {
 func (Bool) isValue() {}
 
 func (Bool) Type() Type {
-	return TheBoolType
+	return BoolType
 }
 
 func (v Bool) MeteredType(common.MemoryGauge) Type {
@@ -206,7 +206,7 @@ func NewMeteredString(
 func (String) isValue() {}
 
 func (String) Type() Type {
-	return TheStringType
+	return StringType
 }
 
 func (v String) MeteredType(common.MemoryGauge) Type {
@@ -279,7 +279,7 @@ func NewMeteredCharacter(
 func (Character) isValue() {}
 
 func (Character) Type() Type {
-	return TheCharacterType
+	return CharacterType
 }
 
 func (v Character) MeteredType(common.MemoryGauge) Type {
@@ -325,11 +325,11 @@ func BytesToMeteredAddress(memoryGauge common.MemoryGauge, b []byte) Address {
 func (Address) isValue() {}
 
 func (Address) Type() Type {
-	return TheAddressType
+	return AddressType
 }
 
 func (Address) MeteredType(common.MemoryGauge) Type {
-	return TheAddressType
+	return AddressType
 }
 
 func (v Address) ToGoValue() any {
@@ -381,7 +381,7 @@ func NewMeteredIntFromBig(
 func (Int) isValue() {}
 
 func (Int) Type() Type {
-	return TheIntType
+	return IntType
 }
 
 func (v Int) MeteredType(common.MemoryGauge) Type {
@@ -432,7 +432,7 @@ func (v Int8) ToGoValue() any {
 }
 
 func (Int8) Type() Type {
-	return TheInt8Type
+	return Int8Type
 }
 
 func (v Int8) MeteredType(common.MemoryGauge) Type {
@@ -467,7 +467,7 @@ func NewMeteredInt16(memoryGauge common.MemoryGauge, v int16) Int16 {
 func (Int16) isValue() {}
 
 func (Int16) Type() Type {
-	return TheInt16Type
+	return Int16Type
 }
 
 func (v Int16) MeteredType(common.MemoryGauge) Type {
@@ -508,7 +508,7 @@ func NewMeteredInt32(memoryGauge common.MemoryGauge, v int32) Int32 {
 func (Int32) isValue() {}
 
 func (Int32) Type() Type {
-	return TheInt32Type
+	return Int32Type
 }
 
 func (v Int32) MeteredType(common.MemoryGauge) Type {
@@ -549,7 +549,7 @@ func NewMeteredInt64(memoryGauge common.MemoryGauge, v int64) Int64 {
 func (Int64) isValue() {}
 
 func (Int64) Type() Type {
-	return TheInt64Type
+	return Int64Type
 }
 
 func (v Int64) MeteredType(common.MemoryGauge) Type {
@@ -611,7 +611,7 @@ func NewMeteredInt128FromBig(
 func (Int128) isValue() {}
 
 func (Int128) Type() Type {
-	return TheInt128Type
+	return Int128Type
 }
 
 func (v Int128) MeteredType(common.MemoryGauge) Type {
@@ -679,7 +679,7 @@ func NewMeteredInt256FromBig(
 func (Int256) isValue() {}
 
 func (Int256) Type() Type {
-	return TheInt256Type
+	return Int256Type
 }
 
 func (v Int256) MeteredType(common.MemoryGauge) Type {
@@ -742,7 +742,7 @@ func NewMeteredUIntFromBig(
 func (UInt) isValue() {}
 
 func (UInt) Type() Type {
-	return TheUIntType
+	return UIntType
 }
 
 func (v UInt) MeteredType(common.MemoryGauge) Type {
@@ -789,7 +789,7 @@ func NewMeteredUInt8(gauge common.MemoryGauge, v uint8) UInt8 {
 func (UInt8) isValue() {}
 
 func (UInt8) Type() Type {
-	return TheUInt8Type
+	return UInt8Type
 }
 
 func (v UInt8) MeteredType(common.MemoryGauge) Type {
@@ -828,7 +828,7 @@ func NewMeteredUInt16(gauge common.MemoryGauge, v uint16) UInt16 {
 func (UInt16) isValue() {}
 
 func (UInt16) Type() Type {
-	return TheUInt16Type
+	return UInt16Type
 }
 
 func (v UInt16) MeteredType(common.MemoryGauge) Type {
@@ -869,7 +869,7 @@ func NewMeteredUInt32(gauge common.MemoryGauge, v uint32) UInt32 {
 func (UInt32) isValue() {}
 
 func (UInt32) Type() Type {
-	return TheUInt32Type
+	return UInt32Type
 }
 
 func (v UInt32) MeteredType(common.MemoryGauge) Type {
@@ -910,7 +910,7 @@ func NewMeteredUInt64(gauge common.MemoryGauge, v uint64) UInt64 {
 func (UInt64) isValue() {}
 
 func (UInt64) Type() Type {
-	return TheUInt64Type
+	return UInt64Type
 }
 
 func (v UInt64) MeteredType(common.MemoryGauge) Type {
@@ -972,7 +972,7 @@ func NewMeteredUInt128FromBig(
 func (UInt128) isValue() {}
 
 func (UInt128) Type() Type {
-	return TheUInt128Type
+	return UInt128Type
 }
 
 func (v UInt128) MeteredType(common.MemoryGauge) Type {
@@ -1040,7 +1040,7 @@ func NewMeteredUInt256FromBig(
 func (UInt256) isValue() {}
 
 func (UInt256) Type() Type {
-	return TheUInt256Type
+	return UInt256Type
 }
 
 func (v UInt256) MeteredType(common.MemoryGauge) Type {
@@ -1087,7 +1087,7 @@ func NewMeteredWord8(gauge common.MemoryGauge, v uint8) Word8 {
 func (Word8) isValue() {}
 
 func (Word8) Type() Type {
-	return TheWord8Type
+	return Word8Type
 }
 
 func (v Word8) MeteredType(common.MemoryGauge) Type {
@@ -1126,7 +1126,7 @@ func NewMeteredWord16(gauge common.MemoryGauge, v uint16) Word16 {
 func (Word16) isValue() {}
 
 func (Word16) Type() Type {
-	return TheWord16Type
+	return Word16Type
 }
 
 func (v Word16) MeteredType(common.MemoryGauge) Type {
@@ -1167,7 +1167,7 @@ func NewMeteredWord32(gauge common.MemoryGauge, v uint32) Word32 {
 func (Word32) isValue() {}
 
 func (Word32) Type() Type {
-	return TheWord32Type
+	return Word32Type
 }
 
 func (v Word32) MeteredType(common.MemoryGauge) Type {
@@ -1208,7 +1208,7 @@ func NewMeteredWord64(gauge common.MemoryGauge, v uint64) Word64 {
 func (Word64) isValue() {}
 
 func (Word64) Type() Type {
-	return TheWord64Type
+	return Word64Type
 }
 
 func (v Word64) MeteredType(common.MemoryGauge) Type {
@@ -1270,7 +1270,7 @@ func NewMeteredWord128FromBig(
 func (Word128) isValue() {}
 
 func (Word128) Type() Type {
-	return TheWord128Type
+	return Word128Type
 }
 
 func (v Word128) MeteredType(common.MemoryGauge) Type {
@@ -1338,7 +1338,7 @@ func NewMeteredWord256FromBig(
 func (Word256) isValue() {}
 
 func (Word256) Type() Type {
-	return TheWord256Type
+	return Word256Type
 }
 
 func (v Word256) MeteredType(common.MemoryGauge) Type {
@@ -1411,7 +1411,7 @@ func NewMeteredFix64FromRawFixedPointNumber(gauge common.MemoryGauge, n int64) (
 func (Fix64) isValue() {}
 
 func (Fix64) Type() Type {
-	return TheFix64Type
+	return Fix64Type
 }
 
 func (v Fix64) MeteredType(common.MemoryGauge) Type {
@@ -1485,7 +1485,7 @@ func NewMeteredUFix64FromRawFixedPointNumber(gauge common.MemoryGauge, n uint64)
 func (UFix64) isValue() {}
 
 func (UFix64) Type() Type {
-	return TheUFix64Type
+	return UFix64Type
 }
 
 func (v UFix64) MeteredType(common.MemoryGauge) Type {
@@ -2089,11 +2089,11 @@ func (Path) isValue() {}
 func (v Path) Type() Type {
 	switch v.Domain {
 	case common.PathDomainStorage:
-		return TheStoragePathType
+		return StoragePathType
 	case common.PathDomainPrivate:
-		return ThePrivatePathType
+		return PrivatePathType
 	case common.PathDomainPublic:
-		return ThePublicPathType
+		return PublicPathType
 	}
 
 	panic(errors.NewUnreachableError())
@@ -2136,7 +2136,7 @@ func NewMeteredTypeValue(gauge common.MemoryGauge, staticType Type) TypeValue {
 func (TypeValue) isValue() {}
 
 func (TypeValue) Type() Type {
-	return TheMetaType
+	return MetaType
 }
 
 func (v TypeValue) MeteredType(common.MemoryGauge) Type {

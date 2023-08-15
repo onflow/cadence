@@ -2015,9 +2015,10 @@ func isOptionalNeverType(t cadence.Type) bool {
 			return false
 		}
 
-		if ot.Type.Equal(cadence.NewNeverType()) {
+		if ot.Type.Equal(cadence.NeverType) {
 			return true
 		}
+
 		t = ot.Type
 	}
 }

@@ -1734,7 +1734,9 @@ func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.
 				return sema.NewReferenceType(
 					interpreter,
 					refType.Type,
-					interpreter.MustConvertStaticAuthorizationToSemaAccess(interpreter.SharedState.currentEntitlementMappedValue),
+					interpreter.MustConvertStaticAuthorizationToSemaAccess(
+						interpreter.SharedState.currentEntitlementMappedValue,
+					),
 				)
 			}
 		}
@@ -3309,7 +3311,7 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 		return nil, err
 	}
 
-	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
+	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier)
 	if err != nil {
 		return nil, err
 	}
@@ -3467,8 +3469,8 @@ func referenceTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	var authorization Authorization = UnauthorizedAccess
-	var entitlements []common.TypeID = make([]common.TypeID, 0, entitlementValues.Count())
+	authorization := UnauthorizedAccess
+	entitlements := make([]common.TypeID, 0, entitlementValues.Count())
 	errInIteration := false
 
 	entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
@@ -3972,12 +3974,28 @@ func (interpreter *Interpreter) accountPaths(
 	)
 }
 
-func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainPublic, PrimitiveStaticTypePublicPath)
+func (interpreter *Interpreter) publicAccountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+) *ArrayValue {
+	return interpreter.accountPaths(
+		addressValue,
+		locationRange,
+		common.PathDomainPublic,
+		PrimitiveStaticTypePublicPath,
+	)
 }
 
-func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
+func (interpreter *Interpreter) storageAccountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+) *ArrayValue {
+	return interpreter.accountPaths(
+		addressValue,
+		locationRange,
+		common.PathDomainStorage,
+		PrimitiveStaticTypeStoragePath,
+	)
 }
 
 func (interpreter *Interpreter) recordStorageMutation() {
@@ -4509,8 +4527,8 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
 		},
-		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
-			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
+		func(location common.Location, qualifiedIdentifier string) (*sema.CompositeType, error) {
+			return interpreter.GetCompositeType(location, qualifiedIdentifier)
 		},
 		interpreter.getEntitlement,
 		interpreter.getEntitlementMapType,
@@ -4530,7 +4548,12 @@ func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticTyp
 }
 
 func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth Authorization) sema.Access {
-	access, err := ConvertStaticAuthorizationToSemaAccess(interpreter, auth, interpreter.getEntitlement, interpreter.getEntitlementMapType)
+	access, err := ConvertStaticAuthorizationToSemaAccess(
+		interpreter,
+		auth,
+		interpreter.getEntitlement,
+		interpreter.getEntitlementMapType,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -4577,15 +4600,18 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 func (interpreter *Interpreter) GetCompositeType(
 	location common.Location,
 	qualifiedIdentifier string,
-	typeID common.TypeID,
 ) (*sema.CompositeType, error) {
 	var compositeType *sema.CompositeType
+	var typeID common.TypeID
 	if location == nil {
 		compositeType = sema.NativeCompositeTypes[qualifiedIdentifier]
 		if compositeType != nil {
 			return compositeType, nil
 		}
+		typeID = common.TypeID(qualifiedIdentifier)
 	} else {
+		typeID = location.TypeID(interpreter, qualifiedIdentifier)
+
 		compositeType = interpreter.getUserCompositeType(location, typeID)
 		if compositeType != nil {
 			return compositeType, nil
@@ -4728,7 +4754,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 
 		default:
 			var access sema.Access
-			if mappedAccess.Type == sema.IdentityMappingType {
+			if mappedAccess.Type == sema.IdentityType {
 				access = sema.AllSupportedEntitlements(resultingType)
 			}
 

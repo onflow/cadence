@@ -53,3 +53,23 @@ func TestPrimitiveStaticTypeSemaTypeConversion(t *testing.T) {
 		test(ty)
 	}
 }
+
+func TestPrimitiveStaticType_elementSize(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(ty PrimitiveStaticType) {
+		t.Run(ty.String(), func(t *testing.T) {
+			t.Parallel()
+
+			_ = ty.elementSize()
+		})
+	}
+
+	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+		test(ty)
+	}
+}

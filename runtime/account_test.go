@@ -897,7 +897,7 @@ func newBytesValue(bytes []byte) cadence.Array {
 	}
 	return cadence.NewArray(result).
 		WithType(&cadence.VariableSizedArrayType{
-			ElementType: cadence.UInt8Type{},
+			ElementType: cadence.UInt8Type,
 		})
 }
 
@@ -2001,7 +2001,7 @@ func TestRuntimePublicAccountContracts(t *testing.T) {
 					cadence.UInt8(2),
 				},
 			}.WithType(&cadence.VariableSizedArrayType{
-				ElementType: cadence.UInt8Type{},
+				ElementType: cadence.UInt8Type,
 			}),
 			array.Values[1],
 		)

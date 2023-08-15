@@ -16195,7 +16195,6 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 			interpreter,
 			v.Location,
 			v.QualifiedIdentifier,
-			v.TypeID(), // TODO TypeID metering
 		)
 	}
 	return v.staticType

@@ -41,7 +41,6 @@ const (
 	MemoryKindPathValue
 	MemoryKindIDCapabilityValue
 	MemoryKindStorageReferenceValue
-	MemoryKindAccountReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
 	MemoryKindHostFunctionValue

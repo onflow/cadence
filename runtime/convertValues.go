@@ -1317,8 +1317,7 @@ func (i valueImporter) importCompositeValue(
 	inter := i.inter
 	locationRange := i.locationRange
 
-	typeID := common.NewTypeIDFromQualifiedName(inter, location, qualifiedIdentifier)
-	compositeType, typeErr := inter.GetCompositeType(location, qualifiedIdentifier, typeID)
+	compositeType, typeErr := inter.GetCompositeType(location, qualifiedIdentifier)
 	if typeErr != nil {
 		return nil, typeErr
 	}

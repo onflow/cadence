@@ -58,8 +58,8 @@ func TestNewEntitlementAccess(t *testing.T) {
 			func() {
 				newEntitlementAccess(
 					[]Type{
-						IdentityMappingType,
-						MutateEntitlement,
+						IdentityType,
+						MutateType,
 					},
 					Conjunction,
 				)
@@ -75,8 +75,8 @@ func TestNewEntitlementAccess(t *testing.T) {
 			func() {
 				newEntitlementAccess(
 					[]Type{
-						MutateEntitlement,
-						IdentityMappingType,
+						MutateType,
+						IdentityType,
 					},
 					Conjunction,
 				)
@@ -90,13 +90,13 @@ func TestNewEntitlementAccess(t *testing.T) {
 		assert.Equal(t,
 			NewEntitlementSetAccess(
 				[]*EntitlementType{
-					MutateEntitlement,
+					MutateType,
 				},
 				Conjunction,
 			),
 			newEntitlementAccess(
 				[]Type{
-					MutateEntitlement,
+					MutateType,
 				},
 				Conjunction,
 			),
@@ -109,15 +109,15 @@ func TestNewEntitlementAccess(t *testing.T) {
 		assert.Equal(t,
 			NewEntitlementSetAccess(
 				[]*EntitlementType{
-					MutateEntitlement,
-					InsertEntitlement,
+					MutateType,
+					InsertType,
 				},
 				Conjunction,
 			),
 			newEntitlementAccess(
 				[]Type{
-					MutateEntitlement,
-					InsertEntitlement,
+					MutateType,
+					InsertType,
 				},
 				Conjunction,
 			),
@@ -130,15 +130,15 @@ func TestNewEntitlementAccess(t *testing.T) {
 		assert.Equal(t,
 			NewEntitlementSetAccess(
 				[]*EntitlementType{
-					MutateEntitlement,
-					InsertEntitlement,
+					MutateType,
+					InsertType,
 				},
 				Disjunction,
 			),
 			newEntitlementAccess(
 				[]Type{
-					MutateEntitlement,
-					InsertEntitlement,
+					MutateType,
+					InsertType,
 				},
 				Disjunction,
 			),
@@ -150,11 +150,11 @@ func TestNewEntitlementAccess(t *testing.T) {
 
 		assert.Equal(t,
 			NewEntitlementMapAccess(
-				IdentityMappingType,
+				IdentityType,
 			),
 			newEntitlementAccess(
 				[]Type{
-					IdentityMappingType,
+					IdentityType,
 				},
 				Conjunction,
 			),
@@ -169,7 +169,7 @@ func TestNewEntitlementAccess(t *testing.T) {
 			func() {
 				newEntitlementAccess(
 					[]Type{
-						IdentityMappingType,
+						IdentityType,
 						AccountMappingType,
 					},
 					Conjunction,

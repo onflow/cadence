@@ -356,11 +356,11 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 						cadence.UInt8(algo.RawValue()),
 					}).WithType(&cadence.EnumType{
 						QualifiedIdentifier: "SignatureAlgorithm",
-						RawType:             cadence.UInt8Type{},
+						RawType:             cadence.UInt8Type,
 						Fields: []cadence.Field{
 							{
 								Identifier: "rawValue",
-								Type:       cadence.UInt8Type{},
+								Type:       cadence.UInt8Type,
 							},
 						},
 					}),
@@ -438,11 +438,11 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 						cadence.UInt8(algo.RawValue()),
 					}).WithType(&cadence.EnumType{
 						QualifiedIdentifier: "HashAlgorithm",
-						RawType:             cadence.UInt8Type{},
+						RawType:             cadence.UInt8Type,
 						Fields: []cadence.Field{
 							{
 								Identifier: "rawValue",
-								Type:       cadence.UInt8Type{},
+								Type:       cadence.UInt8Type,
 							},
 						},
 					}),
@@ -591,7 +591,7 @@ func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 			cadence.UInt8(4),
 			cadence.UInt8(5),
 		}).WithType(&cadence.VariableSizedArrayType{
-			ElementType: cadence.UInt8Type{},
+			ElementType: cadence.UInt8Type,
 		}),
 		result,
 	)
@@ -666,7 +666,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 			cadence.UInt8(1),
 			cadence.UInt8(2),
 		}).WithType(&cadence.VariableSizedArrayType{
-			ElementType: cadence.UInt8Type{},
+			ElementType: cadence.UInt8Type,
 		}),
 		result.(cadence.Optional).Value.(cadence.Struct).Fields[0],
 	)

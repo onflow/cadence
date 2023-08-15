@@ -410,12 +410,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	// If type t for the value to be decoded is a concrete type (e.g. IntType),
 	// value MUST NOT be ccf-type-and-value-message.
 
-	switch t := t.(type) {
+	switch t {
 	case cadence.VoidType:
 		return d.decodeVoid()
-
-	case *cadence.OptionalType:
-		return d.decodeOptional(t, types)
 
 	case cadence.BoolType:
 		return d.decodeBool()
@@ -495,27 +492,6 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	case cadence.UFix64Type:
 		return d.decodeUFix64()
 
-	case *cadence.VariableSizedArrayType:
-		return d.decodeArray(t, false, 0, types)
-
-	case *cadence.ConstantSizedArrayType:
-		return d.decodeArray(t, true, uint64(t.Size), types)
-
-	case *cadence.DictionaryType:
-		return d.decodeDictionary(t, types)
-
-	case *cadence.ResourceType:
-		return d.decodeResource(t, types)
-
-	case *cadence.StructType:
-		return d.decodeStruct(t, types)
-
-	case *cadence.EventType:
-		return d.decodeEvent(t, types)
-
-	case *cadence.ContractType:
-		return d.decodeContract(t, types)
-
 	case cadence.StoragePathType:
 		return d.decodePath()
 
@@ -536,6 +512,32 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 			return nil, err
 		}
 		return cadence.NewMeteredTypeValue(d.gauge, typeValue), nil
+	}
+
+	switch t := t.(type) {
+	case *cadence.OptionalType:
+		return d.decodeOptional(t, types)
+
+	case *cadence.VariableSizedArrayType:
+		return d.decodeArray(t, false, 0, types)
+
+	case *cadence.ConstantSizedArrayType:
+		return d.decodeArray(t, true, uint64(t.Size), types)
+
+	case *cadence.DictionaryType:
+		return d.decodeDictionary(t, types)
+
+	case *cadence.ResourceType:
+		return d.decodeResource(t, types)
+
+	case *cadence.StructType:
+		return d.decodeStruct(t, types)
+
+	case *cadence.EventType:
+		return d.decodeEvent(t, types)
+
+	case *cadence.ContractType:
+		return d.decodeContract(t, types)
 
 	case *cadence.CapabilityType:
 		return d.decodeCapability(t, types)

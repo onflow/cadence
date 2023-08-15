@@ -96,7 +96,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		"This is the color",
 	))
 
-	fruitStaticType := interpreter.NewCompositeStaticTypeComputeTypeID(
+	fruitStaticType := interpreter.NewCompositeStaticType(
 		nil,
 		TestLocation,
 		fruitType.Identifier,

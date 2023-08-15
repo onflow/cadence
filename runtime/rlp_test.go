@@ -139,7 +139,7 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 					Arguments: encodeArgs([]cadence.Value{
 						cadence.Array{
 							ArrayType: &cadence.VariableSizedArrayType{
-								ElementType: cadence.UInt8Type{},
+								ElementType: cadence.UInt8Type,
 							},
 							Values: test.input,
 						},
@@ -160,7 +160,7 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 					cadence.Array{
 						Values: test.output,
 					}.WithType(&cadence.VariableSizedArrayType{
-						ElementType: cadence.UInt8Type{},
+						ElementType: cadence.UInt8Type,
 					}),
 					result,
 				)
@@ -298,7 +298,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 					Arguments: encodeArgs([]cadence.Value{
 						cadence.Array{
 							ArrayType: &cadence.VariableSizedArrayType{
-								ElementType: cadence.UInt8Type{},
+								ElementType: cadence.UInt8Type,
 							},
 							Values: test.input,
 						},
@@ -321,7 +321,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 					arrays = append(arrays,
 						cadence.Array{Values: values}.
 							WithType(&cadence.VariableSizedArrayType{
-								ElementType: cadence.UInt8Type{},
+								ElementType: cadence.UInt8Type,
 							}))
 				}
 
@@ -330,7 +330,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 						Values: arrays,
 					}.WithType(&cadence.VariableSizedArrayType{
 						ElementType: &cadence.VariableSizedArrayType{
-							ElementType: cadence.UInt8Type{},
+							ElementType: cadence.UInt8Type,
 						},
 					}),
 					result,

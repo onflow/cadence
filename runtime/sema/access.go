@@ -340,7 +340,7 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 // arguments.
 func (e EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
 
-	if e.Type == IdentityMappingType {
+	if e.Type == IdentityType {
 		return inputs, nil
 	}
 

@@ -483,7 +483,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 				cadence.Address(signer),
 				cadence.NewReferenceType(
 					cadence.Unauthorized{},
-					cadence.IntType{},
+					cadence.IntType,
 				),
 			),
 			value,
@@ -1154,7 +1154,7 @@ func TestRuntimeStorageSaveIDCapability(t *testing.T) {
 
 	ty := &cadence.ReferenceType{
 		Authorization: cadence.UnauthorizedAccess,
-		Type:          cadence.IntType{},
+		Type:          cadence.IntType,
 	}
 
 	var storagePathCounter int

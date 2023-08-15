@@ -613,7 +613,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "R"),
+				Type: interpreter.NewCompositeStaticType(nil, TestLocation, "R"),
 			},
 		},
 		{
