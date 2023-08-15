@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
@@ -7755,62 +7756,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 
 	t.Parallel()
 
-	type simpleTypes struct {
-		typ              cadence.Type
-		cborSimpleTypeID int
-	}
-
-	var tests []encodeTest
-
-	for _, ty := range []simpleTypes{
-		{cadence.AnyType, ccf.TypeAny},
-		{cadence.AnyResourceType, ccf.TypeAnyResource},
-		{cadence.AnyStructAttachmentType, ccf.TypeAnyStructAttachmentType},
-		{cadence.AnyResourceAttachmentType, ccf.TypeAnyResourceAttachmentType},
-		{cadence.MetaType, ccf.TypeMetaType},
-		{cadence.VoidType, ccf.TypeVoid},
-		{cadence.NeverType, ccf.TypeNever},
-		{cadence.BoolType, ccf.TypeBool},
-		{cadence.StringType, ccf.TypeString},
-		{cadence.CharacterType, ccf.TypeCharacter},
-		{cadence.BytesType{}, ccf.TypeBytes},
-		{cadence.AddressType, ccf.TypeAddress},
-		{cadence.SignedNumberType, ccf.TypeSignedNumber},
-		{cadence.IntegerType, ccf.TypeInteger},
-		{cadence.SignedIntegerType, ccf.TypeSignedInteger},
-		{cadence.FixedPointType, ccf.TypeFixedPoint},
-		{cadence.SignedFixedPointType, ccf.TypeSignedFixedPoint},
-		{cadence.IntType, ccf.TypeInt},
-		{cadence.Int8Type, ccf.TypeInt8},
-		{cadence.Int16Type, ccf.TypeInt16},
-		{cadence.Int32Type, ccf.TypeInt32},
-		{cadence.Int64Type, ccf.TypeInt64},
-		{cadence.Int128Type, ccf.TypeInt128},
-		{cadence.Int256Type, ccf.TypeInt256},
-		{cadence.UIntType, ccf.TypeUInt},
-		{cadence.UInt8Type, ccf.TypeUInt8},
-		{cadence.UInt16Type, ccf.TypeUInt16},
-		{cadence.UInt32Type, ccf.TypeUInt32},
-		{cadence.UInt64Type, ccf.TypeUInt64},
-		{cadence.UInt128Type, ccf.TypeUInt128},
-		{cadence.UInt256Type, ccf.TypeUInt256},
-		{cadence.Word8Type, ccf.TypeWord8},
-		{cadence.Word16Type, ccf.TypeWord16},
-		{cadence.Word32Type, ccf.TypeWord32},
-		{cadence.Word64Type, ccf.TypeWord64},
-		{cadence.Word128Type, ccf.TypeWord128},
-		{cadence.Word256Type, ccf.TypeWord256},
-		{cadence.Fix64Type, ccf.TypeFix64},
-		{cadence.UFix64Type, ccf.TypeUFix64},
-		{cadence.BlockType, ccf.TypeBlock},
-		{cadence.PathType, ccf.TypePath},
-		{cadence.CapabilityPathType, ccf.TypeCapabilityPath},
-		{cadence.StoragePathType, ccf.TypeStoragePath},
-		{cadence.PublicPathType, ccf.TypePublicPath},
-		{cadence.PrivatePathType, ccf.TypePrivatePath},
-		{cadence.DeployedContractType, ccf.TypeDeployedContract},
-		// TODO: missing types
-	} {
+	expected := func(ty ccf.SimpleType) []byte {
 		var w bytes.Buffer
 
 		cborEncMode := func() cbor.EncMode {
@@ -7839,17 +7785,136 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = encoder.EncodeInt(ty.cborSimpleTypeID)
+		err = encoder.EncodeUint64(uint64(ty))
 		require.NoError(t, err)
 
-		encoder.Flush()
+		err = encoder.Flush()
+		require.NoError(t, err)
+
+		return w.Bytes()
+	}
+
+	var tests []encodeTest
+
+	testCases := map[ccf.SimpleType]cadence.Type{
+		ccf.SimpleTypeAny:                              cadence.AnyType,
+		ccf.SimpleTypeAnyResource:                      cadence.AnyResourceType,
+		ccf.SimpleTypeAnyStruct:                        cadence.AnyStructType,
+		ccf.SimpleTypeAnyStructAttachmentType:          cadence.AnyStructAttachmentType,
+		ccf.SimpleTypeAnyResourceAttachmentType:        cadence.AnyResourceAttachmentType,
+		ccf.SimpleTypeMetaType:                         cadence.MetaType,
+		ccf.SimpleTypeVoid:                             cadence.VoidType,
+		ccf.SimpleTypeNever:                            cadence.NeverType,
+		ccf.SimpleTypeBool:                             cadence.BoolType,
+		ccf.SimpleTypeString:                           cadence.StringType,
+		ccf.SimpleTypeCharacter:                        cadence.CharacterType,
+		ccf.SimpleTypeBytes:                            cadence.TheBytesType,
+		ccf.SimpleTypeAddress:                          cadence.AddressType,
+		ccf.SimpleTypeNumber:                           cadence.NumberType,
+		ccf.SimpleTypeSignedNumber:                     cadence.SignedNumberType,
+		ccf.SimpleTypeInteger:                          cadence.IntegerType,
+		ccf.SimpleTypeSignedInteger:                    cadence.SignedIntegerType,
+		ccf.SimpleTypeFixedPoint:                       cadence.FixedPointType,
+		ccf.SimpleTypeSignedFixedPoint:                 cadence.SignedFixedPointType,
+		ccf.SimpleTypeInt:                              cadence.IntType,
+		ccf.SimpleTypeInt8:                             cadence.Int8Type,
+		ccf.SimpleTypeInt16:                            cadence.Int16Type,
+		ccf.SimpleTypeInt32:                            cadence.Int32Type,
+		ccf.SimpleTypeInt64:                            cadence.Int64Type,
+		ccf.SimpleTypeInt128:                           cadence.Int128Type,
+		ccf.SimpleTypeInt256:                           cadence.Int256Type,
+		ccf.SimpleTypeUInt:                             cadence.UIntType,
+		ccf.SimpleTypeUInt8:                            cadence.UInt8Type,
+		ccf.SimpleTypeUInt16:                           cadence.UInt16Type,
+		ccf.SimpleTypeUInt32:                           cadence.UInt32Type,
+		ccf.SimpleTypeUInt64:                           cadence.UInt64Type,
+		ccf.SimpleTypeUInt128:                          cadence.UInt128Type,
+		ccf.SimpleTypeUInt256:                          cadence.UInt256Type,
+		ccf.SimpleTypeWord8:                            cadence.Word8Type,
+		ccf.SimpleTypeWord16:                           cadence.Word16Type,
+		ccf.SimpleTypeWord32:                           cadence.Word32Type,
+		ccf.SimpleTypeWord64:                           cadence.Word64Type,
+		ccf.SimpleTypeWord128:                          cadence.Word128Type,
+		ccf.SimpleTypeWord256:                          cadence.Word256Type,
+		ccf.SimpleTypeFix64:                            cadence.Fix64Type,
+		ccf.SimpleTypeUFix64:                           cadence.UFix64Type,
+		ccf.SimpleTypeBlock:                            cadence.BlockType,
+		ccf.SimpleTypePath:                             cadence.PathType,
+		ccf.SimpleTypeCapabilityPath:                   cadence.CapabilityPathType,
+		ccf.SimpleTypeStoragePath:                      cadence.StoragePathType,
+		ccf.SimpleTypePublicPath:                       cadence.PublicPathType,
+		ccf.SimpleTypePrivatePath:                      cadence.PrivatePathType,
+		ccf.SimpleTypeDeployedContract:                 cadence.DeployedContractType,
+		ccf.SimpleTypeStorageCapabilityController:      cadence.StorageCapabilityControllerType,
+		ccf.SimpleTypeAccountCapabilityController:      cadence.AccountCapabilityControllerType,
+		ccf.SimpleTypeAccount:                          cadence.AccountType,
+		ccf.SimpleTypeAccount_Contracts:                cadence.Account_ContractsType,
+		ccf.SimpleTypeAccount_Keys:                     cadence.Account_KeysType,
+		ccf.SimpleTypeAccount_Inbox:                    cadence.Account_InboxType,
+		ccf.SimpleTypeAccount_StorageCapabilities:      cadence.Account_StorageCapabilitiesType,
+		ccf.SimpleTypeAccount_AccountCapabilities:      cadence.Account_AccountCapabilitiesType,
+		ccf.SimpleTypeAccount_Capabilities:             cadence.Account_CapabilitiesType,
+		ccf.SimpleTypeAccount_Storage:                  cadence.Account_StorageType,
+		ccf.SimpleTypeMutate:                           cadence.MutateType,
+		ccf.SimpleTypeInsert:                           cadence.InsertType,
+		ccf.SimpleTypeRemove:                           cadence.RemoveType,
+		ccf.SimpleTypeIdentity:                         cadence.IdentityType,
+		ccf.SimpleTypeStorage:                          cadence.StorageType,
+		ccf.SimpleTypeSaveValue:                        cadence.SaveValueType,
+		ccf.SimpleTypeLoadValue:                        cadence.LoadValueType,
+		ccf.SimpleTypeBorrowValue:                      cadence.BorrowValueType,
+		ccf.SimpleTypeContracts:                        cadence.ContractsType,
+		ccf.SimpleTypeAddContract:                      cadence.AddContractType,
+		ccf.SimpleTypeUpdateContract:                   cadence.UpdateContractType,
+		ccf.SimpleTypeRemoveContract:                   cadence.RemoveContractType,
+		ccf.SimpleTypeKeys:                             cadence.KeysType,
+		ccf.SimpleTypeAddKey:                           cadence.AddKeyType,
+		ccf.SimpleTypeRevokeKey:                        cadence.RevokeKeyType,
+		ccf.SimpleTypeInbox:                            cadence.InboxType,
+		ccf.SimpleTypePublishInboxCapability:           cadence.PublishInboxCapabilityType,
+		ccf.SimpleTypeUnpublishInboxCapability:         cadence.UnpublishInboxCapabilityType,
+		ccf.SimpleTypeClaimInboxCapability:             cadence.ClaimInboxCapabilityType,
+		ccf.SimpleTypeCapabilities:                     cadence.CapabilitiesType,
+		ccf.SimpleTypeStorageCapabilities:              cadence.StorageCapabilitiesType,
+		ccf.SimpleTypeAccountCapabilities:              cadence.AccountCapabilitiesType,
+		ccf.SimpleTypePublishCapability:                cadence.PublishCapabilityType,
+		ccf.SimpleTypeUnpublishCapability:              cadence.UnpublishCapabilityType,
+		ccf.SimpleTypeGetStorageCapabilityController:   cadence.GetStorageCapabilityControllerType,
+		ccf.SimpleTypeIssueStorageCapabilityController: cadence.IssueStorageCapabilityControllerType,
+		ccf.SimpleTypeGetAccountCapabilityController:   cadence.GetAccountCapabilityControllerType,
+		ccf.SimpleTypeIssueAccountCapabilityController: cadence.IssueAccountCapabilityControllerType,
+		ccf.SimpleTypeCapabilitiesMapping:              cadence.CapabilitiesMappingType,
+		ccf.SimpleTypeAccountMapping:                   cadence.AccountMappingType,
+	}
+
+	var missingTests []string
+
+	for ty := ccf.SimpleType(0); ty < ccf.SimpleType_Count; ty++ {
+		if ty == ccf.SimpleTypeFunction {
+			continue
+		}
+
+		_, ok := testCases[ty]
+
+		name := ty.String()
+		if ok || strings.Contains(name, "(") {
+			continue
+		}
+		missingTests = append(missingTests, name)
+	}
+
+	if len(missingTests) > 0 {
+		assert.Failf(t, "missing test cases", strings.Join(missingTests, ", "))
+	}
+
+	for simpleType, cadenceType := range testCases {
 
 		tests = append(tests, encodeTest{
-			name: fmt.Sprintf("with static %s", ty.typ.ID()),
+			name: fmt.Sprintf("with static %s", cadenceType.ID()),
 			val: cadence.TypeValue{
-				StaticType: ty.typ,
+				StaticType: cadenceType,
 			},
-			expected: w.Bytes(),
+			expected: expected(simpleType),
 			// language=json, format=json-cdc
 			// {"type":"Type","value":{"staticType":{"kind":"[ty.ID()]"}}}
 			//

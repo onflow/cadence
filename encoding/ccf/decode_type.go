@@ -109,7 +109,7 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 		return nil, err
 	}
 
-	ty := typeBySimpleTypeID(simpleTypeID)
+	ty := typeBySimpleTypeID(SimpleType(simpleTypeID))
 	if ty == nil {
 		return nil, fmt.Errorf("unsupported encoded simple type ID %d", simpleTypeID)
 	}
