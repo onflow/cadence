@@ -779,7 +779,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 	})
 }
 
-func TestContractInterfaceEventEmission(t *testing.T) {
+func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -892,7 +892,7 @@ func TestContractInterfaceEventEmission(t *testing.T) {
 	require.Equal(t, concreteEvent.Fields[1], cadence.NewInt(2))
 }
 
-func TestContractInterfaceConditionEventEmission(t *testing.T) {
+func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
