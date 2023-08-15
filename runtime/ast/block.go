@@ -223,6 +223,11 @@ func (b *FunctionBlock) HasStatements() bool {
 	return b != nil && len(b.Block.Statements) > 0
 }
 
+func (b *FunctionBlock) HasConditions() bool {
+	return b != nil &&
+		(!b.PreConditions.IsEmpty() || !b.PostConditions.IsEmpty())
+}
+
 // Condition
 
 type Condition interface {

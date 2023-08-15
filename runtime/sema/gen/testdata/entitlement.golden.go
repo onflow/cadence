@@ -1,3 +1,4 @@
+// Code generated from testdata/entitlement.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -16,18 +17,8 @@
  * limitations under the License.
  */
 
-package format
+package sema
 
-import (
-	"fmt"
-)
-
-func PathLink(ty string, targetPath string) string {
-	return fmt.Sprintf(
-		"PathLink<%s>(%s)",
-		ty,
-		targetPath,
-	)
+var FooEntitlement = &EntitlementType{
+	Identifier: "Foo",
 }
-
-const AccountLink = "AccountLink()"

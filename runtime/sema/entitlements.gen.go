@@ -1,3 +1,4 @@
+// Code generated from entitlements.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -16,22 +17,25 @@
  * limitations under the License.
  */
 
-package interpreter
+package sema
 
-import "github.com/onflow/cadence/runtime/common"
-
-type CapabilityTarget interface {
-	isCapabilityTarget()
+var MutateEntitlement = &EntitlementType{
+	Identifier: "Mutate",
 }
 
-type PathCapabilityTarget PathValue
+var InsertEntitlement = &EntitlementType{
+	Identifier: "Insert",
+}
 
-func (PathCapabilityTarget) isCapabilityTarget() {}
+var RemoveEntitlement = &EntitlementType{
+	Identifier: "Remove",
+}
 
-var _ CapabilityTarget = PathCapabilityTarget{}
-
-type AccountCapabilityTarget common.Address
-
-var _ CapabilityTarget = AccountCapabilityTarget{}
-
-func (AccountCapabilityTarget) isCapabilityTarget() {}
+func init() {
+	BuiltinEntitlements[MutateEntitlement.Identifier] = MutateEntitlement
+	addToBaseActivation(MutateEntitlement)
+	BuiltinEntitlements[InsertEntitlement.Identifier] = InsertEntitlement
+	addToBaseActivation(InsertEntitlement)
+	BuiltinEntitlements[RemoveEntitlement.Identifier] = RemoveEntitlement
+	addToBaseActivation(RemoveEntitlement)
+}

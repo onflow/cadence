@@ -3077,6 +3077,46 @@ func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	)
 }
 
+// UnauthorizedReferenceAssignmentError
+
+type UnauthorizedReferenceAssignmentError struct {
+	RequiredAccess [2]Access
+	FoundAccess    Access
+	ast.Range
+}
+
+var _ SemanticError = &UnauthorizedReferenceAssignmentError{}
+var _ errors.UserError = &UnauthorizedReferenceAssignmentError{}
+var _ errors.SecondaryError = &UnauthorizedReferenceAssignmentError{}
+
+func (*UnauthorizedReferenceAssignmentError) isSemanticError() {}
+
+func (*UnauthorizedReferenceAssignmentError) IsUserError() {}
+
+func (e *UnauthorizedReferenceAssignmentError) Error() string {
+	var foundAccess string
+	if e.FoundAccess == UnauthorizedAccess {
+		foundAccess = "non-auth"
+	} else {
+		foundAccess = fmt.Sprintf("(%s)", e.FoundAccess.Description())
+	}
+
+	return fmt.Sprintf(
+		"invalid assignment: can only assign to a reference with (%s) or (%s) access, but found a %s reference",
+		e.RequiredAccess[0].Description(),
+		e.RequiredAccess[1].Description(),
+		foundAccess,
+	)
+}
+
+func (e *UnauthorizedReferenceAssignmentError) SecondaryError() string {
+	return fmt.Sprintf(
+		"consider taking a reference with `%s` or `%s` access",
+		e.RequiredAccess[0].Description(),
+		e.RequiredAccess[1].Description(),
+	)
+}
+
 // InvalidCharacterLiteralError
 
 type InvalidCharacterLiteralError struct {
@@ -4033,40 +4073,6 @@ func (e *InvalidEntryPointTypeError) Error() string {
 	return fmt.Sprintf(
 		"invalid entry point type: `%s`",
 		e.Type.QualifiedString(),
-	)
-}
-
-// ExternalMutationError
-
-type ExternalMutationError struct {
-	ContainerType Type
-	Name          string
-	ast.Range
-	DeclarationKind common.DeclarationKind
-}
-
-var _ SemanticError = &ExternalMutationError{}
-var _ errors.UserError = &ExternalMutationError{}
-var _ errors.SecondaryError = &ExternalMutationError{}
-
-func (*ExternalMutationError) isSemanticError() {}
-
-func (*ExternalMutationError) IsUserError() {}
-
-func (e *ExternalMutationError) Error() string {
-	return fmt.Sprintf(
-		"cannot mutate `%s`: %s is only mutable inside `%s`",
-		e.Name,
-		e.DeclarationKind.Name(),
-		e.ContainerType.QualifiedString(),
-	)
-}
-
-func (e *ExternalMutationError) SecondaryError() string {
-	return fmt.Sprintf(
-		"Consider adding a setter for `%s` to `%s`",
-		e.Name,
-		e.ContainerType.QualifiedString(),
 	)
 }
 

@@ -287,12 +287,3 @@ var AccountInboxClaimedEventType = newFlowEventType(
 	AccountEventRecipientParameter,
 	AccountEventNameParameter,
 )
-
-var AccountLinkedEventType = newFlowEventType(
-	"AccountLinked",
-	AccountEventAddressParameter,
-	sema.Parameter{
-		Identifier:     "path",
-		TypeAnnotation: sema.AuthAccountTypeLinkAccountFunctionTypePathParameterTypeAnnotation,
-	},
-)

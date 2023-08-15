@@ -4016,7 +4016,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			`
 				access(all) resource R {}
 				access(all) attachment A for R {
-					access(all) let x: [String] 
+					access(all) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -4030,7 +4030,37 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("basic, with entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				access(all) resource R {}
+
+				entitlement mapping M {
+					Mutate -> Insert
+				}
+
+				access(M) attachment A for R {
+					access(Identity) let x: [String]
+					init() {
+						self.x = ["x"]
+					}
+				}
+
+				fun main(r: @R) {
+					var xRef = r[A]!.x
+					xRef.append("y")
+					destroy r
+				}
+				`,
+		)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("in base", func(t *testing.T) {
@@ -4045,7 +4075,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 					}
 				}
 				access(all) attachment A for R {
-					access(all) let x: [String] 
+					access(all) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -4055,7 +4085,35 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("in base, with entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				entitlement mapping M {
+					Mutate -> Insert
+				}
+
+				access(all) resource R {
+					access(all) fun foo() {
+						var xRef = self[A]!.x
+						xRef.append("y")
+					}
+				}
+				access(M) attachment A for R {
+					access(Identity) let x: [String]
+					init() {
+						self.x = ["x"]
+					}
+				}
+				`,
+		)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("in self, through base", func(t *testing.T) {
@@ -4066,7 +4124,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			`
 				access(all) resource R {}
 				access(all) attachment A for R {
-					access(all) let x: [String] 
+					access(all) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -4078,7 +4136,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 }
 

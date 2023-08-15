@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -591,16 +592,30 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			entitlement X
 			entitlement Y
 
-			fun test(): Bool {
-				account.save(3, to: /storage/foo)
-				let capX = account.getCapability<auth(X, Y) &Int>(/public/foo)
-				let upCap = capX as Capability<auth(X) &Int>
+			fun test(capXY: Capability<auth(X, Y) &Int>): Bool {
+				let upCap = capXY as Capability<auth(X) &Int>
 				return upCap as? Capability<auth(X, Y) &Int> == nil
 			}
 			`,
-			sema.Config{})
+			sema.Config{},
+		)
 
-		value, err := inter.Invoke("test")
+		capXY := interpreter.NewIDCapabilityValue(
+			nil,
+			interpreter.NewUnmeteredUInt64Value(1),
+			address,
+			interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"S.test.X", "S.test.Y"},
+					sema.Conjunction,
+				),
+				interpreter.PrimitiveStaticTypeInt,
+			),
+		)
+
+		value, err := inter.Invoke("test", capXY)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
@@ -623,31 +638,32 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			`
 			entitlement X
 
-			fun test(): Capability {
-				account.save(3, to: /storage/foo)
-				let capX = account.getCapability<auth(X) &Int>(/public/foo)
+			fun test(capX: Capability<auth(X) &Int>): Capability {
 				let upCap = capX as Capability
 				return (upCap as? Capability<auth(X) &Int>)!
 			}
 			`,
-			sema.Config{})
+			sema.Config{},
+		)
 
-		value, err := inter.Invoke("test")
+		capX := interpreter.NewIDCapabilityValue(
+			nil,
+			interpreter.NewUnmeteredUInt64Value(1),
+			address,
+			interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
+				interpreter.PrimitiveStaticTypeInt,
+			),
+		)
+
+		value, err := inter.Invoke("test", capX)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewPathCapabilityValue(
-				nil,
-				address,
-				interpreter.NewPathValue(nil, common.PathDomainPublic, "foo"),
-				interpreter.NewReferenceStaticType(
-					nil,
-					interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
-					interpreter.PrimitiveStaticTypeInt,
-				),
-			),
+			capX,
 			value,
 		)
 	})
@@ -928,268 +944,6 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			t,
 			inter,
 			interpreter.TrueValue,
-			value,
-		)
-	})
-
-}
-
-func TestInterpretCapabilityEntitlements(t *testing.T) {
-	t.Parallel()
-
-	t.Run("can borrow with supertype", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): &R {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.borrow<auth(X | Y) &R>()!
-			}
-			`,
-			sema.Config{},
-		)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("cannot borrow with supertype then downcast", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): &R? {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.borrow<auth(X | Y) &R>()! as? auth(X, Y) &R
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NilOptionalValue,
-			value,
-		)
-	})
-
-	t.Run("can borrow with two types", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): &R {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				cap.borrow<auth(X | Y) &R>()! as? auth(X, Y) &R
-				return cap.borrow<auth(X, Y) &R>()! as! auth(X, Y) &R
-			}
-			`,
-			sema.Config{},
-		)
-
-		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("upcast runtime entitlements", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			struct S {}
-			fun test(): Bool {
-				let s = S()
-				account.save(s, to: /storage/foo)
-				account.link<auth(X) &S>(/public/foo, target: /storage/foo)
-				let cap: Capability<auth(X) &S> = account.getCapability<auth(X) &S>(/public/foo)
-				let runtimeType = cap.getType() 
-				let upcastCap = cap as Capability<&S> 
-				let upcastRuntimeType = upcastCap.getType() 
-				return runtimeType == upcastRuntimeType 
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.FalseValue,
-			value,
-		)
-	})
-
-	t.Run("upcast runtime type", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			struct S {}
-			fun test(): Bool {
-				let s = S()
-				account.save(s, to: /storage/foo)
-				account.link<&S>(/public/foo, target: /storage/foo)
-				let cap: Capability<&S> = account.getCapability<&S>(/public/foo)
-				let runtimeType = cap.getType() 
-				let upcastCap = cap as Capability<&AnyStruct> 
-				let upcastRuntimeType = upcastCap.getType() 
-				return runtimeType == upcastRuntimeType 
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
-	})
-
-	t.Run("can check with supertype", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): Bool {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X, Y) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.check<auth(X | Y) &R>()
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			value,
-		)
-	})
-
-	t.Run("cannot borrow with subtype", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): &R {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.borrow<auth(X, Y) &R>()!
-			}
-			`,
-			sema.Config{},
-		)
-
-		_, err := inter.Invoke("test")
-		require.Error(t, err)
-		var nilErr interpreter.ForceNilError
-		require.ErrorAs(t, err, &nilErr)
-	})
-
-	t.Run("cannot check with subtype", func(t *testing.T) {
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
-			entitlement X
-			entitlement Y
-			resource R {}
-			fun test(): Bool {
-				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				account.link<auth(X) &R>(/public/foo, target: /storage/foo)
-				let cap = account.getCapability(/public/foo)
-				return cap.check<auth(X, Y) &R>()
-			}
-			`,
-			sema.Config{},
-		)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.FalseValue,
 			value,
 		)
 	})
@@ -2949,5 +2703,196 @@ func TestInterpretEntitlementSetEquality(t *testing.T) {
 
 		require.False(t, one.Equal(two))
 		require.False(t, two.Equal(one))
+	})
+}
+
+func TestInterpretBuiltinEntitlements(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        struct S {
+            access(Mutate) fun foo() {}
+            access(Insert) fun bar() {}
+            access(Remove) fun baz() {}
+        }
+
+        fun main() {
+            let s = S()
+            let mutableRef = &s as auth(Mutate) &S
+            let insertableRef = &s as auth(Insert) &S
+            let removableRef = &s as auth(Remove) &S
+        }
+    `)
+
+	_, err := inter.Invoke("main")
+	assert.NoError(t, err)
+}
+
+func TestInterpretIdentityMapping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("owned value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                // OK: Must return an unauthorized ref
+                let resultRef1: &AnyStruct = s.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("unauthorized ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let ref = &s as &S
+
+                // OK: Must return an unauthorized ref
+                let resultRef1: &AnyStruct = ref.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("basic entitled ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let mutableRef = &s as auth(Mutate) &S
+                let ref1: auth(Mutate) &AnyStruct = mutableRef.foo()
+
+                let insertableRef = &s as auth(Insert) &S
+                let ref2: auth(Insert) &AnyStruct = insertableRef.foo()
+
+                let removableRef = &s as auth(Remove) &S
+                let ref3: auth(Remove) &AnyStruct = removableRef.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("entitlement set ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct S {
+                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                    let a: AnyStruct = "hello"
+                    return &a as auth(Identity) &AnyStruct
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let ref1 = &s as auth(Insert | Remove) &S
+                let resultRef1: auth(Insert | Remove) &AnyStruct = ref1.foo()
+
+                let ref2 = &s as auth(Insert, Remove) &S
+                let resultRef2: auth(Insert, Remove) &AnyStruct = ref2.foo()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("owned value, with entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            struct X {
+               access(A | B) var s: String
+               init() {
+                   self.s = "hello"
+               }
+               access(C) fun foo() {}
+            }
+
+            struct Y {
+
+                // Reference
+                access(Identity) var x1: auth(Identity) &X
+
+                // Optional reference
+                access(Identity) var x2: auth(Identity) &X?
+
+                // Function returning a reference
+                access(Identity) fun getX(): auth(Identity) &X {
+                    let x = X()
+                    return &x as auth(Identity) &X
+                }
+
+                // Function returning an optional reference
+                access(Identity) fun getOptionalX(): auth(Identity) &X? {
+                    let x: X? = X()
+                    return &x as auth(Identity) &X?
+                }
+
+                init() {
+                    let x = X()
+                    self.x1 = &x as auth(A, B, C) &X
+                    self.x2 = nil
+                }
+            }
+
+            fun main() {
+                let y = Y()
+
+                let ref1: auth(A, B, C) &X = y.x1
+
+                let ref2: auth(A, B, C) &X? = y.x2
+
+                let ref3: auth(A, B, C) &X = y.getX()
+
+                let ref4: auth(A, B, C) &X? = y.getOptionalX()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
 	})
 }
