@@ -2717,10 +2717,15 @@ func getCapabilityController(
 	// Inject functions
 	switch controller := controller.(type) {
 	case *interpreter.StorageCapabilityControllerValue:
+		capabilityID := controller.CapabilityID
+
+		controller.GetCapability =
+			newCapabilityControllerGetCapabilityFunction(inter, address, controller)
+
 		controller.GetTag =
-			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
+			newCapabilityControllerGetTagFunction(inter, address, capabilityID)
 		controller.SetTag =
-			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+			newCapabilityControllerSetTagFunction(inter, address, capabilityID)
 
 		controller.TargetFunction =
 			newStorageCapabilityControllerTargetFunction(inter, controller)
@@ -2730,10 +2735,15 @@ func getCapabilityController(
 			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
 
 	case *interpreter.AccountCapabilityControllerValue:
+		capabilityID := controller.CapabilityID
+
+		controller.GetCapability =
+			newCapabilityControllerGetCapabilityFunction(inter, address, controller)
+
 		controller.GetTag =
-			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
+			newCapabilityControllerGetTagFunction(inter, address, capabilityID)
 		controller.SetTag =
-			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+			newCapabilityControllerSetTagFunction(inter, address, capabilityID)
 
 		controller.DeleteFunction =
 			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
@@ -4003,6 +4013,26 @@ func getCapabilityControllerTag(
 	}
 
 	return stringValue
+}
+
+func newCapabilityControllerGetCapabilityFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	controller interpreter.CapabilityControllerValue,
+) func() *interpreter.IDCapabilityValue {
+
+	addressValue := interpreter.AddressValue(address)
+	capabilityID := controller.ControllerCapabilityID()
+	borrowType := controller.CapabilityControllerBorrowType()
+
+	return func() *interpreter.IDCapabilityValue {
+		return interpreter.NewIDCapabilityValue(
+			inter,
+			capabilityID,
+			addressValue,
+			borrowType,
+		)
+	}
 }
 
 func newCapabilityControllerGetTagFunction(
