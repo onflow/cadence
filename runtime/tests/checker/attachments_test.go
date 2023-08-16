@@ -420,23 +420,6 @@ func TestCheckNestedBaseType(t *testing.T) {
 		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
 	})
 
-	t.Run("contract interface", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for Test {}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
-	})
-
 	t.Run("qualified base type", func(t *testing.T) {
 
 		t.Parallel()
@@ -481,7 +464,7 @@ func TestCheckNestedBaseType(t *testing.T) {
 	})
 }
 
-func TestCheckTypeRequirement(t *testing.T) {
+func TestCheckTypeRequirementsNoLongerAllowed(t *testing.T) {
 
 	t.Parallel()
 
@@ -496,195 +479,12 @@ func TestCheckTypeRequirement(t *testing.T) {
 					fun foo(): Int 
 				}
 			}
-			contract C: Test {
-
-			}
 			`,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("concrete struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {}
-			}
-			contract C: Test {
-				struct A {}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-	})
-
-	t.Run("concrete resource", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {}
-			}
-			contract C: Test {
-				resource A {}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-	})
-
-	t.Run("missing method", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {
-					fun foo(): Int 
-				}
-			}
-			contract C: Test {
-				attachment A for AnyStruct {
-
-				}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("missing field", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {
-					let x: Int
-				}
-			}
-			contract C: Test {
-				attachment A for AnyStruct {
-
-				}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("incompatible base type", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				struct S {}
-				attachment A for S {
-				}
-			}
-			contract C: Test {
-				struct S {}
-				struct S2 {}
-				attachment A for S2 {
-				}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("basetype subtype", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {
-				}
-			}
-			contract C: Test {
-				struct S {}
-				attachment A for S {
-				}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("base type Basetype", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				struct S {}
-				attachment A for S {
-				}
-			}
-			contract C: Test {
-				struct S {}
-				attachment A for AnyStruct {
-				}
-			}
-			`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("conforms", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {
-					fun foo(): Int 
-				}
-			}
-			contract C: Test {
-				attachment A for AnyStruct {
-					fun foo(): Int {return 3}
-				}
-			}
-			`,
-		)
-
-		require.NoError(t, err)
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	})
 }
 

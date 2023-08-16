@@ -100,10 +100,6 @@ func TestInterpretTransferCheck(t *testing.T) {
 			`
 		      contract interface CI {
 		          resource interface RI {}
-
-		          resource R: RI {}
-
-		          fun createR(): @R
 		      }
 
               contract C: CI {
@@ -116,7 +112,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 
               fun test() {
                   let r <- C.createR()
-                  let r2: @CI.R <- r as @CI.R
+                  let r2: @C.R <- r as @C.R
                   let r3: @{CI.RI} <- r2
                   destroy r3
               }
@@ -141,10 +137,6 @@ func TestInterpretTransferCheck(t *testing.T) {
 			`
 		      contract interface CI {
 		          resource interface RI {}
-
-		          resource R: RI {}
-
-		          fun createR(): @R
 		      }
 
               contract C: CI {
@@ -157,7 +149,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 
               fun test() {
                   let r <- C.createR()
-                  let ref: &CI.R = &r as &CI.R
+                  let ref: &C.R = &r as &C.R
                   let intersectionRef: &{CI.RI} = ref
                   destroy r
               }

@@ -94,7 +94,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 
 	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 		if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
-			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindComposite)
+			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration)
 		}
 	}
 
@@ -156,21 +156,11 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
-		// Non-event composite declarations nested in interface declarations are type requirements,
-		// i.e. they should be checked like interfaces
-
-		if nestedComposite.Kind() != common.CompositeKindEvent {
-			checker.visitCompositeLikeDeclaration(nestedComposite, kind)
-		} else {
-			// events should be checked like composites, as they are not type requirements
-			checker.visitCompositeLikeDeclaration(nestedComposite, ContainerKindComposite)
+		// only event types may be declared in interfaces.
+		// However, the error will be reported later in `declareNestedDeclarations``
+		if nestedComposite.Kind() == common.CompositeKindEvent {
+			checker.visitCompositeLikeDeclaration(nestedComposite)
 		}
-	}
-
-	for _, nestedAttachments := range declaration.Members.Attachments() {
-		// Attachment declarations nested in interface declarations are type requirements,
-		// i.e. they should be checked like interfaces
-		checker.visitAttachmentDeclaration(nestedAttachments, kind)
 	}
 
 	return
@@ -362,7 +352,7 @@ func (checker *Checker) declareNestedEvent(
 	eventMembers *orderedmap.OrderedMap[string, *Member],
 	interfaceType Type,
 ) {
-	checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindComposite)
+	checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration)
 
 	// Declare nested composites' values (constructor/instance) as members of the containing composite
 	identifier := *nestedCompositeDeclaration.DeclarationIdentifier()
@@ -454,13 +444,7 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
 				checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
-			} else {
-				checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
 			}
-		}
-
-		for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
-			checker.declareAttachmentMembersAndValue(nestedAttachmentDeclaration, ContainerKindInterface)
 		}
 	})()
 }
@@ -646,55 +630,6 @@ func (checker *Checker) checkInterfaceConformance(
 		if !isDuplicate {
 			inheritedMembers = append(inheritedMembers, conformanceMember)
 			inheritedMembersByName[name] = inheritedMembers
-		}
-	})
-
-	// Check for nested type conflicts
-
-	reportTypeConflictError := func(typeName string, typ CompositeKindedType, otherType Type) {
-		otherCompositeType, ok := otherType.(CompositeKindedType)
-		if !ok {
-			return
-		}
-
-		_, isInterface := typ.(*InterfaceType)
-		_, isOtherTypeInterface := otherCompositeType.(*InterfaceType)
-
-		checker.report(&InterfaceMemberConflictError{
-			InterfaceType:            interfaceType,
-			ConflictingInterfaceType: conformance,
-			MemberName:               typeName,
-			MemberKind:               typ.GetCompositeKind().DeclarationKind(isInterface),
-			ConflictingMemberKind:    otherCompositeType.GetCompositeKind().DeclarationKind(isOtherTypeInterface),
-			Range: ast.NewRangeFromPositioned(
-				checker.memoryGauge,
-				interfaceDeclaration.Identifier,
-			),
-		})
-	}
-
-	conformance.NestedTypes.Foreach(func(name string, typeRequirement Type) {
-		compositeType, ok := typeRequirement.(CompositeKindedType)
-		if !ok {
-			return
-		}
-
-		// Check if the type definitions coming from other conformances have conflicts.
-		if inheritedType, ok := inheritedNestedTypes[name]; ok {
-			inheritedCompositeType, ok := inheritedType.(CompositeKindedType)
-			if !ok {
-				return
-			}
-
-			reportTypeConflictError(name, compositeType, inheritedCompositeType)
-		}
-
-		inheritedNestedTypes[name] = typeRequirement
-
-		// Check if the type definitions coming from the current declaration have conflicts.
-		nestedType, ok := interfaceType.NestedTypes.Get(name)
-		if ok {
-			reportTypeConflictError(name, compositeType, nestedType)
 		}
 	})
 }

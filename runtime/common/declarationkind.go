@@ -211,6 +211,16 @@ func (k DeclarationKind) Keywords() string {
 	}
 }
 
+func (k DeclarationKind) IsInterfaceDeclaration() bool {
+	switch k {
+	case DeclarationKindContractInterface,
+		DeclarationKindStructureInterface,
+		DeclarationKindResourceInterface:
+		return true
+	}
+	return false
+}
+
 func (k DeclarationKind) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.String())
 }

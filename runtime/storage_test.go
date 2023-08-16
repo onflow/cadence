@@ -526,7 +526,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}: realNonFungibleTokenInterface,
+		}: modifiedNonFungibleTokenInterface,
 	}
 
 	events := make([]cadence.Event, 0)
@@ -613,7 +613,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}: realNonFungibleTokenInterface,
+		}: modifiedNonFungibleTokenInterface,
 	}
 
 	deployTx := DeploymentTransaction("TopShot", []byte(realTopShotContract))
@@ -747,7 +747,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
       import TopShot from 0x0b2a3299cc857e29
 
       transaction(momentIDs: [UInt64]) {
-          let transferTokens: @NonFungibleToken.Collection
+          let transferTokens: @{NonFungibleToken.Collection}
 
           prepare(acct: AuthAccount) {
               let ref = acct.borrow<&TopShot.Collection>(from: /storage/MomentCollection)!

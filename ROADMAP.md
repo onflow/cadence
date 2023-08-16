@@ -79,11 +79,6 @@ listed in no particular order.
 
   Cadence should provide a way to define type aliases.
 
-  For example, if a contract interface might declare a type requirement `NFT`,
-  then all concrete conforming types must provide a concrete type `NFT`.
-
-  However, it would be nice to give the type an additional, more useful name.
-
 - `Word128` and `Word256` types
 
   Cadence should provide `Word128` and `Word256` types, just like it provides `UInt128` and `UInt256`
