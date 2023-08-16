@@ -516,7 +516,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 		Script{
 			Source: DeploymentTransaction(
 				"FungibleToken",
-				[]byte(realFungibleTokenContractInterface),
+				[]byte(modifiedFungibleTokenContractInterface),
 			),
 		},
 		Context{
@@ -539,7 +539,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
                       }
                   }
                 `,
-				hex.EncodeToString([]byte(realFlowContract)),
+				hex.EncodeToString([]byte(modifiedFlowContract)),
 			)),
 		},
 		Context{
