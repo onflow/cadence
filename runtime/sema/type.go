@@ -2872,6 +2872,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 func formatFunctionType(
 	separator string,
 	purity string,
+	functionName string,
 	typeParameters []string,
 	parameters []string,
 	returnTypeAnnotation string,
@@ -2885,6 +2886,11 @@ func formatFunctionType(
 	}
 
 	builder.WriteString("fun")
+
+	if functionName != "" {
+		builder.WriteByte(' ')
+		builder.WriteString(functionName)
+	}
 
 	if len(typeParameters) > 0 {
 		builder.WriteByte('<')
@@ -2990,6 +2996,7 @@ func (t *FunctionType) Tag() TypeTag {
 
 func (t *FunctionType) string(
 	typeParameterFormatter func(*TypeParameter) string,
+	functionName string,
 	parameterFormatter func(Parameter) string,
 	returnTypeAnnotationFormatter func(TypeAnnotation) string,
 ) string {
@@ -3019,6 +3026,7 @@ func (t *FunctionType) string(
 	return formatFunctionType(
 		" ",
 		purity,
+		functionName,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -3034,6 +3042,7 @@ func FormatFunctionTypeID(
 	return formatFunctionType(
 		"",
 		purity,
+		"",
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -3045,6 +3054,7 @@ func (t *FunctionType) String() string {
 		func(parameter *TypeParameter) string {
 			return parameter.String()
 		},
+		"",
 		func(parameter Parameter) string {
 			return parameter.String()
 		},
@@ -3055,10 +3065,15 @@ func (t *FunctionType) String() string {
 }
 
 func (t *FunctionType) QualifiedString() string {
+	return t.NamedQualifiedString("")
+}
+
+func (t *FunctionType) NamedQualifiedString(functionName string) string {
 	return t.string(
 		func(parameter *TypeParameter) string {
 			return parameter.QualifiedString()
 		},
+		functionName,
 		func(parameter Parameter) string {
 			return parameter.QualifiedString()
 		},
