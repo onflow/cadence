@@ -471,6 +471,7 @@ func FromBigEndianBytesFunctionDocstring(ty Type) string {
 
 func FromBigEndianBytesFunctionType(ty Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -3882,6 +3883,7 @@ Returns an Address from the given byte array
 `
 
 var AddressTypeFromBytesFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
