@@ -219,8 +219,8 @@ func (e *interpreterEnvironment) ProgramLog(message string) error {
 	return e.runtimeInterface.ProgramLog(message)
 }
 
-func (e *interpreterEnvironment) UnsafeRandom() (uint64, error) {
-	return e.runtimeInterface.UnsafeRandom()
+func (e *interpreterEnvironment) ReadRandom(buffer []byte) error {
+	return e.runtimeInterface.ReadRandom(buffer)
 }
 
 func (e *interpreterEnvironment) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
