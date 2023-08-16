@@ -65,8 +65,6 @@ var _ MemberAccessibleValue = &CapabilityValue{}
 
 func (*CapabilityValue) isValue() {}
 
-func (*CapabilityValue) isCapabilityValue() {}
-
 func (v *CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
