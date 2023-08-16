@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
 )
 
@@ -62,14 +63,22 @@ func main() {
 
 var commands = map[string]command{
 	"dump-builtin-types": {
+		help:    "Dumps all built-in types",
 		handler: dumpBuiltinTypes,
+	},
+	"dump-builtin-values": {
+		help:    "Dumps all built-in values",
+		handler: dumpBuiltinValues,
 	},
 }
 
 func dumpBuiltinTypes() {
-	var types []sema.Type
 
-	for _, ty := range checker.AllBaseSemaTypes() {
+	allBaseSemaTypes := checker.AllBaseSemaTypes()
+
+	types := make([]sema.Type, 0, len(allBaseSemaTypes))
+
+	for _, ty := range allBaseSemaTypes {
 		types = append(types, ty)
 	}
 
@@ -112,76 +121,142 @@ func dumpBuiltinTypes() {
 		fmt.Printf("- %s\n", id)
 
 		if *includeMembers {
-			type namedResolver struct {
-				name     string
-				resolver sema.MemberResolver
-			}
-
-			resolversByName := ty.GetMembers()
-
-			namedResolvers := make([]namedResolver, 0, len(resolversByName))
-
-			for name, resolver := range resolversByName {
-
-				namedResolvers = append(
-					namedResolvers,
-					namedResolver{
-						name:     name,
-						resolver: resolver,
-					},
-				)
-			}
-
-			slices.SortFunc(
-				namedResolvers,
-				func(a, b namedResolver) bool {
-					return a.name < b.name
-				},
-			)
-
-			for _, namedResolver := range namedResolvers {
-				name := namedResolver.name
-				resolver := namedResolver.resolver
-
-				member := resolver.Resolve(nil, name, ast.EmptyRange, nil)
-				if member == nil {
-					continue
-				}
-
-				declarationKind := resolver.Kind
-
-				switch declarationKind {
-				case common.DeclarationKindFunction:
-					memberType := member.TypeAnnotation.Type
-					functionType, ok := memberType.(*sema.FunctionType)
-					if !ok {
-						panic(errors.NewUnexpectedError(
-							"function declaration with non-function type: %s: %s",
-							name,
-							memberType,
-						))
-					}
-
-					fmt.Printf(
-						"  - %s\n",
-						functionType.NamedQualifiedString(name),
-					)
-
-				case common.DeclarationKindField:
-					fmt.Printf(
-						"  - %s %s: %s\n",
-						member.VariableKind.Keyword(),
-						name,
-						member.TypeAnnotation.QualifiedString(),
-					)
-
-				default:
-					panic(errors.NewUnexpectedError("unsupported declaration kind: %s", declarationKind.Name()))
-				}
-			}
+			dumpTypeMembers(ty)
 		}
 	}
+}
 
+func dumpTypeMembers(ty sema.Type) {
+	type namedResolver struct {
+		name     string
+		resolver sema.MemberResolver
+	}
+
+	resolversByName := ty.GetMembers()
+
+	namedResolvers := make([]namedResolver, 0, len(resolversByName))
+
+	for name, resolver := range resolversByName {
+
+		namedResolvers = append(
+			namedResolvers,
+			namedResolver{
+				name:     name,
+				resolver: resolver,
+			},
+		)
+	}
+
+	slices.SortFunc(
+		namedResolvers,
+		func(a, b namedResolver) bool {
+			return a.name < b.name
+		},
+	)
+
+	for _, namedResolver := range namedResolvers {
+		name := namedResolver.name
+		resolver := namedResolver.resolver
+
+		member := resolver.Resolve(nil, name, ast.EmptyRange, nil)
+		if member == nil {
+			continue
+		}
+
+		declarationKind := resolver.Kind
+
+		switch declarationKind {
+		case common.DeclarationKindFunction:
+			memberType := member.TypeAnnotation.Type
+			functionType, ok := memberType.(*sema.FunctionType)
+			if !ok {
+				panic(errors.NewUnexpectedError(
+					"function declaration with non-function type: %s: %s",
+					name,
+					memberType,
+				))
+			}
+
+			fmt.Printf(
+				"  - %s\n",
+				functionType.NamedQualifiedString(name),
+			)
+
+		case common.DeclarationKindField:
+			fmt.Printf(
+				"  - %s %s: %s\n",
+				member.VariableKind.Keyword(),
+				name,
+				member.TypeAnnotation.QualifiedString(),
+			)
+
+		default:
+			panic(errors.NewUnexpectedError("unsupported declaration kind: %s", declarationKind.Name()))
+		}
+	}
+}
+
+func dumpBuiltinValues() {
+
+	type valueType struct {
+		name string
+		ty   sema.Type
+	}
+
+	allBaseSemaValueTypes := checker.AllBaseSemaValueTypes()
+	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
+
+	valueTypes := make([]valueType, 0, len(allBaseSemaValueTypes)+len(standardLibraryValues))
+
+	for name, ty := range allBaseSemaValueTypes {
+		valueTypes = append(
+			valueTypes,
+			valueType{
+				name: name,
+				ty:   ty,
+			},
+		)
+	}
+
+	for _, value := range standardLibraryValues {
+		valueTypes = append(
+			valueTypes,
+			valueType{
+				name: value.ValueDeclarationName(),
+				ty:   value.ValueDeclarationType(),
+			},
+		)
+	}
+
+	slices.SortFunc(
+		valueTypes,
+		func(a, b valueType) bool {
+			return a.name < b.name
+		},
+	)
+
+	for _, valueType := range valueTypes {
+
+		name := valueType.name
+		ty := valueType.ty
+
+		if functionType, ok := ty.(*sema.FunctionType); ok {
+			fmt.Printf(
+				"- %s\n",
+				functionType.NamedQualifiedString(name),
+			)
+		} else {
+			fmt.Printf(
+				"- %s: %s\n",
+				name,
+				sema.NewTypeAnnotation(ty).QualifiedString(),
+			)
+		}
+
+		if *includeMembers {
+			dumpTypeMembers(ty)
+		}
+	}
 }
 
 func printAvailableCommands() {
