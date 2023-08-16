@@ -50,6 +50,7 @@ The code of the contract.
 const DeployedContractTypePublicTypesFunctionName = "publicTypes"
 
 var DeployedContractTypePublicTypesFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
 			Type: MetaType,
