@@ -148,8 +148,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnMeterComputation:            e.newOnMeterComputation(),
 		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
-		IDCapabilityBorrowHandler:     stdlib.BorrowCapabilityController,
-		IDCapabilityCheckHandler:      stdlib.CheckCapabilityController,
+		CapabilityBorrowHandler:       stdlib.BorrowCapabilityController,
+		CapabilityCheckHandler:        stdlib.CheckCapabilityController,
 	}
 }
 

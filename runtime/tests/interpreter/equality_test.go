@@ -47,7 +47,7 @@ func TestInterpretEquality(t *testing.T) {
 		capabilityValueDeclaration := stdlib.StandardLibraryValue{
 			Name: "cap",
 			Type: &sema.CapabilityType{},
-			Value: interpreter.NewUnmeteredIDCapabilityValue(
+			Value: interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				nil,

@@ -114,8 +114,8 @@ type OnMeterComputationFunc func(
 	intensity uint,
 )
 
-// IDCapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
-type IDCapabilityBorrowHandlerFunc func(
+// CapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
+type CapabilityBorrowHandlerFunc func(
 	inter *Interpreter,
 	locationRange LocationRange,
 	address AddressValue,
@@ -124,8 +124,8 @@ type IDCapabilityBorrowHandlerFunc func(
 	capabilityBorrowType *sema.ReferenceType,
 ) ReferenceValue
 
-// IDCapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
-type IDCapabilityCheckHandlerFunc func(
+// CapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
+type CapabilityCheckHandlerFunc func(
 	inter *Interpreter,
 	locationRange LocationRange,
 	address AddressValue,
@@ -2102,10 +2102,10 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
 
 			switch capability := value.(type) {
-			case *IDCapabilityValue:
+			case *CapabilityValue:
 				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
-				return NewIDCapabilityValue(
+				return NewCapabilityValue(
 					interpreter,
 					capability.ID,
 					capability.Address,
@@ -4071,7 +4071,7 @@ func (interpreter *Interpreter) checkValue(
 	//	1) The actual stored value (storage path)
 	//	2) A capability to the value at the storage (private/public paths)
 
-	if idCapability, ok := value.(*IDCapabilityValue); ok {
+	if capability, ok := value.(*CapabilityValue); ok {
 		// If, the value is a capability, try to load the value at the capability target.
 		// However, borrow type is not statically known.
 		// So take the borrow type from the value itself
@@ -4090,11 +4090,11 @@ func (interpreter *Interpreter) checkValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		_ = interpreter.SharedState.Config.IDCapabilityCheckHandler(
+		_ = interpreter.SharedState.Config.CapabilityCheckHandler(
 			interpreter,
 			locationRange,
-			idCapability.Address,
-			idCapability.ID,
+			capability.Address,
+			capability.ID,
 			referenceType,
 			referenceType,
 		)
@@ -5242,7 +5242,7 @@ func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
 }
 
-func (interpreter *Interpreter) idCapabilityBorrowFunction(
+func (interpreter *Interpreter) capabilityBorrowFunction(
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -5267,7 +5267,7 @@ func (interpreter *Interpreter) idCapabilityBorrowFunction(
 				}
 			}
 
-			referenceValue := inter.SharedState.Config.IDCapabilityBorrowHandler(
+			referenceValue := inter.SharedState.Config.CapabilityBorrowHandler(
 				inter,
 				locationRange,
 				addressValue,
@@ -5283,7 +5283,7 @@ func (interpreter *Interpreter) idCapabilityBorrowFunction(
 	)
 }
 
-func (interpreter *Interpreter) idCapabilityCheckFunction(
+func (interpreter *Interpreter) capabilityCheckFunction(
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -5311,7 +5311,7 @@ func (interpreter *Interpreter) idCapabilityCheckFunction(
 				}
 			}
 
-			return inter.SharedState.Config.IDCapabilityCheckHandler(
+			return inter.SharedState.Config.CapabilityCheckHandler(
 				inter,
 				locationRange,
 				addressValue,

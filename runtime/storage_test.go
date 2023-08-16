@@ -478,7 +478,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewIDCapability(
+			cadence.NewCapability(
 				1,
 				cadence.Address(signer),
 				cadence.NewReferenceType(
@@ -1132,7 +1132,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageSaveIDCapability(t *testing.T) {
+func TestRuntimeStorageSaveCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -1203,7 +1203,7 @@ func TestRuntimeStorageSaveIDCapability(t *testing.T) {
 	value, err := runtime.ReadStored(signer, storagePath1, context)
 	require.NoError(t, err)
 
-	expected := cadence.NewIDCapability(
+	expected := cadence.NewCapability(
 		cadence.UInt64(1),
 		cadence.Address(signer),
 		ty,

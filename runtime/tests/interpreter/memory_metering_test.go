@@ -6966,7 +6966,7 @@ func TestInterpretPathValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretIDCapabilityValueMetering(t *testing.T) {
+func TestInterpretCapabilityValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
@@ -6974,9 +6974,9 @@ func TestInterpretIDCapabilityValueMetering(t *testing.T) {
 
 		meter := newTestMemoryGauge()
 
-		_ = interpreter.NewIDCapabilityValue(meter, 1, interpreter.AddressValue{}, nil)
+		_ = interpreter.NewCapabilityValue(meter, 1, interpreter.AddressValue{}, nil)
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindIDCapabilityValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCapabilityValue))
 	})
 }
 
@@ -8934,7 +8934,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 
 		testValueStringConversion(t,
 			script,
-			interpreter.NewUnmeteredIDCapabilityValue(
+			interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.AddressValue{1},
 				interpreter.CompositeStaticType{
