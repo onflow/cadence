@@ -3482,12 +3482,13 @@ func referenceTypeFunction(invocation Invocation) Value {
 
 	var authorization Authorization = UnauthorizedAccess
 	errInIteration := false
+	entitlementsCount := entitlementValues.Count()
 
-	if entitlementValues.Count() > 0 {
+	if entitlementsCount > 0 {
 		authorization = NewEntitlementSetAuthorization(
 			invocation.Interpreter,
 			func() []common.TypeID {
-				var entitlements []common.TypeID = make([]common.TypeID, 0, entitlementValues.Count())
+				entitlements := make([]common.TypeID, 0, entitlementsCount)
 				entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
 					entitlementString, isString := element.(*StringValue)
 					if !isString {
@@ -3506,7 +3507,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 				})
 				return entitlements
 			},
-			entitlementValues.Count(),
+			entitlementsCount,
 			sema.Conjunction,
 		)
 	}

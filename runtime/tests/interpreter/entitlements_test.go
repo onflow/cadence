@@ -610,7 +610,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				interpreter.NewEntitlementSetAuthorization(
 					nil,
 					func() []common.TypeID { return []common.TypeID{"S.test.X", "S.test.Y"} },
-					1,
+					2,
 					sema.Conjunction,
 				),
 				interpreter.PrimitiveStaticTypeInt,

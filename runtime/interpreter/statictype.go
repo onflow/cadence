@@ -523,6 +523,10 @@ func NewEntitlementSetAuthorization(
 	})
 
 	entitlementList := entitlementListConstructor()
+	if len(entitlementList) > entitlementListSize {
+		// it should not be possible to reach this point unless something is implemented wrong
+		panic(errors.NewUnreachableError())
+	}
 
 	entitlements := orderedmap.New[sema.TypeIDOrderedSet](len(entitlementList))
 	for _, entitlement := range entitlementList {

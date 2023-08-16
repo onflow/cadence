@@ -1234,7 +1234,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Authorization: interpreter.NewEntitlementSetAuthorization(
 					nil,
 					func() []common.TypeID { return []common.TypeID{"E", "F"} },
-					1,
+					2,
 					sema.Disjunction),
 				ReferencedType: interpreter.PrimitiveStaticTypeInt,
 			},
