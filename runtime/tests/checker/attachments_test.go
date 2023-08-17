@@ -3901,8 +3901,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		require.Equal(
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
 			sema.NewEntitlementSetAccess(
@@ -3913,7 +3913,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				sema.Disjunction,
 			),
 		)
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,
@@ -3969,8 +3969,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		require.Equal(
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
 			sema.NewEntitlementSetAccess(
@@ -3981,7 +3981,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				sema.Disjunction,
 			),
 		)
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,

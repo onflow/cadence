@@ -918,7 +918,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
 			sema.NewEntitlementSetAccess(
@@ -930,7 +930,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		)
 		// in this case `M` functions like a generic name for an entitlement,
 		// so we use `M` as the access for `x` here
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.NewEntitlementMapAccess(checker.Elaboration.EntitlementMapType("S.test.M")),
@@ -994,7 +994,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
 			sema.NewEntitlementSetAccess(
@@ -1004,7 +1004,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 				sema.Conjunction,
 			),
 		)
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.NewEntitlementSetAccess(
@@ -4663,7 +4663,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 3)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
 			sema.NewEntitlementSetAccess(
@@ -4673,7 +4673,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 				sema.Conjunction,
 			),
 		)
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,
@@ -4721,7 +4721,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
 			sema.NewEntitlementSetAccess(
@@ -4731,7 +4731,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 				sema.Conjunction,
 			),
 		)
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,
@@ -5047,8 +5047,8 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		require.Equal(
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
 			sema.NewEntitlementSetAccess(
@@ -5059,7 +5059,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 				sema.Disjunction,
 			),
 		)
-		require.Equal(
+		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,

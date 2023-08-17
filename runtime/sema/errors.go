@@ -3011,14 +3011,14 @@ func (e *InvalidAccessError) Error() string {
 			possessedDescription = ", but reference is unauthorized"
 		} else {
 			possessedDescription = fmt.Sprintf(
-				", but reference only has %s authorization", 
+				", but reference only has `%s` authorization",
 				e.PossessedAccess.Description(),
 			)
 		}
 	}
 
 	return fmt.Sprintf(
-		"cannot access `%s`: %s requires %s access%s",
+		"cannot access `%s`: `%s` requires `%s` authorization%s",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.Description(),
@@ -4243,13 +4243,17 @@ func (*UnrepresentableEntitlementMapOutputError) isSemanticError() {}
 func (*UnrepresentableEntitlementMapOutputError) IsUserError() {}
 
 func (e *UnrepresentableEntitlementMapOutputError) Error() string {
-	return fmt.Sprintf("cannot map %s through %s because the output is unrepresentable", e.Input.AccessKeyword(), e.Map.QualifiedString())
+	return fmt.Sprintf(
+		"cannot map `%s` through `%s` because the output is unrepresentable",
+		e.Input.AccessKeyword(),
+		e.Map.QualifiedString(),
+	)
 }
 
 func (e *UnrepresentableEntitlementMapOutputError) SecondaryError() string {
 	return fmt.Sprintf(
-		"this usually occurs because the input set is disjunctive and %s is one-to-many", 
-		e.Map.QualifiedString()
+		"this usually occurs because the input set is disjunctive and `%s` is one-to-many",
+		e.Map.QualifiedString(),
 	)
 }
 
@@ -4276,7 +4280,7 @@ func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
 
 func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
 	return fmt.Sprintf(
-		"cannot use mapped entitlement authorization for %s outside of a field or accessor function using the same entitlement access",
+		"cannot use mapped entitlement authorization for `%s` outside of a field or accessor function using the same entitlement access",
 		e.Map.QualifiedIdentifier(),
 	)
 }
@@ -4371,7 +4375,7 @@ func (*RequiredEntitlementNotProvidedError) IsUserError() {}
 
 func (e *RequiredEntitlementNotProvidedError) Error() string {
 	return fmt.Sprintf(
-		"attachment type %s requires entitlement %s to be provided when attaching",
+		"attachment type `%s` requires entitlement `%s` to be provided when attaching",
 		e.AttachmentType.QualifiedString(),
 		e.RequiredEntitlement.QualifiedString(),
 	)
