@@ -342,6 +342,13 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 		names[name] = variable.Type.String()
 	})
 
+	_ = r.checker.Config.BaseValueActivation.ForEach(func(name string, variable *sema.Variable) error {
+		if names[name] == "" {
+			names[name] = variable.Type.String()
+		}
+		return nil
+	})
+
 	// Iterating over the dictionary of names is safe,
 	// as the suggested entries are sorted afterwards
 
