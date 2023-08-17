@@ -3010,7 +3010,10 @@ func (e *InvalidAccessError) Error() string {
 		if e.PossessedAccess.Equal(UnauthorizedAccess) {
 			possessedDescription = ", but reference is unauthorized"
 		} else {
-			possessedDescription = fmt.Sprintf(", but reference only has %s access", e.PossessedAccess.Description())
+			possessedDescription = fmt.Sprintf(
+				", but reference only has %s authorization", 
+				e.PossessedAccess.Description(),
+			)
 		}
 	}
 
@@ -4181,7 +4184,8 @@ func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
 func (*InvalidMappedEntitlementMemberError) IsUserError() {}
 
 func (e *InvalidMappedEntitlementMemberError) Error() string {
-	return "mapped entitlement access modifiers may only be used for fields or accessors with a container type, or a reference type authorized with the same mapped entitlement"
+	return "mapped entitlement access modifiers may only be used for fields or accessors with a container type, " +
+		" or a reference type authorized with the same mapped entitlement"
 }
 
 func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
@@ -4243,7 +4247,10 @@ func (e *UnrepresentableEntitlementMapOutputError) Error() string {
 }
 
 func (e *UnrepresentableEntitlementMapOutputError) SecondaryError() string {
-	return fmt.Sprintf("this usually occurs because the input set is disjunctive and %s is one-to-many", e.Map.QualifiedString())
+	return fmt.Sprintf(
+		"this usually occurs because the input set is disjunctive and %s is one-to-many", 
+		e.Map.QualifiedString()
+	)
 }
 
 func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position {

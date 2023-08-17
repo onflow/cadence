@@ -288,8 +288,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		// can more easily see what access is missing
 		var possessedAccess Access
 		if _, ok := member.Access.(PrimitiveAccess); !ok {
-			switch ty := accessedType.(type) {
-			case *ReferenceType:
+			if ty, ok := accessedType.(*ReferenceType); ok {
 				possessedAccess = ty.Authorization
 			}
 		}
