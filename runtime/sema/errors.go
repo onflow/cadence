@@ -2992,6 +2992,7 @@ func (e *InvalidOptionalChainingError) Error() string {
 type InvalidAccessError struct {
 	Name              string
 	RestrictingAccess Access
+	PossessedAccess   Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -3004,11 +3005,21 @@ func (*InvalidAccessError) isSemanticError() {}
 func (*InvalidAccessError) IsUserError() {}
 
 func (e *InvalidAccessError) Error() string {
+	var possessedDescription string
+	if e.PossessedAccess != nil {
+		if e.PossessedAccess.Equal(UnauthorizedAccess) {
+			possessedDescription = ", but reference is unauthorized"
+		} else {
+			possessedDescription = fmt.Sprintf(", but reference only has %s access", e.PossessedAccess.Description())
+		}
+	}
+
 	return fmt.Sprintf(
-		"cannot access `%s`: %s has %s access",
+		"cannot access `%s`: %s requires %s access%s",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.Description(),
+		possessedDescription,
 	)
 }
 

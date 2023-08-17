@@ -3831,6 +3831,22 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		require.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					sema.InsertEntitlement,
+					sema.MutateEntitlement,
+				},
+				sema.Disjunction,
+			),
+		)
+		require.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.UnauthorizedAccess,
+		)
 	})
 
 	t.Run("basic, with entitlements", func(t *testing.T) {
@@ -3886,6 +3902,22 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		require.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					sema.InsertEntitlement,
+					sema.MutateEntitlement,
+				},
+				sema.Disjunction,
+			),
+		)
+		require.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.UnauthorizedAccess,
+		)
 	})
 
 	t.Run("in base, with entitlements", func(t *testing.T) {
@@ -3938,6 +3970,22 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		require.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					sema.InsertEntitlement,
+					sema.MutateEntitlement,
+				},
+				sema.Disjunction,
+			),
+		)
+		require.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.UnauthorizedAccess,
+		)
 	})
 }
 
