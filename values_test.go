@@ -385,7 +385,7 @@ func newValueTestCases() map[string]valueTestCase {
 				testFunctionType,
 			),
 			expectedType: testFunctionType,
-			string:       "Function(...)",
+			string:       "fun ...",
 		},
 	}
 }
