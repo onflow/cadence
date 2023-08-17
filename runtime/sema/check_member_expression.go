@@ -449,7 +449,9 @@ func (checker *Checker) mapAccess(
 		grantedAccess, err := mappedAccess.Image(ty.Authorization, accessRange)
 		if err != nil {
 			checker.report(err)
-			return false, mappedAccess
+			// since we are already reporting an error that the map is unrepresentable,
+			// pretend that the access succeeds to prevent a redundant access error report
+			return true, UnauthorizedAccess
 		}
 		return true, grantedAccess
 

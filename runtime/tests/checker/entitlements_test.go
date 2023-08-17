@@ -3712,10 +3712,9 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
-		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 
 	t.Run("unrepresentable disjoint with dedup", func(t *testing.T) {
@@ -3742,10 +3741,9 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		// theoretically this should be allowed, because ((Y & B) | (Y & B)) simplifies to
 		// just (Y & B), but this would require us to build in a simplifier for boolean expressions,
 		// which is a lot of work for an edge case that is very unlikely to come up
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
-		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 
 	t.Run("multiple output", func(t *testing.T) {
