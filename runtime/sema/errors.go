@@ -2992,6 +2992,7 @@ func (e *InvalidOptionalChainingError) Error() string {
 type InvalidAccessError struct {
 	Name              string
 	RestrictingAccess Access
+	PossessedAccess   Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -3004,11 +3005,24 @@ func (*InvalidAccessError) isSemanticError() {}
 func (*InvalidAccessError) IsUserError() {}
 
 func (e *InvalidAccessError) Error() string {
+	var possessedDescription string
+	if e.PossessedAccess != nil {
+		if e.PossessedAccess.Equal(UnauthorizedAccess) {
+			possessedDescription = ", but reference is unauthorized"
+		} else {
+			possessedDescription = fmt.Sprintf(
+				", but reference only has `%s` authorization",
+				e.PossessedAccess.Description(),
+			)
+		}
+	}
+
 	return fmt.Sprintf(
-		"cannot access `%s`: %s has %s access",
+		"cannot access `%s`: `%s` requires `%s` authorization%s",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.Description(),
+		possessedDescription,
 	)
 }
 
@@ -4170,7 +4184,8 @@ func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
 func (*InvalidMappedEntitlementMemberError) IsUserError() {}
 
 func (e *InvalidMappedEntitlementMemberError) Error() string {
-	return "mapped entitlement access modifiers may only be used for fields or accessors with a reference type authorized with the same mapped entitlement"
+	return "mapped entitlement access modifiers may only be used for fields or accessors with a container type, " +
+		" or a reference type authorized with the same mapped entitlement"
 }
 
 func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
@@ -4228,7 +4243,18 @@ func (*UnrepresentableEntitlementMapOutputError) isSemanticError() {}
 func (*UnrepresentableEntitlementMapOutputError) IsUserError() {}
 
 func (e *UnrepresentableEntitlementMapOutputError) Error() string {
-	return fmt.Sprintf("cannot map %s through %s because the output is unrepresentable", e.Input.AccessKeyword(), e.Map.QualifiedString())
+	return fmt.Sprintf(
+		"cannot map `%s` through `%s` because the output is unrepresentable",
+		e.Input.AccessKeyword(),
+		e.Map.QualifiedString(),
+	)
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) SecondaryError() string {
+	return fmt.Sprintf(
+		"this usually occurs because the input set is disjunctive and `%s` is one-to-many",
+		e.Map.QualifiedString(),
+	)
 }
 
 func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position {
@@ -4254,7 +4280,7 @@ func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
 
 func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
 	return fmt.Sprintf(
-		"cannot use mapped entitlement authorization for %s outside of a field or accessor function using the same entitlement access",
+		"cannot use mapped entitlement authorization for `%s` outside of a field or accessor function using the same entitlement access",
 		e.Map.QualifiedIdentifier(),
 	)
 }
@@ -4349,7 +4375,7 @@ func (*RequiredEntitlementNotProvidedError) IsUserError() {}
 
 func (e *RequiredEntitlementNotProvidedError) Error() string {
 	return fmt.Sprintf(
-		"attachment type %s requires entitlement %s to be provided when attaching",
+		"attachment type `%s` requires entitlement `%s` to be provided when attaching",
 		e.AttachmentType.QualifiedString(),
 		e.RequiredEntitlement.QualifiedString(),
 	)

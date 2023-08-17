@@ -897,7 +897,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 	t.Run("accessor function with no downcast impl", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheck(t, `
 			entitlement X
 			entitlement Y
 			entitlement mapping M {
@@ -918,6 +918,23 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					checker.Elaboration.EntitlementType("S.test.Y"),
+				},
+				sema.Conjunction,
+			),
+		)
+		// in this case `M` functions like a generic name for an entitlement,
+		// so we use `M` as the access for `x` here
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.NewEntitlementMapAccess(checker.Elaboration.EntitlementMapType("S.test.M")),
+		)
 	})
 
 	t.Run("accessor function with object access impl", func(t *testing.T) {
@@ -950,7 +967,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 	t.Run("accessor function with invalid object access impl", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheck(t, `
 			entitlement X
 			entitlement Y
 			entitlement Z
@@ -977,6 +994,26 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					checker.Elaboration.EntitlementType("S.test.Z"),
+				},
+				sema.Conjunction,
+			),
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					checker.Elaboration.EntitlementType("S.test.Y"),
+				},
+				sema.Conjunction,
+			),
+		)
 	})
 
 	t.Run("accessor function with mapped object access impl", func(t *testing.T) {
@@ -3675,10 +3712,9 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		}
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
-		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 
 	t.Run("unrepresentable disjoint with dedup", func(t *testing.T) {
@@ -3705,10 +3741,9 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		// theoretically this should be allowed, because ((Y & B) | (Y & B)) simplifies to
 		// just (Y & B), but this would require us to build in a simplifier for boolean expressions,
 		// which is a lot of work for an edge case that is very unlikely to come up
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
-		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 
 	t.Run("multiple output", func(t *testing.T) {
@@ -4607,7 +4642,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 
 	t.Run("use of function on unentitled referenced value", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheck(t, `
 		entitlement X
 		struct S {
 			view access(X) fun foo(): Bool {
@@ -4627,6 +4662,22 @@ func TestCheckEntitlementConditions(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 3)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					checker.Elaboration.EntitlementType("S.test.X"),
+				},
+				sema.Conjunction,
+			),
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.UnauthorizedAccess,
+		)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
 		require.IsType(t, &sema.InvalidAccessError{}, errs[2])
 	})
@@ -4653,7 +4704,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 
 	t.Run("result value usage reference", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheck(t, `
 		entitlement X
 		struct S {
 			view access(X) fun foo(): Bool {
@@ -4670,6 +4721,21 @@ func TestCheckEntitlementConditions(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					checker.Elaboration.EntitlementType("S.test.X"),
+				},
+				sema.Conjunction,
+			),
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.UnauthorizedAccess,
+		)
 	})
 
 	t.Run("result value usage reference authorized", func(t *testing.T) {
@@ -4981,7 +5047,23 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					sema.InsertEntitlement,
+					sema.MutateEntitlement,
+				},
+				sema.Disjunction,
+			),
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.UnauthorizedAccess,
+		)
 	})
 }
 

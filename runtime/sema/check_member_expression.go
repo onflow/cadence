@@ -283,10 +283,20 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	accessRange := func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, expression) }
 	isReadable, resultingAuthorization := checker.isReadableMember(accessedType, member, resultingType, accessRange)
 	if !isReadable {
+		// if the member being accessed has entitled access,
+		// also report the authorization possessed by the reference so that developers
+		// can more easily see what access is missing
+		var possessedAccess Access
+		if _, ok := member.Access.(PrimitiveAccess); !ok {
+			if ty, ok := accessedType.(*ReferenceType); ok {
+				possessedAccess = ty.Authorization
+			}
+		}
 		checker.report(
 			&InvalidAccessError{
 				Name:              member.Identifier.Identifier,
 				RestrictingAccess: member.Access,
+				PossessedAccess:   possessedAccess,
 				DeclarationKind:   member.DeclarationKind,
 				Range:             accessRange(),
 			},
@@ -438,7 +448,9 @@ func (checker *Checker) mapAccess(
 		grantedAccess, err := mappedAccess.Image(ty.Authorization, accessRange)
 		if err != nil {
 			checker.report(err)
-			return false, mappedAccess
+			// since we are already reporting an error that the map is unrepresentable,
+			// pretend that the access succeeds to prevent a redundant access error report
+			return true, UnauthorizedAccess
 		}
 		return true, grantedAccess
 
