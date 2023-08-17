@@ -309,8 +309,8 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagPathValue:
 			storable, err = d.decodePath()
 
-		case CBORTagIDCapabilityValue:
-			storable, err = d.decodeIDCapability()
+		case CBORTagCapabilityValue:
+			storable, err = d.decodeCapability()
 
 		case CBORTagPublishedValue:
 			storable, err = d.decodePublishedValue()
@@ -917,9 +917,9 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 	), nil
 }
 
-func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
+func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
 
-	const expectedLength = encodedIDCapabilityValueLength
+	const expectedLength = encodedCapabilityValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
@@ -943,7 +943,7 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 
 	// address
 
-	// Decode address at array index encodedIDCapabilityValueAddressFieldKey
+	// Decode address at array index encodedCapabilityValueAddressFieldKey
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
@@ -966,7 +966,7 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 		)
 	}
 
-	// Decode ID at array index encodedIDCapabilityValueIDFieldKey
+	// Decode ID at array index encodedCapabilityValueIDFieldKey
 
 	id, err := d.decoder.DecodeUint64()
 	if err != nil {
@@ -976,14 +976,14 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 		)
 	}
 
-	// Decode borrow type at array index encodedIDCapabilityValueBorrowTypeFieldKey
+	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
 
 	borrowType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid capability borrow type encoding: %w", err)
 	}
 
-	return NewIDCapabilityValue(
+	return NewCapabilityValue(
 		d.memoryGauge,
 		UInt64Value(id),
 		address,
@@ -1164,7 +1164,7 @@ func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
 		return nil, errors.NewUnexpectedError("invalid published value value encoding: %w", err)
 	}
 
-	capabilityValue, ok := value.(CapabilityValue)
+	capabilityValue, ok := value.(*CapabilityValue)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid published value value encoding: expected capability, got %T",

@@ -846,7 +846,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label: "ID Capability (invalid)",
-			value: cadence.NewIDCapability(
+			value: cadence.NewCapability(
 				4,
 				cadence.Address{0x1},
 				cadence.IntType{},
@@ -2129,13 +2129,13 @@ func TestExportTypeValue(t *testing.T) {
 
 }
 
-func TestExportIDCapabilityValue(t *testing.T) {
+func TestExportCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("Int", func(t *testing.T) {
 
-		capability := interpreter.NewUnmeteredIDCapabilityValue(
+		capability := interpreter.NewUnmeteredCapabilityValue(
 			3,
 			interpreter.AddressValue{0x1},
 			interpreter.PrimitiveStaticTypeInt,
@@ -2149,7 +2149,7 @@ func TestExportIDCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.NewIDCapability(
+		expected := cadence.NewCapability(
 			3,
 			cadence.Address{0x1},
 			cadence.IntType{},
@@ -2183,7 +2183,7 @@ func TestExportIDCapabilityValue(t *testing.T) {
 		inter := newTestInterpreter(t)
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
-		capability := interpreter.NewUnmeteredIDCapabilityValue(
+		capability := interpreter.NewUnmeteredCapabilityValue(
 			3,
 			interpreter.AddressValue{0x1},
 			interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
@@ -2197,7 +2197,7 @@ func TestExportIDCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		expected := cadence.NewIDCapability(
+		expected := cadence.NewCapability(
 			3,
 			cadence.Address{0x1},
 			&cadence.StructType{
@@ -3971,7 +3971,7 @@ func TestTypeValueImport(t *testing.T) {
 	})
 }
 
-func TestIDCapabilityValueImport(t *testing.T) {
+func TestCapabilityValueImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -3979,7 +3979,7 @@ func TestIDCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.NewIDCapability(
+		capabilityValue := cadence.NewCapability(
 			42,
 			cadence.Address{0x1},
 			&cadence.ReferenceType{Type: cadence.IntType{}},
@@ -4023,7 +4023,7 @@ func TestIDCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.NewIDCapability(
+		capabilityValue := cadence.NewCapability(
 			3,
 			cadence.Address{0x1},
 			cadence.IntType{},
@@ -4074,7 +4074,7 @@ func TestIDCapabilityValueImport(t *testing.T) {
 			Initializers:        [][]cadence.Parameter{},
 		}
 
-		capabilityValue := cadence.NewIDCapability(
+		capabilityValue := cadence.NewCapability(
 			42,
 			cadence.Address{0x1},
 			borrowType,

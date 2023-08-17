@@ -9781,7 +9781,7 @@ func TestEncodeType(t *testing.T) {
 	})
 }
 
-func TestEncodeIDCapability(t *testing.T) {
+func TestEncodeCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -9790,7 +9790,7 @@ func TestEncodeIDCapability(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
-			cadence.IDCapability{
+			cadence.Capability{
 				ID:      42,
 				Address: cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			},
@@ -9836,13 +9836,13 @@ func TestEncodeIDCapability(t *testing.T) {
 			},
 		}
 
-		capability1 := cadence.IDCapability{
+		capability1 := cadence.Capability{
 			ID:         42,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		}
 
-		capability2 := cadence.IDCapability{
+		capability2 := cadence.Capability{
 			ID:         43,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: simpleStructType,
@@ -9961,7 +9961,7 @@ func TestEncodeIDCapability(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
-			cadence.IDCapability{
+			cadence.Capability{
 				ID:         42,
 				Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: cadence.IntType{},
@@ -9999,12 +9999,12 @@ func TestEncodeIDCapability(t *testing.T) {
 	t.Run("array of Capability<Int>", func(t *testing.T) {
 		t.Parallel()
 
-		capability1 := cadence.IDCapability{
+		capability1 := cadence.Capability{
 			ID:         42,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},
 		}
-		capability2 := cadence.IDCapability{
+		capability2 := cadence.Capability{
 			ID:         43,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			BorrowType: cadence.IntType{},

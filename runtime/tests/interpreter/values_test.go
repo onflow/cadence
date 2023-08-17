@@ -1144,7 +1144,7 @@ func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter
 	if currentDepth < containerMaxDepth {
 		n = r.randomInt(randomValueKindComposite)
 	} else {
-		n = r.randomInt(randomValueKindIDCapability)
+		n = r.randomInt(randomValueKindCapability)
 	}
 
 	switch n {
@@ -1164,8 +1164,8 @@ func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter
 		fieldsCount := r.randomInt(compositeMaxFields)
 		v, _ := r.randomCompositeValue(common.ZeroAddress, fieldsCount, inter, currentDepth)
 		return v
-	case randomValueKindIDCapability:
-		return interpreter.NewUnmeteredIDCapabilityValue(
+	case randomValueKindCapability:
+		return interpreter.NewUnmeteredCapabilityValue(
 			interpreter.UInt64Value(r.randomInt(math.MaxInt-1)),
 			r.randomAddressValue(),
 			interpreter.ReferenceStaticType{
@@ -1511,7 +1511,7 @@ const (
 	// Non-hashable values
 	randomValueKindVoid
 	randomValueKindNil // `Never?`
-	randomValueKindIDCapability
+	randomValueKindCapability
 
 	// Containers
 	randomValueKindSome

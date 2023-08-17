@@ -601,7 +601,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			sema.Config{},
 		)
 
-		capXY := interpreter.NewIDCapabilityValue(
+		capXY := interpreter.NewCapabilityValue(
 			nil,
 			interpreter.NewUnmeteredUInt64Value(1),
 			address,
@@ -648,7 +648,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			sema.Config{},
 		)
 
-		capX := interpreter.NewIDCapabilityValue(
+		capX := interpreter.NewCapabilityValue(
 			nil,
 			interpreter.NewUnmeteredUInt64Value(1),
 			address,
