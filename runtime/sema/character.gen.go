@@ -28,19 +28,20 @@ var CharacterTypeUtf8FieldType = &VariableSizedType{
 }
 
 const CharacterTypeUtf8FieldDocString = `
-The byte array of the UTF-8 encoding
+The byte array of the UTF-8 encoding.
 `
 
 const CharacterTypeToStringFunctionName = "toString"
 
 var CharacterTypeToStringFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
 	),
 }
 
 const CharacterTypeToStringFunctionDocString = `
-Returns this character as a String
+Returns this character as a String.
 `
 
 const CharacterTypeName = "Character"

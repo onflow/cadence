@@ -94,7 +94,7 @@ func init() {
 				IntType,
 				stringTypeLengthFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredPublicFunctionMember(
 				t,
 				StringTypeToLowerFunctionName,
 				StringTypeToLowerFunctionType,
