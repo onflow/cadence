@@ -44,7 +44,7 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	if len(args) <= 0 {
+	if len(args) == 0 {
 		printAvailableCommands()
 		return
 	}
@@ -78,7 +78,8 @@ func dumpBuiltinTypes() {
 
 	types := make([]sema.Type, 0, len(allBaseSemaTypes))
 
-	for _, ty := range allBaseSemaTypes {
+	// Gather all types in a slice, then sort them
+	for _, ty := range allBaseSemaTypes { //nolint:maprange
 		types = append(types, ty)
 	}
 
@@ -136,7 +137,8 @@ func dumpTypeMembers(ty sema.Type) {
 
 	namedResolvers := make([]namedResolver, 0, len(resolversByName))
 
-	for name, resolver := range resolversByName {
+	// Gather all resolvers, then sort them
+	for name, resolver := range resolversByName { //nolint:maprange
 
 		namedResolvers = append(
 			namedResolvers,
@@ -208,7 +210,8 @@ func dumpBuiltinValues() {
 
 	valueTypes := make([]valueType, 0, len(allBaseSemaValueTypes)+len(standardLibraryValues))
 
-	for name, ty := range allBaseSemaValueTypes {
+	// Gather all values, then sort them
+	for name, ty := range allBaseSemaValueTypes { //nolint:maprange
 		valueTypes = append(
 			valueTypes,
 			valueType{
@@ -267,7 +270,8 @@ func printAvailableCommands() {
 
 	commandHelps := make([]commandHelp, 0, len(commands))
 
-	for name, command := range commands {
+	// Gather all commands, then sort them
+	for name, command := range commands { //nolint:maprange
 		commandHelps = append(
 			commandHelps,
 			commandHelp{
