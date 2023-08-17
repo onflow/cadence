@@ -127,6 +127,13 @@ pub contract Test {
         pub fun reset(to height: UInt64) {
             self.backend.reset(to: height)
         }
+
+        /// Moves the time of the blockchain by the given delta,
+        /// which should be passed in the form of seconds.
+        ///
+        pub fun moveTime(by delta: UFix64) {
+            self.backend.moveTime(by: delta)
+        }
     }
 
     pub struct Matcher {
@@ -312,6 +319,11 @@ pub contract Test {
         /// Resets the state of the blockchain to the given height.
         ///
         pub fun reset(to height: UInt64)
+
+        /// Moves the time of the blockchain by the given delta,
+        /// which should be passed in the form of seconds.
+        ///
+        pub fun moveTime(by delta: UFix64)
     }
 
     /// Returns a new matcher that negates the test of the given matcher.
