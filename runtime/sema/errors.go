@@ -4181,7 +4181,7 @@ func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
 func (*InvalidMappedEntitlementMemberError) IsUserError() {}
 
 func (e *InvalidMappedEntitlementMemberError) Error() string {
-	return "mapped entitlement access modifiers may only be used for fields or accessors with a reference type authorized with the same mapped entitlement"
+	return "mapped entitlement access modifiers may only be used for fields or accessors with a container type, or a reference type authorized with the same mapped entitlement"
 }
 
 func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
@@ -4240,6 +4240,10 @@ func (*UnrepresentableEntitlementMapOutputError) IsUserError() {}
 
 func (e *UnrepresentableEntitlementMapOutputError) Error() string {
 	return fmt.Sprintf("cannot map %s through %s because the output is unrepresentable", e.Input.AccessKeyword(), e.Map.QualifiedString())
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) SecondaryError() string {
+	return fmt.Sprintf("this usually occurs because the input set is disjunctive and %s is one-to-many", e.Map.QualifiedString())
 }
 
 func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position {
