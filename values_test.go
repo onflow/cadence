@@ -372,7 +372,7 @@ func newValueTestCases() map[string]valueTestCase {
 			string:       "Type<Int>()",
 		},
 		"Capability (ID)": {
-			value: NewIDCapability(
+			value: NewCapability(
 				3,
 				BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				IntType{},

@@ -202,7 +202,7 @@ const (
 	_ // DO NOT REPLACE! used to be used for account links
 	CBORTagStorageCapabilityControllerValue
 	CBORTagAccountCapabilityControllerValue
-	CBORTagIDCapabilityValue
+	CBORTagCapabilityValue
 	_
 	_
 	_
@@ -764,32 +764,32 @@ func (v PathValue) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedIDCapabilityValueAddressFieldKey    uint64 = 0
-	// encodedIDCapabilityValueIDFieldKey         uint64 = 1
-	// encodedIDCapabilityValueBorrowTypeFieldKey uint64 = 2
+	// encodedCapabilityValueAddressFieldKey    uint64 = 0
+	// encodedCapabilityValueIDFieldKey         uint64 = 1
+	// encodedCapabilityValueBorrowTypeFieldKey uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
-	// encodedIDCapabilityValueLength MUST be updated when new element is added.
+	// encodedCapabilityValueLength MUST be updated when new element is added.
 	// It is used to verify encoded capability length during decoding.
-	encodedIDCapabilityValueLength = 3
+	encodedCapabilityValueLength = 3
 )
 
-// Encode encodes IDCapabilityValue as
+// Encode encodes CapabilityValue as
 //
 //	cbor.Tag{
-//				Number: CBORTagIDCapabilityValue,
+//				Number: CBORTagCapabilityValue,
 //				Content: []any{
-//						encodedIDCapabilityValueAddressFieldKey:    AddressValue(v.Address),
-//						encodedIDCapabilityValueIDFieldKey:         v.ID,
-//						encodedIDCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
+//						encodedCapabilityValueAddressFieldKey:    AddressValue(v.Address),
+//						encodedCapabilityValueIDFieldKey:         v.ID,
+//						encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
 //					},
 //	}
-func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
+func (v *CapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagIDCapabilityValue,
+		0xd8, CBORTagCapabilityValue,
 		// array, 3 items follow
 		0x83,
 	})
@@ -797,19 +797,19 @@ func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode address at array index encodedIDCapabilityValueAddressFieldKey
+	// Encode address at array index encodedCapabilityValueAddressFieldKey
 	err = v.Address.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode ID at array index encodedIDCapabilityValueIDFieldKey
+	// Encode ID at array index encodedCapabilityValueIDFieldKey
 	err = e.CBOR.EncodeUint64(uint64(v.ID))
 	if err != nil {
 		return err
 	}
 
-	// Encode borrow type at array index encodedIDCapabilityValueBorrowTypeFieldKey
+	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
 	return v.BorrowType.Encode(e.CBOR)
 }
 

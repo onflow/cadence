@@ -664,7 +664,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutate"},
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
 				sema.Conjunction,
 			),
 			array,
@@ -768,7 +769,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutate"},
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
 				sema.Conjunction,
 			),
 			array1,
@@ -791,7 +793,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutate"},
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
 				sema.Conjunction,
 			),
 			array2,
@@ -861,7 +864,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutate"},
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
 				sema.Conjunction,
 			),
 			array,
@@ -990,7 +994,8 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"Mutate"},
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
 				sema.Conjunction,
 			),
 			array,

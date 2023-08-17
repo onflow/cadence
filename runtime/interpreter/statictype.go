@@ -513,13 +513,20 @@ var _ Authorization = EntitlementSetAuthorization{}
 
 func NewEntitlementSetAuthorization(
 	memoryGauge common.MemoryGauge,
-	entitlementList []common.TypeID,
+	entitlementListConstructor func() []common.TypeID,
+	entitlementListSize int,
 	kind sema.EntitlementSetKind,
 ) EntitlementSetAuthorization {
 	common.UseMemory(memoryGauge, common.MemoryUsage{
 		Kind:   common.MemoryKindEntitlementSetStaticAccess,
-		Amount: uint64(len(entitlementList)),
+		Amount: uint64(entitlementListSize),
 	})
+
+	entitlementList := entitlementListConstructor()
+	if len(entitlementList) > entitlementListSize {
+		// it should not be possible to reach this point unless something is implemented wrong
+		panic(errors.NewUnreachableError())
+	}
 
 	entitlements := orderedmap.New[sema.TypeIDOrderedSet](len(entitlementList))
 	for _, entitlement := range entitlementList {
@@ -831,7 +838,18 @@ func ConvertSemaAccesstoStaticAuthorization(
 			typeId := key.ID()
 			entitlements = append(entitlements, typeId)
 		})
-		return NewEntitlementSetAuthorization(memoryGauge, entitlements, access.SetKind)
+		return NewEntitlementSetAuthorization(
+			memoryGauge,
+			func() (entitlements []common.TypeID) {
+				access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
+					typeId := key.ID()
+					entitlements = append(entitlements, typeId)
+				})
+				return
+			},
+			access.Entitlements.Len(),
+			access.SetKind,
+		)
 
 	case sema.EntitlementMapAccess:
 		typeId := access.Type.ID()

@@ -206,7 +206,7 @@ type jsonTypeValue struct {
 	StaticType jsonValue `json:"staticType"`
 }
 
-type jsonIDCapabilityValue struct {
+type jsonCapabilityValue struct {
 	BorrowType jsonValue `json:"borrowType"`
 	Address    string    `json:"address"`
 	ID         string    `json:"id"`
@@ -335,8 +335,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return preparePath(v)
 	case cadence.TypeValue:
 		return prepareTypeValue(v)
-	case cadence.IDCapability:
-		return prepareIDCapability(v)
+	case cadence.Capability:
+		return prepareCapability(v)
 	case cadence.Enum:
 		return prepareEnum(v)
 	case cadence.Attachment:
@@ -960,10 +960,10 @@ func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 	}
 }
 
-func prepareIDCapability(capability cadence.IDCapability) jsonValue {
+func prepareCapability(capability cadence.Capability) jsonValue {
 	return jsonValueObject{
 		Type: capabilityTypeStr,
-		Value: jsonIDCapabilityValue{
+		Value: jsonCapabilityValue{
 			ID:         encodeUInt(uint64(capability.ID)),
 			Address:    encodeBytes(capability.Address.Bytes()),
 			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),
