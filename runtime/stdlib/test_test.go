@@ -2185,6 +2185,39 @@ func TestBlockchain(t *testing.T) {
 		assert.False(t, resetInvoked)
 	})
 
+	t.Run("moveTime", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                // timeDelta is the representation of 35 days,
+                // in the form of seconds.
+                let timeDelta = UFix64(35 * 24 * 60 * 60)
+                blockchain.moveTime(by: timeDelta)
+            }
+		`
+
+		moveTimeInvoked := false
+
+		testFramework := &mockedTestFramework{
+			moveTime: func(timeDelta int64) {
+				moveTimeInvoked = true
+				assert.Equal(t, int64(3024000), timeDelta)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, moveTimeInvoked)
+	})
+
 	// TODO: Add more tests for the remaining functions.
 }
 
@@ -2202,6 +2235,7 @@ type mockedTestFramework struct {
 	serviceAccount     func() (*Account, error)
 	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
 	reset              func(uint64)
+	moveTime           func(int64)
 }
 
 var _ TestFramework = &mockedTestFramework{}
@@ -2327,4 +2361,12 @@ func (m mockedTestFramework) Reset(height uint64) {
 	}
 
 	m.reset(height)
+}
+
+func (m mockedTestFramework) MoveTime(timeDelta int64) {
+	if m.moveTime == nil {
+		panic("'SetTimestamp' is not implemented")
+	}
+
+	m.moveTime(timeDelta)
 }

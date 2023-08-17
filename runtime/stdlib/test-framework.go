@@ -71,6 +71,8 @@ type TestFramework interface {
 	) interpreter.Value
 
 	Reset(uint64)
+
+	MoveTime(int64)
 }
 
 type ScriptResult struct {
