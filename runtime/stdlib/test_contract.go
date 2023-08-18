@@ -439,6 +439,50 @@ func (t *TestContractType) newNewEmulatorBlockchainFunction(
 	)
 }
 
+// 'Test.emulatorBlockchain' public field
+
+const testTypeEmulatorBlockchainFieldDocString = `
+Returns a blockchain singleton which is backed by an emulator instance.
+`
+
+const testTypeEmulatorBlockchainFieldName = "emulatorBlockchain"
+
+func (t *TestContractType) newEmulatorBlockchain(
+	inter *interpreter.Interpreter,
+	testFramework TestFramework,
+	parent *interpreter.CompositeValue,
+) interpreter.Value {
+	locationRange := interpreter.EmptyLocationRange
+
+	// Create an `EmulatorBackend`
+	emulatorBackend := t.emulatorBackendType.newEmulatorBackend(
+		inter,
+		testFramework,
+		locationRange,
+	)
+
+	// Create a 'Blockchain' struct value, that wraps the emulator backend,
+	// by calling the constructor of 'Blockchain'.
+	blockchainConstructor := getNestedTypeConstructorValue(
+		parent,
+		testBlockchainTypeName,
+	)
+
+	blockchain, err := inter.InvokeExternally(
+		blockchainConstructor,
+		blockchainConstructor.Type,
+		[]interpreter.Value{
+			emulatorBackend,
+		},
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return blockchain
+}
+
 // 'Test.NewMatcher' function.
 // Constructs a matcher that test only 'AnyStruct'.
 // Accepts test function that accepts subtype of 'AnyStruct'.
@@ -1118,6 +1162,19 @@ func newTestContractType() *TestContractType {
 	)
 	ty.newEmulatorBlockchainFunctionType = newEmulatorBlockchainFunctionType
 
+	// Test.emulatorBlockchain
+	compositeType.Members.Set(
+		testTypeEmulatorBlockchainFieldName,
+		sema.NewUnmeteredFieldMember(
+			compositeType,
+			ast.AccessPublic,
+			ast.VariableKindConstant,
+			testTypeEmulatorBlockchainFieldName,
+			blockchainType,
+			testTypeEmulatorBlockchainFieldDocString,
+		),
+	)
+
 	// Test.readFile()
 	compositeType.Members.Set(
 		testTypeReadFileFunctionName,
@@ -1357,6 +1414,15 @@ func (t *TestContractType) NewTestContract(
 		t.newNewEmulatorBlockchainFunction(testFramework)
 	compositeValue.Functions[testTypeReadFileFunctionName] =
 		newTestTypeReadFileFunction(testFramework)
+
+	// Inject natively implemented public fields
+	emulatorBlockchain := t.newEmulatorBlockchain(inter, testFramework, compositeValue)
+	compositeValue.SetMember(
+		inter,
+		interpreter.EmptyLocationRange,
+		testTypeEmulatorBlockchainFieldName,
+		emulatorBlockchain,
+	)
 
 	// Inject natively implemented matchers
 	compositeValue.Functions[testTypeNewMatcherFunctionName] = t.newMatcherFunction

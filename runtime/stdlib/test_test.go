@@ -865,7 +865,7 @@ func TestAssertEqual(t *testing.T) {
 		assert.ErrorContains(
 			t,
 			err,
-			"not equal: expected: {2: false, 1: true}, actual: {2: true, 1: true}",
+			"not equal: expected: {2: false, 1: true}, actual: {1: true, 2: true}",
 		)
 	})
 
@@ -2137,6 +2137,37 @@ func TestBlockchain(t *testing.T) {
 
             pub fun test() {
                 let blockchain = Test.newEmulatorBlockchain()
+                blockchain.reset(to: 5)
+            }
+		`
+
+		resetInvoked := false
+
+		testFramework := &mockedTestFramework{
+			reset: func(height uint64) {
+				resetInvoked = true
+				assert.Equal(t, uint64(5), height)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, resetInvoked)
+	})
+
+	t.Run("emulatorBlockchain", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.emulatorBlockchain
+                Test.assertEqual(Type<Test.Blockchain>(), blockchain.getType())
                 blockchain.reset(to: 5)
             }
 		`
