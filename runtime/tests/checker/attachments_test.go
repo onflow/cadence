@@ -3847,6 +3847,11 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,
 		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+			"reference needs one of entitlements `Insert` or `Mutate`",
+		)
 	})
 
 	t.Run("basic, with entitlements", func(t *testing.T) {
@@ -3918,6 +3923,11 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,
 		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+			"reference needs one of entitlements `Insert` or `Mutate`",
+		)
 	})
 
 	t.Run("in base, with entitlements", func(t *testing.T) {
@@ -3985,6 +3995,11 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+			"reference needs one of entitlements `Insert` or `Mutate`",
 		)
 	})
 }
