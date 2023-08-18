@@ -1802,6 +1802,12 @@ Returns a new array whose elements are filtered by applying the filter function 
 Available if the array element type is not resource-kinded.
 `
 
+const ArrayTypeMapFunctionName = "map"
+
+const arrayTypeMapFunctionDocString = `
+Returns a new array whose elements are produced by applying the mapper function on each element of the original array.
+`
+
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
@@ -1942,6 +1948,31 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					ArrayFilterFunctionType(memoryGauge, elementType),
 					arrayTypeFilterFunctionDocString,
+				)
+			},
+		},
+		ArrayTypeMapFunctionName: {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+				elementType := arrayType.ElementType(false)
+
+				// TODO: maybe allow for resource element type as a reference.
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayMapFunctionType(memoryGauge, arrayType),
+					arrayTypeMapFunctionDocString,
 				)
 			},
 		},
@@ -2286,6 +2317,56 @@ func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(NewVariableSizedType(memoryGauge, elementType)),
+	}
+}
+
+func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *FunctionType {
+	// For [T] or [T; N]
+	// fun map(_ function: ((T): U)): [U]
+	//               or
+	// fun map(_ function: ((T): U)): [U; N]
+
+	typeParameter := &TypeParameter{
+		Name: "U",
+	}
+
+	typeU := &GenericType{
+		TypeParameter: typeParameter,
+	}
+
+	var returnArrayType Type
+	switch arrayType := arrayType.(type) {
+	case *VariableSizedType:
+		returnArrayType = NewVariableSizedType(memoryGauge, typeU)
+	case *ConstantSizedType:
+		returnArrayType = NewConstantSizedType(memoryGauge, typeU, arrayType.Size)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	// transformFuncType: elementType -> U
+	transformFuncType := &FunctionType{
+		Parameters: []Parameter{
+			{
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(arrayType.ElementType(false)),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(typeU),
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "transform",
+				TypeAnnotation: NewTypeAnnotation(transformFuncType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(returnArrayType),
 	}
 }
 
