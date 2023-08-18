@@ -4797,16 +4797,16 @@ func (interpreter *Interpreter) GetCompositeType(
 			return compositeType, nil
 		}
 	} else {
-		compositeType = interpreter.getUserCompositeType(location, typeID)
-		if compositeType != nil {
-			return compositeType, nil
+		config := interpreter.SharedState.Config
+		compositeTypeHandler := config.CompositeTypeHandler
+		if compositeTypeHandler != nil {
+			compositeType = compositeTypeHandler(location, typeID)
+			if compositeType != nil {
+				return compositeType, nil
+			}
 		}
-	}
 
-	config := interpreter.SharedState.Config
-	compositeTypeHandler := config.CompositeTypeHandler
-	if compositeTypeHandler != nil {
-		compositeType = compositeTypeHandler(location, typeID)
+		compositeType = interpreter.getUserCompositeType(location, typeID)
 		if compositeType != nil {
 			return compositeType, nil
 		}
