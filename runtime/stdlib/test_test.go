@@ -2185,17 +2185,17 @@ func TestBlockchain(t *testing.T) {
 		assert.False(t, resetInvoked)
 	})
 
-	t.Run("moveTime", func(t *testing.T) {
+	t.Run("moveTime forward", func(t *testing.T) {
 		t.Parallel()
 
 		const script = `
             import Test
 
-            pub fun test() {
+            pub fun testMoveForward() {
                 let blockchain = Test.newEmulatorBlockchain()
                 // timeDelta is the representation of 35 days,
                 // in the form of seconds.
-                let timeDelta = UFix64(35 * 24 * 60 * 60)
+                let timeDelta = Fix64(35 * 24 * 60 * 60)
                 blockchain.moveTime(by: timeDelta)
             }
 		`
@@ -2212,10 +2212,69 @@ func TestBlockchain(t *testing.T) {
 		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
 		require.NoError(t, err)
 
-		_, err = inter.Invoke("test")
+		_, err = inter.Invoke("testMoveForward")
 		require.NoError(t, err)
 
 		assert.True(t, moveTimeInvoked)
+	})
+
+	t.Run("moveTime backward", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun testMoveBackward() {
+                let blockchain = Test.newEmulatorBlockchain()
+                // timeDelta is the representation of 35 days,
+                // in the form of seconds.
+                let timeDelta = Fix64(35 * 24 * 60 * 60) * -1.0
+                blockchain.moveTime(by: timeDelta)
+            }
+		`
+
+		moveTimeInvoked := false
+
+		testFramework := &mockedTestFramework{
+			moveTime: func(timeDelta int64) {
+				moveTimeInvoked = true
+				assert.Equal(t, int64(-3024000), timeDelta)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMoveBackward")
+		require.NoError(t, err)
+
+		assert.True(t, moveTimeInvoked)
+	})
+
+	t.Run("moveTime with invalid time delta", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun testMoveTime() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.moveTime(by: 3000)
+            }
+		`
+
+		moveTimeInvoked := false
+
+		testFramework := &mockedTestFramework{
+			moveTime: func(timeDelta int64) {
+				moveTimeInvoked = true
+			},
+		}
+
+		_, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.False(t, moveTimeInvoked)
 	})
 
 	// TODO: Add more tests for the remaining functions.

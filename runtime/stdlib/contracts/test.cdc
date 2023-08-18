@@ -131,7 +131,7 @@ pub contract Test {
         /// Moves the time of the blockchain by the given delta,
         /// which should be passed in the form of seconds.
         ///
-        pub fun moveTime(by delta: UFix64) {
+        pub fun moveTime(by delta: Fix64) {
             self.backend.moveTime(by: delta)
         }
     }
@@ -323,7 +323,7 @@ pub contract Test {
         /// Moves the time of the blockchain by the given delta,
         /// which should be passed in the form of seconds.
         ///
-        pub fun moveTime(by delta: UFix64)
+        pub fun moveTime(by delta: Fix64)
     }
 
     /// Returns a new matcher that negates the test of the given matcher.
