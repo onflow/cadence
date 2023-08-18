@@ -713,7 +713,7 @@ func (t *testEmulatorBackendType) newMoveTimeFunction(
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.moveTimeFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			timeDelta, ok := invocation.Arguments[0].(interpreter.UFix64Value)
+			timeDelta, ok := invocation.Arguments[0].(interpreter.Fix64Value)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
