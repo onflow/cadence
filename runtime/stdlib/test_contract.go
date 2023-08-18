@@ -383,6 +383,8 @@ func newTestTypeReadFileFunction(testFramework TestFramework) *interpreter.HostF
 // 'Test.newEmulatorBlockchain' function
 
 const testTypeNewEmulatorBlockchainFunctionDocString = `
+**DEPRECATED**: Use the ` + "`Test.emulatorBlockchain`" + ` field instead.
+
 Creates a blockchain which is backed by a new emulator instance.
 `
 
