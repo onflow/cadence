@@ -3096,7 +3096,7 @@ func (v *ArrayValue) Map(
 
 	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
 	iterationInvocation := func(arrayElement Value) Invocation {
-		invocation := NewInvocation(
+		return NewInvocation(
 			interpreter,
 			nil,
 			nil,
@@ -3105,7 +3105,6 @@ func (v *ArrayValue) Map(
 			nil,
 			locationRange,
 		)
-		return invocation
 	}
 
 	procedureStaticType, ok := ConvertSemaToStaticType(interpreter, transformFunctionType).(FunctionStaticType)
