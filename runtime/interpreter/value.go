@@ -3111,18 +3111,19 @@ func (v *ArrayValue) Map(
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+	returnType := procedureStaticType.ReturnType(interpreter)
 
 	var returnArrayStaticType ArrayStaticType
 	switch v.Type.(type) {
 	case VariableSizedStaticType:
 		returnArrayStaticType = NewVariableSizedStaticType(
 			interpreter,
-			procedureStaticType.ReturnType(interpreter),
+			returnType,
 		)
 	case ConstantSizedStaticType:
 		returnArrayStaticType = NewConstantSizedStaticType(
 			interpreter,
-			procedureStaticType.ReturnType(interpreter),
+			returnType,
 			int64(v.Count()),
 		)
 	default:
@@ -3148,12 +3149,10 @@ func (v *ArrayValue) Map(
 				panic(errors.NewExternalError(err))
 			}
 
-			// Also handles the end of array case since iterator.Next() returns nil for that.
-			if atreeValue == nil {
-				return nil
+			if atreeValue != nil {
+				value = MustConvertStoredValue(interpreter, atreeValue)
 			}
 
-			value = MustConvertStoredValue(interpreter, atreeValue)
 			if value == nil {
 				return nil
 			}
