@@ -17132,12 +17132,16 @@ func (v *CompositeValue) ConformsToStaticType(
 			return false
 		}
 
+		expectedMemberStaticType := ConvertSemaToStaticType(interpreter, inclusiveRangeType.MemberType)
 		for _, fieldName := range sema.InclusiveRangeTypeFieldNames {
 			value := v.GetField(interpreter, locationRange, fieldName)
 
 			fieldStaticType := value.StaticType(interpreter)
 
-			if !interpreter.IsSubTypeOfSemaType(fieldStaticType, inclusiveRangeType.MemberType) {
+			// InclusiveRange is non-covariant.
+			// For e.g. we disallow assigning InclusiveRange<Int> to an InclusiveRange<Integer>.
+			// Hence we do an exact equality check instead of a sub-type check.
+			if fieldStaticType != expectedMemberStaticType {
 				return false
 			}
 

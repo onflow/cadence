@@ -1458,25 +1458,19 @@ func (i valueImporter) importInclusiveRangeValue(
 	*interpreter.CompositeValue,
 	error,
 ) {
-	// start, end and step. The order matters.
-	members := make([]interpreter.IntegerValue, 3)
 
 	var memberType sema.Type
 
 	inclusiveRangeType, ok := expectedType.(*sema.InclusiveRangeType)
 	if ok {
 		memberType = inclusiveRangeType.MemberType
-
-		// The inner type must be an integer.
-		if !memberType.Tag().BelongsTo(sema.IntegerTypeTag) {
-			return nil, errors.NewDefaultUserError(
-				"cannot import inclusiverange: member type must be an integer",
-			)
-		}
 	}
 
 	inter := i.inter
 	locationRange := i.locationRange
+
+	// start, end and step. The order matters.
+	members := make([]interpreter.IntegerValue, 3)
 
 	// import members.
 	for index, value := range []cadence.Value{v.Start, v.End, v.Step} {
@@ -1486,42 +1480,42 @@ func (i valueImporter) importInclusiveRangeValue(
 		}
 		importedIntegerValue, ok := importedValue.(interpreter.IntegerValue)
 		if !ok {
-			return nil, err
+			return nil, errors.NewDefaultUserError(
+				"cannot import inclusiverange: start, end and step must be integers",
+			)
 		}
 
 		members[index] = importedIntegerValue
 	}
 
-	// start, end and step. The order matters.
-	memberTypes := make([]sema.Type, 3)
-	memberStaticTypes := make([]interpreter.StaticType, 3)
-
-	for i, member := range members {
-		memberStaticTypes[i] = member.StaticType(inter)
-		memberType, err := inter.ConvertStaticToSemaType(memberStaticTypes[i])
+	if inclusiveRangeType == nil {
+		memberSemaType, err := inter.ConvertStaticToSemaType(members[0].StaticType(inter))
 		if err != nil {
 			return nil, err
 		}
-		memberTypes[i] = memberType
-	}
 
-	// start, end and step must have the same static type.
-	if memberStaticTypes[0] != memberStaticTypes[1] || memberStaticTypes[0] != memberStaticTypes[2] {
-		return nil, errors.NewDefaultUserError(
-			"cannot import inclusiverange: start, end and step must be of the same type",
-		)
-	}
-
-	if inclusiveRangeType == nil {
+		memberType = memberSemaType
 		inclusiveRangeType = sema.NewInclusiveRangeType(
 			inter,
-			memberTypes[0],
+			memberType,
 		)
 	}
 
 	inclusiveRangeStaticType, ok := interpreter.ConvertSemaToStaticType(inter, inclusiveRangeType).(interpreter.InclusiveRangeStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
+	}
+
+	// Ensure that start, end and step have the same static type.
+	// Usually this validation would be done outside of this function in ConformsToStaticType but
+	// we do it here because the NewInclusiveRangeValueWithStep constructor performs validations
+	// which involve comparisons between these values and hence they need to be of the same static
+	// type.
+	if members[0].StaticType(inter) != members[1].StaticType(inter) ||
+		members[0].StaticType(inter) != members[2].StaticType(inter) {
+		return nil, errors.NewDefaultUserError(
+			"cannot import inclusiverange: start, end and step must be of the same type",
+		)
 	}
 
 	return interpreter.NewInclusiveRangeValueWithStep(

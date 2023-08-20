@@ -1573,37 +1573,10 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid type - InclusiveRange<AnyStruct>", func(t *testing.T) {
+	t.Run("invalid - mixed types", func(t *testing.T) {
 		t.Parallel()
 
-		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewInt(-10), cadence.NewInt(-2))
-
-		inter := newTestInterpreter(t)
-
-		_, err := ImportValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			nil,
-			value,
-			sema.NewInclusiveRangeType(inter, sema.AnyStructType),
-		)
-
-		RequireError(t, err)
-		assertUserError(t, err)
-
-		var userError errors.DefaultUserError
-		require.ErrorAs(t, err, &userError)
-		require.Contains(
-			t,
-			userError.Error(),
-			"cannot import inclusiverange: member type must be an integer",
-		)
-	})
-
-	t.Run("mismatched static types", func(t *testing.T) {
-		t.Parallel()
-
-		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewUInt(100), cadence.NewInt(-2))
+		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewUInt(100), cadence.NewUInt64(1))
 
 		inter := newTestInterpreter(t)
 

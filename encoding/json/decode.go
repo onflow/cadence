@@ -886,8 +886,6 @@ func (d *Decoder) decodeInclusiveRange(valueJSON any) cadence.InclusiveRange {
 		step,
 	)
 
-	// TODO: Ensure that start, end and step have the same type.
-
 	return value.WithType(cadence.NewMeteredInclusiveRangeType(
 		d.gauge,
 		start.Type(),
