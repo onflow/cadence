@@ -1821,7 +1821,7 @@ func (*UnsupportedOverloadingError) IsUserError() {}
 func (e *UnsupportedOverloadingError) Error() string {
 	var initializerName string = "init"
 	return fmt.Sprint(
-		"cannot redeclare initializer %s is already declared", initializerName)
+		"cannot redeclare initializer `%s` is already declared", initializerName)
 }
 
 // CompositeKindMismatchError
