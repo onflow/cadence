@@ -1599,6 +1599,36 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 			"cannot import inclusiverange: start, end and step must be of the same type",
 		)
 	})
+
+	t.Run("invalid - InclusiveRange<String>", func(t *testing.T) {
+		t.Parallel()
+
+		strValue, err := cadence.NewString("anything")
+		require.NoError(t, err)
+
+		value := cadence.NewInclusiveRange(strValue, strValue, strValue)
+
+		inter := newTestInterpreter(t)
+
+		_, err = ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			sema.StringType,
+		)
+
+		RequireError(t, err)
+		assertUserError(t, err)
+
+		var userError errors.DefaultUserError
+		require.ErrorAs(t, err, &userError)
+		require.Contains(
+			t,
+			userError.Error(),
+			"cannot import inclusiverange: start, end and step must be integers",
+		)
+	})
 }
 
 func TestExportStructValue(t *testing.T) {
