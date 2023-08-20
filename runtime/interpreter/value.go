@@ -3142,20 +3142,16 @@ func (v *ArrayValue) Map(
 		uint64(v.Count()),
 		func() Value {
 
-			var value Value
-
 			atreeValue, err := iterator.Next()
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 
-			if atreeValue != nil {
-				value = MustConvertStoredValue(interpreter, atreeValue)
-			}
-
-			if value == nil {
+			if atreeValue == nil {
 				return nil
 			}
+
+			value := MustConvertStoredValue(interpreter, atreeValue)
 
 			mappedValue := procedure.invoke(iterationInvocation(value))
 			return mappedValue.Transfer(
