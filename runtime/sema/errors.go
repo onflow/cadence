@@ -1819,10 +1819,9 @@ func (*UnsupportedOverloadingError) isSemanticError() {}
 func (*UnsupportedOverloadingError) IsUserError() {}
 
 func (e *UnsupportedOverloadingError) Error() string {
-	return fmt.Sprintf(
-		"%s overloading is not supported yet",
-		e.DeclarationKind.Name(),
-	)
+	var initializerName string = "init"
+	return fmt.Sprint(
+		"cannot redeclare initializer %s is already declared", initializerName)
 }
 
 // CompositeKindMismatchError
