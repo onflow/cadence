@@ -3039,7 +3039,7 @@ func (e *InvalidAccessError) SecondaryError() string {
 	if !possessedOk && e.PossessedAccess.Equal(UnauthorizedAccess) {
 		possessedOk = true
 		// for this error reporting, model UnauthorizedAccess as an empty entitlement set
-		possessedEntitlements = NewEntitlementSetAccess([]*EntitlementType{}, Conjunction)
+		possessedEntitlements = NewEntitlementSetAccess(nil, Conjunction)
 	}
 	if !possessedOk || !requiredOk || possessedEntitlements.SetKind != Conjunction {
 		return ""
