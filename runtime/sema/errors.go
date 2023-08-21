@@ -2991,10 +2991,11 @@ func (e *InvalidOptionalChainingError) Error() string {
 // InvalidAccessError
 
 type InvalidAccessError struct {
-	Name              string
-	RestrictingAccess Access
-	PossessedAccess   Access
-	DeclarationKind   common.DeclarationKind
+	Name                string
+	RestrictingAccess   Access
+	PossessedAccess     Access
+	DeclarationKind     common.DeclarationKind
+	suggestEntitlements bool
 	ast.Range
 }
 
@@ -3031,7 +3032,7 @@ func (e *InvalidAccessError) Error() string {
 // which additional entitlements it would need to be given in order to have
 // e.RequiredAccess.
 func (e *InvalidAccessError) SecondaryError() string {
-	if e.PossessedAccess == nil || e.RestrictingAccess == nil {
+	if !e.suggestEntitlements || e.PossessedAccess == nil || e.RestrictingAccess == nil {
 		return ""
 	}
 	possessedEntitlements, possessedOk := e.PossessedAccess.(EntitlementSetAccess)
@@ -3059,32 +3060,38 @@ func (e *InvalidAccessError) SecondaryError() string {
 		})
 		missingLen := missingEntitlements.Len()
 		if missingLen == 1 {
-			sb.WriteString("reference needs entitlement ")
-			sb.WriteString(fmt.Sprintf("`%s`", missingEntitlements.Newest().Key.QualifiedString()))
+			fmt.Fprint(&sb, "reference needs entitlement ")
+			fmt.Fprintf(&sb, "`%s`", missingEntitlements.Newest().Key.QualifiedString())
 		} else {
-			sb.WriteString("reference needs all of entitlements ")
+			fmt.Fprint(&sb, "reference needs all of entitlements ")
 			missingEntitlements.ForeachWithIndex(func(index int, key *EntitlementType, _ struct{}) {
-				sb.WriteString(fmt.Sprintf("`%s`", key.QualifiedString()))
+				fmt.Fprintf(&sb, "`%s`", key.QualifiedString())
 				if index < missingLen-2 {
-					sb.WriteString(", ")
+					fmt.Fprint(&sb, ", ")
 				} else if index < missingLen-1 {
-					sb.WriteString(" and ")
+					if missingLen > 2 {
+						fmt.Fprint(&sb, ",")
+					}
+					fmt.Fprint(&sb, " and ")
 				}
 			})
 		}
 	case Disjunction:
 		// when both `required` is a disjunction, we know `possessed` has none of the entitlements in it:
 		// suggest adding one of those entitlements
-		sb.WriteString("reference needs one of entitlements ")
+		fmt.Fprint(&sb, "reference needs one of entitlements ")
 		requiredEntitlementsSet := requiredEntitlements.Entitlements
 		requiredLen := requiredEntitlementsSet.Len()
 		// singleton-1 sets are always conjunctions
 		requiredEntitlementsSet.ForeachWithIndex(func(index int, key *EntitlementType, _ struct{}) {
-			sb.WriteString(fmt.Sprintf("`%s`", key.QualifiedString()))
+			fmt.Fprintf(&sb, "`%s`", key.QualifiedString())
 			if index < requiredLen-2 {
-				sb.WriteString(", ")
+				fmt.Fprint(&sb, ", ")
 			} else if index < requiredLen-1 {
-				sb.WriteString(" or ")
+				if requiredLen > 2 {
+					fmt.Fprint(&sb, ",")
+				}
+				fmt.Fprint(&sb, " or ")
 			}
 		})
 	}

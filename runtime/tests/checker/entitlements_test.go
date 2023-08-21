@@ -898,7 +898,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 	t.Run("accessor function with no downcast impl", func(t *testing.T) {
 		t.Parallel()
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithOptions(t, `
 			entitlement X
 			entitlement Y
 			entitlement mapping M {
@@ -914,7 +914,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 					return x
 				}
 			}
-		`)
+		`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 1)
 
@@ -968,7 +968,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 	t.Run("accessor function with invalid object access impl", func(t *testing.T) {
 		t.Parallel()
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithOptions(t, `
 			entitlement X
 			entitlement Y
 			entitlement Z
@@ -990,7 +990,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 					self.t = &T() as auth(Y) &T
 				}
 			}
-		`)
+		`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 1)
 
@@ -4648,7 +4648,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 
 	t.Run("use of function on unentitled referenced value", func(t *testing.T) {
 		t.Parallel()
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithOptions(t, `
 		entitlement X
 		struct S {
 			view access(X) fun foo(): Bool {
@@ -4664,7 +4664,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			}
 			r.foo()
 		}
-		`)
+		`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 3)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -4715,7 +4715,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 
 	t.Run("result value usage reference", func(t *testing.T) {
 		t.Parallel()
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithOptions(t, `
 		entitlement X
 		struct S {
 			view access(X) fun foo(): Bool {
@@ -4728,7 +4728,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			}
 			return &r as auth(X) &S
 		}
-		`)
+		`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5047,7 +5047,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 
 	t.Run("basic authorized", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheck(t, `
+		_, err := ParseAndCheckWithOptions(t, `
 			entitlement E
 			struct S {
 				access(E) var x: [Int]
@@ -5060,7 +5060,7 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 				let ref = &s as auth(E) &S
 				ref.x.append(3)
 			}
-		`)
+		`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5755,7 +5755,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 func TestCheckEntitlementErrorReporting(t *testing.T) {
 	t.Run("three or more conjunction", func(t *testing.T) {
 		t.Parallel()
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithOptions(t, `
 		entitlement X
 		entitlement Y
 		entitlement Z
@@ -5769,7 +5769,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		fun bar(r: auth(A, B) &S) {
 			r.foo()
 		}
-	`)
+	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5799,13 +5799,13 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).SecondaryError(),
-			"reference needs all of entitlements `X`, `Y` and `Z`",
+			"reference needs all of entitlements `X`, `Y`, and `Z`",
 		)
 	})
 
 	t.Run("has one entitlement of three", func(t *testing.T) {
 		t.Parallel()
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithOptions(t, `
 		entitlement X
 		entitlement Y
 		entitlement Z
@@ -5819,7 +5819,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		fun bar(r: auth(A, B, Y) &S) {
 			r.foo()
 		}
-	`)
+	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5856,7 +5856,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("has one entitlement of three", func(t *testing.T) {
 		t.Parallel()
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithOptions(t, `
 		entitlement X
 		entitlement Y
 		entitlement Z
@@ -5870,7 +5870,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		fun bar(r: auth(A, B) &S) {
 			r.foo()
 		}
-	`)
+	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5900,13 +5900,13 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		assert.Equal(
 			t,
 			errs[0].(*sema.InvalidAccessError).SecondaryError(),
-			"reference needs one of entitlements `X`, `Y` or `Z`",
+			"reference needs one of entitlements `X`, `Y`, or `Z`",
 		)
 	})
 
 	t.Run("no suggestion for disjoint possession set", func(t *testing.T) {
 		t.Parallel()
-		checker, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheckWithOptions(t, `
 		entitlement X
 		entitlement Y
 		entitlement Z
@@ -5920,7 +5920,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		fun bar(r: auth(A | B) &S) {
 			r.foo()
 		}
-	`)
+	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5956,7 +5956,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("no suggestion for self access requirement", func(t *testing.T) {
 		t.Parallel()
-		_, err := ParseAndCheck(t, `
+		_, err := ParseAndCheckWithOptions(t, `
 		entitlement A
 		entitlement B
 		struct S {
@@ -5967,7 +5967,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		fun bar(r: auth(A, B) &S) {
 			r.foo()
 		}
-	`)
+	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])

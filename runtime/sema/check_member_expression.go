@@ -294,11 +294,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 		checker.report(
 			&InvalidAccessError{
-				Name:              member.Identifier.Identifier,
-				RestrictingAccess: member.Access,
-				PossessedAccess:   possessedAccess,
-				DeclarationKind:   member.DeclarationKind,
-				Range:             accessRange(),
+				Name:                member.Identifier.Identifier,
+				RestrictingAccess:   member.Access,
+				PossessedAccess:     possessedAccess,
+				DeclarationKind:     member.DeclarationKind,
+				suggestEntitlements: checker.Config.SuggestionsEnabled,
+				Range:               accessRange(),
 			},
 		)
 	}
