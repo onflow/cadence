@@ -1132,6 +1132,34 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 		assert.True(t, present)
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val)
 	})
+
+	t.Run("resource dictionary, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            fun test(): @{String: Foo} {
+                let dictionary: @{String: Foo} <- {"a": <- create Foo(), "b": <- create Foo(), "c": <- create Foo()}
+
+                var dictionaryRef = &dictionary as &{String: Foo}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        destroy dictionaryRef.remove(key: "b")
+                    }
+                    return true
+                })
+
+                return <- dictionary
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
 }
 
 func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
