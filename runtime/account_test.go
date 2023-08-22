@@ -375,7 +375,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Nil(t, testEnv.storage.returnedKey)
 	})
 
-	t.Run("get key count afte revocation", func(t *testing.T) {
+	t.Run("get key count after revocation", func(t *testing.T) {
 		t.Parallel()
 
 		nextTransactionLocation := newTransactionLocationGenerator()
