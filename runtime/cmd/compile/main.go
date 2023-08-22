@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/compiler"
 	"github.com/onflow/cadence/runtime/compiler/ir"
 	"github.com/onflow/cadence/runtime/compiler/wasm"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func main() {
@@ -44,7 +45,17 @@ func main() {
 
 	program, must := cmd.PrepareProgramFromFile(location, codes)
 
-	checker, must := cmd.PrepareChecker(program, location, codes, nil, must)
+	// standard library handler is only needed for execution, but we're only checking
+	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
+
+	checker, must := cmd.PrepareChecker(
+		program,
+		location,
+		codes,
+		nil,
+		standardLibraryValues,
+		must,
+	)
 
 	must(checker.Check())
 

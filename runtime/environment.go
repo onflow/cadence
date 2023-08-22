@@ -212,7 +212,7 @@ func (e *interpreterEnvironment) MeterMemory(usage common.MemoryUsage) error {
 	return e.runtimeInterface.MeterMemory(usage)
 }
 
-func (e *interpreterEnvironment) ProgramLog(message string) error {
+func (e *interpreterEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
 	return e.runtimeInterface.ProgramLog(message)
 }
 

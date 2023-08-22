@@ -2321,7 +2321,7 @@ func (Function) ToGoValue() any {
 
 func (v Function) String() string {
 	// TODO: include function type
-	return format.Function("(...)")
+	return "fun ..."
 }
 
 // ValueWithCachedTypeID recursively caches type ID of value v's type.
