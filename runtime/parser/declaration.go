@@ -1042,8 +1042,9 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapEl
 // parseEntitlementMappings parses entitlement mappings
 //
 //	membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
-func parseEntitlementMappings(p *parser, endTokenType lexer.TokenType) ([]*ast.EntitlementMapElement, error) {
+func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenType) ([]*ast.EntitlementMapElement, []*ast.NominalType, error) {
 	var mappings []*ast.EntitlementMapElement
+	var inclusions []*ast.NominalType
 
 	for {
 		_, docString := p.parseTrivia(triviaOptions{
@@ -1054,15 +1055,35 @@ func parseEntitlementMappings(p *parser, endTokenType lexer.TokenType) ([]*ast.E
 		switch p.current.Type {
 
 		case endTokenType, lexer.TokenEOF:
-			return mappings, nil
+			return mappings, inclusions, nil
 
 		default:
-			mapping, err := parseEntitlementMapping(p, docString)
-			if err != nil {
-				return nil, err
-			}
+			if string(p.currentTokenSource()) == KeywordInclude {
+				// Skip the `include` keyword
+				p.nextSemanticToken()
+				outputType, err := parseType(p, lowestBindingPower)
+				if err != nil {
+					return nil, nil, err
+				}
 
-			mappings = append(mappings, mapping)
+				outputNominalType, ok := outputType.(*ast.NominalType)
+				if !ok {
+					p.reportSyntaxError(
+						"expected nominal type, got %s",
+						outputType,
+					)
+				}
+
+				p.skipSpaceAndComments()
+				inclusions = append(inclusions, outputNominalType)
+			} else {
+				mapping, err := parseEntitlementMapping(p, docString)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				mappings = append(mappings, mapping)
+			}
 		}
 	}
 }
@@ -1119,7 +1140,7 @@ func parseEntitlementOrMappingDeclaration(
 		if err != nil {
 			return nil, err
 		}
-		mappings, err := parseEntitlementMappings(p, lexer.TokenBraceClose)
+		mappings, inclusions, err := parseEntitlementMappingsAndInclusions(p, lexer.TokenBraceClose)
 		if err != nil {
 			return nil, err
 		}
@@ -1141,6 +1162,7 @@ func parseEntitlementOrMappingDeclaration(
 			access,
 			identifier,
 			mappings,
+			inclusions,
 			docString,
 			declarationRange,
 		), nil

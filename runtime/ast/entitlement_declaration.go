@@ -162,6 +162,7 @@ type EntitlementMappingDeclaration struct {
 	DocString    string
 	Identifier   Identifier
 	Associations []*EntitlementMapElement
+	Inclusions   []*NominalType
 	Range
 }
 
@@ -174,6 +175,7 @@ func NewEntitlementMappingDeclaration(
 	access Access,
 	identifier Identifier,
 	associations []*EntitlementMapElement,
+	inclusions []*NominalType,
 	docString string,
 	declRange Range,
 ) *EntitlementMappingDeclaration {
@@ -183,6 +185,7 @@ func NewEntitlementMappingDeclaration(
 		Access:       access,
 		Identifier:   identifier,
 		Associations: associations,
+		Inclusions:   inclusions,
 		DocString:    docString,
 		Range:        declRange,
 	}
@@ -232,6 +235,7 @@ func (d *EntitlementMappingDeclaration) MarshalJSON() ([]byte, error) {
 }
 
 var mappingKeywordSpaceDoc = prettier.Text("mapping ")
+var includeKeywordSpaceDoc = prettier.Text("include ")
 var mappingStartDoc prettier.Doc = prettier.Text("{")
 var mappingEndDoc prettier.Doc = prettier.Text("}")
 
@@ -243,6 +247,19 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 			doc,
 			prettier.Text(d.Access.Keyword()),
 			prettier.HardLine{},
+		)
+	}
+
+	var mappingInclusionsDoc prettier.Concat
+
+	for _, typ := range d.Inclusions {
+		mappingInclusionsDoc = append(
+			mappingInclusionsDoc,
+			prettier.Concat{
+				prettier.HardLine{},
+				includeKeywordSpaceDoc,
+				typ.Doc(),
+			},
 		)
 	}
 
@@ -265,6 +282,13 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		prettier.Text(d.Identifier.Identifier),
 		prettier.Space,
 		mappingStartDoc,
+		prettier.Indent{
+			Doc: prettier.Join(
+				prettier.HardLine{},
+				mappingInclusionsDoc...,
+			),
+		},
+		prettier.HardLine{},
 		prettier.Indent{
 			Doc: prettier.Join(
 				prettier.HardLine{},

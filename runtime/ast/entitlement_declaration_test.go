@@ -152,6 +152,14 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 				},
 			},
 		},
+		Inclusions: []*NominalType{
+			{
+				Identifier: Identifier{
+					Identifier: "X",
+					Pos:        Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+		},
 	}
 
 	actual, err := json.Marshal(decl)
@@ -190,6 +198,18 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 						"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 						"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
 					}
+				}
+			],
+			"Inclusions": [
+				{
+					"Type": "NominalType",
+						"Identifier": { 
+							"Identifier": "X",
+							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+							"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+						},
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
 				}
 			],
             "DocString": "test",
@@ -232,6 +252,13 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 				},
 			},
 		},
+		Inclusions: []*NominalType{
+			{
+				Identifier: Identifier{Identifier: "X",
+					Pos: Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+		},
 	}
 
 	require.Equal(
@@ -244,6 +271,14 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 			prettier.Text("AB"),
 			prettier.Space,
 			prettier.Text("{"),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.HardLine{},
+					prettier.Text("include "),
+					prettier.Text("X"),
+				},
+			},
+			prettier.HardLine{},
 			prettier.Indent{
 				Doc: prettier.Concat{
 					prettier.HardLine{},
@@ -293,12 +328,21 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 				},
 			},
 		},
+		Inclusions: []*NominalType{
+			{
+				Identifier: Identifier{Identifier: "X",
+					Pos: Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+		},
 	}
 
 	require.Equal(
 		t,
 		`access(all)
 entitlement mapping AB {
+    include X
+
     X -> Y
 }`,
 		decl.String(),
