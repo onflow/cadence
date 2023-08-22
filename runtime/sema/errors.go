@@ -3048,6 +3048,20 @@ func (e *InvalidAccessError) SecondaryError() string {
 
 	var sb strings.Builder
 
+	enumerateEntitlements := func(len int, separator string) func(index int, key *EntitlementType, _ struct{}) {
+		return func(index int, key *EntitlementType, _ struct{}) {
+			fmt.Fprintf(&sb, "`%s`", key.QualifiedString())
+			if index < len-2 {
+				fmt.Fprint(&sb, ", ")
+			} else if index < len-1 {
+				if len > 2 {
+					fmt.Fprint(&sb, ",")
+				}
+				fmt.Fprintf(&sb, " %s ", separator)
+			}
+		}
+	}
+
 	switch requiredEntitlements.SetKind {
 	case Conjunction:
 		// when both `possessed` and `required` are conjunctions, the missing set is simple set difference:
@@ -3064,17 +3078,7 @@ func (e *InvalidAccessError) SecondaryError() string {
 			fmt.Fprintf(&sb, "`%s`", missingEntitlements.Newest().Key.QualifiedString())
 		} else {
 			fmt.Fprint(&sb, "reference needs all of entitlements ")
-			missingEntitlements.ForeachWithIndex(func(index int, key *EntitlementType, _ struct{}) {
-				fmt.Fprintf(&sb, "`%s`", key.QualifiedString())
-				if index < missingLen-2 {
-					fmt.Fprint(&sb, ", ")
-				} else if index < missingLen-1 {
-					if missingLen > 2 {
-						fmt.Fprint(&sb, ",")
-					}
-					fmt.Fprint(&sb, " and ")
-				}
-			})
+			missingEntitlements.ForeachWithIndex(enumerateEntitlements(missingLen, "and"))
 		}
 	case Disjunction:
 		// when both `required` is a disjunction, we know `possessed` has none of the entitlements in it:
@@ -3083,17 +3087,7 @@ func (e *InvalidAccessError) SecondaryError() string {
 		requiredEntitlementsSet := requiredEntitlements.Entitlements
 		requiredLen := requiredEntitlementsSet.Len()
 		// singleton-1 sets are always conjunctions
-		requiredEntitlementsSet.ForeachWithIndex(func(index int, key *EntitlementType, _ struct{}) {
-			fmt.Fprintf(&sb, "`%s`", key.QualifiedString())
-			if index < requiredLen-2 {
-				fmt.Fprint(&sb, ", ")
-			} else if index < requiredLen-1 {
-				if requiredLen > 2 {
-					fmt.Fprint(&sb, ",")
-				}
-				fmt.Fprint(&sb, " or ")
-			}
-		})
+		requiredEntitlementsSet.ForeachWithIndex(enumerateEntitlements(requiredLen, "or"))
 	}
 
 	return sb.String()

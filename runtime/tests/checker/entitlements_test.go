@@ -5761,15 +5761,23 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		entitlement Z
 		entitlement A
 		entitlement B
+
 		struct S {
 			view access(X, Y, Z) fun foo(): Bool {
 				return true
 			}
 		}
+
 		fun bar(r: auth(A, B) &S) {
 			r.foo()
 		}
-	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
+	`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					SuggestionsEnabled: true,
+				},
+			},
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5811,15 +5819,23 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		entitlement Z
 		entitlement A
 		entitlement B
+
 		struct S {
 			view access(X, Y, Z) fun foo(): Bool {
 				return true
 			}
 		}
+
 		fun bar(r: auth(A, B, Y) &S) {
 			r.foo()
 		}
-	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
+	`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					SuggestionsEnabled: true,
+				},
+			},
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5862,15 +5878,23 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		entitlement Z
 		entitlement A
 		entitlement B
+
 		struct S {
 			view access(X | Y | Z) fun foo(): Bool {
 				return true
 			}
 		}
+
 		fun bar(r: auth(A, B) &S) {
 			r.foo()
 		}
-	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
+	`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					SuggestionsEnabled: true,
+				},
+			},
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5912,15 +5936,23 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		entitlement Z
 		entitlement A
 		entitlement B
+
 		struct S {
 			view access(X | Y | Z) fun foo(): Bool {
 				return true
 			}
 		}
+
 		fun bar(r: auth(A | B) &S) {
 			r.foo()
 		}
-	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
+	`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					SuggestionsEnabled: true,
+				},
+			},
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
@@ -5959,15 +5991,23 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		_, err := ParseAndCheckWithOptions(t, `
 		entitlement A
 		entitlement B
+		
 		struct S {
 			view access(self) fun foo(): Bool {
 				return true
 			}
 		}
+
 		fun bar(r: auth(A, B) &S) {
 			r.foo()
 		}
-	`, ParseAndCheckOptions{Config: &sema.Config{SuggestionsEnabled: true}})
+	`,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					SuggestionsEnabled: true,
+				},
+			},
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
