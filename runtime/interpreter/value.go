@@ -2482,6 +2482,35 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				)
 			},
 		)
+
+	case sema.ArrayTypeMapFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayMapFunctionType(
+				interpreter,
+				v.SemaType(interpreter),
+			),
+			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
+				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				transformFunctionType, ok := invocation.ArgumentTypes[0].(*sema.FunctionType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Map(
+					interpreter,
+					invocation.LocationRange,
+					funcArgument,
+					transformFunctionType,
+				)
+			},
+		)
 	}
 
 	return nil
@@ -3047,6 +3076,85 @@ func (v *ArrayValue) Filter(
 			}
 
 			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		},
+	)
+}
+
+func (v *ArrayValue) Map(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	procedure FunctionValue,
+	transformFunctionType *sema.FunctionType,
+) Value {
+
+	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
+	iterationInvocation := func(arrayElement Value) Invocation {
+		return NewInvocation(
+			interpreter,
+			nil,
+			nil,
+			[]Value{arrayElement},
+			elementTypeSlice,
+			nil,
+			locationRange,
+		)
+	}
+
+	procedureStaticType, ok := ConvertSemaToStaticType(interpreter, transformFunctionType).(FunctionStaticType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	returnType := procedureStaticType.ReturnType(interpreter)
+
+	var returnArrayStaticType ArrayStaticType
+	switch v.Type.(type) {
+	case VariableSizedStaticType:
+		returnArrayStaticType = NewVariableSizedStaticType(
+			interpreter,
+			returnType,
+		)
+	case ConstantSizedStaticType:
+		returnArrayStaticType = NewConstantSizedStaticType(
+			interpreter,
+			returnType,
+			int64(v.Count()),
+		)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		returnArrayStaticType,
+		common.ZeroAddress,
+		uint64(v.Count()),
+		func() Value {
+
+			atreeValue, err := iterator.Next()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			if atreeValue == nil {
+				return nil
+			}
+
+			value := MustConvertStoredValue(interpreter, atreeValue)
+
+			mappedValue := procedure.invoke(iterationInvocation(value))
+			return mappedValue.Transfer(
 				interpreter,
 				locationRange,
 				atree.Address{},
