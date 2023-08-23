@@ -11086,6 +11086,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 }
 
 func TestInterpretArrayMap(t *testing.T) {
+	t.Parallel()
 
 	runValidCase := func(
 		t *testing.T,

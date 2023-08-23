@@ -1237,7 +1237,7 @@ func TestCheckArrayMap(t *testing.T) {
 					return x % 2 == 0
 				}
 
-			let y = x.map(trueForEven)
+			let y: [Bool] = x.map(trueForEven)
 		}
 
 		fun testFixedSize() {
@@ -1247,7 +1247,7 @@ func TestCheckArrayMap(t *testing.T) {
 					return x % 2 == 0
 				}
 
-			let y = x.map(trueForEvenInt)
+			let y: [Bool; 5] = x.map(trueForEvenInt)
 		}
 	`)
 
@@ -1288,7 +1288,7 @@ func TestCheckArrayMapInvalidArgs(t *testing.T) {
 					return x % 2 == 0
 				}
 
-			let y = x.map(trueForEvenInt16)
+			let y: [Bool] = x.map(trueForEvenInt16)
 		}
 	`,
 		[]sema.SemanticError{
@@ -1312,7 +1312,7 @@ func TestCheckResourceArrayMapInvalid(t *testing.T) {
 					return true
 				}
 
-			let mappedXs = xs.map(allResources)
+			let mappedXs: [Bool] = xs.map(allResources)
 			destroy xs
 			return mappedXs
 		}
