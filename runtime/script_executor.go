@@ -29,7 +29,7 @@ import (
 type interpreterScriptExecutorPreparation struct {
 	environment            Environment
 	preprocessErr          error
-	codesAndPrograms       codesAndPrograms
+	codesAndPrograms       CodesAndPrograms
 	functionEntryPointType *sema.FunctionType
 	program                *interpreter.Program
 	storage                *Storage
@@ -92,7 +92,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 	location := context.Location
 	script := executor.script
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
 	interpreterRuntime := executor.runtime

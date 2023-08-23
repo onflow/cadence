@@ -41,7 +41,7 @@ type Environment interface {
 	Declare(valueDeclaration stdlib.StandardLibraryValue)
 	Configure(
 		runtimeInterface Interface,
-		codesAndPrograms codesAndPrograms,
+		codesAndPrograms CodesAndPrograms,
 		storage *Storage,
 		coverageReport *CoverageReport,
 	)
@@ -73,7 +73,7 @@ type interpreterEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	storage          *Storage
 	coverageReport   *CoverageReport
-	codesAndPrograms codesAndPrograms
+	codesAndPrograms CodesAndPrograms
 }
 
 type interpreterEnvironment struct {
@@ -186,7 +186,7 @@ func NewScriptInterpreterEnvironment(config Config) Environment {
 
 func (e *interpreterEnvironment) Configure(
 	runtimeInterface Interface,
-	codesAndPrograms codesAndPrograms,
+	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
 	coverageReport *CoverageReport,
 ) {
