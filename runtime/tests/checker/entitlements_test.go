@@ -5742,6 +5742,8 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 			"struct interface X {}",
 			"resource X {}",
 			"resource interface X {}",
+			"contract X {}",
+			"contract interface X {}",
 			"enum X: Int {}",
 			"event X()",
 			"entitlement X",
@@ -6154,6 +6156,48 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 			entitlement mapping A {
 				E -> F
 				F -> X
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("diamond include", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include B
+				include C
+			}
+
+			entitlement mapping C {
+				include A
+				X -> Y
+			}
+
+			entitlement mapping B {
+				F -> X
+				include A
+			}
+
+			entitlement mapping A {
+				E -> F
 			}
 
 			struct S {

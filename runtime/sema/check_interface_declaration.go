@@ -571,6 +571,9 @@ func (checker *Checker) resolveEntitlementMappingInclusions(
 		visitedMaps[mapType] = struct{}{}
 
 		// track locally included maps to report duplicates, which are unrelated to cycles
+		// we do not enforce that no maps are duplicated across the entire chain; only the specific map definition
+		// currently being considered. This is to avoid reporting annoying errors when trying to include two
+		// maps defined elsewhere that may have small overlap.
 		includedMaps := map[*EntitlementMapType]struct{}{}
 
 		for _, inclusion := range declaration.Inclusions {
@@ -610,6 +613,8 @@ func (checker *Checker) resolveEntitlementMappingInclusions(
 
 			includedMaps[includedMapType] = struct{}{}
 		}
+
+		delete(visitedMaps, mapType)
 	})
 }
 
