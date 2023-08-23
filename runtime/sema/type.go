@@ -3607,6 +3607,7 @@ const IdentityMappingIdentifier string = "Identity"
 var IdentityMappingType = func() *EntitlementMapType {
 	m := NewEntitlementMapType(nil, nil, IdentityMappingIdentifier)
 	m.IncludesIdentity = true
+	m.resolveInclusions.Do(func() {})
 	return m
 }()
 
@@ -7654,11 +7655,12 @@ type EntitlementRelation struct {
 }
 
 type EntitlementMapType struct {
-	Location         common.Location
-	containerType    Type
-	Identifier       string
-	Relations        []EntitlementRelation
-	IncludesIdentity bool
+	Location          common.Location
+	containerType     Type
+	Identifier        string
+	Relations         []EntitlementRelation
+	IncludesIdentity  bool
+	resolveInclusions sync.Once
 }
 
 var _ Type = &EntitlementMapType{}

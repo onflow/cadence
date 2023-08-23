@@ -4323,6 +4323,36 @@ func (e *InvalidEntitlementMappingInclusionError) EndPosition(common.MemoryGauge
 	return e.EndPos
 }
 
+// DuplicateEntitlementMappingInclusionError
+type DuplicateEntitlementMappingInclusionError struct {
+	Map          *EntitlementMapType
+	IncludedType *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementMappingInclusionError{}
+var _ errors.UserError = &DuplicateEntitlementMappingInclusionError{}
+
+func (*DuplicateEntitlementMappingInclusionError) isSemanticError() {}
+
+func (*DuplicateEntitlementMappingInclusionError) IsUserError() {}
+
+func (e *DuplicateEntitlementMappingInclusionError) Error() string {
+	return fmt.Sprintf(
+		"`%s` is already included in the definition of `%s`",
+		e.IncludedType.QualifiedIdentifier(),
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+func (e *DuplicateEntitlementMappingInclusionError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *DuplicateEntitlementMappingInclusionError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
 type DuplicateEntitlementRequirementError struct {
 	Entitlement *EntitlementType
 	ast.Range

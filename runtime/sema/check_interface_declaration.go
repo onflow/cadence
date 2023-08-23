@@ -557,6 +557,48 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 	return entitlementMapType
 }
 
+// Recursively resolve the include statements of an entitlement mapping declaration, walking the "heirarchy" defined in this file
+// Uses the sync primitive stored in `resolveInclusions` to ensure each map type's includes are computed only once.
+// This assumes that any includes coming from imported files are necessarily already completely resolved, since that imported file
+// must necessarily already have been fullly checked. Additionally, because import cycles are not allowed in Cadence, we only
+// need to check for map-include cycles within the currently-checked file
+func (checker *Checker) resolveEntitlementMappingInclusions(mapType *EntitlementMapType, declaration *ast.EntitlementMappingDeclaration) {
+	mapType.resolveInclusions.Do(func() {
+		includedMaps := orderedmap.New[orderedmap.OrderedMap[*EntitlementMapType, struct{}]](len(declaration.Inclusions))
+
+		for _, inclusion := range declaration.Inclusions {
+
+			includedType := checker.convertNominalType(inclusion)
+			includedMapType, isEntitlementMapping := includedType.(*EntitlementMapType)
+			if !isEntitlementMapping {
+				checker.report(&InvalidEntitlementMappingInclusionError{
+					Map:          mapType,
+					IncludedType: includedType,
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, inclusion),
+				})
+				continue
+			}
+			if includedMaps.Contains(includedMapType) {
+				checker.report(&DuplicateEntitlementMappingInclusionError{
+					Map:          mapType,
+					IncludedType: includedMapType,
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, inclusion),
+				})
+				continue
+			}
+
+			// recursively resolve the included map type's includes, skipping any that have already been resolved
+			checker.resolveEntitlementMappingInclusions(includedMapType, checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType))
+			mapType.Relations = append(mapType.Relations, includedMapType.Relations...)
+			if includedMapType.IncludesIdentity {
+				mapType.IncludesIdentity = true
+			}
+
+			includedMaps.Set(includedMapType, struct{}{})
+		}
+	})
+}
+
 func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.EntitlementMappingDeclaration) (_ struct{}) {
 
 	entitlementMapType := checker.Elaboration.EntitlementMapDeclarationType(declaration)
@@ -573,28 +615,7 @@ func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.Enti
 		true,
 	)
 
-	includedMaps := orderedmap.New[orderedmap.OrderedMap[*EntitlementMapType, struct{}]](len(declaration.Inclusions))
-
-	for _, inclusion := range declaration.Inclusions {
-		if inclusion.Identifier.Identifier == IdentityMappingIdentifier {
-			entitlementMapType.IncludesIdentity = true
-			includedMaps.Set(IdentityMappingType, struct{}{})
-			continue
-		}
-
-		includedType := checker.convertNominalType(inclusion)
-		includedMapType, isEntitlementMapping := includedType.(*EntitlementMapType)
-		if !isEntitlementMapping {
-			checker.report(&InvalidEntitlementMappingInclusionError{
-				Map:          entitlementMapType,
-				IncludedType: includedType,
-				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, inclusion),
-			})
-			continue
-		}
-
-		includedMaps.Set(includedMapType, struct{}{})
-	}
+	checker.resolveEntitlementMappingInclusions(entitlementMapType, declaration)
 
 	return
 }
