@@ -145,8 +145,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnMeterComputation:            e.newOnMeterComputation(),
 		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
-		IDCapabilityBorrowHandler:     stdlib.BorrowCapabilityController,
-		IDCapabilityCheckHandler:      stdlib.CheckCapabilityController,
+		CapabilityBorrowHandler:       stdlib.BorrowCapabilityController,
+		CapabilityCheckHandler:        stdlib.CheckCapabilityController,
 	}
 }
 
@@ -201,7 +201,7 @@ func (e *interpreterEnvironment) MeterMemory(usage common.MemoryUsage) error {
 	return e.runtimeInterface.MeterMemory(usage)
 }
 
-func (e *interpreterEnvironment) ProgramLog(message string) error {
+func (e *interpreterEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
 	return e.runtimeInterface.ProgramLog(message)
 }
 

@@ -2516,3 +2516,97 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	})
 
 }
+
+func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	contract := []byte(`
+        access(all) contract Test {
+
+            access(all) resource interface Balance {}
+
+            access(all) resource interface Vault:Balance {}
+
+            access(all) resource VaultImpl: Vault {}
+
+            access(all) fun createVaultImpl(): @VaultImpl {
+                return <- create VaultImpl()
+            }
+        }
+    `)
+
+	script := []byte(`
+        import Test from 0x01
+
+        transaction {
+            prepare(acct: auth(Storage, Capabilities) &Account) {
+                acct.storage.save(<-Test.createVaultImpl(), to: /storage/r)
+
+                let cap = acct.capabilities.storage.issue<&{Test.Balance}>(/storage/r)
+                acct.capabilities.publish(cap, at: /public/r)
+
+                let vaultRef = acct.capabilities.borrow<&{Test.Balance}>(/public/r)
+                    ?? panic("Could not borrow Balance reference to the Vault")
+            }
+        }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	var accountCode []byte
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Test
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+}

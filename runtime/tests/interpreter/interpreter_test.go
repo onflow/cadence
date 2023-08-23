@@ -39,7 +39,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
-	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -8334,7 +8333,8 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 	)
 }
 
-func TestInterpretFungibleTokenContract(t *testing.T) {
+// TODO: re-enable this test with the v2 fungible token contract
+/* func TestInterpretFungibleTokenContract(t *testing.T) {
 
 	t.Parallel()
 
@@ -8403,7 +8403,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 		),
 		value,
 	)
-}
+} */
 
 func TestInterpretContractAccountFieldUse(t *testing.T) {
 
@@ -10601,43 +10601,6 @@ func TestInterpretConditionsWrapperFunctionType(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
-	})
-
-	t.Run("type requirement", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, err := parseCheckAndInterpretWithOptions(t,
-			`
-              contract interface CI {
-                  struct S {
-                      fun test(x: Int) {
-                          pre { true }
-                      }
-                  }
-              }
-
-              contract C: CI {
-                  struct S {
-                      fun test(x: Int) {}
-                  }
-              }
-
-              fun test(): fun (Int): Void {
-                  let s = C.S()
-                  return s.test
-              }
-            `,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				},
-			},
-		)
-		require.NoError(t, err)
-
-		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 	})
 }

@@ -2153,66 +2153,56 @@ func (v TypeValue) String() string {
 
 // Capability
 
-type Capability interface {
-	Value
-	isCapability()
-}
-
-// IDCapability
-
-type IDCapability struct {
+type Capability struct {
 	BorrowType Type
 	Address    Address
 	ID         UInt64
 }
 
-var _ Value = IDCapability{}
-var _ Capability = IDCapability{}
+var _ Value = Capability{}
 
-func NewIDCapability(
+func NewCapability(
 	id UInt64,
 	address Address,
 	borrowType Type,
-) IDCapability {
-	return IDCapability{
+) Capability {
+	return Capability{
 		ID:         id,
 		Address:    address,
 		BorrowType: borrowType,
 	}
 }
 
-func NewMeteredIDCapability(
+func NewMeteredCapability(
 	gauge common.MemoryGauge,
 	id UInt64,
 	address Address,
 	borrowType Type,
-) IDCapability {
-	common.UseMemory(gauge, common.CadenceIDCapabilityValueMemoryUsage)
-	return NewIDCapability(
+) Capability {
+	common.UseMemory(gauge, common.CadenceCapabilityValueMemoryUsage)
+	return NewCapability(
 		id,
 		address,
 		borrowType,
 	)
 }
 
-func (IDCapability) isValue() {}
+func (Capability) isValue() {}
 
-func (IDCapability) isCapability() {}
-
-func (v IDCapability) Type() Type {
+func (v Capability) Type() Type {
 	return NewCapabilityType(v.BorrowType)
 }
 
-func (v IDCapability) MeteredType(gauge common.MemoryGauge) Type {
+func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCapabilityType(gauge, v.BorrowType)
 }
 
-func (IDCapability) ToGoValue() any {
+func (Capability) ToGoValue() any {
 	return nil
 }
 
-func (v IDCapability) String() string {
-	return format.IDCapability(
+func (v Capability) String() string {
+	return format.Capability(
 		v.BorrowType.ID(),
 		v.Address.String(),
 		v.ID.String(),
@@ -2331,7 +2321,7 @@ func (Function) ToGoValue() any {
 
 func (v Function) String() string {
 	// TODO: include function type
-	return format.Function("(...)")
+	return "fun ..."
 }
 
 // ValueWithCachedTypeID recursively caches type ID of value v's type.

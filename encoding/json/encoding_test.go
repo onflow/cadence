@@ -2702,13 +2702,13 @@ func TestEncodeType(t *testing.T) {
 	})
 }
 
-func TestEncodeIDCapability(t *testing.T) {
+func TestEncodeCapability(t *testing.T) {
 
 	t.Parallel()
 
 	testEncodeAndDecode(
 		t,
-		cadence.NewIDCapability(
+		cadence.NewCapability(
 			6,
 			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 			cadence.IntType,

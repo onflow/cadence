@@ -1098,7 +1098,7 @@ func TestStringer(t *testing.T) {
 			expected: "Type<Int>()",
 		},
 		"ID Capability with borrow type": {
-			value: NewUnmeteredIDCapabilityValue(
+			value: NewUnmeteredCapabilityValue(
 				6,
 				NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
 				PrimitiveStaticTypeInt,
@@ -1719,7 +1719,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	assert.True(t, conforms)
 }
 
-func TestIDCapabilityValue_Equal(t *testing.T) {
+func TestCapabilityValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
@@ -1730,14 +1730,14 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
 			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
+				NewUnmeteredCapabilityValue(
 					4,
 					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					PrimitiveStaticTypeInt,
@@ -1753,14 +1753,14 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
 			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
+				NewUnmeteredCapabilityValue(
 					4,
 					NewUnmeteredAddressValueFromBytes([]byte{0x2}),
 					PrimitiveStaticTypeInt,
@@ -1776,14 +1776,14 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
 			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
+				NewUnmeteredCapabilityValue(
 					4,
 					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					PrimitiveStaticTypeString,
@@ -1799,14 +1799,14 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
 			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
+				NewUnmeteredCapabilityValue(
 					5,
 					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					PrimitiveStaticTypeInt,
@@ -1822,7 +1822,7 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
@@ -3907,13 +3907,13 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 	})
 
-	t.Run("IDCapabilityValue", func(t *testing.T) {
+	t.Run("CapabilityValue", func(t *testing.T) {
 
 		t.Parallel()
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredIDCapabilityValue(
+				return NewUnmeteredCapabilityValue(
 					NewUnmeteredUInt64Value(4),
 					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
 					ReferenceStaticType{

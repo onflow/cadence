@@ -64,8 +64,8 @@ type Config struct {
 	AtreeStorageValidationEnabled bool
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled
 	AtreeValueValidationEnabled bool
-	// IDCapabilityCheckHandler is used to check ID capabilities
-	IDCapabilityCheckHandler IDCapabilityCheckHandlerFunc
-	// IDCapabilityBorrowHandler is used to borrow ID capabilities
-	IDCapabilityBorrowHandler IDCapabilityBorrowHandlerFunc
+	// CapabilityCheckHandler is used to check ID capabilities
+	CapabilityCheckHandler CapabilityCheckHandlerFunc
+	// CapabilityBorrowHandler is used to borrow ID capabilities
+	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
 }

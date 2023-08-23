@@ -39,7 +39,7 @@ const (
 	MemoryKindOptionalValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
-	MemoryKindIDCapabilityValue
+	MemoryKindCapabilityValue
 	MemoryKindStorageReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
@@ -103,7 +103,7 @@ const (
 	MemoryKindCadenceEnumValueSize
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
-	MemoryKindCadenceIDCapabilityValue
+	MemoryKindCadenceCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types

@@ -3326,7 +3326,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 	test := func(
 		name string,
-		newCapabilityValue func(borrowType interpreter.StaticType) interpreter.CapabilityValue,
+		newCapabilityValue func(borrowType interpreter.StaticType) *interpreter.CapabilityValue,
 	) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -3482,9 +3482,9 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		})
 	}
 
-	test("ID capability",
-		func(borrowType interpreter.StaticType) interpreter.CapabilityValue {
-			return interpreter.NewUnmeteredIDCapabilityValue(
+	test("capability",
+		func(borrowType interpreter.StaticType) *interpreter.CapabilityValue {
+			return interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.AddressValue{},
 				borrowType,

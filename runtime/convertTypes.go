@@ -642,7 +642,12 @@ func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorizat
 	case cadence.EntitlementMapAuthorization:
 		return interpreter.NewEntitlementMapAuthorization(memoryGauge, auth.TypeID)
 	case cadence.EntitlementSetAuthorization:
-		return interpreter.NewEntitlementSetAuthorization(memoryGauge, auth.Entitlements, sema.EntitlementSetKind(auth.Kind))
+		return interpreter.NewEntitlementSetAuthorization(
+			memoryGauge,
+			func() []common.TypeID { return auth.Entitlements },
+			len(auth.Entitlements),
+			sema.EntitlementSetKind(auth.Kind),
+		)
 	}
 	panic(fmt.Sprintf("cannot import authorization of type %T", auth))
 }

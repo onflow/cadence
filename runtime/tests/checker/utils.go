@@ -208,11 +208,11 @@ func RequireGlobalValue(t *testing.T, elaboration *sema.Elaboration, name string
 	return variable.Type
 }
 
-func AllBaseSemaTypes() map[string]sema.Type {
+func AllActivationTypes(activation *sema.VariableActivation) map[string]sema.Type {
 
 	types := map[string]sema.Type{}
 
-	_ = sema.BaseTypeActivation.ForEach(func(name string, variable *sema.Variable) error {
+	_ = activation.ForEach(func(name string, variable *sema.Variable) error {
 		if name == "" {
 			return nil
 		}
@@ -222,4 +222,12 @@ func AllBaseSemaTypes() map[string]sema.Type {
 	})
 
 	return types
+}
+
+func AllBaseSemaTypes() map[string]sema.Type {
+	return AllActivationTypes(sema.BaseTypeActivation)
+}
+
+func AllBaseSemaValueTypes() map[string]sema.Type {
+	return AllActivationTypes(sema.BaseValueActivation)
 }

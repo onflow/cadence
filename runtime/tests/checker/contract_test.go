@@ -436,6 +436,10 @@ func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
 				for _, secondKind := range compositeKinds {
 					for _, secondIsInterface := range interfacePossibilities {
 
+						if contractIsInterface && (!firstIsInterface || !secondIsInterface) {
+							continue
+						}
+
 						contractInterfaceKeyword := ""
 						if contractIsInterface {
 							contractInterfaceKeyword = "interface"
@@ -724,7 +728,7 @@ func TestCheckBadContractNesting(t *testing.T) {
 
 	_, err := ParseAndCheck(t, "contract signatureAlgorithm { resource interface payer { contract foo : payer { contract foo { contract foo { } contract foo { contract interface account { } } contract account { } } } } }")
 
-	errs := RequireCheckerErrors(t, err, 14)
+	errs := RequireCheckerErrors(t, err, 9)
 
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -735,11 +739,6 @@ func TestCheckBadContractNesting(t *testing.T) {
 	assert.IsType(t, &sema.RedeclarationError{}, errs[6])
 	assert.IsType(t, &sema.RedeclarationError{}, errs[7])
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[8])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[9])
-	assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[10])
-	assert.IsType(t, &sema.MissingConformanceError{}, errs[11])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[12])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[13])
 }
 
 func TestCheckContractEnumAccessRestricted(t *testing.T) {

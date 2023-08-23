@@ -257,7 +257,8 @@ func TestInterpretEntitledReferences(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.X"},
+				func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.StorageReferenceValue).Authorization),
 		)
@@ -585,7 +586,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			}
 			`, sema.Config{})
 
-		capXY := interpreter.NewIDCapabilityValue(
+		capXY := interpreter.NewCapabilityValue(
 			nil,
 			interpreter.NewUnmeteredUInt64Value(1),
 			address,
@@ -593,7 +594,8 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				nil,
 				interpreter.NewEntitlementSetAuthorization(
 					nil,
-					[]common.TypeID{"S.test.X", "S.test.Y"},
+					func() []common.TypeID { return []common.TypeID{"S.test.X", "S.test.Y"} },
+					2,
 					sema.Conjunction,
 				),
 				interpreter.PrimitiveStaticTypeInt,
@@ -626,13 +628,16 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 			}
 			`, sema.Config{})
 
-		capX := interpreter.NewIDCapabilityValue(
+		capX := interpreter.NewCapabilityValue(
 			nil,
 			interpreter.NewUnmeteredUInt64Value(1),
 			address,
 			interpreter.NewReferenceStaticType(
 				nil,
-				interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
+				interpreter.NewEntitlementSetAuthorization(nil,
+					func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+					1,
+					sema.Conjunction),
 				interpreter.PrimitiveStaticTypeInt,
 			),
 		)
@@ -999,7 +1004,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1049,7 +1055,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1098,7 +1105,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1146,7 +1154,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y", "S.test.F"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.F"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1195,7 +1204,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y", "S.test.F"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.F"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1244,7 +1254,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1301,7 +1312,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1348,7 +1360,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1419,7 +1432,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y", "S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.Z"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1458,7 +1472,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y", "S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.Z"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1503,7 +1518,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.F"},
+				func() []common.TypeID { return []common.TypeID{"S.test.F"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1701,7 +1717,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1749,7 +1766,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Z"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1800,7 +1818,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Z"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1854,7 +1873,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Z"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1910,7 +1930,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.B", "S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.B", "S.test.Z"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1947,7 +1968,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y", "S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.Z"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -1984,7 +2006,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.Y", "S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.Z"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2055,7 +2078,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.X"},
+				func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2095,7 +2119,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.F", "S.test.G"},
+				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2139,7 +2164,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.F", "S.test.G", "S.test.Y", "S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G", "S.test.Y", "S.test.Z"} },
+				4,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2224,7 +2250,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.E"},
+				func() []common.TypeID { return []common.TypeID{"S.test.E"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2265,7 +2292,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.F", "S.test.G"},
+				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2310,7 +2338,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.F", "S.test.G"},
+				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2359,7 +2388,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.F", "S.test.G", "S.test.Y", "S.test.Z"},
+				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G", "S.test.Y", "S.test.Z"} },
+				4,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2409,7 +2439,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.X"},
+				func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2501,7 +2532,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.X"},
+				func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2571,7 +2603,8 @@ func TestInterpretEntitledReferenceCollections(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.X"},
+				func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2599,7 +2632,8 @@ func TestInterpretEntitledReferenceCollections(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				[]common.TypeID{"S.test.X"},
+				func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2615,13 +2649,15 @@ func TestInterpretEntitlementSetEquality(t *testing.T) {
 
 		conjunction := interpreter.NewEntitlementSetAuthorization(
 			nil,
-			[]common.TypeID{"S.test.X"},
+			func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+			1,
 			sema.Conjunction,
 		)
 
 		disjunction := interpreter.NewEntitlementSetAuthorization(
 			nil,
-			[]common.TypeID{"S.test.X"},
+			func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+			1,
 			sema.Disjunction,
 		)
 
@@ -2635,13 +2671,15 @@ func TestInterpretEntitlementSetEquality(t *testing.T) {
 
 		one := interpreter.NewEntitlementSetAuthorization(
 			nil,
-			[]common.TypeID{"S.test.X"},
+			func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+			1,
 			sema.Conjunction,
 		)
 
 		two := interpreter.NewEntitlementSetAuthorization(
 			nil,
-			[]common.TypeID{"S.test.X", "S.test.Y"},
+			func() []common.TypeID { return []common.TypeID{"S.test.X", "S.test.Y"} },
+			2,
 			sema.Conjunction,
 		)
 

@@ -471,6 +471,7 @@ func FromBigEndianBytesFunctionDocstring(ty Type) string {
 
 func FromBigEndianBytesFunctionType(ty Type) *FunctionType {
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2878,6 +2879,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 func formatFunctionType(
 	separator string,
 	purity string,
+	functionName string,
 	typeParameters []string,
 	parameters []string,
 	returnTypeAnnotation string,
@@ -2891,6 +2893,11 @@ func formatFunctionType(
 	}
 
 	builder.WriteString("fun")
+
+	if functionName != "" {
+		builder.WriteByte(' ')
+		builder.WriteString(functionName)
+	}
 
 	if len(typeParameters) > 0 {
 		builder.WriteByte('<')
@@ -2996,6 +3003,7 @@ func (t *FunctionType) Tag() TypeTag {
 
 func (t *FunctionType) string(
 	typeParameterFormatter func(*TypeParameter) string,
+	functionName string,
 	parameterFormatter func(Parameter) string,
 	returnTypeAnnotationFormatter func(TypeAnnotation) string,
 ) string {
@@ -3025,6 +3033,7 @@ func (t *FunctionType) string(
 	return formatFunctionType(
 		" ",
 		purity,
+		functionName,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -3040,6 +3049,7 @@ func FormatFunctionTypeID(
 	return formatFunctionType(
 		"",
 		purity,
+		"",
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -3051,6 +3061,7 @@ func (t *FunctionType) String() string {
 		func(parameter *TypeParameter) string {
 			return parameter.String()
 		},
+		"",
 		func(parameter Parameter) string {
 			return parameter.String()
 		},
@@ -3061,10 +3072,15 @@ func (t *FunctionType) String() string {
 }
 
 func (t *FunctionType) QualifiedString() string {
+	return t.NamedQualifiedString("")
+}
+
+func (t *FunctionType) NamedQualifiedString(functionName string) string {
 	return t.string(
 		func(parameter *TypeParameter) string {
 			return parameter.QualifiedString()
 		},
+		functionName,
 		func(parameter Parameter) string {
 			return parameter.QualifiedString()
 		},
@@ -3872,6 +3888,7 @@ Returns an Address from the given byte array
 `
 
 var AddressTypeFromBytesFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -4088,12 +4105,11 @@ type CompositeType struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
-	Members                             *StringMemberOrderedMap
-	memberResolvers                     map[string]MemberResolver
-	Identifier                          string
-	Fields                              []string
-	ConstructorParameters               []Parameter
-	ImplicitTypeRequirementConformances []*CompositeType
+	Members               *StringMemberOrderedMap
+	memberResolvers       map[string]MemberResolver
+	Identifier            string
+	Fields                []string
+	ConstructorParameters []Parameter
 	// an internal set of field `effectiveInterfaceConformances`
 	effectiveInterfaceConformanceSet     *InterfaceSet
 	effectiveInterfaceConformances       []Conformance
@@ -4146,11 +4162,6 @@ func (t *CompositeType) EffectiveInterfaceConformances() []Conformance {
 	})
 
 	return t.effectiveInterfaceConformances
-}
-
-func (t *CompositeType) addImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
-	t.ImplicitTypeRequirementConformances =
-		append(t.ImplicitTypeRequirementConformances, typeRequirement)
 }
 
 func (*CompositeType) IsType() {}
@@ -4450,29 +4461,6 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		containerType:         t.containerType,
 		NestedTypes:           t.NestedTypes,
 	}
-}
-
-func (t *CompositeType) TypeRequirements() []*CompositeType {
-
-	var typeRequirements []*CompositeType
-
-	if containerComposite, ok := t.containerType.(*CompositeType); ok {
-		for _, conformance := range containerComposite.EffectiveInterfaceConformances() {
-			ty, ok := conformance.InterfaceType.NestedTypes.Get(t.Identifier)
-			if !ok {
-				continue
-			}
-
-			typeRequirement, ok := ty.(*CompositeType)
-			if !ok {
-				continue
-			}
-
-			typeRequirements = append(typeRequirements, typeRequirement)
-		}
-	}
-
-	return typeRequirements
 }
 
 func (*CompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
@@ -6391,21 +6379,15 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// NOTE: type equality case (composite type `T` is subtype of composite type `U`)
 		// is already handled at beginning of function
 
-		switch typedSubType := subType.(type) {
+		switch subType.(type) {
 		case *IntersectionType:
 
 			// A intersection type `{Us}` is never a subtype of a type `V`:
 			return false
 
 		case *CompositeType:
-			// The supertype composite type might be a type requirement.
-			// Check if the subtype composite type implicitly conforms to it.
-
-			for _, conformance := range typedSubType.ImplicitTypeRequirementConformances {
-				if conformance == typedSuperType {
-					return true
-				}
-			}
+			// Non-equal composite types are never subtypes of each other
+			return false
 		}
 
 	case *InterfaceType:

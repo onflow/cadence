@@ -1441,16 +1441,15 @@ type InitializerMismatch struct {
 	InterfaceParameters []Parameter
 }
 type ConformanceError struct {
-	CompositeDeclaration           ast.CompositeLikeDeclaration
-	CompositeType                  *CompositeType
-	InterfaceType                  *InterfaceType
-	NestedInterfaceType            *InterfaceType
-	InitializerMismatch            *InitializerMismatch
-	MissingMembers                 []*Member
-	MemberMismatches               []MemberMismatch
-	MissingNestedCompositeTypes    []*CompositeType
-	Pos                            ast.Position
-	InterfaceTypeIsTypeRequirement bool
+	CompositeDeclaration        ast.CompositeLikeDeclaration
+	CompositeType               *CompositeType
+	InterfaceType               *InterfaceType
+	NestedInterfaceType         *InterfaceType
+	InitializerMismatch         *InitializerMismatch
+	MissingMembers              []*Member
+	MemberMismatches            []MemberMismatch
+	MissingNestedCompositeTypes []*CompositeType
+	Pos                         ast.Position
 }
 
 var _ SemanticError = &ConformanceError{}
@@ -1462,19 +1461,11 @@ func (*ConformanceError) isSemanticError() {}
 func (*ConformanceError) IsUserError() {}
 
 func (e *ConformanceError) Error() string {
-	var interfaceDescription string
-	if e.InterfaceTypeIsTypeRequirement {
-		interfaceDescription = "type requirement"
-	} else {
-		interfaceDescription = "interface"
-	}
-
 	return fmt.Sprintf(
-		"%s `%s` does not conform to %s %s `%s`",
+		"%s `%s` does not conform to %s interface `%s`",
 		e.CompositeType.Kind.Name(),
 		e.CompositeType.QualifiedString(),
 		e.InterfaceType.CompositeKind.Name(),
-		interfaceDescription,
 		e.InterfaceType.QualifiedString(),
 	)
 }
@@ -1540,14 +1531,6 @@ func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
 		})
 	}
 
-	if e.NestedInterfaceType != e.InterfaceType {
-		compositeIdentifierRange := ast.NewUnmeteredRangeFromPositioned(e.CompositeDeclaration.DeclarationIdentifier())
-		notes = append(notes, &NestedConformanceMismatchNote{
-			nestedInterfaceType: e.NestedInterfaceType,
-			Range:               compositeIdentifierRange,
-		})
-	}
-
 	return
 }
 
@@ -1559,20 +1542,6 @@ type MemberMismatchNote struct {
 
 func (n MemberMismatchNote) Message() string {
 	return "mismatch here"
-}
-
-// NestedConformanceMismatchNote
-
-type NestedConformanceMismatchNote struct {
-	nestedInterfaceType *InterfaceType
-	ast.Range
-}
-
-func (n NestedConformanceMismatchNote) Message() string {
-	return fmt.Sprintf(
-		"does not conform to nested interface requirement `%s`",
-		n.nestedInterfaceType,
-	)
 }
 
 // DuplicateConformanceError
@@ -3023,6 +2992,7 @@ func (e *InvalidOptionalChainingError) Error() string {
 type InvalidAccessError struct {
 	Name              string
 	RestrictingAccess Access
+	PossessedAccess   Access
 	DeclarationKind   common.DeclarationKind
 	ast.Range
 }
@@ -3035,11 +3005,24 @@ func (*InvalidAccessError) isSemanticError() {}
 func (*InvalidAccessError) IsUserError() {}
 
 func (e *InvalidAccessError) Error() string {
+	var possessedDescription string
+	if e.PossessedAccess != nil {
+		if e.PossessedAccess.Equal(UnauthorizedAccess) {
+			possessedDescription = ", but reference is unauthorized"
+		} else {
+			possessedDescription = fmt.Sprintf(
+				", but reference only has `%s` authorization",
+				e.PossessedAccess.Description(),
+			)
+		}
+	}
+
 	return fmt.Sprintf(
-		"cannot access `%s`: %s requires `%s` authorization",
+		"cannot access `%s`: %s requires `%s` authorization%s",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.Description(),
+		possessedDescription,
 	)
 }
 
@@ -4201,7 +4184,8 @@ func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
 func (*InvalidMappedEntitlementMemberError) IsUserError() {}
 
 func (e *InvalidMappedEntitlementMemberError) Error() string {
-	return "mapped entitlement access modifiers may only be used for fields or accessors with a reference type authorized with the same mapped entitlement"
+	return "mapped entitlement access modifiers may only be used for fields or accessors with a container type, " +
+		" or a reference type authorized with the same mapped entitlement"
 }
 
 func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
@@ -4259,7 +4243,18 @@ func (*UnrepresentableEntitlementMapOutputError) isSemanticError() {}
 func (*UnrepresentableEntitlementMapOutputError) IsUserError() {}
 
 func (e *UnrepresentableEntitlementMapOutputError) Error() string {
-	return fmt.Sprintf("cannot map %s through %s because the output is unrepresentable", e.Input.AccessKeyword(), e.Map.QualifiedString())
+	return fmt.Sprintf(
+		"cannot map `%s` through `%s` because the output is unrepresentable",
+		e.Input.AccessKeyword(),
+		e.Map.QualifiedString(),
+	)
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) SecondaryError() string {
+	return fmt.Sprintf(
+		"this usually occurs because the input set is disjunctive and `%s` is one-to-many",
+		e.Map.QualifiedString(),
+	)
 }
 
 func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position {
@@ -4285,7 +4280,7 @@ func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
 
 func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
 	return fmt.Sprintf(
-		"cannot use mapped entitlement authorization for %s outside of a field or accessor function using the same entitlement access",
+		"cannot use mapped entitlement authorization for `%s` outside of a field or accessor function using the same entitlement access",
 		e.Map.QualifiedIdentifier(),
 	)
 }
@@ -4380,7 +4375,7 @@ func (*RequiredEntitlementNotProvidedError) IsUserError() {}
 
 func (e *RequiredEntitlementNotProvidedError) Error() string {
 	return fmt.Sprintf(
-		"attachment type %s requires entitlement %s to be provided when attaching",
+		"attachment type `%s` requires entitlement `%s` to be provided when attaching",
 		e.AttachmentType.QualifiedString(),
 		e.RequiredEntitlement.QualifiedString(),
 	)

@@ -3635,7 +3635,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloArg",
 			[]cadence.Value{
-				cadence.NewIDCapability(
+				cadence.NewCapability(
 					1,
 					cadence.Address{},
 					cadence.AddressType, // this will error during `importValue`
@@ -3662,7 +3662,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			},
 			"helloArg",
 			[]cadence.Value{
-				cadence.NewIDCapability(
+				cadence.NewCapability(
 					42,
 					cadence.Address{},
 					cadence.AddressType, // this will error during `importValue`

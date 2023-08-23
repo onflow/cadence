@@ -3257,7 +3257,7 @@ func TestEncodeDecodePathValue(t *testing.T) {
 	})
 }
 
-func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
+func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -3267,7 +3267,7 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagIDCapabilityValue,
+			0xd8, CBORTagCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -3295,7 +3295,7 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := NewUnmeteredIDCapabilityValue(
+		value := NewUnmeteredCapabilityValue(
 			4,
 			NewUnmeteredAddressValueFromBytes([]byte{0x2}),
 			PrimitiveStaticTypeBool,
@@ -3303,7 +3303,7 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagIDCapabilityValue,
+			0xd8, CBORTagCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -3342,7 +3342,7 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 			}
 		}
 
-		expected := NewUnmeteredIDCapabilityValue(
+		expected := NewUnmeteredCapabilityValue(
 			4,
 			NewUnmeteredAddressValueFromBytes([]byte{0x3}),
 			borrowType,

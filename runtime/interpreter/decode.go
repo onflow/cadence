@@ -309,8 +309,8 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagPathValue:
 			storable, err = d.decodePath()
 
-		case CBORTagIDCapabilityValue:
-			storable, err = d.decodeIDCapability()
+		case CBORTagCapabilityValue:
+			storable, err = d.decodeCapability()
 
 		case CBORTagPublishedValue:
 			storable, err = d.decodePublishedValue()
@@ -917,9 +917,9 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 	), nil
 }
 
-func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
+func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
 
-	const expectedLength = encodedIDCapabilityValueLength
+	const expectedLength = encodedCapabilityValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
@@ -943,7 +943,7 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 
 	// address
 
-	// Decode address at array index encodedIDCapabilityValueAddressFieldKey
+	// Decode address at array index encodedCapabilityValueAddressFieldKey
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
@@ -966,7 +966,7 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 		)
 	}
 
-	// Decode ID at array index encodedIDCapabilityValueIDFieldKey
+	// Decode ID at array index encodedCapabilityValueIDFieldKey
 
 	id, err := d.decoder.DecodeUint64()
 	if err != nil {
@@ -976,14 +976,14 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 		)
 	}
 
-	// Decode borrow type at array index encodedIDCapabilityValueBorrowTypeFieldKey
+	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
 
 	borrowType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid capability borrow type encoding: %w", err)
 	}
 
-	return NewIDCapabilityValue(
+	return NewCapabilityValue(
 		d.memoryGauge,
 		UInt64Value(id),
 		address,
@@ -1164,7 +1164,7 @@ func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
 		return nil, errors.NewUnexpectedError("invalid published value value encoding: %w", err)
 	}
 
-	capabilityValue, ok := value.(CapabilityValue)
+	capabilityValue, ok := value.(*CapabilityValue)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid published value value encoding: expected capability, got %T",
@@ -1546,18 +1546,34 @@ func (d TypeDecoder) decodeStaticAuthorization() (Authorization, error) {
 			}
 			return nil, err
 		}
-		var entitlements []common.TypeID
-		if entitlementsSize > 0 {
-			entitlements = make([]common.TypeID, entitlementsSize)
-			for i := 0; i < int(entitlementsSize); i++ {
-				typeID, err := d.decoder.DecodeString()
-				if err != nil {
-					return nil, err
+
+		var setCreationErr error
+
+		entitlementSet := NewEntitlementSetAuthorization(
+			d.memoryGauge,
+			func() (entitlements []common.TypeID) {
+				if entitlementsSize > 0 {
+					entitlements = make([]common.TypeID, entitlementsSize)
+					for i := 0; i < int(entitlementsSize); i++ {
+						typeID, err := d.decoder.DecodeString()
+						if err != nil {
+							setCreationErr = err
+							return nil
+						}
+						entitlements[i] = common.TypeID(typeID)
+					}
 				}
-				entitlements[i] = common.TypeID(typeID)
-			}
+				return
+			},
+			int(entitlementsSize),
+			sema.EntitlementSetKind(setKind),
+		)
+
+		if setCreationErr != nil {
+			return nil, setCreationErr
 		}
-		return NewEntitlementSetAuthorization(d.memoryGauge, entitlements, sema.EntitlementSetKind(setKind)), nil
+
+		return entitlementSet, nil
 	}
 	return nil, errors.NewUnexpectedError("invalid static authorization encoding tag: %d", number)
 }

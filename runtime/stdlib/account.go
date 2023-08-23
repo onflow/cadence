@@ -906,7 +906,7 @@ func newAccountInboxPublishFunction(
 		gauge,
 		sema.Account_InboxTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
+			value, ok := invocation.Arguments[0].(*interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -2372,7 +2372,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 				targetPathValue,
 			)
 
-			return interpreter.NewIDCapabilityValue(
+			return interpreter.NewCapabilityValue(
 				gauge,
 				capabilityIDValue,
 				addressValue,
@@ -2455,7 +2455,7 @@ func newAccountAccountCapabilitiesIssueFunction(
 					borrowType,
 				)
 
-			return interpreter.NewIDCapabilityValue(
+			return interpreter.NewCapabilityValue(
 				gauge,
 				capabilityIDValue,
 				addressValue,
@@ -3010,11 +3010,11 @@ func newAccountCapabilitiesPublishFunction(
 
 			// Get capability argument
 
-			var capabilityValue *interpreter.IDCapabilityValue
+			var capabilityValue *interpreter.CapabilityValue
 
 			firstValue := invocation.Arguments[0]
 			switch firstValue := firstValue.(type) {
-			case *interpreter.IDCapabilityValue:
+			case *interpreter.CapabilityValue:
 				capabilityValue = firstValue
 
 			default:
@@ -3058,7 +3058,7 @@ func newAccountCapabilitiesPublishFunction(
 				true,
 				nil,
 				nil,
-			).(*interpreter.IDCapabilityValue)
+			).(*interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3109,9 +3109,9 @@ func newAccountCapabilitiesUnpublishFunction(
 				return interpreter.Nil
 			}
 
-			var capabilityValue *interpreter.IDCapabilityValue
+			var capabilityValue *interpreter.CapabilityValue
 			switch readValue := readValue.(type) {
-			case *interpreter.IDCapabilityValue:
+			case *interpreter.CapabilityValue:
 				capabilityValue = readValue
 
 			default:
@@ -3125,7 +3125,7 @@ func newAccountCapabilitiesUnpublishFunction(
 				true,
 				nil,
 				nil,
-			).(*interpreter.IDCapabilityValue)
+			).(*interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3334,10 +3334,10 @@ func newAccountCapabilitiesGetFunction(
 				return interpreter.Nil
 			}
 
-			var readCapabilityValue *interpreter.IDCapabilityValue
+			var readCapabilityValue *interpreter.CapabilityValue
 
 			switch readValue := readValue.(type) {
-			case *interpreter.IDCapabilityValue:
+			case *interpreter.CapabilityValue:
 				readCapabilityValue = readValue
 
 			default:
@@ -3386,7 +3386,7 @@ func newAccountCapabilitiesGetFunction(
 						panic(errors.NewUnreachableError())
 					}
 
-					resultValue = interpreter.NewIDCapabilityValue(
+					resultValue = interpreter.NewCapabilityValue(
 						inter,
 						capabilityID,
 						capabilityAddress,

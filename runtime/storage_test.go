@@ -478,7 +478,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewIDCapability(
+			cadence.NewCapability(
 				1,
 				cadence.Address(signer),
 				cadence.NewReferenceType(
@@ -526,7 +526,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}: realNonFungibleTokenInterface,
+		}: modifiedNonFungibleTokenInterface,
 	}
 
 	events := make([]cadence.Event, 0)
@@ -613,7 +613,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 		common.AddressLocation{
 			Address: nftAddress,
 			Name:    "NonFungibleToken",
-		}: realNonFungibleTokenInterface,
+		}: modifiedNonFungibleTokenInterface,
 	}
 
 	deployTx := DeploymentTransaction("TopShot", []byte(realTopShotContract))
@@ -747,7 +747,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
       import TopShot from 0x0b2a3299cc857e29
 
       transaction(momentIDs: [UInt64]) {
-          let transferTokens: @NonFungibleToken.Collection
+          let transferTokens: @{NonFungibleToken.Collection}
 
           prepare(signer: auth(Storage) &Account) {
               let ref = signer.storage.borrow<&TopShot.Collection>(from: /storage/MomentCollection)!
@@ -1133,7 +1133,7 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageSaveIDCapability(t *testing.T) {
+func TestRuntimeStorageSaveCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -1204,7 +1204,7 @@ func TestRuntimeStorageSaveIDCapability(t *testing.T) {
 	value, err := runtime.ReadStored(signer, storagePath1, context)
 	require.NoError(t, err)
 
-	expected := cadence.NewIDCapability(
+	expected := cadence.NewCapability(
 		cadence.UInt64(1),
 		cadence.Address(signer),
 		ty,

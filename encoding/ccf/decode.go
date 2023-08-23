@@ -1407,7 +1407,7 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 		return nil, err
 	}
 
-	return cadence.NewMeteredIDCapability(
+	return cadence.NewMeteredCapability(
 		d.gauge,
 		id.(cadence.UInt64),
 		address.(cadence.Address),

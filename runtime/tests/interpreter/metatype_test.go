@@ -634,7 +634,11 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
+						Authorization: interpreter.NewEntitlementSetAuthorization(
+							nil,
+							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+							1,
+							sema.Conjunction),
 						ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
@@ -683,7 +687,10 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
+						Authorization: interpreter.NewEntitlementSetAuthorization(
+							nil,
+							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+							1, sema.Conjunction),
 						ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
@@ -740,7 +747,11 @@ func TestInterpretGetType(t *testing.T) {
 			result: interpreter.TypeValue{
 				Type: interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
-						Authorization:  interpreter.NewEntitlementSetAuthorization(nil, []common.TypeID{"S.test.X"}, sema.Conjunction),
+						Authorization: interpreter.NewEntitlementSetAuthorization(
+							nil,
+							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+							1,
+							sema.Conjunction),
 						ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},

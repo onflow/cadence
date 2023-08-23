@@ -1308,7 +1308,7 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
-	return cadence.NewMeteredIDCapability(
+	return cadence.NewMeteredCapability(
 		d.gauge,
 		d.decodeUInt64(obj.Get(idKey)),
 		d.decodeAddress(obj.Get(addressKey)),
