@@ -5781,6 +5781,24 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 		require.True(t, checker.Elaboration.EntitlementMapType("S.test.M").IncludesIdentity)
 	})
 
+	t.Run("no include identity", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				E -> F
+				F -> G
+			}
+        `)
+
+		require.NoError(t, err)
+		require.False(t, checker.Elaboration.EntitlementMapType("S.test.M").IncludesIdentity)
+	})
+
 	t.Run("duplicate include", func(t *testing.T) {
 		t.Parallel()
 
@@ -5835,6 +5853,48 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
         `)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("simple cycle detection", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement mapping Y {
+				include Y
+			}
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		cycleError := &sema.CyclicEntitlementMappingError{}
+		require.ErrorAs(t, errors[0], &cycleError)
+	})
+
+	t.Run("complex cycle detection", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement mapping Y {
+				include X
+			}
+
+			entitlement mapping X {
+				include Y
+				include Z
+			}
+
+			entitlement mapping M {
+				include X
+				include Y
+			}
+
+			entitlement mapping Z {
+				include Identity
+			}
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		cycleError := &sema.CyclicEntitlementMappingError{}
+		require.ErrorAs(t, errors[0], &cycleError)
 	})
 
 }

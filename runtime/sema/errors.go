@@ -4353,6 +4353,36 @@ func (e *DuplicateEntitlementMappingInclusionError) EndPosition(common.MemoryGau
 	return e.EndPos
 }
 
+// CyclicEntitlementMappingError
+type CyclicEntitlementMappingError struct {
+	Map          *EntitlementMapType
+	IncludedType *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &CyclicEntitlementMappingError{}
+var _ errors.UserError = &CyclicEntitlementMappingError{}
+
+func (*CyclicEntitlementMappingError) isSemanticError() {}
+
+func (*CyclicEntitlementMappingError) IsUserError() {}
+
+func (e *CyclicEntitlementMappingError) Error() string {
+	return fmt.Sprintf(
+		"including `%s` in the definition of `%s` creates a cyclical entitlement mapping",
+		e.IncludedType.QualifiedIdentifier(),
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+func (e *CyclicEntitlementMappingError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *CyclicEntitlementMappingError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
 type DuplicateEntitlementRequirementError struct {
 	Entitlement *EntitlementType
 	ast.Range

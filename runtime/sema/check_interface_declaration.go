@@ -562,9 +562,16 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 // This assumes that any includes coming from imported files are necessarily already completely resolved, since that imported file
 // must necessarily already have been fullly checked. Additionally, because import cycles are not allowed in Cadence, we only
 // need to check for map-include cycles within the currently-checked file
-func (checker *Checker) resolveEntitlementMappingInclusions(mapType *EntitlementMapType, declaration *ast.EntitlementMappingDeclaration) {
+func (checker *Checker) resolveEntitlementMappingInclusions(
+	mapType *EntitlementMapType,
+	declaration *ast.EntitlementMappingDeclaration,
+	visitedMaps map[*EntitlementMapType]struct{},
+) {
 	mapType.resolveInclusions.Do(func() {
-		includedMaps := orderedmap.New[orderedmap.OrderedMap[*EntitlementMapType, struct{}]](len(declaration.Inclusions))
+		visitedMaps[mapType] = struct{}{}
+
+		// track locally included maps to report duplicates, which are unrelated to cycles
+		includedMaps := map[*EntitlementMapType]struct{}{}
 
 		for _, inclusion := range declaration.Inclusions {
 
@@ -578,8 +585,16 @@ func (checker *Checker) resolveEntitlementMappingInclusions(mapType *Entitlement
 				})
 				continue
 			}
-			if includedMaps.Contains(includedMapType) {
+			if _, contains := includedMaps[includedMapType]; contains {
 				checker.report(&DuplicateEntitlementMappingInclusionError{
+					Map:          mapType,
+					IncludedType: includedMapType,
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, inclusion),
+				})
+				continue
+			}
+			if _, isCylical := visitedMaps[includedMapType]; isCylical {
+				checker.report(&CyclicEntitlementMappingError{
 					Map:          mapType,
 					IncludedType: includedMapType,
 					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, inclusion),
@@ -588,13 +603,13 @@ func (checker *Checker) resolveEntitlementMappingInclusions(mapType *Entitlement
 			}
 
 			// recursively resolve the included map type's includes, skipping any that have already been resolved
-			checker.resolveEntitlementMappingInclusions(includedMapType, checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType))
+			checker.resolveEntitlementMappingInclusions(includedMapType, checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType), visitedMaps)
 			mapType.Relations = append(mapType.Relations, includedMapType.Relations...)
 			if includedMapType.IncludesIdentity {
 				mapType.IncludesIdentity = true
 			}
 
-			includedMaps.Set(includedMapType, struct{}{})
+			includedMaps[includedMapType] = struct{}{}
 		}
 	})
 }
@@ -615,7 +630,7 @@ func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.Enti
 		true,
 	)
 
-	checker.resolveEntitlementMappingInclusions(entitlementMapType, declaration)
+	checker.resolveEntitlementMappingInclusions(entitlementMapType, declaration, map[*EntitlementMapType]struct{}{})
 
 	return
 }
