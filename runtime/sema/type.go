@@ -3601,7 +3601,12 @@ func addToBaseActivation(ty Type) {
 	)
 }
 
-var IdentityMappingType = NewEntitlementMapType(nil, nil, "Identity")
+// The `Identity` mapping is an empty map that includes the Identity map
+var IdentityMappingType = func() *EntitlementMapType {
+	m := NewEntitlementMapType(nil, nil, "Identity")
+	m.IncludesIdentity = true
+	return m
+}()
 
 func baseTypeVariable(name string, ty Type) *Variable {
 	return &Variable{
@@ -7647,10 +7652,11 @@ type EntitlementRelation struct {
 }
 
 type EntitlementMapType struct {
-	Location      common.Location
-	containerType Type
-	Identifier    string
-	Relations     []EntitlementRelation
+	Location         common.Location
+	containerType    Type
+	Identifier       string
+	Relations        []EntitlementRelation
+	IncludesIdentity bool
 }
 
 var _ Type = &EntitlementMapType{}
