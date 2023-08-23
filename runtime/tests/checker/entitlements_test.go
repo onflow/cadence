@@ -5780,5 +5780,130 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, checker.Elaboration.EntitlementMapType("S.test.M").IncludesIdentity)
 	})
+}
 
+func TestCheckIdentityIncludedMaps(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("only identity included", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				include Identity 
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, F) &S): auth(E, F) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("only identity included error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				include Identity 
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, F) &S): auth(E, F, G) &Int {
+				return s.foo()
+			}
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+		require.Equal(t, errors[0].(*sema.TypeMismatchError).ActualType.String(), "auth(E, F) &Int")
+	})
+
+	t.Run("identity included with relations", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				include Identity 
+				F -> G
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, F) &S): auth(E, F, G) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("identity included disjoint", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			// this is functionally equivalent to
+			// entitlement mapping M {
+				//	E -> E 
+				//	F -> F 
+				//	G -> G 
+				//	F -> G
+			// }
+			entitlement mapping M {
+				include Identity 
+				F -> G
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E | F) &S): &Int {
+				return s.foo()
+			}
+        `)
+
+		// because the Identity map will always try to create conjunctions of the input with
+		// any additional relations, it is functionally impossible to map a disjointly authorized
+		// reference through any non-trivial map including the Identity
+		errors := RequireCheckerErrors(t, err, 1)
+		unrepresentableError := &sema.UnrepresentableEntitlementMapOutputError{}
+		require.ErrorAs(t, errors[0], &unrepresentableError)
+	})
 }
