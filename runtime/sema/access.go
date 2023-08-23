@@ -330,6 +330,9 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 			output.Set(relation.Output, struct{}{})
 		}
 	}
+	if e.Type.IncludesIdentity {
+		output.Set(entitlement, struct{}{})
+	}
 
 	e.images[entitlement] = output
 	return
@@ -349,9 +352,6 @@ func (e EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (A
 		var err error = nil
 		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 			entitlementImage := e.entitlementImage(entitlement)
-			if e.Type.IncludesIdentity {
-				entitlementImage.Set(entitlement, struct{}{})
-			}
 			// the image of a single element is always a conjunctive set; consider a mapping
 			// M defined as X -> Y, X -> Z, A -> B, A -> C. M(X) = Y & Z and M(A) = B & C.
 			// Thus M(X | A) would be ((Y & Z) | (B & C)), which is a disjunction of two conjunctions,

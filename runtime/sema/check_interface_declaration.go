@@ -560,7 +560,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 // Recursively resolve the include statements of an entitlement mapping declaration, walking the "heirarchy" defined in this file
 // Uses the sync primitive stored in `resolveInclusions` to ensure each map type's includes are computed only once.
 // This assumes that any includes coming from imported files are necessarily already completely resolved, since that imported file
-// must necessarily already have been fullly checked. Additionally, because import cycles are not allowed in Cadence, we only
+// must necessarily already have been fully checked. Additionally, because import cycles are not allowed in Cadence, we only
 // need to check for map-include cycles within the currently-checked file
 func (checker *Checker) resolveEntitlementMappingInclusions(
 	mapType *EntitlementMapType,
@@ -585,7 +585,7 @@ func (checker *Checker) resolveEntitlementMappingInclusions(
 				})
 				continue
 			}
-			if _, contains := includedMaps[includedMapType]; contains {
+			if _, duplicate := includedMaps[includedMapType]; duplicate {
 				checker.report(&DuplicateEntitlementMappingInclusionError{
 					Map:          mapType,
 					IncludedType: includedMapType,
@@ -603,11 +603,10 @@ func (checker *Checker) resolveEntitlementMappingInclusions(
 			}
 
 			// recursively resolve the included map type's includes, skipping any that have already been resolved
-			checker.resolveEntitlementMappingInclusions(includedMapType, checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType), visitedMaps)
+			includedDecl := checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType)
+			checker.resolveEntitlementMappingInclusions(includedMapType, includedDecl, visitedMaps)
 			mapType.Relations = append(mapType.Relations, includedMapType.Relations...)
-			if includedMapType.IncludesIdentity {
-				mapType.IncludesIdentity = true
-			}
+			mapType.IncludesIdentity = mapType.IncludesIdentity || includedMapType.IncludesIdentity
 
 			includedMaps[includedMapType] = struct{}{}
 		}
