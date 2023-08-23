@@ -572,6 +572,30 @@ func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.Enti
 		declaration.StartPos,
 		true,
 	)
+
+	includedMaps := orderedmap.New[orderedmap.OrderedMap[*EntitlementMapType, struct{}]](len(declaration.Inclusions))
+
+	for _, inclusion := range declaration.Inclusions {
+		if inclusion.Identifier.Identifier == IdentityMappingIdentifier {
+			entitlementMapType.IncludesIdentity = true
+			includedMaps.Set(IdentityMappingType, struct{}{})
+			continue
+		}
+
+		includedType := checker.convertNominalType(inclusion)
+		includedMapType, isEntitlementMapping := includedType.(*EntitlementMapType)
+		if !isEntitlementMapping {
+			checker.report(&InvalidEntitlementMappingInclusionError{
+				Map:          entitlementMapType,
+				IncludedType: includedType,
+				Range:        ast.NewRangeFromPositioned(checker.memoryGauge, inclusion),
+			})
+			continue
+		}
+
+		includedMaps.Set(includedMapType, struct{}{})
+	}
+
 	return
 }
 

@@ -4293,6 +4293,36 @@ func (e *InvalidMappedAuthorizationOutsideOfFieldError) EndPosition(common.Memor
 	return e.EndPos
 }
 
+// InvalidEntitlementMappingInclusionError
+type InvalidEntitlementMappingInclusionError struct {
+	Map          *EntitlementMapType
+	IncludedType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidEntitlementMappingInclusionError{}
+var _ errors.UserError = &InvalidEntitlementMappingInclusionError{}
+
+func (*InvalidEntitlementMappingInclusionError) isSemanticError() {}
+
+func (*InvalidEntitlementMappingInclusionError) IsUserError() {}
+
+func (e *InvalidEntitlementMappingInclusionError) Error() string {
+	return fmt.Sprintf(
+		"cannot include `%s` in the definition of `%s`, as it is not an entitlement map",
+		e.IncludedType.QualifiedString(),
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+func (e *InvalidEntitlementMappingInclusionError) StartPosition() ast.Position {
+	return e.StartPos
+}
+
+func (e *InvalidEntitlementMappingInclusionError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.EndPos
+}
+
 type DuplicateEntitlementRequirementError struct {
 	Entitlement *EntitlementType
 	ast.Range

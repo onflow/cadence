@@ -5730,3 +5730,55 @@ func TestCheckIdentityMapping(t *testing.T) {
 		require.Equal(t, 0, auth.Entitlements.Len())
 	})
 }
+
+func TestCheckMappingDefinitionWithInclude(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("cannot include non-maps", func(t *testing.T) {
+		t.Parallel()
+		tests := []string{
+			"struct X {}",
+			"struct interface X {}",
+			"resource X {}",
+			"resource interface X {}",
+			"enum X: Int {}",
+			"event X()",
+			"entitlement X",
+		}
+		for _, typeDef := range tests {
+			t.Run(typeDef, func(t *testing.T) {
+				_, err := ParseAndCheck(t, fmt.Sprintf(`
+					%s
+					entitlement mapping M {
+						include X
+					}
+				`, typeDef))
+
+				errors := RequireCheckerErrors(t, err, 1)
+				invalidIncludeError := &sema.InvalidEntitlementMappingInclusionError{}
+				require.ErrorAs(t, errors[0], &invalidIncludeError)
+			})
+		}
+	})
+
+	t.Run("include identity", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				E -> F
+				include Identity 
+				F -> G
+			}
+        `)
+
+		require.NoError(t, err)
+		require.True(t, checker.Elaboration.EntitlementMapType("S.test.M").IncludesIdentity)
+	})
+
+}

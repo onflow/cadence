@@ -3602,8 +3602,10 @@ func addToBaseActivation(ty Type) {
 }
 
 // The `Identity` mapping is an empty map that includes the Identity map
+const IdentityMappingIdentifier string = "Identity"
+
 var IdentityMappingType = func() *EntitlementMapType {
-	m := NewEntitlementMapType(nil, nil, "Identity")
+	m := NewEntitlementMapType(nil, nil, IdentityMappingIdentifier)
 	m.IncludesIdentity = true
 	return m
 }()

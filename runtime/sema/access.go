@@ -340,16 +340,15 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 // arguments.
 func (e EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
 
-	if e.Type.IncludesIdentity {
-		return inputs, nil
-	}
-
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map
 	case PrimitiveAccess:
 		return inputs, nil
 	case EntitlementSetAccess:
 		output := orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
+		if e.Type.IncludesIdentity {
+			output.SetAll(inputs.Entitlements)
+		}
 		var err error = nil
 		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 			entitlementImage := e.entitlementImage(entitlement)
