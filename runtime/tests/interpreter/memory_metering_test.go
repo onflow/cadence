@@ -6666,9 +6666,12 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 		address := common.MustBytesToAddress([]byte{0x1})
 		authorization := interpreter.NewEntitlementSetAuthorization(
 			meter,
-			[]common.TypeID{
-				sema.StorageType.ID(),
+			func() []common.TypeID {
+				return []common.TypeID{
+					sema.StorageType.ID(),
+				}
 			},
+			1,
 			sema.Conjunction,
 		)
 		account := stdlib.NewAccountReferenceValue(meter, nil, interpreter.AddressValue(address), authorization)
@@ -8608,9 +8611,12 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	address := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
 	authorization := interpreter.NewEntitlementSetAuthorization(
 		meter,
-		[]common.TypeID{
-			sema.StorageType.ID(),
+		func() []common.TypeID {
+			return []common.TypeID{
+				sema.StorageType.ID(),
+			}
 		},
+		1,
 		sema.Conjunction,
 	)
 	account := stdlib.NewAccountReferenceValue(
