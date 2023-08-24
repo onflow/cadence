@@ -569,6 +569,7 @@ func (checker *Checker) resolveEntitlementMappingInclusions(
 ) {
 	mapType.resolveInclusions.Do(func() {
 		visitedMaps[mapType] = struct{}{}
+		defer delete(visitedMaps, mapType)
 
 		// track locally included maps to report duplicates, which are unrelated to cycles
 		// we do not enforce that no maps are duplicated across the entire chain; only the specific map definition
@@ -606,15 +607,16 @@ func (checker *Checker) resolveEntitlementMappingInclusions(
 			}
 
 			// recursively resolve the included map type's includes, skipping any that have already been resolved
-			includedDecl := checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType)
-			checker.resolveEntitlementMappingInclusions(includedMapType, includedDecl, visitedMaps)
+			checker.resolveEntitlementMappingInclusions(
+				includedMapType,
+				checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType),
+				visitedMaps,
+			)
 			mapType.Relations = append(mapType.Relations, includedMapType.Relations...)
 			mapType.IncludesIdentity = mapType.IncludesIdentity || includedMapType.IncludesIdentity
 
 			includedMaps[includedMapType] = struct{}{}
 		}
-
-		delete(visitedMaps, mapType)
 	})
 }
 

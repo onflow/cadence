@@ -4436,7 +4436,7 @@ func (*CyclicEntitlementMappingError) IsUserError() {}
 
 func (e *CyclicEntitlementMappingError) Error() string {
 	return fmt.Sprintf(
-		"including `%s` in the definition of `%s` creates a cyclical entitlement mapping",
+		"cannot include `%s` in the definition of `%s`, as it would create a cyclical mapping",
 		e.IncludedType.QualifiedIdentifier(),
 		e.Map.QualifiedIdentifier(),
 	)
