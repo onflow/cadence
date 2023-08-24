@@ -5859,7 +5859,7 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 		require.ErrorAs(t, errors[0], &duplicateIncludeError)
 	})
 
-	t.Run("non duplicate across heirarchy", func(t *testing.T) {
+	t.Run("non duplicate across hierarchy", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `

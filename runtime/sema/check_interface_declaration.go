@@ -557,7 +557,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 	return entitlementMapType
 }
 
-// Recursively resolve the include statements of an entitlement mapping declaration, walking the "heirarchy" defined in this file
+// Recursively resolve the include statements of an entitlement mapping declaration, walking the "hierarchy" defined in this file
 // Uses the sync primitive stored in `resolveInclusions` to ensure each map type's includes are computed only once.
 // This assumes that any includes coming from imported files are necessarily already completely resolved, since that imported file
 // must necessarily already have been fully checked. Additionally, because import cycles are not allowed in Cadence, we only
