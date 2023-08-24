@@ -453,69 +453,62 @@ func exportCompositeValue(
 		structure, err := cadence.NewMeteredStruct(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return structure.WithType(t.(*cadence.StructType)), nil
+
 	case common.CompositeKindResource:
 		resource, err := cadence.NewMeteredResource(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return resource.WithType(t.(*cadence.ResourceType)), nil
+
 	case common.CompositeKindAttachment:
 		attachment, err := cadence.NewMeteredAttachment(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return attachment.WithType(t.(*cadence.AttachmentType)), nil
+
 	case common.CompositeKindEvent:
 		event, err := cadence.NewMeteredEvent(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return event.WithType(t.(*cadence.EventType)), nil
+
 	case common.CompositeKindContract:
 		contract, err := cadence.NewMeteredContract(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return contract.WithType(t.(*cadence.ContractType)), nil
+
 	case common.CompositeKindEnum:
 		enum, err := cadence.NewMeteredEnum(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
