@@ -7242,10 +7242,104 @@ func TestInterpretEmitEvent(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		expectedEvents,
 		actualEvents,
 	)
+}
+
+func TestInterpretReferenceEventParameter(t *testing.T) {
+
+	t.Parallel()
+
+	var actualEvents []interpreter.Value
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          event TestEvent(ref: &[{Int: String}])
+
+          fun test(ref: &[{Int: String}]) {
+              emit TestEvent(ref: ref)
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					eventType *sema.CompositeType,
+				) error {
+					actualEvents = append(actualEvents, event)
+					return nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	dictionaryStaticType := interpreter.NewDictionaryStaticType(
+		nil,
+		interpreter.PrimitiveStaticTypeInt,
+		interpreter.PrimitiveStaticTypeString,
+	)
+
+	dictionaryValue := interpreter.NewDictionaryValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		dictionaryStaticType,
+		interpreter.NewUnmeteredIntValueFromInt64(42),
+		interpreter.NewUnmeteredStringValue("answer"),
+	)
+
+	arrayStaticType := interpreter.NewVariableSizedStaticType(nil, dictionaryStaticType)
+
+	arrayValue := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		arrayStaticType,
+		common.ZeroAddress,
+		dictionaryValue,
+	)
+
+	ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+		interpreter.UnauthorizedAccess,
+		arrayValue,
+		inter.MustConvertStaticToSemaType(arrayStaticType),
+	)
+
+	_, err = inter.Invoke("test", ref)
+	require.NoError(t, err)
+
+	eventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TestEvent")
+
+	expectedEvents := []interpreter.Value{
+		interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			TestLocation,
+			TestLocation.QualifiedIdentifier(eventType.ID()),
+			common.CompositeKindEvent,
+			[]interpreter.CompositeField{
+				{
+					Name:  "ref",
+					Value: ref,
+				},
+			},
+			common.ZeroAddress,
+		),
+	}
+
+	for _, event := range expectedEvents {
+		event.(*interpreter.CompositeValue).InitializeFunctions(inter)
+	}
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		expectedEvents,
+		actualEvents,
+	)
+
 }
 
 type testValue struct {

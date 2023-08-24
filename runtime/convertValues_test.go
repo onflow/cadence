@@ -1765,25 +1765,67 @@ func TestRuntimeExportEventValue(t *testing.T) {
 
 	t.Parallel()
 
-	script := `
-        access(all) event Foo(bar: Int)
+	t.Run("primitive", func(t *testing.T) {
+		t.Parallel()
 
-        access(all) fun main() {
-            emit Foo(bar: 42)
-        }
-    `
+		script := `
+          access(all)
+          event Foo(bar: Int)
 
-	fooEventType := &cadence.EventType{
-		Location:            common.ScriptLocation{},
-		QualifiedIdentifier: "Foo",
-		Fields:              fooFields,
-	}
+          access(all)
+          fun main() {
+              emit Foo(bar: 42)
+          }
+        `
 
-	actual := exportEventFromScript(t, script)
-	expected := cadence.NewEvent([]cadence.Value{cadence.NewInt(42)}).
-		WithType(fooEventType)
+		fooEventType := &cadence.EventType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields:              fooFields,
+		}
 
-	assert.Equal(t, expected, actual)
+		actual := exportEventFromScript(t, script)
+		expected := cadence.NewEvent([]cadence.Value{
+			cadence.NewInt(42),
+		}).WithType(fooEventType)
+
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+          access(all)
+          event Foo(bar: &Int)
+
+          access(all)
+          fun main() {
+              emit Foo(bar: &42)
+          }
+        `
+
+		fooEventType := &cadence.EventType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "bar",
+					Type: cadence.NewReferenceType(
+						cadence.UnauthorizedAccess,
+						cadence.IntType,
+					),
+				},
+			},
+		}
+
+		actual := exportEventFromScript(t, script)
+		expected := cadence.NewEvent([]cadence.Value{
+			cadence.NewInt(42),
+		}).WithType(fooEventType)
+
+		assert.Equal(t, expected, actual)
+	})
 }
 
 func exportEventFromScript(t *testing.T, script string) cadence.Event {

@@ -9496,3 +9496,126 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 		test(name, ty)
 	}
 }
+
+func TestRuntimeEventEmission(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("primitive", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all)
+          event TestEvent(ref: Int)
+
+          access(all)
+          fun main() {
+              emit TestEvent(ref: 42)
+          }
+        `)
+
+		var events []cadence.Event
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextScriptLocation := newScriptLocationGenerator()
+
+		location := nextScriptLocation()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  location,
+			},
+		)
+		require.NoError(t, err)
+
+		require.Len(t, events, 1)
+		event := events[0]
+
+		assert.EqualValues(
+			t,
+			location.TypeID(nil, "TestEvent"),
+			event.Type().ID(),
+		)
+
+		assert.Equal(
+			t,
+			[]cadence.Value{
+				cadence.NewInt(42),
+			},
+			event.GetFieldValues(),
+		)
+
+	})
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all)
+          event TestEvent(ref: &Int)
+
+          access(all)
+          fun main() {
+              emit TestEvent(ref: &42)
+          }
+        `)
+
+		var events []cadence.Event
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextScriptLocation := newScriptLocationGenerator()
+
+		location := nextScriptLocation()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  location,
+			},
+		)
+		require.NoError(t, err)
+
+		require.Len(t, events, 1)
+		event := events[0]
+
+		assert.EqualValues(
+			t,
+			location.TypeID(nil, "TestEvent"),
+			event.Type().ID(),
+		)
+
+		assert.Equal(
+			t,
+			[]cadence.Value{
+				cadence.NewInt(42),
+			},
+			event.GetFieldValues(),
+		)
+
+	})
+}
