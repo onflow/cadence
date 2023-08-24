@@ -3812,7 +3812,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
+		_, err := ParseAndCheckWithOptions(t,
 			`
 				access(all) resource R {}
 				access(all) attachment A for R {
@@ -3827,6 +3827,10 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 					destroy r
 				}
 				`,
+			ParseAndCheckOptions{Config: &sema.Config{
+				SuggestionsEnabled: true,
+				AttachmentsEnabled: true,
+			}},
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -3846,6 +3850,11 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+			"reference needs one of entitlements `Insert` or `Mutate`",
 		)
 	})
 
@@ -3883,7 +3892,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
+		_, err := ParseAndCheckWithOptions(t,
 			`
 				access(all) resource R {
 					access(all) fun foo() {
@@ -3898,6 +3907,10 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				}
 				
 				`,
+			ParseAndCheckOptions{Config: &sema.Config{
+				SuggestionsEnabled: true,
+				AttachmentsEnabled: true,
+			}},
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -3917,6 +3930,11 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+			"reference needs one of entitlements `Insert` or `Mutate`",
 		)
 	})
 
@@ -3952,7 +3970,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
+		_, err := ParseAndCheckWithOptions(t,
 			`
 				access(all) resource R {}
 				access(all) attachment A for R {
@@ -3966,6 +3984,10 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				}
 				
 				`,
+			ParseAndCheckOptions{Config: &sema.Config{
+				SuggestionsEnabled: true,
+				AttachmentsEnabled: true,
+			}},
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -3985,6 +4007,11 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			t,
 			errs[0].(*sema.InvalidAccessError).PossessedAccess,
 			sema.UnauthorizedAccess,
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+			"reference needs one of entitlements `Insert` or `Mutate`",
 		)
 	})
 }
