@@ -1107,3 +1107,169 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 	    `)
 	})
 }
+
+func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	furtherUpstreamDeployTx := DeploymentTransaction("FurtherUpstream", []byte(`
+        access(all) contract FurtherUpstream {
+            access(all) entitlement X
+			access(all) entitlement Y
+			access(all) entitlement Z
+
+			access(all) entitlement mapping M {
+				X -> Y 
+				Y -> Z
+			}
+        }
+    `))
+
+	upstreamDeployTx := DeploymentTransaction("Upstream", []byte(`
+	    import FurtherUpstream from 0x1
+        access(all) contract Upstream {
+            access(all) entitlement A
+			access(all) entitlement B
+			access(all) entitlement C
+
+            access(all) entitlement mapping M {
+				include FurtherUpstream.M
+
+				A -> FurtherUpstream.Y 
+				FurtherUpstream.X -> B
+			}
+        }
+    `))
+
+	testDeployTx := DeploymentTransaction("Test", []byte(`
+		import FurtherUpstream from 0x1
+		import Upstream from 0x1
+        access(all) contract Test {
+			access(all) entitlement E
+			access(all) entitlement F
+			access(all) entitlement G
+
+			access(all) entitlement mapping M {
+				include Upstream.M
+
+				E -> FurtherUpstream.Z
+				E -> G
+				F -> Upstream.C
+				Upstream.C -> FurtherUpstream.X
+			}
+
+			access(all) struct S {
+				access(M) fun performMap(): auth(M) &Int {
+					return &1
+				}
+			} 
+        }
+    `))
+
+	script := []byte(`
+        import Test from 0x1
+        import Upstream from 0x1
+		import FurtherUpstream from 0x1
+
+        access(all) fun main() {
+            let ref1 = &Test.S() as auth(FurtherUpstream.X, Upstream.C, Test.E) &Test.S
+
+			assert([ref1.performMap()].getType() == 
+			Type<[auth(
+				// from map of FurtherUpstream.X 
+				FurtherUpstream.Y, 
+				Upstream.B, 
+				// from map of Upstream.C
+				FurtherUpstream.X, 
+				// from map of Test.E 
+				FurtherUpstream.Z,
+				Test.G
+			) &Int]>(), message: "test 1 failed")
+
+			let ref2 = &Test.S() as auth(FurtherUpstream.Y, Upstream.A, Test.F) &Test.S
+			assert([ref2.performMap()].getType() == 
+				Type<[auth(
+					// from map of FurtherUpstream.Y 
+					FurtherUpstream.Z, 
+					// from map of Upstream.A
+					FurtherUpstream.Y,
+					// from map of Test.F 
+					Upstream.C
+				) &Int]>(), message: "test 2 failed")
+
+			let ref3 = &Test.S() as auth(FurtherUpstream.Z, Upstream.B, Test.G) &Test.S
+          	assert([ref3.performMap()].getType() == Type<[&Int]>(), message: "test 3 failed")
+        }
+     `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log:     func(message string) {},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: furtherUpstreamDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: upstreamDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: testDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+}
