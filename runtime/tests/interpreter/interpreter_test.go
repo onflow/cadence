@@ -4702,7 +4702,6 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredIntValueFromInt64(23),
@@ -5376,7 +5375,6 @@ func TestInterpretArrayAppend(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5407,7 +5405,6 @@ func TestInterpretArrayAppendBound(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5437,7 +5434,6 @@ func TestInterpretArrayAppendAll(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5468,7 +5464,6 @@ func TestInterpretArrayAppendAllBound(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5497,7 +5492,6 @@ func TestInterpretArrayConcat(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5527,7 +5521,6 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5557,7 +5550,6 @@ func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5629,7 +5621,6 @@ func TestInterpretArrayInsert(t *testing.T) {
 			AssertValueSlicesEqual(
 				t,
 				inter,
-
 				testCase.expectedValues,
 				ArrayElements(inter, actualArray.(*interpreter.ArrayValue)),
 			)
@@ -5692,7 +5683,6 @@ func TestInterpretArrayRemove(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(3),
@@ -5763,7 +5753,6 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(3),
@@ -5825,7 +5814,6 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -6154,7 +6142,6 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -6228,7 +6215,6 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredStringValue("def"),
@@ -7597,7 +7583,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			AssertValueSlicesEqual(
 				t,
 				inter,
-
 				expectedEvents,
 				actualEvents,
 			)
@@ -8845,7 +8830,6 @@ func TestInterpretHexDecode(t *testing.T) {
 		AssertValueSlicesEqual(
 			t,
 			inter,
-
 			expected,
 			ArrayElements(inter, arrayValue),
 		)
@@ -8870,7 +8854,6 @@ func TestInterpretHexDecode(t *testing.T) {
 		AssertValueSlicesEqual(
 			t,
 			inter,
-
 			expected,
 			ArrayElements(inter, arrayValue),
 		)
@@ -10053,12 +10036,13 @@ func TestInterpretArrayReverse(t *testing.T) {
 
 			return res
 		}
-		fun originalsa(): [Int] {		
+
+		fun originalsa(): [Int] {
 			let res: [Int] = [];
 			for s in sa {
 				res.append(s.test)
 			}
-		
+
 			return res
 		}
 
@@ -10072,12 +10056,13 @@ func TestInterpretArrayReverse(t *testing.T) {
 
 			return res
 		}
-		fun originalsa_fixed(): [Int] {		
+
+		fun originalsa_fixed(): [Int] {
 			let res: [Int] = [];
 			for s in sa_fixed {
 				res.append(s.test)
 			}
-		
+
 			return res
 		}
 	`)
