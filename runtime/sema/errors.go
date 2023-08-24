@@ -4382,13 +4382,6 @@ func (e *InvalidEntitlementMappingInclusionError) Error() string {
 	)
 }
 
-func (e *InvalidEntitlementMappingInclusionError) StartPosition() ast.Position {
-	return e.StartPos
-}
-
-func (e *InvalidEntitlementMappingInclusionError) EndPosition(common.MemoryGauge) ast.Position {
-	return e.EndPos
-}
 
 // DuplicateEntitlementMappingInclusionError
 type DuplicateEntitlementMappingInclusionError struct {
@@ -4412,13 +4405,6 @@ func (e *DuplicateEntitlementMappingInclusionError) Error() string {
 	)
 }
 
-func (e *DuplicateEntitlementMappingInclusionError) StartPosition() ast.Position {
-	return e.StartPos
-}
-
-func (e *DuplicateEntitlementMappingInclusionError) EndPosition(common.MemoryGauge) ast.Position {
-	return e.EndPos
-}
 
 // CyclicEntitlementMappingError
 type CyclicEntitlementMappingError struct {
@@ -4440,14 +4426,6 @@ func (e *CyclicEntitlementMappingError) Error() string {
 		e.IncludedType.QualifiedIdentifier(),
 		e.Map.QualifiedIdentifier(),
 	)
-}
-
-func (e *CyclicEntitlementMappingError) StartPosition() ast.Position {
-	return e.StartPos
-}
-
-func (e *CyclicEntitlementMappingError) EndPosition(common.MemoryGauge) ast.Position {
-	return e.EndPos
 }
 
 type DuplicateEntitlementRequirementError struct {
