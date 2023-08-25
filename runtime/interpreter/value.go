@@ -400,7 +400,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		var typeID string
 		staticType := v.Type
 		if staticType != nil {
-			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
+			typeID = string(staticType.ID())
 		}
 		memoryUsage := common.MemoryUsage{
 			Kind:   common.MemoryKindStringValue,
