@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/pretty"
 )
@@ -2990,10 +2991,11 @@ func (e *InvalidOptionalChainingError) Error() string {
 // InvalidAccessError
 
 type InvalidAccessError struct {
-	Name              string
-	RestrictingAccess Access
-	PossessedAccess   Access
-	DeclarationKind   common.DeclarationKind
+	Name                string
+	RestrictingAccess   Access
+	PossessedAccess     Access
+	DeclarationKind     common.DeclarationKind
+	suggestEntitlements bool
 	ast.Range
 }
 
@@ -3024,6 +3026,71 @@ func (e *InvalidAccessError) Error() string {
 		e.RestrictingAccess.Description(),
 		possessedDescription,
 	)
+}
+
+// When e.PossessedAccess is a conjunctive entitlement set, we can suggest
+// which additional entitlements it would need to be given in order to have
+// e.RequiredAccess.
+func (e *InvalidAccessError) SecondaryError() string {
+	if !e.suggestEntitlements || e.PossessedAccess == nil || e.RestrictingAccess == nil {
+		return ""
+	}
+	possessedEntitlements, possessedOk := e.PossessedAccess.(EntitlementSetAccess)
+	requiredEntitlements, requiredOk := e.RestrictingAccess.(EntitlementSetAccess)
+	if !possessedOk && e.PossessedAccess.Equal(UnauthorizedAccess) {
+		possessedOk = true
+		// for this error reporting, model UnauthorizedAccess as an empty entitlement set
+		possessedEntitlements = NewEntitlementSetAccess(nil, Conjunction)
+	}
+	if !possessedOk || !requiredOk || possessedEntitlements.SetKind != Conjunction {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	enumerateEntitlements := func(len int, separator string) func(index int, key *EntitlementType, _ struct{}) {
+		return func(index int, key *EntitlementType, _ struct{}) {
+			fmt.Fprintf(&sb, "`%s`", key.QualifiedString())
+			if index < len-2 {
+				fmt.Fprint(&sb, ", ")
+			} else if index < len-1 {
+				if len > 2 {
+					fmt.Fprint(&sb, ",")
+				}
+				fmt.Fprintf(&sb, " %s ", separator)
+			}
+		}
+	}
+
+	switch requiredEntitlements.SetKind {
+	case Conjunction:
+		// when both `possessed` and `required` are conjunctions, the missing set is simple set difference:
+		// `missing` = `required` - `possessed`, and `missing` should be added to `possessed` to make `required`
+		missingEntitlements := orderedmap.New[EntitlementOrderedSet](0)
+		requiredEntitlements.Entitlements.Foreach(func(key *EntitlementType, _ struct{}) {
+			if !possessedEntitlements.Entitlements.Contains(key) {
+				missingEntitlements.Set(key, struct{}{})
+			}
+		})
+		missingLen := missingEntitlements.Len()
+		if missingLen == 1 {
+			fmt.Fprint(&sb, "reference needs entitlement ")
+			fmt.Fprintf(&sb, "`%s`", missingEntitlements.Newest().Key.QualifiedString())
+		} else {
+			fmt.Fprint(&sb, "reference needs all of entitlements ")
+			missingEntitlements.ForeachWithIndex(enumerateEntitlements(missingLen, "and"))
+		}
+	case Disjunction:
+		// when both `required` is a disjunction, we know `possessed` has none of the entitlements in it:
+		// suggest adding one of those entitlements
+		fmt.Fprint(&sb, "reference needs one of entitlements ")
+		requiredEntitlementsSet := requiredEntitlements.Entitlements
+		requiredLen := requiredEntitlementsSet.Len()
+		// singleton-1 sets are always conjunctions
+		requiredEntitlementsSet.ForeachWithIndex(enumerateEntitlements(requiredLen, "or"))
+	}
+
+	return sb.String()
 }
 
 // InvalidAssignmentAccessError
