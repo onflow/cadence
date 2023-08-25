@@ -2358,7 +2358,7 @@ func (interpreter *Interpreter) WriteStored(
 	return accountStorage.WriteValue(interpreter, key, value)
 }
 
-// Get the provided int64 value in the required staticType.
+// Get the provided int8 value in the required staticType.
 // Note: Assumes that the provided value fits within the constraints of the staticType.
 func GetValueForIntegerType(value int8, staticType StaticType) IntegerValue {
 	typedCache, typedOk := cachedIntegerValues[staticType]
