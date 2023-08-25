@@ -3612,7 +3612,7 @@ func TestSimpleTypes(t *testing.T) {
 		}
 
 		cadenceType := cadence.PrimitiveType(ty)
-		if !encodeAsSimpleType(cadenceType) {
+		if !canEncodeAsSimpleType(cadenceType) {
 			continue
 		}
 

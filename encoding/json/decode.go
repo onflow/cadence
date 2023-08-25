@@ -1183,7 +1183,7 @@ var simpleTypes = func() map[string]cadence.Type {
 		}
 
 		cadenceType := cadence.PrimitiveType(ty)
-		if !encodeAsSimpleType(cadenceType) {
+		if !canEncodeAsSimpleType(cadenceType) {
 			continue
 		}
 
@@ -1202,7 +1202,7 @@ var simpleTypes = func() map[string]cadence.Type {
 	return typeMap
 }()
 
-func encodeAsSimpleType(primitiveType cadence.PrimitiveType) bool {
+func canEncodeAsSimpleType(primitiveType cadence.PrimitiveType) bool {
 	return primitiveType != cadence.PrimitiveType(interpreter.PrimitiveStaticTypeCapability)
 }
 
