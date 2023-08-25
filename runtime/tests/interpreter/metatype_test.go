@@ -458,7 +458,7 @@ func TestInterpretIsInstance(t *testing.T) {
 	}
 }
 
-func TestInterpretIsSubtype(t *testing.T) {
+func TestInterpretMetaTypeIsSubtype(t *testing.T) {
 
 	t.Parallel()
 
@@ -823,4 +823,25 @@ func TestInterpretGetType(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestInterpretMetaTypeHashInput(t *testing.T) {
+
+	t.Parallel()
+
+	// TypeValue.HashInput should not load the program
+
+	inter := parseCheckAndInterpret(t, `
+           fun test(_ type: Type) {
+               {type: 1}
+           }
+        `)
+
+	location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+	staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+	typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+	_, err := inter.Invoke("test", typeValue)
+	require.NoError(t, err)
+
 }

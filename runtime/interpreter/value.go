@@ -518,7 +518,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
 func (v TypeValue) HashInput(interpreter *Interpreter, _ LocationRange, scratch []byte) []byte {
-	typeID := interpreter.MustConvertStaticToSemaType(v.Type).ID()
+	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)
 	var buf []byte
