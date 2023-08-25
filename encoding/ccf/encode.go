@@ -1452,9 +1452,7 @@ func (e *Encoder) encodeDictTypeValue(typ *cadence.DictionaryType, visited ccfTy
 // inclusiverange-type-value =
 //
 //	; cbor-tag-inclusiverange-type-value
-//	#6.194([
-//	    element-type: type-value
-//	])
+//	#6.194(type-value)
 func (e *Encoder) encodeInclusiveRangeTypeValue(typ *cadence.InclusiveRangeType, visited ccfTypeIDByCadenceType) error {
 	rawTagNum := []byte{0xd8, CBORTagInclusiveRangeTypeValue}
 	return e.encodeInclusiveRangeTypeWithRawTag(

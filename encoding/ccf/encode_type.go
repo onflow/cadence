@@ -304,10 +304,8 @@ func (e *Encoder) encodeDictTypeWithRawTag(
 // language=CDDL
 // inclusiverange-type =
 //
-//	; cbor-tag-inclusiverange-type
-//	#6.145([
-//	    element-type: inline-type
-//	])
+// ; cbor-tag-inclusiverange-type
+// #6.145(inline-type)
 func (e *Encoder) encodeInclusiveRangeType(
 	typ *cadence.InclusiveRangeType,
 	tids ccfTypeIDByCadenceType,
@@ -335,13 +333,7 @@ func (e *Encoder) encodeInclusiveRangeTypeWithRawTag(
 		return err
 	}
 
-	// Encode array head of length 1.
-	err = e.enc.EncodeArrayHead(1)
-	if err != nil {
-		return err
-	}
-
-	// element 0: element type with given encodeTypeFn
+	// Encode element type with given encodeTypeFn
 	return encodeTypeFn(typ.ElementType, tids)
 }
 

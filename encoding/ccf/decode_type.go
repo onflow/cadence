@@ -445,28 +445,18 @@ func (d *Decoder) decodeDictType(
 // inclusiverange-type =
 //
 //	; cbor-tag-inclusiverange-type
-//	#6.145([
-//	    element-type: inline-type
-//	])
+//	#6.145(inline-type)
 //
 // inclusiverange-type-value =
 //
 //	; cbor-tag-inclusiverange-type-value
-//	#6.194([
-//	    element-type: type-value
-//	])
+//	#6.194(type-value)
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
 func (d *Decoder) decodeInclusiveRangeType(
 	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
-	// Decode array head of length 1.
-	err := decodeCBORArrayWithKnownSize(d.dec, 1)
-	if err != nil {
-		return nil, err
-	}
-
 	// element 0: element type (inline-type or type-value)
 	elementType, err := decodeTypeFn(types)
 	if err != nil {

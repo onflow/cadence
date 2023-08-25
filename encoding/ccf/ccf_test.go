@@ -5718,7 +5718,7 @@ func TestEncodeInclusiveRange(t *testing.T) {
 			// {"type":"InclusiveRange<Int256>","value":[{"type":"Int256","value":"10"},{"type":"Int256","value":"20"},{"type":"Int256","value":"5"}]}
 			//
 			// language=edn, format=ccf
-			// 130([145([137(10)]), [10, 20, 5]])
+			// 130([145(137(10)), [10, 20, 5]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -5728,8 +5728,6 @@ func TestEncodeInclusiveRange(t *testing.T) {
 			// type (InclusiveRange<Int256>)
 			// tag
 			0xd8, ccf.CBORTagInclusiveRangeType,
-			// array, 1 item follows
-			0x81,
 			// tag
 			0xd8, ccf.CBORTagSimpleType,
 			// Int256 type ID (10)
@@ -5772,7 +5770,7 @@ func TestEncodeInclusiveRange(t *testing.T) {
 			// {"type":"InclusiveRange<Int8>","value":[{"type":"Int8","value":"10"},{"type":"Int8","value":"20"},{"type":"Int8","value":"5"}]}
 			//
 			// language=edn, format=ccf
-			// 130([145([137(5)]), [10, 20, 5]])
+			// 130([145(137(5)), [10, 20, 5]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -5782,8 +5780,6 @@ func TestEncodeInclusiveRange(t *testing.T) {
 			// type (InclusiveRange<Int8>)
 			// tag
 			0xd8, ccf.CBORTagInclusiveRangeType,
-			// array, 1 item follows
-			0x81,
 			// tag
 			0xd8, ccf.CBORTagSimpleType,
 			// Int8 type ID (5)
@@ -8219,8 +8215,6 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagInclusiveRangeTypeValue,
-				// array, 1 element follows
-				0x81,
 				// tag
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type (4)
@@ -14146,7 +14140,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			name: "nil element type in inclusiverange type",
 			data: []byte{
 				// language=edn, format=ccf
-				// 130([145([nil]), [10, 20, 5]])
+				// 130([145(nil), [10, 20, 5]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -14156,8 +14150,6 @@ func TestDecodeInvalidData(t *testing.T) {
 				// type (InclusiveRange<nil>)
 				// tag
 				0xd8, ccf.CBORTagInclusiveRangeType,
-				// array, 1 item follow
-				0x81,
 				// null
 				0xf6,
 				// array data without inlined type definition
@@ -14187,7 +14179,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			name: "invalid array head in inclusiverange value",
 			data: []byte{
 				// language=edn, format=ccf
-				// 130([145([4]), [10, 20, 5]])
+				// 130([145(4), [10, 20, 5]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -14197,8 +14189,6 @@ func TestDecodeInvalidData(t *testing.T) {
 				// type (InclusiveRange<Int>)
 				// tag
 				0xd8, ccf.CBORTagInclusiveRangeType,
-				// array, 1 item follow
-				0x81,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// Int type ID (4)
@@ -14229,7 +14219,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			name: "incorrect member count (2 instead of 3) in inclusiverange value",
 			data: []byte{
 				// language=edn, format=ccf
-				// 130([145([4]), [10, 20, 5]])
+				// 130([145(4), [10, 20, 5]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -14239,8 +14229,6 @@ func TestDecodeInvalidData(t *testing.T) {
 				// type (InclusiveRange<Int>)
 				// tag
 				0xd8, ccf.CBORTagInclusiveRangeType,
-				// array, 1 item follow
-				0x81,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// Int type ID (4)
@@ -14266,7 +14254,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			name: "invalid start value in inclusiverange value",
 			data: []byte{
 				// language=edn, format=ccf
-				// 130([145([5]), [10, 20, 5]])
+				// 130([145(5), [10, 20, 5]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -14276,8 +14264,6 @@ func TestDecodeInvalidData(t *testing.T) {
 				// type (InclusiveRange<Int8>)
 				// tag
 				0xd8, ccf.CBORTagInclusiveRangeType,
-				// array, 1 item follow
-				0x81,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// Int8 type ID (5)
@@ -14301,7 +14287,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			name: "invalid end value in inclusiverange value",
 			data: []byte{
 				// language=edn, format=ccf
-				// 130([145([5]), [10, 20, 5]])
+				// 130([145(5), [10, 20, 5]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -14311,8 +14297,6 @@ func TestDecodeInvalidData(t *testing.T) {
 				// type (InclusiveRange<Int8>)
 				// tag
 				0xd8, ccf.CBORTagInclusiveRangeType,
-				// array, 1 item follow
-				0x81,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// Int8 type ID (5)
@@ -14336,7 +14320,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			name: "invalid step value in inclusiverange value",
 			data: []byte{
 				// language=edn, format=ccf
-				// 130([145([5]), [10, 20, 5]])
+				// 130([145(5), [10, 20, 5]])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -14346,8 +14330,6 @@ func TestDecodeInvalidData(t *testing.T) {
 				// type (InclusiveRange<Int8>)
 				// tag
 				0xd8, ccf.CBORTagInclusiveRangeType,
-				// array, 1 item follow
-				0x81,
 				// tag
 				0xd8, ccf.CBORTagSimpleType,
 				// Int8 type ID (5)
@@ -14564,31 +14546,6 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "more than one element type in inclusiverange type value",
-			data: []byte{
-				// language=edn, format=ccf
-				// 130([137(41), 194([null, null])])
-				//
-				// language=cbor, format=ccf
-				// tag
-				0xd8, ccf.CBORTagTypeAndValue,
-				// array, 2 elements follow
-				0x82,
-				// tag
-				0xd8, ccf.CBORTagSimpleType,
-				// Meta type ID (41)
-				0x18, 0x29,
-				// tag
-				0xd8, ccf.CBORTagInclusiveRangeTypeValue,
-				// array, 2 elements follow, expected one
-				0x82,
-				// null
-				0xf6,
-				// null
-				0xf6,
-			},
-		},
-		{
 			name: "nil element type in inclusiverange type value",
 			data: []byte{
 				// language=edn, format=ccf
@@ -14605,8 +14562,6 @@ func TestDecodeInvalidData(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagInclusiveRangeTypeValue,
-				// array, 1 element follow
-				0x81,
 				// null
 				0xf6,
 			},
