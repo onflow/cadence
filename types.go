@@ -1087,7 +1087,7 @@ func NewMeteredInclusiveRangeType(
 func (*InclusiveRangeType) isType() {}
 
 func (t *InclusiveRangeType) ID() string {
-	if len(t.typeID) == 0 {
+	if t.typeID == "" {
 		t.typeID = fmt.Sprintf(
 			"InclusiveRange<%s>",
 			t.ElementType.ID(),
