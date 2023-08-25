@@ -983,7 +983,7 @@ func encodeAndSortKeyValuePairs(
 
 // encodeInclusiveRange encodes cadence.InclusiveRange as
 // language=CDDL
-// inclusiverange-value = [* (key: value, value: value)]
+// inclusiverange-value = [3*3 (key: value, value: value)]
 func (e *Encoder) encodeInclusiveRange(v cadence.InclusiveRange, tids ccfTypeIDByCadenceType) error {
 	staticElementType := v.InclusiveRangeType.ElementType
 
