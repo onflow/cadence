@@ -3998,16 +3998,8 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 					"S",
 				),
 				Restrictions: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "I1",
-						TypeID:              "S.test.I1",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "I2",
-						TypeID:              "S.test.I2",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I1"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I2"),
 				},
 			},
 		}
@@ -4711,16 +4703,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 						"S",
 					),
 					Restrictions: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "I1",
-							TypeID:              "S.test.I1",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "I2",
-							TypeID:              "S.test.I2",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I1"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I2"),
 					},
 				},
 			},

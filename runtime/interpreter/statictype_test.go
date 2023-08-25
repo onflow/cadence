@@ -699,27 +699,15 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 			(&RestrictedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Restrictions: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&RestrictedStaticType{
 					Type: PrimitiveStaticTypeInt,
 					Restrictions: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
 					},
 				},
 			),
@@ -751,27 +739,15 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 			(&RestrictedStaticType{
 				Type: PrimitiveStaticTypeString,
 				Restrictions: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&RestrictedStaticType{
 					Type: PrimitiveStaticTypeInt,
 					Restrictions: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
 					},
 				},
 			),
@@ -786,23 +762,14 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 			(&RestrictedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Restrictions: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&RestrictedStaticType{
 					Type: PrimitiveStaticTypeInt,
 					Restrictions: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 					},
 				},
 			),
@@ -817,25 +784,14 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 			(&RestrictedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Restrictions: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
 				},
 			}).Equal(
 				&RestrictedStaticType{
 					Type: PrimitiveStaticTypeInt,
 					Restrictions: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-							TypeID:              "S.test.X",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-							TypeID:              "S.test.Y",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
 					},
 				},
 			),
@@ -850,31 +806,15 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 			(&RestrictedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Restrictions: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-						TypeID:              "S.test.X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-						TypeID:              "S.test.Y",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&RestrictedStaticType{
 					Type: PrimitiveStaticTypeInt,
 					Restrictions: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-							TypeID:              "S.test.X",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Z",
-							TypeID:              "S.test.Z",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Z"),
 					},
 				},
 			),
@@ -889,16 +829,8 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 			(&RestrictedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Restrictions: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-						TypeID:              "S.test.X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-						TypeID:              "S.test.Y",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				ReferenceStaticType{

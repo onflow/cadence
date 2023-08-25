@@ -539,11 +539,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 			Type: &interpreter.RestrictedStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "A"),
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-						TypeID:              "S.test.R",
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				},
 			},
 		},
@@ -555,11 +551,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 			Type: &interpreter.RestrictedStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "B"),
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "S",
-						Location:            utils.TestLocation,
-						TypeID:              "S.test.S",
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 				},
 			},
 		},
@@ -571,11 +563,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 			Type: &interpreter.RestrictedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyResource,
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-						TypeID:              "S.test.R",
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				},
 			},
 		},
@@ -587,11 +575,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 			Type: &interpreter.RestrictedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "S",
-						Location:            utils.TestLocation,
-						TypeID:              "S.test.S",
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 				},
 			},
 		},

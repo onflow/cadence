@@ -2050,10 +2050,7 @@ func TestExportTypeValue(t *testing.T) {
 			Type: &interpreter.RestrictedStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						Location:            TestLocation,
-						QualifiedIdentifier: "SI",
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "SI"),
 				},
 			},
 		}
