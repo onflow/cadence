@@ -753,3 +753,48 @@ func TestInterpretCapabilityType(t *testing.T) {
 		inter.Globals.Get("e").GetValue(),
 	)
 }
+
+func TestInterpretInclusiveRangeType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		let a = InclusiveRangeType(Type<Int>())!
+		let b = InclusiveRangeType(Type<&Int>())
+
+		resource R {}
+		let c = InclusiveRangeType(Type<@R>())
+		let d = InclusiveRangeType(Type<String>())
+
+		let e = InclusiveRangeType(Type<Int>())!
+	`)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.InclusiveRangeStaticType{
+				ElementType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		inter.Globals.Get("a").GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("b").GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("c").GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("d").GetValue(),
+	)
+
+	assert.Equal(t,
+		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("e").GetValue(),
+	)
+}
