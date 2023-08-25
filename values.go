@@ -2113,18 +2113,19 @@ func (v InclusiveRange) String() string {
 	}
 
 	if v.fields == nil {
+		elementType := v.InclusiveRangeType.ElementType
 		v.fields = []Field{
 			{
 				Identifier: sema.InclusiveRangeTypeStartFieldName,
-				Type:       v.InclusiveRangeType.ElementType,
+				Type:       elementType,
 			},
 			{
 				Identifier: sema.InclusiveRangeTypeEndFieldName,
-				Type:       v.InclusiveRangeType.ElementType,
+				Type:       velementType,
 			},
 			{
 				Identifier: sema.InclusiveRangeTypeStepFieldName,
-				Type:       v.InclusiveRangeType.ElementType,
+				Type:       elementType,
 			},
 		}
 	}
