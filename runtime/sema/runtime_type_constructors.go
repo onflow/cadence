@@ -24,6 +24,8 @@ type RuntimeTypeConstructor struct {
 	DocString string
 }
 
+const OptionalTypeFunctionName = "OptionalType"
+
 var OptionalTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
@@ -35,6 +37,8 @@ var OptionalTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
 
+const VariableSizedArrayTypeFunctionName = "VariableSizedArrayType"
+
 var VariableSizedArrayTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
@@ -45,6 +49,8 @@ var VariableSizedArrayTypeFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
+
+const ConstantSizedArrayTypeFunctionName = "ConstantSizedArrayType"
 
 var ConstantSizedArrayTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
@@ -59,6 +65,8 @@ var ConstantSizedArrayTypeFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
+
+const DictionaryTypeFunctionName = "DictionaryType"
 
 var DictionaryTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
@@ -78,6 +86,8 @@ var DictionaryTypeFunctionType = &FunctionType{
 	),
 }
 
+const CompositeTypeFunctionName = "CompositeType"
+
 var CompositeTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
@@ -93,6 +103,8 @@ var CompositeTypeFunctionType = &FunctionType{
 	),
 }
 
+const InterfaceTypeFunctionName = "InterfaceType"
+
 var InterfaceTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
@@ -107,6 +119,8 @@ var InterfaceTypeFunctionType = &FunctionType{
 		},
 	),
 }
+
+const FunctionTypeFunctionName = "FunctionType"
 
 var FunctionTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
@@ -125,6 +139,8 @@ var FunctionTypeFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
+
+const RestrictedTypeFunctionName = "RestrictedType"
 
 var RestrictedTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
@@ -152,6 +168,8 @@ var RestrictedTypeFunctionType = &FunctionType{
 	),
 }
 
+const ReferenceTypeFunctionName = "ReferenceType"
+
 var ReferenceTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
 		{
@@ -165,6 +183,8 @@ var ReferenceTypeFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
+
+const CapabilityTypeFunctionName = "CapabilityType"
 
 var CapabilityTypeFunctionType = &FunctionType{
 	Parameters: []Parameter{
@@ -183,65 +203,65 @@ var CapabilityTypeFunctionType = &FunctionType{
 
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
-		Name:      "OptionalType",
+		Name:      OptionalTypeFunctionName,
 		Value:     OptionalTypeFunctionType,
 		DocString: "Creates a run-time type representing an optional version of the given run-time type.",
 	},
 
 	{
-		Name:      "VariableSizedArrayType",
+		Name:      VariableSizedArrayTypeFunctionName,
 		Value:     VariableSizedArrayTypeFunctionType,
 		DocString: "Creates a run-time type representing a variable-sized array type of the given run-time type.",
 	},
 
 	{
-		Name:      "ConstantSizedArrayType",
+		Name:      ConstantSizedArrayTypeFunctionName,
 		Value:     ConstantSizedArrayTypeFunctionType,
-		DocString: "Creates a run-time type representing a constant-sized array type of the given run-time type with the specifized size.",
+		DocString: "Creates a run-time type representing a constant-sized array type of the given run-time type with the specified size.",
 	},
 
 	{
-		Name:  "DictionaryType",
+		Name:  DictionaryTypeFunctionName,
 		Value: DictionaryTypeFunctionType,
 		DocString: `Creates a run-time type representing a dictionary type of the given run-time key and value types. 
 		Returns nil if the key type is not a valid dictionary key.`,
 	},
 
 	{
-		Name:  "CompositeType",
+		Name:  CompositeTypeFunctionName,
 		Value: CompositeTypeFunctionType,
 		DocString: `Creates a run-time type representing the composite type associated with the given type identifier. 
 		Returns nil if the identifier does not correspond to any composite type.`,
 	},
 
 	{
-		Name:  "InterfaceType",
+		Name:  InterfaceTypeFunctionName,
 		Value: InterfaceTypeFunctionType,
 		DocString: `Creates a run-time type representing the interface type associated with the given type identifier. 
 		Returns nil if the identifier does not correspond to any interface type.`,
 	},
 
 	{
-		Name:      "FunctionType",
+		Name:      FunctionTypeFunctionName,
 		Value:     FunctionTypeFunctionType,
 		DocString: "Creates a run-time type representing a function type associated with the given parameters and return type.",
 	},
 
 	{
-		Name:      "ReferenceType",
+		Name:      ReferenceTypeFunctionName,
 		Value:     ReferenceTypeFunctionType,
 		DocString: "Creates a run-time type representing a reference type of the given type, with authorization provided by the first argument.",
 	},
 
 	{
-		Name:  "RestrictedType",
+		Name:  RestrictedTypeFunctionName,
 		Value: RestrictedTypeFunctionType,
 		DocString: `Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument. 
 		Returns nil if the restriction is not valid.`,
 	},
 
 	{
-		Name:      "CapabilityType",
+		Name:      CapabilityTypeFunctionName,
 		Value:     CapabilityTypeFunctionType,
 		DocString: "Creates a run-time type representing a capability type of the given reference type. Returns nil if the type is not a reference.",
 	},
