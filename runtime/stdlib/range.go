@@ -93,7 +93,7 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 
 		startStaticType := start.StaticType(inter)
 		endStaticType := end.StaticType(inter)
-		if startStaticType != endStaticType {
+		if !startStaticType.Equal(endStaticType) {
 			panic(interpreter.InclusiveRangeConstructionError{
 				LocationRange: locationRange,
 				Message: fmt.Sprintf(
