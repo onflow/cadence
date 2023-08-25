@@ -5423,7 +5423,7 @@ func (r *InclusiveRangeType) initializeMemberResolvers() {
 						memoryGauge,
 						r,
 						identifier,
-						r.ElementType(false),
+						r.MemberType,
 						inclusiveRangeTypeStartFieldDocString,
 					)
 				},
@@ -5435,7 +5435,7 @@ func (r *InclusiveRangeType) initializeMemberResolvers() {
 						memoryGauge,
 						r,
 						identifier,
-						r.ElementType(false),
+						r.MemberType,
 						inclusiveRangeTypeEndFieldDocString,
 					)
 				},
@@ -5447,7 +5447,7 @@ func (r *InclusiveRangeType) initializeMemberResolvers() {
 						memoryGauge,
 						r,
 						identifier,
-						r.ElementType(false),
+						r.MemberType,
 						inclusiveRangeTypeStepFieldDocString,
 					)
 				},
@@ -5455,7 +5455,7 @@ func (r *InclusiveRangeType) initializeMemberResolvers() {
 			InclusiveRangeTypeContainsFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
-					elementType := r.ElementType(false)
+					elementType := r.MemberType
 
 					return NewPublicFunctionMember(
 						memoryGauge,
