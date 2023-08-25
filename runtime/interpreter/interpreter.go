@@ -261,7 +261,6 @@ var _ ast.ExpressionVisitor[Value] = &Interpreter{}
 // It is reused across all interpreters.
 var BaseActivation *VariableActivation
 
-// Question: Does it need a mutex?
 var cachedIntegerValues map[StaticType]map[int8]IntegerValue
 
 func init() {
