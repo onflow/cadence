@@ -2121,7 +2121,7 @@ func (v InclusiveRange) String() string {
 			},
 			{
 				Identifier: sema.InclusiveRangeTypeEndFieldName,
-				Type:       velementType,
+				Type:       elementType,
 			},
 			{
 				Identifier: sema.InclusiveRangeTypeStepFieldName,
