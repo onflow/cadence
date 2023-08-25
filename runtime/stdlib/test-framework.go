@@ -73,6 +73,8 @@ type TestFramework interface {
 	Reset(uint64)
 
 	MoveTime(int64)
+
+	NewEmulatorBackend() TestFramework
 }
 
 type ScriptResult struct {

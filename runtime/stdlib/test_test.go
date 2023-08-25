@@ -2048,18 +2048,20 @@ func TestBlockchain(t *testing.T) {
 	t.Run("all events, empty", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-		    import Test
+		const script = `
+            import Test
 
-		    pub fun test(): [AnyStruct] {
-		        var blockchain = Test.newEmulatorBlockchain()
-		        return blockchain.events()
-		    }
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let events = blockchain.events()
+
+                Test.expect(events, Test.beEmpty())
+            }
 		`
 
 		eventsInvoked := false
 
-		testFramework := &mockedTestFramework{
+		emulatorBackend := &mockedTestFramework{
 			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
 				eventsInvoked = true
 				assert.Nil(t, eventType)
@@ -2069,6 +2071,11 @@ func TestBlockchain(t *testing.T) {
 					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
 					common.Address{},
 				)
+			},
+		}
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() TestFramework {
+				return emulatorBackend
 			},
 		}
 
@@ -2084,25 +2091,27 @@ func TestBlockchain(t *testing.T) {
 	t.Run("typed events, empty", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-		    import Test
+		const script = `
+            import Test
 
-		    pub fun test(): [AnyStruct] {
-		        var blockchain = Test.newEmulatorBlockchain()
+            pub struct Foo {}
 
-		        // 'Foo' is not an event-type.
-		        // But we just need to test the API, so it doesn't really matter.
-		        var typ = Type<Foo>()
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
 
-		        return blockchain.eventsOfType(typ)
-		    }
+                // 'Foo' is not an event-type.
+                // But we just need to test the API, so it doesn't really matter.
+                let typ = Type<Foo>()
 
-		    pub struct Foo {}
+                let events = blockchain.eventsOfType(typ)
+
+                Test.expect(events, Test.beEmpty())
+            }
 		`
 
 		eventsInvoked := false
 
-		testFramework := &mockedTestFramework{
+		emulatorBackend := &mockedTestFramework{
 			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
 				eventsInvoked = true
 				assert.NotNil(t, eventType)
@@ -2117,6 +2126,12 @@ func TestBlockchain(t *testing.T) {
 					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
 					common.Address{},
 				)
+			},
+		}
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() TestFramework {
+				return emulatorBackend
 			},
 		}
 
@@ -2143,10 +2158,16 @@ func TestBlockchain(t *testing.T) {
 
 		resetInvoked := false
 
-		testFramework := &mockedTestFramework{
+		emulatorBackend := &mockedTestFramework{
 			reset: func(height uint64) {
 				resetInvoked = true
 				assert.Equal(t, uint64(5), height)
+			},
+		}
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() TestFramework {
+				return emulatorBackend
 			},
 		}
 
@@ -2173,9 +2194,15 @@ func TestBlockchain(t *testing.T) {
 
 		resetInvoked := false
 
-		testFramework := &mockedTestFramework{
+		emulatorBackend := &mockedTestFramework{
 			reset: func(height uint64) {
 				resetInvoked = true
+			},
+		}
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() TestFramework {
+				return emulatorBackend
 			},
 		}
 
@@ -2202,10 +2229,16 @@ func TestBlockchain(t *testing.T) {
 
 		moveTimeInvoked := false
 
-		testFramework := &mockedTestFramework{
+		emulatorBackend := &mockedTestFramework{
 			moveTime: func(timeDelta int64) {
 				moveTimeInvoked = true
 				assert.Equal(t, int64(3024000), timeDelta)
+			},
+		}
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() TestFramework {
+				return emulatorBackend
 			},
 		}
 
@@ -2235,10 +2268,16 @@ func TestBlockchain(t *testing.T) {
 
 		moveTimeInvoked := false
 
-		testFramework := &mockedTestFramework{
+		emulatorBackend := &mockedTestFramework{
 			moveTime: func(timeDelta int64) {
 				moveTimeInvoked = true
 				assert.Equal(t, int64(-3024000), timeDelta)
+			},
+		}
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() TestFramework {
+				return emulatorBackend
 			},
 		}
 
@@ -2277,6 +2316,37 @@ func TestBlockchain(t *testing.T) {
 		assert.False(t, moveTimeInvoked)
 	})
 
+	t.Run("newEmulatorBackend", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                Test.assertEqual(Type<Test.Blockchain>(), blockchain.getType())
+            }
+		`
+
+		newEmulatorBackendInvoked := false
+
+		emulatorBackend := &mockedTestFramework{}
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() TestFramework {
+				newEmulatorBackendInvoked = true
+				return emulatorBackend
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, newEmulatorBackendInvoked)
+	})
+
 	// TODO: Add more tests for the remaining functions.
 }
 
@@ -2295,6 +2365,7 @@ type mockedTestFramework struct {
 	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
 	reset              func(uint64)
 	moveTime           func(int64)
+	newEmulatorBackend func() TestFramework
 }
 
 var _ TestFramework = &mockedTestFramework{}
@@ -2428,4 +2499,12 @@ func (m mockedTestFramework) MoveTime(timeDelta int64) {
 	}
 
 	m.moveTime(timeDelta)
+}
+
+func (m mockedTestFramework) NewEmulatorBackend() TestFramework {
+	if m.newEmulatorBackend == nil {
+		panic("'NewEmulatorBackend' is not implemented")
+	}
+
+	return m.newEmulatorBackend()
 }
