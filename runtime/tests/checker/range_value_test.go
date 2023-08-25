@@ -34,7 +34,7 @@ type inclusiveRangeConstructionTest struct {
 	s, e, step int64
 }
 
-func TestInclusiveRangeConstructionValid(t *testing.T) {
+func TestCheckInclusiveRangeConstructionValid(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
