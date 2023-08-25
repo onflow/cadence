@@ -205,12 +205,12 @@ func (t InterfaceStaticType) MeteredString(memoryGauge common.MemoryGauge) strin
 }
 
 func (t InterfaceStaticType) Equal(other StaticType) bool {
-	otherCompositeType, ok := other.(InterfaceStaticType)
+	otherInterfaceType, ok := other.(InterfaceStaticType)
 	if !ok {
 		return false
 	}
 
-	return otherCompositeType.TypeID == t.TypeID
+	return otherInterfaceType.TypeID == t.TypeID
 }
 
 // ArrayStaticType
