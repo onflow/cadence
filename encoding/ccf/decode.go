@@ -1323,18 +1323,10 @@ func (d *Decoder) decodeEnum(typ *cadence.EnumType, types *cadenceTypeByCCFTypeI
 //
 // ]
 func (d *Decoder) decodeInclusiveRange(typ *cadence.InclusiveRangeType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	// Decode array length.
-	n, err := d.dec.DecodeArrayHead()
+	// Decode array head of length 3.
+	err := decodeCBORArrayWithKnownSize(d.dec, 3)
 	if err != nil {
 		return nil, err
-	}
-
-	if n != 3 {
-		return nil, fmt.Errorf(
-			"encoded inclusiverange-value has %d elements (expected %d elements)",
-			n,
-			3,
-		)
 	}
 
 	elementType := typ.ElementType
