@@ -276,7 +276,7 @@ func TestCheckInclusiveRangeConstructionValid(t *testing.T) {
 	}
 }
 
-func TestInclusiveRangeConstructionInvalid(t *testing.T) {
+func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
