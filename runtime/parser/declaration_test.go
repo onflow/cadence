@@ -9226,8 +9226,8 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 							Column: 33,
 						},
 					},
-					Associations: []*ast.EntitlementMapElement{
-						{
+					Elements: []ast.EntitlementMapElement{
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "A",
@@ -9248,7 +9248,8 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 									},
 								},
 							},
-						}, {
+						},
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "C",
@@ -9314,8 +9315,8 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 							Column: 33,
 						},
 					},
-					Inclusions: []*ast.NominalType{
-						{
+					Elements: []ast.EntitlementMapElement{
+						&ast.NominalType{
 							Identifier: ast.Identifier{
 								Identifier: "Y",
 								Pos: ast.Position{
@@ -9325,18 +9326,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 								},
 							},
 						},
-						{
-							Identifier: ast.Identifier{Identifier: "X",
-								Pos: ast.Position{
-									Offset: 82,
-									Line:   5,
-									Column: 11,
-								},
-							},
-						},
-					},
-					Associations: []*ast.EntitlementMapElement{
-						{
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "A",
@@ -9357,7 +9347,8 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 									},
 								},
 							},
-						}, {
+						},
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "C",
@@ -9376,6 +9367,15 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 										Line:   4,
 										Column: 8,
 									},
+								},
+							},
+						},
+						&ast.NominalType{
+							Identifier: ast.Identifier{Identifier: "X",
+								Pos: ast.Position{
+									Offset: 82,
+									Line:   5,
+									Column: 11,
 								},
 							},
 						},
@@ -9419,8 +9419,8 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 							Column: 33,
 						},
 					},
-					Associations: []*ast.EntitlementMapElement{
-						{
+					Elements: []ast.EntitlementMapElement{
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "A",
@@ -9442,7 +9442,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 								},
 							},
 						},
-						{
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "C",

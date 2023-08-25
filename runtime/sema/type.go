@@ -7805,7 +7805,7 @@ func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
 		// maps defined elsewhere that may have small overlap.
 		includedMaps := map[*EntitlementMapType]struct{}{}
 
-		for _, inclusion := range declaration.Inclusions {
+		for _, inclusion := range declaration.Inclusions() {
 
 			includedType := checker.convertNominalType(inclusion)
 			includedMapType, isEntitlementMapping := includedType.(*EntitlementMapType)

@@ -999,7 +999,7 @@ func parseFieldWithVariableKind(
 // parseEntitlementMapping parses an entitlement mapping
 //
 //	entitlementMapping : nominalType '->' nominalType
-func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapElement, error) {
+func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRelation, error) {
 	inputType, err := parseType(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
@@ -1036,15 +1036,12 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapEl
 
 	p.skipSpaceAndComments()
 
-	return ast.NewEntitlementMapElement(p.memoryGauge, inputNominalType, outputNominalType), nil
+	return ast.NewEntitlementMapRelation(p.memoryGauge, inputNominalType, outputNominalType), nil
 }
 
 // parseEntitlementMappings parses entitlement mappings
-//
-//	membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
-func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenType) ([]*ast.EntitlementMapElement, []*ast.NominalType, error) {
-	var mappings []*ast.EntitlementMapElement
-	var inclusions []*ast.NominalType
+func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenType) ([]ast.EntitlementMapElement, error) {
+	var elements []ast.EntitlementMapElement
 
 	for {
 		_, docString := p.parseTrivia(triviaOptions{
@@ -1055,7 +1052,7 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 		switch p.current.Type {
 
 		case endTokenType, lexer.TokenEOF:
-			return mappings, inclusions, nil
+			return elements, nil
 
 		default:
 			if string(p.currentTokenSource()) == KeywordInclude {
@@ -1063,7 +1060,7 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 				p.nextSemanticToken()
 				outputType, err := parseType(p, lowestBindingPower)
 				if err != nil {
-					return nil, nil, err
+					return nil, err
 				}
 
 				outputNominalType, ok := outputType.(*ast.NominalType)
@@ -1075,14 +1072,14 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 				}
 
 				p.skipSpaceAndComments()
-				inclusions = append(inclusions, outputNominalType)
+				elements = append(elements, outputNominalType)
 			} else {
 				mapping, err := parseEntitlementMapping(p, docString)
 				if err != nil {
-					return nil, nil, err
+					return nil, err
 				}
 
-				mappings = append(mappings, mapping)
+				elements = append(elements, mapping)
 			}
 		}
 	}
@@ -1140,7 +1137,7 @@ func parseEntitlementOrMappingDeclaration(
 		if err != nil {
 			return nil, err
 		}
-		mappings, inclusions, err := parseEntitlementMappingsAndInclusions(p, lexer.TokenBraceClose)
+		elements, err := parseEntitlementMappingsAndInclusions(p, lexer.TokenBraceClose)
 		if err != nil {
 			return nil, err
 		}
@@ -1161,8 +1158,7 @@ func parseEntitlementOrMappingDeclaration(
 			p.memoryGauge,
 			access,
 			identifier,
-			mappings,
-			inclusions,
+			elements,
 			docString,
 			declarationRange,
 		), nil
