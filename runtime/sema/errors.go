@@ -4382,7 +4382,6 @@ func (e *InvalidEntitlementMappingInclusionError) Error() string {
 	)
 }
 
-
 // DuplicateEntitlementMappingInclusionError
 type DuplicateEntitlementMappingInclusionError struct {
 	Map          *EntitlementMapType
@@ -4404,7 +4403,6 @@ func (e *DuplicateEntitlementMappingInclusionError) Error() string {
 		e.Map.QualifiedIdentifier(),
 	)
 }
-
 
 // CyclicEntitlementMappingError
 type CyclicEntitlementMappingError struct {
