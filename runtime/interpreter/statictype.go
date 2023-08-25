@@ -47,14 +47,17 @@ type StaticType interface {
 	Equal(other StaticType) bool
 	Encode(e *cbor.StreamEncoder) error
 	MeteredString(memoryGauge common.MemoryGauge) string
+	ID() TypeID
 }
+
+type TypeID = common.TypeID
 
 // CompositeStaticType
 
 type CompositeStaticType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	TypeID              common.TypeID
+	TypeID              TypeID
 }
 
 var _ StaticType = CompositeStaticType{}
@@ -63,7 +66,7 @@ func NewCompositeStaticType(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
 	qualifiedIdentifier string,
-	typeID common.TypeID,
+	typeID TypeID,
 ) CompositeStaticType {
 	common.UseMemory(memoryGauge, common.CompositeStaticTypeMemoryUsage)
 
@@ -118,6 +121,10 @@ func (t CompositeStaticType) Equal(other StaticType) bool {
 	return otherCompositeType.TypeID == t.TypeID
 }
 
+func (t CompositeStaticType) ID() TypeID {
+	return t.TypeID
+}
+
 // InterfaceStaticType
 
 type InterfaceStaticType struct {
@@ -168,6 +175,13 @@ func (t InterfaceStaticType) Equal(other StaticType) bool {
 
 	return otherInterfaceType.Location == t.Location &&
 		otherInterfaceType.QualifiedIdentifier == t.QualifiedIdentifier
+}
+
+func (t InterfaceStaticType) ID() TypeID {
+	if t.Location == nil {
+		return TypeID(t.QualifiedIdentifier)
+	}
+	return t.Location.TypeID(nil, t.QualifiedIdentifier)
 }
 
 // ArrayStaticType
@@ -228,6 +242,10 @@ func (t VariableSizedStaticType) Equal(other StaticType) bool {
 	}
 
 	return t.Type.Equal(otherVariableSizedType.Type)
+}
+
+func (t VariableSizedStaticType) ID() TypeID {
+	return sema.VariableSizedTypeID(t.Type.ID())
 }
 
 // ConstantSizedStaticType
@@ -293,6 +311,10 @@ func (t ConstantSizedStaticType) Equal(other StaticType) bool {
 		t.Type.Equal(otherConstantSizedType.Type)
 }
 
+func (t ConstantSizedStaticType) ID() TypeID {
+	return sema.ConstantSizedTypeID(t.Type.ID(), t.Size)
+}
+
 // DictionaryStaticType
 
 type DictionaryStaticType struct {
@@ -344,6 +366,13 @@ func (t DictionaryStaticType) Equal(other StaticType) bool {
 		t.ValueType.Equal(otherDictionaryType.ValueType)
 }
 
+func (t DictionaryStaticType) ID() TypeID {
+	return sema.DictionaryTypeID(
+		t.KeyType.ID(),
+		t.ValueType.ID(),
+	)
+}
+
 // OptionalStaticType
 
 type OptionalStaticType struct {
@@ -387,6 +416,10 @@ func (t OptionalStaticType) Equal(other StaticType) bool {
 	return t.Type.Equal(otherOptionalType.Type)
 }
 
+func (t OptionalStaticType) ID() TypeID {
+	return sema.OptionalTypeID(t.Type.ID())
+}
+
 var NilStaticType = OptionalStaticType{
 	Type: PrimitiveStaticTypeNever,
 }
@@ -396,6 +429,7 @@ var NilStaticType = OptionalStaticType{
 type RestrictedStaticType struct {
 	Type         StaticType
 	Restrictions []InterfaceStaticType
+	typeID       TypeID
 }
 
 var _ StaticType = &RestrictedStaticType{}
@@ -419,7 +453,7 @@ func NewRestrictedStaticType(
 // and slices are not, but `Restrictions` is one.
 func (*RestrictedStaticType) isStaticType() {}
 
-func (RestrictedStaticType) elementSize() uint {
+func (*RestrictedStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
@@ -477,6 +511,25 @@ outer:
 	return t.Type.Equal(otherRestrictedType.Type)
 }
 
+func (t *RestrictedStaticType) ID() TypeID {
+	if t.typeID == "" {
+		var restrictionStrings []string
+		restrictionCount := len(t.Restrictions)
+		if restrictionCount > 0 {
+			restrictionStrings = make([]string, 0, restrictionCount)
+			for _, restriction := range t.Restrictions {
+				restrictionStrings = append(restrictionStrings, string(restriction.ID()))
+			}
+		}
+		var typeString string
+		if t.Type != nil {
+			typeString = string(t.Type.ID())
+		}
+		t.typeID = TypeID(sema.FormatRestrictedTypeID(typeString, restrictionStrings))
+	}
+	return t.typeID
+}
+
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
@@ -485,6 +538,7 @@ type ReferenceStaticType struct {
 	// ReferencedType is type of the referenced value (the type of the target)
 	ReferencedType StaticType
 	Authorized     bool
+	typeID         TypeID
 }
 
 var _ StaticType = ReferenceStaticType{}
@@ -546,6 +600,13 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 		t.BorrowedType.Equal(otherReferenceType.BorrowedType)
 }
 
+func (t ReferenceStaticType) ID() TypeID {
+	if t.typeID == "" {
+		t.typeID = TypeID(sema.FormatReferenceTypeID(t.Authorized, string(t.BorrowedType.ID())))
+	}
+	return t.typeID
+}
+
 // CapabilityStaticType
 
 type CapabilityStaticType struct {
@@ -603,6 +664,15 @@ func (t CapabilityStaticType) Equal(other StaticType) bool {
 	}
 
 	return t.BorrowType.Equal(otherCapabilityType.BorrowType)
+}
+
+func (t CapabilityStaticType) ID() TypeID {
+	var borrowTypeString string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeString = string(borrowType.ID())
+	}
+	return TypeID(sema.FormatCapabilityTypeID(borrowTypeString))
 }
 
 // Conversion
@@ -724,7 +794,7 @@ func ConvertStaticToSemaType(
 	memoryGauge common.MemoryGauge,
 	typ StaticType,
 	getInterface func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error),
-	getComposite func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error),
+	getComposite func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error),
 ) (_ sema.Type, err error) {
 	switch t := typ.(type) {
 	case CompositeStaticType:
@@ -920,6 +990,10 @@ func (t FunctionStaticType) Equal(other StaticType) bool {
 	}
 
 	return t.Type.Equal(otherFunction.Type)
+}
+
+func (t FunctionStaticType) ID() TypeID {
+	return t.Type.ID()
 }
 
 type TypeParameter struct {

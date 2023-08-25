@@ -574,12 +574,12 @@ func (t *OptionalType) QualifiedString() string {
 	return fmt.Sprintf("%s?", t.Type.QualifiedString())
 }
 
+func OptionalTypeID(elementTypeID TypeID) TypeID {
+	return TypeID(fmt.Sprintf("%s?", elementTypeID))
+}
+
 func (t *OptionalType) ID() TypeID {
-	var id string
-	if t.Type != nil {
-		id = string(t.Type.ID())
-	}
-	return TypeID(fmt.Sprintf("%s?", id))
+	return OptionalTypeID(t.Type.ID())
 }
 
 func (t *OptionalType) Equal(other Type) bool {
@@ -2404,8 +2404,12 @@ func (t *VariableSizedType) QualifiedString() string {
 	return fmt.Sprintf("[%s]", t.Type.QualifiedString())
 }
 
+func VariableSizedTypeID(elementTypeID TypeID) TypeID {
+	return TypeID(fmt.Sprintf("[%s]", elementTypeID))
+}
+
 func (t *VariableSizedType) ID() TypeID {
-	return TypeID(fmt.Sprintf("[%s]", t.Type.ID()))
+	return VariableSizedTypeID(t.Type.ID())
 }
 
 func (t *VariableSizedType) Equal(other Type) bool {
@@ -2549,8 +2553,12 @@ func (t *ConstantSizedType) QualifiedString() string {
 	return fmt.Sprintf("[%s; %d]", t.Type.QualifiedString(), t.Size)
 }
 
+func ConstantSizedTypeID(elementTypeID TypeID, size int64) TypeID {
+	return TypeID(fmt.Sprintf("[%s;%d]", elementTypeID, size))
+}
+
 func (t *ConstantSizedType) ID() TypeID {
-	return TypeID(fmt.Sprintf("[%s;%d]", t.Type.ID(), t.Size))
+	return ConstantSizedTypeID(t.Type.ID(), t.Size)
 }
 
 func (t *ConstantSizedType) Equal(other Type) bool {
@@ -4839,12 +4847,16 @@ func (t *DictionaryType) QualifiedString() string {
 	)
 }
 
-func (t *DictionaryType) ID() TypeID {
+func DictionaryTypeID(keyTypeID TypeID, valueTypeID TypeID) TypeID {
 	return TypeID(fmt.Sprintf(
 		"{%s:%s}",
-		t.KeyType.ID(),
-		t.ValueType.ID(),
+		keyTypeID,
+		valueTypeID,
 	))
+}
+
+func (t *DictionaryType) ID() TypeID {
+	return DictionaryTypeID(t.KeyType.ID(), t.ValueType.ID())
 }
 
 func (t *DictionaryType) Equal(other Type) bool {

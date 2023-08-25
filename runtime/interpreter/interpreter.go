@@ -180,7 +180,7 @@ type PublicAccountHandlerFunc func(
 type UUIDHandlerFunc func() (uint64, error)
 
 // CompositeTypeHandlerFunc is a function that loads composite types.
-type CompositeTypeHandlerFunc func(location common.Location, typeID common.TypeID) *sema.CompositeType
+type CompositeTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.CompositeType
 
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
@@ -3061,7 +3061,7 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 		return nil, err
 	}
 
-	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
+	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -4730,7 +4730,7 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
 		},
-		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
 			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
 		},
 	)
@@ -4788,7 +4788,7 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 func (interpreter *Interpreter) GetCompositeType(
 	location common.Location,
 	qualifiedIdentifier string,
-	typeID common.TypeID,
+	typeID TypeID,
 ) (*sema.CompositeType, error) {
 	var compositeType *sema.CompositeType
 	if location == nil {
@@ -4817,7 +4817,7 @@ func (interpreter *Interpreter) GetCompositeType(
 	}
 }
 
-func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID common.TypeID) *sema.CompositeType {
+func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID TypeID) *sema.CompositeType {
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return nil

@@ -16243,7 +16243,7 @@ type CompositeValue struct {
 	NestedVariables map[string]*Variable
 	Functions       map[string]FunctionValue
 	dictionary      *atree.OrderedMap
-	typeID          common.TypeID
+	typeID          TypeID
 
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
@@ -16993,12 +16993,12 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, locationRange Locat
 	panic(errors.NewUnreachableError())
 }
 
-func (v *CompositeValue) TypeID() common.TypeID {
+func (v *CompositeValue) TypeID() TypeID {
 	if v.typeID == "" {
 		location := v.Location
 		qualifiedIdentifier := v.QualifiedIdentifier
 		if location == nil {
-			return common.TypeID(qualifiedIdentifier)
+			return TypeID(qualifiedIdentifier)
 		}
 		v.typeID = location.TypeID(nil, qualifiedIdentifier)
 	}
