@@ -467,6 +467,25 @@ func TestInclusiveRange(t *testing.T) {
 	}
 }
 
+func TestGetValueForIntegerType(t *testing.T) {
+
+	t.Parallel()
+
+	// Ensure that GetValueForIntegerType handles every IntegerType
+
+	for _, integerType := range sema.AllIntegerTypes {
+		switch integerType {
+		case sema.IntegerType, sema.SignedIntegerType:
+			continue
+		}
+
+		staticType := interpreter.ConvertSemaToStaticType(nil, integerType)
+
+		// Panics if not handled.
+		_ = interpreter.GetValueForIntegerType(int8(1), staticType)
+	}
+}
+
 func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 	t.Parallel()
 
