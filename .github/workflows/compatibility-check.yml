@@ -23,7 +23,7 @@ on:
       - 'v**'
 
 env:
-  GO_VERSION: '1.19.2'
+  GO_VERSION: '1.20'
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base || github.run_id }}
@@ -53,7 +53,7 @@ jobs:
             echo "branch=`(echo "${{ github.event.pull_request.head.sha }}")`" >> $GITHUB_OUTPUT
             echo "base=`(echo "${{ github.base_ref }}")`" >> $GITHUB_OUTPUT
           else
-            echo "repo=`(echo "${{ inputs.repo || 'onflow/cadence' }}")`" >> $GITHUB_OUTPUT
+            echo "repo=`(echo "${{ inputs.repo || github.repository }}")`" >> $GITHUB_OUTPUT
             echo "branch=`(echo "${{ inputs.branch }}")`" >> $GITHUB_OUTPUT
             echo "base=`(echo "${{ inputs.base }}")`" >> $GITHUB_OUTPUT
           fi

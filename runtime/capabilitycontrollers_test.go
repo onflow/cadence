@@ -2500,6 +2500,43 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 		t.Parallel()
 
+		t.Run("capability", func(t *testing.T) {
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          let storagePath = /storage/r
+                          let resourceID = 42
+
+						  // Arrange
+						  Test.createAndSaveR(id: resourceID, storagePath: storagePath)
+
+                          let issuedCap: Capability<&Test.R> =
+                              signer.capabilities.storage.issue<&Test.R>(storagePath)
+                          let controller1: &StorageCapabilityController =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)!
+                          let controller2: &StorageCapabilityController =
+                              signer.capabilities.storage.getController(byCapabilityID: issuedCap.id)!
+
+                          // Act
+                          let controller1Cap = controller1.capability
+                          let controller2Cap = controller2.capability
+
+                          // Assert
+                          assert(controller1Cap.borrow<&Test.R>() != nil)
+                          assert(controller2Cap.borrow<&Test.R>() != nil)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
 		t.Run("tag", func(t *testing.T) {
 			t.Parallel()
 
@@ -2980,6 +3017,39 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	t.Run("AccountCapabilityController", func(t *testing.T) {
 
 		t.Parallel()
+
+		t.Run("capability", func(t *testing.T) {
+			t.Parallel()
+
+			err, _ := test(
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: AuthAccount) {
+
+						  // Arrange
+                          let issuedCap: Capability<&AuthAccount> =
+                              signer.capabilities.account.issue<&AuthAccount>()
+                          let controller1: &AccountCapabilityController =
+                              signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
+                          let controller2: &AccountCapabilityController =
+                              signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
+
+                          // Act
+                          let controller1Cap = controller1.capability
+                          let controller2Cap = controller2.capability
+
+                          // Assert
+                          assert(controller1Cap.borrow<&AuthAccount>() != nil)
+                          assert(controller2Cap.borrow<&AuthAccount>() != nil)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
 
 		t.Run("tag", func(t *testing.T) {
 			t.Parallel()

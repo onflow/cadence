@@ -28,8 +28,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -207,6 +209,16 @@ func RequireError(t *testing.T, err error) {
 
 	_ = err.Error()
 
+	if hasImportLocation, ok := err.(common.HasLocation); ok {
+		location := hasImportLocation.ImportLocation()
+		assert.NotNil(t, location)
+	}
+
+	if hasPosition, ok := err.(ast.HasPosition); ok {
+		_ = hasPosition.StartPosition()
+		_ = hasPosition.EndPosition(nil)
+	}
+
 	if hasErrorNotes, ok := err.(errors.ErrorNotes); ok {
 		for _, note := range hasErrorNotes.ErrorNotes() {
 			_ = note.Message()
@@ -215,5 +227,9 @@ func RequireError(t *testing.T, err error) {
 
 	if hasSecondaryError, ok := err.(errors.SecondaryError); ok {
 		_ = hasSecondaryError.SecondaryError()
+	}
+
+	if hasSuggestedFixes, ok := err.(sema.HasSuggestedFixes); ok {
+		_ = hasSuggestedFixes.SuggestFixes("")
 	}
 }

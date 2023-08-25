@@ -46,6 +46,7 @@ type testEmulatorBackendType struct {
 	serviceAccountFunctionType         *sema.FunctionType
 	eventsFunctionType                 *sema.FunctionType
 	resetFunctionType                  *sema.FunctionType
+	moveTimeFunctionType               *sema.FunctionType
 }
 
 func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceType) *testEmulatorBackendType {
@@ -102,6 +103,11 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 	resetFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeResetFunctionName,
+	)
+
+	moveTimeFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeMoveTimeFunctionName,
 	)
 
 	compositeType := &sema.CompositeType{
@@ -180,6 +186,12 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 			resetFunctionType,
 			testEmulatorBackendTypeResetFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeMoveTimeFunctionName,
+			moveTimeFunctionType,
+			testEmulatorBackendTypeMoveTimeFunctionDocString,
+		),
 	}
 
 	compositeType.Members = sema.MembersAsMap(members)
@@ -198,6 +210,7 @@ func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceTy
 		serviceAccountFunctionType:         serviceAccountFunctionType,
 		eventsFunctionType:                 eventsFunctionType,
 		resetFunctionType:                  resetFunctionType,
+		moveTimeFunctionType:               moveTimeFunctionType,
 	}
 }
 
@@ -666,16 +679,45 @@ func (t *testEmulatorBackendType) newEventsFunction(
 const testEmulatorBackendTypeResetFunctionName = "reset"
 
 const testEmulatorBackendTypeResetFunctionDocString = `
-Resets the state of the blockchain.
+Resets the state of the blockchain to the given height.
 `
 
 func (t *testEmulatorBackendType) newResetFunction(
 	testFramework TestFramework,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
-		t.eventsFunctionType,
+		t.resetFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			testFramework.Reset()
+			height, ok := invocation.Arguments[0].(interpreter.UInt64Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			testFramework.Reset(uint64(height))
+			return interpreter.Void
+		},
+	)
+}
+
+// 'Emulator.moveTime' function
+
+const testEmulatorBackendTypeMoveTimeFunctionName = "moveTime"
+
+const testEmulatorBackendTypeMoveTimeFunctionDocString = `
+Moves the time of the blockchain by the given delta,
+which should be passed in the form of seconds.
+`
+
+func (t *testEmulatorBackendType) newMoveTimeFunction(
+	testFramework TestFramework,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.moveTimeFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			timeDelta, ok := invocation.Arguments[0].(interpreter.Fix64Value)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			testFramework.MoveTime(int64(timeDelta.ToInt(invocation.LocationRange)))
 			return interpreter.Void
 		},
 	)
@@ -729,6 +771,10 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeResetFunctionName,
 			Value: t.newResetFunction(testFramework),
+		},
+		{
+			Name:  testEmulatorBackendTypeMoveTimeFunctionName,
+			Value: t.newMoveTimeFunction(testFramework),
 		},
 	}
 

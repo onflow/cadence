@@ -198,7 +198,7 @@ type testRuntimeInterface struct {
 	programParsed      func(location Location, duration time.Duration)
 	programChecked     func(location Location, duration time.Duration)
 	programInterpreted func(location Location, duration time.Duration)
-	unsafeRandom       func() (uint64, error)
+	readRandom         func([]byte) error
 	verifySignature    func(
 		signature []byte,
 		tag string,
@@ -513,11 +513,11 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block stdlib.Blo
 	return block, true, nil
 }
 
-func (i *testRuntimeInterface) UnsafeRandom() (uint64, error) {
-	if i.unsafeRandom == nil {
-		return 0, nil
+func (i *testRuntimeInterface) ReadRandom(buffer []byte) error {
+	if i.readRandom == nil {
+		return nil
 	}
-	return i.unsafeRandom()
+	return i.readRandom(buffer)
 }
 
 func (i *testRuntimeInterface) VerifySignature(
@@ -4752,8 +4752,9 @@ func TestRuntimeUnsafeRandom(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		unsafeRandom: func() (uint64, error) {
-			return 7558174677681708339, nil
+		readRandom: func(buffer []byte) error {
+			binary.LittleEndian.PutUint64(buffer, 7558174677681708339)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -7704,7 +7705,7 @@ func assertRuntimeErrorIsInternalError(t *testing.T, err error) {
 	require.True(
 		t,
 		runtimeErrors.IsInternalError(innerError),
-		"Expected `UserError`, found `%T`", innerError,
+		"Expected `InternalError`, found `%T`", innerError,
 	)
 }
 
@@ -8637,4 +8638,676 @@ func TestInvalidatedResourceUse2(t *testing.T) {
 
 	var destroyedResourceErr interpreter.DestroyedResourceError
 	require.ErrorAs(t, err, &destroyedResourceErr)
+}
+
+func TestRuntimeInvalidRecursiveTransferViaVariableDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.AtreeValidationEnabled = false
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	contract := []byte(`
+      pub contract Test{
+
+          pub resource Holder{
+
+              pub var vaults: @[AnyResource]
+
+              init(_ vaults: @[AnyResource]){
+                  self.vaults <- vaults
+              }
+
+              pub fun x(): @[AnyResource] {
+                  var x <- self.vaults <- [<-Test.dummy()]
+                  return <-x
+              }
+
+              destroy() {
+                  var t <-  self.vaults[0] <- self.vaults    // here is the problem
+                  destroy t
+                  Test.account.save(<- self.x(), to: /storage/x42)
+              }
+          }
+
+          pub fun createHolder(_ vaults: @[AnyResource]): @Holder {
+              return <- create Holder(<-vaults)
+          }
+
+          pub resource Dummy {}
+
+          pub fun dummy(): @Dummy {
+              return <- create Dummy()
+          }
+      }
+    `)
+
+	tx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+              var holder <- Test.createHolder(<-[<-Test.dummy(), <-Test.dummy()])
+              destroy holder
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Test
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.RecursiveTransferError{})
+}
+
+func TestRuntimeInvalidRecursiveTransferViaFunctionArgument(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.AtreeValidationEnabled = false
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	contract := []byte(`
+      pub contract Test{
+
+          pub resource Holder {
+
+              pub var vaults: @[AnyResource]
+
+              init(_ vaults: @[AnyResource]) {
+                  self.vaults <- vaults
+              }
+
+              destroy() {
+                  self.vaults.append(<-self.vaults)
+              }
+          }
+
+          pub fun createHolder(_ vaults: @[AnyResource]): @Holder {
+              return <- create Holder(<-vaults)
+          }
+
+          pub resource Dummy {}
+
+          pub fun dummy(): @Dummy {
+              return <- create Dummy()
+          }
+      }
+    `)
+
+	tx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+              var holder <- Test.createHolder(<-[<-Test.dummy(), <-Test.dummy()])
+              destroy holder
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Test
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.RecursiveTransferError{})
+}
+
+func TestRuntimeOptionalReferenceAttack(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+      pub resource Vault {
+          pub var balance: UFix64
+
+          init(balance: UFix64) {
+              self.balance = balance
+          }
+
+          pub fun withdraw(amount: UFix64): @Vault {
+              self.balance = self.balance - amount
+              return <-create Vault(balance: amount)
+          }
+
+          pub fun deposit(from: @Vault) {
+              self.balance = self.balance + from.balance
+              destroy from
+          }
+      }
+
+      pub fun empty(): @Vault {
+          return <- create Vault(balance: 0.0)
+      }
+
+      pub fun giveme(): @Vault {
+          return <- create Vault(balance: 10.0)
+      }
+
+      pub fun main() {
+          var vault <- giveme() //get 10 token
+          var someDict:@{Int:Vault} <- {1:<-vault}
+          var r = (&someDict[1] as auth &AnyResource) as! &Vault
+          var double <- empty()
+          double.deposit(from: <- someDict.remove(key:1)!)
+          double.deposit(from: <- r.withdraw(amount:10.0))
+          log(double.balance) // 20
+          destroy double
+          destroy someDict
+      }
+    `
+
+	runtime := newTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	var events []cadence.Event
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(s string) {
+
+		},
+	}
+	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		return json.Decode(nil, b)
+	}
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: [][]byte{},
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+
+	RequireError(t, err)
+
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestRuntimeReturnDestroyedOptional(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	script := []byte(`
+      pub resource Foo {}
+
+      pub fun main(): AnyStruct {
+          let y: @Foo? <- create Foo()
+          let z: @AnyResource <- y
+          var ref = &z as &AnyResource
+          destroy z
+          return ref
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+	}
+
+	// Test
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}
+
+func TestRuntimeComputationMeteringError(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	t.Run("regular error returned", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            pub fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			meterComputation: func(compKind common.ComputationKind, intensity uint) error {
+				return fmt.Errorf("computation limit exceeded")
+			},
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+
+		// Returned error MUST be an external error.
+		// It can NOT be an internal error.
+		assertRuntimeErrorIsExternalError(t, err)
+	})
+
+	t.Run("regular error panicked", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            pub fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			meterComputation: func(compKind common.ComputationKind, intensity uint) error {
+				panic(fmt.Errorf("computation limit exceeded"))
+			},
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+
+		// Returned error MUST be an external error.
+		// It can NOT be an internal error.
+		assertRuntimeErrorIsExternalError(t, err)
+	})
+
+	t.Run("go runtime error panicked", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            pub fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			meterComputation: func(compKind common.ComputationKind, intensity uint) error {
+				// Cause a runtime error
+				var x any = "hello"
+				_ = x.(int)
+				return nil
+			},
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+
+		// Returned error MUST be an internal error.
+		assertRuntimeErrorIsInternalError(t, err)
+	})
+
+	t.Run("go runtime error returned", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun foo() {}
+
+            pub fun main() {
+                foo()
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			meterComputation: func(compKind common.ComputationKind, intensity uint) (err error) {
+				// Cause a runtime error. Catch it and return.
+				var x any = "hello"
+				defer func() {
+					if r := recover(); r != nil {
+						if r, ok := r.(error); ok {
+							err = r
+						}
+					}
+				}()
+
+				_ = x.(int)
+
+				return
+			},
+		}
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.Error(t, err)
+
+		// Returned error MUST be an internal error.
+		assertRuntimeErrorIsInternalError(t, err)
+	})
+}
+
+func TestRuntimeWrappedErrorHandling(t *testing.T) {
+
+	t.Parallel()
+
+	foo := []byte(`
+        access(all) contract Foo {
+            access(all) resource R {
+                access(all) var x: Int
+
+                init() {
+                    self.x = 0
+                }
+            }
+
+            access(all) fun createR(): @R {
+                return <-create R()
+            }
+        }
+    `)
+
+	brokenFoo := []byte(`
+        access(all) contract Foo {
+            access(all) resource R {
+                access(all) var x: Int
+
+                init() {
+                    self.x = "hello"
+                }
+            }
+
+            access(all) fun createR(): @R {
+                return <-create R()
+            }
+        }
+    `)
+
+	tx1 := []byte(`
+        import Foo from 0x1
+
+        transaction {
+            prepare(signer: AuthAccount) {
+                signer.save(<- Foo.createR(), to: /storage/r)
+                signer.link<&Foo.R>(/private/r, target:/storage/r)
+            }
+        }
+    `)
+
+	tx2 := []byte(`
+        transaction {
+            prepare(signer: AuthAccount) {
+                var cap = signer.getCapability<&AnyStruct>(/private/r)
+				cap.check()
+            }
+        }
+    `)
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.AtreeValidationEnabled = false
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	deploy := DeploymentTransaction("Foo", foo)
+
+	var contractCode []byte
+	var events []cadence.Event
+
+	isContractBroken := false
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return contractCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			if isContractBroken && contractCode != nil {
+				return brokenFoo, nil
+			}
+			return contractCode, nil
+		},
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			contractCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		getAndSetProgram: func(location Location, load func() (*interpreter.Program, error)) (*interpreter.Program, error) {
+			program, err := load()
+			if err == nil {
+				return program, nil
+			}
+			return program, fmt.Errorf("wrapped error: %w", err)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Run Tx to save values
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Run Tx to load value.
+	// Mark the contract is broken
+
+	isContractBroken = true
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	RequireError(t, err)
+
+	// Returned error MUST be a user error.
+	// It can NOT be an internal error.
+	assertRuntimeErrorIsUserError(t, err)
 }

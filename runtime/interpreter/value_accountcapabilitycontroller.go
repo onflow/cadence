@@ -41,6 +41,7 @@ type AccountCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
+	GetCapability  func() *IDCapabilityValue
 	GetTag         func() *StringValue
 	SetTag         func(*StringValue)
 	DeleteFunction FunctionValue
@@ -110,7 +111,10 @@ func (v *AccountCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 	)
 }
 
-func (v *AccountCapabilityControllerValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *AccountCapabilityControllerValue) MeteredString(
+	memoryGauge common.MemoryGauge,
+	seenReferences SeenReferences,
+) string {
 	common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueStringMemoryUsage)
 
 	return format.AccountCapabilityController(
@@ -127,7 +131,11 @@ func (v *AccountCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *AccountCapabilityControllerValue) Equal(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	other Value,
+) bool {
 	otherController, ok := other.(*AccountCapabilityControllerValue)
 	if !ok {
 		return false
@@ -141,7 +149,14 @@ func (*AccountCapabilityControllerValue) IsStorable() bool {
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v *AccountCapabilityControllerValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (
+	atree.Storable,
+	error,
+) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
@@ -159,6 +174,7 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -211,6 +227,9 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	case sema.AccountCapabilityControllerTypeDeleteFunctionName:
 		return v.DeleteFunction
+
+	case sema.AccountCapabilityControllerTypeCapabilityFieldName:
+		return v.GetCapability()
 	}
 
 	return nil
@@ -221,7 +240,12 @@ func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 	panic(errors.NewUnreachableError())
 }
 
-func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
+func (v *AccountCapabilityControllerValue) SetMember(
+	_ *Interpreter,
+	_ LocationRange,
+	identifier string,
+	value Value,
+) bool {
 	switch identifier {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
 		stringValue, ok := value.(*StringValue)
@@ -234,6 +258,10 @@ func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationR
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (v *AccountCapabilityControllerValue) ControllerCapabilityID() UInt64Value {
+	return v.CapabilityID
 }
 
 func (v *AccountCapabilityControllerValue) ReferenceValue(

@@ -198,7 +198,7 @@ func defineExpr(def any) {
 func setExprNullDenotation(tokenType lexer.TokenType, nullDenotation exprNullDenotationFunc) {
 	current := exprNullDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(errors.NewUnexpectedError(
 			"expression null denotation for token %s already exists",
 			tokenType,
 		))
@@ -225,7 +225,7 @@ func setExprIdentifierLeftBindingPower(keyword string, power int) {
 func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
 	current := exprLeftDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(errors.NewUnexpectedError(
 			"expression left denotation for token %s already exists",
 			tokenType,
 		))
@@ -237,7 +237,7 @@ func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDen
 func setExprMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation exprMetaLeftDenotationFunc) {
 	current := exprMetaLeftDenotations[tokenType]
 	if current != nil {
-		panic(NewUnpositionedSyntaxError(
+		panic(errors.NewUnexpectedError(
 			"expression meta left denotation for token %s already exists",
 			tokenType,
 		))
@@ -1054,6 +1054,8 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 
 	// If a colon follows the expression, the expression was our label.
 	if p.current.Is(lexer.TokenColon) {
+		labelEndPos = p.current.EndPos
+
 		identifier, ok := expr.(*ast.IdentifierExpression)
 		if !ok {
 			return nil, p.syntaxError(
@@ -1063,7 +1065,6 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 		}
 		label = identifier.Identifier.Identifier
 		labelStartPos = expr.StartPosition()
-		labelEndPos = expr.EndPosition(p.memoryGauge)
 
 		// Skip the identifier
 		p.nextSemanticToken()

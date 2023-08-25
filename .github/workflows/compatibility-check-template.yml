@@ -21,7 +21,7 @@ on:
         type: string
 
 env:
-  GO_VERSION: '1.19.2'
+  GO_VERSION: '1.20'
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base-branch || github.run_id }}-${{ inputs.chain }}
@@ -113,6 +113,5 @@ jobs:
       # Check Diff
 
       - name: Check diff
-        working-directory: ./tools/compatibility-check
         run: |
-          go run ./cmd/check_diff/main.go ../../tmp/output-old.txt ../../tmp/output-new.txt
+          diff -u --color ./tmp/output-old.txt ./tmp/output-new.txt

@@ -1154,6 +1154,112 @@ func TestTestBeFailedMatcher(t *testing.T) {
 	})
 }
 
+func TestTestAssertErrorMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with ScriptResult", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun testMatch() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.failed,
+                    returnValue: nil,
+                    error: Test.Error("computation exceeding limit")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            pub fun testNoMatch() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.failed,
+                    returnValue: nil,
+                    error: Test.Error("computation exceeding memory")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            pub fun testNoError() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.succeeded,
+                    returnValue: 42,
+                    error: nil
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMatch")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNoMatch")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "the error message did not contain the given sub-string")
+
+		_, err = inter.Invoke("testNoError")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "no error was found")
+	})
+
+	t.Run("with TransactionResult", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun testMatch() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.failed,
+                    error: Test.Error("computation exceeding limit")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            pub fun testNoMatch() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.failed,
+                    error: Test.Error("computation exceeding memory")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            pub fun testNoError() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.succeeded,
+                    error: nil
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMatch")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNoMatch")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "the error message did not contain the given sub-string")
+
+		_, err = inter.Invoke("testNoError")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "no error was found")
+	})
+}
+
 func TestTestBeNilMatcher(t *testing.T) {
 
 	t.Parallel()
@@ -2023,6 +2129,154 @@ func TestBlockchain(t *testing.T) {
 		assert.True(t, eventsInvoked)
 	})
 
+	t.Run("reset", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.reset(to: 5)
+            }
+		`
+
+		resetInvoked := false
+
+		testFramework := &mockedTestFramework{
+			reset: func(height uint64) {
+				resetInvoked = true
+				assert.Equal(t, uint64(5), height)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, resetInvoked)
+	})
+
+	t.Run("reset with type mismatch for height", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.reset(to: 5.5)
+            }
+		`
+
+		resetInvoked := false
+
+		testFramework := &mockedTestFramework{
+			reset: func(height uint64) {
+				resetInvoked = true
+			},
+		}
+
+		_, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.False(t, resetInvoked)
+	})
+
+	t.Run("moveTime forward", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun testMoveForward() {
+                let blockchain = Test.newEmulatorBlockchain()
+                // timeDelta is the representation of 35 days,
+                // in the form of seconds.
+                let timeDelta = Fix64(35 * 24 * 60 * 60)
+                blockchain.moveTime(by: timeDelta)
+            }
+		`
+
+		moveTimeInvoked := false
+
+		testFramework := &mockedTestFramework{
+			moveTime: func(timeDelta int64) {
+				moveTimeInvoked = true
+				assert.Equal(t, int64(3024000), timeDelta)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMoveForward")
+		require.NoError(t, err)
+
+		assert.True(t, moveTimeInvoked)
+	})
+
+	t.Run("moveTime backward", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun testMoveBackward() {
+                let blockchain = Test.newEmulatorBlockchain()
+                // timeDelta is the representation of 35 days,
+                // in the form of seconds.
+                let timeDelta = Fix64(35 * 24 * 60 * 60) * -1.0
+                blockchain.moveTime(by: timeDelta)
+            }
+		`
+
+		moveTimeInvoked := false
+
+		testFramework := &mockedTestFramework{
+			moveTime: func(timeDelta int64) {
+				moveTimeInvoked = true
+				assert.Equal(t, int64(-3024000), timeDelta)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMoveBackward")
+		require.NoError(t, err)
+
+		assert.True(t, moveTimeInvoked)
+	})
+
+	t.Run("moveTime with invalid time delta", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun testMoveTime() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.moveTime(by: 3000)
+            }
+		`
+
+		moveTimeInvoked := false
+
+		testFramework := &mockedTestFramework{
+			moveTime: func(timeDelta int64) {
+				moveTimeInvoked = true
+			},
+		}
+
+		_, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.False(t, moveTimeInvoked)
+	})
+
 	// TODO: Add more tests for the remaining functions.
 }
 
@@ -2039,7 +2293,8 @@ type mockedTestFramework struct {
 	logs               func() []string
 	serviceAccount     func() (*Account, error)
 	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
-	reset              func()
+	reset              func(uint64)
+	moveTime           func(int64)
 }
 
 var _ TestFramework = &mockedTestFramework{}
@@ -2159,10 +2414,18 @@ func (m mockedTestFramework) Events(
 	return m.events(inter, eventType)
 }
 
-func (m mockedTestFramework) Reset() {
+func (m mockedTestFramework) Reset(height uint64) {
 	if m.reset == nil {
 		panic("'Reset' is not implemented")
 	}
 
-	m.reset()
+	m.reset(height)
+}
+
+func (m mockedTestFramework) MoveTime(timeDelta int64) {
+	if m.moveTime == nil {
+		panic("'SetTimestamp' is not implemented")
+	}
+
+	m.moveTime(timeDelta)
 }
