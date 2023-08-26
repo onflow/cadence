@@ -754,6 +754,52 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 		)
 	})
 
+	t.Run("same, restrictions in different order", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			(&RestrictedStaticType{
+				Type: PrimitiveStaticTypeString,
+				Restrictions: []InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+				},
+			}).Equal(
+				&RestrictedStaticType{
+					Type: PrimitiveStaticTypeString,
+					Restrictions: []InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					},
+				},
+			),
+		)
+	})
+
+	t.Run("same, restrictions in same order", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			(&RestrictedStaticType{
+				Type: PrimitiveStaticTypeString,
+				Restrictions: []InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+				},
+			}).Equal(
+				&RestrictedStaticType{
+					Type: PrimitiveStaticTypeString,
+					Restrictions: []InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					},
+				},
+			),
+		)
+	})
+
 	t.Run("fewer restrictions", func(t *testing.T) {
 
 		t.Parallel()
