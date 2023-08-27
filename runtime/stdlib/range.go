@@ -72,7 +72,8 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 				MemberType: typeAnnotation.Type,
 			},
 		),
-		RequiredArgumentCount: sema.RequiredArgumentCount(2),
+		// `step` parameter is optional
+		Arity: &sema.Arity{Min: 2, Max: 3},
 	}
 }()
 

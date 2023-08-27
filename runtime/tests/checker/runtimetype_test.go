@@ -896,14 +896,14 @@ func TestCheckInclusiveRangeTypeConstructor(t *testing.T) {
 			code: `
               let result = InclusiveRangeType(Type<Int>(), Type<Int>())
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.ExcessiveArgumentsError{},
 		},
 		{
 			name: "too few args",
 			code: `
               let result = InclusiveRangeType()
             `,
-			expectedError: &sema.ArgumentCountError{},
+			expectedError: &sema.InsufficientArgumentsError{},
 		},
 	}
 

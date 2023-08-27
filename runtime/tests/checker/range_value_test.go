@@ -337,7 +337,7 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 			t,
 			typeString,
 			fmt.Sprintf("let r = InclusiveRange(%s(1))", typeString),
-			[]error{&sema.ArgumentCountError{}},
+			[]error{&sema.InsufficientArgumentsError{}},
 		)
 
 		// Label for step not provided
