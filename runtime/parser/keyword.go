@@ -75,6 +75,7 @@ const (
 	KeywordNative      = "native"
 	KeywordPub         = "pub"
 	KeywordPriv        = "priv"
+	KeywordInclude     = "include"
 	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 
@@ -128,6 +129,7 @@ var allKeywords = []string{
 	keywordAttachment,
 	keywordTo,
 	keywordRemove,
+	KeywordInclude,
 }
 
 // Keywords that can be used in identifier position without ambiguity.

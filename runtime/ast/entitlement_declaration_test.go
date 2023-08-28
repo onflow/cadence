@@ -136,8 +136,14 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
 		},
-		Associations: []*EntitlementMapElement{
-			{
+		Elements: []EntitlementMapElement{
+			&NominalType{
+				Identifier: Identifier{
+					Identifier: "X",
+					Pos:        Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+			&EntitlementMapRelation{
 				Input: &NominalType{
 					Identifier: Identifier{
 						Identifier: "X",
@@ -168,7 +174,17 @@ func TestEntitlementMappingDeclaration_MarshalJSON(t *testing.T) {
 				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 2, "Line": 2, "Column": 4}
             },
-			"Associations": [
+			"Elements": [
+				{
+					"Type": "NominalType",
+						"Identifier": { 
+							"Identifier": "X",
+							"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+							"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+						},
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+				},
 				{
 					"Input": {
 						"Type": "NominalType",
@@ -216,8 +232,13 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
 		},
-		Associations: []*EntitlementMapElement{
-			{
+		Elements: []EntitlementMapElement{
+			&NominalType{
+				Identifier: Identifier{Identifier: "X",
+					Pos: Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+			&EntitlementMapRelation{
 				Input: &NominalType{
 					Identifier: Identifier{
 						Identifier: "X",
@@ -244,13 +265,20 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 			prettier.Text("AB"),
 			prettier.Space,
 			prettier.Text("{"),
+			prettier.HardLine{},
 			prettier.Indent{
 				Doc: prettier.Concat{
+					prettier.Concat{
+						prettier.Text("include "),
+						prettier.Text("X"),
+					},
 					prettier.HardLine{},
 					prettier.Concat{
-						prettier.Text("X"),
-						prettier.Text(" -> "),
-						prettier.Text("Y"),
+						prettier.Concat{
+							prettier.Text("X"),
+							prettier.Text(" -> "),
+							prettier.Text("Y"),
+						},
 					},
 				},
 			},
@@ -277,8 +305,13 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
 		},
-		Associations: []*EntitlementMapElement{
-			{
+		Elements: []EntitlementMapElement{
+			&NominalType{
+				Identifier: Identifier{Identifier: "X",
+					Pos: Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+			&EntitlementMapRelation{
 				Input: &NominalType{
 					Identifier: Identifier{
 						Identifier: "X",
@@ -299,6 +332,7 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 		t,
 		`access(all)
 entitlement mapping AB {
+include X
     X -> Y
 }`,
 		decl.String(),

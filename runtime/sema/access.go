@@ -330,6 +330,9 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 			output.Set(relation.Output, struct{}{})
 		}
 	}
+	if e.Type.IncludesIdentity {
+		output.Set(entitlement, struct{}{})
+	}
 
 	e.images[entitlement] = output
 	return
@@ -339,10 +342,6 @@ func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (ou
 // defined by the map in `e`, producing a new entitlement set of the image of the
 // arguments.
 func (e EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
-
-	if e.Type == IdentityMappingType {
-		return inputs, nil
-	}
 
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map

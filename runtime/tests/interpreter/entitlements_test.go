@@ -2934,3 +2934,262 @@ func TestInterpretIdentityMapping(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestInterpretMappingInclude(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("included identity", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement E
+		entitlement F
+		entitlement G 
+
+		entitlement mapping M {
+			include Identity 
+		}
+
+		struct S {
+			access(M) fun foo(): auth(M) &Int {
+				return &3
+			}
+		}
+
+		fun main(): auth(E, F) &Int {
+			let s = &S() as  auth(E, F) &S
+			return s.foo()
+		}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.E",
+						"S.test.F",
+					}
+				},
+				2,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("included identity with additional", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement E
+		entitlement F
+		entitlement G 
+
+		entitlement mapping M {
+			include Identity 
+			F -> G
+		}
+
+		struct S {
+			access(M) fun foo(): auth(M) &Int {
+				return &3
+			}
+		}
+
+		fun main(): auth(E, F, G) &Int {
+			let s = &S() as  auth(E, F) &S
+			return s.foo()
+		}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.E",
+						"S.test.F",
+						"S.test.G",
+					}
+				},
+				3,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("included non-identity", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include N
+			}
+
+			entitlement mapping N {
+				E -> F 
+				X -> Y
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun main(): auth(F, Y) &Int {
+				let s = &S() as  auth(E, X) &S
+				return s.foo()
+			}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.F",
+						"S.test.Y",
+					}
+				},
+				2,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("overlapping includes", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping A {
+				E -> F
+				F -> X
+				X -> Y
+			}
+
+			entitlement mapping B {
+				X -> Y
+			}
+
+			entitlement mapping M {
+				include A
+				include B
+				F -> X
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun main(): auth(F, X, Y) &Int {
+				let s = &S() as  auth(E, X, F) &S
+				return s.foo()
+			}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.F",
+						"S.test.X",
+						"S.test.Y",
+					}
+				},
+				3,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("diamond include", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include B
+				include C
+			}
+
+			entitlement mapping C {
+				include A
+				X -> Y
+			}
+
+			entitlement mapping B {
+				F -> X
+				include A
+			}
+
+			entitlement mapping A {
+				E -> F
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun main(): auth(F, X, Y) &Int {
+				let s = &S() as  auth(E, X, F) &S
+				return s.foo()
+			}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.F",
+						"S.test.X",
+						"S.test.Y",
+					}
+				},
+				3,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+}

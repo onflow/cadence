@@ -5752,6 +5752,531 @@ func TestCheckIdentityMapping(t *testing.T) {
 	})
 }
 
+func TestCheckMappingDefinitionWithInclude(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("cannot include non-maps", func(t *testing.T) {
+		t.Parallel()
+		tests := []string{
+			"struct X {}",
+			"struct interface X {}",
+			"resource X {}",
+			"resource interface X {}",
+			"contract X {}",
+			"contract interface X {}",
+			"enum X: Int {}",
+			"event X()",
+			"entitlement X",
+		}
+		for _, typeDef := range tests {
+			t.Run(typeDef, func(t *testing.T) {
+				_, err := ParseAndCheck(t, fmt.Sprintf(`
+					%s
+					entitlement mapping M {
+						include X
+					}
+				`, typeDef))
+
+				errors := RequireCheckerErrors(t, err, 1)
+				invalidIncludeError := &sema.InvalidEntitlementMappingInclusionError{}
+				require.ErrorAs(t, errors[0], &invalidIncludeError)
+			})
+		}
+	})
+
+	t.Run("include identity", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				E -> F
+				include Identity 
+				F -> G
+			}
+        `)
+
+		require.NoError(t, err)
+		require.True(t, checker.Elaboration.EntitlementMapType("S.test.M").IncludesIdentity)
+	})
+
+	t.Run("no include identity", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				E -> F
+				F -> G
+			}
+        `)
+
+		require.NoError(t, err)
+		require.False(t, checker.Elaboration.EntitlementMapType("S.test.M").IncludesIdentity)
+	})
+
+	t.Run("duplicate include", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				include Identity 
+				include Identity 
+			}
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		duplicateIncludeError := &sema.DuplicateEntitlementMappingInclusionError{}
+		require.ErrorAs(t, errors[0], &duplicateIncludeError)
+	})
+
+	t.Run("duplicate include non-identity", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping X {}
+
+			entitlement mapping M {
+				include X
+				include Identity 
+				include X 
+			}
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		duplicateIncludeError := &sema.DuplicateEntitlementMappingInclusionError{}
+		require.ErrorAs(t, errors[0], &duplicateIncludeError)
+	})
+
+	t.Run("non duplicate across hierarchy", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement mapping Y {
+				include X
+			}
+
+			entitlement mapping X {}
+
+			entitlement mapping M {
+				include X
+				include Y
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("simple cycle detection", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement mapping Y {
+				include Y
+			}
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		cycleError := &sema.CyclicEntitlementMappingError{}
+		require.ErrorAs(t, errors[0], &cycleError)
+	})
+
+	t.Run("complex cycle detection", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement mapping Y {
+				include X
+			}
+
+			entitlement mapping X {
+				include Y
+				include Z
+			}
+
+			entitlement mapping M {
+				include X
+				include Y
+			}
+
+			entitlement mapping Z {
+				include Identity
+			}
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		cycleError := &sema.CyclicEntitlementMappingError{}
+		require.ErrorAs(t, errors[0], &cycleError)
+	})
+
+}
+
+func TestCheckIdentityIncludedMaps(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("only identity included", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				include Identity 
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, F) &S): auth(E, F) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("only identity included error", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				include Identity 
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, F) &S): auth(E, F, G) &Int {
+				return s.foo()
+			}
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		typeMismatchError := &sema.TypeMismatchError{}
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+		require.Equal(t, errors[0].(*sema.TypeMismatchError).ActualType.String(), "auth(E, F) &Int")
+	})
+
+	t.Run("identity included with relations", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			entitlement mapping M {
+				include Identity 
+				F -> G
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, F) &S): auth(E, F, G) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("identity included disjoint", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement G 
+
+			// this is functionally equivalent to
+			// entitlement mapping M {
+				//	E -> E 
+				//	F -> F 
+				//	G -> G 
+				//	F -> G
+			// }
+			entitlement mapping M {
+				include Identity 
+				F -> G
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E | F) &S): &Int {
+				return s.foo()
+			}
+        `)
+
+		// because the Identity map will always try to create conjunctions of the input with
+		// any additional relations, it is functionally impossible to map a disjointly authorized
+		// reference through any non-trivial map including the Identity
+		errors := RequireCheckerErrors(t, err, 1)
+		unrepresentableError := &sema.UnrepresentableEntitlementMapOutputError{}
+		require.ErrorAs(t, errors[0], &unrepresentableError)
+	})
+}
+
+func TestCheckGeneralIncludedMaps(t *testing.T) {
+	t.Run("basic include", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include N
+			}
+
+			entitlement mapping N {
+				E -> F 
+				X -> Y
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, X) &S): auth(F, Y) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("multiple includes", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include A
+				include B
+			}
+
+			entitlement mapping A {
+				E -> F
+			}
+
+			entitlement mapping B {
+				X -> Y
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, X) &S): auth(F, Y) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("multiple includes with overlap", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping A {
+				E -> F
+				F -> X
+				X -> Y
+			}
+
+			entitlement mapping B {
+				X -> Y
+			}
+
+			entitlement mapping M {
+				include A
+				include B
+				F -> X
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("multilayer include", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include B
+			}
+
+			entitlement mapping B {
+				include A
+				X -> Y
+			}
+
+			entitlement mapping A {
+				E -> F
+				F -> X
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("diamond include", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include B
+				include C
+			}
+
+			entitlement mapping C {
+				include A
+				X -> Y
+			}
+
+			entitlement mapping B {
+				F -> X
+				include A
+			}
+
+			entitlement mapping A {
+				E -> F
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("multilayer include identity", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include B
+			}
+
+			entitlement mapping B {
+				include A
+				X -> Y
+			}
+
+			entitlement mapping A {
+				include Identity
+				E -> F
+				F -> X
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun foo(s: auth(E, X, F) &S): auth(E, F, Y, X) &Int {
+				return s.foo()
+			}
+        `)
+
+		require.NoError(t, err)
+		require.True(t, checker.Elaboration.EntitlementMapType("S.test.A").IncludesIdentity)
+		require.True(t, checker.Elaboration.EntitlementMapType("S.test.B").IncludesIdentity)
+		require.True(t, checker.Elaboration.EntitlementMapType("S.test.M").IncludesIdentity)
+	})
+}
+
 func TestCheckEntitlementErrorReporting(t *testing.T) {
 	t.Run("three or more conjunction", func(t *testing.T) {
 		t.Parallel()

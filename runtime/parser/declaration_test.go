@@ -9226,8 +9226,8 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 							Column: 33,
 						},
 					},
-					Associations: []*ast.EntitlementMapElement{
-						{
+					Elements: []ast.EntitlementMapElement{
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "A",
@@ -9248,7 +9248,8 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 									},
 								},
 							},
-						}, {
+						},
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "C",
@@ -9289,6 +9290,114 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("mappings with includes", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(` access(all) entitlement mapping M { 
+			include Y
+			A -> B
+			C -> D
+			include X
+		} `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access:    ast.AccessAll,
+					DocString: "",
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos: ast.Position{
+							Offset: 33,
+							Line:   1,
+							Column: 33,
+						},
+					},
+					Elements: []ast.EntitlementMapElement{
+						&ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "Y",
+								Pos: ast.Position{
+									Offset: 49,
+									Line:   2,
+									Column: 11,
+								},
+							},
+						},
+						&ast.EntitlementMapRelation{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "A",
+									Pos: ast.Position{
+										Offset: 54,
+										Line:   3,
+										Column: 3,
+									},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "B",
+									Pos: ast.Position{
+										Offset: 59,
+										Line:   3,
+										Column: 8,
+									},
+								},
+							},
+						},
+						&ast.EntitlementMapRelation{
+							Input: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "C",
+									Pos: ast.Position{
+										Offset: 64,
+										Line:   4,
+										Column: 3,
+									},
+								},
+							},
+							Output: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "D",
+									Pos: ast.Position{
+										Offset: 69,
+										Line:   4,
+										Column: 8,
+									},
+								},
+							},
+						},
+						&ast.NominalType{
+							Identifier: ast.Identifier{Identifier: "X",
+								Pos: ast.Position{
+									Offset: 82,
+									Line:   5,
+									Column: 11,
+								},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 1,
+							Line:   1,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 86,
+							Line:   6,
+							Column: 2,
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("same line mappings", func(t *testing.T) {
 
 		t.Parallel()
@@ -9310,8 +9419,8 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 							Column: 33,
 						},
 					},
-					Associations: []*ast.EntitlementMapElement{
-						{
+					Elements: []ast.EntitlementMapElement{
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "A",
@@ -9333,7 +9442,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 								},
 							},
 						},
-						{
+						&ast.EntitlementMapRelation{
 							Input: &ast.NominalType{
 								Identifier: ast.Identifier{
 									Identifier: "C",
@@ -9540,6 +9649,44 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 				&SyntaxError{
 					Message: "expected token '->'",
 					Pos:     ast.Position{Offset: 43, Line: 2, Column: 5},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("non-nominal include", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
+			include &A
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected nominal type, got &A",
+					Pos:     ast.Position{Offset: 51, Line: 2, Column: 13},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("include with arrow", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(` access(all) entitlement mapping M { 
+			include -> B
+		} `)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in type: '->'",
+					Pos:     ast.Position{Offset: 51, Line: 2, Column: 13},
 				},
 			},
 			errs,
