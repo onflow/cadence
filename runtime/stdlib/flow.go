@@ -193,7 +193,7 @@ var AccountEventCodeHashParameter = sema.Parameter{
 var AccountEventPublicKeyParameterAsCompositeType = sema.Parameter{
 	Identifier: "publicKey",
 	TypeAnnotation: sema.NewTypeAnnotation(
-		sema.PublicKeyType,
+		PublicKeyType,
 	),
 }
 

@@ -18,6 +18,10 @@
 
 package stdlib
 
+import "github.com/onflow/cadence/runtime/sema"
+
+var UInt8Type = sema.UInt8Type
+
 type StandardLibraryHandler interface {
 	Logger
 	UnsafeRandomGenerator
