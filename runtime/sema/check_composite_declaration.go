@@ -1037,17 +1037,15 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 
 		if initializerCount > 1 {
 
-			firstInitializer := initializers[0]
 			secondInitializer := initializers[1]
 
 			previousPos := firstInitializer.StartPosition()
-
 			pos := secondInitializer.StartPosition()
 
 			checker.report(
 				&RedeclarationError{
 					Kind:        common.DeclarationKindInitializer,
-					Name:        "",
+					Name:        common.DeclarationKindInitializer.Keywords(),
 					PreviousPos: &previousPos,
 					Pos:         pos,
 				},
