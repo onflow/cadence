@@ -95,8 +95,11 @@ func (e EntitlementSetAccess) string(typeFormatter func(ty Type) string) string 
 		separator = " | "
 	}
 
-	e.Entitlements.ForeachWithIndex(func(i int, entitlement *EntitlementType, _ struct{}) {
-		builder.WriteString(typeFormatter(entitlement))
+	compareFn := func(i string, j string) bool { return i < j }
+	mappedToIDs := orderedmap.MapKeys(e.Entitlements, func(et *EntitlementType) string { return typeFormatter(et) })
+
+	mappedToIDs.SortByKey(compareFn).ForeachWithIndex(func(i int, id string, _ struct{}) {
+		builder.WriteString(id)
 		if i < e.Entitlements.Len()-1 {
 			builder.WriteString(separator)
 		}
