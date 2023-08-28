@@ -2061,21 +2061,20 @@ func TestBlockchain(t *testing.T) {
 
 		eventsInvoked := false
 
-		emulatorBackend := &mockedTestFramework{
-			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
-				eventsInvoked = true
-				assert.Nil(t, eventType)
-				return interpreter.NewArrayValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
-					common.Address{},
-				)
-			},
-		}
 		testFramework := &mockedTestFramework{
 			newEmulatorBackend: func() TestFramework {
-				return emulatorBackend
+				return &mockedTestFramework{
+					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+						eventsInvoked = true
+						assert.Nil(t, eventType)
+						return interpreter.NewArrayValue(
+							inter,
+							interpreter.EmptyLocationRange,
+							interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+							common.Address{},
+						)
+					},
+				}
 			},
 		}
 
@@ -2111,27 +2110,25 @@ func TestBlockchain(t *testing.T) {
 
 		eventsInvoked := false
 
-		emulatorBackend := &mockedTestFramework{
-			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
-				eventsInvoked = true
-				assert.NotNil(t, eventType)
-
-				require.IsType(t, interpreter.CompositeStaticType{}, eventType)
-				compositeType := eventType.(interpreter.CompositeStaticType)
-				assert.Equal(t, "Foo", compositeType.QualifiedIdentifier)
-
-				return interpreter.NewArrayValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
-					common.Address{},
-				)
-			},
-		}
-
 		testFramework := &mockedTestFramework{
 			newEmulatorBackend: func() TestFramework {
-				return emulatorBackend
+				return &mockedTestFramework{
+					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+						eventsInvoked = true
+						assert.NotNil(t, eventType)
+
+						require.IsType(t, interpreter.CompositeStaticType{}, eventType)
+						compositeType := eventType.(interpreter.CompositeStaticType)
+						assert.Equal(t, "Foo", compositeType.QualifiedIdentifier)
+
+						return interpreter.NewArrayValue(
+							inter,
+							interpreter.EmptyLocationRange,
+							interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+							common.Address{},
+						)
+					},
+				}
 			},
 		}
 
@@ -2158,16 +2155,14 @@ func TestBlockchain(t *testing.T) {
 
 		resetInvoked := false
 
-		emulatorBackend := &mockedTestFramework{
-			reset: func(height uint64) {
-				resetInvoked = true
-				assert.Equal(t, uint64(5), height)
-			},
-		}
-
 		testFramework := &mockedTestFramework{
 			newEmulatorBackend: func() TestFramework {
-				return emulatorBackend
+				return &mockedTestFramework{
+					reset: func(height uint64) {
+						resetInvoked = true
+						assert.Equal(t, uint64(5), height)
+					},
+				}
 			},
 		}
 
@@ -2194,15 +2189,13 @@ func TestBlockchain(t *testing.T) {
 
 		resetInvoked := false
 
-		emulatorBackend := &mockedTestFramework{
-			reset: func(height uint64) {
-				resetInvoked = true
-			},
-		}
-
 		testFramework := &mockedTestFramework{
 			newEmulatorBackend: func() TestFramework {
-				return emulatorBackend
+				return &mockedTestFramework{
+					reset: func(height uint64) {
+						resetInvoked = true
+					},
+				}
 			},
 		}
 
@@ -2229,16 +2222,14 @@ func TestBlockchain(t *testing.T) {
 
 		moveTimeInvoked := false
 
-		emulatorBackend := &mockedTestFramework{
-			moveTime: func(timeDelta int64) {
-				moveTimeInvoked = true
-				assert.Equal(t, int64(3024000), timeDelta)
-			},
-		}
-
 		testFramework := &mockedTestFramework{
 			newEmulatorBackend: func() TestFramework {
-				return emulatorBackend
+				return &mockedTestFramework{
+					moveTime: func(timeDelta int64) {
+						moveTimeInvoked = true
+						assert.Equal(t, int64(3024000), timeDelta)
+					},
+				}
 			},
 		}
 
@@ -2268,16 +2259,14 @@ func TestBlockchain(t *testing.T) {
 
 		moveTimeInvoked := false
 
-		emulatorBackend := &mockedTestFramework{
-			moveTime: func(timeDelta int64) {
-				moveTimeInvoked = true
-				assert.Equal(t, int64(-3024000), timeDelta)
-			},
-		}
-
 		testFramework := &mockedTestFramework{
 			newEmulatorBackend: func() TestFramework {
-				return emulatorBackend
+				return &mockedTestFramework{
+					moveTime: func(timeDelta int64) {
+						moveTimeInvoked = true
+						assert.Equal(t, int64(-3024000), timeDelta)
+					},
+				}
 			},
 		}
 
@@ -2330,11 +2319,10 @@ func TestBlockchain(t *testing.T) {
 
 		newEmulatorBackendInvoked := false
 
-		emulatorBackend := &mockedTestFramework{}
 		testFramework := &mockedTestFramework{
 			newEmulatorBackend: func() TestFramework {
 				newEmulatorBackendInvoked = true
-				return emulatorBackend
+				return &mockedTestFramework{}
 			},
 		}
 
