@@ -165,8 +165,6 @@ func (d *EntitlementMapRelation) Doc() prettier.Doc {
 	)
 }
 
-func (*NominalType) isEntitlementMapElement() {}
-
 // EntitlementMappingDeclaration
 type EntitlementMappingDeclaration struct {
 	Access     Access
