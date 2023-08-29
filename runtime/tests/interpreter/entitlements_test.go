@@ -203,6 +203,149 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 		)
 	})
 
+	t.Run("subtype comparison order irrelevant", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Bool {
+			return ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())!.isSubtype(of: 
+				   ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())!
+			) && ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())!.isSubtype(of: 
+				 ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())!
+			)
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("equality", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Bool {
+			return ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())! ==
+				   ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())! && 
+				   Type<auth(X, Y) &R>() == Type<auth(Y, X) &R>()
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("order irrelevant as dictionary key", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Int {
+			let runtimeType1 = ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())!
+			let runtimeType2 = ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())!
+
+			let dict = {runtimeType1 : 3}
+			return dict[runtimeType2]!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
+	t.Run("order irrelevant as dictionary key when obtained from Type<>", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Int {
+			let runtimeType1 = Type<auth(X, Y) &R>()
+			let runtimeType2 = Type<auth(Y, X) &R>()
+
+			let dict = {runtimeType1 : 3}
+			return dict[runtimeType2]!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
+	t.Run("order irrelevant as dictionary key when obtained from .getType()", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        struct S {}
+
+        fun test(): Int {
+			let runtimeType1 = [&S() as auth(X, Y) &S].getType()
+			let runtimeType2 = [&S() as auth(Y, X) &S].getType()
+
+			let dict = {runtimeType1 : 3}
+			return dict[runtimeType2]!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
 	t.Run("created different auth <: auth", func(t *testing.T) {
 
 		t.Parallel()
@@ -2876,5 +3019,264 @@ func TestInterpretIdentityMapping(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		assert.NoError(t, err)
+	})
+}
+
+func TestInterpretMappingInclude(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("included identity", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement E
+		entitlement F
+		entitlement G 
+
+		entitlement mapping M {
+			include Identity 
+		}
+
+		struct S {
+			access(M) fun foo(): auth(M) &Int {
+				return &3
+			}
+		}
+
+		fun main(): auth(E, F) &Int {
+			let s = &S() as  auth(E, F) &S
+			return s.foo()
+		}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.E",
+						"S.test.F",
+					}
+				},
+				2,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("included identity with additional", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement E
+		entitlement F
+		entitlement G 
+
+		entitlement mapping M {
+			include Identity 
+			F -> G
+		}
+
+		struct S {
+			access(M) fun foo(): auth(M) &Int {
+				return &3
+			}
+		}
+
+		fun main(): auth(E, F, G) &Int {
+			let s = &S() as  auth(E, F) &S
+			return s.foo()
+		}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.E",
+						"S.test.F",
+						"S.test.G",
+					}
+				},
+				3,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("included non-identity", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include N
+			}
+
+			entitlement mapping N {
+				E -> F 
+				X -> Y
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun main(): auth(F, Y) &Int {
+				let s = &S() as  auth(E, X) &S
+				return s.foo()
+			}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.F",
+						"S.test.Y",
+					}
+				},
+				2,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("overlapping includes", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping A {
+				E -> F
+				F -> X
+				X -> Y
+			}
+
+			entitlement mapping B {
+				X -> Y
+			}
+
+			entitlement mapping M {
+				include A
+				include B
+				F -> X
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun main(): auth(F, X, Y) &Int {
+				let s = &S() as  auth(E, X, F) &S
+				return s.foo()
+			}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.F",
+						"S.test.X",
+						"S.test.Y",
+					}
+				},
+				3,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("diamond include", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement E
+			entitlement F
+			entitlement X
+			entitlement Y
+
+			entitlement mapping M {
+				include B
+				include C
+			}
+
+			entitlement mapping C {
+				include A
+				X -> Y
+			}
+
+			entitlement mapping B {
+				F -> X
+				include A
+			}
+
+			entitlement mapping A {
+				E -> F
+			}
+
+			struct S {
+				access(M) fun foo(): auth(M) &Int {
+					return &3
+				}
+			}
+
+			fun main(): auth(F, X, Y) &Int {
+				let s = &S() as  auth(E, X, F) &S
+				return s.foo()
+			}
+        `)
+
+		value, err := inter.Invoke("main")
+		assert.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID {
+					return []common.TypeID{
+						"S.test.F",
+						"S.test.X",
+						"S.test.Y",
+					}
+				},
+				3,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
 	})
 }

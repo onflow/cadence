@@ -1351,7 +1351,7 @@ func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
 		return nil, err
 	}
 
-	return NewCompositeStaticType(d.memoryGauge, location, qualifiedIdentifier), nil
+	return NewCompositeStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
 }
 
 func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
@@ -1402,7 +1402,7 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 		return InterfaceStaticType{}, err
 	}
 
-	return NewInterfaceStaticType(d.memoryGauge, location, qualifiedIdentifier), nil
+	return NewInterfaceStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
 }
 
 func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {

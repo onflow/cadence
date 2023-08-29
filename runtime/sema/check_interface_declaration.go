@@ -519,9 +519,11 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 		)
 	}
 
-	entitlementRelations := make([]EntitlementRelation, 0, len(declaration.Associations))
+	relations := declaration.Relations()
 
-	for _, association := range declaration.Associations {
+	entitlementRelations := make([]EntitlementRelation, 0, len(relations))
+
+	for _, association := range relations {
 		input := checker.convertNominalType(association.Input)
 		inputEntitlement, isEntitlement := input.(*EntitlementType)
 
@@ -572,6 +574,9 @@ func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.Enti
 		declaration.StartPos,
 		true,
 	)
+
+	entitlementMapType.resolveEntitlementMappingInclusions(checker, declaration, map[*EntitlementMapType]struct{}{})
+
 	return
 }
 

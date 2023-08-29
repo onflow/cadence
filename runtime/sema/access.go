@@ -96,8 +96,11 @@ func (e EntitlementSetAccess) string(typeFormatter func(ty Type) string) string 
 		separator = " | "
 	}
 
-	e.Entitlements.ForeachWithIndex(func(i int, entitlement *EntitlementType, _ struct{}) {
-		builder.WriteString(typeFormatter(entitlement))
+	compareFn := func(i string, j string) bool { return i < j }
+	mappedToIDs := orderedmap.MapKeys(e.Entitlements, func(et *EntitlementType) string { return typeFormatter(et) })
+
+	mappedToIDs.SortByKey(compareFn).ForeachWithIndex(func(i int, id string, _ struct{}) {
+		builder.WriteString(id)
 		if i < e.Entitlements.Len()-1 {
 			builder.WriteString(separator)
 		}
@@ -330,6 +333,9 @@ func (e *EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) *E
 			imageMap.Set(relation.Output, struct{}{})
 		}
 	}
+	if e.Type.IncludesIdentity {
+		imageMap.Set(entitlement, struct{}{})
+	}
 
 	e.images.Store(entitlement, imageMap)
 	return imageMap
@@ -339,10 +345,6 @@ func (e *EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) *E
 // defined by the map in `e`, producing a new entitlement set of the image of the
 // arguments.
 func (e *EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
-
-	if e.Type == IdentityType {
-		return inputs, nil
-	}
 
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map

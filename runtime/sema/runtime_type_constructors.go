@@ -30,6 +30,8 @@ var MetaTypeFunctionType = NewSimpleFunctionType(
 	MetaTypeAnnotation,
 )
 
+const OptionalTypeFunctionName = "OptionalType"
+
 var OptionalTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
@@ -42,6 +44,8 @@ var OptionalTypeFunctionType = NewSimpleFunctionType(
 	MetaTypeAnnotation,
 )
 
+const VariableSizedArrayTypeFunctionName = "VariableSizedArrayType"
+
 var VariableSizedArrayTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
@@ -53,6 +57,8 @@ var VariableSizedArrayTypeFunctionType = NewSimpleFunctionType(
 	},
 	MetaTypeAnnotation,
 )
+
+const ConstantSizedArrayTypeFunctionName = "ConstantSizedArrayType"
 
 var ConstantSizedArrayTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
@@ -73,6 +79,8 @@ var OptionalMetaTypeAnnotation = NewTypeAnnotation(&OptionalType{
 	Type: MetaType,
 })
 
+const DictionaryTypeFunctionName = "DictionaryType"
+
 var DictionaryTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
@@ -88,6 +96,8 @@ var DictionaryTypeFunctionType = NewSimpleFunctionType(
 	OptionalMetaTypeAnnotation,
 )
 
+const CompositeTypeFunctionName = "CompositeType"
+
 var CompositeTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
@@ -100,6 +110,8 @@ var CompositeTypeFunctionType = NewSimpleFunctionType(
 	OptionalMetaTypeAnnotation,
 )
 
+const InterfaceTypeFunctionName = "InterfaceType"
+
 var InterfaceTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
@@ -111,6 +123,8 @@ var InterfaceTypeFunctionType = NewSimpleFunctionType(
 	},
 	OptionalMetaTypeAnnotation,
 )
+
+const FunctionTypeFunctionName = "FunctionType"
 
 var FunctionTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
@@ -131,6 +145,8 @@ var FunctionTypeFunctionType = NewSimpleFunctionType(
 	MetaTypeAnnotation,
 )
 
+const IntersectionTypeFunctionName = "IntersectionType"
+
 var IntersectionTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
@@ -145,6 +161,8 @@ var IntersectionTypeFunctionType = NewSimpleFunctionType(
 	},
 	OptionalMetaTypeAnnotation,
 )
+
+const ReferenceTypeFunctionName = "ReferenceType"
 
 var ReferenceTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
@@ -165,6 +183,8 @@ var ReferenceTypeFunctionType = NewSimpleFunctionType(
 	OptionalMetaTypeAnnotation,
 )
 
+const CapabilityTypeFunctionName = "CapabilityType"
+
 var CapabilityTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
@@ -179,72 +199,72 @@ var CapabilityTypeFunctionType = NewSimpleFunctionType(
 
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
-		Name:      "OptionalType",
+		Name:      OptionalTypeFunctionName,
 		Value:     OptionalTypeFunctionType,
 		DocString: "Creates a run-time type representing an optional version of the given run-time type.",
 	},
 
 	{
-		Name:      "VariableSizedArrayType",
+		Name:      VariableSizedArrayTypeFunctionName,
 		Value:     VariableSizedArrayTypeFunctionType,
 		DocString: "Creates a run-time type representing a variable-sized array type of the given run-time type.",
 	},
 
 	{
-		Name:      "ConstantSizedArrayType",
+		Name:      ConstantSizedArrayTypeFunctionName,
 		Value:     ConstantSizedArrayTypeFunctionType,
-		DocString: "Creates a run-time type representing a constant-sized array type of the given run-time type with the specifized size.",
+		DocString: "Creates a run-time type representing a constant-sized array type of the given run-time type with the specified size.",
 	},
 
 	{
-		Name:  "DictionaryType",
+		Name:  DictionaryTypeFunctionName,
 		Value: DictionaryTypeFunctionType,
 		DocString: `Creates a run-time type representing a dictionary type of the given run-time key and value types.
 		Returns nil if the key type is not a valid dictionary key.`,
 	},
 
 	{
-		Name:  "CompositeType",
+		Name:  CompositeTypeFunctionName,
 		Value: CompositeTypeFunctionType,
 		DocString: `Creates a run-time type representing the composite type associated with the given type identifier.
 		Returns nil if the identifier does not correspond to any composite type.`,
 	},
 
 	{
-		Name:  "InterfaceType",
+		Name:  InterfaceTypeFunctionName,
 		Value: InterfaceTypeFunctionType,
 		DocString: `Creates a run-time type representing the interface type associated with the given type identifier.
 		Returns nil if the identifier does not correspond to any interface type.`,
 	},
 
 	{
-		Name:      "FunctionType",
+		Name:      FunctionTypeFunctionName,
 		Value:     FunctionTypeFunctionType,
 		DocString: "Creates a run-time type representing a function type associated with the given parameters and return type.",
 	},
 
 	{
-		Name:  "ReferenceType",
+		Name:  ReferenceTypeFunctionName,
 		Value: ReferenceTypeFunctionType,
 		DocString: `
-		Creates a run-time type representing a reference type of the given type. 
+		Creates a run-time type representing a reference type of the given type.
 
-		The first argument specifies the set of entitlements to which this reference is entitled. 
+		The first argument specifies the set of entitlements to which this reference is entitled.
 
-		Providing an empty array will result in an unauthorized return value. 
+		Providing an empty array will result in an unauthorized return value.
 
 		Providing invalid entitlements in the input array will result in a nil return value`,
 	},
 
 	{
-		Name:  "IntersectionType",
+		Name:  IntersectionTypeFunctionName,
 		Value: IntersectionTypeFunctionType,
 		DocString: `Creates a run-time type representing an intersection of the interface identifiers in the argument.
 		Returns nil if the intersection is not valid.`,
 	},
 
 	{
-		Name:      "CapabilityType",
+		Name:      CapabilityTypeFunctionName,
 		Value:     CapabilityTypeFunctionType,
 		DocString: "Creates a run-time type representing a capability type of the given reference type. Returns nil if the type is not a reference.",
 	},

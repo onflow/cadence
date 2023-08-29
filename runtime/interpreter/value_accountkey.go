@@ -23,7 +23,7 @@ import (
 )
 
 var accountKeyTypeID = sema.AccountKeyType.ID()
-var AccountKeyStaticType StaticType = NewCompositeStaticType(nil, nil, "AccountKey") // unmetered
+var AccountKeyStaticType StaticType = ConvertSemaCompositeTypeToStaticCompositeType(nil, sema.AccountKeyType)
 var accountKeyFieldNames = []string{
 	sema.AccountKeyKeyIndexFieldName,
 	sema.AccountKeyPublicKeyFieldName,

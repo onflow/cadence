@@ -21,8 +21,10 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 
 	"github.com/stretchr/testify/require"
 
@@ -2235,4 +2237,55 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+}
+
+func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	for _, valueDeclaration := range []stdlib.StandardLibraryValue{
+		stdlib.NewPublicKeyConstructor(
+			assumeValidPublicKeyValidator{},
+			nil,
+			nil,
+		),
+		stdlib.SignatureAlgorithmConstructor,
+	} {
+		baseValueActivation.DeclareValue(valueDeclaration)
+		interpreter.Declare(baseActivation, valueDeclaration)
+	}
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          attachment A for AnyStruct {
+              fun foo(): Int {
+                  return 42
+              }
+          }
+
+          fun main(): Int {
+              var key = PublicKey(
+                  publicKey: "0102".decodeHex(),
+                  signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+              )
+			  key = attach A() to key
+              return key[A]!.foo()
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
+				AttachmentsEnabled:  true,
+			},
+			Config: &interpreter.Config{
+				BaseActivation: baseActivation,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
 }

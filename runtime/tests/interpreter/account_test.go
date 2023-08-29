@@ -613,10 +613,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
 		require.Equal(t,
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
-					Type: interpreter.CompositeStaticType{
-						Location:            TestLocation,
-						QualifiedIdentifier: "R",
-					},
+					Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "R"),
 				},
 			),
 			value,
@@ -635,10 +632,7 @@ func TestInterpretAccountStorageType(t *testing.T) {
 		require.Equal(t,
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
-					Type: interpreter.CompositeStaticType{
-						Location:            TestLocation,
-						QualifiedIdentifier: "S",
-					},
+					Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 				},
 			),
 			value,

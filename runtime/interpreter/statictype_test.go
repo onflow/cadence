@@ -179,12 +179,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
 				nil,
 				utils.TestLocation,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
 					nil,
 					utils.TestLocation,
 					"X",
@@ -198,12 +198,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
 				nil,
 				utils.TestLocation,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
 					nil,
 					utils.TestLocation,
 					"Y",
@@ -217,12 +217,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
 				nil,
 				common.IdentifierLocation("A"),
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
 					nil,
 					common.IdentifierLocation("B"),
 					"X",
@@ -236,12 +236,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
 				nil,
 				common.IdentifierLocation("A"),
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
 					nil,
 					common.StringLocation("A"),
 					"X",
@@ -255,12 +255,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
 				nil,
 				nil,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
 					nil,
 					nil,
 					"X",
@@ -274,12 +274,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
 				nil,
 				nil,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
 					nil,
 					nil,
 					"Y",
@@ -293,12 +293,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
 				nil,
 				nil,
 				"X",
 			).Equal(
-				NewCompositeStaticType(
+				NewCompositeStaticTypeComputeTypeID(
 					nil,
 					common.StringLocation("B"),
 					"X",
@@ -312,15 +312,12 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewCompositeStaticType(
+			NewCompositeStaticTypeComputeTypeID(
 				nil,
 				nil,
 				"X",
 			).Equal(
-				InterfaceStaticType{
-					Location:            nil,
-					QualifiedIdentifier: "X",
-				},
+				NewInterfaceStaticTypeComputeTypeID(nil, nil, "X"),
 			),
 		)
 	})
@@ -335,15 +332,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			InterfaceStaticType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X")),
 		)
 	})
 
@@ -352,49 +342,28 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Y",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y")),
 		)
 	})
 
-	t.Run("different locations, different identifier", func(t *testing.T) {
+	t.Run("different locations of same kind, same qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            common.IdentifierLocation("A"),
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            common.IdentifierLocation("B"),
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, common.IdentifierLocation("A"), "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, common.IdentifierLocation("B"), "X")),
 		)
 	})
 
-	t.Run("different locations, different identifier", func(t *testing.T) {
+	t.Run("different locations of different kinds, same qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            common.IdentifierLocation("A"),
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            common.StringLocation("A"),
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, common.IdentifierLocation("A"), "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, common.StringLocation("A"), "X")),
 		)
 	})
 
@@ -403,15 +372,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			InterfaceStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            nil,
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, nil, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, nil, "X")),
 		)
 	})
 
@@ -420,15 +382,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            nil,
-					QualifiedIdentifier: "Y",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, nil, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, nil, "Y")),
 		)
 	})
 
@@ -437,15 +392,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            common.StringLocation("B"),
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, nil, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, common.StringLocation("B"), "X")),
 		)
 	})
 
@@ -454,16 +402,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				NewCompositeStaticType(
-					nil,
-					nil,
-					"X",
-				),
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, nil, "X").
+				Equal(NewCompositeStaticTypeComputeTypeID(nil, nil, "X")),
 		)
 	})
 }
@@ -758,26 +698,14 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.True(t,
 			(&IntersectionStaticType{
 				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
 					},
 				},
 			),
@@ -806,51 +734,55 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.False(t,
 			(&IntersectionStaticType{
 				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
 					},
 				},
 			),
 		)
 	})
 
-	t.Run("more intersections", func(t *testing.T) {
+	t.Run("same, restrictions in different order", func(t *testing.T) {
 
 		t.Parallel()
 
-		require.False(t,
+		require.True(t,
 			(&IntersectionStaticType{
 				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					},
+				},
+			),
+		)
+	})
+
+	t.Run("same, restrictions in same order", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			(&IntersectionStaticType{
+				Types: []InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+				},
+			}).Equal(
+				&IntersectionStaticType{
+					Types: []InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 					},
 				},
 			),
@@ -864,26 +796,55 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.False(t,
 			(&IntersectionStaticType{
 				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
 					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Z",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Z"),
+					},
+				},
+			),
+		)
+	})
+
+	t.Run("more restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			(&IntersectionStaticType{
+				Types: []InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+				},
+			}).Equal(
+				&IntersectionStaticType{
+					Types: []InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					},
+				},
+			),
+		)
+	})
+
+	t.Run("different restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			(&IntersectionStaticType{
+				Types: []InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+				},
+			}).Equal(
+				&IntersectionStaticType{
+					Types: []InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Z"),
 					},
 				},
 			),
@@ -897,14 +858,8 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 		require.False(t,
 			(&IntersectionStaticType{
 				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				ReferenceStaticType{
@@ -941,10 +896,11 @@ func TestStaticTypeConversion(t *testing.T) {
 		Identifier: testInterfaceQualifiedIdentifier,
 	}
 
-	testInterfaceStaticType := InterfaceStaticType{
-		Location:            testLocation,
-		QualifiedIdentifier: testInterfaceQualifiedIdentifier,
-	}
+	testInterfaceStaticType := NewInterfaceStaticTypeComputeTypeID(
+		nil,
+		testLocation,
+		testInterfaceQualifiedIdentifier,
+	)
 
 	const testCompositeQualifiedIdentifier = "TestComposite"
 
@@ -953,10 +909,11 @@ func TestStaticTypeConversion(t *testing.T) {
 		Identifier: testCompositeQualifiedIdentifier,
 	}
 
-	testCompositeStaticType := CompositeStaticType{
-		Location:            testLocation,
-		QualifiedIdentifier: testCompositeQualifiedIdentifier,
-	}
+	testCompositeStaticType := NewCompositeStaticTypeComputeTypeID(
+		nil,
+		testLocation,
+		testCompositeQualifiedIdentifier,
+	)
 
 	testFunctionType := &sema.FunctionType{}
 
@@ -968,6 +925,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			t *testing.T,
 			location common.Location,
 			qualifiedIdentifier string,
+			typeID TypeID,
 		) (
 			*sema.InterfaceType,
 			error,
@@ -976,6 +934,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			t *testing.T,
 			location common.Location,
 			qualifiedIdentifier string,
+			typeID TypeID,
 		) (
 			*sema.CompositeType,
 			error,
@@ -1292,6 +1251,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				t *testing.T,
 				location common.Location,
 				qualifiedIdentifier string,
+				_ TypeID,
 			) (*sema.CompositeType, error) {
 				require.Nil(t, location)
 				require.Equal(t, "AccountKey", qualifiedIdentifier)
@@ -1531,6 +1491,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				t *testing.T,
 				location common.Location,
 				qualifiedIdentifier string,
+				typeID TypeID,
 			) (*sema.InterfaceType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testInterfaceQualifiedIdentifier, qualifiedIdentifier)
@@ -1545,6 +1506,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				t *testing.T,
 				location common.Location,
 				qualifiedIdentifier string,
+				typeID TypeID,
 			) (*sema.InterfaceType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testInterfaceQualifiedIdentifier, qualifiedIdentifier)
@@ -1559,6 +1521,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				t *testing.T,
 				location common.Location,
 				qualifiedIdentifier string,
+				typeID TypeID,
 			) (*sema.CompositeType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testCompositeQualifiedIdentifier, qualifiedIdentifier)
@@ -1659,6 +1622,7 @@ func TestStaticTypeConversion(t *testing.T) {
 					_ *testing.T,
 					_ common.Location,
 					_ string,
+					_ TypeID,
 				) (*sema.InterfaceType, error) {
 					require.FailNow(t, "getInterface should not be called")
 					return nil, nil
@@ -1671,6 +1635,7 @@ func TestStaticTypeConversion(t *testing.T) {
 					_ *testing.T,
 					_ common.Location,
 					_ string,
+					_ TypeID,
 				) (*sema.CompositeType, error) {
 					require.FailNow(t, "getComposite should not be called")
 					return nil, nil
@@ -1690,11 +1655,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			convertedSemaType, err := ConvertStaticToSemaType(
 				nil,
 				test.staticType,
-				func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
-					return getInterface(t, location, qualifiedIdentifier)
+				func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error) {
+					return getInterface(t, location, qualifiedIdentifier, typeID)
 				},
-				func(location common.Location, qualifiedIdentifier string) (*sema.CompositeType, error) {
-					return getComposite(t, location, qualifiedIdentifier)
+				func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
+					return getComposite(t, location, qualifiedIdentifier, typeID)
 				},
 				getEntitlement,
 				getEntitlementMap,

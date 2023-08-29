@@ -4360,6 +4360,72 @@ func (e *InvalidMappedAuthorizationOutsideOfFieldError) EndPosition(common.Memor
 	return e.EndPos
 }
 
+// InvalidEntitlementMappingInclusionError
+type InvalidEntitlementMappingInclusionError struct {
+	Map          *EntitlementMapType
+	IncludedType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidEntitlementMappingInclusionError{}
+var _ errors.UserError = &InvalidEntitlementMappingInclusionError{}
+
+func (*InvalidEntitlementMappingInclusionError) isSemanticError() {}
+
+func (*InvalidEntitlementMappingInclusionError) IsUserError() {}
+
+func (e *InvalidEntitlementMappingInclusionError) Error() string {
+	return fmt.Sprintf(
+		"cannot include `%s` in the definition of `%s`, as it is not an entitlement map",
+		e.IncludedType.QualifiedString(),
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+// DuplicateEntitlementMappingInclusionError
+type DuplicateEntitlementMappingInclusionError struct {
+	Map          *EntitlementMapType
+	IncludedType *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementMappingInclusionError{}
+var _ errors.UserError = &DuplicateEntitlementMappingInclusionError{}
+
+func (*DuplicateEntitlementMappingInclusionError) isSemanticError() {}
+
+func (*DuplicateEntitlementMappingInclusionError) IsUserError() {}
+
+func (e *DuplicateEntitlementMappingInclusionError) Error() string {
+	return fmt.Sprintf(
+		"`%s` is already included in the definition of `%s`",
+		e.IncludedType.QualifiedIdentifier(),
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+// CyclicEntitlementMappingError
+type CyclicEntitlementMappingError struct {
+	Map          *EntitlementMapType
+	IncludedType *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &CyclicEntitlementMappingError{}
+var _ errors.UserError = &CyclicEntitlementMappingError{}
+
+func (*CyclicEntitlementMappingError) isSemanticError() {}
+
+func (*CyclicEntitlementMappingError) IsUserError() {}
+
+func (e *CyclicEntitlementMappingError) Error() string {
+	return fmt.Sprintf(
+		"cannot include `%s` in the definition of `%s`, as it would create a cyclical mapping",
+		e.IncludedType.QualifiedIdentifier(),
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
 type DuplicateEntitlementRequirementError struct {
 	Entitlement *EntitlementType
 	ast.Range

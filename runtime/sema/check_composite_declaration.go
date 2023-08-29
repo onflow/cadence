@@ -1144,18 +1144,27 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 
 	initializerCount := len(initializers)
 	if initializerCount > 0 {
+
 		firstInitializer := initializers[0]
+
 		parameters = checker.parameters(firstInitializer.FunctionDeclaration.ParameterList)
 
 		if initializerCount > 1 {
+
 			secondInitializer := initializers[1]
 
+			previousPos := firstInitializer.StartPosition()
+			pos := secondInitializer.StartPosition()
+
 			checker.report(
-				&UnsupportedOverloadingError{
-					DeclarationKind: common.DeclarationKindInitializer,
-					Range:           ast.NewRangeFromPositioned(checker.memoryGauge, secondInitializer),
+				&RedeclarationError{
+					Kind:        common.DeclarationKindInitializer,
+					Name:        common.DeclarationKindInitializer.Keywords(),
+					PreviousPos: &previousPos,
+					Pos:         pos,
 				},
 			)
+
 		}
 	}
 	return parameters

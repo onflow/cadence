@@ -35,31 +35,11 @@ var PrimitiveStaticTypes = _PrimitiveStaticType_map
 
 type PrimitiveStaticType uint
 
-func (t PrimitiveStaticType) Equal(other StaticType) bool {
-	otherPrimitiveType, ok := other.(PrimitiveStaticType)
-	if !ok {
-		return false
-	}
-
-	return t == otherPrimitiveType
-}
+var _ StaticType = PrimitiveStaticType(0)
 
 const primitiveStaticTypePrefix = "PrimitiveStaticType"
 
 var primitiveStaticTypeConstantLength = len(primitiveStaticTypePrefix) + 2 // + 2 for parentheses
-
-func (t PrimitiveStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	if str, ok := PrimitiveStaticTypes[t]; ok {
-		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(str)))
-		return str
-	}
-
-	memoryAmount := primitiveStaticTypeConstantLength + OverEstimateIntStringLength(int(t))
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(memoryAmount))
-
-	rawValueStr := strconv.FormatInt(int64(t), 10)
-	return fmt.Sprintf("%s(%s)", primitiveStaticTypePrefix, rawValueStr)
-}
 
 func NewPrimitiveStaticType(
 	memoryGauge common.MemoryGauge,
@@ -413,6 +393,32 @@ func (t PrimitiveStaticType) elementSize() uint {
 	}
 
 	panic(errors.NewUnexpectedError("missing case for %s", t))
+}
+
+func (t PrimitiveStaticType) Equal(other StaticType) bool {
+	otherPrimitiveType, ok := other.(PrimitiveStaticType)
+	if !ok {
+		return false
+	}
+
+	return t == otherPrimitiveType
+}
+
+func (t PrimitiveStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	if str, ok := PrimitiveStaticTypes[t]; ok {
+		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(str)))
+		return str
+	}
+
+	memoryAmount := primitiveStaticTypeConstantLength + OverEstimateIntStringLength(int(t))
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(memoryAmount))
+
+	rawValueStr := strconv.FormatInt(int64(t), 10)
+	return fmt.Sprintf("%s(%s)", primitiveStaticTypePrefix, rawValueStr)
+}
+
+func (t PrimitiveStaticType) ID() TypeID {
+	return t.SemaType().ID()
 }
 
 func (t PrimitiveStaticType) SemaType() sema.Type {

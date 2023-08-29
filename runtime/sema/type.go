@@ -615,12 +615,12 @@ func (t *OptionalType) QualifiedString() string {
 	return fmt.Sprintf("%s?", t.Type.QualifiedString())
 }
 
+func OptionalTypeID(elementTypeID TypeID) TypeID {
+	return TypeID(fmt.Sprintf("%s?", elementTypeID))
+}
+
 func (t *OptionalType) ID() TypeID {
-	var id string
-	if t.Type != nil {
-		id = string(t.Type.ID())
-	}
-	return TypeID(fmt.Sprintf("%s?", id))
+	return OptionalTypeID(t.Type.ID())
 }
 
 func (t *OptionalType) Equal(other Type) bool {
@@ -1980,6 +1980,19 @@ var removableEntitledAccess = NewEntitlementSetAccess(
 	Disjunction,
 )
 
+const ArrayTypeFilterFunctionName = "filter"
+
+const arrayTypeFilterFunctionDocString = `
+Returns a new array whose elements are filtered by applying the filter function on each element of the original array.
+Available if the array element type is not resource-kinded.
+`
+
+const ArrayTypeMapFunctionName = "map"
+
+const arrayTypeMapFunctionDocString = `
+Returns a new array whose elements are produced by applying the mapper function on each element of the original array.
+`
+
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
@@ -2095,6 +2108,56 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					identifier,
 					ArrayReverseFunctionType(arrayType),
 					arrayTypeReverseFunctionDocString,
+				)
+			},
+		},
+		ArrayTypeFilterFunctionName: {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayFilterFunctionType(memoryGauge, elementType),
+					arrayTypeFilterFunctionDocString,
+				)
+			},
+		},
+		ArrayTypeMapFunctionName: {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+				elementType := arrayType.ElementType(false)
+
+				// TODO: maybe allow for resource element type as a reference.
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayMapFunctionType(memoryGauge, arrayType),
+					arrayTypeMapFunctionDocString,
 				)
 			},
 		},
@@ -2416,6 +2479,81 @@ func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
 	}
 }
 
+func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *FunctionType {
+	// fun filter(_ function: ((T): Bool)): [T]
+	// funcType: elementType -> Bool
+	funcType := &FunctionType{
+		Parameters: []Parameter{
+			{
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
+
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "f",
+				TypeAnnotation: NewTypeAnnotation(funcType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(NewVariableSizedType(memoryGauge, elementType)),
+	}
+}
+
+func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *FunctionType {
+	// For [T] or [T; N]
+	// fun map(_ function: ((T): U)): [U]
+	//               or
+	// fun map(_ function: ((T): U)): [U; N]
+
+	typeParameter := &TypeParameter{
+		Name: "U",
+	}
+
+	typeU := &GenericType{
+		TypeParameter: typeParameter,
+	}
+
+	var returnArrayType Type
+	switch arrayType := arrayType.(type) {
+	case *VariableSizedType:
+		returnArrayType = NewVariableSizedType(memoryGauge, typeU)
+	case *ConstantSizedType:
+		returnArrayType = NewConstantSizedType(memoryGauge, typeU, arrayType.Size)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	// transformFuncType: elementType -> U
+	transformFuncType := &FunctionType{
+		Parameters: []Parameter{
+			{
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(arrayType.ElementType(false)),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(typeU),
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "transform",
+				TypeAnnotation: NewTypeAnnotation(transformFuncType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(returnArrayType),
+	}
+}
+
 // VariableSizedType is a variable sized array type
 type VariableSizedType struct {
 	Type                Type
@@ -2451,8 +2589,12 @@ func (t *VariableSizedType) QualifiedString() string {
 	return fmt.Sprintf("[%s]", t.Type.QualifiedString())
 }
 
+func VariableSizedTypeID(elementTypeID TypeID) TypeID {
+	return TypeID(fmt.Sprintf("[%s]", elementTypeID))
+}
+
 func (t *VariableSizedType) ID() TypeID {
-	return TypeID(fmt.Sprintf("[%s]", t.Type.ID()))
+	return VariableSizedTypeID(t.Type.ID())
 }
 
 func (t *VariableSizedType) Equal(other Type) bool {
@@ -2617,8 +2759,12 @@ func (t *ConstantSizedType) QualifiedString() string {
 	return fmt.Sprintf("[%s; %d]", t.Type.QualifiedString(), t.Size)
 }
 
+func ConstantSizedTypeID(elementTypeID TypeID, size int64) TypeID {
+	return TypeID(fmt.Sprintf("[%s;%d]", elementTypeID, size))
+}
+
 func (t *ConstantSizedType) ID() TypeID {
-	return TypeID(fmt.Sprintf("[%s;%d]", t.Type.ID(), t.Size))
+	return ConstantSizedTypeID(t.Type.ID(), t.Size)
 }
 
 func (t *ConstantSizedType) Equal(other Type) bool {
@@ -3606,7 +3752,18 @@ func addToBaseActivation(ty Type) {
 	)
 }
 
-var IdentityType = NewEntitlementMapType(nil, nil, "Identity")
+const IdentityMappingIdentifier string = "Identity"
+
+// IdentityType represents the `Identity` entitlement mapping type.
+// It is an empty map that includes the Identity map,
+// and is considered already "resolved" with regards to its (vacuously empty) inclusions.
+// defining it this way eliminates the need to do any special casing for its behavior
+var IdentityType = func() *EntitlementMapType {
+	m := NewEntitlementMapType(nil, nil, IdentityMappingIdentifier)
+	m.IncludesIdentity = true
+	m.resolveInclusions.Do(func() {})
+	return m
+}()
 
 func baseTypeVariable(name string, ty Type) *Variable {
 	return &Variable{
@@ -4268,12 +4425,7 @@ func (t *CompositeType) initializeIdentifiers() {
 
 	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
 
-	var typeID TypeID
-	if t.Location == nil {
-		typeID = TypeID(identifier)
-	} else {
-		typeID = t.Location.TypeID(nil, identifier)
-	}
+	typeID := common.NewTypeIDFromQualifiedName(nil, t.Location, identifier)
 
 	t.cachedIdentifiers = &struct {
 		TypeID              TypeID
@@ -4971,12 +5123,7 @@ func (t *InterfaceType) initializeIdentifiers() {
 
 	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
 
-	var typeID TypeID
-	if t.Location == nil {
-		typeID = TypeID(identifier)
-	} else {
-		typeID = t.Location.TypeID(nil, identifier)
-	}
+	typeID := common.NewTypeIDFromQualifiedName(nil, t.Location, identifier)
 
 	t.cachedIdentifiers = &struct {
 		TypeID              TypeID
@@ -5283,12 +5430,16 @@ func (t *DictionaryType) QualifiedString() string {
 	)
 }
 
-func (t *DictionaryType) ID() TypeID {
+func DictionaryTypeID(keyTypeID TypeID, valueTypeID TypeID) TypeID {
 	return TypeID(fmt.Sprintf(
 		"{%s:%s}",
-		t.KeyType.ID(),
-		t.ValueType.ID(),
+		keyTypeID,
+		valueTypeID,
 	))
+}
+
+func (t *DictionaryType) ID() TypeID {
+	return DictionaryTypeID(t.KeyType.ID(), t.ValueType.ID())
 }
 
 func (t *DictionaryType) Equal(other Type) bool {
@@ -7571,12 +7722,7 @@ func (t *EntitlementType) QualifiedIdentifier() string {
 }
 
 func (t *EntitlementType) ID() TypeID {
-	identifier := t.QualifiedIdentifier()
-	if t.Location == nil {
-		return TypeID(identifier)
-	} else {
-		return t.Location.TypeID(nil, identifier)
-	}
+	return common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier())
 }
 
 func (t *EntitlementType) Equal(other Type) bool {
@@ -7652,10 +7798,12 @@ type EntitlementRelation struct {
 }
 
 type EntitlementMapType struct {
-	Location      common.Location
-	containerType Type
-	Identifier    string
-	Relations     []EntitlementRelation
+	Location          common.Location
+	containerType     Type
+	Identifier        string
+	Relations         []EntitlementRelation
+	IncludesIdentity  bool
+	resolveInclusions sync.Once
 }
 
 var _ Type = &EntitlementMapType{}
@@ -7705,12 +7853,7 @@ func (t *EntitlementMapType) QualifiedIdentifier() string {
 }
 
 func (t *EntitlementMapType) ID() TypeID {
-	identifier := t.QualifiedIdentifier()
-	if t.Location == nil {
-		return TypeID(identifier)
-	} else {
-		return t.Location.TypeID(nil, identifier)
-	}
+	return common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier())
 }
 
 func (t *EntitlementMapType) Equal(other Type) bool {
@@ -7776,6 +7919,69 @@ func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(
 
 func (t *EntitlementMapType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+// Recursively resolve the include statements of an entitlement mapping declaration, walking the "hierarchy" defined in this file
+// Uses the sync primitive stored in `resolveInclusions` to ensure each map type's includes are computed only once.
+// This assumes that any includes coming from imported files are necessarily already completely resolved, since that imported file
+// must necessarily already have been fully checked. Additionally, because import cycles are not allowed in Cadence, we only
+// need to check for map-include cycles within the currently-checked file
+func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
+	checker *Checker,
+	declaration *ast.EntitlementMappingDeclaration,
+	visitedMaps map[*EntitlementMapType]struct{},
+) {
+	t.resolveInclusions.Do(func() {
+		visitedMaps[t] = struct{}{}
+		defer delete(visitedMaps, t)
+
+		// track locally included maps to report duplicates, which are unrelated to cycles
+		// we do not enforce that no maps are duplicated across the entire chain; only the specific map definition
+		// currently being considered. This is to avoid reporting annoying errors when trying to include two
+		// maps defined elsewhere that may have small overlap.
+		includedMaps := map[*EntitlementMapType]struct{}{}
+
+		for _, inclusion := range declaration.Inclusions() {
+
+			includedType := checker.convertNominalType(inclusion)
+			includedMapType, isEntitlementMapping := includedType.(*EntitlementMapType)
+			if !isEntitlementMapping {
+				checker.report(&InvalidEntitlementMappingInclusionError{
+					Map:          t,
+					IncludedType: includedType,
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, inclusion),
+				})
+				continue
+			}
+			if _, duplicate := includedMaps[includedMapType]; duplicate {
+				checker.report(&DuplicateEntitlementMappingInclusionError{
+					Map:          t,
+					IncludedType: includedMapType,
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, inclusion),
+				})
+				continue
+			}
+			if _, isCylical := visitedMaps[includedMapType]; isCylical {
+				checker.report(&CyclicEntitlementMappingError{
+					Map:          t,
+					IncludedType: includedMapType,
+					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, inclusion),
+				})
+				continue
+			}
+
+			// recursively resolve the included map type's includes, skipping any that have already been resolved
+			includedMapType.resolveEntitlementMappingInclusions(
+				checker,
+				checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType),
+				visitedMaps,
+			)
+			t.Relations = append(t.Relations, includedMapType.Relations...)
+			t.IncludesIdentity = t.IncludesIdentity || includedMapType.IncludesIdentity
+
+			includedMaps[includedMapType] = struct{}{}
+		}
+	})
 }
 
 var NativeCompositeTypes = map[string]*CompositeType{}

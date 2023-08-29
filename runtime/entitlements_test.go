@@ -942,16 +942,16 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      entitlement Y
+          entitlement Y
 
           access(all)
-	      resource R {}
+          resource R {}
 
           access(all)
-	      fun main() {
+          fun main() {
                let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
                let r <- create R()
@@ -960,13 +960,13 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
                let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
                account.capabilities.publish(issuedCap, at: /public/foo)
 
-	           let ref = account.capabilities.borrow<auth(X, Y) &R>(/public/foo)
+               let ref = account.capabilities.borrow<auth(X, Y) &R>(/public/foo)
                assert(ref != nil, message: "failed borrow")
 
                let ref2 = ref! as? auth(X, Y) &R
                assert(ref2 != nil, message: "failed cast")
-	      }
-	    `)
+          }
+        `)
 	})
 
 	t.Run("upcast runtime entitlements", func(t *testing.T) {
@@ -974,31 +974,31 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      struct S {}
+          struct S {}
 
           access(all)
-	      fun main() {
+          fun main() {
               let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let s = S()
-	          account.storage.save(s, to: /storage/foo)
+              let s = S()
+              account.storage.save(s, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<auth(X) &S>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<auth(X) &S>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let cap: Capability<auth(X) &S> = account.capabilities.get<auth(X) &S>(/public/foo)!
+              let cap: Capability<auth(X) &S> = account.capabilities.get<auth(X) &S>(/public/foo)!
 
-	          let runtimeType = cap.getType()
+              let runtimeType = cap.getType()
 
-	          let upcastCap = cap as Capability<&S>
-	          let upcastRuntimeType = upcastCap.getType()
+              let upcastCap = cap as Capability<&S>
+              let upcastRuntimeType = upcastCap.getType()
 
-	          assert(runtimeType != upcastRuntimeType)
-	      }
-	    `)
+              assert(runtimeType != upcastRuntimeType)
+          }
+        `)
 	})
 
 	t.Run("upcast runtime type", func(t *testing.T) {
@@ -1006,26 +1006,26 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      struct S {}
+          struct S {}
 
           access(all)
-	      fun main() {
+          fun main() {
               let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let s = S()
-	          account.storage.save(s, to: /storage/foo)
+              let s = S()
+              account.storage.save(s, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<&S>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let cap: Capability<&S> = account.capabilities.get<&S>(/public/foo)!
+              let cap: Capability<&S> = account.capabilities.get<&S>(/public/foo)!
 
-	          let runtimeType = cap.getType()
-	          let upcastCap = cap as Capability<&AnyStruct>
-	          let upcastRuntimeType = upcastCap.getType()
-	          assert(runtimeType == upcastRuntimeType)
-	       }
-	    `)
+              let runtimeType = cap.getType()
+              let upcastCap = cap as Capability<&AnyStruct>
+              let upcastRuntimeType = upcastCap.getType()
+              assert(runtimeType == upcastRuntimeType)
+           }
+        `)
 	})
 
 	t.Run("can check with supertype", func(t *testing.T) {
@@ -1033,28 +1033,28 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      entitlement Y
+          entitlement Y
 
           access(all)
-	      resource R {}
+          resource R {}
 
           access(all)
-	      fun main() {
+          fun main() {
               let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let r <- create R()
-	          account.storage.save(<-r, to: /storage/foo)
+              let r <- create R()
+              account.storage.save(<-r, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let cap = account.capabilities.get<auth(X | Y) &R>(/public/foo)!
-	          assert(cap.check())
-	      }
-	    `)
+              let cap = account.capabilities.get<auth(X | Y) &R>(/public/foo)!
+              assert(cap.check())
+          }
+        `)
 	})
 
 	t.Run("cannot borrow with subtype", func(t *testing.T) {
@@ -1062,28 +1062,28 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      entitlement Y
+          entitlement Y
 
           access(all)
-	      resource R {}
+          resource R {}
 
           access(all)
-	      fun main() {
+          fun main() {
               let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let r <- create R()
-	          account.storage.save(<-r, to: /storage/foo)
+              let r <- create R()
+              account.storage.save(<-r, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let ref = account.capabilities.borrow<auth(X, Y) &R>(/public/foo)
-	          assert(ref == nil)
-	      }
-	    `)
+              let ref = account.capabilities.borrow<auth(X, Y) &R>(/public/foo)
+              assert(ref == nil)
+          }
+        `)
 	})
 
 	t.Run("cannot get with subtype", func(t *testing.T) {
@@ -1091,27 +1091,193 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      entitlement Y
+          entitlement Y
 
           access(all)
-	      resource R {}
+          resource R {}
 
           access(all)
-	      fun main() {
+          fun main() {
               let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let r <- create R()
-	          account.storage.save(<-r, to: /storage/foo)
+              let r <- create R()
+              account.storage.save(<-r, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let cap = account.capabilities.get<auth(X, Y) &R>(/public/foo)
-	          assert(cap == nil)
-	      }
-	    `)
+              let cap = account.capabilities.get<auth(X, Y) &R>(/public/foo)
+              assert(cap == nil)
+          }
+        `)
 	})
+}
+
+func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	furtherUpstreamDeployTx := DeploymentTransaction("FurtherUpstream", []byte(`
+        access(all) contract FurtherUpstream {
+            access(all) entitlement X
+            access(all) entitlement Y
+            access(all) entitlement Z
+
+            access(all) entitlement mapping M {
+                X -> Y 
+                Y -> Z
+            }
+        }
+    `))
+
+	upstreamDeployTx := DeploymentTransaction("Upstream", []byte(`
+        import FurtherUpstream from 0x1
+        access(all) contract Upstream {
+            access(all) entitlement A
+            access(all) entitlement B
+            access(all) entitlement C
+
+            access(all) entitlement mapping M {
+                include FurtherUpstream.M
+
+                A -> FurtherUpstream.Y 
+                FurtherUpstream.X -> B
+            }
+        }
+    `))
+
+	testDeployTx := DeploymentTransaction("Test", []byte(`
+        import FurtherUpstream from 0x1
+        import Upstream from 0x1
+        access(all) contract Test {
+            access(all) entitlement E
+            access(all) entitlement F
+            access(all) entitlement G
+
+            access(all) entitlement mapping M {
+                include Upstream.M
+
+                E -> FurtherUpstream.Z
+                E -> G
+                F -> Upstream.C
+                Upstream.C -> FurtherUpstream.X
+            }
+
+            access(all) struct S {
+                access(M) fun performMap(): auth(M) &Int {
+                    return &1
+                }
+            } 
+        }
+    `))
+
+	script := []byte(`
+        import Test from 0x1
+        import Upstream from 0x1
+        import FurtherUpstream from 0x1
+
+        access(all) fun main() {
+            let ref1 = &Test.S() as auth(FurtherUpstream.X, Upstream.C, Test.E) &Test.S
+
+            assert([ref1.performMap()].getType() == 
+            Type<[auth(
+                // from map of FurtherUpstream.X 
+                FurtherUpstream.Y, 
+                Upstream.B, 
+                // from map of Upstream.C
+                FurtherUpstream.X, 
+                // from map of Test.E 
+                FurtherUpstream.Z,
+                Test.G
+            ) &Int]>(), message: "test 1 failed")
+
+            let ref2 = &Test.S() as auth(FurtherUpstream.Y, Upstream.A, Test.F) &Test.S
+            assert([ref2.performMap()].getType() == 
+                Type<[auth(
+                    // from map of FurtherUpstream.Y 
+                    FurtherUpstream.Z, 
+                    // from map of Upstream.A
+                    FurtherUpstream.Y,
+                    // from map of Test.F 
+                    Upstream.C
+                ) &Int]>(), message: "test 2 failed")
+
+            let ref3 = &Test.S() as auth(FurtherUpstream.Z, Upstream.B, Test.G) &Test.S
+              assert([ref3.performMap()].getType() == Type<[&Int]>(), message: "test 3 failed")
+        }
+     `)
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log:     func(message string) {},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: furtherUpstreamDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: upstreamDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: testDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+
+	require.NoError(t, err)
 }

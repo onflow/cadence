@@ -593,7 +593,7 @@ func (g *generator) VisitEntitlementMappingDeclaration(decl *ast.EntitlementMapp
 
 	entitlementMappingName := decl.Identifier.Identifier
 	typeVarName := typeVarName(entitlementMappingName)
-	typeVarDecl := entitlementMapTypeLiteral(entitlementMappingName, decl.Associations)
+	typeVarDecl := entitlementMapTypeLiteral(entitlementMappingName, decl.Elements)
 
 	g.addDecls(
 		goVarDecl(
@@ -1721,7 +1721,7 @@ func entitlementTypeLiteral(name string) dst.Expr {
 	}
 }
 
-func entitlementMapTypeLiteral(name string, associations []*ast.EntitlementMapElement) dst.Expr {
+func entitlementMapTypeLiteral(name string, elements []ast.EntitlementMapElement) dst.Expr {
 	// &sema.EntitlementMapType{
 	//	Identifier: "Foo",
 	//	Relations: []EntitlementRelation{
@@ -1732,14 +1732,20 @@ func entitlementMapTypeLiteral(name string, associations []*ast.EntitlementMapEl
 	//	}
 	// }
 
-	relationExprs := make([]dst.Expr, 0, len(associations))
+	relationExprs := make([]dst.Expr, 0, len(elements))
 
-	for _, association := range associations {
+	for _, element := range elements {
+
+		relation, ok := element.(*ast.EntitlementMapRelation)
+		if !ok {
+			panic(fmt.Errorf("non-relation map element is not supported: %s", element))
+		}
+
 		relationExpr := &dst.CompositeLit{
 			Type: dst.NewIdent("EntitlementRelation"),
 			Elts: []dst.Expr{
-				goKeyValue("Input", typeExpr(association.Input, nil)),
-				goKeyValue("Output", typeExpr(association.Output, nil)),
+				goKeyValue("Input", typeExpr(relation.Input, nil)),
+				goKeyValue("Output", typeExpr(relation.Output, nil)),
 			},
 		}
 

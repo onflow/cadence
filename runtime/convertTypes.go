@@ -620,7 +620,7 @@ func exportCapabilityType(
 }
 
 func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) interpreter.InterfaceStaticType {
-	return interpreter.NewInterfaceStaticType(
+	return interpreter.NewInterfaceStaticTypeComputeTypeID(
 		memoryGauge,
 		t.InterfaceTypeLocation(),
 		t.InterfaceTypeQualifiedIdentifier(),
@@ -628,7 +628,7 @@ func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType
 }
 
 func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) interpreter.CompositeStaticType {
-	return interpreter.NewCompositeStaticType(
+	return interpreter.NewCompositeStaticTypeComputeTypeID(
 		memoryGauge,
 		t.CompositeTypeLocation(),
 		t.CompositeTypeQualifiedIdentifier(),

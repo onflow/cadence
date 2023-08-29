@@ -1160,36 +1160,28 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			actual: &cadence.StructType{
 				QualifiedIdentifier: "AccountKey",
 			},
-			expected: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "AccountKey",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "AccountKey"),
 		},
 		{
 			label: "PublicKey",
 			actual: &cadence.StructType{
 				QualifiedIdentifier: "PublicKey",
 			},
-			expected: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "PublicKey",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "PublicKey"),
 		},
 		{
 			label: "HashAlgorithm",
 			actual: &cadence.StructType{
 				QualifiedIdentifier: "HashAlgorithm",
 			},
-			expected: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "HashAlgorithm",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "HashAlgorithm"),
 		},
 		{
 			label: "SignatureAlgorithm",
 			actual: &cadence.StructType{
 				QualifiedIdentifier: "SignatureAlgorithm",
 			},
-			expected: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "SignatureAlgorithm",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "SignatureAlgorithm"),
 		},
 		{
 			label: "Optional",
@@ -1310,10 +1302,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Resource",
@@ -1321,10 +1310,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Contract",
@@ -1332,10 +1318,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Event",
@@ -1343,10 +1326,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Enum",
@@ -1354,10 +1334,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "StructInterface",
@@ -1365,10 +1342,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.InterfaceStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "ResourceInterface",
@@ -1376,10 +1350,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.InterfaceStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "ContractInterface",
@@ -1387,10 +1358,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.InterfaceStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "IntersectionType",
@@ -1399,14 +1367,12 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 					&cadence.StructInterfaceType{
 						Location:            TestLocation,
 						QualifiedIdentifier: "T",
-					}},
+					},
+				},
 			},
 			expected: &interpreter.IntersectionStaticType{
 				Types: []interpreter.InterfaceStaticType{
-					{
-						Location:            TestLocation,
-						QualifiedIdentifier: "T",
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "T"),
 				},
 			},
 		},
@@ -2183,10 +2149,7 @@ func TestRuntimeExportTypeValue(t *testing.T) {
 		ty := interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
 				Types: []interpreter.InterfaceStaticType{
-					{
-						Location:            TestLocation,
-						QualifiedIdentifier: "SI",
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "SI"),
 				},
 			},
 		}
@@ -2269,7 +2232,7 @@ func TestRuntimeExportCapabilityValue(t *testing.T) {
 		capability := interpreter.NewUnmeteredCapabilityValue(
 			3,
 			interpreter.AddressValue{0x1},
-			interpreter.NewCompositeStaticType(inter, TestLocation, "S"),
+			interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 		)
 
 		actual, err := exportValueWithInterpreter(
