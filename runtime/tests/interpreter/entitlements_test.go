@@ -243,7 +243,8 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 
         fun test(): Bool {
 			return ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())! ==
-				   ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())!
+				   ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())! && 
+				   Type<auth(X, Y) &R>() == Type<auth(Y, X) &R>()
         }
     `)
 
