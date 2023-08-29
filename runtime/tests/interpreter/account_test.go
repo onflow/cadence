@@ -305,11 +305,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 		require.Equal(t,
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
-					Type: interpreter.CompositeStaticType{
-						Location:            TestLocation,
-						QualifiedIdentifier: "R",
-						TypeID:              "S.test.R",
-					},
+					Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "R"),
 				},
 			),
 			value,
@@ -328,11 +324,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 		require.Equal(t,
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.TypeValue{
-					Type: interpreter.CompositeStaticType{
-						Location:            TestLocation,
-						QualifiedIdentifier: "S",
-						TypeID:              "S.test.S",
-					},
+					Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 				},
 			),
 			value,
