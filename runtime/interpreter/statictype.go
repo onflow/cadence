@@ -732,7 +732,6 @@ type ReferenceStaticType struct {
 	// ReferencedType is type of the referenced value (the type of the target)
 	ReferencedType StaticType
 	Authorization  Authorization
-	typeID         TypeID
 }
 
 var _ StaticType = ReferenceStaticType{}
@@ -779,6 +778,7 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 }
 
 func (t ReferenceStaticType) ID() TypeID {
+	// TODO: cache
 	return TypeID(sema.FormatReferenceTypeID(t.Authorization.ID(), string(t.ReferencedType.ID())))
 }
 
