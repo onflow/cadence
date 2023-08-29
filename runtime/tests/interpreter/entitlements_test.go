@@ -203,6 +203,149 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 		)
 	})
 
+	t.Run("subtype comparison order irrelevant", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Bool {
+			return ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())!.isSubtype(of: 
+				   ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())!
+			) && ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())!.isSubtype(of: 
+				 ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())!
+			)
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("equality", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Bool {
+			return ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())! ==
+				   ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())! && 
+				   Type<auth(X, Y) &R>() == Type<auth(Y, X) &R>()
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
+	t.Run("order irrelevant as dictionary key", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Int {
+			let runtimeType1 = ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())!
+			let runtimeType2 = ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())!
+
+			let dict = {runtimeType1 : 3}
+			return dict[runtimeType2]!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
+	t.Run("order irrelevant as dictionary key when obtained from Type<>", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Int {
+			let runtimeType1 = Type<auth(X, Y) &R>()
+			let runtimeType2 = Type<auth(Y, X) &R>()
+
+			let dict = {runtimeType1 : 3}
+			return dict[runtimeType2]!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
+	t.Run("order irrelevant as dictionary key when obtained from .getType()", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        struct S {}
+
+        fun test(): Int {
+			let runtimeType1 = [&S() as auth(X, Y) &S].getType()
+			let runtimeType2 = [&S() as auth(Y, X) &S].getType()
+
+			let dict = {runtimeType1 : 3}
+			return dict[runtimeType2]!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
+	})
+
 	t.Run("created different auth <: auth", func(t *testing.T) {
 
 		t.Parallel()

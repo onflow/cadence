@@ -22,6 +22,10 @@
 package orderedmap
 
 import (
+	"sort"
+
+	"golang.org/x/exp/maps"
+
 	"github.com/onflow/cadence/runtime/common/list"
 )
 
@@ -227,6 +231,36 @@ func (om *OrderedMap[K, V]) ForAllKeys(predicate func(key K) bool) bool {
 		}
 	}
 	return true
+}
+
+// MapKeys returns a new ordered map whose keys are mapped according to
+// the provided mapping function between
+func MapKeys[T OrderedMap[K, V], K comparable, V any, H comparable](om *OrderedMap[K, V], f func(K) H) *OrderedMap[H, V] {
+	mapped := New[OrderedMap[H, V]](om.Len())
+
+	om.Foreach(func(key K, value V) {
+		mapped.Set(f(key), value)
+	})
+
+	return mapped
+}
+
+// SortByKeys returns a new ordered map whose insertion order is sorted according to
+// the provided comparison function between keys
+func (om *OrderedMap[K, V]) SortByKey(compare func(K, K) bool) *OrderedMap[K, V] {
+	sorted := New[OrderedMap[K, V]](om.Len())
+	// non-deterministic order is okay here because the result is immediately sorted
+	keys := maps.Keys(om.pairs) //nolint:forbidigo
+	sort.Slice(keys, func(i, j int) bool {
+		return compare(keys[i], keys[j])
+	})
+
+	for _, key := range keys {
+		value, _ := om.Get(key)
+		sorted.Set(key, value)
+	}
+
+	return sorted
 }
 
 // ForAnyKey iterates over the keys of the map, and returns whether the provided
