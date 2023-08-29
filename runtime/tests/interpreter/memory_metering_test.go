@@ -8920,7 +8920,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		testValueStringConversion(t, script)
 	})
 
-	t.Run("ID Capability", func(t *testing.T) {
+	t.Run("Capability", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -8937,11 +8937,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 			interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.AddressValue{1},
-				interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Bar",
-					TypeID:              "S.test.Bar",
-				},
+				interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "Bar"),
 			))
 	})
 

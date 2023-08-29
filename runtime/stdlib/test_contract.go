@@ -396,7 +396,7 @@ func (t *TestContractType) newNewEmulatorBlockchainFunction(
 			// Create an `EmulatorBackend`
 			emulatorBackend := t.emulatorBackendType.newEmulatorBackend(
 				inter,
-				testFramework,
+				testFramework.NewEmulatorBackend(),
 				locationRange,
 			)
 

@@ -78,7 +78,7 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.UnsupportedOverloadingError{}, errs[0])
+				assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 			})
 		}
 	}

@@ -1172,6 +1172,118 @@ func TestTestBeFailedMatcher(t *testing.T) {
 	})
 }
 
+func TestTestAssertErrorMatcher(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with ScriptResult", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun testMatch() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.failed,
+                    returnValue: nil,
+                    error: Test.Error("computation exceeding limit")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            access(all)
+            fun testNoMatch() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.failed,
+                    returnValue: nil,
+                    error: Test.Error("computation exceeding memory")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            access(all)
+            fun testNoError() {
+                let result = Test.ScriptResult(
+                    status: Test.ResultStatus.succeeded,
+                    returnValue: 42,
+                    error: nil
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMatch")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNoMatch")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "the error message did not contain the given sub-string")
+
+		_, err = inter.Invoke("testNoError")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "no error was found")
+	})
+
+	t.Run("with TransactionResult", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun testMatch() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.failed,
+                    error: Test.Error("computation exceeding limit")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            access(all)
+            fun testNoMatch() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.failed,
+                    error: Test.Error("computation exceeding memory")
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+
+            access(all)
+            fun testNoError() {
+                let result = Test.TransactionResult(
+                    status: Test.ResultStatus.succeeded,
+                    error: nil
+                )
+
+                Test.assertError(result, errorMessage: "exceeding limit")
+            }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMatch")
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testNoMatch")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "the error message did not contain the given sub-string")
+
+		_, err = inter.Invoke("testNoError")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "no error was found")
+	})
+}
+
 func TestTestBeNilMatcher(t *testing.T) {
 
 	t.Parallel()
@@ -1960,27 +2072,33 @@ func TestBlockchain(t *testing.T) {
 	t.Run("all events, empty", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-		    import Test
+		const script = `
+            import Test
 
-		    access(all) fun test(): [AnyStruct] {
-		        var blockchain = Test.newEmulatorBlockchain()
-		        return blockchain.events()
-		    }
+            access(all) fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let events = blockchain.events()
+
+                Test.expect(events, Test.beEmpty())
+            }
 		`
 
 		eventsInvoked := false
 
 		testFramework := &mockedTestFramework{
-			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
-				eventsInvoked = true
-				assert.Nil(t, eventType)
-				return interpreter.NewArrayValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
-					common.Address{},
-				)
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+						eventsInvoked = true
+						assert.Nil(t, eventType)
+						return interpreter.NewArrayValue(
+							inter,
+							interpreter.EmptyLocationRange,
+							interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+							common.Address{},
+						)
+					},
+				}
 			},
 		}
 
@@ -1996,39 +2114,48 @@ func TestBlockchain(t *testing.T) {
 	t.Run("typed events, empty", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-		    import Test
+		const script = `
+            import Test
 
-		    access(all) fun test(): [AnyStruct] {
-		        var blockchain = Test.newEmulatorBlockchain()
+            access(all)
+            struct Foo {}
 
-		        // 'Foo' is not an event-type.
-		        // But we just need to test the API, so it doesn't really matter.
-		        var typ = Type<Foo>()
+			access(all)
+            fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
 
-		        return blockchain.eventsOfType(typ)
-		    }
+                // 'Foo' is not an event-type.
+                // But we just need to test the API, so it doesn't really matter.
+                let typ = Type<Foo>()
 
-		    access(all) struct Foo {}
+
+                let events = blockchain.eventsOfType(typ)
+
+                Test.expect(events, Test.beEmpty())
+            }
 		`
 
 		eventsInvoked := false
 
 		testFramework := &mockedTestFramework{
-			events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
-				eventsInvoked = true
-				assert.NotNil(t, eventType)
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
+						eventsInvoked = true
+						assert.NotNil(t, eventType)
 
-				require.IsType(t, interpreter.CompositeStaticType{}, eventType)
-				compositeType := eventType.(interpreter.CompositeStaticType)
-				assert.Equal(t, "Foo", compositeType.QualifiedIdentifier)
+						require.IsType(t, interpreter.CompositeStaticType{}, eventType)
+						compositeType := eventType.(interpreter.CompositeStaticType)
+						assert.Equal(t, "Foo", compositeType.QualifiedIdentifier)
 
-				return interpreter.NewArrayValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
-					common.Address{},
-				)
+						return interpreter.NewArrayValue(
+							inter,
+							interpreter.EmptyLocationRange,
+							interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+							common.Address{},
+						)
+					},
+				}
 			},
 		}
 
@@ -2041,28 +2168,255 @@ func TestBlockchain(t *testing.T) {
 		assert.True(t, eventsInvoked)
 	})
 
+	t.Run("reset", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.reset(to: 5)
+            }
+		`
+
+		resetInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					reset: func(height uint64) {
+						resetInvoked = true
+						assert.Equal(t, uint64(5), height)
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, resetInvoked)
+	})
+
+	t.Run("reset with type mismatch for height", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.reset(to: 5.5)
+            }
+		`
+
+		resetInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					reset: func(height uint64) {
+						resetInvoked = true
+					},
+				}
+			},
+		}
+
+		_, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.False(t, resetInvoked)
+	})
+
+	t.Run("moveTime forward", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun testMoveForward() {
+                let blockchain = Test.newEmulatorBlockchain()
+                // timeDelta is the representation of 35 days,
+                // in the form of seconds.
+                let timeDelta = Fix64(35 * 24 * 60 * 60)
+                blockchain.moveTime(by: timeDelta)
+            }
+		`
+
+		moveTimeInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					moveTime: func(timeDelta int64) {
+						moveTimeInvoked = true
+						assert.Equal(t, int64(3024000), timeDelta)
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMoveForward")
+		require.NoError(t, err)
+
+		assert.True(t, moveTimeInvoked)
+	})
+
+	t.Run("moveTime backward", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun testMoveBackward() {
+                let blockchain = Test.newEmulatorBlockchain()
+                // timeDelta is the representation of 35 days,
+                // in the form of seconds.
+                let timeDelta = Fix64(35 * 24 * 60 * 60) * -1.0
+                blockchain.moveTime(by: timeDelta)
+            }
+		`
+
+		moveTimeInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					moveTime: func(timeDelta int64) {
+						moveTimeInvoked = true
+						assert.Equal(t, int64(-3024000), timeDelta)
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("testMoveBackward")
+		require.NoError(t, err)
+
+		assert.True(t, moveTimeInvoked)
+	})
+
+	t.Run("moveTime with invalid time delta", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun testMoveTime() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.moveTime(by: 3000)
+            }
+		`
+
+		moveTimeInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					moveTime: func(timeDelta int64) {
+						moveTimeInvoked = true
+					},
+				}
+			},
+		}
+
+		_, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.False(t, moveTimeInvoked)
+	})
+
+	t.Run("newEmulatorBackend", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                Test.assertEqual(Type<Test.Blockchain>(), blockchain.getType())
+            }
+		`
+
+		newEmulatorBackendInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				newEmulatorBackendInvoked = true
+				return &mockedBlockchain{}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, newEmulatorBackendInvoked)
+	})
+
 	// TODO: Add more tests for the remaining functions.
 }
 
 type mockedTestFramework struct {
+	newEmulatorBackend func() Blockchain
+	readFile           func(s string) (string, error)
+}
+
+var _ TestFramework = &mockedTestFramework{}
+
+func (m mockedTestFramework) NewEmulatorBackend() Blockchain {
+	if m.newEmulatorBackend == nil {
+		panic("'NewEmulatorBackend' is not implemented")
+	}
+
+	return m.newEmulatorBackend()
+}
+
+func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
+	if m.readFile == nil {
+		panic("'ReadFile' is not implemented")
+	}
+
+	return m.readFile(fileName)
+}
+
+type mockedBlockchain struct {
 	runScript          func(inter *interpreter.Interpreter, code string, arguments []interpreter.Value)
 	createAccount      func() (*Account, error)
 	addTransaction     func(inter *interpreter.Interpreter, code string, authorizers []common.Address, signers []*Account, arguments []interpreter.Value) error
 	executeTransaction func() *TransactionResult
 	commitBlock        func() error
 	deployContract     func(inter *interpreter.Interpreter, name string, code string, account *Account, arguments []interpreter.Value) error
-	readFile           func(s string) (string, error)
 	useConfiguration   func(configuration *Configuration)
 	stdlibHandler      func() StandardLibraryHandler
 	logs               func() []string
 	serviceAccount     func() (*Account, error)
 	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
-	reset              func()
+	reset              func(uint64)
+	moveTime           func(int64)
 }
 
-var _ TestFramework = &mockedTestFramework{}
+var _ Blockchain = &mockedBlockchain{}
 
-func (m mockedTestFramework) RunScript(
+func (m mockedBlockchain) RunScript(
 	inter *interpreter.Interpreter,
 	code string,
 	arguments []interpreter.Value,
@@ -2074,7 +2428,7 @@ func (m mockedTestFramework) RunScript(
 	return m.RunScript(inter, code, arguments)
 }
 
-func (m mockedTestFramework) CreateAccount() (*Account, error) {
+func (m mockedBlockchain) CreateAccount() (*Account, error) {
 	if m.createAccount == nil {
 		panic("'CreateAccount' is not implemented")
 	}
@@ -2082,7 +2436,7 @@ func (m mockedTestFramework) CreateAccount() (*Account, error) {
 	return m.createAccount()
 }
 
-func (m mockedTestFramework) AddTransaction(
+func (m mockedBlockchain) AddTransaction(
 	inter *interpreter.Interpreter,
 	code string,
 	authorizers []common.Address,
@@ -2096,7 +2450,7 @@ func (m mockedTestFramework) AddTransaction(
 	return m.addTransaction(inter, code, authorizers, signers, arguments)
 }
 
-func (m mockedTestFramework) ExecuteNextTransaction() *TransactionResult {
+func (m mockedBlockchain) ExecuteNextTransaction() *TransactionResult {
 	if m.executeTransaction == nil {
 		panic("'ExecuteNextTransaction' is not implemented")
 	}
@@ -2104,7 +2458,7 @@ func (m mockedTestFramework) ExecuteNextTransaction() *TransactionResult {
 	return m.executeTransaction()
 }
 
-func (m mockedTestFramework) CommitBlock() error {
+func (m mockedBlockchain) CommitBlock() error {
 	if m.commitBlock == nil {
 		panic("'CommitBlock' is not implemented")
 	}
@@ -2112,7 +2466,7 @@ func (m mockedTestFramework) CommitBlock() error {
 	return m.commitBlock()
 }
 
-func (m mockedTestFramework) DeployContract(
+func (m mockedBlockchain) DeployContract(
 	inter *interpreter.Interpreter,
 	name string,
 	code string,
@@ -2126,15 +2480,7 @@ func (m mockedTestFramework) DeployContract(
 	return m.deployContract(inter, name, code, account, arguments)
 }
 
-func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
-	if m.readFile == nil {
-		panic("'ReadFile' is not implemented")
-	}
-
-	return m.readFile(fileName)
-}
-
-func (m mockedTestFramework) UseConfiguration(configuration *Configuration) {
+func (m mockedBlockchain) UseConfiguration(configuration *Configuration) {
 	if m.useConfiguration == nil {
 		panic("'UseConfiguration' is not implemented")
 	}
@@ -2142,7 +2488,7 @@ func (m mockedTestFramework) UseConfiguration(configuration *Configuration) {
 	m.useConfiguration(configuration)
 }
 
-func (m mockedTestFramework) StandardLibraryHandler() StandardLibraryHandler {
+func (m mockedBlockchain) StandardLibraryHandler() StandardLibraryHandler {
 	if m.stdlibHandler == nil {
 		panic("'StandardLibraryHandler' is not implemented")
 	}
@@ -2150,7 +2496,7 @@ func (m mockedTestFramework) StandardLibraryHandler() StandardLibraryHandler {
 	return m.stdlibHandler()
 }
 
-func (m mockedTestFramework) Logs() []string {
+func (m mockedBlockchain) Logs() []string {
 	if m.logs == nil {
 		panic("'Logs' is not implemented")
 	}
@@ -2158,7 +2504,7 @@ func (m mockedTestFramework) Logs() []string {
 	return m.logs()
 }
 
-func (m mockedTestFramework) ServiceAccount() (*Account, error) {
+func (m mockedBlockchain) ServiceAccount() (*Account, error) {
 	if m.serviceAccount == nil {
 		panic("'ServiceAccount' is not implemented")
 	}
@@ -2166,7 +2512,7 @@ func (m mockedTestFramework) ServiceAccount() (*Account, error) {
 	return m.serviceAccount()
 }
 
-func (m mockedTestFramework) Events(
+func (m mockedBlockchain) Events(
 	inter *interpreter.Interpreter,
 	eventType interpreter.StaticType,
 ) interpreter.Value {
@@ -2177,10 +2523,18 @@ func (m mockedTestFramework) Events(
 	return m.events(inter, eventType)
 }
 
-func (m mockedTestFramework) Reset() {
+func (m mockedBlockchain) Reset(height uint64) {
 	if m.reset == nil {
 		panic("'Reset' is not implemented")
 	}
 
-	m.reset()
+	m.reset(height)
+}
+
+func (m mockedBlockchain) MoveTime(timeDelta int64) {
+	if m.moveTime == nil {
+		panic("'SetTimestamp' is not implemented")
+	}
+
+	m.moveTime(timeDelta)
 }

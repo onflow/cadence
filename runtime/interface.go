@@ -98,9 +98,8 @@ type Interface interface {
 	GetCurrentBlockHeight() (uint64, error)
 	// GetBlockAtHeight returns the block at the given height.
 	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
-	// UnsafeRandom returns a random uint64, where the process of random number derivation is not cryptographically
-	// secure.
-	UnsafeRandom() (uint64, error)
+	// ReadRandom reads pseudo-random bytes into the input slice, using distributed randomness.
+	ReadRandom([]byte) error
 	// VerifySignature returns true if the given signature was produced by signing the given tag + data
 	// using the given public key, signature algorithm, and hash algorithm.
 	VerifySignature(

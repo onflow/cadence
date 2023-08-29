@@ -1402,7 +1402,7 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 		return InterfaceStaticType{}, err
 	}
 
-	return NewInterfaceStaticType(d.memoryGauge, location, qualifiedIdentifier), nil
+	return NewInterfaceStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
 }
 
 func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {

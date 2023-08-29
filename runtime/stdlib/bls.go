@@ -48,11 +48,10 @@ var blsContractType = func() *sema.CompositeType {
 	return ty
 }()
 
-var blsContractTypeID = blsContractType.ID()
-var blsContractStaticType interpreter.StaticType = interpreter.CompositeStaticType{
-	QualifiedIdentifier: blsContractType.Identifier,
-	TypeID:              blsContractTypeID,
-}
+var blsContractStaticType interpreter.StaticType = interpreter.ConvertSemaCompositeTypeToStaticCompositeType(
+	nil,
+	blsContractType,
+)
 
 const blsAggregateSignaturesFunctionDocString = `
 Aggregates multiple BLS signatures into one,

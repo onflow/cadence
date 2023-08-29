@@ -303,6 +303,33 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			inter.Globals.Get("identifier").GetValue(),
 		)
 	})
+
+	t.Run("no loading of program", func(t *testing.T) {
+
+		t.Parallel()
+
+		// TypeValue.GetMember for `identifier` should not load the program
+
+		inter := parseCheckAndInterpret(t, `
+           fun test(_ type: Type): String {
+               return type.identifier
+           }
+        `)
+
+		location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+		result, err := inter.Invoke("test", typeValue)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("A.0000000000000001.Foo.Bar"),
+			result,
+		)
+	})
 }
 
 func TestInterpretIsInstance(t *testing.T) {
@@ -431,7 +458,7 @@ func TestInterpretIsInstance(t *testing.T) {
 	}
 }
 
-func TestInterpretIsSubtype(t *testing.T) {
+func TestInterpretMetaTypeIsSubtype(t *testing.T) {
 
 	t.Parallel()
 
@@ -786,4 +813,25 @@ func TestInterpretGetType(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestInterpretMetaTypeHashInput(t *testing.T) {
+
+	t.Parallel()
+
+	// TypeValue.HashInput should not load the program
+
+	inter := parseCheckAndInterpret(t, `
+           fun test(_ type: Type) {
+               {type: 1}
+           }
+        `)
+
+	location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+	staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+	typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+	_, err := inter.Invoke("test", typeValue)
+	require.NoError(t, err)
+
 }

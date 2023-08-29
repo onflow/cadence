@@ -388,7 +388,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		var typeID string
 		staticType := v.Type
 		if staticType != nil {
-			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
+			typeID = string(staticType.ID())
 		}
 		memoryUsage := common.MemoryUsage{
 			Kind:   common.MemoryKindStringValue,
@@ -506,7 +506,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
 func (v TypeValue) HashInput(interpreter *Interpreter, _ LocationRange, scratch []byte) []byte {
-	typeID := interpreter.MustConvertStaticToSemaType(v.Type).ID()
+	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)
 	var buf []byte
@@ -1611,7 +1611,7 @@ func NewArrayValueWithIterator(
 	interpreter *Interpreter,
 	arrayType ArrayStaticType,
 	address common.Address,
-	count uint64,
+	countOverestimate uint64,
 	values func() Value,
 ) *ArrayValue {
 	interpreter.ReportComputation(common.ComputationKindCreateArrayValue, 1)
@@ -1656,7 +1656,7 @@ func NewArrayValueWithIterator(
 		return array
 	}
 	// must assign to v here for tracing to work properly
-	v = newArrayValueFromConstructor(interpreter, arrayType, count, constructor)
+	v = newArrayValueFromConstructor(interpreter, arrayType, countOverestimate, constructor)
 	return v
 }
 
@@ -1673,14 +1673,14 @@ func newArrayValueFromAtreeValue(
 func newArrayValueFromConstructor(
 	gauge common.MemoryGauge,
 	staticType ArrayStaticType,
-	count uint64,
+	countOverestimate uint64,
 	constructor func() *atree.Array,
 ) (array *ArrayValue) {
 	var elementSize uint
 	if staticType != nil {
 		elementSize = staticType.ElementType().elementSize()
 	}
-	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(count, elementSize)
+	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(countOverestimate, elementSize)
 	common.UseMemory(gauge, baseUsage)
 	common.UseMemory(gauge, elementUsage)
 	common.UseMemory(gauge, dataSlabs)
@@ -2448,6 +2448,58 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				)
 			},
 		)
+
+	case sema.ArrayTypeFilterFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayFilterFunctionType(
+				interpreter,
+				v.SemaType(interpreter).ElementType(false),
+			),
+			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
+				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Filter(
+					interpreter,
+					invocation.LocationRange,
+					funcArgument,
+				)
+			},
+		)
+
+	case sema.ArrayTypeMapFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayMapFunctionType(
+				interpreter,
+				v.SemaType(interpreter),
+			),
+			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
+				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				transformFunctionType, ok := invocation.ArgumentTypes[0].(*sema.FunctionType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Map(
+					interpreter,
+					invocation.LocationRange,
+					funcArgument,
+					transformFunctionType,
+				)
+			},
+		)
 	}
 
 	return nil
@@ -2928,6 +2980,160 @@ func (v *ArrayValue) Reverse(
 			index--
 
 			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		},
+	)
+}
+
+func (v *ArrayValue) Filter(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	procedure FunctionValue,
+) Value {
+
+	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
+	iterationInvocation := func(arrayElement Value) Invocation {
+		invocation := NewInvocation(
+			interpreter,
+			nil,
+			nil,
+			nil,
+			[]Value{arrayElement},
+			elementTypeSlice,
+			nil,
+			locationRange,
+		)
+		return invocation
+	}
+
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		NewVariableSizedStaticType(interpreter, v.Type.ElementType()),
+		common.ZeroAddress,
+		uint64(v.Count()), // worst case estimation.
+		func() Value {
+
+			var value Value
+
+			for {
+				atreeValue, err := iterator.Next()
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
+
+				// Also handles the end of array case since iterator.Next() returns nil for that.
+				if atreeValue == nil {
+					return nil
+				}
+
+				value = MustConvertStoredValue(interpreter, atreeValue)
+				if value == nil {
+					return nil
+				}
+
+				shouldInclude, ok := procedure.invoke(iterationInvocation(value)).(BoolValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				// We found the next entry of the filtered array.
+				if shouldInclude {
+					break
+				}
+			}
+
+			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		},
+	)
+}
+
+func (v *ArrayValue) Map(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	procedure FunctionValue,
+	transformFunctionType *sema.FunctionType,
+) Value {
+
+	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
+	iterationInvocation := func(arrayElement Value) Invocation {
+		return NewInvocation(
+			interpreter,
+			nil,
+			nil,
+			nil,
+			[]Value{arrayElement},
+			elementTypeSlice,
+			nil,
+			locationRange,
+		)
+	}
+
+	procedureStaticType, ok := ConvertSemaToStaticType(interpreter, transformFunctionType).(FunctionStaticType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	returnType := procedureStaticType.ReturnType(interpreter)
+
+	var returnArrayStaticType ArrayStaticType
+	switch v.Type.(type) {
+	case VariableSizedStaticType:
+		returnArrayStaticType = NewVariableSizedStaticType(
+			interpreter,
+			returnType,
+		)
+	case ConstantSizedStaticType:
+		returnArrayStaticType = NewConstantSizedStaticType(
+			interpreter,
+			returnType,
+			int64(v.Count()),
+		)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		returnArrayStaticType,
+		common.ZeroAddress,
+		uint64(v.Count()),
+		func() Value {
+
+			atreeValue, err := iterator.Next()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			if atreeValue == nil {
+				return nil
+			}
+
+			value := MustConvertStoredValue(interpreter, atreeValue)
+
+			mappedValue := procedure.invoke(iterationInvocation(value))
+			return mappedValue.Transfer(
 				interpreter,
 				locationRange,
 				atree.Address{},
@@ -16012,7 +16218,7 @@ type CompositeValue struct {
 	NestedVariables map[string]*Variable
 	Functions       map[string]FunctionValue
 	dictionary      *atree.OrderedMap
-	typeID          common.TypeID
+	typeID          TypeID
 
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
@@ -16755,14 +16961,9 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, locationRange Locat
 	panic(errors.NewUnreachableError())
 }
 
-func (v *CompositeValue) TypeID() common.TypeID {
+func (v *CompositeValue) TypeID() TypeID {
 	if v.typeID == "" {
-		location := v.Location
-		qualifiedIdentifier := v.QualifiedIdentifier
-		if location == nil {
-			return common.TypeID(qualifiedIdentifier)
-		}
-		v.typeID = location.TypeID(nil, qualifiedIdentifier)
+		v.typeID = common.NewTypeIDFromQualifiedName(nil, v.Location, v.QualifiedIdentifier)
 	}
 	return v.typeID
 }
