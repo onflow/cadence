@@ -49,7 +49,9 @@ type testEmulatorBackendType struct {
 	moveTimeFunctionType               *sema.FunctionType
 }
 
-func newTestEmulatorBackendType(blockchainBackendInterfaceType *sema.InterfaceType) *testEmulatorBackendType {
+func newTestEmulatorBackendType(
+	blockchainBackendInterfaceType *sema.InterfaceType,
+) *testEmulatorBackendType {
 	executeScriptFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeExecuteScriptFunctionName,
@@ -223,7 +225,9 @@ Executes a script and returns the script return value and the status.
 The 'returnValue' field of the result will be nil if the script failed.
 `
 
-func (t *testEmulatorBackendType) newExecuteScriptFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
+func (t *testEmulatorBackendType) newExecuteScriptFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.executeScriptFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -239,7 +243,7 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(testFramework TestFra
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 
-			result := testFramework.RunScript(inter, script.Str, args)
+			result := blockchain.RunScript(inter, script.Str, args)
 
 			return newScriptResult(inter, result.Value, result)
 		},
@@ -256,11 +260,13 @@ The transaction is paid by the service account.
 The returned account can be used to sign and authorize transactions.
 `
 
-func (t *testEmulatorBackendType) newCreateAccountFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
+func (t *testEmulatorBackendType) newCreateAccountFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.createAccountFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			account, err := testFramework.CreateAccount()
+			account, err := blockchain.CreateAccount()
 			if err != nil {
 				panic(err)
 			}
@@ -269,7 +275,7 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(testFramework TestFra
 			locationRange := invocation.LocationRange
 
 			return newTestAccountValue(
-				testFramework,
+				blockchain,
 				inter,
 				locationRange,
 				account,
@@ -279,7 +285,7 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(testFramework TestFra
 }
 
 func newTestAccountValue(
-	framework TestFramework,
+	blockchain Blockchain,
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	account *Account,
@@ -288,7 +294,7 @@ func newTestAccountValue(
 	// Create address value
 	address := interpreter.NewAddressValue(nil, account.Address)
 
-	standardLibraryHandler := framework.StandardLibraryHandler()
+	standardLibraryHandler := blockchain.StandardLibraryHandler()
 
 	publicKey := NewPublicKeyValue(
 		inter,
@@ -329,7 +335,9 @@ const testTransactionTypeAuthorizersFieldName = "authorizers"
 const testTransactionTypeSignersFieldName = "signers"
 const testTransactionTypeArgumentsFieldName = "arguments"
 
-func (t *testEmulatorBackendType) newAddTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
+func (t *testEmulatorBackendType) newAddTransactionFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.addTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -385,7 +393,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(testFramework TestFr
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 
-			err = testFramework.AddTransaction(
+			err = blockchain.AddTransaction(
 				inter,
 				code.Str,
 				authorizers,
@@ -411,11 +419,13 @@ Executes the next transaction in the block, if any.
 Returns the result of the transaction, or nil if no transaction was scheduled.
 `
 
-func (t *testEmulatorBackendType) newExecuteNextTransactionFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
+func (t *testEmulatorBackendType) newExecuteNextTransactionFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.executeNextTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			result := testFramework.ExecuteNextTransaction()
+			result := blockchain.ExecuteNextTransaction()
 
 			// If there are no transactions to run, then return `nil`.
 			if result == nil {
@@ -435,11 +445,13 @@ const testEmulatorBackendTypeCommitBlockFunctionDocString = `
 Commit the current block. Committing will fail if there are un-executed transactions in the block.
 `
 
-func (t *testEmulatorBackendType) newCommitBlockFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
+func (t *testEmulatorBackendType) newCommitBlockFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.commitBlockFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			err := testFramework.CommitBlock()
+			err := blockchain.CommitBlock()
 			if err != nil {
 				panic(err)
 			}
@@ -457,7 +469,9 @@ const testEmulatorBackendTypeDeployContractFunctionDocString = `
 Deploys a given contract, and initializes it with the provided arguments.
 `
 
-func (t *testEmulatorBackendType) newDeployContractFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
+func (t *testEmulatorBackendType) newDeployContractFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.deployContractFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -489,7 +503,7 @@ func (t *testEmulatorBackendType) newDeployContractFunction(testFramework TestFr
 				panic(err)
 			}
 
-			err = testFramework.DeployContract(
+			err = blockchain.DeployContract(
 				inter,
 				name.Str,
 				code.Str,
@@ -511,7 +525,9 @@ Set the configuration to be used by the blockchain.
 Overrides any existing configuration.
 `
 
-func (t *testEmulatorBackendType) newUseConfigFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
+func (t *testEmulatorBackendType) newUseConfigFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.useConfigFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -550,7 +566,7 @@ func (t *testEmulatorBackendType) newUseConfigFunction(testFramework TestFramewo
 				return true
 			})
 
-			testFramework.UseConfiguration(&Configuration{
+			blockchain.UseConfiguration(&Configuration{
 				Addresses: mapping,
 			})
 
@@ -568,12 +584,12 @@ Returns all the logs from the blockchain, up to the calling point.
 `
 
 func (t *testEmulatorBackendType) newLogsFunction(
-	testFramework TestFramework,
+	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.logsFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			logs := testFramework.Logs()
+			logs := blockchain.Logs()
 			inter := invocation.Interpreter
 
 			arrayType := interpreter.NewVariableSizedStaticType(
@@ -617,18 +633,18 @@ transactions with this account.
 `
 
 func (t *testEmulatorBackendType) newServiceAccountFunction(
-	testFramework TestFramework,
+	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.serviceAccountFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			serviceAccount, err := testFramework.ServiceAccount()
+			serviceAccount, err := blockchain.ServiceAccount()
 			if err != nil {
 				panic(err)
 			}
 
 			return newTestAccountValue(
-				testFramework,
+				blockchain,
 				invocation.Interpreter,
 				invocation.LocationRange,
 				serviceAccount,
@@ -647,7 +663,7 @@ optionally filtered by event type.
 `
 
 func (t *testEmulatorBackendType) newEventsFunction(
-	testFramework TestFramework,
+	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.eventsFunctionType,
@@ -669,7 +685,7 @@ func (t *testEmulatorBackendType) newEventsFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			return testFramework.Events(invocation.Interpreter, eventType)
+			return blockchain.Events(invocation.Interpreter, eventType)
 		},
 	)
 }
@@ -683,7 +699,7 @@ Resets the state of the blockchain to the given height.
 `
 
 func (t *testEmulatorBackendType) newResetFunction(
-	testFramework TestFramework,
+	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.resetFunctionType,
@@ -692,7 +708,7 @@ func (t *testEmulatorBackendType) newResetFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			testFramework.Reset(uint64(height))
+			blockchain.Reset(uint64(height))
 			return interpreter.Void
 		},
 	)
@@ -708,7 +724,7 @@ which should be passed in the form of seconds.
 `
 
 func (t *testEmulatorBackendType) newMoveTimeFunction(
-	testFramework TestFramework,
+	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.moveTimeFunctionType,
@@ -717,7 +733,7 @@ func (t *testEmulatorBackendType) newMoveTimeFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			testFramework.MoveTime(int64(timeDelta.ToInt(invocation.LocationRange)))
+			blockchain.MoveTime(int64(timeDelta.ToInt(invocation.LocationRange)))
 			return interpreter.Void
 		},
 	)
@@ -725,56 +741,56 @@ func (t *testEmulatorBackendType) newMoveTimeFunction(
 
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
-	testFramework TestFramework,
+	blockchain Blockchain,
 	locationRange interpreter.LocationRange,
 ) *interpreter.CompositeValue {
 	var fields = []interpreter.CompositeField{
 		{
 			Name:  testEmulatorBackendTypeExecuteScriptFunctionName,
-			Value: t.newExecuteScriptFunction(testFramework),
+			Value: t.newExecuteScriptFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeCreateAccountFunctionName,
-			Value: t.newCreateAccountFunction(testFramework),
+			Value: t.newCreateAccountFunction(blockchain),
 		}, {
 			Name:  testEmulatorBackendTypeAddTransactionFunctionName,
-			Value: t.newAddTransactionFunction(testFramework),
+			Value: t.newAddTransactionFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeExecuteNextTransactionFunctionName,
-			Value: t.newExecuteNextTransactionFunction(testFramework),
+			Value: t.newExecuteNextTransactionFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeCommitBlockFunctionName,
-			Value: t.newCommitBlockFunction(testFramework),
+			Value: t.newCommitBlockFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeDeployContractFunctionName,
-			Value: t.newDeployContractFunction(testFramework),
+			Value: t.newDeployContractFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeUseConfigFunctionName,
-			Value: t.newUseConfigFunction(testFramework),
+			Value: t.newUseConfigFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeLogsFunctionName,
-			Value: t.newLogsFunction(testFramework),
+			Value: t.newLogsFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeServiceAccountFunctionName,
-			Value: t.newServiceAccountFunction(testFramework),
+			Value: t.newServiceAccountFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeEventsFunctionName,
-			Value: t.newEventsFunction(testFramework),
+			Value: t.newEventsFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeResetFunctionName,
-			Value: t.newResetFunction(testFramework),
+			Value: t.newResetFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeMoveTimeFunctionName,
-			Value: t.newMoveTimeFunction(testFramework),
+			Value: t.newMoveTimeFunction(blockchain),
 		},
 	}
 
