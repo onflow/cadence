@@ -400,7 +400,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		var typeID string
 		staticType := v.Type
 		if staticType != nil {
-			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
+			typeID = string(staticType.ID())
 		}
 		memoryUsage := common.MemoryUsage{
 			Kind:   common.MemoryKindStringValue,
@@ -518,7 +518,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
 func (v TypeValue) HashInput(interpreter *Interpreter, _ LocationRange, scratch []byte) []byte {
-	typeID := interpreter.MustConvertStaticToSemaType(v.Type).ID()
+	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)
 	var buf []byte
@@ -16243,7 +16243,7 @@ type CompositeValue struct {
 	NestedVariables map[string]*Variable
 	Functions       map[string]FunctionValue
 	dictionary      *atree.OrderedMap
-	typeID          common.TypeID
+	typeID          TypeID
 
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
@@ -16993,7 +16993,7 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, locationRange Locat
 	panic(errors.NewUnreachableError())
 }
 
-func (v *CompositeValue) TypeID() common.TypeID {
+func (v *CompositeValue) TypeID() TypeID {
 	if v.typeID == "" {
 		v.typeID = common.NewTypeIDFromQualifiedName(nil, v.Location, v.QualifiedIdentifier)
 	}

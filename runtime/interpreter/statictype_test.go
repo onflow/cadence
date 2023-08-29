@@ -948,7 +948,7 @@ func TestStaticTypeConversion(t *testing.T) {
 		getComposite func(
 			location common.Location,
 			qualifiedIdentifier string,
-			typeID common.TypeID,
+			typeID TypeID,
 		) (
 			*sema.CompositeType,
 			error,
@@ -1336,7 +1336,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "Composite",
 			semaType:   testCompositeSemaType,
 			staticType: testCompositeStaticType,
-			getComposite: func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+			getComposite: func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testCompositeQualifiedIdentifier, qualifiedIdentifier)
 				return testCompositeSemaType, nil
@@ -1374,7 +1374,7 @@ func TestStaticTypeConversion(t *testing.T) {
 
 			getComposite := test.getComposite
 			if getComposite == nil {
-				getComposite = func(_ common.Location, _ string, _ common.TypeID) (*sema.CompositeType, error) {
+				getComposite = func(_ common.Location, _ string, _ TypeID) (*sema.CompositeType, error) {
 					require.FailNow(t, "getComposite should not be called")
 					return nil, nil
 				}
