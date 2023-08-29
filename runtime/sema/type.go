@@ -4038,12 +4038,7 @@ func (t *CompositeType) initializeIdentifiers() {
 
 	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
 
-	var typeID TypeID
-	if t.Location == nil {
-		typeID = TypeID(identifier)
-	} else {
-		typeID = t.Location.TypeID(nil, identifier)
-	}
+	typeID := common.NewTypeIDFromQualifiedName(nil, t.Location, identifier)
 
 	t.cachedIdentifiers = &struct {
 		TypeID              TypeID
@@ -4653,12 +4648,7 @@ func (t *InterfaceType) initializeIdentifiers() {
 
 	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
 
-	var typeID TypeID
-	if t.Location == nil {
-		typeID = TypeID(identifier)
-	} else {
-		typeID = t.Location.TypeID(nil, identifier)
-	}
+	typeID := common.NewTypeIDFromQualifiedName(nil, t.Location, identifier)
 
 	t.cachedIdentifiers = &struct {
 		TypeID              TypeID

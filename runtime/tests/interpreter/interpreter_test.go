@@ -11897,11 +11897,7 @@ func TestInterpretCompositeTypeHandler(t *testing.T) {
 
 	t.Parallel()
 
-	testType := interpreter.CompositeStaticType{
-		Location:            stdlib.FlowLocation{},
-		QualifiedIdentifier: "AccountContractAdded",
-		TypeID:              "flow.AccountContractAdded",
-	}
+	testType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, stdlib.FlowLocation{}, "AccountContractAdded")
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`

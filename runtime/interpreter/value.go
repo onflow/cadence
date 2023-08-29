@@ -16995,12 +16995,7 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, locationRange Locat
 
 func (v *CompositeValue) TypeID() TypeID {
 	if v.typeID == "" {
-		location := v.Location
-		qualifiedIdentifier := v.QualifiedIdentifier
-		if location == nil {
-			return TypeID(qualifiedIdentifier)
-		}
-		v.typeID = location.TypeID(nil, qualifiedIdentifier)
+		v.typeID = common.NewTypeIDFromQualifiedName(nil, v.Location, v.QualifiedIdentifier)
 	}
 	return v.typeID
 }

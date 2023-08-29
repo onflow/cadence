@@ -3801,10 +3801,7 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 
 		value := PathLinkValue{
 			TargetPath: publicPathValue,
-			Type: InterfaceStaticType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "SimpleInterface",
-			},
+			Type:       NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
 		}
 
 		encoded := assemble(
@@ -4001,14 +3998,8 @@ func TestEncodeDecodePathLinkValue(t *testing.T) {
 					"S",
 				),
 				Restrictions: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "I1",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "I2",
-					},
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I1"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I2"),
 				},
 			},
 		}
@@ -4543,10 +4534,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				BorrowedType: InterfaceStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "SimpleInterface",
-				},
+				BorrowedType: NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
 			},
 			CapabilityID: capabilityID,
 		}
@@ -4715,14 +4703,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 						"S",
 					),
 					Restrictions: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "I1",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "I2",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I1"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I2"),
 					},
 				},
 			},

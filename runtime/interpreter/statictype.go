@@ -70,6 +70,10 @@ func NewCompositeStaticType(
 ) CompositeStaticType {
 	common.UseMemory(memoryGauge, common.CompositeStaticTypeMemoryUsage)
 
+	if typeID == "" {
+		panic(errors.NewUnreachableError())
+	}
+
 	return CompositeStaticType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
@@ -82,9 +86,18 @@ func NewCompositeStaticTypeComputeTypeID(
 	location common.Location,
 	qualifiedIdentifier string,
 ) CompositeStaticType {
-	typeID := common.NewTypeIDFromQualifiedName(memoryGauge, location, qualifiedIdentifier)
+	typeID := common.NewTypeIDFromQualifiedName(
+		memoryGauge,
+		location,
+		qualifiedIdentifier,
+	)
 
-	return NewCompositeStaticType(memoryGauge, location, qualifiedIdentifier, typeID)
+	return NewCompositeStaticType(
+		memoryGauge,
+		location,
+		qualifiedIdentifier,
+		typeID,
+	)
 }
 
 func (CompositeStaticType) isStaticType() {}
@@ -130,6 +143,7 @@ func (t CompositeStaticType) ID() TypeID {
 type InterfaceStaticType struct {
 	Location            common.Location
 	QualifiedIdentifier string
+	TypeID              common.TypeID
 }
 
 var _ StaticType = InterfaceStaticType{}
@@ -138,13 +152,38 @@ func NewInterfaceStaticType(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
 	qualifiedIdentifier string,
+	typeID common.TypeID,
 ) InterfaceStaticType {
 	common.UseMemory(memoryGauge, common.InterfaceStaticTypeMemoryUsage)
+
+	if typeID == "" {
+		panic(errors.NewUnreachableError())
+	}
 
 	return InterfaceStaticType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
+		TypeID:              typeID,
 	}
+}
+
+func NewInterfaceStaticTypeComputeTypeID(
+	memoryGauge common.MemoryGauge,
+	location common.Location,
+	qualifiedIdentifier string,
+) InterfaceStaticType {
+	typeID := common.NewTypeIDFromQualifiedName(
+		memoryGauge,
+		location,
+		qualifiedIdentifier,
+	)
+
+	return NewInterfaceStaticType(
+		memoryGauge,
+		location,
+		qualifiedIdentifier,
+		typeID,
+	)
 }
 
 func (InterfaceStaticType) isStaticType() {}
@@ -157,14 +196,19 @@ func (t InterfaceStaticType) String() string {
 	if t.Location == nil {
 		return t.QualifiedIdentifier
 	}
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return string(t.TypeID)
 }
 
 func (t InterfaceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	var amount int
 	if t.Location == nil {
-		return t.QualifiedIdentifier
+		amount = len(t.QualifiedIdentifier)
+	} else {
+		amount = len(t.TypeID)
 	}
-	return string(t.Location.TypeID(memoryGauge, t.QualifiedIdentifier))
+
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(amount))
+	return t.String()
 }
 
 func (t InterfaceStaticType) Equal(other StaticType) bool {
@@ -173,8 +217,7 @@ func (t InterfaceStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
-	return otherInterfaceType.Location == t.Location &&
-		otherInterfaceType.QualifiedIdentifier == t.QualifiedIdentifier
+	return otherInterfaceType.TypeID == t.TypeID
 }
 
 func (t InterfaceStaticType) ID() TypeID {
@@ -686,7 +729,7 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 
 	switch t := t.(type) {
 	case *sema.CompositeType:
-		return NewCompositeStaticType(memoryGauge, t.Location, t.QualifiedIdentifier(), t.ID())
+		return ConvertSemaCompositeTypeToStaticCompositeType(memoryGauge, t)
 
 	case *sema.InterfaceType:
 		return ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, t)
@@ -783,11 +826,28 @@ func ConvertSemaReferenceTypeToStaticReferenceType(
 	)
 }
 
+func ConvertSemaCompositeTypeToStaticCompositeType(
+	memoryGauge common.MemoryGauge,
+	t *sema.CompositeType,
+) CompositeStaticType {
+	return NewCompositeStaticType(
+		memoryGauge,
+		t.Location,
+		t.QualifiedIdentifier(),
+		t.ID(),
+	)
+}
+
 func ConvertSemaInterfaceTypeToStaticInterfaceType(
 	memoryGauge common.MemoryGauge,
 	t *sema.InterfaceType,
 ) InterfaceStaticType {
-	return NewInterfaceStaticType(memoryGauge, t.Location, t.QualifiedIdentifier())
+	return NewInterfaceStaticType(
+		memoryGauge,
+		t.Location,
+		t.QualifiedIdentifier(),
+		t.ID(),
+	)
 }
 
 func ConvertStaticToSemaType(
