@@ -777,7 +777,6 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 }
 
 func (t ReferenceStaticType) ID() TypeID {
-	// TODO: introduce and use proper Authorization.ID()
 	return TypeID(sema.FormatReferenceTypeID(t.Authorization.ID(), string(t.ReferencedType.ID())))
 }
 
