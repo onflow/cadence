@@ -24,10 +24,18 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-// TestFramework is the interface to be implemented by the test providers.
-// Cadence standard library talks to test providers via this interface.
+// TestFramework & Blockchain are the interfaces to be implemented by
+// the test providers.
+// Cadence standard library talks to test providers via these interfaces.
 // This is used as a way to inject test provider dependencies dynamically.
+
 type TestFramework interface {
+	NewEmulatorBackend() Blockchain
+
+	ReadFile(string) (string, error)
+}
+
+type Blockchain interface {
 	RunScript(
 		inter *interpreter.Interpreter,
 		code string, arguments []interpreter.Value,
@@ -55,8 +63,6 @@ type TestFramework interface {
 		arguments []interpreter.Value,
 	) error
 
-	ReadFile(string) (string, error)
-
 	UseConfiguration(configuration *Configuration)
 
 	StandardLibraryHandler() StandardLibraryHandler
@@ -73,8 +79,6 @@ type TestFramework interface {
 	Reset(uint64)
 
 	MoveTime(int64)
-
-	NewEmulatorBackend() TestFramework
 }
 
 type ScriptResult struct {

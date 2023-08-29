@@ -2062,8 +2062,8 @@ func TestBlockchain(t *testing.T) {
 		eventsInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() TestFramework {
-				return &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
 					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
 						eventsInvoked = true
 						assert.Nil(t, eventType)
@@ -2111,8 +2111,8 @@ func TestBlockchain(t *testing.T) {
 		eventsInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() TestFramework {
-				return &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
 					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
 						eventsInvoked = true
 						assert.NotNil(t, eventType)
@@ -2156,8 +2156,8 @@ func TestBlockchain(t *testing.T) {
 		resetInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() TestFramework {
-				return &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
 					reset: func(height uint64) {
 						resetInvoked = true
 						assert.Equal(t, uint64(5), height)
@@ -2190,8 +2190,8 @@ func TestBlockchain(t *testing.T) {
 		resetInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() TestFramework {
-				return &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
 					reset: func(height uint64) {
 						resetInvoked = true
 					},
@@ -2223,8 +2223,8 @@ func TestBlockchain(t *testing.T) {
 		moveTimeInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() TestFramework {
-				return &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
 					moveTime: func(timeDelta int64) {
 						moveTimeInvoked = true
 						assert.Equal(t, int64(3024000), timeDelta)
@@ -2260,8 +2260,8 @@ func TestBlockchain(t *testing.T) {
 		moveTimeInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() TestFramework {
-				return &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
 					moveTime: func(timeDelta int64) {
 						moveTimeInvoked = true
 						assert.Equal(t, int64(-3024000), timeDelta)
@@ -2294,8 +2294,12 @@ func TestBlockchain(t *testing.T) {
 		moveTimeInvoked := false
 
 		testFramework := &mockedTestFramework{
-			moveTime: func(timeDelta int64) {
-				moveTimeInvoked = true
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					moveTime: func(timeDelta int64) {
+						moveTimeInvoked = true
+					},
+				}
 			},
 		}
 
@@ -2320,9 +2324,9 @@ func TestBlockchain(t *testing.T) {
 		newEmulatorBackendInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() TestFramework {
+			newEmulatorBackend: func() Blockchain {
 				newEmulatorBackendInvoked = true
-				return &mockedTestFramework{}
+				return &mockedBlockchain{}
 			},
 		}
 
@@ -2339,13 +2343,35 @@ func TestBlockchain(t *testing.T) {
 }
 
 type mockedTestFramework struct {
+	newEmulatorBackend func() Blockchain
+	readFile           func(s string) (string, error)
+}
+
+var _ TestFramework = &mockedTestFramework{}
+
+func (m mockedTestFramework) NewEmulatorBackend() Blockchain {
+	if m.newEmulatorBackend == nil {
+		panic("'NewEmulatorBackend' is not implemented")
+	}
+
+	return m.newEmulatorBackend()
+}
+
+func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
+	if m.readFile == nil {
+		panic("'ReadFile' is not implemented")
+	}
+
+	return m.readFile(fileName)
+}
+
+type mockedBlockchain struct {
 	runScript          func(inter *interpreter.Interpreter, code string, arguments []interpreter.Value)
 	createAccount      func() (*Account, error)
 	addTransaction     func(inter *interpreter.Interpreter, code string, authorizers []common.Address, signers []*Account, arguments []interpreter.Value) error
 	executeTransaction func() *TransactionResult
 	commitBlock        func() error
 	deployContract     func(inter *interpreter.Interpreter, name string, code string, account *Account, arguments []interpreter.Value) error
-	readFile           func(s string) (string, error)
 	useConfiguration   func(configuration *Configuration)
 	stdlibHandler      func() StandardLibraryHandler
 	logs               func() []string
@@ -2353,12 +2379,11 @@ type mockedTestFramework struct {
 	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
 	reset              func(uint64)
 	moveTime           func(int64)
-	newEmulatorBackend func() TestFramework
 }
 
-var _ TestFramework = &mockedTestFramework{}
+var _ Blockchain = &mockedBlockchain{}
 
-func (m mockedTestFramework) RunScript(
+func (m mockedBlockchain) RunScript(
 	inter *interpreter.Interpreter,
 	code string,
 	arguments []interpreter.Value,
@@ -2370,7 +2395,7 @@ func (m mockedTestFramework) RunScript(
 	return m.RunScript(inter, code, arguments)
 }
 
-func (m mockedTestFramework) CreateAccount() (*Account, error) {
+func (m mockedBlockchain) CreateAccount() (*Account, error) {
 	if m.createAccount == nil {
 		panic("'CreateAccount' is not implemented")
 	}
@@ -2378,7 +2403,7 @@ func (m mockedTestFramework) CreateAccount() (*Account, error) {
 	return m.createAccount()
 }
 
-func (m mockedTestFramework) AddTransaction(
+func (m mockedBlockchain) AddTransaction(
 	inter *interpreter.Interpreter,
 	code string,
 	authorizers []common.Address,
@@ -2392,7 +2417,7 @@ func (m mockedTestFramework) AddTransaction(
 	return m.addTransaction(inter, code, authorizers, signers, arguments)
 }
 
-func (m mockedTestFramework) ExecuteNextTransaction() *TransactionResult {
+func (m mockedBlockchain) ExecuteNextTransaction() *TransactionResult {
 	if m.executeTransaction == nil {
 		panic("'ExecuteNextTransaction' is not implemented")
 	}
@@ -2400,7 +2425,7 @@ func (m mockedTestFramework) ExecuteNextTransaction() *TransactionResult {
 	return m.executeTransaction()
 }
 
-func (m mockedTestFramework) CommitBlock() error {
+func (m mockedBlockchain) CommitBlock() error {
 	if m.commitBlock == nil {
 		panic("'CommitBlock' is not implemented")
 	}
@@ -2408,7 +2433,7 @@ func (m mockedTestFramework) CommitBlock() error {
 	return m.commitBlock()
 }
 
-func (m mockedTestFramework) DeployContract(
+func (m mockedBlockchain) DeployContract(
 	inter *interpreter.Interpreter,
 	name string,
 	code string,
@@ -2422,15 +2447,7 @@ func (m mockedTestFramework) DeployContract(
 	return m.deployContract(inter, name, code, account, arguments)
 }
 
-func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
-	if m.readFile == nil {
-		panic("'ReadFile' is not implemented")
-	}
-
-	return m.readFile(fileName)
-}
-
-func (m mockedTestFramework) UseConfiguration(configuration *Configuration) {
+func (m mockedBlockchain) UseConfiguration(configuration *Configuration) {
 	if m.useConfiguration == nil {
 		panic("'UseConfiguration' is not implemented")
 	}
@@ -2438,7 +2455,7 @@ func (m mockedTestFramework) UseConfiguration(configuration *Configuration) {
 	m.useConfiguration(configuration)
 }
 
-func (m mockedTestFramework) StandardLibraryHandler() StandardLibraryHandler {
+func (m mockedBlockchain) StandardLibraryHandler() StandardLibraryHandler {
 	if m.stdlibHandler == nil {
 		panic("'StandardLibraryHandler' is not implemented")
 	}
@@ -2446,7 +2463,7 @@ func (m mockedTestFramework) StandardLibraryHandler() StandardLibraryHandler {
 	return m.stdlibHandler()
 }
 
-func (m mockedTestFramework) Logs() []string {
+func (m mockedBlockchain) Logs() []string {
 	if m.logs == nil {
 		panic("'Logs' is not implemented")
 	}
@@ -2454,7 +2471,7 @@ func (m mockedTestFramework) Logs() []string {
 	return m.logs()
 }
 
-func (m mockedTestFramework) ServiceAccount() (*Account, error) {
+func (m mockedBlockchain) ServiceAccount() (*Account, error) {
 	if m.serviceAccount == nil {
 		panic("'ServiceAccount' is not implemented")
 	}
@@ -2462,7 +2479,7 @@ func (m mockedTestFramework) ServiceAccount() (*Account, error) {
 	return m.serviceAccount()
 }
 
-func (m mockedTestFramework) Events(
+func (m mockedBlockchain) Events(
 	inter *interpreter.Interpreter,
 	eventType interpreter.StaticType,
 ) interpreter.Value {
@@ -2473,7 +2490,7 @@ func (m mockedTestFramework) Events(
 	return m.events(inter, eventType)
 }
 
-func (m mockedTestFramework) Reset(height uint64) {
+func (m mockedBlockchain) Reset(height uint64) {
 	if m.reset == nil {
 		panic("'Reset' is not implemented")
 	}
@@ -2481,18 +2498,10 @@ func (m mockedTestFramework) Reset(height uint64) {
 	m.reset(height)
 }
 
-func (m mockedTestFramework) MoveTime(timeDelta int64) {
+func (m mockedBlockchain) MoveTime(timeDelta int64) {
 	if m.moveTime == nil {
 		panic("'SetTimestamp' is not implemented")
 	}
 
 	m.moveTime(timeDelta)
-}
-
-func (m mockedTestFramework) NewEmulatorBackend() TestFramework {
-	if m.newEmulatorBackend == nil {
-		panic("'NewEmulatorBackend' is not implemented")
-	}
-
-	return m.newEmulatorBackend()
 }
