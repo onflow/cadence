@@ -56,7 +56,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 	self := NewSimpleCompositeValue(
 		interpreter,
-		staticType.Location.TypeID(interpreter, qualifiedIdentifier),
+		staticType.TypeID,
 		staticType,
 		nil,
 		map[string]Value{},
