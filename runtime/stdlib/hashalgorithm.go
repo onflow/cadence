@@ -25,11 +25,10 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var hashAlgorithmTypeID = sema.HashAlgorithmType.ID()
-var hashAlgorithmStaticType interpreter.StaticType = interpreter.CompositeStaticType{
-	QualifiedIdentifier: sema.HashAlgorithmType.Identifier,
-	TypeID:              hashAlgorithmTypeID,
-}
+var hashAlgorithmStaticType interpreter.StaticType = interpreter.ConvertSemaCompositeTypeToStaticCompositeType(
+	nil,
+	sema.HashAlgorithmType,
+)
 
 type Hasher interface {
 	// Hash returns the digest of hashing the given data with using the given hash algorithm

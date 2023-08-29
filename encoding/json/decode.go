@@ -303,7 +303,7 @@ func (d *Decoder) decodeAddress(valueJSON any) cadence.Address {
 	actualPrefix := v[:prefixLength]
 	if actualPrefix != addressPrefix {
 		panic(errors.NewDefaultUserError(
-			"invalid address prefix: expected `%s`, got `%s`",
+			"invalid address prefix: (shown as hex) expected %x, got %x", // hex encoding user input (actualPrefix) avoids invalid UTF-8.
 			addressPrefix,
 			actualPrefix,
 		))

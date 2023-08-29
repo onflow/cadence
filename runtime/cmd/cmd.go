@@ -241,11 +241,12 @@ func (*StandardLibraryHandler) ProgramLog(message string, locationRange interpre
 	return nil
 }
 
-func (h *StandardLibraryHandler) UnsafeRandom() (uint64, error) {
+func (h *StandardLibraryHandler) ReadRandom(p []byte) error {
 	if h.rand == nil {
 		h.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
-	return h.rand.Uint64(), nil
+	h.rand.Read(p)
+	return nil
 }
 
 func (*StandardLibraryHandler) GetBlockAtHeight(_ uint64) (block stdlib.Block, exists bool, err error) {

@@ -598,7 +598,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					0xc3,
 					// byte string, length 1
 					0x41,
-					// `-42` in decimal is is `0x2a` in hex.
+					// `-42` in decimal is `0x2a` in hex.
 					// CBOR requires negative values to be encoded as `-1-n`, which is `-n - 1`,
 					// which is `0x2a - 0x01`, which equals to `0x29`.
 					0x29,
@@ -3712,11 +3712,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				ReferencedType: InterfaceStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "SimpleInterface",
-				},
-				Authorization: UnauthorizedAccess,
+				ReferencedType: NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
+				Authorization:  UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3895,14 +3892,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			BorrowType: ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
 					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "I1",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "I2",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I1"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I2"),
 					},
 				},
 				Authorization: UnauthorizedAccess,
@@ -4086,10 +4077,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 			BorrowType: ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
 					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "SimpleInterface",
-						},
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
 					},
 				},
 				Authorization: UnauthorizedAccess,

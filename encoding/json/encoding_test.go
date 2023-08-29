@@ -197,6 +197,16 @@ func TestEncodeAddress(t *testing.T) {
 	)
 }
 
+func TestDecodeInvalidAddress(t *testing.T) {
+
+	t.Parallel()
+
+	msg := `{"type":"Address","value":"000000000102030405"}`
+
+	_, err := json.Decode(nil, []byte(msg))
+	require.ErrorContains(t, err, "invalid address prefix: (shown as hex) expected 3078, got 3030")
+}
+
 func TestEncodeInt(t *testing.T) {
 
 	t.Parallel()

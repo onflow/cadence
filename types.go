@@ -1389,7 +1389,7 @@ func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
 	if len(t.typeID) == 0 {
-		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
+		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 	}
 	return t.typeID
 }
@@ -1465,7 +1465,7 @@ func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
 	if len(t.typeID) == 0 {
-		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
+		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 	}
 	return t.typeID
 }
@@ -1509,6 +1509,7 @@ type AttachmentType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
+	typeID              string
 }
 
 func NewAttachmentType(
@@ -1531,22 +1532,27 @@ func NewMeteredAttachmentType(
 	gauge common.MemoryGauge,
 	location common.Location,
 	baseType Type,
-	qualifiedIdentifer string,
+	qualifiedIdentifier string,
 	fields []Field,
 	initializers [][]Parameter,
 ) *AttachmentType {
 	common.UseMemory(gauge, common.CadenceStructTypeMemoryUsage)
-	return NewAttachmentType(location, baseType, qualifiedIdentifer, fields, initializers)
+	return NewAttachmentType(
+		location,
+		baseType,
+		qualifiedIdentifier,
+		fields,
+		initializers,
+	)
 }
 
 func (*AttachmentType) isType() {}
 
 func (t *AttachmentType) ID() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
+	if len(t.typeID) == 0 {
+		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 	}
-
-	return string(t.Location.TypeID(nil, t.QualifiedIdentifier))
+	return t.typeID
 }
 
 func (*AttachmentType) isCompositeType() {}
@@ -1624,7 +1630,7 @@ func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
 	if len(t.typeID) == 0 {
-		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
+		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 	}
 	return t.typeID
 }
@@ -1700,7 +1706,7 @@ func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
 	if len(t.typeID) == 0 {
-		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
+		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 	}
 	return t.typeID
 }
@@ -1788,7 +1794,7 @@ func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
 	if len(t.typeID) == 0 {
-		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
+		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 	}
 	return t.typeID
 }
@@ -1864,7 +1870,7 @@ func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
 	if len(t.typeID) == 0 {
-		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
+		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 	}
 	return t.typeID
 }
@@ -1940,7 +1946,7 @@ func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
 	if len(t.typeID) == 0 {
-		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
+		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 	}
 	return t.typeID
 }
@@ -2558,7 +2564,7 @@ func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
 	if len(t.typeID) == 0 {
-		t.typeID = generateTypeID(t.Location, t.QualifiedIdentifier)
+		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 	}
 	return t.typeID
 }
@@ -2745,14 +2751,6 @@ func (AccountKeyType) ID() string {
 
 func (t AccountKeyType) Equal(other Type) bool {
 	return t == other
-}
-
-func generateTypeID(location common.Location, identifier string) string {
-	if location == nil {
-		return identifier
-	}
-
-	return string(location.TypeID(nil, identifier))
 }
 
 // TypeWithCachedTypeID recursively caches type ID of type t.

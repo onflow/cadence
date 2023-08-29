@@ -36,6 +36,7 @@ type CapabilityControllerValue interface {
 		capabilityAddress common.Address,
 		resultBorrowType *sema.ReferenceType,
 	) ReferenceValue
+	ControllerCapabilityID() UInt64Value
 }
 
 // StorageCapabilityControllerValue
@@ -53,6 +54,7 @@ type StorageCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
+	GetCapability    func() *CapabilityValue
 	GetTag           func() *StringValue
 	SetTag           func(*StringValue)
 	TargetFunction   FunctionValue
@@ -131,7 +133,10 @@ func (v *StorageCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 	)
 }
 
-func (v *StorageCapabilityControllerValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *StorageCapabilityControllerValue) MeteredString(
+	memoryGauge common.MemoryGauge,
+	seenReferences SeenReferences,
+) string {
 	common.UseMemory(memoryGauge, common.StorageCapabilityControllerValueStringMemoryUsage)
 
 	return format.StorageCapabilityController(
@@ -149,7 +154,11 @@ func (v *StorageCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StorageCapabilityControllerValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *StorageCapabilityControllerValue) Equal(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	other Value,
+) bool {
 	otherController, ok := other.(*StorageCapabilityControllerValue)
 	if !ok {
 		return false
@@ -164,7 +173,14 @@ func (*StorageCapabilityControllerValue) IsStorable() bool {
 	return true
 }
 
-func (v *StorageCapabilityControllerValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v *StorageCapabilityControllerValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (
+	atree.Storable,
+	error,
+) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
@@ -249,6 +265,9 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	case sema.StorageCapabilityControllerTypeDeleteFunctionName:
 		return v.DeleteFunction
+
+	case sema.StorageCapabilityControllerTypeCapabilityFieldName:
+		return v.GetCapability()
 	}
 
 	return nil
@@ -259,9 +278,28 @@ func (*StorageCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StorageCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
-	// Storage capability controllers have no settable members (fields / functions)
+func (v *StorageCapabilityControllerValue) SetMember(
+	_ *Interpreter,
+	_ LocationRange,
+	identifier string,
+	value Value,
+) bool {
+	switch identifier {
+	case sema.StorageCapabilityControllerTypeTagFieldName:
+		stringValue, ok := value.(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		v.tag = stringValue
+		v.SetTag(stringValue)
+		return true
+	}
+
 	panic(errors.NewUnreachableError())
+}
+
+func (v *StorageCapabilityControllerValue) ControllerCapabilityID() UInt64Value {
+	return v.CapabilityID
 }
 
 func (v *StorageCapabilityControllerValue) ReferenceValue(
@@ -315,7 +353,7 @@ func (v *StorageCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 	)
 }
 
-func (controller *StorageCapabilityControllerValue) newSetTagFunction(
+func (v *StorageCapabilityControllerValue) newSetTagFunction(
 	inter *Interpreter,
 ) *HostFunctionValue {
 	return NewHostFunctionValue(
@@ -327,8 +365,8 @@ func (controller *StorageCapabilityControllerValue) newSetTagFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			controller.tag = newTagValue
-			controller.SetTag(newTagValue)
+			v.tag = newTagValue
+			v.SetTag(newTagValue)
 
 			return Void
 		},

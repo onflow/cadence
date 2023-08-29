@@ -1,5 +1,9 @@
 access(all) struct StorageCapabilityController: ContainFields {
 
+    /// The capability that is controlled by this controller.
+    access(all)
+    let capability: Capability
+
     /// An arbitrary "tag" for the controller.
     /// For example, it could be used to describe the purpose of the capability.
     /// Empty by default.

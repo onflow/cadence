@@ -584,7 +584,7 @@ func (e UUIDUnavailableError) Error() string {
 
 // TypeLoadingError
 type TypeLoadingError struct {
-	TypeID common.TypeID
+	TypeID TypeID
 }
 
 var _ errors.UserError = TypeLoadingError{}
