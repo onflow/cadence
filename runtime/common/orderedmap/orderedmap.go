@@ -24,8 +24,9 @@ package orderedmap
 import (
 	"sort"
 
-	"github.com/onflow/cadence/runtime/common/list"
 	"golang.org/x/exp/maps"
+
+	"github.com/onflow/cadence/runtime/common/list"
 )
 
 // OrderedMap
@@ -248,7 +249,8 @@ func MapKeys[T OrderedMap[K, V], K comparable, V any, H comparable](om *OrderedM
 // the provided comparison function between keys
 func (om *OrderedMap[K, V]) SortByKey(compare func(K, K) bool) *OrderedMap[K, V] {
 	sorted := New[OrderedMap[K, V]](om.Len())
-	keys := maps.Keys(om.pairs)
+	// non-deterministic order is okay here because the result is immediately sorted
+	keys := maps.Keys(om.pairs) //nolint:forbidigo
 	sort.Slice(keys, func(i, j int) bool {
 		return compare(keys[i], keys[j])
 	})

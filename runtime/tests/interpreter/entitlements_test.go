@@ -232,6 +232,32 @@ func TestInterpretEntitledReferenceRuntimeTypes(t *testing.T) {
 		)
 	})
 
+	t.Run("equality", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement X
+		entitlement Y
+        resource R {}
+
+        fun test(): Bool {
+			return ReferenceType(entitlements: ["S.test.X", "S.test.Y"], type: Type<@R>())! ==
+				   ReferenceType(entitlements: ["S.test.Y", "S.test.X"], type: Type<@R>())!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			value,
+		)
+	})
+
 	t.Run("order irrelevant as dictionary key", func(t *testing.T) {
 
 		t.Parallel()
