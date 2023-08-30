@@ -1188,7 +1188,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			actual: &cadence.OptionalType{
 				Type: cadence.IntType,
 			},
-			expected: interpreter.OptionalStaticType{
+			expected: &interpreter.OptionalStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},

@@ -18265,7 +18265,7 @@ func (v *DictionaryValue) SetKey(
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
 	interpreter.checkContainerMutation(
-		OptionalStaticType{ // intentionally unmetered
+		&OptionalStaticType{ // intentionally unmetered
 			Type: v.Type.ValueType,
 		},
 		value,

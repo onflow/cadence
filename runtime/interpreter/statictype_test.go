@@ -574,10 +574,10 @@ func TestOptionalStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			OptionalStaticType{
+			(&OptionalStaticType{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
-				OptionalStaticType{
+			}).Equal(
+				&OptionalStaticType{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -589,10 +589,10 @@ func TestOptionalStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			OptionalStaticType{
+			(&OptionalStaticType{
 				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				OptionalStaticType{
+			}).Equal(
+				&OptionalStaticType{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -604,9 +604,9 @@ func TestOptionalStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			OptionalStaticType{
+			(&OptionalStaticType{
 				Type: PrimitiveStaticTypeInt,
-			}.Equal(
+			}).Equal(
 				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
@@ -1449,7 +1449,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType: &sema.OptionalType{
 				Type: sema.IntType,
 			},
-			staticType: OptionalStaticType{
+			staticType: &OptionalStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
 		},

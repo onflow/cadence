@@ -1798,7 +1798,8 @@ func (interpreter *Interpreter) convertStaticType(
 				valueStaticType.ReferencedType,
 			)
 		}
-	case OptionalStaticType:
+
+	case *OptionalStaticType:
 		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
 			return NewOptionalStaticType(
 				interpreter,
@@ -1808,6 +1809,7 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
+
 	case *DictionaryStaticType:
 		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
 			return NewDictionaryStaticType(
@@ -1822,6 +1824,7 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
+
 	case *VariableSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
 			return NewVariableSizedStaticType(
@@ -1832,6 +1835,7 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
+
 	case *ConstantSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
 			return NewConstantSizedStaticType(
@@ -1870,6 +1874,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		switch value := value.(type) {
 		case NilValue:
 			return value
+
 		case *SomeValue:
 			if !optionalValueType.Type.Equal(unwrappedTargetType) {
 				innerValue := interpreter.convert(value.value, optionalValueType.Type, unwrappedTargetType, locationRange)
@@ -3860,7 +3865,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 	}
 
 	switch subType := subType.(type) {
-	case OptionalStaticType:
+	case *OptionalStaticType:
 		if superType, ok := superType.(*sema.OptionalType); ok {
 			return interpreter.IsSubTypeOfSemaType(subType.Type, superType.Type)
 		}

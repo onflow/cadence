@@ -3337,7 +3337,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
 		for i := uint64(0); i < maxInlineElementSize; i++ {
-			borrowType = OptionalStaticType{
+			borrowType = &OptionalStaticType{
 				Type: borrowType,
 			}
 		}
@@ -3621,7 +3621,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				ReferencedType: OptionalStaticType{
+				ReferencedType: &OptionalStaticType{
 					Type: PrimitiveStaticTypeBool,
 				},
 				Authorization: UnauthorizedAccess,
@@ -4171,7 +4171,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
 		for i := uint64(0); i < maxInlineElementSize; i++ {
-			borrowType = OptionalStaticType{
+			borrowType = &OptionalStaticType{
 				Type: borrowType,
 			}
 		}

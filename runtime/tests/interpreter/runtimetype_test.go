@@ -46,7 +46,7 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
@@ -55,7 +55,7 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
@@ -64,7 +64,7 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
@@ -73,8 +73,8 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
-				Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
+				Type: &interpreter.OptionalStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 			},

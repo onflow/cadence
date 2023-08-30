@@ -1146,7 +1146,7 @@ func (t PrimitiveStaticType) Encode(e *cbor.StreamEncoder) error {
 //			Number:  CBORTagOptionalStaticType,
 //			Content: StaticType(v.Type),
 //	}
-func (t OptionalStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *OptionalStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagOptionalStaticType,

@@ -400,36 +400,36 @@ type OptionalStaticType struct {
 	Type StaticType
 }
 
-var _ StaticType = OptionalStaticType{}
+var _ StaticType = &OptionalStaticType{}
 
 func NewOptionalStaticType(
 	memoryGauge common.MemoryGauge,
 	typ StaticType,
-) OptionalStaticType {
+) *OptionalStaticType {
 	common.UseMemory(memoryGauge, common.OptionalStaticTypeMemoryUsage)
 
-	return OptionalStaticType{Type: typ}
+	return &OptionalStaticType{Type: typ}
 }
 
-func (OptionalStaticType) isStaticType() {}
+func (*OptionalStaticType) isStaticType() {}
 
-func (OptionalStaticType) elementSize() uint {
+func (*OptionalStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (t OptionalStaticType) String() string {
+func (t *OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
 }
 
-func (t OptionalStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+func (t *OptionalStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	common.UseMemory(memoryGauge, common.OptionalStaticTypeStringMemoryUsage)
 
 	typeStr := t.Type.MeteredString(memoryGauge)
 	return fmt.Sprintf("%s?", typeStr)
 }
 
-func (t OptionalStaticType) Equal(other StaticType) bool {
-	otherOptionalType, ok := other.(OptionalStaticType)
+func (t *OptionalStaticType) Equal(other StaticType) bool {
+	otherOptionalType, ok := other.(*OptionalStaticType)
 	if !ok {
 		return false
 	}
@@ -437,11 +437,11 @@ func (t OptionalStaticType) Equal(other StaticType) bool {
 	return t.Type.Equal(otherOptionalType.Type)
 }
 
-func (t OptionalStaticType) ID() TypeID {
+func (t *OptionalStaticType) ID() TypeID {
 	return sema.OptionalTypeID(t.Type.ID())
 }
 
-var NilStaticType = OptionalStaticType{
+var NilStaticType = &OptionalStaticType{
 	Type: PrimitiveStaticTypeNever,
 }
 
@@ -1110,7 +1110,7 @@ func ConvertStaticToSemaType(
 			valueType,
 		), nil
 
-	case OptionalStaticType:
+	case *OptionalStaticType:
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,

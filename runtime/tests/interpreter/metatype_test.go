@@ -659,7 +659,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
+				Type: &interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						Authorization: interpreter.NewEntitlementSetAuthorization(
 							nil,
@@ -687,7 +687,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
+				Type: &interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						// Reference was converted
 						Authorization:  interpreter.UnauthorizedAccess,
@@ -712,7 +712,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
+				Type: &interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						Authorization: interpreter.NewEntitlementSetAuthorization(
 							nil,
@@ -743,7 +743,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
+				Type: &interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						// Reference was converted
 						Authorization:  interpreter.UnauthorizedAccess,
@@ -772,7 +772,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
+				Type: &interpreter.OptionalStaticType{
 					Type: interpreter.ReferenceStaticType{
 						Authorization: interpreter.NewEntitlementSetAuthorization(
 							nil,
