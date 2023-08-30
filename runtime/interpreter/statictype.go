@@ -448,7 +448,6 @@ var NilStaticType = &OptionalStaticType{
 type IntersectionStaticType struct {
 	Types      []*InterfaceStaticType
 	LegacyType StaticType
-	typeID     TypeID
 }
 
 var _ StaticType = &IntersectionStaticType{}
@@ -521,18 +520,15 @@ outer:
 }
 
 func (t *IntersectionStaticType) ID() TypeID {
-	if t.typeID == "" {
-		var intersectionStrings []string
-		typeCount := len(t.Types)
-		if typeCount > 0 {
-			intersectionStrings = make([]string, 0, typeCount)
-			for _, ty := range t.Types {
-				intersectionStrings = append(intersectionStrings, string(ty.ID()))
-			}
+	var intersectionStrings []string
+	typeCount := len(t.Types)
+	if typeCount > 0 {
+		intersectionStrings = make([]string, 0, typeCount)
+		for _, ty := range t.Types {
+			intersectionStrings = append(intersectionStrings, string(ty.ID()))
 		}
-		t.typeID = TypeID(sema.FormatIntersectionTypeID(intersectionStrings))
 	}
-	return t.typeID
+	return TypeID(sema.FormatIntersectionTypeID(intersectionStrings))
 }
 
 // Authorization
@@ -749,8 +745,10 @@ func (t *ReferenceStaticType) Equal(other StaticType) bool {
 }
 
 func (t *ReferenceStaticType) ID() TypeID {
-	// TODO: cache
-	return TypeID(sema.FormatReferenceTypeID(t.Authorization.ID(), string(t.ReferencedType.ID())))
+	return TypeID(sema.FormatReferenceTypeID(
+		t.Authorization.ID(),
+		string(t.ReferencedType.ID()),
+	))
 }
 
 // CapabilityStaticType
