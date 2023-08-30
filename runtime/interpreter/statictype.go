@@ -343,32 +343,32 @@ type DictionaryStaticType struct {
 	ValueType StaticType
 }
 
-var _ StaticType = DictionaryStaticType{}
-var _ atree.TypeInfo = DictionaryStaticType{}
+var _ StaticType = &DictionaryStaticType{}
+var _ atree.TypeInfo = &DictionaryStaticType{}
 
 func NewDictionaryStaticType(
 	memoryGauge common.MemoryGauge,
 	keyType, valueType StaticType,
-) DictionaryStaticType {
+) *DictionaryStaticType {
 	common.UseMemory(memoryGauge, common.DictionaryStaticTypeMemoryUsage)
 
-	return DictionaryStaticType{
+	return &DictionaryStaticType{
 		KeyType:   keyType,
 		ValueType: valueType,
 	}
 }
 
-func (DictionaryStaticType) isStaticType() {}
+func (*DictionaryStaticType) isStaticType() {}
 
-func (DictionaryStaticType) elementSize() uint {
+func (*DictionaryStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (t DictionaryStaticType) String() string {
+func (t *DictionaryStaticType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
 }
 
-func (t DictionaryStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+func (t *DictionaryStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	common.UseMemory(memoryGauge, common.DictionaryStaticTypeStringMemoryUsage)
 
 	keyStr := t.KeyType.MeteredString(memoryGauge)
@@ -377,8 +377,8 @@ func (t DictionaryStaticType) MeteredString(memoryGauge common.MemoryGauge) stri
 	return fmt.Sprintf("{%s: %s}", keyStr, valueStr)
 }
 
-func (t DictionaryStaticType) Equal(other StaticType) bool {
-	otherDictionaryType, ok := other.(DictionaryStaticType)
+func (t *DictionaryStaticType) Equal(other StaticType) bool {
+	otherDictionaryType, ok := other.(*DictionaryStaticType)
 	if !ok {
 		return false
 	}
@@ -387,7 +387,7 @@ func (t DictionaryStaticType) Equal(other StaticType) bool {
 		t.ValueType.Equal(otherDictionaryType.ValueType)
 }
 
-func (t DictionaryStaticType) ID() TypeID {
+func (t *DictionaryStaticType) ID() TypeID {
 	return sema.DictionaryTypeID(
 		t.KeyType.ID(),
 		t.ValueType.ID(),
@@ -917,7 +917,7 @@ func ConvertSemaArrayTypeToStaticArrayType(
 func ConvertSemaDictionaryTypeToStaticDictionaryType(
 	memoryGauge common.MemoryGauge,
 	t *sema.DictionaryType,
-) DictionaryStaticType {
+) *DictionaryStaticType {
 	return NewDictionaryStaticType(
 		memoryGauge,
 		ConvertSemaToStaticType(memoryGauge, t.KeyType),
@@ -1079,7 +1079,7 @@ func ConvertStaticToSemaType(
 			t.Size,
 		), nil
 
-	case DictionaryStaticType:
+	case *DictionaryStaticType:
 		keyType, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.KeyType,

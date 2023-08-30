@@ -1424,7 +1424,7 @@ const (
 //					encodedDictionaryStaticTypeValueTypeFieldKey: StaticType(v.ValueType),
 //			},
 //	}
-func (t DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number

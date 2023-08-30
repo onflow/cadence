@@ -96,7 +96,7 @@ func TestInterpreterTracing(t *testing.T) {
 		dict := interpreter.NewDictionaryValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},

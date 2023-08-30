@@ -229,7 +229,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -239,7 +239,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeInt,
 				ValueType: interpreter.PrimitiveStaticTypeString,
 			},
@@ -249,7 +249,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
 				ValueType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				KeyType:   interpreter.PrimitiveStaticTypeInt,
 			},
@@ -259,8 +259,8 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
-				ValueType: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
+				ValueType: &interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},

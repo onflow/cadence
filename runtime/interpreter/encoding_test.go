@@ -3844,7 +3844,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				ReferencedType: DictionaryStaticType{
+				ReferencedType: &DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeBool,
 					ValueType: PrimitiveStaticTypeString,
 				},

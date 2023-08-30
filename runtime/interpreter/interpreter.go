@@ -1808,7 +1808,7 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
-	case DictionaryStaticType:
+	case *DictionaryStaticType:
 		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
 			return NewDictionaryStaticType(
 				interpreter,
@@ -2046,7 +2046,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
 
 			oldDictStaticType := dictValue.StaticType(interpreter)
-			dictStaticType := interpreter.convertStaticType(oldDictStaticType, unwrappedTargetType).(DictionaryStaticType)
+			dictStaticType := interpreter.convertStaticType(oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
 
 			if oldDictStaticType.Equal(dictStaticType) {
 				return value
@@ -4921,7 +4921,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			return info.Equal(other.(StaticType))
 		case VariableSizedStaticType:
 			return info.Equal(other.(StaticType))
-		case DictionaryStaticType:
+		case *DictionaryStaticType:
 			return info.Equal(other.(StaticType))
 		case compositeTypeInfo:
 			return info.Equal(other)

@@ -69,7 +69,7 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 	case *atree.OrderedMap:
 		typeInfo := value.Type()
 		switch typeInfo := typeInfo.(type) {
-		case DictionaryStaticType:
+		case *DictionaryStaticType:
 			return newDictionaryValueFromConstructor(gauge, typeInfo, value.Count(), func() *atree.OrderedMap { return value }), nil
 		case compositeTypeInfo:
 			return newCompositeValueFromConstructor(gauge, value.Count(), typeInfo, func() *atree.OrderedMap { return value }), nil

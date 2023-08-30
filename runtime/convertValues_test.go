@@ -226,7 +226,7 @@ func TestRuntimeExportValue(t *testing.T) {
 				return interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -244,7 +244,7 @@ func TestRuntimeExportValue(t *testing.T) {
 				return interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -673,7 +673,7 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -689,7 +689,7 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -1218,7 +1218,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				ElementType: cadence.IntType,
 				KeyType:     cadence.StringType,
 			},
-			expected: interpreter.DictionaryStaticType{
+			expected: &interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -3544,7 +3544,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		value := interpreter.NewDictionaryValue(
 			newTestInterpreter(t),
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -3594,7 +3594,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -3612,7 +3612,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		value := interpreter.NewDictionaryValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -3681,7 +3681,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -3742,9 +3742,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType: interpreter.PrimitiveStaticTypeString,
-					ValueType: interpreter.DictionaryStaticType{
+					ValueType: &interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -3754,7 +3754,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeInt8,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -3766,7 +3766,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -4838,7 +4838,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		ValueType: semaArrayType,
 	}
 
-	staticDictionaryType := interpreter.DictionaryStaticType{
+	staticDictionaryType := &interpreter.DictionaryStaticType{
 		KeyType:   interpreter.PrimitiveStaticTypeString,
 		ValueType: staticArrayType,
 	}

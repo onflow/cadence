@@ -17762,7 +17762,7 @@ func (v *CompositeValue) RemoveTypeKey(
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type             DictionaryStaticType
+	Type             *DictionaryStaticType
 	semaType         *sema.DictionaryType
 	isResourceKinded *bool
 	dictionary       *atree.OrderedMap
@@ -17773,7 +17773,7 @@ type DictionaryValue struct {
 func NewDictionaryValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	dictionaryType DictionaryStaticType,
+	dictionaryType *DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 	return NewDictionaryValueWithAddress(
@@ -17788,7 +17788,7 @@ func NewDictionaryValue(
 func NewDictionaryValueWithAddress(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	dictionaryType DictionaryStaticType,
+	dictionaryType *DictionaryStaticType,
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
@@ -17870,7 +17870,7 @@ func NewDictionaryValueWithAddress(
 
 func newDictionaryValueFromOrderedMap(
 	dict *atree.OrderedMap,
-	staticType DictionaryStaticType,
+	staticType *DictionaryStaticType,
 ) *DictionaryValue {
 	return &DictionaryValue{
 		Type:       staticType,
@@ -17881,7 +17881,7 @@ func newDictionaryValueFromOrderedMap(
 func newDictionaryValueWithIterator(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	staticType DictionaryStaticType,
+	staticType *DictionaryStaticType,
 	count uint64,
 	seed uint64,
 	address common.Address,
@@ -17942,7 +17942,7 @@ func newDictionaryValueWithIterator(
 
 func newDictionaryValueFromConstructor(
 	gauge common.MemoryGauge,
-	staticType DictionaryStaticType,
+	staticType *DictionaryStaticType,
 	count uint64,
 	constructor func() *atree.OrderedMap,
 ) (dict *DictionaryValue) {
@@ -18713,7 +18713,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType, ok := v.StaticType(interpreter).(DictionaryStaticType)
+	staticType, ok := v.StaticType(interpreter).(*DictionaryStaticType)
 	if !ok {
 		return false
 	}

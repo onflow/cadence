@@ -47,7 +47,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	dictionaryStaticType := DictionaryStaticType{
+	dictionaryStaticType := &DictionaryStaticType{
 		KeyType:   PrimitiveStaticTypeString,
 		ValueType: PrimitiveStaticTypeInt256,
 	}

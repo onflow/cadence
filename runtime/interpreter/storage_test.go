@@ -247,7 +247,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value := NewDictionaryValue(
 			inter,
 			EmptyLocationRange,
-			DictionaryStaticType{
+			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
@@ -304,7 +304,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value := NewDictionaryValue(
 			inter,
 			EmptyLocationRange,
-			DictionaryStaticType{
+			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
@@ -354,7 +354,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value := NewDictionaryValue(
 			inter,
 			EmptyLocationRange,
-			DictionaryStaticType{
+			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
@@ -403,7 +403,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value := NewDictionaryValue(
 			inter,
 			EmptyLocationRange,
-			DictionaryStaticType{
+			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},

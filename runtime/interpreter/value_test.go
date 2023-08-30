@@ -450,7 +450,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 	dictionary := NewDictionaryValue(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -496,7 +496,7 @@ func TestOwnerDictionary(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -555,7 +555,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -615,7 +615,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -669,7 +669,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -725,7 +725,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -785,7 +785,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -1021,7 +1021,7 @@ func TestStringer(t *testing.T) {
 			value: NewDictionaryValue(
 				newTestInterpreter(t),
 				EmptyLocationRange,
-				DictionaryStaticType{
+				&DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeString,
 					ValueType: PrimitiveStaticTypeUInt8,
 				},
@@ -1183,7 +1183,7 @@ func TestVisitor(t *testing.T) {
 	value = NewDictionaryValue(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAny,
 		},
@@ -2506,7 +2506,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
-	byteStringDictionaryType := DictionaryStaticType{
+	byteStringDictionaryType := &DictionaryStaticType{
 		KeyType:   PrimitiveStaticTypeUInt8,
 		ValueType: PrimitiveStaticTypeString,
 	}
@@ -2668,7 +2668,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		stringByteDictionaryStaticType := DictionaryStaticType{
+		stringByteDictionaryStaticType := &DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeUInt8,
 		}
@@ -4003,7 +4003,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewDictionaryValueWithAddress(
 					inter,
 					EmptyLocationRange,
-					DictionaryStaticType{
+					&DictionaryStaticType{
 						KeyType:   PrimitiveStaticTypeString,
 						ValueType: PrimitiveStaticTypeNumber,
 					},
@@ -4022,7 +4022,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewDictionaryValueWithAddress(
 					inter,
 					EmptyLocationRange,
-					DictionaryStaticType{
+					&DictionaryStaticType{
 						KeyType:   PrimitiveStaticTypeString,
 						ValueType: PrimitiveStaticTypeAnyStruct,
 					},
@@ -4041,7 +4041,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewDictionaryValueWithAddress(
 					inter,
 					EmptyLocationRange,
-					DictionaryStaticType{
+					&DictionaryStaticType{
 						KeyType:   PrimitiveStaticTypeAnyStruct,
 						ValueType: PrimitiveStaticTypeNumber,
 					},
@@ -4060,7 +4060,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		//test(
 		//	NewDictionaryValueWithAddress(
 		//		inter,
-		//		DictionaryStaticType{
+		//		&DictionaryStaticTypeX{
 		//			KeyType:   PrimitiveStaticTypeInt,
 		//			ValueType: PrimitiveStaticTypeNumber,
 		//		},
@@ -4076,7 +4076,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		//test(
 		//	NewDictionaryValueWithAddress(
 		//		inter,
-		//		DictionaryStaticType{
+		//		&DictionaryStaticTypeX{
 		//			KeyType:   PrimitiveStaticTypeAnyStruct,
 		//			ValueType: PrimitiveStaticTypeInteger,
 		//		},
@@ -4094,7 +4094,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewDictionaryValueWithAddress(
 					inter,
 					EmptyLocationRange,
-					DictionaryStaticType{
+					&DictionaryStaticType{
 						KeyType:   PrimitiveStaticTypeAnyStruct,
 						ValueType: PrimitiveStaticTypeAnyStruct,
 					},

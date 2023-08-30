@@ -624,11 +624,11 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			DictionaryStaticType{
+			(&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeString,
-			}.Equal(
-				DictionaryStaticType{
+			}).Equal(
+				&DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeInt,
 					ValueType: PrimitiveStaticTypeString,
 				},
@@ -641,11 +641,11 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			DictionaryStaticType{
+			(&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeString,
-			}.Equal(
-				DictionaryStaticType{
+			}).Equal(
+				&DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeVoid,
 					ValueType: PrimitiveStaticTypeString,
 				},
@@ -658,11 +658,11 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			DictionaryStaticType{
+			(&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeVoid,
-			}.Equal(
-				DictionaryStaticType{
+			}).Equal(
+				&DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeInt,
 					ValueType: PrimitiveStaticTypeString,
 				},
@@ -675,10 +675,10 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			DictionaryStaticType{
+			(&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeVoid,
-			}.Equal(
+			}).Equal(
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
@@ -1470,7 +1470,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				KeyType:   sema.IntType,
 				ValueType: sema.StringType,
 			},
-			staticType: DictionaryStaticType{
+			staticType: &DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeString,
 			},

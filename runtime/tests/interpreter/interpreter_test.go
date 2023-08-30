@@ -4317,7 +4317,7 @@ func TestInterpretDictionary(t *testing.T) {
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -4346,7 +4346,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -4603,7 +4603,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -4670,7 +4670,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -7576,7 +7576,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			value := interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					ValueType: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 				},
@@ -9641,7 +9641,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	stringIntDictionaryStaticType := interpreter.DictionaryStaticType{
+	stringIntDictionaryStaticType := &interpreter.DictionaryStaticType{
 		KeyType:   interpreter.PrimitiveStaticTypeString,
 		ValueType: interpreter.PrimitiveStaticTypeInt,
 	}
@@ -9769,7 +9769,7 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 		interpreter.NewDictionaryValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeString,
 			},

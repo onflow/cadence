@@ -101,7 +101,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		testMap = interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -202,7 +202,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -251,7 +251,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -299,7 +299,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -382,7 +382,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -472,7 +472,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -1371,7 +1371,7 @@ func (r randomValueGenerator) randomDictionaryValue(
 	return interpreter.NewDictionaryValueWithAddress(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 		},

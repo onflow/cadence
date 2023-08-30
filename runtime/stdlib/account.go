@@ -2735,7 +2735,7 @@ func newStorageCapabilityControllerDeleteFunction(
 	)
 }
 
-var capabilityIDSetStaticType = interpreter.DictionaryStaticType{
+var capabilityIDSetStaticType = &interpreter.DictionaryStaticType{
 	KeyType:   interpreter.PrimitiveStaticTypeUInt64,
 	ValueType: interpreter.NilStaticType,
 }
