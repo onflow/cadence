@@ -5852,7 +5852,11 @@ var _ TypeIndexableType = &ReferenceType{}
 
 var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessAll)
 
-func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorization Access) *ReferenceType {
+func NewReferenceType(
+	memoryGauge common.MemoryGauge,
+	authorization Access,
+	typ Type,
+) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
 	return &ReferenceType{
 		Type:          typ,
@@ -5989,11 +5993,7 @@ func (t *ReferenceType) RewriteWithIntersectionTypes() (Type, bool) {
 
 func (t *ReferenceType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	mappedType := t.Type.Map(gauge, typeParamMap, f)
-	return f(NewReferenceType(
-		gauge,
-		mappedType,
-		t.Authorization,
-	))
+	return f(NewReferenceType(gauge, t.Authorization, mappedType))
 }
 
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {

@@ -2219,7 +2219,7 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 		if typedSelfType.AttachmentEntitlementAccess != nil {
 			selfAccess = typedSelfType.AttachmentEntitlementAccess.Codomain()
 		}
-		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, selfAccess)
+		selfType = NewReferenceType(checker.memoryGauge, selfAccess, typedSelfType)
 	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
@@ -2247,7 +2247,7 @@ func (checker *Checker) declareBaseValue(baseType Type, attachmentType *Composit
 			SetKind:      Conjunction,
 		}
 	}
-	base := NewReferenceType(checker.memoryGauge, baseType, baseAccess)
+	base := NewReferenceType(checker.memoryGauge, baseAccess, baseType)
 	checker.declareLowerScopedValue(base, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
 

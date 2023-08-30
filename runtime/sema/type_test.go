@@ -1936,8 +1936,8 @@ func TestMapType(t *testing.T) {
 	t.Run("map reference type", func(t *testing.T) {
 		t.Parallel()
 		mapType := NewEntitlementMapAccess(&EntitlementMapType{Identifier: "X"})
-		original := NewReferenceType(nil, StringType, mapType)
-		mapped := NewReferenceType(nil, BoolType, mapType)
+		original := NewReferenceType(nil, mapType, StringType)
+		mapped := NewReferenceType(nil, mapType, BoolType)
 
 		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
@@ -2060,7 +2060,7 @@ func TestReferenceType_ID(t *testing.T) {
 	t.Run("top-level, unauthorized", func(t *testing.T) {
 		t.Parallel()
 
-		referenceType := NewReferenceType(nil, IntType, UnauthorizedAccess)
+		referenceType := NewReferenceType(nil, UnauthorizedAccess, IntType)
 		assert.Equal(t,
 			TypeID("&Int"),
 			referenceType.ID(),
@@ -2072,7 +2072,7 @@ func TestReferenceType_ID(t *testing.T) {
 
 		access := NewEntitlementMapAccess(NewEntitlementMapType(nil, testLocation, "M"))
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
 			TypeID("auth(S.test.M)&Int"),
 			referenceType.ID(),
@@ -2091,7 +2091,7 @@ func TestReferenceType_ID(t *testing.T) {
 			Conjunction,
 		)
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 
 		// NOTE: sorted
 		assert.Equal(t,
@@ -2108,7 +2108,7 @@ func TestReferenceType_ID(t *testing.T) {
 
 		access := NewEntitlementMapAccess(mapType)
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
 			TypeID("auth(S.test.C.M)&Int"),
 			referenceType.ID(),
@@ -2133,7 +2133,7 @@ func TestReferenceType_ID(t *testing.T) {
 			Conjunction,
 		)
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 
 		// NOTE: sorted
 		assert.Equal(t,
@@ -2151,7 +2151,7 @@ func TestReferenceType_String(t *testing.T) {
 	t.Run("unauthorized", func(t *testing.T) {
 		t.Parallel()
 
-		referenceType := NewReferenceType(nil, IntType, UnauthorizedAccess)
+		referenceType := NewReferenceType(nil, UnauthorizedAccess, IntType)
 		assert.Equal(t, "&Int", referenceType.String())
 	})
 
@@ -2160,7 +2160,7 @@ func TestReferenceType_String(t *testing.T) {
 
 		access := NewEntitlementMapAccess(NewEntitlementMapType(nil, testLocation, "M"))
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
 			"auth(M) &Int",
 			referenceType.String(),
@@ -2179,7 +2179,7 @@ func TestReferenceType_String(t *testing.T) {
 			Conjunction,
 		)
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 
 		// NOTE: order
 		assert.Equal(t,
@@ -2202,7 +2202,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 	t.Run("top-level, unauthorized", func(t *testing.T) {
 		t.Parallel()
 
-		referenceType := NewReferenceType(nil, IntType, UnauthorizedAccess)
+		referenceType := NewReferenceType(nil, UnauthorizedAccess, IntType)
 		assert.Equal(t,
 			"&Int",
 			referenceType.QualifiedString(),
@@ -2214,7 +2214,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 
 		access := NewEntitlementMapAccess(NewEntitlementMapType(nil, testLocation, "M"))
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
 			"auth(M) &Int",
 			referenceType.QualifiedString(),
@@ -2233,7 +2233,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 			Conjunction,
 		)
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 
 		// NOTE: order
 		assert.Equal(t,
@@ -2250,7 +2250,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 
 		access := NewEntitlementMapAccess(mapType)
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
 			"auth(C.M) &Int",
 			referenceType.QualifiedString(),
@@ -2275,7 +2275,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 			Conjunction,
 		)
 
-		referenceType := NewReferenceType(nil, IntType, access)
+		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
 			"auth(C.E2, C.E1) &Int",
 			referenceType.QualifiedString(),
