@@ -186,7 +186,7 @@ func TestByteSliceToArrayValue(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		expectedType := ConstantSizedStaticType{
+		expectedType := &ConstantSizedStaticType{
 			Size: int64(len(b)),
 			Type: PrimitiveStaticTypeUInt8,
 		}

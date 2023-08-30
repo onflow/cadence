@@ -1282,7 +1282,7 @@ const (
 //					encodedConstantSizedStaticTypeTypeFieldKey: StaticType(v.Type),
 //			},
 //	}
-func (t ConstantSizedStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *ConstantSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number

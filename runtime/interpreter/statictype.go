@@ -276,39 +276,39 @@ type ConstantSizedStaticType struct {
 	Size int64
 }
 
-var _ ArrayStaticType = ConstantSizedStaticType{}
-var _ atree.TypeInfo = ConstantSizedStaticType{}
+var _ ArrayStaticType = &ConstantSizedStaticType{}
+var _ atree.TypeInfo = &ConstantSizedStaticType{}
 
 func NewConstantSizedStaticType(
 	memoryGauge common.MemoryGauge,
 	elementType StaticType,
 	size int64,
-) ConstantSizedStaticType {
+) *ConstantSizedStaticType {
 	common.UseMemory(memoryGauge, common.ConstantSizedStaticTypeMemoryUsage)
 
-	return ConstantSizedStaticType{
+	return &ConstantSizedStaticType{
 		Type: elementType,
 		Size: size,
 	}
 }
 
-func (ConstantSizedStaticType) isStaticType() {}
+func (*ConstantSizedStaticType) isStaticType() {}
 
-func (ConstantSizedStaticType) elementSize() uint {
+func (*ConstantSizedStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (ConstantSizedStaticType) isArrayStaticType() {}
+func (*ConstantSizedStaticType) isArrayStaticType() {}
 
-func (t ConstantSizedStaticType) ElementType() StaticType {
+func (t *ConstantSizedStaticType) ElementType() StaticType {
 	return t.Type
 }
 
-func (t ConstantSizedStaticType) String() string {
+func (t *ConstantSizedStaticType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
 }
 
-func (t ConstantSizedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+func (t *ConstantSizedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	// n - for size
 	// 2 - for open and close bracket.
 	// 1 - for space
@@ -322,8 +322,8 @@ func (t ConstantSizedStaticType) MeteredString(memoryGauge common.MemoryGauge) s
 	return fmt.Sprintf("[%s; %d]", typeStr, t.Size)
 }
 
-func (t ConstantSizedStaticType) Equal(other StaticType) bool {
-	otherConstantSizedType, ok := other.(ConstantSizedStaticType)
+func (t *ConstantSizedStaticType) Equal(other StaticType) bool {
+	otherConstantSizedType, ok := other.(*ConstantSizedStaticType)
 	if !ok {
 		return false
 	}
@@ -332,7 +332,7 @@ func (t ConstantSizedStaticType) Equal(other StaticType) bool {
 		t.Type.Equal(otherConstantSizedType.Type)
 }
 
-func (t ConstantSizedStaticType) ID() TypeID {
+func (t *ConstantSizedStaticType) ID() TypeID {
 	return sema.ConstantSizedTypeID(t.Type.ID(), t.Size)
 }
 
@@ -904,7 +904,7 @@ func ConvertSemaArrayTypeToStaticArrayType(
 		}
 
 	case *sema.ConstantSizedType:
-		return ConstantSizedStaticType{
+		return &ConstantSizedStaticType{
 			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
 			Size: t.Size,
 		}
@@ -1060,7 +1060,7 @@ func ConvertStaticToSemaType(
 		}
 		return sema.NewVariableSizedType(memoryGauge, ty), nil
 
-	case ConstantSizedStaticType:
+	case *ConstantSizedStaticType:
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,

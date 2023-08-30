@@ -7561,7 +7561,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				value: interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.ConstantSizedStaticType{
+					&interpreter.ConstantSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 						Size: 1,
 					},

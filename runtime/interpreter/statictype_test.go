@@ -417,11 +417,11 @@ func TestConstantSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			ConstantSizedStaticType{
+			(&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeString,
 				Size: 10,
-			}.Equal(
-				ConstantSizedStaticType{
+			}).Equal(
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 					Size: 10,
 				},
@@ -434,11 +434,11 @@ func TestConstantSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ConstantSizedStaticType{
+			(&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeString,
 				Size: 20,
-			}.Equal(
-				ConstantSizedStaticType{
+			}).Equal(
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 					Size: 10,
 				},
@@ -451,11 +451,11 @@ func TestConstantSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ConstantSizedStaticType{
+			(&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Size: 10,
-			}.Equal(
-				ConstantSizedStaticType{
+			}).Equal(
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 					Size: 10,
 				},
@@ -468,10 +468,10 @@ func TestConstantSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ConstantSizedStaticType{
+			(&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Size: 10,
-			}.Equal(
+			}).Equal(
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
@@ -507,7 +507,7 @@ func TestVariableSizedStaticType_Equal(t *testing.T) {
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
-				ConstantSizedStaticType{
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 					Size: 10,
 				},
@@ -1439,7 +1439,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				Type: sema.IntType,
 				Size: 42,
 			},
-			staticType: ConstantSizedStaticType{
+			staticType: &ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Size: 42,
 			},

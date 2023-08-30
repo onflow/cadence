@@ -1832,7 +1832,7 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
-	case ConstantSizedStaticType:
+	case *ConstantSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
 			return NewConstantSizedStaticType(
 				interpreter,
@@ -4917,7 +4917,7 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
-		case ConstantSizedStaticType:
+		case *ConstantSizedStaticType:
 			return info.Equal(other.(StaticType))
 		case VariableSizedStaticType:
 			return info.Equal(other.(StaticType))

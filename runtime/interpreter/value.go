@@ -2556,7 +2556,7 @@ func (v *ArrayValue) ConformsToStaticType(
 
 	var elementType StaticType
 	switch staticType := v.StaticType(interpreter).(type) {
-	case ConstantSizedStaticType:
+	case *ConstantSizedStaticType:
 		elementType = staticType.ElementType()
 		if v.Count() != int(staticType.Size) {
 			return false
@@ -3099,7 +3099,7 @@ func (v *ArrayValue) Map(
 			interpreter,
 			returnType,
 		)
-	case ConstantSizedStaticType:
+	case *ConstantSizedStaticType:
 		returnArrayStaticType = NewConstantSizedStaticType(
 			interpreter,
 			returnType,

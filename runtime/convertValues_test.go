@@ -1207,7 +1207,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				ElementType: cadence.IntType,
 				Size:        3,
 			},
-			expected: interpreter.ConstantSizedStaticType{
+			expected: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 3,
 			},

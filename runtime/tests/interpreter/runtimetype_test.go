@@ -163,7 +163,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 				Size: int64(10),
 			},
@@ -173,7 +173,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: int64(5),
 			},
@@ -183,7 +183,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				Size: int64(400),
 			},
@@ -193,8 +193,8 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
-				Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
+				Type: &interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 					Size: int64(10),
 				},
