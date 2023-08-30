@@ -1222,7 +1222,7 @@ const (
 //					encodedInterfaceStaticTypeQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
 //			},
 //	}
-func (t InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number

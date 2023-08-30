@@ -619,7 +619,7 @@ func exportCapabilityType(
 	)
 }
 
-func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) interpreter.InterfaceStaticType {
+func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) *interpreter.InterfaceStaticType {
 	return interpreter.NewInterfaceStaticTypeComputeTypeID(
 		memoryGauge,
 		t.InterfaceTypeLocation(),
@@ -712,7 +712,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		)
 
 	case *cadence.IntersectionType:
-		types := make([]interpreter.InterfaceStaticType, 0, len(t.Types))
+		types := make([]*interpreter.InterfaceStaticType, 0, len(t.Types))
 		for _, typ := range t.Types {
 			intf, ok := typ.(cadence.InterfaceType)
 			if !ok {

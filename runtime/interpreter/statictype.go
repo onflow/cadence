@@ -137,21 +137,21 @@ type InterfaceStaticType struct {
 	TypeID              common.TypeID
 }
 
-var _ StaticType = InterfaceStaticType{}
+var _ StaticType = &InterfaceStaticType{}
 
 func NewInterfaceStaticType(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
 	qualifiedIdentifier string,
 	typeID common.TypeID,
-) InterfaceStaticType {
+) *InterfaceStaticType {
 	common.UseMemory(memoryGauge, common.InterfaceStaticTypeMemoryUsage)
 
 	if typeID == "" {
 		panic(errors.NewUnreachableError())
 	}
 
-	return InterfaceStaticType{
+	return &InterfaceStaticType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		TypeID:              typeID,
@@ -162,7 +162,7 @@ func NewInterfaceStaticTypeComputeTypeID(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
 	qualifiedIdentifier string,
-) InterfaceStaticType {
+) *InterfaceStaticType {
 	typeID := common.NewTypeIDFromQualifiedName(
 		memoryGauge,
 		location,
@@ -177,33 +177,23 @@ func NewInterfaceStaticTypeComputeTypeID(
 	)
 }
 
-func (InterfaceStaticType) isStaticType() {}
+func (*InterfaceStaticType) isStaticType() {}
 
-func (InterfaceStaticType) elementSize() uint {
+func (*InterfaceStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (t InterfaceStaticType) String() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
-	}
+func (t *InterfaceStaticType) String() string {
 	return string(t.TypeID)
 }
 
-func (t InterfaceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	var amount int
-	if t.Location == nil {
-		amount = len(t.QualifiedIdentifier)
-	} else {
-		amount = len(t.TypeID)
-	}
-
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(amount))
+func (t *InterfaceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(t.TypeID)))
 	return t.String()
 }
 
-func (t InterfaceStaticType) Equal(other StaticType) bool {
-	otherInterfaceType, ok := other.(InterfaceStaticType)
+func (t *InterfaceStaticType) Equal(other StaticType) bool {
+	otherInterfaceType, ok := other.(*InterfaceStaticType)
 	if !ok {
 		return false
 	}
@@ -211,7 +201,7 @@ func (t InterfaceStaticType) Equal(other StaticType) bool {
 	return otherInterfaceType.TypeID == t.TypeID
 }
 
-func (t InterfaceStaticType) ID() TypeID {
+func (t *InterfaceStaticType) ID() TypeID {
 	return t.TypeID
 }
 
@@ -458,7 +448,7 @@ var NilStaticType = OptionalStaticType{
 // IntersectionStaticType
 
 type IntersectionStaticType struct {
-	Types      []InterfaceStaticType
+	Types      []*InterfaceStaticType
 	LegacyType StaticType
 	typeID     TypeID
 }
@@ -467,7 +457,7 @@ var _ StaticType = &IntersectionStaticType{}
 
 func NewIntersectionStaticType(
 	memoryGauge common.MemoryGauge,
-	types []InterfaceStaticType,
+	types []*InterfaceStaticType,
 ) *IntersectionStaticType {
 	common.UseMemory(memoryGauge, common.IntersectionStaticTypeMemoryUsage)
 
@@ -869,10 +859,10 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		)
 
 	case *sema.IntersectionType:
-		var intersectedTypes []InterfaceStaticType
+		var intersectedTypes []*InterfaceStaticType
 		typeCount := len(t.Types)
 		if typeCount > 0 {
-			intersectedTypes = make([]InterfaceStaticType, typeCount)
+			intersectedTypes = make([]*InterfaceStaticType, typeCount)
 
 			for i, typ := range t.Types {
 				intersectedTypes[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, typ)
@@ -997,7 +987,7 @@ func ConvertSemaCompositeTypeToStaticCompositeType(
 func ConvertSemaInterfaceTypeToStaticInterfaceType(
 	memoryGauge common.MemoryGauge,
 	t *sema.InterfaceType,
-) InterfaceStaticType {
+) *InterfaceStaticType {
 	return NewInterfaceStaticType(
 		memoryGauge,
 		t.Location,
@@ -1053,7 +1043,7 @@ func ConvertStaticToSemaType(
 	case *CompositeStaticType:
 		return getComposite(t.Location, t.QualifiedIdentifier, t.TypeID)
 
-	case InterfaceStaticType:
+	case *InterfaceStaticType:
 		return getInterface(t.Location, t.QualifiedIdentifier, t.TypeID)
 
 	case VariableSizedStaticType:

@@ -552,7 +552,7 @@ func TestInterpretIntersectionType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Types: []interpreter.InterfaceStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				},
 			},
@@ -568,7 +568,7 @@ func TestInterpretIntersectionType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Types: []interpreter.InterfaceStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 				},
 			},
@@ -584,7 +584,7 @@ func TestInterpretIntersectionType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Types: []interpreter.InterfaceStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S2"),
 				},

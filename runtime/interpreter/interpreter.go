@@ -3555,12 +3555,12 @@ func intersectionTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	var staticIntersections []InterfaceStaticType
+	var staticIntersections []*InterfaceStaticType
 	var semaIntersections []*sema.InterfaceType
 
 	count := intersectionIDs.Count()
 	if count > 0 {
-		staticIntersections = make([]InterfaceStaticType, 0, count)
+		staticIntersections = make([]*InterfaceStaticType, 0, count)
 		semaIntersections = make([]*sema.InterfaceType, 0, count)
 
 		var invalidIntersectionID bool
@@ -3578,7 +3578,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 			staticIntersections = append(
 				staticIntersections,
-				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(InterfaceStaticType),
+				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(*InterfaceStaticType),
 			)
 			semaIntersections = append(semaIntersections, intersectedInterface)
 

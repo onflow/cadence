@@ -3891,7 +3891,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
-					Types: []InterfaceStaticType{
+					Types: []*InterfaceStaticType{
 						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I1"),
 						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I2"),
 					},
@@ -4111,7 +4111,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		value := &AccountCapabilityControllerValue{
 			BorrowType: ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
-					Types: []InterfaceStaticType{
+					Types: []*InterfaceStaticType{
 						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
 					},
 				},

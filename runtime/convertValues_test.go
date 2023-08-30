@@ -1371,7 +1371,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				},
 			},
 			expected: &interpreter.IntersectionStaticType{
-				Types: []interpreter.InterfaceStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "T"),
 				},
 			},
@@ -2148,7 +2148,7 @@ func TestRuntimeExportTypeValue(t *testing.T) {
 
 		ty := interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Types: []interpreter.InterfaceStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "SI"),
 				},
 			},
