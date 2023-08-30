@@ -1512,7 +1512,7 @@ func (t *IntersectionStaticType) Encode(e *cbor.StreamEncoder) error {
 //			Number:  CBORTagCapabilityStaticType,
 //			Content: StaticType(v.BorrowType),
 //	}
-func (t CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagCapabilityStaticType,

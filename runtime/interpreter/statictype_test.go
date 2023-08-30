@@ -38,10 +38,10 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			CapabilityStaticType{
+			(&CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeString,
-			}.Equal(
-				CapabilityStaticType{
+			}).Equal(
+				&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
 				},
 			),
@@ -52,8 +52,8 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		a := CapabilityStaticType{}
-		b := CapabilityStaticType{}
+		a := &CapabilityStaticType{}
+		b := &CapabilityStaticType{}
 		require.True(t, a.Equal(b))
 	})
 
@@ -62,8 +62,8 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityStaticType{}.Equal(
-				CapabilityStaticType{
+			(&CapabilityStaticType{}).Equal(
+				&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
 				},
 			),
@@ -75,10 +75,10 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityStaticType{
+			(&CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeString,
-			}.Equal(
-				CapabilityStaticType{},
+			}).Equal(
+				&CapabilityStaticType{},
 			),
 		)
 	})
@@ -88,9 +88,9 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityStaticType{
+			(&CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeString,
-			}.Equal(
+			}).Equal(
 				ReferenceStaticType{
 					ReferencedType: PrimitiveStaticTypeString,
 				},
@@ -162,9 +162,9 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 			ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeString,
 			}.Equal(
-				CapabilityStaticType{
+				(&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
-				},
+				}),
 			),
 		)
 	})
@@ -560,7 +560,7 @@ func TestPrimitiveStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			PrimitiveStaticTypeInt.
-				Equal(CapabilityStaticType{}),
+				Equal(&CapabilityStaticType{}),
 		)
 	})
 }
@@ -1419,7 +1419,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType: &sema.CapabilityType{
 				BorrowType: sema.IntType,
 			},
-			staticType: CapabilityStaticType{
+			staticType: &CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeInt,
 			},
 		},

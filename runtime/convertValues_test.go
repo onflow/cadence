@@ -1292,7 +1292,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			actual: &cadence.CapabilityType{
 				BorrowType: cadence.IntType,
 			},
-			expected: interpreter.CapabilityStaticType{
+			expected: &interpreter.CapabilityStaticType{
 				BorrowType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},

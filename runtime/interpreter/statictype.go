@@ -768,33 +768,33 @@ type CapabilityStaticType struct {
 	BorrowType StaticType
 }
 
-var _ StaticType = CapabilityStaticType{}
+var _ StaticType = &CapabilityStaticType{}
 
 func NewCapabilityStaticType(
 	memoryGauge common.MemoryGauge,
 	borrowType StaticType,
-) CapabilityStaticType {
+) *CapabilityStaticType {
 	common.UseMemory(memoryGauge, common.CapabilityStaticTypeMemoryUsage)
 
-	return CapabilityStaticType{
+	return &CapabilityStaticType{
 		BorrowType: borrowType,
 	}
 }
 
-func (CapabilityStaticType) isStaticType() {}
+func (*CapabilityStaticType) isStaticType() {}
 
-func (CapabilityStaticType) elementSize() uint {
+func (*CapabilityStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (t CapabilityStaticType) String() string {
+func (t *CapabilityStaticType) String() string {
 	if t.BorrowType != nil {
 		return fmt.Sprintf("Capability<%s>", t.BorrowType)
 	}
 	return "Capability"
 }
 
-func (t CapabilityStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+func (t *CapabilityStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	common.UseMemory(memoryGauge, common.CapabilityStaticTypeStringMemoryUsage)
 
 	if t.BorrowType != nil {
@@ -805,8 +805,8 @@ func (t CapabilityStaticType) MeteredString(memoryGauge common.MemoryGauge) stri
 	return "Capability"
 }
 
-func (t CapabilityStaticType) Equal(other StaticType) bool {
-	otherCapabilityType, ok := other.(CapabilityStaticType)
+func (t *CapabilityStaticType) Equal(other StaticType) bool {
+	otherCapabilityType, ok := other.(*CapabilityStaticType)
 	if !ok {
 		return false
 	}
@@ -821,7 +821,7 @@ func (t CapabilityStaticType) Equal(other StaticType) bool {
 	return t.BorrowType.Equal(otherCapabilityType.BorrowType)
 }
 
-func (t CapabilityStaticType) ID() TypeID {
+func (t *CapabilityStaticType) ID() TypeID {
 	var borrowTypeString string
 	borrowType := t.BorrowType
 	if borrowType != nil {
@@ -1174,7 +1174,7 @@ func ConvertStaticToSemaType(
 			access,
 		), nil
 
-	case CapabilityStaticType:
+	case *CapabilityStaticType:
 		var borrowType sema.Type
 		if t.BorrowType != nil {
 			borrowType, err = ConvertStaticToSemaType(

@@ -1844,7 +1844,7 @@ func (interpreter *Interpreter) convertStaticType(
 			)
 		}
 
-	case CapabilityStaticType:
+	case *CapabilityStaticType:
 		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
 			return NewCapabilityStaticType(
 				interpreter,
@@ -4090,7 +4090,7 @@ func (interpreter *Interpreter) checkValue(
 		// So take the borrow type from the value itself
 
 		// Capability values always have a `CapabilityStaticType` static type.
-		borrowType := staticType.(CapabilityStaticType).BorrowType
+		borrowType := staticType.(*CapabilityStaticType).BorrowType
 
 		var borrowSemaType sema.Type
 		borrowSemaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
