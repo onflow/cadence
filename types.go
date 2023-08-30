@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -1442,12 +1443,9 @@ func (Unauthorized) ID() string {
 	return ""
 }
 
-func (Unauthorized) Equal(auth Authorization) bool {
-	switch auth.(type) {
-	case Unauthorized:
-		return true
-	}
-	return false
+func (Unauthorized) Equal(other Authorization) bool {
+	_, ok := other.(Unauthorized)
+	return ok
 }
 
 type EntitlementSetKind uint8
@@ -1464,7 +1462,11 @@ type EntitlementSetAuthorization struct {
 
 var _ Authorization = EntitlementSetAuthorization{}
 
-func NewEntitlementSetAuthorization(gauge common.MemoryGauge, entitlements []common.TypeID, kind EntitlementSetKind) EntitlementSetAuthorization {
+func NewEntitlementSetAuthorization(
+	gauge common.MemoryGauge,
+	entitlements []common.TypeID,
+	kind EntitlementSetKind,
+) EntitlementSetAuthorization {
 	common.UseMemory(gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceEntitlementSetAccess,
 		Amount: uint64(len(entitlements)),
@@ -1482,10 +1484,13 @@ func (e EntitlementSetAuthorization) ID() string {
 	builder.WriteString("auth(")
 	var separator string
 
-	if e.Kind == Conjunction {
+	switch e.Kind {
+	case Conjunction:
 		separator = ", "
-	} else if e.Kind == Disjunction {
+	case Disjunction:
 		separator = " | "
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
 	for i, entitlement := range e.Entitlements {
@@ -1534,12 +1539,12 @@ func (e EntitlementMapAuthorization) ID() string {
 	return fmt.Sprintf("auth(%s)", e.TypeID)
 }
 
-func (e EntitlementMapAuthorization) Equal(auth Authorization) bool {
-	switch auth := auth.(type) {
-	case EntitlementMapAuthorization:
-		return e.TypeID == auth.TypeID
+func (e EntitlementMapAuthorization) Equal(other Authorization) bool {
+	auth, ok := other.(EntitlementMapAuthorization)
+	if !ok {
+		return false
 	}
-	return false
+	return e.TypeID == auth.TypeID
 }
 
 // ReferenceType
