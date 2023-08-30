@@ -74,10 +74,22 @@ func NewEntitlementSetAccess(
 func (EntitlementSetAccess) isAccess() {}
 
 func (e EntitlementSetAccess) ID() TypeID {
+	entitlementTypeIDs := make([]string, 0, e.Entitlements.Len())
+	e.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+		entitlementTypeIDs = append(
+			entitlementTypeIDs,
+			string(entitlement.ID()),
+		)
+	})
+
+	return FormatEntitlementSetTypeID(entitlementTypeIDs, e.SetKind)
+}
+
+func FormatEntitlementSetTypeID(entitlementTypeIDs []string, kind EntitlementSetKind) TypeID {
 	var builder strings.Builder
 	var separator string
 
-	switch e.SetKind {
+	switch kind {
 	case Conjunction:
 		separator = ","
 	case Disjunction:
@@ -87,14 +99,6 @@ func (e EntitlementSetAccess) ID() TypeID {
 	}
 
 	// Join entitlements' type IDs in increasing order (sorted)
-
-	entitlementTypeIDs := make([]string, 0, e.Entitlements.Len())
-	e.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-		entitlementTypeIDs = append(
-			entitlementTypeIDs,
-			string(entitlement.ID()),
-		)
-	})
 
 	sort.Strings(entitlementTypeIDs)
 
