@@ -108,7 +108,7 @@ func TestOwnerNewArray(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		common.ZeroAddress,
@@ -162,7 +162,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		common.ZeroAddress,
@@ -218,7 +218,7 @@ func TestOwnerArrayElement(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
@@ -261,7 +261,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
@@ -312,7 +312,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
@@ -358,7 +358,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
@@ -403,7 +403,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		owner,
@@ -1008,7 +1008,7 @@ func TestStringer(t *testing.T) {
 			value: NewArrayValue(
 				newTestInterpreter(t),
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
 				common.ZeroAddress,
@@ -1112,7 +1112,7 @@ func TestStringer(t *testing.T) {
 				array := NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
 					common.ZeroAddress,
@@ -1173,7 +1173,7 @@ func TestVisitor(t *testing.T) {
 	value = NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		common.ZeroAddress,
@@ -2258,7 +2258,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
-	uint8ArrayStaticType := VariableSizedStaticType{
+	uint8ArrayStaticType := &VariableSizedStaticType{
 		Type: PrimitiveStaticTypeUInt8,
 	}
 
@@ -2382,7 +2382,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		uint16ArrayStaticType := VariableSizedStaticType{
+		uint16ArrayStaticType := &VariableSizedStaticType{
 			Type: PrimitiveStaticTypeUInt16,
 		}
 
@@ -3184,7 +3184,7 @@ func TestPublicKeyValue(t *testing.T) {
 		publicKey := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -3237,7 +3237,7 @@ func TestPublicKeyValue(t *testing.T) {
 		publicKey := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -3935,7 +3935,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeNumber,
 					},
 					testAddress,
@@ -3951,7 +3951,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
 					testAddress,
@@ -3967,7 +3967,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeInteger,
 					},
 					testAddress,
@@ -3983,7 +3983,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
 					testAddress,

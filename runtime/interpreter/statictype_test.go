@@ -472,7 +472,7 @@ func TestConstantSizedStaticType_Equal(t *testing.T) {
 				Type: PrimitiveStaticTypeInt,
 				Size: 10,
 			}).Equal(
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -489,10 +489,10 @@ func TestVariableSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			VariableSizedStaticType{
+			(&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
-				VariableSizedStaticType{
+			}).Equal(
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -504,9 +504,9 @@ func TestVariableSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			VariableSizedStaticType{
+			(&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
-			}.Equal(
+			}).Equal(
 				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 					Size: 10,
@@ -520,10 +520,10 @@ func TestVariableSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			VariableSizedStaticType{
+			(&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				VariableSizedStaticType{
+			}).Equal(
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -607,7 +607,7 @@ func TestOptionalStaticType_Equal(t *testing.T) {
 			OptionalStaticType{
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -679,7 +679,7 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeVoid,
 			}).Equal(
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -1429,7 +1429,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType: &sema.VariableSizedType{
 				Type: sema.IntType,
 			},
-			staticType: VariableSizedStaticType{
+			staticType: &VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
 		},

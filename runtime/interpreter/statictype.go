@@ -219,45 +219,45 @@ type VariableSizedStaticType struct {
 	Type StaticType
 }
 
-var _ ArrayStaticType = VariableSizedStaticType{}
-var _ atree.TypeInfo = VariableSizedStaticType{}
+var _ ArrayStaticType = &VariableSizedStaticType{}
+var _ atree.TypeInfo = &VariableSizedStaticType{}
 
 func NewVariableSizedStaticType(
 	memoryGauge common.MemoryGauge,
 	elementType StaticType,
-) VariableSizedStaticType {
+) *VariableSizedStaticType {
 	common.UseMemory(memoryGauge, common.VariableSizedStaticTypeMemoryUsage)
 
-	return VariableSizedStaticType{
+	return &VariableSizedStaticType{
 		Type: elementType,
 	}
 }
 
-func (VariableSizedStaticType) isStaticType() {}
+func (*VariableSizedStaticType) isStaticType() {}
 
-func (VariableSizedStaticType) elementSize() uint {
+func (*VariableSizedStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (VariableSizedStaticType) isArrayStaticType() {}
+func (*VariableSizedStaticType) isArrayStaticType() {}
 
-func (t VariableSizedStaticType) ElementType() StaticType {
+func (t *VariableSizedStaticType) ElementType() StaticType {
 	return t.Type
 }
 
-func (t VariableSizedStaticType) String() string {
+func (t *VariableSizedStaticType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
 }
 
-func (t VariableSizedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+func (t *VariableSizedStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	common.UseMemory(memoryGauge, common.VariableSizedStaticTypeStringMemoryUsage)
 
 	typeStr := t.Type.MeteredString(memoryGauge)
 	return fmt.Sprintf("[%s]", typeStr)
 }
 
-func (t VariableSizedStaticType) Equal(other StaticType) bool {
-	otherVariableSizedType, ok := other.(VariableSizedStaticType)
+func (t *VariableSizedStaticType) Equal(other StaticType) bool {
+	otherVariableSizedType, ok := other.(*VariableSizedStaticType)
 	if !ok {
 		return false
 	}
@@ -265,7 +265,7 @@ func (t VariableSizedStaticType) Equal(other StaticType) bool {
 	return t.Type.Equal(otherVariableSizedType.Type)
 }
 
-func (t VariableSizedStaticType) ID() TypeID {
+func (t *VariableSizedStaticType) ID() TypeID {
 	return sema.VariableSizedTypeID(t.Type.ID())
 }
 
@@ -899,7 +899,7 @@ func ConvertSemaArrayTypeToStaticArrayType(
 ) ArrayStaticType {
 	switch t := t.(type) {
 	case *sema.VariableSizedType:
-		return VariableSizedStaticType{
+		return &VariableSizedStaticType{
 			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
 		}
 
@@ -1046,7 +1046,7 @@ func ConvertStaticToSemaType(
 	case *InterfaceStaticType:
 		return getInterface(t.Location, t.QualifiedIdentifier, t.TypeID)
 
-	case VariableSizedStaticType:
+	case *VariableSizedStaticType:
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,

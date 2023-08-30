@@ -432,7 +432,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 		expected := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -3759,7 +3759,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
 			BorrowType: ReferenceStaticType{
-				ReferencedType: VariableSizedStaticType{
+				ReferencedType: &VariableSizedStaticType{
 					Type: PrimitiveStaticTypeBool,
 				},
 				Authorization: UnauthorizedAccess,

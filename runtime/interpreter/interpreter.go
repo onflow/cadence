@@ -1822,7 +1822,7 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
-	case VariableSizedStaticType:
+	case *VariableSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
 			return NewVariableSizedStaticType(
 				interpreter,
@@ -4919,7 +4919,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		switch info := info.(type) {
 		case *ConstantSizedStaticType:
 			return info.Equal(other.(StaticType))
-		case VariableSizedStaticType:
+		case *VariableSizedStaticType:
 			return info.Equal(other.(StaticType))
 		case *DictionaryStaticType:
 			return info.Equal(other.(StaticType))

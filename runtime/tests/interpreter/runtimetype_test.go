@@ -105,7 +105,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
@@ -114,7 +114,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
@@ -123,7 +123,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
@@ -132,8 +132,8 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
-				Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
+				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 			},

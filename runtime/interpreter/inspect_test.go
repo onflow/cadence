@@ -52,7 +52,7 @@ func TestInspectValue(t *testing.T) {
 		arrayValue := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},
 			common.ZeroAddress,

@@ -1250,7 +1250,7 @@ func (t *InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 //			Number:  CBORTagVariableSizedStaticType,
 //			Content: StaticType(v.Type),
 //	}
-func (t VariableSizedStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *VariableSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagVariableSizedStaticType,

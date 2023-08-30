@@ -188,7 +188,7 @@ func TestRuntimeExportValue(t *testing.T) {
 				return interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					common.ZeroAddress,
@@ -205,7 +205,7 @@ func TestRuntimeExportValue(t *testing.T) {
 				return interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					common.ZeroAddress,
@@ -639,7 +639,7 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewArrayValue(
 				newTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 				common.ZeroAddress,
@@ -657,7 +657,7 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewArrayValue(
 				newTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 				common.ZeroAddress,
@@ -1197,7 +1197,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			actual: &cadence.VariableSizedArrayType{
 				ElementType: cadence.IntType,
 			},
-			expected: interpreter.VariableSizedStaticType{
+			expected: &interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
@@ -3339,7 +3339,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		value := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -3385,7 +3385,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
 				common.ZeroAddress,
@@ -3403,7 +3403,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		value := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -3458,7 +3458,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 				common.ZeroAddress,
@@ -3501,8 +3501,8 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
+					Type: &interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 				},
@@ -3510,7 +3510,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.ZeroAddress,
@@ -3520,7 +3520,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.ZeroAddress,
@@ -4807,7 +4807,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Type: sema.AnyStructType,
 	}
 
-	staticArrayType := interpreter.VariableSizedStaticType{
+	staticArrayType := &interpreter.VariableSizedStaticType{
 		Type: interpreter.PrimitiveStaticTypeAnyStruct,
 	}
 

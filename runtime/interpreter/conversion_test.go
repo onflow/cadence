@@ -45,7 +45,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
 				common.ZeroAddress,
@@ -54,7 +54,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
 				common.ZeroAddress,
@@ -79,7 +79,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
 				common.ZeroAddress,
@@ -87,7 +87,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
 				common.ZeroAddress,
@@ -97,7 +97,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
 				common.ZeroAddress,
@@ -162,7 +162,7 @@ func TestByteSliceToArrayValue(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		expectedType := VariableSizedStaticType{
+		expectedType := &VariableSizedStaticType{
 			Type: PrimitiveStaticTypeUInt8,
 		}
 

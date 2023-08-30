@@ -122,7 +122,7 @@ func TestArrayStorage(t *testing.T) {
 		value := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
 			common.ZeroAddress,
@@ -188,7 +188,7 @@ func TestArrayStorage(t *testing.T) {
 		value := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
 			common.ZeroAddress,
@@ -454,7 +454,7 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 	array1 := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		address,
@@ -471,7 +471,7 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 	array2 := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		address,

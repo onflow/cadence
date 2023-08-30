@@ -559,7 +559,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -645,7 +645,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -680,7 +680,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -718,7 +718,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -769,7 +769,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -840,7 +840,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -1396,7 +1396,7 @@ func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, c
 	return interpreter.NewArrayValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.VariableSizedStaticType{
+		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
 		common.ZeroAddress,

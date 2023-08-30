@@ -2158,7 +2158,7 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 	)
 }
 
-var storageCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
+var storageCapabilityControllerReferencesArrayStaticType = &interpreter.VariableSizedStaticType{
 	Type: interpreter.ReferenceStaticType{
 		ReferencedType: interpreter.PrimitiveStaticTypeStorageCapabilityController,
 		Authorization:  interpreter.UnauthorizedAccess,
@@ -3472,7 +3472,7 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 	)
 }
 
-var accountCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
+var accountCapabilityControllerReferencesArrayStaticType = &interpreter.VariableSizedStaticType{
 	Type: interpreter.ReferenceStaticType{
 		ReferencedType: interpreter.PrimitiveStaticTypeAccountCapabilityController,
 		Authorization:  interpreter.UnauthorizedAccess,

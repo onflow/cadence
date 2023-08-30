@@ -641,7 +641,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
@@ -746,7 +746,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array1 := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			common.Address{0x1},
@@ -770,7 +770,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array2 := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			common.Address{0x2},
@@ -841,7 +841,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
@@ -965,7 +965,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,

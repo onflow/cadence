@@ -245,7 +245,7 @@ func TestInterpretForString(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeCharacter,
 			},
 			common.ZeroAddress,
