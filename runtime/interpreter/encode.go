@@ -1179,7 +1179,7 @@ const (
 //					encodedCompositeStaticTypeQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
 //			},
 //	}
-func (t CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number

@@ -61,21 +61,21 @@ type CompositeStaticType struct {
 	TypeID              TypeID
 }
 
-var _ StaticType = CompositeStaticType{}
+var _ StaticType = &CompositeStaticType{}
 
 func NewCompositeStaticType(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
 	qualifiedIdentifier string,
 	typeID TypeID,
-) CompositeStaticType {
+) *CompositeStaticType {
 	common.UseMemory(memoryGauge, common.CompositeStaticTypeMemoryUsage)
 
 	if typeID == "" {
 		panic(errors.NewUnreachableError())
 	}
 
-	return CompositeStaticType{
+	return &CompositeStaticType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		TypeID:              typeID,
@@ -86,7 +86,7 @@ func NewCompositeStaticTypeComputeTypeID(
 	memoryGauge common.MemoryGauge,
 	location common.Location,
 	qualifiedIdentifier string,
-) CompositeStaticType {
+) *CompositeStaticType {
 	typeID := common.NewTypeIDFromQualifiedName(
 		memoryGauge,
 		location,
@@ -101,33 +101,23 @@ func NewCompositeStaticTypeComputeTypeID(
 	)
 }
 
-func (CompositeStaticType) isStaticType() {}
+func (*CompositeStaticType) isStaticType() {}
 
-func (CompositeStaticType) elementSize() uint {
+func (*CompositeStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (t CompositeStaticType) String() string {
-	if t.Location == nil {
-		return t.QualifiedIdentifier
-	}
+func (t *CompositeStaticType) String() string {
 	return string(t.TypeID)
 }
 
-func (t CompositeStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
-	var amount int
-	if t.Location == nil {
-		amount = len(t.QualifiedIdentifier)
-	} else {
-		amount = len(t.TypeID)
-	}
-
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(amount))
+func (t *CompositeStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(t.TypeID)))
 	return t.String()
 }
 
-func (t CompositeStaticType) Equal(other StaticType) bool {
-	otherCompositeType, ok := other.(CompositeStaticType)
+func (t *CompositeStaticType) Equal(other StaticType) bool {
+	otherCompositeType, ok := other.(*CompositeStaticType)
 	if !ok {
 		return false
 	}
@@ -135,7 +125,7 @@ func (t CompositeStaticType) Equal(other StaticType) bool {
 	return otherCompositeType.TypeID == t.TypeID
 }
 
-func (t CompositeStaticType) ID() TypeID {
+func (t *CompositeStaticType) ID() TypeID {
 	return t.TypeID
 }
 
@@ -995,7 +985,7 @@ func ConvertSemaReferenceTypeToStaticReferenceType(
 func ConvertSemaCompositeTypeToStaticCompositeType(
 	memoryGauge common.MemoryGauge,
 	t *sema.CompositeType,
-) CompositeStaticType {
+) *CompositeStaticType {
 	return NewCompositeStaticType(
 		memoryGauge,
 		t.Location,
@@ -1060,7 +1050,7 @@ func ConvertStaticToSemaType(
 	getEntitlementMapType func(typeID TypeID) (*sema.EntitlementMapType, error),
 ) (_ sema.Type, err error) {
 	switch t := typ.(type) {
-	case CompositeStaticType:
+	case *CompositeStaticType:
 		return getComposite(t.Location, t.QualifiedIdentifier, t.TypeID)
 
 	case InterfaceStaticType:

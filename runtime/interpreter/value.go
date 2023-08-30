@@ -17003,7 +17003,7 @@ func (v *CompositeValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType := v.StaticType(interpreter).(CompositeStaticType)
+	staticType := v.StaticType(interpreter).(*CompositeStaticType)
 
 	semaType := interpreter.MustConvertStaticToSemaType(staticType)
 

@@ -627,7 +627,7 @@ func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType
 	)
 }
 
-func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) interpreter.CompositeStaticType {
+func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) *interpreter.CompositeStaticType {
 	return interpreter.NewCompositeStaticTypeComputeTypeID(
 		memoryGauge,
 		t.CompositeTypeLocation(),
