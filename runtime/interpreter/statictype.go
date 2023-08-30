@@ -1208,38 +1208,6 @@ func NewFunctionStaticType(
 	}
 }
 
-func (t FunctionStaticType) TypeParameters(interpreter *Interpreter) []*TypeParameter {
-	var typeParameters []*TypeParameter
-
-	count := len(t.Type.TypeParameters)
-	if count > 0 {
-		typeParameters = make([]*TypeParameter, count)
-		for i, typeParameter := range t.Type.TypeParameters {
-			typeParameters[i] = &TypeParameter{
-				Name:      typeParameter.Name,
-				TypeBound: ConvertSemaToStaticType(interpreter, typeParameter.TypeBound),
-				Optional:  typeParameter.Optional,
-			}
-		}
-	}
-
-	return typeParameters
-}
-
-func (t FunctionStaticType) ParameterTypes(interpreter *Interpreter) []StaticType {
-	var parameterTypes []StaticType
-
-	count := len(t.Type.Parameters)
-	if count > 0 {
-		parameterTypes = make([]StaticType, count)
-		for i, parameter := range t.Type.Parameters {
-			parameterTypes[i] = ConvertSemaToStaticType(interpreter, parameter.TypeAnnotation.Type)
-		}
-	}
-
-	return parameterTypes
-}
-
 func (t FunctionStaticType) ReturnType(interpreter *Interpreter) StaticType {
 	var returnType StaticType
 	if t.Type.ReturnTypeAnnotation.Type != nil {
