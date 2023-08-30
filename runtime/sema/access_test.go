@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestNewEntitlementAccess(t *testing.T) {
@@ -175,6 +177,376 @@ func TestNewEntitlementAccess(t *testing.T) {
 					Conjunction,
 				)
 			},
+		)
+	})
+}
+
+func TestEntitlementMapAccess_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementMapAccess(NewEntitlementMapType(nil, testLocation, "M"))
+		assert.Equal(t, TypeID("S.test.M"), access.ID())
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		mapType := NewEntitlementMapType(nil, testLocation, "M")
+
+		mapType.SetContainerType(&CompositeType{
+			Location:   testLocation,
+			Identifier: "C",
+		})
+
+		access := NewEntitlementMapAccess(mapType)
+		assert.Equal(t, TypeID("S.test.C.M"), access.ID())
+	})
+
+}
+
+func TestEntitlementMapAccess_String(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	access := NewEntitlementMapAccess(NewEntitlementMapType(nil, testLocation, "M"))
+	assert.Equal(t, "M", access.String())
+}
+
+func TestEntitlementMapAccess_QualifiedString(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementMapAccess(NewEntitlementMapType(nil, testLocation, "M"))
+		assert.Equal(t, "M", access.QualifiedString())
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		mapType := NewEntitlementMapType(nil, testLocation, "M")
+
+		mapType.SetContainerType(&CompositeType{
+			Location:   testLocation,
+			Identifier: "C",
+		})
+
+		access := NewEntitlementMapAccess(mapType)
+		assert.Equal(t, "C.M", access.QualifiedString())
+	})
+}
+
+func TestEntitlementSetAccess_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("single", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				NewEntitlementType(nil, testLocation, "E"),
+			},
+			Conjunction,
+		)
+		assert.Equal(t,
+			TypeID("S.test.E"),
+			access.ID(),
+		)
+	})
+
+	t.Run("two, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Conjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("S.test.E1,S.test.E2"),
+			access.ID(),
+		)
+	})
+
+	t.Run("two, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Disjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("S.test.E1|S.test.E2"),
+			access.ID(),
+		)
+	})
+
+	t.Run("three, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E3"),
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Conjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("S.test.E1,S.test.E2,S.test.E3"),
+			access.ID(),
+		)
+	})
+
+	t.Run("three, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E3"),
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Disjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("S.test.E1|S.test.E2|S.test.E3"),
+			access.ID(),
+		)
+	})
+
+}
+
+func TestEntitlementSetAccess_String(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("single", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				NewEntitlementType(nil, testLocation, "E"),
+			},
+			Conjunction,
+		)
+		assert.Equal(t, "E", access.String())
+	})
+
+	t.Run("two, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Conjunction,
+		)
+		// NOTE: order
+		assert.Equal(t, "E2, E1", access.String())
+	})
+
+	t.Run("two, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Disjunction,
+		)
+		// NOTE: order
+		assert.Equal(t, "E2 | E1", access.String())
+	})
+
+	t.Run("three, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E3"),
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Conjunction,
+		)
+		// NOTE: order
+		assert.Equal(t, "E3, E2, E1", access.String())
+	})
+
+	t.Run("three, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E3"),
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Disjunction,
+		)
+		// NOTE: order
+		assert.Equal(t, "E3 | E2 | E1", access.String())
+	})
+}
+
+func TestEntitlementSetAccess_QualifiedString(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	containerType := &CompositeType{
+		Location:   testLocation,
+		Identifier: "C",
+	}
+
+	t.Run("single", func(t *testing.T) {
+		t.Parallel()
+
+		entitlementType := NewEntitlementType(nil, testLocation, "E")
+		entitlementType.SetContainerType(containerType)
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				entitlementType,
+			},
+			Conjunction,
+		)
+		assert.Equal(t, "C.E", access.QualifiedString())
+	})
+
+	t.Run("two, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		entitlementType1 := NewEntitlementType(nil, testLocation, "E1")
+		entitlementType1.SetContainerType(containerType)
+
+		entitlementType2 := NewEntitlementType(nil, testLocation, "E2")
+		entitlementType2.SetContainerType(containerType)
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				entitlementType2,
+				entitlementType1,
+			},
+			Conjunction,
+		)
+		// NOTE: order
+		assert.Equal(t,
+			"C.E2, C.E1",
+			access.QualifiedString(),
+		)
+	})
+
+	t.Run("two, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		entitlementType1 := NewEntitlementType(nil, testLocation, "E1")
+		entitlementType1.SetContainerType(containerType)
+
+		entitlementType2 := NewEntitlementType(nil, testLocation, "E2")
+		entitlementType2.SetContainerType(containerType)
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				entitlementType2,
+				entitlementType1,
+			},
+			Disjunction,
+		)
+		// NOTE: order
+		assert.Equal(t,
+			"C.E2 | C.E1",
+			access.QualifiedString(),
+		)
+	})
+
+	t.Run("three, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		entitlementType1 := NewEntitlementType(nil, testLocation, "E1")
+		entitlementType1.SetContainerType(containerType)
+
+		entitlementType2 := NewEntitlementType(nil, testLocation, "E2")
+		entitlementType2.SetContainerType(containerType)
+
+		entitlementType3 := NewEntitlementType(nil, testLocation, "E3")
+		entitlementType3.SetContainerType(containerType)
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				entitlementType3,
+				entitlementType2,
+				entitlementType1,
+			},
+			Conjunction,
+		)
+		// NOTE: order
+		assert.Equal(t,
+			"C.E3, C.E2, C.E1",
+			access.QualifiedString(),
+		)
+	})
+
+	t.Run("three, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		entitlementType1 := NewEntitlementType(nil, testLocation, "E1")
+		entitlementType1.SetContainerType(containerType)
+
+		entitlementType2 := NewEntitlementType(nil, testLocation, "E2")
+		entitlementType2.SetContainerType(containerType)
+
+		entitlementType3 := NewEntitlementType(nil, testLocation, "E3")
+		entitlementType3.SetContainerType(containerType)
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				entitlementType3,
+				entitlementType2,
+				entitlementType1,
+			},
+			Disjunction,
+		)
+		// NOTE: order
+		assert.Equal(t,
+			"C.E3 | C.E2 | C.E1",
+			access.QualifiedString(),
 		)
 	})
 }

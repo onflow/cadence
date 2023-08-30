@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strings"
 	"sync"
 
@@ -5886,36 +5887,40 @@ func FormatReferenceTypeID(authorization string, typeString string) string {
 	return formatReferenceType("", authorization, typeString)
 }
 
-func (t *ReferenceType) string(typeFormatter func(Type) string) string {
+func (t *ReferenceType) String() string {
 	if t.Type == nil {
 		return "reference"
 	}
+	var authorization string
 	if t.Authorization != UnauthorizedAccess {
-		return formatReferenceType(" ", t.Authorization.string(typeFormatter), typeFormatter(t.Type))
+		authorization = t.Authorization.String()
 	}
-	return formatReferenceType(" ", "", typeFormatter(t.Type))
-}
-
-func (t *ReferenceType) String() string {
-	return t.string(func(t Type) string {
-		return t.String()
-	})
+	return formatReferenceType(" ", authorization, t.Type.String())
 }
 
 func (t *ReferenceType) QualifiedString() string {
-	return t.string(func(t Type) string {
-		return t.QualifiedString()
-	})
+	if t.Type == nil {
+		return "reference"
+	}
+	var authorization string
+	if t.Authorization != UnauthorizedAccess {
+		authorization = t.Authorization.QualifiedString()
+	}
+	return formatReferenceType(" ", authorization, t.Type.QualifiedString())
 }
 
 func (t *ReferenceType) ID() TypeID {
 	if t.Type == nil {
 		return "reference"
 	}
+	var authorization string
 	if t.Authorization != UnauthorizedAccess {
-		return TypeID(FormatReferenceTypeID(t.Authorization.AccessKeyword(), string(t.Type.ID())))
+		authorization = string(t.Authorization.ID())
 	}
-	return TypeID(FormatReferenceTypeID("", string(t.Type.ID())))
+	return TypeID(FormatReferenceTypeID(
+		authorization,
+		string(t.Type.ID()),
+	))
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -5963,8 +5968,8 @@ func (*ReferenceType) ContainFieldsOrElements() bool {
 	return false
 }
 
-func (r *ReferenceType) TypeAnnotationState() TypeAnnotationState {
-	if r.Type.TypeAnnotationState() == TypeAnnotationStateDirectEntitlementTypeAnnotation {
+func (t *ReferenceType) TypeAnnotationState() TypeAnnotationState {
+	if t.Type.TypeAnnotationState() == TypeAnnotationStateDirectEntitlementTypeAnnotation {
 		return TypeAnnotationStateDirectEntitlementTypeAnnotation
 	}
 	return TypeAnnotationStateValid
@@ -6875,6 +6880,7 @@ func formatIntersectionType(separator string, intersectionStrings []string) stri
 }
 
 func FormatIntersectionTypeID(intersectionStrings []string) string {
+	sort.Strings(intersectionStrings)
 	return formatIntersectionType("", intersectionStrings)
 }
 
@@ -6903,11 +6909,15 @@ func (t *IntersectionType) QualifiedString() string {
 }
 
 func (t *IntersectionType) ID() TypeID {
-	return TypeID(
-		t.string("", func(ty Type) string {
-			return string(ty.ID())
-		}),
-	)
+	var intersectionStrings []string
+	typeCount := len(t.Types)
+	if typeCount > 0 {
+		intersectionStrings = make([]string, 0, typeCount)
+		for _, typ := range t.Types {
+			intersectionStrings = append(intersectionStrings, string(typ.ID()))
+		}
+	}
+	return TypeID(FormatIntersectionTypeID(intersectionStrings))
 }
 
 func (t *IntersectionType) Equal(other Type) bool {

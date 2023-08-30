@@ -19,7 +19,7 @@
 package sema
 
 import (
-	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -31,17 +31,14 @@ import (
 
 type Access interface {
 	isAccess()
+	ID() TypeID
+	String() string
+	QualifiedString() string
+	Equal(other Access) bool
 	// IsLessPermissiveThan returns whether receiver access is less permissive than argument access
 	IsLessPermissiveThan(Access) bool
 	// PermitsAccess returns whether receiver access permits argument access
 	PermitsAccess(Access) bool
-	Equal(other Access) bool
-	string(func(ty Type) string) string
-	Description() string
-	// string representation of this access when it is used as an access modifier
-	AccessKeyword() string
-	// string representation of this access when it is used as an auth modifier
-	AuthKeyword() string
 }
 
 type EntitlementSetKind uint8
@@ -50,6 +47,8 @@ const (
 	Conjunction EntitlementSetKind = iota
 	Disjunction
 )
+
+// EntitlementSetAccess
 
 type EntitlementSetAccess struct {
 	Entitlements *EntitlementOrderedSet
@@ -74,48 +73,88 @@ func NewEntitlementSetAccess(
 
 func (EntitlementSetAccess) isAccess() {}
 
-func (a EntitlementSetAccess) Description() string {
-	return a.AccessKeyword()
-}
-
-func (a EntitlementSetAccess) AccessKeyword() string {
-	return a.string(func(ty Type) string { return ty.QualifiedString() })
-}
-
-func (a EntitlementSetAccess) AuthKeyword() string {
-	return fmt.Sprintf("auth(%s)", a.AccessKeyword())
-}
-
-func (e EntitlementSetAccess) string(typeFormatter func(ty Type) string) string {
+func (e EntitlementSetAccess) ID() TypeID {
 	var builder strings.Builder
 	var separator string
 
-	if e.SetKind == Conjunction {
-		separator = ", "
-	} else if e.SetKind == Disjunction {
-		separator = " | "
+	switch e.SetKind {
+	case Conjunction:
+		separator = ","
+	case Disjunction:
+		separator = "|"
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
-	compareFn := func(i string, j string) bool { return i < j }
-	mappedToIDs := orderedmap.MapKeys(e.Entitlements, func(et *EntitlementType) string { return typeFormatter(et) })
+	// Join entitlements' type IDs in increasing order (sorted)
 
-	mappedToIDs.SortByKey(compareFn).ForeachWithIndex(func(i int, id string, _ struct{}) {
-		builder.WriteString(id)
-		if i < e.Entitlements.Len()-1 {
+	entitlementTypeIDs := make([]string, 0, e.Entitlements.Len())
+	e.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+		entitlementTypeIDs = append(
+			entitlementTypeIDs,
+			string(entitlement.ID()),
+		)
+	})
+
+	sort.Strings(entitlementTypeIDs)
+
+	for i, entitlementTypeID := range entitlementTypeIDs {
+		if i > 0 {
 			builder.WriteString(separator)
 		}
+		builder.WriteString(entitlementTypeID)
+	}
+
+	return TypeID(builder.String())
+}
+
+func (e EntitlementSetAccess) string(typeFormatter func(Type) string) string {
+	var builder strings.Builder
+	var separator string
+
+	switch e.SetKind {
+	case Conjunction:
+		separator = ", "
+	case Disjunction:
+		separator = " | "
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	// Join entitlements' string representation in given order (as-is)
+
+	e.Entitlements.ForeachWithIndex(func(i int, entitlement *EntitlementType, _ struct{}) {
+		if i > 0 {
+			builder.WriteString(separator)
+		}
+		builder.WriteString(typeFormatter(entitlement))
+
 	})
+
 	return builder.String()
 }
 
+func (e EntitlementSetAccess) String() string {
+	return e.string(func(t Type) string {
+		return t.String()
+	})
+}
+
+func (e EntitlementSetAccess) QualifiedString() string {
+	return e.string(func(t Type) string {
+		return t.QualifiedString()
+	})
+}
+
 func (e EntitlementSetAccess) Equal(other Access) bool {
-	switch otherAccess := other.(type) {
-	case EntitlementSetAccess:
-		return e.SetKind == otherAccess.SetKind &&
-			e.PermitsAccess(otherAccess) &&
-			otherAccess.PermitsAccess(e)
+	otherAccess, ok := other.(EntitlementSetAccess)
+	if !ok {
+		return false
 	}
-	return false
+
+	return e.SetKind == otherAccess.SetKind &&
+		e.PermitsAccess(otherAccess) &&
+		otherAccess.PermitsAccess(e)
 }
 
 func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
@@ -199,6 +238,8 @@ func (e EntitlementSetAccess) IsLessPermissiveThan(other Access) bool {
 	}
 }
 
+// EntitlementMapAccess
+
 type EntitlementMapAccess struct {
 	Type         *EntitlementMapType
 	domain       EntitlementSetAccess
@@ -219,20 +260,16 @@ func NewEntitlementMapAccess(mapType *EntitlementMapType) *EntitlementMapAccess 
 
 func (*EntitlementMapAccess) isAccess() {}
 
-func (e *EntitlementMapAccess) string(typeFormatter func(ty Type) string) string {
-	return typeFormatter(e.Type)
+func (e *EntitlementMapAccess) ID() TypeID {
+	return e.Type.ID()
 }
 
-func (a *EntitlementMapAccess) Description() string {
-	return a.AccessKeyword()
+func (e *EntitlementMapAccess) String() string {
+	return e.Type.String()
 }
 
-func (a *EntitlementMapAccess) AccessKeyword() string {
-	return a.string(func(ty Type) string { return ty.String() })
-}
-
-func (a *EntitlementMapAccess) AuthKeyword() string {
-	return fmt.Sprintf("auth(%s)", a.AccessKeyword())
+func (e *EntitlementMapAccess) QualifiedString() string {
+	return e.Type.QualifiedString()
 }
 
 func (e *EntitlementMapAccess) Equal(other Access) bool {
@@ -384,24 +421,24 @@ func (e *EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (
 	return UnauthorizedAccess, nil
 }
 
+// PrimitiveAccess
+
 type PrimitiveAccess ast.PrimitiveAccess
+
+var _ Access = PrimitiveAccess(0)
 
 func (PrimitiveAccess) isAccess() {}
 
-func (a PrimitiveAccess) string(_ func(_ Type) string) string {
-	return ast.PrimitiveAccess(a).String()
+func (PrimitiveAccess) ID() TypeID {
+	panic(errors.NewUnreachableError())
 }
 
-func (a PrimitiveAccess) Description() string {
+func (a PrimitiveAccess) String() string {
 	return ast.PrimitiveAccess(a).Description()
 }
 
-func (a PrimitiveAccess) AccessKeyword() string {
-	return ast.PrimitiveAccess(a).Keyword()
-}
-
-func (a PrimitiveAccess) AuthKeyword() string {
-	return ""
+func (a PrimitiveAccess) QualifiedString() string {
+	return ast.PrimitiveAccess(a).Description()
 }
 
 func (a PrimitiveAccess) Equal(other Access) bool {
