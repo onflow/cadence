@@ -17598,7 +17598,7 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 					nil,
 					nil,
 					[]Value{attachmentReference},
-					[]sema.Type{sema.NewReferenceType(interpreter, attachmentType, sema.UnauthorizedAccess)},
+					[]sema.Type{sema.NewReferenceType(interpreter, sema.UnauthorizedAccess, attachmentType)},
 					nil,
 					locationRange,
 				)

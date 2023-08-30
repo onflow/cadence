@@ -1313,7 +1313,7 @@ func (t Unauthorized) Encode(e *cbor.StreamEncoder) error {
 	return e.EncodeNil()
 }
 
-func (t EntitlementMapAuthorization) Encode(e *cbor.StreamEncoder) error {
+func (a EntitlementMapAuthorization) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagEntitlementMapStaticAuthorization,
@@ -1321,7 +1321,7 @@ func (t EntitlementMapAuthorization) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	return e.EncodeString(string(t.TypeID))
+	return e.EncodeString(string(a.TypeID))
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1336,7 +1336,7 @@ const (
 	encodedSetAuthorizationStaticTypeLength = 2
 )
 
-func (t EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
+func (a EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagEntitlementSetStaticAuthorization,
@@ -1347,16 +1347,16 @@ func (t EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 
-	err = e.EncodeUint8(uint8(t.SetKind))
+	err = e.EncodeUint8(uint8(a.SetKind))
 	if err != nil {
 		return err
 	}
 
-	err = e.EncodeArrayHead(uint64(t.Entitlements.Len()))
+	err = e.EncodeArrayHead(uint64(a.Entitlements.Len()))
 	if err != nil {
 		return err
 	}
-	return t.Entitlements.ForeachWithError(func(entitlement common.TypeID, value struct{}) error {
+	return a.Entitlements.ForeachWithError(func(entitlement common.TypeID, value struct{}) error {
 		// Encode entitlement as array entitlements element
 		return e.EncodeString(string(entitlement))
 	})

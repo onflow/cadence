@@ -1712,13 +1712,10 @@ func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.
 		switch refType := t.(type) {
 		case *sema.ReferenceType:
 			if _, isMappedAuth := refType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
-				return sema.NewReferenceType(
-					interpreter,
-					refType.Type,
-					interpreter.MustConvertStaticAuthorizationToSemaAccess(
-						interpreter.SharedState.currentEntitlementMappedValue,
-					),
+				authorization := interpreter.MustConvertStaticAuthorizationToSemaAccess(
+					interpreter.SharedState.currentEntitlementMappedValue,
 				)
+				return sema.NewReferenceType(interpreter, authorization, refType.Type)
 			}
 		}
 		return t

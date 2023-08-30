@@ -528,6 +528,7 @@ func (t *IntersectionStaticType) ID() TypeID {
 			intersectionStrings = append(intersectionStrings, string(ty.ID()))
 		}
 	}
+	// FormatIntersectionTypeID sorts
 	return TypeID(sema.FormatIntersectionTypeID(intersectionStrings))
 }
 
@@ -539,7 +540,7 @@ type Authorization interface {
 	MeteredString(common.MemoryGauge) string
 	Equal(auth Authorization) bool
 	Encode(e *cbor.StreamEncoder) error
-	ID() string
+	ID() TypeID
 }
 
 type Unauthorized struct{}
@@ -558,8 +559,8 @@ func (Unauthorized) MeteredString(_ common.MemoryGauge) string {
 	return ""
 }
 
-func (Unauthorized) ID() string {
-	return ""
+func (Unauthorized) ID() TypeID {
+	panic(errors.NewUnreachableError())
 }
 
 func (Unauthorized) Equal(auth Authorization) bool {
@@ -601,57 +602,66 @@ func NewEntitlementSetAuthorization(
 
 func (EntitlementSetAuthorization) isAuthorization() {}
 
-func (e EntitlementSetAuthorization) string(stringer func(common.TypeID) string) string {
+func (a EntitlementSetAuthorization) ID() TypeID {
+	entitlementTypeIDs := make([]string, 0, a.Entitlements.Len())
+	a.Entitlements.Foreach(func(typeID TypeID, _ struct{}) {
+		entitlementTypeIDs = append(
+			entitlementTypeIDs,
+			string(typeID),
+		)
+	})
+
+	return sema.FormatEntitlementSetTypeID(entitlementTypeIDs, a.SetKind)
+}
+
+func (a EntitlementSetAuthorization) String() string {
+	return a.MeteredString(nil)
+}
+
+func (a EntitlementSetAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.AuthStringMemoryUsage)
+
 	var builder strings.Builder
 	builder.WriteString("auth(")
+	var separator string
 
-	compareFn := func(i string, j string) bool { return i < j }
-	mappedToIDs := orderedmap.MapKeys(e.Entitlements, stringer)
+	switch a.SetKind {
+	case sema.Conjunction:
+		separator = ", "
+	case sema.Disjunction:
+		separator = " | "
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
-	mappedToIDs.SortByKey(compareFn).ForeachWithIndex(func(i int, entitlement string, value struct{}) {
-		builder.WriteString(entitlement)
-		if i < e.Entitlements.Len()-1 {
-			if e.SetKind == sema.Conjunction {
-				builder.WriteString(", ")
-			} else {
-				builder.WriteString(" | ")
-			}
-
+	var i int
+	a.Entitlements.Foreach(func(typeID common.TypeID, _ struct{}) {
+		if i > 0 {
+			common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(separator)))
+			builder.WriteString(separator)
 		}
+
+		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(typeID)))
+		builder.WriteString(string(typeID))
+
+		i++
 	})
+
 	builder.WriteString(") ")
 	return builder.String()
 }
 
-func (e EntitlementSetAuthorization) ID() string {
-	return e.string(func(id common.TypeID) string {
-		return string(id)
-	})
-}
-
-func (e EntitlementSetAuthorization) String() string {
-	return e.string(func(ti common.TypeID) string { return string(ti) })
-}
-
-func (e EntitlementSetAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
-	common.UseMemory(memoryGauge, common.AuthStringMemoryUsage)
-	return e.string(func(ti common.TypeID) string {
-		common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(ti)))
-		return string(ti)
-	})
-}
-
-func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
+func (a EntitlementSetAuthorization) Equal(auth Authorization) bool {
 	// sets are equivalent if they contain the same elements, regardless of order
 	if auth, ok := auth.(EntitlementSetAuthorization); ok {
-		if e.SetKind != auth.SetKind {
+		if a.SetKind != auth.SetKind {
 			return false
 		}
-		if auth.Entitlements.Len() != e.Entitlements.Len() {
+		if auth.Entitlements.Len() != a.Entitlements.Len() {
 			return false
 		}
 		return auth.Entitlements.ForAllKeys(func(entitlement common.TypeID) bool {
-			return e.Entitlements.Contains(entitlement)
+			return a.Entitlements.Contains(entitlement)
 		})
 	}
 	return false
@@ -671,26 +681,26 @@ func NewEntitlementMapAuthorization(memoryGauge common.MemoryGauge, id common.Ty
 
 func (EntitlementMapAuthorization) isAuthorization() {}
 
-func (e EntitlementMapAuthorization) String() string {
-	return fmt.Sprintf("auth(%s) ", e.TypeID)
+func (a EntitlementMapAuthorization) String() string {
+	return a.MeteredString(nil)
 }
 
-func (e EntitlementMapAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
+func (a EntitlementMapAuthorization) MeteredString(memoryGauge common.MemoryGauge) string {
 	common.UseMemory(memoryGauge, common.AuthStringMemoryUsage)
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(e.TypeID)))
-	return e.String()
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(a.TypeID)))
+	return fmt.Sprintf("auth(%s) ", a.TypeID)
 }
 
-func (e EntitlementMapAuthorization) ID() string {
-	return string(e.TypeID)
+func (a EntitlementMapAuthorization) ID() TypeID {
+	return a.TypeID
 }
 
-func (e EntitlementMapAuthorization) Equal(auth Authorization) bool {
-	switch auth := auth.(type) {
-	case EntitlementMapAuthorization:
-		return e.TypeID == auth.TypeID
+func (a EntitlementMapAuthorization) Equal(other Authorization) bool {
+	auth, ok := other.(EntitlementMapAuthorization)
+	if !ok {
+		return false
 	}
-	return false
+	return a.TypeID == auth.TypeID
 }
 
 // ReferenceStaticType
@@ -745,8 +755,12 @@ func (t *ReferenceStaticType) Equal(other StaticType) bool {
 }
 
 func (t *ReferenceStaticType) ID() TypeID {
+	var authorizationString string
+	if t.Authorization != UnauthorizedAccess {
+		authorizationString = string(t.Authorization.ID())
+	}
 	return TypeID(sema.FormatReferenceTypeID(
-		t.Authorization.ID(),
+		authorizationString,
 		string(t.ReferencedType.ID()),
 	))
 }
@@ -1154,11 +1168,7 @@ func ConvertStaticToSemaType(
 			return nil, err
 		}
 
-		return sema.NewReferenceType(
-			memoryGauge,
-			ty,
-			access,
-		), nil
+		return sema.NewReferenceType(memoryGauge, access, ty), nil
 
 	case *CapabilityStaticType:
 		var borrowType sema.Type
