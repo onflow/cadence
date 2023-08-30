@@ -37,7 +37,7 @@ type Error struct {
 	Programs map[Location]*ast.Program
 }
 
-func newError(err error, location Location, codesAndPrograms codesAndPrograms) Error {
+func newError(err error, location Location, codesAndPrograms CodesAndPrograms) Error {
 	return Error{
 		Err:      err,
 		Location: location,
