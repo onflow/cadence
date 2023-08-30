@@ -1020,7 +1020,7 @@ func (d StorableDecoder) decodeStorageCapabilityController() (*StorageCapability
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid storage capability controller borrow type encoding: %w", err)
 	}
-	borrowReferenceStaticType, ok := borrowStaticType.(ReferenceStaticType)
+	borrowReferenceStaticType, ok := borrowStaticType.(*ReferenceStaticType)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid storage capability controller borrow type encoding: expected reference static type, got %T",
@@ -1092,7 +1092,7 @@ func (d StorableDecoder) decodeAccountCapabilityController() (*AccountCapability
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid account capability controller borrow type encoding: %w", err)
 	}
-	borrowReferenceStaticType, ok := borrowStaticType.(ReferenceStaticType)
+	borrowReferenceStaticType, ok := borrowStaticType.(*ReferenceStaticType)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid account capability controller borrow type encoding: expected reference static type, got %T",

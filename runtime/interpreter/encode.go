@@ -1383,7 +1383,7 @@ const (
 //					encodedReferenceStaticTypeTypeFieldKey:          StaticType(v.Type),
 //			},
 //		}
-func (t ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number

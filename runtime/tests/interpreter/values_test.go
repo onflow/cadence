@@ -1168,7 +1168,7 @@ func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter
 		return interpreter.NewUnmeteredCapabilityValue(
 			interpreter.UInt64Value(r.randomInt(math.MaxInt-1)),
 			r.randomAddressValue(),
-			interpreter.ReferenceStaticType{
+			&interpreter.ReferenceStaticType{
 				Authorization:  interpreter.UnauthorizedAccess,
 				ReferencedType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},

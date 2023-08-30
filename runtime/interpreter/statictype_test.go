@@ -91,7 +91,7 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 			(&CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeString,
 			}).Equal(
-				ReferenceStaticType{
+				&ReferenceStaticType{
 					ReferencedType: PrimitiveStaticTypeString,
 				},
 			),
@@ -108,11 +108,11 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			ReferenceStaticType{
+			(&ReferenceStaticType{
 				Authorization:  UnauthorizedAccess,
 				ReferencedType: PrimitiveStaticTypeString,
-			}.Equal(
-				ReferenceStaticType{
+			}).Equal(
+				&ReferenceStaticType{
 					Authorization:  UnauthorizedAccess,
 					ReferencedType: PrimitiveStaticTypeString,
 				},
@@ -125,11 +125,11 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ReferenceStaticType{
+			(&ReferenceStaticType{
 				Authorization:  UnauthorizedAccess,
 				ReferencedType: PrimitiveStaticTypeInt,
-			}.Equal(
-				ReferenceStaticType{
+			}).Equal(
+				&ReferenceStaticType{
 					Authorization:  UnauthorizedAccess,
 					ReferencedType: PrimitiveStaticTypeString,
 				},
@@ -142,11 +142,11 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ReferenceStaticType{
+			(&ReferenceStaticType{
 				Authorization:  UnauthorizedAccess,
 				ReferencedType: PrimitiveStaticTypeInt,
-			}.Equal(
-				ReferenceStaticType{
+			}).Equal(
+				&ReferenceStaticType{
 					Authorization:  EntitlementMapAuthorization{TypeID: "Foo"},
 					ReferencedType: PrimitiveStaticTypeInt,
 				},
@@ -159,9 +159,9 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ReferenceStaticType{
+			(&ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeString,
-			}.Equal(
+			}).Equal(
 				(&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
 				}),
@@ -862,7 +862,7 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
-				ReferenceStaticType{
+				&ReferenceStaticType{
 					ReferencedType: PrimitiveStaticTypeInt,
 				},
 			),
@@ -1459,7 +1459,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				Type:          sema.IntType,
 				Authorization: sema.UnauthorizedAccess,
 			},
-			staticType: ReferenceStaticType{
+			staticType: &ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeInt,
 				Authorization:  UnauthorizedAccess,
 			},

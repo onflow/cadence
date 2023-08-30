@@ -3916,7 +3916,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewUnmeteredCapabilityValue(
 					NewUnmeteredUInt64Value(4),
 					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
-					ReferenceStaticType{
+					&ReferenceStaticType{
 						Authorization:  UnauthorizedAccess,
 						ReferencedType: PrimitiveStaticTypeBool,
 					},

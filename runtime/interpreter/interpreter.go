@@ -1790,7 +1790,7 @@ func (interpreter *Interpreter) convertStaticType(
 	targetSemaType sema.Type,
 ) StaticType {
 	switch valueStaticType := valueStaticType.(type) {
-	case ReferenceStaticType:
+	case *ReferenceStaticType:
 		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
 			return NewReferenceStaticType(
 				interpreter,
@@ -2104,7 +2104,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 			switch capability := value.(type) {
 			case *CapabilityValue:
-				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
+				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
 				return NewCapabilityValue(
 					interpreter,
@@ -3784,7 +3784,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				ty := typeValue.Type
 				// Capabilities must hold references
-				_, ok = ty.(ReferenceStaticType)
+				_, ok = ty.(*ReferenceStaticType)
 				if !ok {
 					return Nil
 				}
@@ -3875,7 +3875,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 			return interpreter.IsSubTypeOfSemaType(subType.Type, superType)
 		}
 
-	case ReferenceStaticType:
+	case *ReferenceStaticType:
 		if superType, ok := superType.(*sema.ReferenceType); ok {
 
 			// First, check that the static type of the referenced value

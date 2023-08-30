@@ -714,41 +714,41 @@ type ReferenceStaticType struct {
 	Authorization  Authorization
 }
 
-var _ StaticType = ReferenceStaticType{}
+var _ StaticType = &ReferenceStaticType{}
 
 func NewReferenceStaticType(
 	memoryGauge common.MemoryGauge,
 	authorization Authorization,
 	referencedType StaticType,
-) ReferenceStaticType {
+) *ReferenceStaticType {
 	common.UseMemory(memoryGauge, common.ReferenceStaticTypeMemoryUsage)
 
-	return ReferenceStaticType{
+	return &ReferenceStaticType{
 		Authorization:  authorization,
 		ReferencedType: referencedType,
 	}
 }
 
-func (ReferenceStaticType) isStaticType() {}
+func (*ReferenceStaticType) isStaticType() {}
 
-func (ReferenceStaticType) elementSize() uint {
+func (*ReferenceStaticType) elementSize() uint {
 	return UnknownElementSize
 }
 
-func (t ReferenceStaticType) String() string {
+func (t *ReferenceStaticType) String() string {
 	auth := t.Authorization.String()
 	return fmt.Sprintf("%s&%s", auth, t.ReferencedType)
 }
 
-func (t ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+func (t *ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	typeStr := t.ReferencedType.MeteredString(memoryGauge)
 	authString := t.Authorization.MeteredString(memoryGauge)
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(typeStr)+len(authString)))
 	return fmt.Sprintf("%s&%s", authString, typeStr)
 }
 
-func (t ReferenceStaticType) Equal(other StaticType) bool {
-	otherReferenceType, ok := other.(ReferenceStaticType)
+func (t *ReferenceStaticType) Equal(other StaticType) bool {
+	otherReferenceType, ok := other.(*ReferenceStaticType)
 	if !ok {
 		return false
 	}
@@ -757,7 +757,7 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 		t.ReferencedType.Equal(otherReferenceType.ReferencedType)
 }
 
-func (t ReferenceStaticType) ID() TypeID {
+func (t *ReferenceStaticType) ID() TypeID {
 	// TODO: cache
 	return TypeID(sema.FormatReferenceTypeID(t.Authorization.ID(), string(t.ReferencedType.ID())))
 }
@@ -964,7 +964,7 @@ func ConvertSemaAccessToStaticAuthorization(
 func ConvertSemaReferenceTypeToStaticReferenceType(
 	memoryGauge common.MemoryGauge,
 	t *sema.ReferenceType,
-) ReferenceStaticType {
+) *ReferenceStaticType {
 	return NewReferenceStaticType(
 		memoryGauge,
 		ConvertSemaAccessToStaticAuthorization(memoryGauge, t.Authorization),
@@ -1144,7 +1144,7 @@ func ConvertStaticToSemaType(
 			intersectedTypes,
 		), nil
 
-	case ReferenceStaticType:
+	case *ReferenceStaticType:
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.ReferencedType,

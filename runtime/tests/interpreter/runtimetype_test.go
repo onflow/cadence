@@ -472,7 +472,7 @@ func TestInterpretReferenceType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ReferenceStaticType{
+			Type: &interpreter.ReferenceStaticType{
 				ReferencedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				Authorization: interpreter.NewEntitlementSetAuthorization(
 					nil,
@@ -487,7 +487,7 @@ func TestInterpretReferenceType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ReferenceStaticType{
+			Type: &interpreter.ReferenceStaticType{
 				ReferencedType: interpreter.PrimitiveStaticTypeString,
 				Authorization:  interpreter.UnauthorizedAccess,
 			},
@@ -497,7 +497,7 @@ func TestInterpretReferenceType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ReferenceStaticType{
+			Type: &interpreter.ReferenceStaticType{
 				ReferencedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 				Authorization: interpreter.NewEntitlementSetAuthorization(
 					nil,
@@ -627,7 +627,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.CapabilityStaticType{
-				BorrowType: interpreter.ReferenceStaticType{
+				BorrowType: &interpreter.ReferenceStaticType{
 					ReferencedType: interpreter.PrimitiveStaticTypeString,
 					Authorization:  interpreter.UnauthorizedAccess,
 				},
@@ -639,7 +639,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.CapabilityStaticType{
-				BorrowType: interpreter.ReferenceStaticType{
+				BorrowType: &interpreter.ReferenceStaticType{
 					ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					Authorization:  interpreter.UnauthorizedAccess,
 				},
@@ -651,7 +651,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.CapabilityStaticType{
-				BorrowType: interpreter.ReferenceStaticType{
+				BorrowType: &interpreter.ReferenceStaticType{
 					ReferencedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 					Authorization:  interpreter.UnauthorizedAccess,
 				},
