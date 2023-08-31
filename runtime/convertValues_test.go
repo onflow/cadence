@@ -1493,11 +1493,9 @@ func TestRuntimeExportStructValue(t *testing.T) {
 	}
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewStruct([]cadence.Value{
-			cadence.NewInt(42),
-		}).WithType(fooStructType),
-	)
+	expected := cadence.NewStruct([]cadence.Value{
+		cadence.NewInt(42),
+	}).WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1521,12 +1519,10 @@ func TestRuntimeExportResourceValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(1),
-			cadence.NewInt(42),
-		}).WithType(newFooResourceType()),
-	)
+	expected := cadence.NewResource([]cadence.Value{
+		cadence.NewUInt64(1),
+		cadence.NewInt(42),
+	}).WithType(newFooResourceType())
 
 	assert.Equal(t, expected, actual)
 }
@@ -1551,37 +1547,33 @@ func TestRuntimeExportResourceArrayValue(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	actual := cadence.ValueWithCachedTypeID(
-		exportValueFromScript(t, script),
-	)
+	actual := exportValueFromScript(t, script)
 
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewArray([]cadence.Value{
-			cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(1),
-				cadence.NewInt(3),
-			}).WithType(fooResourceType),
-			cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(2),
-				cadence.NewInt(4),
-			}).WithType(fooResourceType),
-		}).WithType(&cadence.VariableSizedArrayType{
-			ElementType: &cadence.ResourceType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "uuid",
-						Type:       cadence.UInt64Type,
-					},
-					{
-						Identifier: "bar",
-						Type:       cadence.IntType,
-					},
+	expected := cadence.NewArray([]cadence.Value{
+		cadence.NewResource([]cadence.Value{
+			cadence.NewUInt64(1),
+			cadence.NewInt(3),
+		}).WithType(fooResourceType),
+		cadence.NewResource([]cadence.Value{
+			cadence.NewUInt64(2),
+			cadence.NewInt(4),
+		}).WithType(fooResourceType),
+	}).WithType(&cadence.VariableSizedArrayType{
+		ElementType: &cadence.ResourceType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "uuid",
+					Type:       cadence.UInt64Type,
+				},
+				{
+					Identifier: "bar",
+					Type:       cadence.IntType,
 				},
 			},
-		}),
-	)
+		},
+	})
 
 	assert.Equal(t, expected, actual)
 }
@@ -1609,44 +1601,40 @@ func TestRuntimeExportResourceDictionaryValue(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	actual := cadence.ValueWithCachedTypeID(
-		exportValueFromScript(t, script),
-	)
+	actual := exportValueFromScript(t, script)
 
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewDictionary([]cadence.KeyValuePair{
-			{
-				Key: cadence.String("b"),
-				Value: cadence.NewResource([]cadence.Value{
-					cadence.NewUInt64(2),
-					cadence.NewInt(4),
-				}).WithType(fooResourceType),
-			},
-			{
-				Key: cadence.String("a"),
-				Value: cadence.NewResource([]cadence.Value{
-					cadence.NewUInt64(1),
-					cadence.NewInt(3),
-				}).WithType(fooResourceType),
-			},
-		}).WithType(&cadence.DictionaryType{
-			KeyType: cadence.StringType,
-			ElementType: &cadence.ResourceType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "uuid",
-						Type:       cadence.UInt64Type,
-					},
-					{
-						Identifier: "bar",
-						Type:       cadence.IntType,
-					},
+	expected := cadence.NewDictionary([]cadence.KeyValuePair{
+		{
+			Key: cadence.String("b"),
+			Value: cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(2),
+				cadence.NewInt(4),
+			}).WithType(fooResourceType),
+		},
+		{
+			Key: cadence.String("a"),
+			Value: cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(1),
+				cadence.NewInt(3),
+			}).WithType(fooResourceType),
+		},
+	}).WithType(&cadence.DictionaryType{
+		KeyType: cadence.StringType,
+		ElementType: &cadence.ResourceType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "uuid",
+					Type:       cadence.UInt64Type,
+				},
+				{
+					Identifier: "bar",
+					Type:       cadence.IntType,
 				},
 			},
-		}),
-	)
+		},
+	})
 
 	assert.Equal(t, expected, actual)
 }
@@ -1711,18 +1699,14 @@ func TestRuntimeExportNestedResourceValueFromScript(t *testing.T) {
         }
     `
 
-	actual := cadence.ValueWithCachedTypeID(
-		exportValueFromScript(t, script),
-	)
-	expected := cadence.ValueWithCachedTypeID(
+	actual := exportValueFromScript(t, script)
+	expected := cadence.NewResource([]cadence.Value{
+		cadence.NewUInt64(2),
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(2),
-			cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(1),
-				cadence.NewInt(42),
-			}).WithType(barResourceType),
-		}).WithType(fooResourceType),
-	)
+			cadence.NewUInt64(1),
+			cadence.NewInt(42),
+		}).WithType(barResourceType),
+	}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2294,20 +2278,16 @@ func TestRuntimeExportCompositeValueWithFunctionValueField(t *testing.T) {
 		},
 	}
 
-	actual := cadence.ValueWithCachedTypeID(
-		exportValueFromScript(t, script),
-	)
+	actual := exportValueFromScript(t, script)
 
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewStruct([]cadence.Value{
-			cadence.NewInt(42),
-			cadence.Function{
-				FunctionType: &cadence.FunctionType{
-					ReturnType: cadence.VoidType,
-				},
+	expected := cadence.NewStruct([]cadence.Value{
+		cadence.NewInt(42),
+		cadence.Function{
+			FunctionType: &cadence.FunctionType{
+				ReturnType: cadence.VoidType,
 			},
-		}).WithType(fooStructType),
-	)
+		},
+	}).WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2432,10 +2412,7 @@ func TestRuntimeEnumValue(t *testing.T) {
 		expected := newEnumValue()
 		actual := exportValueFromScript(t, script)
 
-		assert.Equal(t,
-			cadence.ValueWithCachedTypeID(expected),
-			cadence.ValueWithCachedTypeID(actual),
-		)
+		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("test import", func(t *testing.T) {
@@ -2496,10 +2473,6 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 			Location:  common.ScriptLocation{},
 		},
 	)
-
-	if err == nil {
-		value = cadence.ValueWithCachedTypeID(value)
-	}
 
 	return value, err
 }
@@ -2748,7 +2721,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			require.NoError(t, err)
 
 			if !test.skipExport {
-				expected := cadence.ValueWithCachedTypeID(test.exportedValue)
+				expected := test.exportedValue
 				assert.Equal(t, expected, actual)
 			}
 		})
@@ -2909,7 +2882,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
 
-	expected := cadence.ValueWithCachedTypeID(complexStructValue)
+	expected := complexStructValue
 	assert.Equal(t, expected, actual)
 
 }
@@ -3021,7 +2994,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
 
-	expected := cadence.ValueWithCachedTypeID(complexStructValue)
+	expected := complexStructValue
 	assert.Equal(t, expected, actual)
 }
 
@@ -4709,6 +4682,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		)
 
+		RequireError(t, err)
 		assert.Contains(t, err.Error(),
 			"invalid argument at index 0: cannot import value of type 'PublicKey'. missing field 'publicKey'")
 		assert.False(t, publicKeyValidated)
@@ -4782,6 +4756,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		)
 
+		RequireError(t, err)
 		assert.Contains(t, err.Error(),
 			"invalid argument at index 0: cannot import value of type 'PublicKey'. missing field 'signatureAlgorithm'")
 		assert.False(t, publicKeyValidated)

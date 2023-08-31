@@ -564,7 +564,7 @@ func exportAuthorization(
 		})
 		return cadence.EntitlementSetAuthorization{
 			Entitlements: entitlements,
-			Kind:         cadence.EntitlementSetKind(access.SetKind),
+			Kind:         access.SetKind,
 		}
 	}
 	panic(fmt.Sprintf("cannot export authorization with access %T", access))
@@ -646,7 +646,7 @@ func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorizat
 			memoryGauge,
 			func() []common.TypeID { return auth.Entitlements },
 			len(auth.Entitlements),
-			sema.EntitlementSetKind(auth.Kind),
+			auth.Kind,
 		)
 	}
 	panic(fmt.Sprintf("cannot import authorization of type %T", auth))
