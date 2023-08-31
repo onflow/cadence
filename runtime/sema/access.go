@@ -19,9 +19,10 @@
 package sema
 
 import (
-	"sort"
 	"strings"
 	"sync"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -74,18 +75,19 @@ func NewEntitlementSetAccess(
 func (EntitlementSetAccess) isAccess() {}
 
 func (e EntitlementSetAccess) ID() TypeID {
-	entitlementTypeIDs := make([]string, 0, e.Entitlements.Len())
+	entitlementTypeIDs := make([]TypeID, 0, e.Entitlements.Len())
 	e.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 		entitlementTypeIDs = append(
 			entitlementTypeIDs,
-			string(entitlement.ID()),
+			entitlement.ID(),
 		)
 	})
 
+	// FormatEntitlementSetTypeID sorts
 	return FormatEntitlementSetTypeID(entitlementTypeIDs, e.SetKind)
 }
 
-func FormatEntitlementSetTypeID(entitlementTypeIDs []string, kind EntitlementSetKind) TypeID {
+func FormatEntitlementSetTypeID[T ~string](entitlementTypeIDs []T, kind EntitlementSetKind) T {
 	var builder strings.Builder
 	var separator string
 
@@ -100,16 +102,16 @@ func FormatEntitlementSetTypeID(entitlementTypeIDs []string, kind EntitlementSet
 
 	// Join entitlements' type IDs in increasing order (sorted)
 
-	sort.Strings(entitlementTypeIDs)
+	slices.Sort(entitlementTypeIDs)
 
 	for i, entitlementTypeID := range entitlementTypeIDs {
 		if i > 0 {
 			builder.WriteString(separator)
 		}
-		builder.WriteString(entitlementTypeID)
+		builder.WriteString(string(entitlementTypeID))
 	}
 
-	return TypeID(builder.String())
+	return T(builder.String())
 }
 
 func (e EntitlementSetAccess) string(typeFormatter func(Type) string) string {

@@ -266,7 +266,7 @@ func (t *VariableSizedStaticType) Equal(other StaticType) bool {
 }
 
 func (t *VariableSizedStaticType) ID() TypeID {
-	return sema.VariableSizedTypeID(t.Type.ID())
+	return sema.FormatVariableSizedTypeID(t.Type.ID())
 }
 
 // ConstantSizedStaticType
@@ -332,7 +332,7 @@ func (t *ConstantSizedStaticType) Equal(other StaticType) bool {
 }
 
 func (t *ConstantSizedStaticType) ID() TypeID {
-	return sema.ConstantSizedTypeID(t.Type.ID(), t.Size)
+	return sema.FormatConstantSizedTypeID(t.Type.ID(), t.Size)
 }
 
 // DictionaryStaticType
@@ -386,7 +386,7 @@ func (t *DictionaryStaticType) Equal(other StaticType) bool {
 }
 
 func (t *DictionaryStaticType) ID() TypeID {
-	return sema.DictionaryTypeID(
+	return sema.FormatDictionaryTypeID(
 		t.KeyType.ID(),
 		t.ValueType.ID(),
 	)
@@ -436,7 +436,7 @@ func (t *OptionalStaticType) Equal(other StaticType) bool {
 }
 
 func (t *OptionalStaticType) ID() TypeID {
-	return sema.OptionalTypeID(t.Type.ID())
+	return sema.FormatOptionalTypeID(t.Type.ID())
 }
 
 var NilStaticType = &OptionalStaticType{
@@ -520,16 +520,16 @@ outer:
 }
 
 func (t *IntersectionStaticType) ID() TypeID {
-	var intersectionStrings []string
+	var interfaceTypeIDs []TypeID
 	typeCount := len(t.Types)
 	if typeCount > 0 {
-		intersectionStrings = make([]string, 0, typeCount)
+		interfaceTypeIDs = make([]TypeID, 0, typeCount)
 		for _, ty := range t.Types {
-			intersectionStrings = append(intersectionStrings, string(ty.ID()))
+			interfaceTypeIDs = append(interfaceTypeIDs, ty.ID())
 		}
 	}
 	// FormatIntersectionTypeID sorts
-	return TypeID(sema.FormatIntersectionTypeID(intersectionStrings))
+	return sema.FormatIntersectionTypeID(interfaceTypeIDs)
 }
 
 // Authorization
@@ -603,11 +603,11 @@ func NewEntitlementSetAuthorization(
 func (EntitlementSetAuthorization) isAuthorization() {}
 
 func (a EntitlementSetAuthorization) ID() TypeID {
-	entitlementTypeIDs := make([]string, 0, a.Entitlements.Len())
+	entitlementTypeIDs := make([]TypeID, 0, a.Entitlements.Len())
 	a.Entitlements.Foreach(func(typeID TypeID, _ struct{}) {
 		entitlementTypeIDs = append(
 			entitlementTypeIDs,
-			string(typeID),
+			typeID,
 		)
 	})
 
@@ -755,14 +755,14 @@ func (t *ReferenceStaticType) Equal(other StaticType) bool {
 }
 
 func (t *ReferenceStaticType) ID() TypeID {
-	var authorizationString string
+	var authorization TypeID
 	if t.Authorization != UnauthorizedAccess {
-		authorizationString = string(t.Authorization.ID())
+		authorization = t.Authorization.ID()
 	}
-	return TypeID(sema.FormatReferenceTypeID(
-		authorizationString,
-		string(t.ReferencedType.ID()),
-	))
+	return sema.FormatReferenceTypeID(
+		authorization,
+		t.ReferencedType.ID(),
+	)
 }
 
 // CapabilityStaticType
@@ -822,12 +822,12 @@ func (t *CapabilityStaticType) Equal(other StaticType) bool {
 }
 
 func (t *CapabilityStaticType) ID() TypeID {
-	var borrowTypeString string
+	var borrowTypeID TypeID
 	borrowType := t.BorrowType
 	if borrowType != nil {
-		borrowTypeString = string(borrowType.ID())
+		borrowTypeID = borrowType.ID()
 	}
-	return TypeID(sema.FormatCapabilityTypeID(borrowTypeString))
+	return sema.FormatCapabilityTypeID(borrowTypeID)
 }
 
 // Conversion
