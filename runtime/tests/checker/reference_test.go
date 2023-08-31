@@ -2578,6 +2578,116 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 				Column: 24,
 			})
 	})
+
+	t.Run("create ref by field access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            access(all) fun test() {
+                let foo <- create Foo()
+                var fooRef = &foo as &Foo
+
+                let barRef = fooRef.bar
+                destroy foo
+                barRef.id
+            }
+
+            resource Foo {
+                let bar: @Bar
+                init() {
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("create ref by index access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            access(all) fun test() {
+                let array <- [<- create Foo()]
+                var arrayRef = &array as &[Foo]
+
+                let fooRef = arrayRef[0]
+                destroy array
+                fooRef.id
+            }
+
+            resource Foo {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("create ref by field and index access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            access(all) fun test() {
+                let array <- [<- create Foo()]
+                var arrayRef = &array as &[Foo]
+
+                let barRef = arrayRef[0].bar
+                destroy array
+                barRef.id
+            }
+
+            resource Foo {
+                let bar: @Bar
+                init() {
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
 }
 
 func TestCheckReferenceUseAfterCopy(t *testing.T) {
