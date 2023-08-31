@@ -41,6 +41,7 @@ import (
 )
 
 const semaPath = "github.com/onflow/cadence/runtime/sema"
+const astPath = "github.com/onflow/cadence/runtime/ast"
 
 var packagePathFlag = flag.String("p", semaPath, "package path")
 
@@ -734,7 +735,13 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 				Elts: []dst.Expr{
 					goKeyValue("Type", borrowType),
 					// TODO: add support for parsing entitlements
-					goKeyValue("Authorization", dst.NewIdent("UnauthorizedAccess")),
+					goKeyValue(
+						"Authorization",
+						&dst.Ident{
+							Name: "UnauthorizedAccess",
+							Path: semaPath,
+						},
+					),
 				},
 			},
 		}
@@ -861,7 +868,10 @@ func functionTypeExpr(
 
 	var purityExpr dst.Expr
 	if t.PurityAnnotation == ast.FunctionPurityView {
-		purityExpr = dst.NewIdent("FunctionPurityView")
+		purityExpr = &dst.Ident{
+			Name: "FunctionPurityView",
+			Path: semaPath,
+		}
 	}
 
 	// Type parameters
@@ -1521,11 +1531,14 @@ func accessExpr(access ast.Access) dst.Expr {
 	switch access := access.(type) {
 	case ast.PrimitiveAccess:
 		return &dst.CallExpr{
-			Fun: dst.NewIdent("PrimitiveAccess"),
+			Fun: &dst.Ident{
+				Name: "PrimitiveAccess",
+				Path: semaPath,
+			},
 			Args: []dst.Expr{
 				&dst.Ident{
 					Name: access.String(),
-					Path: "github.com/onflow/cadence/runtime/ast",
+					Path: astPath,
 				},
 			},
 		}
@@ -1544,9 +1557,15 @@ func accessExpr(access ast.Access) dst.Expr {
 
 		switch access.EntitlementSet.Separator() {
 		case ast.Conjunction:
-			setKind = dst.NewIdent("Conjunction")
+			setKind = &dst.Ident{
+				Name: "Conjunction",
+				Path: semaPath,
+			}
 		case ast.Disjunction:
-			setKind = dst.NewIdent("Disjunction")
+			setKind = &dst.Ident{
+				Name: "Disjunction",
+				Path: semaPath,
+			}
 		default:
 			panic(errors.NewUnreachableError())
 		}
@@ -1554,7 +1573,10 @@ func accessExpr(access ast.Access) dst.Expr {
 		args := []dst.Expr{
 			&dst.CompositeLit{
 				Type: &dst.ArrayType{
-					Elt: dst.NewIdent("Type"),
+					Elt: &dst.Ident{
+						Name: "Type",
+						Path: semaPath,
+					},
 				},
 				Elts: entitlementExprs,
 			},
@@ -1567,7 +1589,10 @@ func accessExpr(access ast.Access) dst.Expr {
 		}
 
 		return &dst.CallExpr{
-			Fun:  dst.NewIdent("newEntitlementAccess"),
+			Fun: &dst.Ident{
+				Name: "newEntitlementAccess",
+				Path: semaPath,
+			},
 			Args: args,
 		}
 
@@ -1579,7 +1604,7 @@ func accessExpr(access ast.Access) dst.Expr {
 func variableKindIdent(variableKind ast.VariableKind) *dst.Ident {
 	return &dst.Ident{
 		Name: variableKind.String(),
-		Path: "github.com/onflow/cadence/runtime/ast",
+		Path: astPath,
 	}
 }
 
@@ -1810,7 +1835,10 @@ func entitlementTypeLiteral(name string) dst.Expr {
 	return &dst.UnaryExpr{
 		Op: token.AND,
 		X: &dst.CompositeLit{
-			Type: dst.NewIdent("EntitlementType"),
+			Type: &dst.Ident{
+				Name: "EntitlementType",
+				Path: semaPath,
+			},
 			Elts: []dst.Expr{
 				goKeyValue("Identifier", goStringLit(name)),
 			},
@@ -1839,7 +1867,10 @@ func entitlementMapTypeLiteral(name string, elements []ast.EntitlementMapElement
 		}
 
 		relationExpr := &dst.CompositeLit{
-			Type: dst.NewIdent("EntitlementRelation"),
+			Type: &dst.Ident{
+				Name: "EntitlementRelation",
+				Path: semaPath,
+			},
 			Elts: []dst.Expr{
 				goKeyValue("Input", typeExpr(relation.Input, nil)),
 				goKeyValue("Output", typeExpr(relation.Output, nil)),
@@ -1854,7 +1885,10 @@ func entitlementMapTypeLiteral(name string, elements []ast.EntitlementMapElement
 
 	relationsExpr := &dst.CompositeLit{
 		Type: &dst.ArrayType{
-			Elt: dst.NewIdent("EntitlementRelation"),
+			Elt: &dst.Ident{
+				Name: "EntitlementRelation",
+				Path: semaPath,
+			},
 		},
 		Elts: relationExprs,
 	}
@@ -1862,7 +1896,10 @@ func entitlementMapTypeLiteral(name string, elements []ast.EntitlementMapElement
 	return &dst.UnaryExpr{
 		Op: token.AND,
 		X: &dst.CompositeLit{
-			Type: dst.NewIdent("EntitlementMapType"),
+			Type: &dst.Ident{
+				Name: "EntitlementMapType",
+				Path: semaPath,
+			},
 			Elts: []dst.Expr{
 				goKeyValue("Identifier", goStringLit(name)),
 				goKeyValue("Relations", relationsExpr),
