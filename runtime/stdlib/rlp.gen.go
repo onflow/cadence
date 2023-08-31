@@ -28,7 +28,7 @@ import (
 const RLPTypeDecodeStringFunctionName = "decodeString"
 
 var RLPTypeDecodeStringFunctionType = &sema.FunctionType{
-	Purity: FunctionPurityView,
+	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -55,7 +55,7 @@ If any error is encountered while decoding, the program aborts.
 const RLPTypeDecodeListFunctionName = "decodeList"
 
 var RLPTypeDecodeListFunctionType = &sema.FunctionType{
-	Purity: FunctionPurityView,
+	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -99,14 +99,14 @@ func init() {
 	var members = []*sema.Member{
 		sema.NewUnmeteredFunctionMember(
 			RLPType,
-			PrimitiveAccess(ast.AccessAll),
+			sema.PrimitiveAccess(ast.AccessAll),
 			RLPTypeDecodeStringFunctionName,
 			RLPTypeDecodeStringFunctionType,
 			RLPTypeDecodeStringFunctionDocString,
 		),
 		sema.NewUnmeteredFunctionMember(
 			RLPType,
-			PrimitiveAccess(ast.AccessAll),
+			sema.PrimitiveAccess(ast.AccessAll),
 			RLPTypeDecodeListFunctionName,
 			RLPTypeDecodeListFunctionType,
 			RLPTypeDecodeListFunctionDocString,

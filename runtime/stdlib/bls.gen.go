@@ -28,7 +28,7 @@ import (
 const BLSTypeAggregateSignaturesFunctionName = "aggregateSignatures"
 
 var BLSTypeAggregateSignaturesFunctionType = &sema.FunctionType{
-	Purity: FunctionPurityView,
+	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -63,7 +63,7 @@ The function returns nil if the array is empty or if decoding one of the signatu
 const BLSTypeAggregatePublicKeysFunctionName = "aggregatePublicKeys"
 
 var BLSTypeAggregatePublicKeysFunctionType = &sema.FunctionType{
-	Purity: FunctionPurityView,
+	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -105,14 +105,14 @@ func init() {
 	var members = []*sema.Member{
 		sema.NewUnmeteredFunctionMember(
 			BLSType,
-			PrimitiveAccess(ast.AccessAll),
+			sema.PrimitiveAccess(ast.AccessAll),
 			BLSTypeAggregateSignaturesFunctionName,
 			BLSTypeAggregateSignaturesFunctionType,
 			BLSTypeAggregateSignaturesFunctionDocString,
 		),
 		sema.NewUnmeteredFunctionMember(
 			BLSType,
-			PrimitiveAccess(ast.AccessAll),
+			sema.PrimitiveAccess(ast.AccessAll),
 			BLSTypeAggregatePublicKeysFunctionName,
 			BLSTypeAggregatePublicKeysFunctionType,
 			BLSTypeAggregatePublicKeysFunctionDocString,
