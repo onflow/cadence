@@ -71,6 +71,17 @@ const TestTypeTestConstIntsFieldDocString = `
 This is a test constant-sized integer array.
 `
 
+const TestTypeTestIntDictFieldName = "testIntDict"
+
+var TestTypeTestIntDictFieldType = &DictionaryType{
+	KeyType:   UInt64Type,
+	ValueType: BoolType,
+}
+
+const TestTypeTestIntDictFieldDocString = `
+This is a test integer dictionary.
+`
+
 const TestTypeTestParamFieldName = "testParam"
 
 var TestTypeTestParamFieldType = MustInstantiate(
@@ -185,6 +196,14 @@ func init() {
 				TestTypeTestConstIntsFieldName,
 				TestTypeTestConstIntsFieldType,
 				TestTypeTestConstIntsFieldDocString,
+			),
+			NewUnmeteredFieldMember(
+				t,
+				PrimitiveAccess(ast.AccessAll),
+				ast.VariableKindConstant,
+				TestTypeTestIntDictFieldName,
+				TestTypeTestIntDictFieldType,
+				TestTypeTestIntDictFieldDocString,
 			),
 			NewUnmeteredFieldMember(
 				t,
