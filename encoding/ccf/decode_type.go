@@ -75,7 +75,7 @@ func (d *Decoder) decodeInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type,
 		return d.decodeReferenceType(types, d.decodeInlineType)
 
 	case CBORTagIntersectionType:
-		return d.decodeIntersectionType(types, d.decodeNullableInlineType, d.decodeInlineType)
+		return d.decodeIntersectionType(types, d.decodeInlineType)
 
 	case CBORTagCapabilityType:
 		return d.decodeCapabilityType(types, d.decodeNullableInlineType)
@@ -550,7 +550,6 @@ func (d *Decoder) decodeReferenceType(
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
 func (d *Decoder) decodeIntersectionType(
 	types *cadenceTypeByCCFTypeID,
-	decodeTypeFn decodeTypeFn,
 	decodeIntersectionTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
 	// types

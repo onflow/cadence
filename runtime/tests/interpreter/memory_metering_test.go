@@ -8589,7 +8589,7 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariableSizedSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindConstantSizedSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalSemaType))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindIntersectionSemaType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindIntersectionSemaType))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindReferenceSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCapabilitySemaType))
 	})
