@@ -166,7 +166,7 @@ var rlpContractValue = interpreter.NewSimpleCompositeValue(
 )
 
 var RLPContract = StandardLibraryValue{
-	Name:  "RLP",
+	Name:  RLPTypeName,
 	Type:  RLPType,
 	Value: rlpContractValue,
 	Kind:  common.DeclarationKindContract,
