@@ -973,33 +973,7 @@ func CheckIntersectionType(
 		panic(errors.NewUnreachableError())
 	}
 
-	var compositeType *CompositeType
-
-	// If the intersection type is a composite type,
-	// check that the intersections are conformances
-
-	if compositeType != nil {
-
-		// Prepare a set of all the conformances
-
-		conformances := compositeType.EffectiveInterfaceConformanceSet()
-
-		for _, intersectedType := range types {
-			// The intersected type must be an explicit or implicit conformance
-			// of the composite (intersection type)
-
-			if !conformances.Contains(intersectedType) {
-				report(func(t *ast.IntersectionType) error {
-					return &InvalidNonConformanceIntersectionError{
-						Type:  intersectedType,
-						Range: intersectionRanges[intersectedType](t),
-					}
-				})
-			}
-		}
-	}
-
-	return &IntersectionType{Types: types}
+	return NewIntersectionType(memoryGauge, types)
 }
 
 func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
