@@ -9,7 +9,7 @@ contract BLS {
     /// No subgroup membership check is performed on the input signatures.
     /// The function returns nil if the array is empty or if decoding one of the signature fails.
     access(all)
-    fun aggregateSignatures(_ signatures: [[UInt8]]): [UInt8]?
+    view fun aggregateSignatures(_ signatures: [[UInt8]]): [UInt8]?
 
 
     /// Aggregates multiple BLS public keys into one.
@@ -18,5 +18,5 @@ contract BLS {
     /// No subgroup membership check is performed on the input keys.
     /// The function returns nil if the array is empty or any of the input keys is not a BLS key.
     access(all)
-    fun aggregatePublicKeys(_ keys: [PublicKey]): PublicKey?
+    view fun aggregatePublicKeys(_ keys: [PublicKey]): PublicKey?
 }

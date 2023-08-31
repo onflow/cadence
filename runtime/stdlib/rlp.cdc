@@ -5,7 +5,7 @@ contract RLP {
     /// if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
     /// If any error is encountered while decoding, the program aborts.
     access(all)
-    fun decodeString(_ input: [UInt8]): [UInt8]
+    view fun decodeString(_ input: [UInt8]): [UInt8]
 
 
     /// Decodes an RLP-encoded list into an array of RLP-encoded items.
@@ -14,5 +14,5 @@ contract RLP {
     /// if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
     /// If any error is encountered while decoding, the program aborts.
     access(all)
-    fun decodeList(_ input: [UInt8]): [[UInt8]]
+    view fun decodeList(_ input: [UInt8]): [[UInt8]]
 }

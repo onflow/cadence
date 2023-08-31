@@ -28,6 +28,7 @@ import (
 const RLPTypeDecodeStringFunctionName = "decodeString"
 
 var RLPTypeDecodeStringFunctionType = &sema.FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -54,6 +55,7 @@ If any error is encountered while decoding, the program aborts.
 const RLPTypeDecodeListFunctionName = "decodeList"
 
 var RLPTypeDecodeListFunctionType = &sema.FunctionType{
+	Purity: FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
