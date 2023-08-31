@@ -783,6 +783,23 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 			},
 		}
 
+	case *ast.DictionaryType:
+		keyType := typeExpr(t.KeyType, typeParams)
+		valueType := typeExpr(t.ValueType, typeParams)
+		return &dst.UnaryExpr{
+			Op: token.AND,
+			X: &dst.CompositeLit{
+				Type: &dst.Ident{
+					Name: "DictionaryType",
+					Path: semaPath,
+				},
+				Elts: []dst.Expr{
+					goKeyValue("KeyType", keyType),
+					goKeyValue("ValueType", valueType),
+				},
+			},
+		}
+
 	case *ast.FunctionType:
 		return functionTypeExpr(t, nil, nil, typeParams)
 
