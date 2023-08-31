@@ -103,14 +103,14 @@ func init() {
 	var members = []*sema.Member{
 		sema.NewUnmeteredFunctionMember(
 			BLSType,
-			ast.AccessPublic,
+			PrimitiveAccess(ast.AccessAll),
 			BLSTypeAggregateSignaturesFunctionName,
 			BLSTypeAggregateSignaturesFunctionType,
 			BLSTypeAggregateSignaturesFunctionDocString,
 		),
 		sema.NewUnmeteredFunctionMember(
 			BLSType,
-			ast.AccessPublic,
+			PrimitiveAccess(ast.AccessAll),
 			BLSTypeAggregatePublicKeysFunctionName,
 			BLSTypeAggregatePublicKeysFunctionType,
 			BLSTypeAggregatePublicKeysFunctionDocString,

@@ -97,14 +97,14 @@ func init() {
 	var members = []*sema.Member{
 		sema.NewUnmeteredFunctionMember(
 			RLPType,
-			ast.AccessPublic,
+			PrimitiveAccess(ast.AccessAll),
 			RLPTypeDecodeStringFunctionName,
 			RLPTypeDecodeStringFunctionType,
 			RLPTypeDecodeStringFunctionDocString,
 		),
 		sema.NewUnmeteredFunctionMember(
 			RLPType,
-			ast.AccessPublic,
+			PrimitiveAccess(ast.AccessAll),
 			RLPTypeDecodeListFunctionName,
 			RLPTypeDecodeListFunctionType,
 			RLPTypeDecodeListFunctionDocString,
