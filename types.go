@@ -270,7 +270,6 @@ func (t *VariableSizedArrayType) Equal(other Type) bool {
 type ConstantSizedArrayType struct {
 	ElementType Type
 	Size        uint
-	typeID      string
 }
 
 var _ Type = &ConstantSizedArrayType{}
