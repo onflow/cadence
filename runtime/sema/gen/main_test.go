@@ -50,7 +50,7 @@ func TestFiles(t *testing.T) {
 			require.NoError(t, err)
 			defer outFile.Close()
 
-			gen(inputPath, outFile)
+			gen(inputPath, outFile, "github.com/onflow/cadence/runtime/sema")
 
 			goldenPath := filepath.Join(testDataDirectory, testname+".golden.go")
 			want, err := os.ReadFile(goldenPath)

@@ -445,8 +445,8 @@ var Account_StorageType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_StorageTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	return t
@@ -731,8 +731,8 @@ var Account_ContractsType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_ContractsTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	return t
@@ -918,8 +918,8 @@ var Account_KeysType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_KeysTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	return t
@@ -1096,8 +1096,8 @@ var Account_InboxType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_InboxTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	return t
@@ -1291,8 +1291,8 @@ var Account_CapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_CapabilitiesTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	return t
@@ -1497,8 +1497,8 @@ var Account_StorageCapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_StorageCapabilitiesTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	return t
@@ -1669,8 +1669,8 @@ var Account_AccountCapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_AccountCapabilitiesTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	return t
@@ -1730,8 +1730,8 @@ var AccountType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         AccountTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	t.SetNestedType(Account_StorageTypeName, Account_StorageType)

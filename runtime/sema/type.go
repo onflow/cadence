@@ -4279,9 +4279,9 @@ type CompositeType struct {
 	effectiveInterfaceConformancesOnce   sync.Once
 	memberResolversOnce                  sync.Once
 	ConstructorPurity                    FunctionPurity
-	hasComputedMembers                   bool
+	HasComputedMembers                   bool
 	// Only applicable for native composite types
-	importable            bool
+	ImportableBuiltin     bool
 	supportedEntitlements *EntitlementOrderedSet
 }
 
@@ -4490,7 +4490,7 @@ func (*CompositeType) IsInvalidType() bool {
 }
 
 func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
-	if t.hasComputedMembers {
+	if t.HasComputedMembers {
 		return false
 	}
 
@@ -4526,7 +4526,7 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
 	// Use the pre-determined flag for native types
 	if t.Location == nil {
-		return t.importable
+		return t.ImportableBuiltin
 	}
 
 	// Only structures and enums can be imported
@@ -7455,9 +7455,9 @@ const AccountKeyIsRevokedFieldName = "isRevoked"
 var AccountKeyType = func() *CompositeType {
 
 	accountKeyType := &CompositeType{
-		Identifier: AccountKeyTypeName,
-		Kind:       common.CompositeKindStructure,
-		importable: false,
+		Identifier:        AccountKeyTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
 	}
 
 	const accountKeyKeyIndexFieldDocString = `The index of the account key`
@@ -7538,8 +7538,8 @@ var PublicKeyType = func() *CompositeType {
 	publicKeyType := &CompositeType{
 		Identifier:         PublicKeyTypeName,
 		Kind:               common.CompositeKindStructure,
-		hasComputedMembers: true,
-		importable:         true,
+		HasComputedMembers: true,
+		ImportableBuiltin:  true,
 	}
 
 	var members = []*Member{

@@ -62,8 +62,8 @@ var Foo_BarType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Foo_BarTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	return t
@@ -90,8 +90,8 @@ var FooType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         FooTypeName,
 		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
 	}
 
 	t.SetNestedType(Foo_BarTypeName, Foo_BarType)
