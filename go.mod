@@ -31,7 +31,7 @@ require (
 
 require (
 	github.com/SaveTheRbtz/mph v0.1.2
-	github.com/bytecodealliance/wasmtime-go/v7 v7.0.0
+	github.com/bytecodealliance/wasmtime-go/v12 v12.0.0
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/k0kubun/pp/v3 v3.2.0
 	github.com/logrusorgru/aurora/v4 v4.0.0

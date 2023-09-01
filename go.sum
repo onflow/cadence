@@ -2,8 +2,8 @@ github.com/SaveTheRbtz/mph v0.1.2 h1:5l3W496Up+7BNOVJQnJhzcGBh+wWfxWdmPUAkx3WmaM
 github.com/SaveTheRbtz/mph v0.1.2/go.mod h1:V4+WtKQPe2+dEA5os1WnGsEB0NR9qgqqgIiSt73+sT4=
 github.com/bits-and-blooms/bitset v1.2.2 h1:J5gbX05GpMdBjCvQ9MteIg2KKDExr7DrgK+Yc15FvIk=
 github.com/bits-and-blooms/bitset v1.2.2/go.mod h1:gIdJ4wp64HaoK2YrL1Q5/N7Y16edYb8uY+O0FJTyyDA=
-github.com/bytecodealliance/wasmtime-go/v7 v7.0.0 h1:/rBNjgFju2HCZnkPb1eL+W4GBwP8DMbaQu7i+GR9DH4=
-github.com/bytecodealliance/wasmtime-go/v7 v7.0.0/go.mod h1:bu6fic7trDt20w+LMooX7j3fsOwv4/ln6j8gAdP6vmA=
+github.com/bytecodealliance/wasmtime-go/v12 v12.0.0 h1:Wga02UaZXYF3p0LIeL5xFp09/RI7UhjfT2uB0mLrwlw=
+github.com/bytecodealliance/wasmtime-go/v12 v12.0.0/go.mod h1:a3PRoftJxxUzkQvgjC6sv7pKyJJK0ZsFVmH+eeEKQC4=
 github.com/c-bata/go-prompt v0.2.5 h1:3zg6PecEywxNn0xiqcXHD96fkbxghD+gdB2tbsYfl+Y=
 github.com/c-bata/go-prompt v0.2.5/go.mod h1:vFnjEGDIIA/Lib7giyE4E9c50Lvl8j0S+7FVlAwDAVw=
 github.com/dave/dst v0.27.2 h1:4Y5VFTkhGLC1oddtNwuxxe36pnyLxMFXT51FOzH8Ekc=
