@@ -3020,7 +3020,7 @@ func (e *InvalidAccessError) Error() string {
 	}
 
 	return fmt.Sprintf(
-		"cannot access `%s`: `%s` requires `%s` authorization%s",
+		"cannot access `%s`: %s requires `%s` authorization%s",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.Description(),
@@ -3113,7 +3113,7 @@ func (*InvalidAssignmentAccessError) IsUserError() {}
 
 func (e *InvalidAssignmentAccessError) Error() string {
 	return fmt.Sprintf(
-		"cannot assign to `%s`: %s has %s access",
+		"cannot assign to `%s`: %s has `%s` access",
 		e.Name,
 		e.DeclarationKind.Name(),
 		e.RestrictingAccess.Description(),
@@ -3403,8 +3403,8 @@ func (*InvalidTransactionPrepareParameterTypeError) IsUserError() {}
 
 func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 	return fmt.Sprintf(
-		"prepare parameter must be of type `%s`, not `%s`",
-		AuthAccountType,
+		"prepare parameter must be subtype of `%s`, not `%s`",
+		AccountReferenceType,
 		e.Type.QualifiedString(),
 	)
 }
@@ -4708,7 +4708,7 @@ func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
 	switch access := e.AttachmentAccessModifier.(type) {
 	case PrimitiveAccess:
 		return "attachments declared with `access(all)` access do not support entitlements on their members"
-	case EntitlementMapAccess:
+	case *EntitlementMapAccess:
 		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
 			e.InvalidEntitlement.QualifiedIdentifier(),
 			access.Type.QualifiedIdentifier())

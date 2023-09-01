@@ -51,7 +51,8 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	postConditionsRewrite :=
 		interpreter.Program.Elaboration.PostConditionsRewrite(declaration.PostConditions)
 
-	staticType := NewCompositeStaticTypeComputeTypeID(interpreter, interpreter.Location, "")
+	const qualifiedIdentifier = ""
+	staticType := NewCompositeStaticTypeComputeTypeID(interpreter, interpreter.Location, qualifiedIdentifier)
 
 	self := NewSimpleCompositeValue(
 		interpreter,

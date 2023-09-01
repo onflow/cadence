@@ -65,7 +65,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				CharacterTypeUtf8FieldName,
 				CharacterTypeUtf8FieldType,
@@ -73,7 +73,7 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				CharacterTypeToStringFunctionName,
 				CharacterTypeToStringFunctionType,
 				CharacterTypeToStringFunctionDocString,

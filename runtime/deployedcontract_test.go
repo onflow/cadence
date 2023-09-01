@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestDeployedContracts(t *testing.T) {
+func TestRuntimeDeployedContracts(t *testing.T) {
 	t.Parallel()
 
 	contractCode := `
@@ -44,11 +44,11 @@ func TestDeployedContracts(t *testing.T) {
 	script :=
 		`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				let deployedContract = signer.contracts.get(name: "Test")
 				assert(deployedContract!.name == "Test")
 
-				let expected: {String: Void} =  
+				let expected: {String: Void} =
 					{ "A.2a00000000000000.Test.A": ()
 					, "A.2a00000000000000.Test.B": ()
 					, "A.2a00000000000000.Test.C": ()

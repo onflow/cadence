@@ -62,7 +62,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(AddContract) &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -89,13 +89,13 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                  transaction {
-                     prepare(signer: AuthAccount) {
+                     prepare(signer: auth(UpdateContract) &Account) {
 
                          let contract1 = signer.contracts.get(name: %[1]q)
                          log(contract1?.name)
                          log(contract1?.code)
 
-                         let contract2 = signer.contracts.update__experimental(name: %[1]q, code: "%[2]s".decodeHex())
+                         let contract2 = signer.contracts.update(name: %[1]q, code: "%[2]s".decodeHex())
                          log(contract2.name)
                          log(contract2.code)
 
@@ -114,7 +114,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(RemoveContract) &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -136,7 +136,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Contracts) &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -639,7 +639,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Contracts) &Account) {
                           signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
                       }
                    }
@@ -708,7 +708,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
           import A from 0x1
 
           transaction {
-              prepare(signer: AuthAccount) {
+              prepare(signer: &Account) {
                   log(A.a())
               }
           }
@@ -733,7 +733,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
          import B from 0x1
 
          transaction {
-             prepare(signer: AuthAccount) {
+             prepare(signer: &Account) {
                  log(B.b())
              }
          }
@@ -758,7 +758,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
           import C from 0x1
 
           transaction {
-              prepare(signer: AuthAccount) {
+              prepare(signer: &Account) {
                   log(C.c())
               }
           }
@@ -779,7 +779,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 	})
 }
 
-func TestContractInterfaceEventEmission(t *testing.T) {
+func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -788,10 +788,10 @@ func TestContractInterfaceEventEmission(t *testing.T) {
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
 		access(all) contract interface TestInterface {
-			access(all) event Foo(x: Int) 
+			access(all) event Foo(x: Int)
 
 			access(all) fun foo() {
-				emit Foo(x: 3) 
+				emit Foo(x: 3)
 			}
 		}
 	`))
@@ -799,10 +799,10 @@ func TestContractInterfaceEventEmission(t *testing.T) {
 	deployTx := DeploymentTransaction("TestContract", []byte(`
 		import TestInterface from 0x1
 		access(all) contract TestContract: TestInterface {
-			access(all) event Foo(x: String, y: Int) 
+			access(all) event Foo(x: String, y: Int)
 
 			access(all) fun bar() {
-				emit Foo(x: "", y: 2) 
+				emit Foo(x: "", y: 2)
 			}
 		}
 	`))
@@ -810,7 +810,7 @@ func TestContractInterfaceEventEmission(t *testing.T) {
 	transaction1 := []byte(`
 		import TestContract from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				TestContract.foo()
 				TestContract.bar()
 			}
@@ -892,7 +892,7 @@ func TestContractInterfaceEventEmission(t *testing.T) {
 	require.Equal(t, concreteEvent.Fields[1], cadence.NewInt(2))
 }
 
-func TestContractInterfaceConditionEventEmission(t *testing.T) {
+func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 	t.Parallel()
 
 	storage := newTestLedger(nil, nil)
@@ -900,12 +900,15 @@ func TestContractInterfaceConditionEventEmission(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
-		access(all) contract interface TestInterface {
-			access(all) event Foo(x: Int) 
+		access(all)
+        contract interface TestInterface {
+
+			access(all)
+            event Foo(x: Int)
 
 			access(all) fun bar() {
 				post {
-					emit Foo(x: 3) 
+					emit Foo(x: 3)
 				}
 			}
 		}
@@ -913,19 +916,25 @@ func TestContractInterfaceConditionEventEmission(t *testing.T) {
 
 	deployTx := DeploymentTransaction("TestContract", []byte(`
 		import TestInterface from 0x1
-		access(all) contract TestContract: TestInterface {
-			access(all) event Foo(x: String, y: Int) 
 
-			access(all) fun bar() {
-				emit Foo(x: "", y: 2) 
+		access(all)
+        contract TestContract: TestInterface {
+
+			access(all)
+            event Foo(x: String, y: Int)
+
+			access(all)
+            fun bar() {
+				emit Foo(x: "", y: 2)
 			}
 		}
 	`))
 
 	transaction1 := []byte(`
 		import TestContract from 0x1
+
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: &Account) {
 				TestContract.bar()
 			}
 		}

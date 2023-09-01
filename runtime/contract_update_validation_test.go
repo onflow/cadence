@@ -38,7 +38,7 @@ func newContractDeployTransaction(function, name, code string) string {
 	return fmt.Sprintf(
 		`
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: auth(Contracts) &Account) {
                         signer.contracts.%s(name: "%s", code: "%s".decodeHex())
                     }
                 }
@@ -51,7 +51,7 @@ func newContractDeployTransaction(function, name, code string) string {
 
 func newContractAddTransaction(name string, code string) string {
 	return newContractDeployTransaction(
-		sema.AuthAccountContractsTypeAddFunctionName,
+		sema.Account_ContractsTypeAddFunctionName,
 		name,
 		code,
 	)
@@ -59,7 +59,7 @@ func newContractAddTransaction(name string, code string) string {
 
 func newContractUpdateTransaction(name string, code string) string {
 	return newContractDeployTransaction(
-		sema.AuthAccountContractsTypeUpdate__experimentalFunctionName,
+		sema.Account_ContractsTypeUpdateFunctionName,
 		name,
 		code,
 	)
@@ -69,12 +69,12 @@ func newContractRemovalTransaction(contractName string) string {
 	return fmt.Sprintf(
 		`
            transaction {
-               prepare(signer: AuthAccount) {
+               prepare(signer: auth(RemoveContract) &Account) {
                    signer.contracts.%s(name: "%s")
                }
            }
        `,
-		sema.AuthAccountContractsTypeRemoveFunctionName,
+		sema.Account_ContractsTypeRemoveFunctionName,
 		contractName,
 	)
 }
@@ -2468,7 +2468,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
               import %s from %s
 
               transaction {
-                  prepare(signer: AuthAccount) {}
+                  prepare(signer: &Account) {}
               }
             `,
 			name,

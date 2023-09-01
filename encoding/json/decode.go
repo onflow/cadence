@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -1170,6 +1171,41 @@ func (d *Decoder) decodeIntersectionType(
 
 type typeDecodingResults map[string]cadence.Type
 
+var simpleTypes = func() map[string]cadence.Type {
+	typeMap := make(map[string]cadence.Type, interpreter.PrimitiveStaticType_Count)
+
+	// Bytes is not a primitive static type
+	typeMap["Bytes"] = cadence.TheBytesType
+
+	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+
+		cadenceType := cadence.PrimitiveType(ty)
+		if !canEncodeAsSimpleType(cadenceType) {
+			continue
+		}
+
+		semaType := ty.SemaType()
+
+		// Some primitive static types are deprecated,
+		// and only exist for migration purposes,
+		// so do not have an equivalent sema type
+		if semaType == nil {
+			continue
+		}
+
+		typeMap[string(semaType.ID())] = cadenceType
+	}
+
+	return typeMap
+}()
+
+func canEncodeAsSimpleType(primitiveType cadence.PrimitiveType) bool {
+	return primitiveType != cadence.PrimitiveType(interpreter.PrimitiveStaticTypeCapability)
+}
+
 func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence.Type {
 	if valueJSON == "" {
 		return nil
@@ -1240,117 +1276,12 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeAuthorization(obj.Get(authorizationKey)),
 			d.decodeType(obj.Get(typeKey), results),
 		)
-	case "Any":
-		return cadence.TheAnyType
-	case "AnyStruct":
-		return cadence.TheAnyStructType
-	case "AnyStructAttachment":
-		return cadence.TheAnyStructAttachmentType
-	case "AnyResource":
-		return cadence.TheAnyResourceType
-	case "AnyResourceAttachment":
-		return cadence.TheAnyResourceAttachmentType
-	case "Type":
-		return cadence.TheMetaType
-	case "Void":
-		return cadence.TheVoidType
-	case "Never":
-		return cadence.TheNeverType
-	case "Bool":
-		return cadence.TheBoolType
-	case "String":
-		return cadence.TheStringType
-	case "Character":
-		return cadence.TheCharacterType
-	case "Bytes":
-		return cadence.TheBytesType
-	case "Address":
-		return cadence.TheAddressType
-	case "Number":
-		return cadence.TheNumberType
-	case "SignedNumber":
-		return cadence.TheSignedNumberType
-	case "Integer":
-		return cadence.TheIntegerType
-	case "SignedInteger":
-		return cadence.TheSignedIntegerType
-	case "FixedPoint":
-		return cadence.TheFixedPointType
-	case "SignedFixedPoint":
-		return cadence.TheSignedFixedPointType
-	case "Int":
-		return cadence.TheIntType
-	case "Int8":
-		return cadence.TheInt8Type
-	case "Int16":
-		return cadence.TheInt16Type
-	case "Int32":
-		return cadence.TheInt32Type
-	case "Int64":
-		return cadence.TheInt64Type
-	case "Int128":
-		return cadence.TheInt128Type
-	case "Int256":
-		return cadence.TheInt256Type
-	case "UInt":
-		return cadence.TheUIntType
-	case "UInt8":
-		return cadence.TheUInt8Type
-	case "UInt16":
-		return cadence.TheUInt16Type
-	case "UInt32":
-		return cadence.TheUInt32Type
-	case "UInt64":
-		return cadence.TheUInt64Type
-	case "UInt128":
-		return cadence.TheUInt128Type
-	case "UInt256":
-		return cadence.TheUInt256Type
-	case "Word8":
-		return cadence.TheWord8Type
-	case "Word16":
-		return cadence.TheWord16Type
-	case "Word32":
-		return cadence.TheWord32Type
-	case "Word64":
-		return cadence.TheWord64Type
-	case "Word128":
-		return cadence.TheWord128Type
-	case "Word256":
-		return cadence.TheWord256Type
-	case "Fix64":
-		return cadence.TheFix64Type
-	case "UFix64":
-		return cadence.TheUFix64Type
-	case "Path":
-		return cadence.ThePathType
-	case "CapabilityPath":
-		return cadence.TheCapabilityPathType
-	case "StoragePath":
-		return cadence.TheStoragePathType
-	case "PublicPath":
-		return cadence.ThePublicPathType
-	case "PrivatePath":
-		return cadence.ThePrivatePathType
-	case "AuthAccount":
-		return cadence.TheAuthAccountType
-	case "PublicAccount":
-		return cadence.ThePublicAccountType
-	case "AuthAccount.Keys":
-		return cadence.TheAuthAccountKeysType
-	case "PublicAccount.Keys":
-		return cadence.ThePublicAccountKeysType
-	case "AuthAccount.Contracts":
-		return cadence.TheAuthAccountContractsType
-	case "PublicAccount.Contracts":
-		return cadence.ThePublicAccountContractsType
-	case "DeployedContract":
-		return cadence.TheDeployedContractType
-	case "AccountKey":
-		return cadence.TheAccountKeyType
-	case "Block":
-		return cadence.TheBlockType
 	default:
+		simpleType, ok := simpleTypes[kindValue]
+		if ok {
+			return simpleType
+		}
+
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))
 		initValue := obj.Get(initializersKey)

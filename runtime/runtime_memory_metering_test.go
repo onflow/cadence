@@ -53,7 +53,7 @@ func (g *testMemoryGauge) getMemory(kind common.MemoryKind) uint64 {
 	return g.meter[kind]
 }
 
-func TestInterpreterAddressLocationMetering(t *testing.T) {
+func TestRuntimeInterpreterAddressLocationMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -102,7 +102,7 @@ func TestInterpreterAddressLocationMetering(t *testing.T) {
 	})
 }
 
-func TestInterpreterElaborationImportMetering(t *testing.T) {
+func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -202,7 +202,7 @@ func TestInterpreterElaborationImportMetering(t *testing.T) {
 	}
 }
 
-func TestCadenceValueAndTypeMetering(t *testing.T) {
+func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -759,7 +759,7 @@ func TestCadenceValueAndTypeMetering(t *testing.T) {
 	})
 }
 
-func TestLogFunctionStringConversionMetering(t *testing.T) {
+func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -821,7 +821,7 @@ func TestLogFunctionStringConversionMetering(t *testing.T) {
 	assert.Equal(t, diffOfActualLen, diffOfMeteredAmount)
 }
 
-func TestStorageCommitsMetering(t *testing.T) {
+func TestRuntimeStorageCommitsMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -830,8 +830,8 @@ func TestStorageCommitsMetering(t *testing.T) {
 
 		code := []byte(`
             transaction {
-                prepare(signer: AuthAccount) {
-                    signer.storageUsed
+                prepare(signer: &Account) {
+                    signer.storage.used
                 }
             }
         `)
@@ -872,13 +872,13 @@ func TestStorageCommitsMetering(t *testing.T) {
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
 	})
 
-	t.Run("account save", func(t *testing.T) {
+	t.Run("account.storage.save", func(t *testing.T) {
 		t.Parallel()
 
 		code := []byte(`
             transaction {
-                prepare(signer: AuthAccount) {
-                    signer.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                prepare(signer: auth(Storage) &Account) {
+                    signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
                 }
             }
         `)
@@ -914,9 +914,9 @@ func TestStorageCommitsMetering(t *testing.T) {
 
 		code := []byte(`
             transaction {
-                prepare(signer: AuthAccount) {
-                    signer.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
-                    signer.storageUsed
+                prepare(signer: auth(Storage) &Account) {
+                    signer.storage.save([[1, 2, 3], [4, 5, 6]], to: /storage/test)
+                    signer.storage.used
                 }
             }
         `)
@@ -957,7 +957,7 @@ func TestStorageCommitsMetering(t *testing.T) {
 	})
 }
 
-func TestMemoryMeteringErrors(t *testing.T) {
+func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 	t.Parallel()
 
@@ -1064,7 +1064,7 @@ func TestMemoryMeteringErrors(t *testing.T) {
 	})
 }
 
-func TestMeterEncoding(t *testing.T) {
+func TestRuntimeMeterEncoding(t *testing.T) {
 
 	t.Parallel()
 
@@ -1093,9 +1093,9 @@ func TestMeterEncoding(t *testing.T) {
 			Script{
 				Source: []byte(fmt.Sprintf(`
                 transaction() {
-                    prepare(acc: AuthAccount) {
+                    prepare(acc: auth(Storage) &Account) {
                         var s = "%s"
-                        acc.save(s, to:/storage/some_path)
+                        acc.storage.save(s, to:/storage/some_path)
                     }
                 }`,
 					text,
@@ -1136,12 +1136,12 @@ func TestMeterEncoding(t *testing.T) {
 			Script{
 				Source: []byte(fmt.Sprintf(`
                 transaction() {
-                    prepare(acc: AuthAccount) {
+                    prepare(acc: auth(Storage) &Account) {
                         var i = 0
                         var s = "%s"
                         while i<1000 {
                             let path = StoragePath(identifier: "i".concat(i.toString()))!
-                            acc.save(s, to: path)
+                            acc.storage.save(s, to: path)
                             i=i+1
                         }
                     }
@@ -1182,12 +1182,12 @@ func TestMeterEncoding(t *testing.T) {
 			Script{
 				Source: []byte(`
                 access(all) fun main() {
-                    let acc = getAuthAccount(0x02)
+                    let acc = getAuthAccount<auth(Storage) &Account>(0x02)
                     var i = 0
                     var f = Foo()
                     while i<1000 {
                         let path = StoragePath(identifier: "i".concat(i.toString()))!
-                        acc.save(f, to: path)
+                        acc.storage.save(f, to: path)
                         i=i+1
                     }
                 }

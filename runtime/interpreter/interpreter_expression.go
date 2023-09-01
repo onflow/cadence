@@ -268,13 +268,13 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 }
 
 func (interpreter *Interpreter) getEffectiveAuthorization(referenceType *sema.ReferenceType) Authorization {
-	_, isMapped := referenceType.Authorization.(sema.EntitlementMapAccess)
+	_, isMapped := referenceType.Authorization.(*sema.EntitlementMapAccess)
 
 	if isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
 		return interpreter.SharedState.currentEntitlementMappedValue
 	}
 
-	return ConvertSemaAccesstoStaticAuthorization(interpreter, referenceType.Authorization)
+	return ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization)
 }
 
 func (interpreter *Interpreter) checkMemberAccess(
@@ -1389,7 +1389,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 			SetKind:      sema.Conjunction,
 			Entitlements: attachmentType.RequiredEntitlements,
 		}
-		auth = ConvertSemaAccesstoStaticAuthorization(interpreter, baseAccess)
+		auth = ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
 	}
 
 	var baseValue Value = NewEphemeralReferenceValue(

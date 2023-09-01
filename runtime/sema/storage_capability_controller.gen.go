@@ -149,7 +149,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeCapabilityFieldName,
 				StorageCapabilityControllerTypeCapabilityFieldType,
@@ -157,7 +157,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindVariable,
 				StorageCapabilityControllerTypeTagFieldName,
 				StorageCapabilityControllerTypeTagFieldType,
@@ -165,14 +165,14 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				StorageCapabilityControllerTypeSetTagFunctionName,
 				StorageCapabilityControllerTypeSetTagFunctionType,
 				StorageCapabilityControllerTypeSetTagFunctionDocString,
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeBorrowTypeFieldName,
 				StorageCapabilityControllerTypeBorrowTypeFieldType,
@@ -180,7 +180,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeCapabilityIDFieldName,
 				StorageCapabilityControllerTypeCapabilityIDFieldType,
@@ -188,21 +188,21 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				StorageCapabilityControllerTypeDeleteFunctionName,
 				StorageCapabilityControllerTypeDeleteFunctionType,
 				StorageCapabilityControllerTypeDeleteFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				StorageCapabilityControllerTypeTargetFunctionName,
 				StorageCapabilityControllerTypeTargetFunctionType,
 				StorageCapabilityControllerTypeTargetFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				StorageCapabilityControllerTypeRetargetFunctionName,
 				StorageCapabilityControllerTypeRetargetFunctionType,
 				StorageCapabilityControllerTypeRetargetFunctionDocString,

@@ -522,8 +522,8 @@ func TestInterpretMetaTypeIsSubtype(t *testing.T) {
 		{
 			name: "resource is not a subtype of String",
 			code: `
-			  resource R {}
-			  let result = Type<@R>().isSubtype(of: Type<String>())
+              resource R {}
+              let result = Type<@R>().isSubtype(of: Type<String>())
             `,
 			result: false,
 		},
@@ -649,7 +649,8 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional auth ephemeral reference",
 			code: `
-			  entitlement X
+              entitlement X
+
               fun test(): Type {
                   let value = 1
                   let ref = &value as auth(X) &Int
@@ -676,7 +677,8 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional ephemeral reference, auth to unauth",
 			code: `
-			  entitlement X
+              entitlement X
+
               fun test(): Type {
                   let value = 1
                   let ref = &value as auth(X) &Int
@@ -700,7 +702,8 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional ephemeral reference, auth to auth",
 			code: `
-			  entitlement X
+              entitlement X
+
               fun test(): Type {
                   let value = 1
                   let ref = &value as auth(X) &Int
@@ -726,11 +729,13 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. StorageReferenceValue.StaticType is tested
 			name: "optional storage reference, auth to unauth",
 			code: `
-			  entitlement X
-			  fun getStorageReference(): auth(X) &Int {
-				account.save(1, to: /storage/foo)
-				return account.borrow<auth(X) &Int>(from: /storage/foo)!
-			}
+              entitlement X
+
+              fun getStorageReference(): auth(X) &Int {
+                  account.storage.save(1, to: /storage/foo)
+                  return account.storage.borrow<auth(X) &Int>(from: /storage/foo)!
+              }
+
               fun test(): Type {
                   let ref = getStorageReference()
                   let optRef: &Int? = ref
@@ -753,11 +758,13 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. StorageReferenceValue.StaticType is tested
 			name: "optional storage reference, auth to auth",
 			code: `
-			  entitlement X
-			  fun getStorageReference(): auth(X) &Int {
-			      account.save(1, to: /storage/foo)
-				  return account.borrow<auth(X) &Int>(from: /storage/foo)!
-			  }
+              entitlement X
+
+              fun getStorageReference(): auth(X) &Int {
+                  account.storage.save(1, to: /storage/foo)
+                  return account.storage.borrow<auth(X) &Int>(from: /storage/foo)!
+              }
+
               fun test(): Type {
                   let ref = getStorageReference()
                   let optRef: auth(X) &Int? = ref
@@ -795,12 +802,7 @@ func TestInterpretGetType(t *testing.T) {
 	for _, testCase := range cases {
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 		t.Run(testCase.name, func(t *testing.T) {
-			inter, _ := testAccount(t,
-				address,
-				true,
-				testCase.code,
-				sema.Config{},
-			)
+			inter, _ := testAccount(t, address, true, nil, testCase.code, sema.Config{})
 
 			result, err := inter.Invoke("test")
 			require.NoError(t, err)

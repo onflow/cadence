@@ -659,7 +659,7 @@ func TestCheckForceExpressionTypeInference(t *testing.T) {
 	})
 }
 
-func TestCastExpressionTypeInference(t *testing.T) {
+func TestCheckCastExpressionTypeInference(t *testing.T) {
 
 	t.Parallel()
 

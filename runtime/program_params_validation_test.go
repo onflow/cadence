@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -68,7 +69,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 	newPublicAccountKeys := func() cadence.Struct {
 		return cadence.Struct{
 			StructType: &cadence.StructType{
-				QualifiedIdentifier: "PublicAccount.Keys",
+				QualifiedIdentifier: "Account.Keys",
 				Fields:              []cadence.Field{},
 			},
 			Fields: []cadence.Value{},
@@ -113,11 +114,11 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: Foo) {
-            }
+          access(all)
+          fun main(arg: Foo) {}
 
-            access(all) struct Foo {
-            }
+          access(all)
+          struct Foo {}
         `
 
 		err := executeScript(t, script, newFooStruct())
@@ -128,16 +129,18 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: Foo?) {
-            }
+          access(all)
+          fun main(arg: Foo?) {}
 
-            access(all) struct Foo {
-                access(all) var funcTypedField: fun(): Void
+          access(all)
+          struct Foo {
+              access(all)
+              var funcTypedField: fun(): Void
 
-                init() {
-                    self.funcTypedField = fun() {}
-                }
-            }
+              init() {
+                  self.funcTypedField = fun() {}
+              }
+          }
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
@@ -148,8 +151,8 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: AnyStruct?) {
-            }
+          access(all)
+          fun main(arg: AnyStruct?) {}
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
@@ -160,14 +163,14 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: {Bar}) {
-            }
+          access(all)
+          fun main(arg: {Bar}) {}
 
-            access(all) struct Foo: Bar {
-            }
+          access(all)
+          struct Foo: Bar {}
 
-            access(all) struct interface Bar {
-            }
+          access(all)
+          struct interface Bar {}
         `
 
 		err := executeScript(t, script, newFooStruct())
@@ -178,12 +181,15 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: {Bar}?) {
-            }
+          access(all)
+          fun main(arg: {Bar}?) {}
 
-            access(all) struct interface Bar {
-                access(all) var funcTypedField: fun():Void
-            }
+          access(all)
+          struct interface Bar {
+
+              access(all)
+              var funcTypedField: fun(): Void
+          }
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
@@ -194,12 +200,13 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: @Baz?) {
-                destroy arg
-            }
+          access(all)
+          fun main(arg: @Baz?) {
+              destroy arg
+          }
 
-            access(all) resource Baz {
-            }
+          access(all)
+          resource Baz {}
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
@@ -210,9 +217,10 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: @AnyResource?) {
-                destroy arg
-            }
+          access(all)
+          fun main(arg: @AnyResource?) {
+              destroy arg
+          }
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
@@ -223,11 +231,11 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: Foo?) {
-            }
+            access(all)
+            fun main(arg: Foo?) {}
 
-            access(all) contract Foo {
-            }
+            access(all)
+            contract Foo {}
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
@@ -238,8 +246,8 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: [String]) {
-            }
+          access(all)
+          fun main(arg: [String]) {}
         `
 
 		err := executeScript(
@@ -255,8 +263,8 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: [fun():Void]) {
-            }
+          access(all)
+          fun main(arg: [fun(): Void]) {}
         `
 
 		err := executeScript(
@@ -272,8 +280,8 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: {String: Bool}) {
-            }
+          access(all)
+          fun main(arg: {String: Bool}) {}
         `
 
 		err := executeScript(
@@ -289,8 +297,8 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: Capability<&Int>?) {
-            }
+          access(all)
+          fun main(arg: Capability<&Int>?) {}
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
@@ -301,8 +309,8 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(arg: {String: fun():Void}) {
-            }
+          access(all)
+          fun main(arg: {String: fun(): Void}) {}
         `
 
 		err := executeScript(
@@ -323,9 +331,10 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			t.Run(typString, func(t *testing.T) {
 				t.Parallel()
 
-				script := fmt.Sprintf(`
-                        access(all) fun main(arg: %s?) {
-                        }
+				script := fmt.Sprintf(
+					`
+                      access(all)
+                      fun main(arg: %s?) {}
                     `,
 					typString,
 				)
@@ -430,15 +439,20 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                access(all) fun main(arg: AnyStruct?) {
-                }
-                access(all) struct Foo {
-                    access(all) var nonImportableField: PublicAccount.Keys?
-                    init() {
-                        self.nonImportableField = nil
-                    }
-                }
-            `
+          access(all)
+          fun main(arg: AnyStruct?) {}
+
+          access(all)
+          struct Foo {
+
+              access(all)
+              var nonImportableField: Account.Keys?
+
+              init() {
+                  self.nonImportableField = nil
+              }
+          }
+        `
 
 		err := executeScript(t, script, newFooStruct())
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
@@ -448,17 +462,22 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                access(all) fun main(arg: {Bar}?) {
-                }
-                access(all) struct Foo: Bar {
-                    access(all) var nonImportableField: PublicAccount.Keys?
-                    init() {
-                        self.nonImportableField = nil
-                    }
-                }
-                access(all) struct interface Bar {
-                }
-            `
+          access(all)
+          fun main(arg: {Bar}?) {}
+
+          access(all)
+          struct Foo: Bar {
+              access(all)
+              var nonImportableField: Account.Keys?
+
+              init() {
+                  self.nonImportableField = nil
+              }
+          }
+
+          access(all)
+          struct interface Bar {}
+        `
 
 		err := executeScript(t, script, newFooStruct())
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
@@ -475,16 +494,16 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		err := executeScript(t, script, newPublicAccountKeys())
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
+		assert.Contains(t, err.Error(), "cannot import value of type Account.Keys")
 	})
 
 	t.Run("Invalid struct in array", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                access(all) fun main(arg: [AnyStruct]) {
-                }
-            `
+          access(all)
+          fun main(arg: [AnyStruct]) {}
+        `
 
 		err := executeScript(
 			t,
@@ -495,14 +514,17 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
+		assert.Contains(t, err.Error(), "cannot import value of type Account.Keys")
 	})
 
 	t.Run("invalid HashAlgorithm", func(t *testing.T) {
 		t.Parallel()
 
 		err := executeScript(t,
-			`access(all) fun main(arg: HashAlgorithm) {}`,
+			`
+              access(all)
+              fun main(arg: HashAlgorithm) {}
+            `,
 			cadence.NewEnum(
 				[]cadence.Value{
 					cadence.NewUInt8(0),
@@ -519,7 +541,10 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		err := executeScript(t,
-			`access(all) fun main(arg: SignatureAlgorithm) {}`,
+			`
+              access(all)
+              fun main(arg: SignatureAlgorithm) {}
+		    `,
 			cadence.NewEnum(
 				[]cadence.Value{
 					cadence.NewUInt8(0),
@@ -536,24 +561,6 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
-
-	RequireCheckerErrors := func(t *testing.T, err error, expectedErrors ...error) {
-		RequireError(t, err)
-
-		require.IsType(t, Error{}, err)
-		runtimeErr := err.(Error)
-
-		require.IsType(t, &ParsingCheckingError{}, runtimeErr.Err)
-		parsingCheckingErr := runtimeErr.Err.(*ParsingCheckingError)
-
-		require.IsType(t, &sema.CheckerError{}, parsingCheckingErr.Err)
-		checkerErr := parsingCheckingErr.Err.(*sema.CheckerError)
-
-		require.Len(t, checkerErr.Errors, len(expectedErrors))
-		for i, err := range expectedErrors {
-			assert.IsType(t, err, checkerErr.Errors[i])
-		}
-	}
 
 	expectRuntimeError := func(t *testing.T, err error, expectedError error) {
 		RequireError(t, err)
@@ -581,7 +588,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 	newPublicAccountKeys := func() cadence.Struct {
 		return cadence.Struct{
 			StructType: &cadence.StructType{
-				QualifiedIdentifier: "PublicAccount.Keys",
+				QualifiedIdentifier: "Account.Keys",
 				Fields:              []cadence.Field{},
 			},
 			Fields: []cadence.Value{},
@@ -680,11 +687,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
         `
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
-		RequireCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-		)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
 
 	t.Run("AnyStruct", func(t *testing.T) {
@@ -747,11 +753,9 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		RequireCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-		)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
 
 	t.Run("Resource", func(t *testing.T) {
@@ -776,12 +780,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		RequireCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-			&sema.ResourceLossError{},
-		)
+		errs := checker.RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
+		require.IsType(t, &sema.ResourceLossError{}, errs[1])
 	})
 
 	t.Run("AnyResource", func(t *testing.T) {
@@ -793,12 +795,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, nil, cadence.NewOptional(nil))
 
-		RequireCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-			&sema.ResourceLossError{},
-		)
+		errs := checker.RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
+		require.IsType(t, &sema.ResourceLossError{}, errs[1])
 	})
 
 	t.Run("Contract", func(t *testing.T) {
@@ -820,11 +820,9 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 
-		RequireCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-		)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
 
 	t.Run("Array", func(t *testing.T) {
@@ -847,11 +845,9 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, nil, cadence.NewArray([]cadence.Value{}))
 
-		RequireCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-		)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
 
 	t.Run("Dictionary", func(t *testing.T) {
@@ -885,11 +881,9 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		err := executeTransaction(t, script, nil, cadence.NewArray([]cadence.Value{}))
 
-		RequireCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-		)
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 	})
 
 	t.Run("Numeric Types", func(t *testing.T) {
@@ -992,11 +986,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				err := executeTransaction(t, script, nil, test.argument)
 
 				if test.expectErrors {
-					RequireCheckerErrors(
-						t,
-						err,
-						&sema.InvalidNonImportableTransactionParameterTypeError{},
-					)
+
+					errs := checker.RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
 				} else {
 					assert.NoError(t, err)
 				}
@@ -1018,7 +1011,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			}: []byte(`
                access(all) contract C {
                    access(all) struct Foo {
-                      access(all) var nonImportableField: PublicAccount.Keys?
+                      access(all) var nonImportableField: &Account.Keys?
 
                       init() {
                           self.nonImportableField = nil
@@ -1048,7 +1041,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			}: []byte(`
                access(all) contract C {
                     access(all) struct Foo: Bar {
-                        access(all) var nonImportableField: PublicAccount.Keys?
+                        access(all) var nonImportableField: &Account.Keys?
                         init() {
                             self.nonImportableField = nil
                         }
@@ -1079,7 +1072,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		err := executeTransaction(t, script, nil, newPublicAccountKeys())
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
+		assert.Contains(t, err.Error(), "cannot import value of type Account.Keys")
 	})
 
 	t.Run("Invalid native struct in array", func(t *testing.T) {
@@ -1098,7 +1091,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		)
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
+		assert.Contains(t, err.Error(), "cannot import value of type Account.Keys")
 	})
 
 	t.Run("invalid HashAlgorithm", func(t *testing.T) {

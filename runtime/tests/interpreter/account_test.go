@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,6 +47,7 @@ func testAccount(
 	t *testing.T,
 	address interpreter.AddressValue,
 	auth bool,
+	handler stdlib.AccountHandler,
 	code string,
 	checkerConfig sema.Config,
 ) (
@@ -56,43 +58,354 @@ func testAccount(
 		t,
 		address,
 		auth,
+		handler,
 		code,
 		checkerConfig,
 		nil,
 	)
 }
 
+type testAccountHandler struct {
+	accountIDs                 map[common.Address]uint64
+	generateAccountID          func(address common.Address) (uint64, error)
+	getAccountBalance          func(address common.Address) (uint64, error)
+	getAccountAvailableBalance func(address common.Address) (uint64, error)
+	commitStorageTemporarily   func(inter *interpreter.Interpreter) error
+	getStorageUsed             func(address common.Address) (uint64, error)
+	getStorageCapacity         func(address common.Address) (uint64, error)
+	validatePublicKey          func(key *stdlib.PublicKey) error
+	verifySignature            func(
+		signature []byte,
+		tag string,
+		signedData []byte,
+		publicKey []byte,
+		signatureAlgorithm sema.SignatureAlgorithm,
+		hashAlgorithm sema.HashAlgorithm,
+	) (
+		bool,
+		error,
+	)
+	blsVerifyPOP     func(publicKey *stdlib.PublicKey, signature []byte) (bool, error)
+	hash             func(data []byte, tag string, algorithm sema.HashAlgorithm) ([]byte, error)
+	getAccountKey    func(address common.Address, index int) (*stdlib.AccountKey, error)
+	accountKeysCount func(address common.Address) (uint64, error)
+	emitEvent        func(
+		inter *interpreter.Interpreter,
+		eventType *sema.CompositeType,
+		values []interpreter.Value,
+		locationRange interpreter.LocationRange,
+	)
+	addAccountKey func(
+		address common.Address,
+		key *stdlib.PublicKey,
+		algo sema.HashAlgorithm,
+		weight int,
+	) (
+		*stdlib.AccountKey,
+		error,
+	)
+	revokeAccountKey       func(address common.Address, index int) (*stdlib.AccountKey, error)
+	getAccountContractCode func(location common.AddressLocation) ([]byte, error)
+	parseAndCheckProgram   func(
+		code []byte,
+		location common.Location,
+		getAndSetProgram bool,
+	) (
+		*interpreter.Program,
+		error,
+	)
+	updateAccountContractCode func(location common.AddressLocation, code []byte) error
+	recordContractUpdate      func(location common.AddressLocation, value *interpreter.CompositeValue)
+	interpretContract         func(
+		location common.AddressLocation,
+		program *interpreter.Program,
+		name string,
+		invocation stdlib.DeployedContractConstructorInvocation,
+	) (
+		*interpreter.CompositeValue,
+		error,
+	)
+	temporarilyRecordCode     func(location common.AddressLocation, code []byte)
+	removeAccountContractCode func(location common.AddressLocation) error
+	recordContractRemoval     func(location common.AddressLocation)
+	getAccountContractNames   func(address common.Address) ([]string, error)
+}
+
+var _ stdlib.AccountHandler = &testAccountHandler{}
+
+func (t *testAccountHandler) GenerateAccountID(address common.Address) (uint64, error) {
+	if t.generateAccountID == nil {
+		if t.accountIDs == nil {
+			t.accountIDs = map[common.Address]uint64{}
+		}
+		t.accountIDs[address]++
+		return t.accountIDs[address], nil
+	}
+	return t.generateAccountID(address)
+}
+
+func (t *testAccountHandler) GetAccountBalance(address common.Address) (uint64, error) {
+	if t.getAccountBalance == nil {
+		panic(errors.NewUnexpectedError("unexpected call to GetAccountBalance"))
+	}
+	return t.getAccountBalance(address)
+}
+
+func (t *testAccountHandler) GetAccountAvailableBalance(address common.Address) (uint64, error) {
+	if t.getAccountAvailableBalance == nil {
+		panic(errors.NewUnexpectedError("unexpected call to GetAccountAvailableBalance"))
+	}
+	return t.getAccountAvailableBalance(address)
+}
+
+func (t *testAccountHandler) CommitStorageTemporarily(inter *interpreter.Interpreter) error {
+	if t.commitStorageTemporarily == nil {
+		panic(errors.NewUnexpectedError("unexpected call to CommitStorageTemporarily"))
+	}
+	return t.commitStorageTemporarily(inter)
+}
+
+func (t *testAccountHandler) GetStorageUsed(address common.Address) (uint64, error) {
+	if t.getStorageUsed == nil {
+		panic(errors.NewUnexpectedError("unexpected call to GetStorageUsed"))
+	}
+	return t.getStorageUsed(address)
+}
+
+func (t *testAccountHandler) GetStorageCapacity(address common.Address) (uint64, error) {
+	if t.getStorageCapacity == nil {
+		panic(errors.NewUnexpectedError("unexpected call to GetStorageCapacity"))
+	}
+	return t.getStorageCapacity(address)
+}
+
+func (t *testAccountHandler) ValidatePublicKey(key *stdlib.PublicKey) error {
+	if t.validatePublicKey == nil {
+		panic(errors.NewUnexpectedError("unexpected call to ValidatePublicKey"))
+	}
+	return t.validatePublicKey(key)
+}
+
+func (t *testAccountHandler) VerifySignature(
+	signature []byte,
+	tag string,
+	signedData []byte,
+	publicKey []byte,
+	signatureAlgorithm sema.SignatureAlgorithm,
+	hashAlgorithm sema.HashAlgorithm,
+) (
+	bool,
+	error,
+) {
+	if t.verifySignature == nil {
+		panic(errors.NewUnexpectedError("unexpected call to VerifySignature"))
+	}
+	return t.verifySignature(
+		signature,
+		tag,
+		signedData,
+		publicKey,
+		signatureAlgorithm,
+		hashAlgorithm,
+	)
+}
+
+func (t *testAccountHandler) BLSVerifyPOP(publicKey *stdlib.PublicKey, signature []byte) (bool, error) {
+	if t.blsVerifyPOP == nil {
+		panic(errors.NewUnexpectedError("unexpected call to BLSVerifyPOP"))
+	}
+	return t.blsVerifyPOP(publicKey, signature)
+}
+
+func (t *testAccountHandler) Hash(data []byte, tag string, algorithm sema.HashAlgorithm) ([]byte, error) {
+	if t.hash == nil {
+		panic(errors.NewUnexpectedError("unexpected call to Hash"))
+	}
+	return t.hash(data, tag, algorithm)
+}
+
+func (t *testAccountHandler) GetAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+	if t.getAccountKey == nil {
+		panic(errors.NewUnexpectedError("unexpected call to GetAccountKey"))
+	}
+	return t.getAccountKey(address, index)
+}
+
+func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint64, error) {
+	if t.accountKeysCount == nil {
+		panic(errors.NewUnexpectedError("unexpected call to AccountKeysCount"))
+	}
+	return t.accountKeysCount(address)
+}
+
+func (t *testAccountHandler) EmitEvent(
+	inter *interpreter.Interpreter,
+	eventType *sema.CompositeType,
+	values []interpreter.Value,
+	locationRange interpreter.LocationRange,
+) {
+	if t.emitEvent == nil {
+		panic(errors.NewUnexpectedError("unexpected call to EmitEvent"))
+	}
+	t.emitEvent(
+		inter,
+		eventType,
+		values,
+		locationRange,
+	)
+}
+
+func (t *testAccountHandler) AddAccountKey(
+	address common.Address,
+	key *stdlib.PublicKey,
+	algo sema.HashAlgorithm,
+	weight int,
+) (
+	*stdlib.AccountKey,
+	error,
+) {
+	if t.addAccountKey == nil {
+		panic(errors.NewUnexpectedError("unexpected call to AddAccountKey"))
+	}
+	return t.addAccountKey(
+		address,
+		key,
+		algo,
+		weight,
+	)
+}
+
+func (t *testAccountHandler) RevokeAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+	if t.revokeAccountKey == nil {
+		panic(errors.NewUnexpectedError("unexpected call to RevokeAccountKey"))
+	}
+	return t.revokeAccountKey(address, index)
+}
+
+func (t *testAccountHandler) GetAccountContractCode(location common.AddressLocation) ([]byte, error) {
+	if t.getAccountContractCode == nil {
+		panic(errors.NewUnexpectedError("unexpected call to GetAccountContractCode"))
+	}
+	return t.getAccountContractCode(location)
+}
+
+func (t *testAccountHandler) ParseAndCheckProgram(
+	code []byte,
+	location common.Location,
+	getAndSetProgram bool,
+) (
+	*interpreter.Program,
+	error,
+) {
+	if t.parseAndCheckProgram == nil {
+		panic(errors.NewUnexpectedError("unexpected call to ParseAndCheckProgram"))
+	}
+	return t.parseAndCheckProgram(code, location, getAndSetProgram)
+}
+
+func (t *testAccountHandler) UpdateAccountContractCode(location common.AddressLocation, code []byte) error {
+	if t.updateAccountContractCode == nil {
+		panic(errors.NewUnexpectedError("unexpected call to UpdateAccountContractCode"))
+	}
+	return t.updateAccountContractCode(location, code)
+}
+
+func (t *testAccountHandler) RecordContractUpdate(location common.AddressLocation, value *interpreter.CompositeValue) {
+	if t.recordContractUpdate == nil {
+		panic(errors.NewUnexpectedError("unexpected call to RecordContractUpdate"))
+	}
+	t.recordContractUpdate(location, value)
+}
+
+func (t *testAccountHandler) InterpretContract(
+	location common.AddressLocation,
+	program *interpreter.Program,
+	name string,
+	invocation stdlib.DeployedContractConstructorInvocation,
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
+	if t.interpretContract == nil {
+		panic(errors.NewUnexpectedError("unexpected call to InterpretContract"))
+	}
+	return t.interpretContract(
+		location,
+		program,
+		name,
+		invocation,
+	)
+}
+
+func (t *testAccountHandler) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
+	if t.temporarilyRecordCode == nil {
+		panic(errors.NewUnexpectedError("unexpected call to TemporarilyRecordCode"))
+	}
+	t.temporarilyRecordCode(location, code)
+}
+
+func (t *testAccountHandler) RemoveAccountContractCode(location common.AddressLocation) error {
+	if t.removeAccountContractCode == nil {
+		panic(errors.NewUnexpectedError("unexpected call to RemoveAccountContractCode"))
+	}
+	return t.removeAccountContractCode(location)
+}
+
+func (t *testAccountHandler) RecordContractRemoval(location common.AddressLocation) {
+	if t.recordContractRemoval == nil {
+		panic(errors.NewUnexpectedError("unexpected call to RecordContractRemoval"))
+	}
+	t.recordContractRemoval(location)
+}
+
+func (t *testAccountHandler) GetAccountContractNames(address common.Address) ([]string, error) {
+	if t.getAccountContractNames == nil {
+		panic(errors.NewUnexpectedError("unexpected call to GetAccountContractNames"))
+	}
+	return t.getAccountContractNames(address)
+}
+
 func testAccountWithErrorHandler(
 	t *testing.T,
 	address interpreter.AddressValue,
 	auth bool,
+	handler stdlib.AccountHandler,
 	code string,
 	checkerConfig sema.Config,
 	checkerErrorHandler func(error),
-) (
-	*interpreter.Interpreter,
-	func() map[storageKey]interpreter.Value,
-) {
+) (*interpreter.Interpreter, func() map[storageKey]interpreter.Value) {
+
+	account := stdlib.NewAccountValue(nil, handler, address)
 
 	var valueDeclarations []stdlib.StandardLibraryValue
 
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "authAccount",
-		Type:  sema.AuthAccountType,
-		Value: newTestAuthAccountValue(nil, address),
-		Kind:  common.DeclarationKindConstant,
+		Name: "authAccount",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: interpreter.NewEphemeralReferenceValue(
+			nil,
+			interpreter.FullyEntitledAccountAccess,
+			account,
+			sema.AccountType,
+		),
+		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
 
 	// `pubAccount`
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "pubAccount",
-		Type:  sema.PublicAccountType,
-		Value: newTestPublicAccountValue(nil, address),
-		Kind:  common.DeclarationKindConstant,
+		Name: "pubAccount",
+		Type: sema.AccountReferenceType,
+		Value: interpreter.NewEphemeralReferenceValue(
+			nil,
+			interpreter.UnauthorizedAccess,
+			account,
+			sema.AccountType,
+		),
+		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
 
@@ -130,8 +443,8 @@ func testAccountWithErrorHandler(
 				BaseActivation:                       baseActivation,
 				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
 				InvalidatedResourceValidationEnabled: true,
-				AuthAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return newTestAuthAccountValue(nil, address)
+				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(nil, nil, address)
 				},
 			},
 			HandleCheckerError: checkerErrorHandler,
@@ -163,15 +476,7 @@ func testAccountWithErrorHandler(
 	return inter, getAccountValues
 }
 
-func returnZeroUInt64(_ *interpreter.Interpreter) interpreter.UInt64Value {
-	return interpreter.NewUnmeteredUInt64Value(0)
-}
-
-func returnZeroUFix64() interpreter.UFix64Value {
-	return interpreter.NewUnmeteredUFix64Value(0)
-}
-
-func TestInterpretAuthAccount_save(t *testing.T) {
+func TestInterpretAccountStorageSave(t *testing.T) {
 
 	t.Parallel()
 
@@ -181,20 +486,14 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               resource R {}
 
               fun test() {
                   let r <- create R()
-                  account.save(<-r, to: /storage/r)
+                  account.storage.save(<-r, to: /storage/r)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// Save first value
 
@@ -227,20 +526,14 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               struct S {}
 
               fun test() {
                   let s = S()
-                  account.save(s, to: /storage/s)
+                  account.storage.save(s, to: /storage/s)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// Save first value
 
@@ -269,7 +562,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccount_type(t *testing.T) {
+func TestInterpretAccountStorageType(t *testing.T) {
 
 	t.Parallel()
 
@@ -279,32 +572,26 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountStorables := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountStorables := testAccount(t, address, true, nil, `
               struct S {}
 
               resource R {}
 
               fun saveR() {
                 let r <- create R()
-                account.save(<-r, to: /storage/x)
+                account.storage.save(<-r, to: /storage/x)
               }
 
               fun saveS() {
                 let s = S()
-                destroy account.load<@R>(from: /storage/x)
-                 account.save(s, to: /storage/x)
+                destroy account.storage.load<@R>(from: /storage/x)
+                account.storage.save(s, to: /storage/x)
               }
 
               fun typeAt(): AnyStruct {
-                return account.type(at: /storage/x)
+                return account.storage.type(at: /storage/x)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// type empty path is nil
 
@@ -353,7 +640,7 @@ func TestInterpretAuthAccount_type(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccount_load(t *testing.T) {
+func TestInterpretAccountStorageLoad(t *testing.T) {
 
 	t.Parallel()
 
@@ -363,30 +650,24 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               resource R {}
 
               resource R2 {}
 
               fun save() {
                   let r <- create R()
-                  account.save(<-r, to: /storage/r)
+                  account.storage.save(<-r, to: /storage/r)
               }
 
               fun loadR(): @R? {
-                  return <-account.load<@R>(from: /storage/r)
+                  return <-account.storage.load<@R>(from: /storage/r)
               }
 
               fun loadR2(): @R2? {
-                  return <-account.load<@R2>(from: /storage/r)
+                  return <-account.storage.load<@R2>(from: /storage/r)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		t.Run("save R and load R ", func(t *testing.T) {
 
@@ -446,30 +727,24 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               struct S {}
 
               struct S2 {}
 
               fun save() {
                   let s = S()
-                  account.save(s, to: /storage/s)
+                  account.storage.save(s, to: /storage/s)
               }
 
               fun loadS(): S? {
-                  return account.load<S>(from: /storage/s)
+                  return account.storage.load<S>(from: /storage/s)
               }
 
               fun loadS2(): S2? {
-                  return account.load<S2>(from: /storage/s)
+                  return account.storage.load<S2>(from: /storage/s)
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		t.Run("save S and load S", func(t *testing.T) {
 
@@ -524,7 +799,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccount_copy(t *testing.T) {
+func TestInterpretAccountStorageCopy(t *testing.T) {
 
 	t.Parallel()
 
@@ -535,15 +810,15 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
       fun save() {
           let s = S()
-          account.save(s, to: /storage/s)
+          account.storage.save(s, to: /storage/s)
       }
 
       fun copyS(): S? {
-          return account.copy<S>(from: /storage/s)
+          return account.storage.copy<S>(from: /storage/s)
       }
 
       fun copyS2(): S2? {
-          return account.copy<S2>(from: /storage/s)
+          return account.storage.copy<S2>(from: /storage/s)
       }
     `
 
@@ -553,13 +828,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			code,
-			sema.Config{},
-		)
+		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -594,13 +863,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			code,
-			sema.Config{},
-		)
+		inter, getAccountValues := testAccount(t, address, true, nil, code, sema.Config{})
 
 		// save
 
@@ -621,7 +884,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccount_borrow(t *testing.T) {
+func TestInterpretAccountStorageBorrow(t *testing.T) {
 
 	t.Parallel()
 
@@ -631,11 +894,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               resource R {
                   let foo: Int
 
@@ -654,47 +913,45 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
               fun save() {
                   let r <- create R()
-                  account.save(<-r, to: /storage/r)
+                  account.storage.save(<-r, to: /storage/r)
               }
 
 			  fun checkR(): Bool {
-				  return account.check<@R>(from: /storage/r)
+				  return account.storage.check<@R>(from: /storage/r)
 			  }
 
               fun borrowR(): &R? {
-                  return account.borrow<&R>(from: /storage/r)
+                  return account.storage.borrow<&R>(from: /storage/r)
               }
 
               fun foo(): Int {
-                  return account.borrow<&R>(from: /storage/r)!.foo
+                  return account.storage.borrow<&R>(from: /storage/r)!.foo
               }
 
 			  fun checkR2(): Bool {
-				  return account.check<@R2>(from: /storage/r)
+				  return account.storage.check<@R2>(from: /storage/r)
 			  }
 
               fun borrowR2(): &R2? {
-                  return account.borrow<&R2>(from: /storage/r)
+                  return account.storage.borrow<&R2>(from: /storage/r)
               }
 
 			  fun checkR2WithInvalidPath(): Bool {
-				  return account.check<@R2>(from: /storage/wrongpath)
+				  return account.storage.check<@R2>(from: /storage/wrongpath)
 			  }
 
               fun changeAfterBorrow(): Int {
-                 let ref = account.borrow<&R>(from: /storage/r)!
+                 let ref = account.storage.borrow<&R>(from: /storage/r)!
 
-                 let r <- account.load<@R>(from: /storage/r)
+                 let r <- account.storage.load<@R>(from: /storage/r)
                  destroy r
 
                  let r2 <- create R2()
-                 account.save(<-r2, to: /storage/r)
+                 account.storage.save(<-r2, to: /storage/r)
 
                  return ref.foo
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// save
 
@@ -812,11 +1069,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, getAccountValues := testAccount(t, address, true, nil, `
               struct S {
                   let foo: Int
 
@@ -835,50 +1088,48 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
               fun save() {
                   let s = S()
-                  account.save(s, to: /storage/s)
+                  account.storage.save(s, to: /storage/s)
               }
 
 			  fun checkS(): Bool {
-				  return account.check<S>(from: /storage/s)
+				  return account.storage.check<S>(from: /storage/s)
 			  }
 
               fun borrowS(): &S? {
-                  return account.borrow<&S>(from: /storage/s)
+                  return account.storage.borrow<&S>(from: /storage/s)
               }
 
               fun foo(): Int {
-                  return account.borrow<&S>(from: /storage/s)!.foo
+                  return account.storage.borrow<&S>(from: /storage/s)!.foo
               }
 			 
 			  fun checkS2(): Bool {
-				  return account.check<S2>(from: /storage/s)
+				  return account.storage.check<S2>(from: /storage/s)
 			  }
              
 			  fun borrowS2(): &S2? {
-                  return account.borrow<&S2>(from: /storage/s)
+                  return account.storage.borrow<&S2>(from: /storage/s)
               }
 
               fun changeAfterBorrow(): Int {
-                 let ref = account.borrow<&S>(from: /storage/s)!
+                 let ref = account.storage.borrow<&S>(from: /storage/s)!
 
                  // remove stored value
-                 account.load<S>(from: /storage/s)
+                 account.storage.load<S>(from: /storage/s)
 
                  let s2 = S2()
-                 account.save(s2, to: /storage/s)
+                 account.storage.save(s2, to: /storage/s)
 
                  return ref.foo
               }
 
               fun invalidBorrowS(): &S2? {
                   let s = S()
-                  account.save(s, to: /storage/another_s)
-                  let borrowedS = account.borrow<&AnyStruct>(from: /storage/another_s)
+                  account.storage.save(s, to: /storage/another_s)
+                  let borrowedS = account.storage.borrow<&AnyStruct>(from: /storage/another_s)
                   return borrowedS as! &S2?
               }
-            `,
-			sema.Config{},
-		)
+            `, sema.Config{})
 
 		// save
 
@@ -990,38 +1241,45 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 func TestInterpretAccountBalanceFields(t *testing.T) {
 	t.Parallel()
 
-	for accountType, auth := range map[string]bool{
-		"AuthAccount":   true,
-		"PublicAccount": false,
-	} {
+	const availableBalance = 42
+	const balance = 43
 
-		for _, fieldName := range []string{
-			"balance",
-			"availableBalance",
+	handler := &testAccountHandler{
+
+		getAccountAvailableBalance: func(_ common.Address) (uint64, error) {
+			return availableBalance, nil
+		},
+		getAccountBalance: func(_ common.Address) (uint64, error) {
+			return balance, nil
+		},
+	}
+
+	for _, auth := range []bool{true, false} {
+
+		for fieldName, expected := range map[string]uint64{
+			"balance":          balance,
+			"availableBalance": availableBalance,
 		} {
 
-			testName := fmt.Sprintf(
-				"%s.%s",
-				accountType,
-				fieldName,
-			)
+			testName := fmt.Sprintf("%s, auth: %v", fieldName, auth)
 
 			t.Run(testName, func(t *testing.T) {
 
-				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
 				code := fmt.Sprintf(
 					`
-                          fun test(): UFix64 {
-                              return account.%s
-                          }
-                        `,
+                      fun test(): UFix64 {
+                          return account.%s
+                      }
+                    `,
 					fieldName,
 				)
 				inter, _ := testAccount(
 					t,
 					address,
 					auth,
+					handler,
 					code,
 					sema.Config{},
 				)
@@ -1032,7 +1290,7 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.NewUnmeteredUFix64Value(0),
+					interpreter.NewUnmeteredUFix64Value(expected),
 					value,
 				)
 			})
@@ -1040,45 +1298,47 @@ func TestInterpretAccountBalanceFields(t *testing.T) {
 	}
 }
 
-func TestInterpretAccount_StorageFields(t *testing.T) {
+func TestInterpretAccountStorageFields(t *testing.T) {
 	t.Parallel()
 
-	for accountType, auth := range map[string]bool{
-		"AuthAccount":   true,
-		"PublicAccount": false,
-	} {
+	const storageUsed = 42
+	const storageCapacity = 43
 
-		for _, fieldName := range []string{
-			"storageUsed",
-			"storageCapacity",
+	handler := &testAccountHandler{
+		commitStorageTemporarily: func(_ *interpreter.Interpreter) error {
+			return nil
+		},
+		getStorageUsed: func(_ common.Address) (uint64, error) {
+			return storageUsed, nil
+		},
+		getStorageCapacity: func(address common.Address) (uint64, error) {
+			return storageCapacity, nil
+		},
+	}
+
+	for _, auth := range []bool{true, false} {
+
+		for fieldName, expected := range map[string]uint64{
+			"used":     storageUsed,
+			"capacity": storageCapacity,
 		} {
 
-			testName := fmt.Sprintf(
-				"%s.%s",
-				accountType,
-				fieldName,
-			)
+			testName := fmt.Sprintf("%s, auth: %v", fieldName, auth)
 
 			t.Run(testName, func(t *testing.T) {
 
 				code := fmt.Sprintf(
 					`
-                          fun test(): UInt64 {
-                              return account.%s
-                          }
-                        `,
+                      fun test(): UInt64 {
+                          return account.storage.%s
+                      }
+                    `,
 					fieldName,
 				)
 
-				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1})
 
-				inter, _ := testAccount(
-					t,
-					address,
-					auth,
-					code,
-					sema.Config{},
-				)
+				inter, _ := testAccount(t, address, auth, handler, code, sema.Config{})
 
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
@@ -1086,7 +1346,7 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 				AssertValuesEqual(
 					t,
 					inter,
-					interpreter.NewUnmeteredUInt64Value(0),
+					interpreter.NewUnmeteredUInt64Value(expected),
 					value,
 				)
 			})

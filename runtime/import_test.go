@@ -114,7 +114,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
 
-func TestCheckCyclicImportsAfterUpdate(t *testing.T) {
+func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
@@ -211,7 +211,7 @@ func TestCheckCyclicImportsAfterUpdate(t *testing.T) {
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
 
-func TestCheckCyclicImportAddress(t *testing.T) {
+func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
@@ -322,7 +322,7 @@ func TestCheckCyclicImportAddress(t *testing.T) {
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
 
-func TestCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
+func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 

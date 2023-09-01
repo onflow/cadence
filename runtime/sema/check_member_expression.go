@@ -384,7 +384,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, resu
 	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
 		checker.containerTypes[member.ContainerType] {
 
-		if mappedAccess, isMappedAccess := member.Access.(EntitlementMapAccess); isMappedAccess {
+		if mappedAccess, isMappedAccess := member.Access.(*EntitlementMapAccess); isMappedAccess {
 			return checker.mapAccess(mappedAccess, accessedType, resultingType, accessRange)
 		}
 
@@ -428,7 +428,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, resu
 			// allowed as an owned value is considered fully authorized
 			return true, member.Access
 		}
-	case EntitlementMapAccess:
+	case *EntitlementMapAccess:
 		return checker.mapAccess(access, accessedType, resultingType, accessRange)
 	}
 
@@ -436,7 +436,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, resu
 }
 
 func (checker *Checker) mapAccess(
-	mappedAccess EntitlementMapAccess,
+	mappedAccess *EntitlementMapAccess,
 	accessedType Type,
 	resultingType Type,
 	accessRange func() ast.Range,
@@ -459,7 +459,7 @@ func (checker *Checker) mapAccess(
 		return checker.mapAccess(mappedAccess, ty.Type, resultingType, accessRange)
 
 	default:
-		if mappedAccess.Type == IdentityMappingType {
+		if mappedAccess.Type == IdentityType {
 			access := AllSupportedEntitlements(resultingType)
 			if access != nil {
 				return true, access

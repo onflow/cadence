@@ -1699,7 +1699,7 @@ func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
 	}
 }
 
-func TestNilAssignmentToDictionary(t *testing.T) {
+func TestCheckNilAssignmentToDictionary(t *testing.T) {
 
 	t.Parallel()
 
@@ -1775,7 +1775,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			assert.ErrorAs(t, errors[1], &invalidAccessError)
 		})
 
-		t.Run("insertable reference", func(t *testing.T) {
+		t.Run("insert reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -1792,7 +1792,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("removable reference", func(t *testing.T) {
+		t.Run("remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -1857,7 +1857,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			assert.ErrorAs(t, errors[1], &invalidAccessError)
 		})
 
-		t.Run("insertable reference", func(t *testing.T) {
+		t.Run("insert reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -1879,7 +1879,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			assert.ErrorAs(t, errors[1], &invalidAccessError)
 		})
 
-		t.Run("removable reference", func(t *testing.T) {
+		t.Run("remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -1936,7 +1936,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("insertable reference", func(t *testing.T) {
+		t.Run("insert reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -1954,7 +1954,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("removable reference", func(t *testing.T) {
+		t.Run("remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2015,7 +2015,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			)
 		})
 
-		t.Run("insertable reference", func(t *testing.T) {
+		t.Run("insert reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2039,7 +2039,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			)
 		})
 
-		t.Run("removable reference", func(t *testing.T) {
+		t.Run("remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2063,7 +2063,7 @@ func TestCheckArrayFunctionEntitlements(t *testing.T) {
 			)
 		})
 
-		t.Run("insertable and removable reference", func(t *testing.T) {
+		t.Run("insert and remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2157,7 +2157,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			assert.ErrorAs(t, errors[0], &invalidAccessError)
 		})
 
-		t.Run("insertable reference", func(t *testing.T) {
+		t.Run("insert reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2172,7 +2172,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("removable reference", func(t *testing.T) {
+		t.Run("remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2227,7 +2227,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			assert.ErrorAs(t, errors[0], &invalidAccessError)
 		})
 
-		t.Run("insertable reference", func(t *testing.T) {
+		t.Run("insert reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2245,7 +2245,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			assert.ErrorAs(t, errors[0], &invalidAccessError)
 		})
 
-		t.Run("removable reference", func(t *testing.T) {
+		t.Run("remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2296,7 +2296,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("insertable reference", func(t *testing.T) {
+		t.Run("insert reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2312,7 +2312,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("removable reference", func(t *testing.T) {
+		t.Run("remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2371,7 +2371,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			)
 		})
 
-		t.Run("insertable reference", func(t *testing.T) {
+		t.Run("insert reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2395,7 +2395,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			)
 		})
 
-		t.Run("removable reference", func(t *testing.T) {
+		t.Run("remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
@@ -2419,7 +2419,7 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			)
 		})
 
-		t.Run("insertable and removable reference", func(t *testing.T) {
+		t.Run("insert and remove reference", func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `

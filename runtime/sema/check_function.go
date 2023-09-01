@@ -187,7 +187,7 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				if mappedAccess, isMappedAccess := access.(EntitlementMapAccess); isMappedAccess {
+				if mappedAccess, isMappedAccess := access.(*EntitlementMapAccess); isMappedAccess {
 					checker.entitlementMappingInScope = mappedAccess.Type
 				}
 

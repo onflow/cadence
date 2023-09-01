@@ -4069,6 +4069,41 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		)
 	})
 
+	t.Run("unauthorized reference, Account", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &AccountCapabilityControllerValue{
+			BorrowType: ReferenceStaticType{
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeAccount,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			0xd8, CBORTagPrimitiveStaticType,
+			// unsigned 105
+			0x18, 0x69,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
 	t.Run("unauthorized reference, intersection I1", func(t *testing.T) {
 
 		t.Parallel()

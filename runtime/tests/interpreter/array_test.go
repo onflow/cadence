@@ -43,12 +43,12 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
                 arrayRef.slice(from: 1, upTo: 1)
                 arrayRef.concat(["hello"])
 
-                // Insertable functions
+                // Insert functions
                 arrayRef.append("baz")
                 arrayRef.appendAll(["baz"])
                 arrayRef.insert(at:0, "baz")
 
-                // Removable functions
+                // Remove functions
                 arrayRef.remove(at: 1)
                 arrayRef.removeFirst()
                 arrayRef.removeLast()
@@ -80,7 +80,7 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("insertable reference", func(t *testing.T) {
+	t.Run("insert reference", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -95,7 +95,7 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
                 arrayRef.slice(from: 1, upTo: 1)
                 arrayRef.concat(["hello"])
 
-                // Insertable functions
+                // Insert functions
                 arrayRef.append("baz")
                 arrayRef.appendAll(["baz"])
                 arrayRef.insert(at:0, "baz")
@@ -106,7 +106,7 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("removable reference", func(t *testing.T) {
+	t.Run("remove reference", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -121,7 +121,7 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
                 arrayRef.slice(from: 1, upTo: 1)
                 arrayRef.concat(["hello"])
 
-                // Removable functions
+                // Remove functions
                 arrayRef.remove(at: 1)
                 arrayRef.removeFirst()
                 arrayRef.removeLast()

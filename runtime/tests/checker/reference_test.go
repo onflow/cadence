@@ -1648,16 +1648,16 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t,
+		_, err := ParseAndCheck(t,
 			`
-            access(all) fun test() {
-                authAccount.save(<-[<-create R()], to: /storage/a)
+            access(all) fun test(storage: auth(Storage) &Account.Storage) {
+                storage.save(<-[<-create R()], to: /storage/a)
 
-                let collectionRef = authAccount.borrow<&[R]>(from: /storage/a)!
+                let collectionRef = storage.borrow<&[R]>(from: /storage/a)!
                 let ref = collectionRef[0]
 
-                let collection <- authAccount.load<@[R]>(from: /storage/a)!
-                authAccount.save(<- collection, to: /storage/b)
+                let collection <- storage.load<@[R]>(from: /storage/a)!
+                storage.save(<- collection, to: /storage/b)
 
                 ref.setA(2)
             }

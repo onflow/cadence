@@ -356,11 +356,11 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 						cadence.UInt8(algo.RawValue()),
 					}).WithType(&cadence.EnumType{
 						QualifiedIdentifier: "SignatureAlgorithm",
-						RawType:             cadence.UInt8Type{},
+						RawType:             cadence.UInt8Type,
 						Fields: []cadence.Field{
 							{
 								Identifier: "rawValue",
-								Type:       cadence.UInt8Type{},
+								Type:       cadence.UInt8Type,
 							},
 						},
 					}),
@@ -438,11 +438,11 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 						cadence.UInt8(algo.RawValue()),
 					}).WithType(&cadence.EnumType{
 						QualifiedIdentifier: "HashAlgorithm",
-						RawType:             cadence.UInt8Type{},
+						RawType:             cadence.UInt8Type,
 						Fields: []cadence.Field{
 							{
 								Identifier: "rawValue",
-								Type:       cadence.UInt8Type{},
+								Type:       cadence.UInt8Type,
 							},
 						},
 					}),
@@ -475,7 +475,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 	}
 }
 
-func TestBLSVerifyPoP(t *testing.T) {
+func TestRuntimeBLSVerifyPoP(t *testing.T) {
 
 	t.Parallel()
 
@@ -534,7 +534,7 @@ func TestBLSVerifyPoP(t *testing.T) {
 	assert.True(t, called)
 }
 
-func TestBLSAggregateSignatures(t *testing.T) {
+func TestRuntimeBLSAggregateSignatures(t *testing.T) {
 
 	t.Parallel()
 
@@ -591,7 +591,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 			cadence.UInt8(4),
 			cadence.UInt8(5),
 		}).WithType(&cadence.VariableSizedArrayType{
-			ElementType: cadence.UInt8Type{},
+			ElementType: cadence.UInt8Type,
 		}),
 		result,
 	)
@@ -599,7 +599,7 @@ func TestBLSAggregateSignatures(t *testing.T) {
 	assert.True(t, called)
 }
 
-func TestBLSAggregatePublicKeys(t *testing.T) {
+func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 
 	t.Parallel()
 
@@ -666,7 +666,7 @@ func TestBLSAggregatePublicKeys(t *testing.T) {
 			cadence.UInt8(1),
 			cadence.UInt8(2),
 		}).WithType(&cadence.VariableSizedArrayType{
-			ElementType: cadence.UInt8Type{},
+			ElementType: cadence.UInt8Type,
 		}),
 		result.(cadence.Optional).Value.(cadence.Struct).Fields[0],
 	)
@@ -693,7 +693,7 @@ func getCadenceValueArrayFromHexStr(t *testing.T, inp string) cadence.Value {
 // and should not be used as a sample code for Merkle Proof Verification,
 // for proper verification you need extra steps such as checking if the leaf content matches
 // what you're expecting and etc...
-func TestTraversingMerkleProof(t *testing.T) {
+func TestRuntimeTraversingMerkleProof(t *testing.T) {
 
 	t.Parallel()
 
@@ -703,8 +703,8 @@ func TestTraversingMerkleProof(t *testing.T) {
         access(all) fun main(rootHash: [UInt8], address: [UInt8], accountProof: [[UInt8]]){
 
         let path = HashAlgorithm.KECCAK_256.hash(address)
-     
-        var nibbles: [UInt8]  = [] 
+
+        var nibbles: [UInt8]  = []
 
         for b in path {
             nibbles.append(b >> 4)
@@ -712,11 +712,11 @@ func TestTraversingMerkleProof(t *testing.T) {
         }
 
         var nibbleIndex = 0
-        var expectedNodeHash = rootHash 
+        var expectedNodeHash = rootHash
 
         for encodedNode in accountProof {
             log(nibbleIndex)
-            let nodeHash = HashAlgorithm.KECCAK_256.hash(encodedNode) 
+            let nodeHash = HashAlgorithm.KECCAK_256.hash(encodedNode)
 
             // verify that expected node hash (from a higher level or given root hash)
             // matches the hash of this level

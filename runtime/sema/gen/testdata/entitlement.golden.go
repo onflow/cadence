@@ -19,6 +19,29 @@
 
 package sema
 
-var FooEntitlement = &EntitlementType{
+var FooType = &EntitlementType{
 	Identifier: "Foo",
+}
+
+var BarType = &EntitlementType{
+	Identifier: "Bar",
+}
+
+var BazType = &EntitlementMapType{
+	Identifier: "Baz",
+	Relations: []EntitlementRelation{
+		EntitlementRelation{
+			Input:  FooType,
+			Output: BarType,
+		},
+	},
+}
+
+func init() {
+	BuiltinEntitlementMappings[BazType.Identifier] = BazType
+	addToBaseActivation(BazType)
+	BuiltinEntitlements[FooType.Identifier] = FooType
+	addToBaseActivation(FooType)
+	BuiltinEntitlements[BarType.Identifier] = BarType
+	addToBaseActivation(BarType)
 }

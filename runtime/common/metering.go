@@ -149,7 +149,6 @@ var (
 	CapabilityValueMemoryUsage                  = NewConstantMemoryUsage(MemoryKindCapabilityValue)
 	EphemeralReferenceValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
 	StorageReferenceValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)
-	AccountReferenceValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindAccountReferenceValue)
 	PathValueMemoryUsage                        = NewConstantMemoryUsage(MemoryKindPathValue)
 	OptionalValueMemoryUsage                    = NewConstantMemoryUsage(MemoryKindOptionalValue)
 	TypeValueMemoryUsage                        = NewConstantMemoryUsage(MemoryKindTypeValue)
@@ -239,21 +238,17 @@ var (
 	TypeValueStringMemoryUsage                        = NewRawStringMemoryUsage(len("Type<>()"))
 	NilValueStringMemoryUsage                         = NewRawStringMemoryUsage(len("nil"))
 	StorageReferenceValueStringMemoryUsage            = NewRawStringMemoryUsage(len("StorageReference()"))
-	AccountReferenceValueStringMemoryUsage            = NewRawStringMemoryUsage(len("AccountReference()"))
 	SeenReferenceStringMemoryUsage                    = NewRawStringMemoryUsage(3)                   // len(ellipsis)
 	AddressValueStringMemoryUsage                     = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
 	HostFunctionValueStringMemoryUsage                = NewRawStringMemoryUsage(len("Function(...)"))
-	AuthAccountValueStringMemoryUsage                 = NewRawStringMemoryUsage(len("AuthAccount()"))
-	PublicAccountValueStringMemoryUsage               = NewRawStringMemoryUsage(len("PublicAccount()"))
-	AuthAccountContractsStringMemoryUsage             = NewRawStringMemoryUsage(len("AuthAccount.Contracts()"))
-	PublicAccountContractsStringMemoryUsage           = NewRawStringMemoryUsage(len("PublicAccount.Contracts()"))
-	AuthAccountKeysStringMemoryUsage                  = NewRawStringMemoryUsage(len("AuthAccount.Keys()"))
-	PublicAccountKeysStringMemoryUsage                = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
-	AuthAccountStorageCapabilitiesStringMemoryUsage   = NewRawStringMemoryUsage(len("AuthAccount.StorageCapabilities()"))
-	AuthAccountAccountCapabilitiesStringMemoryUsage   = NewRawStringMemoryUsage(len("AuthAccount.AccountCapabilities()"))
-	AuthAccountCapabilitiesStringMemoryUsage          = NewRawStringMemoryUsage(len("AuthAccount.Capabilities()"))
-	PublicAccountCapabilitiesStringMemoryUsage        = NewRawStringMemoryUsage(len("PublicAccount.Capabilities()"))
-	AuthAccountInboxStringMemoryUsage                 = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
+	AccountValueStringMemoryUsage                     = NewRawStringMemoryUsage(len("Account()"))
+	AccountContractsStringMemoryUsage                 = NewRawStringMemoryUsage(len("Account.Contracts()"))
+	AccountKeysStringMemoryUsage                      = NewRawStringMemoryUsage(len("Account.Keys()"))
+	AccountStorageCapabilitiesStringMemoryUsage       = NewRawStringMemoryUsage(len("Account.StorageCapabilities()"))
+	AccountAccountCapabilitiesStringMemoryUsage       = NewRawStringMemoryUsage(len("Account.AccountCapabilities()"))
+	AccountCapabilitiesStringMemoryUsage              = NewRawStringMemoryUsage(len("Account.Capabilities()"))
+	AccountInboxStringMemoryUsage                     = NewRawStringMemoryUsage(len("Account.Inbox()"))
+	AccountStorageStringMemoryUsage                   = NewRawStringMemoryUsage(len("Account.Storage()"))
 	CapabilityValueStringMemoryUsage                  = NewRawStringMemoryUsage(len("Capability<>(address: , id: )"))
 	StorageCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("StorageCapabilityController(borrowType: , capabilityID: , target: )"))
 	AccountCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("AccountCapabilityController(borrowType: , capabilityID: )"))
@@ -265,8 +260,6 @@ var (
 	VariableSizedStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(2)  // []
 	DictionaryStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(4)  // {: }
 	OptionalStaticTypeStringMemoryUsage      = NewRawStringMemoryUsage(1)  // ?
-	AuthReferenceStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(5)  // auth&
-	ReferenceStaticTypeStringMemoryUsage     = NewRawStringMemoryUsage(1)  // &
 	CapabilityStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(12) // Capability<>
 )
 

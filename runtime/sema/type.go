@@ -1965,12 +1965,18 @@ Available if the array element type is not resource-kinded.
 `
 
 var insertableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{InsertEntitlement, MutateEntitlement},
+	[]*EntitlementType{
+		InsertType,
+		MutateType,
+	},
 	Disjunction,
 )
 
 var removableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{RemoveEntitlement, MutateEntitlement},
+	[]*EntitlementType{
+		RemoveType,
+		MutateType,
+	},
 	Disjunction,
 )
 
@@ -2710,9 +2716,9 @@ func (t *VariableSizedType) SupportedEntitlements() *EntitlementOrderedSet {
 
 var arrayDictionaryEntitlements = func() *EntitlementOrderedSet {
 	set := orderedmap.New[EntitlementOrderedSet](3)
-	set.Set(MutateEntitlement, struct{}{})
-	set.Set(InsertEntitlement, struct{}{})
-	set.Set(RemoveEntitlement, struct{}{})
+	set.Set(MutateType, struct{}{})
+	set.Set(InsertType, struct{}{})
+	set.Set(RemoveType, struct{}{})
 	return set
 }()
 
@@ -3699,8 +3705,7 @@ func init() {
 			CharacterType,
 			StringType,
 			TheAddressType,
-			AuthAccountType,
-			PublicAccountType,
+			AccountType,
 			PathType,
 			StoragePathType,
 			CapabilityPathType,
@@ -3722,7 +3727,7 @@ func init() {
 		addToBaseActivation(ty)
 	}
 
-	addToBaseActivation(IdentityMappingType)
+	addToBaseActivation(IdentityType)
 
 	// The AST contains empty type annotations, resolve them to Void
 
@@ -3749,10 +3754,11 @@ func addToBaseActivation(ty Type) {
 
 const IdentityMappingIdentifier string = "Identity"
 
-// The `Identity` mapping is an empty map that includes the Identity map,
+// IdentityType represents the `Identity` entitlement mapping type.
+// It is an empty map that includes the Identity map,
 // and is considered already "resolved" with regards to its (vacuously empty) inclusions.
 // defining it this way eliminates the need to do any special casing for its behavior
-var IdentityMappingType = func() *EntitlementMapType {
+var IdentityType = func() *EntitlementMapType {
 	m := NewEntitlementMapType(nil, nil, IdentityMappingIdentifier)
 	m.IncludesIdentity = true
 	m.resolveInclusions.Do(func() {})
@@ -3839,7 +3845,7 @@ var AllNumberTypes = common.Concat(
 var BuiltinEntitlements = map[string]*EntitlementType{}
 
 var BuiltinEntitlementMappings = map[string]*EntitlementMapType{
-	IdentityMappingType.QualifiedIdentifier(): IdentityMappingType,
+	IdentityType.QualifiedIdentifier(): IdentityType,
 }
 
 const NumberTypeMinFieldName = "min"
@@ -4453,7 +4459,7 @@ func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
 	t.Members.Foreach(func(_ string, member *Member) {
 		switch access := member.Access.(type) {
-		case EntitlementMapAccess:
+		case *EntitlementMapAccess:
 			set.SetAll(access.Domain().Entitlements)
 		case EntitlementSetAccess:
 			set.SetAll(access.Entitlements)
@@ -4820,7 +4826,7 @@ func NewPublicFunctionMember(
 
 func NewUnmeteredFunctionMember(
 	containerType Type,
-	access ast.PrimitiveAccess,
+	access Access,
 	identifier string,
 	functionType *FunctionType,
 	docString string,
@@ -4828,7 +4834,7 @@ func NewUnmeteredFunctionMember(
 	return NewFunctionMember(
 		nil,
 		containerType,
-		PrimitiveAccess(access),
+		access,
 		identifier,
 		functionType,
 		docString,
@@ -4895,7 +4901,7 @@ func NewPublicConstantFieldMember(
 
 func NewUnmeteredFieldMember(
 	containerType Type,
-	access ast.PrimitiveAccess,
+	access Access,
 	variableKind ast.VariableKind,
 	identifier string,
 	fieldType Type,
@@ -4904,7 +4910,7 @@ func NewUnmeteredFieldMember(
 	return NewFieldMember(
 		nil,
 		containerType,
-		PrimitiveAccess(access),
+		access,
 		variableKind,
 		identifier,
 		fieldType,
@@ -5151,7 +5157,7 @@ func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
 	t.Members.Foreach(func(_ string, member *Member) {
 		switch access := member.Access.(type) {
-		case EntitlementMapAccess:
+		case *EntitlementMapAccess:
 			access.Domain().Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
 				set.Set(entitlement, struct{}{})
 			})
@@ -7986,8 +7992,7 @@ func init() {
 		PublicKeyType,
 		HashAlgorithmType,
 		SignatureAlgorithmType,
-		AuthAccountType,
-		PublicAccountType,
+		AccountType,
 	}
 
 	for len(compositeTypes) > 0 {

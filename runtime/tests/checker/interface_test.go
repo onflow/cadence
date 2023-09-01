@@ -1987,7 +1987,7 @@ func TestCheckInterfaceDefaultImplementationOverriden(t *testing.T) {
 	})
 }
 
-func TestSpecialFunctionDefaultImplementationUsage(t *testing.T) {
+func TestCheckSpecialFunctionDefaultImplementationUsage(t *testing.T) {
 
 	t.Parallel()
 
@@ -3449,7 +3449,7 @@ func TestCheckInterfaceTypeDefinitionInheritance(t *testing.T) {
 
 }
 
-func TestInheritedInterfaceMembers(t *testing.T) {
+func TestCheckInheritedInterfaceMembers(t *testing.T) {
 	t.Parallel()
 
 	t.Run("inherited interface field", func(t *testing.T) {
@@ -3808,7 +3808,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 	})
 }
 
-func TestNestedInterfaceInheritance(t *testing.T) {
+func TestCheckNestedInterfaceInheritance(t *testing.T) {
 
 	t.Parallel()
 

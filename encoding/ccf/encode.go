@@ -1305,9 +1305,9 @@ func (e *Encoder) encodeTypeValueRef(id ccfTypeID) error {
 //
 //	; cbor-tag-simple-type-value
 //	#6.185(simple-type-id)
-func (e *Encoder) encodeSimpleTypeValue(id uint64) error {
+func (e *Encoder) encodeSimpleTypeValue(id SimpleType) error {
 	rawTagNum := []byte{0xd8, CBORTagSimpleTypeValue}
-	return e.encodeSimpleTypeWithRawTag(id, rawTagNum)
+	return e.encodeSimpleTypeWithRawTag(uint64(id), rawTagNum)
 }
 
 // encodeOptionalTypeValue encodes cadence.OptionalType as
@@ -2015,9 +2015,10 @@ func isOptionalNeverType(t cadence.Type) bool {
 			return false
 		}
 
-		if ot.Type.Equal(cadence.NewNeverType()) {
+		if ot.Type.Equal(cadence.NeverType) {
 			return true
 		}
+
 		t = ot.Type
 	}
 }

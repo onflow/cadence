@@ -156,15 +156,9 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
-// AuthAccountHandlerFunc is a function that handles retrieving an auth account at a given address.
-// The account returned must be of type `AuthAccount`.
-type AuthAccountHandlerFunc func(
-	address AddressValue,
-) Value
-
-// PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
-// The account returned must be of type `PublicAccount`.
-type PublicAccountHandlerFunc func(
+// AccountHandlerFunc is a function that handles retrieving an auth account at a given address.
+// The account returned must be of type `Account`.
+type AccountHandlerFunc func(
 	address AddressValue,
 ) Value
 
@@ -817,7 +811,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 					SetKind:      sema.Conjunction,
 					Entitlements: supportedEntitlements,
 				}
-				auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
+				auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
 			}
 		}
 		return auth
@@ -1297,7 +1291,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					// the constructor can only be called when in possession of the base resource
 					// if the attachment is declared with access(all) access, then self is unauthorized
 					if attachmentType.AttachmentEntitlementAccess != nil {
-						auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
+						auth = ConvertSemaAccessToStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
 					}
 					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType)
 
@@ -1717,11 +1711,13 @@ func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.
 	return ty.Map(interpreter, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
 		switch refType := t.(type) {
 		case *sema.ReferenceType:
-			if _, isMappedAuth := refType.Authorization.(sema.EntitlementMapAccess); isMappedAuth {
+			if _, isMappedAuth := refType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
 				return sema.NewReferenceType(
 					interpreter,
 					refType.Type,
-					interpreter.MustConvertStaticAuthorizationToSemaAccess(interpreter.SharedState.currentEntitlementMappedValue),
+					interpreter.MustConvertStaticAuthorizationToSemaAccess(
+						interpreter.SharedState.currentEntitlementMappedValue,
+					),
 				)
 			}
 		}
@@ -1798,7 +1794,7 @@ func (interpreter *Interpreter) convertStaticType(
 		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
 			return NewReferenceStaticType(
 				interpreter,
-				ConvertSemaAccesstoStaticAuthorization(interpreter, targetReferenceType.Authorization),
+				ConvertSemaAccessToStaticAuthorization(interpreter, targetReferenceType.Authorization),
 				valueStaticType.ReferencedType,
 			)
 		}
@@ -2126,7 +2122,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *EphemeralReferenceValue:
 				return NewEphemeralReferenceValue(
 					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.Value,
 					unwrappedTargetType.Type,
 				)
@@ -2134,16 +2130,9 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *StorageReferenceValue:
 				return NewStorageReferenceValue(
 					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.TargetStorageAddress,
 					ref.TargetPath,
-					unwrappedTargetType.Type,
-				)
-
-			case *AccountReferenceValue:
-				return NewAccountReferenceValue(
-					interpreter,
-					ref.Address,
 					unwrappedTargetType.Type,
 				)
 
@@ -3253,7 +3242,7 @@ func lookupInterface(interpreter *Interpreter, typeID string) (*sema.InterfaceTy
 		return nil, err
 	}
 
-	typ, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
+	typ, err := interpreter.GetInterfaceType(location, qualifiedIdentifier, TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -3426,7 +3415,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	var authorization Authorization = UnauthorizedAccess
+	authorization := UnauthorizedAccess
 	errInIteration := false
 	entitlementsCount := entitlementValues.Count()
 
@@ -3921,7 +3910,12 @@ func (interpreter *Interpreter) domainPaths(address common.Address, domain commo
 	return paths
 }
 
-func (interpreter *Interpreter) accountPaths(addressValue AddressValue, locationRange LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
+func (interpreter *Interpreter) accountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+	domain common.PathDomain,
+	pathType StaticType,
+) *ArrayValue {
 	address := addressValue.ToAddress()
 	values := interpreter.domainPaths(address, domain)
 	return NewArrayValue(
@@ -3933,16 +3927,28 @@ func (interpreter *Interpreter) accountPaths(addressValue AddressValue, location
 	)
 }
 
-func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainPublic, PrimitiveStaticTypePublicPath)
+func (interpreter *Interpreter) publicAccountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+) *ArrayValue {
+	return interpreter.accountPaths(
+		addressValue,
+		locationRange,
+		common.PathDomainPublic,
+		PrimitiveStaticTypePublicPath,
+	)
 }
 
-func (interpreter *Interpreter) privateAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainPrivate, PrimitiveStaticTypePrivatePath)
-}
-
-func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
+func (interpreter *Interpreter) storageAccountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+) *ArrayValue {
+	return interpreter.accountPaths(
+		addressValue,
+		locationRange,
+		common.PathDomainStorage,
+		PrimitiveStaticTypeStoragePath,
+	)
 }
 
 func (interpreter *Interpreter) recordStorageMutation() {
@@ -4122,7 +4128,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeSaveFunctionType,
+		sema.Account_StorageTypeSaveFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4182,7 +4188,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeTypeFunctionType,
+		sema.Account_StorageTypeTypeFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4228,8 +4234,8 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
-		// same as sema.AuthAccountTypeCopyFunctionType
-		sema.AuthAccountTypeLoadFunctionType,
+		// same as sema.Account_StorageTypeCopyFunctionType
+		sema.Account_StorageTypeLoadFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4308,7 +4314,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeBorrowFunctionType,
+		sema.Account_StorageTypeBorrowFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4331,7 +4337,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 			reference := NewStorageReferenceValue(
 				interpreter,
-				ConvertSemaAccesstoStaticAuthorization(interpreter, referenceType.Authorization),
+				ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization),
 				address,
 				path,
 				referenceType.Type,
@@ -4361,7 +4367,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeCheckFunctionType,
+		sema.Account_StorageTypeCheckFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4396,11 +4402,6 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 			return AsBoolValue(interpreter.IsSubTypeOfSemaType(valueStaticType, ty))
 		},
 	)
-}
-
-var AuthAccountReferenceStaticType = ReferenceStaticType{
-	ReferencedType: PrimitiveStaticTypeAuthAccount,
-	Authorization:  UnauthorizedAccess,
 }
 
 func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.EntitlementType, error) {
@@ -4476,8 +4477,8 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	return ConvertStaticToSemaType(
 		config.MemoryGauge,
 		staticType,
-		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
-			return interpreter.getInterfaceType(location, qualifiedIdentifier)
+		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error) {
+			return interpreter.GetInterfaceType(location, qualifiedIdentifier, typeID)
 		},
 		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
 			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
@@ -4500,7 +4501,12 @@ func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticTyp
 }
 
 func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth Authorization) sema.Access {
-	access, err := ConvertStaticAuthorizationToSemaAccess(interpreter, auth, interpreter.getEntitlement, interpreter.getEntitlementMapType)
+	access, err := ConvertStaticAuthorizationToSemaAccess(
+		interpreter,
+		auth,
+		interpreter.getEntitlement,
+		interpreter.getEntitlementMapType,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -4585,12 +4591,14 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 	return elaboration.CompositeType(typeID)
 }
 
-func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+func (interpreter *Interpreter) GetInterfaceType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID TypeID,
+) (*sema.InterfaceType, error) {
 	if location == nil {
 		return nil, InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
 	}
-
-	typeID := location.TypeID(interpreter, qualifiedIdentifier)
 
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
@@ -4685,7 +4693,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 		return resultValue
 	}
 
-	if mappedAccess, isMappedAccess := (*memberAccess).(sema.EntitlementMapAccess); isMappedAccess {
+	if mappedAccess, isMappedAccess := (*memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
 		var auth Authorization
 		switch selfValue := self.(type) {
 		case AuthorizedValue:
@@ -4694,10 +4702,11 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 			if err != nil {
 				panic(err)
 			}
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, imageAccess)
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, imageAccess)
+
 		default:
 			var access sema.Access
-			if mappedAccess.Type == sema.IdentityMappingType {
+			if mappedAccess.Type == sema.IdentityType {
 				access = sema.AllSupportedEntitlements(resultingType)
 			}
 
@@ -4705,7 +4714,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 				access = mappedAccess.Codomain()
 			}
 
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
 		}
 
 		switch refValue := resultValue.(type) {

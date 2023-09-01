@@ -28,7 +28,7 @@ contract Test {
         /// The returned account can be used to sign and authorize transactions.
         ///
         access(all)
-        fun createAccount(): Account {
+        fun createAccount(): TestAccount {
             return self.backend.createAccount()
         }
 
@@ -89,7 +89,7 @@ contract Test {
         fun deployContract(
             name: String,
             code: String,
-            account: Account,
+            account: TestAccount,
             arguments: [AnyStruct]
         ): Error? {
             return self.backend.deployContract(
@@ -119,7 +119,7 @@ contract Test {
         /// transactions with this account.
         ///
         access(all)
-        fun serviceAccount(): Account {
+        fun serviceAccount(): TestAccount {
             return self.backend.serviceAccount()
         }
 
@@ -197,7 +197,7 @@ contract Test {
 
     /// Result is the interface to be implemented by the various execution
     /// operations, such as transactions and scripts.
-    ///\
+    ///
     access(all)
     struct interface Result {
         /// The result status of an executed operation.
@@ -260,10 +260,10 @@ contract Test {
         }
     }
 
-    /// Account represents info about the account created on the blockchain.
+    /// TestAccount represents info about the account created on the blockchain.
     ///
     access(all)
-    struct Account {
+    struct TestAccount {
 
         access(all)
         let address: Address
@@ -303,13 +303,12 @@ contract Test {
         let authorizers: [Address]
 
         access(all)
-        let signers: [Account]
+        let signers: [TestAccount]
 
         access(all)
         let arguments: [AnyStruct]
 
-
-        init(code: String, authorizers: [Address], signers: [Account], arguments: [AnyStruct]) {
+        init(code: String, authorizers: [Address], signers: [TestAccount], arguments: [AnyStruct]) {
             self.code = code
             self.authorizers = authorizers
             self.signers = signers
@@ -333,7 +332,7 @@ contract Test {
         /// The returned account can be used to sign and authorize transactions.
         ///
         access(all)
-        fun createAccount(): Account
+        fun createAccount(): TestAccount
 
         /// Add a transaction to the current block.
         ///
@@ -358,7 +357,7 @@ contract Test {
         fun deployContract(
             name: String,
             code: String,
-            account: Account,
+            account: TestAccount,
             arguments: [AnyStruct]
         ): Error?
 
@@ -377,7 +376,7 @@ contract Test {
         /// transactions with this account.
         ///
         access(all)
-        fun serviceAccount(): Account
+        fun serviceAccount(): TestAccount
 
         /// Returns all events emitted from the blockchain, optionally filtered
         /// by type.

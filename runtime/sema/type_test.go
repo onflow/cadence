@@ -452,11 +452,11 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 		assert.Equal(t, "foo", identifier)
 	})
 
-	t.Run("public account container", func(t *testing.T) {
+	t.Run("account container", func(t *testing.T) {
 		t.Parallel()
 
-		identifier := qualifiedIdentifier("foo", PublicAccountType)
-		assert.Equal(t, "PublicAccount.foo", identifier)
+		identifier := qualifiedIdentifier("foo", AccountType)
+		assert.Equal(t, "Account.foo", identifier)
 	})
 }
 
@@ -914,7 +914,7 @@ func TestCommonSuperType(t *testing.T) {
 				name: "mixed type structs",
 				types: []Type{
 					PublicKeyType,
-					AuthAccountType,
+					AccountType,
 				},
 				expectedSuperType: AnyStructType,
 			},
@@ -1875,7 +1875,7 @@ func BenchmarkSuperTypeInference(b *testing.B) {
 	b.Run("composites", func(b *testing.B) {
 		types := []Type{
 			PublicKeyType,
-			AuthAccountType,
+			AccountType,
 		}
 
 		b.ReportAllocs()

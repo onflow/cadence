@@ -33,7 +33,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
@@ -4703,7 +4702,6 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredIntValueFromInt64(23),
@@ -5127,7 +5125,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
 				var auth interpreter.Authorization = interpreter.UnauthorizedAccess
 				if authorized {
-					auth = interpreter.ConvertSemaAccesstoStaticAuthorization(
+					auth = interpreter.ConvertSemaAccessToStaticAuthorization(
 						invocation.Interpreter,
 						sema.NewEntitlementSetAccess(
 							[]*sema.EntitlementType{getType("E").(*sema.EntitlementType)},
@@ -5377,7 +5375,6 @@ func TestInterpretArrayAppend(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5408,7 +5405,6 @@ func TestInterpretArrayAppendBound(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5438,7 +5434,6 @@ func TestInterpretArrayAppendAll(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5469,7 +5464,6 @@ func TestInterpretArrayAppendAllBound(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5498,7 +5492,6 @@ func TestInterpretArrayConcat(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5528,7 +5521,6 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5558,7 +5550,6 @@ func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5630,7 +5621,6 @@ func TestInterpretArrayInsert(t *testing.T) {
 			AssertValueSlicesEqual(
 				t,
 				inter,
-
 				testCase.expectedValues,
 				ArrayElements(inter, actualArray.(*interpreter.ArrayValue)),
 			)
@@ -5693,7 +5683,6 @@ func TestInterpretArrayRemove(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(3),
@@ -5764,7 +5753,6 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(3),
@@ -5826,7 +5814,6 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -6155,7 +6142,6 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -6229,7 +6215,6 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredStringValue("def"),
@@ -7257,10 +7242,104 @@ func TestInterpretEmitEvent(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		expectedEvents,
 		actualEvents,
 	)
+}
+
+func TestInterpretReferenceEventParameter(t *testing.T) {
+
+	t.Parallel()
+
+	var actualEvents []interpreter.Value
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          event TestEvent(ref: &[{Int: String}])
+
+          fun test(ref: &[{Int: String}]) {
+              emit TestEvent(ref: ref)
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					eventType *sema.CompositeType,
+				) error {
+					actualEvents = append(actualEvents, event)
+					return nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	dictionaryStaticType := interpreter.NewDictionaryStaticType(
+		nil,
+		interpreter.PrimitiveStaticTypeInt,
+		interpreter.PrimitiveStaticTypeString,
+	)
+
+	dictionaryValue := interpreter.NewDictionaryValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		dictionaryStaticType,
+		interpreter.NewUnmeteredIntValueFromInt64(42),
+		interpreter.NewUnmeteredStringValue("answer"),
+	)
+
+	arrayStaticType := interpreter.NewVariableSizedStaticType(nil, dictionaryStaticType)
+
+	arrayValue := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		arrayStaticType,
+		common.ZeroAddress,
+		dictionaryValue,
+	)
+
+	ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+		interpreter.UnauthorizedAccess,
+		arrayValue,
+		inter.MustConvertStaticToSemaType(arrayStaticType),
+	)
+
+	_, err = inter.Invoke("test", ref)
+	require.NoError(t, err)
+
+	eventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TestEvent")
+
+	expectedEvents := []interpreter.Value{
+		interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			TestLocation,
+			TestLocation.QualifiedIdentifier(eventType.ID()),
+			common.CompositeKindEvent,
+			[]interpreter.CompositeField{
+				{
+					Name:  "ref",
+					Value: ref,
+				},
+			},
+			common.ZeroAddress,
+		),
+	}
+
+	for _, event := range expectedEvents {
+		event.(*interpreter.CompositeValue).InitializeFunctions(inter)
+	}
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		expectedEvents,
+		actualEvents,
+	)
+
 }
 
 type testValue struct {
@@ -7598,7 +7677,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			AssertValueSlicesEqual(
 				t,
 				inter,
-
 				expectedEvents,
 				actualEvents,
 			)
@@ -8428,9 +8506,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
       access(all) let address2 = Test.test()
     `
 
-	addressValue := interpreter.AddressValue{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
+	addressValue := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
 
 	inter, err := parseCheckAndInterpretWithOptions(t, code,
 		ParseCheckAndInterpretOptions{
@@ -8442,8 +8518,16 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 					_ string,
 					_ common.CompositeKind,
 				) map[string]interpreter.Value {
+
+					accountRef := stdlib.NewAccountReferenceValue(
+						nil,
+						nil,
+						addressValue,
+						interpreter.FullyEntitledAccountAccess,
+					)
+
 					return map[string]interpreter.Value{
-						"account": newTestAuthAccountValue(inter, addressValue),
+						sema.ContractAccountFieldName: accountRef,
 					}
 				},
 			},
@@ -8840,7 +8924,6 @@ func TestInterpretHexDecode(t *testing.T) {
 		AssertValueSlicesEqual(
 			t,
 			inter,
-
 			expected,
 			ArrayElements(inter, arrayValue),
 		)
@@ -8865,7 +8948,6 @@ func TestInterpretHexDecode(t *testing.T) {
 		AssertValueSlicesEqual(
 			t,
 			inter,
-
 			expected,
 			ArrayElements(inter, arrayValue),
 		)
@@ -8961,9 +9043,9 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
           let r <- create R()
           addresses.append(r.owner?.address)
 
-          account.save(<-r, to: /storage/r)
+          account.storage.save(<-r, to: /storage/r)
 
-          let ref = account.borrow<&R>(from: /storage/r)
+          let ref = account.storage.borrow<&R>(from: /storage/r)
           addresses.append(ref?.owner?.address)
 
           return addresses
@@ -8971,15 +9053,18 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
     `
 	// `authAccount`
 
-	address := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	valueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "account",
-		Type:  sema.AuthAccountType,
-		Value: newTestAuthAccountValue(nil, interpreter.AddressValue(address)),
-		Kind:  common.DeclarationKindConstant,
+		Name: "account",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: stdlib.NewAccountReferenceValue(
+			nil,
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.FullyEntitledAccountAccess,
+		),
+		Kind: common.DeclarationKindConstant,
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -8996,8 +9081,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			},
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
-				PublicAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return newTestPublicAccountValue(nil, address)
+				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(nil, nil, address)
 				},
 			},
 		},
@@ -9015,158 +9100,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.AddressValue(address)),
 		},
 		ArrayElements(inter, result.(*interpreter.ArrayValue)),
-	)
-}
-
-func newPanicFunctionValue(gauge common.MemoryGauge) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		stdlib.PanicFunction.Type.(*sema.FunctionType),
-		func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnreachableError())
-		},
-	)
-}
-
-func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
-	panicFunctionValue := newPanicFunctionValue(gauge)
-	return interpreter.NewAuthAccountValue(
-		gauge,
-		addressValue,
-		returnZeroUFix64,
-		returnZeroUFix64,
-		returnZeroUInt64,
-		returnZeroUInt64,
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountContractsValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func(
-					inter *interpreter.Interpreter,
-					locationRange interpreter.LocationRange,
-				) *interpreter.ArrayValue {
-					return interpreter.NewArrayValue(
-						inter,
-						locationRange,
-						interpreter.VariableSizedStaticType{
-							Type: interpreter.PrimitiveStaticTypeString,
-						},
-						common.ZeroAddress,
-					)
-				},
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountKeysValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func() interpreter.UInt64Value {
-					panic(errors.NewUnreachableError())
-				},
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountInboxValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountCapabilitiesValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func() interpreter.Value {
-					return interpreter.NewAuthAccountStorageCapabilitiesValue(
-						gauge,
-						addressValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-					)
-				},
-				func() interpreter.Value {
-					return interpreter.NewAuthAccountAccountCapabilitiesValue(
-						gauge,
-						addressValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-					)
-				},
-			)
-		},
-	)
-}
-
-func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
-
-	panicFunctionValue := newPanicFunctionValue(gauge)
-
-	return interpreter.NewPublicAccountValue(
-		gauge,
-		addressValue,
-		returnZeroUFix64,
-		returnZeroUFix64,
-		returnZeroUInt64,
-		returnZeroUInt64,
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountKeysValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				interpreter.AccountKeysCountGetter(func() interpreter.UInt64Value {
-					panic(errors.NewUnreachableError())
-				}),
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountContractsValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func(
-					inter *interpreter.Interpreter,
-					locationRange interpreter.LocationRange,
-				) *interpreter.ArrayValue {
-					return interpreter.NewArrayValue(
-						inter,
-						interpreter.EmptyLocationRange,
-						interpreter.VariableSizedStaticType{
-							Type: interpreter.PrimitiveStaticTypeString,
-						},
-						common.ZeroAddress,
-					)
-				},
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountCapabilitiesValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-			)
-		},
 	)
 }
 
@@ -9935,7 +9868,7 @@ func BenchmarkNewInterpreter(b *testing.B) {
 	})
 }
 
-func TestHostFunctionStaticType(t *testing.T) {
+func TestInterpretHostFunctionStaticType(t *testing.T) {
 
 	t.Parallel()
 
@@ -10197,12 +10130,13 @@ func TestInterpretArrayReverse(t *testing.T) {
 
 			return res
 		}
-		fun originalsa(): [Int] {		
+
+		fun originalsa(): [Int] {
 			let res: [Int] = [];
 			for s in sa {
 				res.append(s.test)
 			}
-		
+
 			return res
 		}
 
@@ -10216,12 +10150,13 @@ func TestInterpretArrayReverse(t *testing.T) {
 
 			return res
 		}
-		fun originalsa_fixed(): [Int] {		
+
+		fun originalsa_fixed(): [Int] {
 			let res: [Int] = [];
 			for s in sa_fixed {
 				res.append(s.test)
 			}
-		
+
 			return res
 		}
 	`)
@@ -11400,11 +11335,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t,
-				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				true,
-				fmt.Sprintf(
-					`
+			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
+				`
                       #allowAccountLinking
 
                       struct S {}
@@ -11421,11 +11353,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-					tc.typeName,
-					tc.code,
-				),
-				sema.Config{},
-			)
+				tc.typeName,
+				tc.code,
+			), sema.Config{})
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -11438,11 +11368,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t,
-				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				true,
-				fmt.Sprintf(
-					`
+			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
+				`
                       #allowAccountLinking
 
                       struct S {}
@@ -11455,11 +11382,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-					tc.typeName,
-					tc.code,
-				),
-				sema.Config{},
-			)
+				tc.typeName,
+				tc.code,
+			), sema.Config{})
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -11469,9 +11394,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:     "account reference",
-			typeName: "AuthAccount",
+			typeName: "Account",
 			code: `
-		      let ref = &account as &AuthAccount
+		      let ref = account
 		    `,
 		},
 	}
@@ -11499,8 +11424,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 				name:     fmt.Sprintf("storage reference%s", testNameSuffix),
 				typeName: "S",
 				code: fmt.Sprintf(`
-                      account.save(S(), to: /storage/s)
-                      let ref = account.borrow<%s &S>(from: /storage/s)!
+                      account.storage.save(S(), to: /storage/s)
+                      let ref = account.storage.borrow<%s &S>(from: /storage/s)!
                     `,
 					authKeyword,
 				),

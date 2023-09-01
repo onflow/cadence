@@ -1028,7 +1028,7 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 	if t.Authorization != nil {
 		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
 		switch mapAccess := access.(type) {
-		case EntitlementMapAccess:
+		case *EntitlementMapAccess:
 			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
 			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
 				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
@@ -1263,7 +1263,7 @@ func (checker *Checker) functionType(
 		// to allow entitlement mapping types to be used in the return annotation only of
 		// a mapped accessor function, we introduce a "variable" into the typing scope while
 		// checking the return
-		if mapAccess, isMapAccess := access.(EntitlementMapAccess); isMapAccess {
+		if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
 			checker.entitlementMappingInScope = mapAccess.Type
 		}
 		convertedReturnTypeAnnotation =
@@ -1708,7 +1708,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 	switch access := access.(type) {
 	case PrimitiveAccess:
 		checker.checkPrimitiveAccess(access, isConstant, declarationKind, startPos)
-	case EntitlementMapAccess:
+	case *EntitlementMapAccess:
 		checker.checkEntitlementMapAccess(access, declarationKind, declarationType, containerKind, startPos)
 	case EntitlementSetAccess:
 		checker.checkEntitlementSetAccess(declarationType, containerKind, startPos)
@@ -1786,7 +1786,7 @@ func (checker *Checker) checkPrimitiveAccess(
 }
 
 func (checker *Checker) checkEntitlementMapAccess(
-	access EntitlementMapAccess,
+	access *EntitlementMapAccess,
 	declarationKind common.DeclarationKind,
 	declarationType Type,
 	containerKind *common.CompositeKind,
@@ -1869,7 +1869,7 @@ func (checker *Checker) checkEntitlementSetAccess(
 	// when using entitlement set access, it is not permitted for the value to be declared with a mapped entitlement
 	switch ty := declarationType.(type) {
 	case *ReferenceType:
-		if _, isMap := ty.Authorization.(EntitlementMapAccess); isMap {
+		if _, isMap := ty.Authorization.(*EntitlementMapAccess); isMap {
 			checker.report(
 				&InvalidMappedEntitlementMemberError{
 					Pos: startPos,
@@ -1879,7 +1879,7 @@ func (checker *Checker) checkEntitlementSetAccess(
 	case *OptionalType:
 		switch optionalType := ty.Type.(type) {
 		case *ReferenceType:
-			if _, isMap := optionalType.Authorization.(EntitlementMapAccess); isMap {
+			if _, isMap := optionalType.Authorization.(*EntitlementMapAccess); isMap {
 				checker.report(
 					&InvalidMappedEntitlementMemberError{
 						Pos: startPos,
@@ -2012,9 +2012,21 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 }
 
 const ResourceOwnerFieldName = "owner"
+
+var ResourceOwnerFieldType = &OptionalType{
+	Type: AccountReferenceType,
+}
+
 const ResourceUUIDFieldName = "uuid"
 
+var ResourceUUIDFieldType = UInt64Type
+
 const ContractAccountFieldName = "account"
+
+var ContractAccountFieldType = &ReferenceType{
+	Type:          AccountType,
+	Authorization: FullyEntitledAccountAccess,
+}
 
 const contractAccountFieldDocString = `
 The account where the contract is deployed in
@@ -2080,12 +2092,12 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		case common.CompositeKindContract:
 
 			// All contracts have a predeclared member
-			// `access(self) let account: AuthAccount`,
+			// `access(self) let account: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account`,
 			// which is ignored in serialization
 
 			addPredeclaredMember(
 				ContractAccountFieldName,
-				AuthAccountType,
+				ContractAccountFieldType,
 				common.DeclarationKindField,
 				ast.AccessSelf,
 				true,
@@ -2096,14 +2108,12 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			// All resources have two predeclared fields:
 
-			// `access(all) let owner: PublicAccount?`,
+			// `access(all) let owner: &Account?`,
 			// ignored in serialization
 
 			addPredeclaredMember(
 				ResourceOwnerFieldName,
-				&OptionalType{
-					Type: PublicAccountType,
-				},
+				ResourceOwnerFieldType,
 				common.DeclarationKindField,
 				ast.AccessAll,
 				true,
@@ -2115,7 +2125,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			addPredeclaredMember(
 				ResourceUUIDFieldName,
-				UInt64Type,
+				ResourceUUIDFieldType,
 				common.DeclarationKindField,
 				ast.AccessAll,
 				false,

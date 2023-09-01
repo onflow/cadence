@@ -21,6 +21,7 @@ package sema
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -199,52 +200,54 @@ func (e EntitlementSetAccess) IsLessPermissiveThan(other Access) bool {
 }
 
 type EntitlementMapAccess struct {
-	Type     *EntitlementMapType
-	domain   EntitlementSetAccess
-	codomain EntitlementSetAccess
-	images   map[*EntitlementType]*EntitlementOrderedSet
+	Type         *EntitlementMapType
+	domain       EntitlementSetAccess
+	domainOnce   sync.Once
+	codomain     EntitlementSetAccess
+	codomainOnce sync.Once
+	images       sync.Map
 }
 
-var _ Access = EntitlementMapAccess{}
+var _ Access = &EntitlementMapAccess{}
 
-func NewEntitlementMapAccess(mapType *EntitlementMapType) EntitlementMapAccess {
-	return EntitlementMapAccess{
+func NewEntitlementMapAccess(mapType *EntitlementMapType) *EntitlementMapAccess {
+	return &EntitlementMapAccess{
 		Type:   mapType,
-		images: make(map[*EntitlementType]*EntitlementOrderedSet),
+		images: sync.Map{},
 	}
 }
 
-func (EntitlementMapAccess) isAccess() {}
+func (*EntitlementMapAccess) isAccess() {}
 
-func (e EntitlementMapAccess) string(typeFormatter func(ty Type) string) string {
+func (e *EntitlementMapAccess) string(typeFormatter func(ty Type) string) string {
 	return typeFormatter(e.Type)
 }
 
-func (a EntitlementMapAccess) Description() string {
+func (a *EntitlementMapAccess) Description() string {
 	return a.AccessKeyword()
 }
 
-func (a EntitlementMapAccess) AccessKeyword() string {
+func (a *EntitlementMapAccess) AccessKeyword() string {
 	return a.string(func(ty Type) string { return ty.String() })
 }
 
-func (a EntitlementMapAccess) AuthKeyword() string {
+func (a *EntitlementMapAccess) AuthKeyword() string {
 	return fmt.Sprintf("auth(%s)", a.AccessKeyword())
 }
 
-func (e EntitlementMapAccess) Equal(other Access) bool {
+func (e *EntitlementMapAccess) Equal(other Access) bool {
 	switch otherAccess := other.(type) {
-	case EntitlementMapAccess:
+	case *EntitlementMapAccess:
 		return e.Type.Equal(otherAccess.Type)
 	}
 	return false
 }
 
-func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
+func (e *EntitlementMapAccess) PermitsAccess(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
 		return otherAccess == PrimitiveAccess(ast.AccessSelf)
-	case EntitlementMapAccess:
+	case *EntitlementMapAccess:
 		return e.Type.Equal(otherAccess.Type)
 	// if we are initializing a field that was declared with an entitlement-mapped reference type,
 	// the type we are using to initialize that member must be fully authorized for the entire codomain
@@ -277,11 +280,11 @@ func (e EntitlementMapAccess) PermitsAccess(other Access) bool {
 	}
 }
 
-func (e EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
+func (e *EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
 	switch otherAccess := other.(type) {
 	case PrimitiveAccess:
 		return ast.PrimitiveAccess(otherAccess) != ast.AccessSelf
-	case EntitlementMapAccess:
+	case *EntitlementMapAccess:
 		// this should be false on equality
 		return !e.Type.Equal(otherAccess.Type)
 	default:
@@ -289,62 +292,59 @@ func (e EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
 	}
 }
 
-func (e EntitlementMapAccess) Domain() EntitlementSetAccess {
-	if e.domain.Entitlements != nil {
-		return e.domain
-	}
-
-	domain := common.MappedSliceWithNoDuplicates(
-		e.Type.Relations,
-		func(r EntitlementRelation) *EntitlementType {
-			return r.Input
-		},
-	)
-	e.domain = NewEntitlementSetAccess(domain, Conjunction)
+func (e *EntitlementMapAccess) Domain() EntitlementSetAccess {
+	e.domainOnce.Do(func() {
+		domain := common.MappedSliceWithNoDuplicates(
+			e.Type.Relations,
+			func(r EntitlementRelation) *EntitlementType {
+				return r.Input
+			},
+		)
+		e.domain = NewEntitlementSetAccess(domain, Conjunction)
+	})
 	return e.domain
 }
 
-func (e EntitlementMapAccess) Codomain() EntitlementSetAccess {
-	if e.codomain.Entitlements != nil {
-		return e.codomain
-	}
-
-	codomain := common.MappedSliceWithNoDuplicates(
-		e.Type.Relations,
-		func(r EntitlementRelation) *EntitlementType {
-			return r.Output
-		},
-	)
-	e.codomain = NewEntitlementSetAccess(codomain, Conjunction)
+func (e *EntitlementMapAccess) Codomain() EntitlementSetAccess {
+	e.codomainOnce.Do(func() {
+		codomain := common.MappedSliceWithNoDuplicates(
+			e.Type.Relations,
+			func(r EntitlementRelation) *EntitlementType {
+				return r.Output
+			},
+		)
+		e.codomain = NewEntitlementSetAccess(codomain, Conjunction)
+	})
 	return e.codomain
 }
 
 // produces the image set of a single entitlement through a map
 // the image set of one element is always a conjunction
-func (e EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) (output *EntitlementOrderedSet) {
-	image := e.images[entitlement]
-	if image != nil {
-		return image
+func (e *EntitlementMapAccess) entitlementImage(entitlement *EntitlementType) *EntitlementOrderedSet {
+	image, ok := e.images.Load(entitlement)
+
+	if ok {
+		return image.(*EntitlementOrderedSet)
 	}
 
-	output = orderedmap.New[EntitlementOrderedSet](0)
+	imageMap := orderedmap.New[EntitlementOrderedSet](0)
 	for _, relation := range e.Type.Relations {
 		if relation.Input.Equal(entitlement) {
-			output.Set(relation.Output, struct{}{})
+			imageMap.Set(relation.Output, struct{}{})
 		}
 	}
 	if e.Type.IncludesIdentity {
-		output.Set(entitlement, struct{}{})
+		imageMap.Set(entitlement, struct{}{})
 	}
 
-	e.images[entitlement] = output
-	return
+	e.images.Store(entitlement, imageMap)
+	return imageMap
 }
 
 // Image applies all the entitlements in the `argumentAccess` to the function
 // defined by the map in `e`, producing a new entitlement set of the image of the
 // arguments.
-func (e EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
+func (e *EntitlementMapAccess) Image(inputs Access, astRange func() ast.Range) (Access, error) {
 
 	switch inputs := inputs.(type) {
 	// primitive access always passes trivially through the map
@@ -426,4 +426,48 @@ func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {
 	}
 	// only access(self) access is guaranteed to be less permissive than entitlement-based access, but cannot appear in interfaces
 	return ast.PrimitiveAccess(a) != ast.AccessSelf
+}
+
+func newEntitlementAccess(
+	entitlements []Type,
+	setKind EntitlementSetKind,
+) Access {
+
+	var setEntitlements []*EntitlementType
+	var mapEntitlement *EntitlementMapType
+
+	for _, entitlement := range entitlements {
+		switch entitlement := entitlement.(type) {
+		case *EntitlementType:
+			if mapEntitlement != nil {
+				panic(errors.NewDefaultUserError("mixed entitlement types"))
+			}
+
+			setEntitlements = append(setEntitlements, entitlement)
+
+		case *EntitlementMapType:
+			if len(setEntitlements) > 0 {
+				panic(errors.NewDefaultUserError("mixed entitlement types"))
+			}
+
+			if mapEntitlement != nil {
+				panic(errors.NewDefaultUserError("extra entitlement map type"))
+			}
+
+			mapEntitlement = entitlement
+
+		default:
+			panic(errors.NewDefaultUserError("invalid entitlement type: %s", entitlement))
+		}
+	}
+
+	if len(setEntitlements) > 0 {
+		return NewEntitlementSetAccess(setEntitlements, setKind)
+	}
+
+	if mapEntitlement != nil {
+		return NewEntitlementMapAccess(mapEntitlement)
+	}
+
+	panic(errors.NewDefaultUserError("neither map entitlement nor set entitlements given"))
 }

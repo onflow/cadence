@@ -765,61 +765,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 	}
 
 	switch typ := typ.(type) {
-	case cadence.AnyType,
-		cadence.AnyStructType,
-		cadence.AnyStructAttachmentType,
-		cadence.AnyResourceType,
-		cadence.AnyResourceAttachmentType,
-		cadence.AddressType,
-		cadence.MetaType,
-		cadence.VoidType,
-		cadence.NeverType,
-		cadence.BoolType,
-		cadence.StringType,
-		cadence.CharacterType,
-		cadence.BytesType,
-		cadence.NumberType,
-		cadence.SignedNumberType,
-		cadence.IntegerType,
-		cadence.SignedIntegerType,
-		cadence.FixedPointType,
-		cadence.SignedFixedPointType,
-		cadence.IntType,
-		cadence.Int8Type,
-		cadence.Int16Type,
-		cadence.Int32Type,
-		cadence.Int64Type,
-		cadence.Int128Type,
-		cadence.Int256Type,
-		cadence.UIntType,
-		cadence.UInt8Type,
-		cadence.UInt16Type,
-		cadence.UInt32Type,
-		cadence.UInt64Type,
-		cadence.UInt128Type,
-		cadence.UInt256Type,
-		cadence.Word8Type,
-		cadence.Word16Type,
-		cadence.Word32Type,
-		cadence.Word64Type,
-		cadence.Word128Type,
-		cadence.Word256Type,
-		cadence.Fix64Type,
-		cadence.UFix64Type,
-		cadence.BlockType,
-		cadence.PathType,
-		cadence.CapabilityPathType,
-		cadence.StoragePathType,
-		cadence.PublicPathType,
-		cadence.PrivatePathType,
-		cadence.AccountKeyType,
-		cadence.AuthAccountContractsType,
-		cadence.AuthAccountKeysType,
-		cadence.AuthAccountType,
-		cadence.PublicAccountContractsType,
-		cadence.PublicAccountKeysType,
-		cadence.PublicAccountType,
-		cadence.DeployedContractType:
+	case cadence.BytesType:
 		return jsonSimpleType{
 			Kind: typ.ID(),
 		}
@@ -942,11 +888,15 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Initializers: prepareInitializers(typ.Initializers, results),
 			Type:         prepareType(typ.RawType, results),
 		}
+	case cadence.PrimitiveType:
+		return jsonSimpleType{
+			Kind: typ.ID(),
+		}
 	case nil:
 		return ""
-	default:
-		panic(fmt.Errorf("unsupported type: %T, %v", typ, typ))
 	}
+
+	panic(fmt.Errorf("unsupported type: %T, %s", typ, typ))
 }
 
 type typePreparationResults map[cadence.Type]struct{}

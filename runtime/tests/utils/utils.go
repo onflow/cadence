@@ -99,7 +99,7 @@ func DeploymentTransaction(name string, contract []byte) []byte {
 		`
           transaction {
 
-              prepare(signer: AuthAccount) {
+              prepare(signer: auth(Contracts) &Account) {
                   signer.contracts.add(name: "%s", code: "%s".decodeHex())
               }
           }
@@ -114,7 +114,7 @@ func RemovalTransaction(name string) []byte {
 		`
           transaction {
 
-              prepare(signer: AuthAccount) {
+              prepare(signer: auth(Contracts) &Account) {
                   signer.contracts.remove(name: "%s")
               }
           }
@@ -128,8 +128,8 @@ func UpdateTransaction(name string, contract []byte) []byte {
 		`
           transaction {
 
-              prepare(signer: AuthAccount) {
-                  signer.contracts.update__experimental(name: "%s", code: "%s".decodeHex())
+              prepare(signer: auth(Contracts) &Account) {
+                  signer.contracts.update(name: "%s", code: "%s".decodeHex())
               }
           }
         `,

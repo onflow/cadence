@@ -64,14 +64,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       access(all) resource S {}
 
                       access(all) fun createAndSaveR(id: Int, storagePath: StoragePath) {
-                          self.account.save(
+                          self.account.storage.save(
                               <-create R(id: id),
                               to: storagePath
                           )
                       }
 
                       access(all) fun createAndSaveS(storagePath: StoragePath) {
-                          self.account.save(
+                          self.account.storage.save(
                               <-create S(),
                               to: storagePath
                           )
@@ -179,6 +179,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		return
 	}
 
+	authAccountType := sema.FullyEntitledAccountReferenceType
+	publicAccountType := sema.AccountReferenceType
+
 	testAccount := func(accountType sema.Type, accountExpression string) {
 
 		testName := fmt.Sprintf(
@@ -199,7 +202,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						// language=cadence
 						`
                             transaction {
-                                prepare(signer: AuthAccount) {
+                                prepare(signer: auth(Capabilities) &Account) {
                                     // Act
                                     let gotCap: Capability<&AnyStruct>? =
                                         %s.capabilities.get<&AnyStruct>(/public/x)
@@ -227,7 +230,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -262,18 +265,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							// language=cadence
 							`
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&AuthAccount> =
-                                          %s.capabilities.get<&AuthAccount>(publicPath)!
+                                      let gotCap: Capability<&Account> =
+                                          %s.capabilities.get<&Account>(publicPath)!
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -302,7 +305,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -340,19 +343,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							// language=cadence
 							`
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&AuthAccount> =
-                                          %s.capabilities.get<&AuthAccount>(publicPath)!
-                                      let ref: &AuthAccount = gotCap.borrow()!
+                                      let gotCap: Capability<&Account> =
+                                          %s.capabilities.get<&Account>(publicPath)!
+                                      let ref: &Account = gotCap.borrow()!
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -382,7 +385,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -419,13 +422,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
@@ -458,7 +461,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -493,13 +496,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							// language=cadence
 							`
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
@@ -531,7 +534,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -567,19 +570,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							// language=cadence
 							`
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
                                       let unpublishedcap = signer.capabilities.unpublish(publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&AuthAccount>? =
-                                          %s.capabilities.get<&AuthAccount>(publicPath)
+                                      let gotCap: Capability<&Account>? =
+                                          %s.capabilities.get<&Account>(publicPath)
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -605,7 +608,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						// language=cadence
 						`
                         transaction {
-                            prepare(signer: AuthAccount) {
+                            prepare(signer: auth(Capabilities) &Account) {
                                 // Act
                                 let ref: &AnyStruct? =
                                     %s.capabilities.borrow<&AnyStruct>(/public/x)
@@ -633,7 +636,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -667,18 +670,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							// language=cadence
 							`
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let ref: &AuthAccount =
-                                          %s.capabilities.borrow<&AuthAccount>(publicPath)!
+                                      let ref: &Account =
+                                          %s.capabilities.borrow<&Account>(publicPath)!
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -706,7 +709,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -740,21 +743,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						fmt.Sprintf(
 							// language=cadence
 							`
-                              import Test from 0x1 
+                              import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let ref: auth(Test.X) &AuthAccount? =
-                                          %s.capabilities.borrow<auth(Test.X) &AuthAccount>(publicPath)
+                                      let ref: auth(Test.X) &Account? =
+                                          %s.capabilities.borrow<auth(Test.X) &Account>(publicPath)
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -782,7 +785,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -817,13 +820,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							// language=cadence
 							`
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
@@ -855,7 +858,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -891,19 +894,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							// language=cadence
 							`
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
                                       let unpublishedcap = signer.capabilities.unpublish(publicPath)
 
                                       // Act
-                                      let ref: &AuthAccount? =
-                                          %s.capabilities.borrow<&AuthAccount>(publicPath)
+                                      let ref: &Account? =
+                                          %s.capabilities.borrow<&Account>(publicPath)
 
                                       // Assert
                                       assert(issuedCap.id == expectedCapID)
@@ -919,7 +922,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				})
 			})
 
-			if accountType == sema.AuthAccountType {
+			if accountType == authAccountType {
 
 				t.Run("publish, existing published", func(t *testing.T) {
 
@@ -932,7 +935,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                               import Test from 0x1
 
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let storagePath = /storage/r
                                       let publicPath = /public/r
                                       let expectedCapID: UInt64 = 1
@@ -959,13 +962,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							// language=cadence
 							`
                               transaction {
-                                  prepare(signer: AuthAccount) {
+                                  prepare(signer: auth(Capabilities) &Account) {
                                       let publicPath = /public/acct
                                       let expectedCapID: UInt64 = 1
 
                                       // Arrange
-                                      let issuedCap: Capability<&AuthAccount> =
-                                          signer.capabilities.account.issue<&AuthAccount>()
+                                      let issuedCap: Capability<&Account> =
+                                          signer.capabilities.account.issue<&Account>()
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
@@ -989,7 +992,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						// language=cadence
 						`
                           transaction {
-                              prepare(signer: AuthAccount) {
+                              prepare(signer: auth(Capabilities) &Account) {
                                   let publicPath = /public/r
 
                                   // Act
@@ -1008,13 +1011,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	}
 
 	for accountType, accountExpression := range map[sema.Type]string{
-		sema.AuthAccountType:   "signer",
-		sema.PublicAccountType: "getAccount(0x1)",
+		authAccountType:   "signer",
+		publicAccountType: "getAccount(0x1)",
 	} {
 		testAccount(accountType, accountExpression)
 	}
 
-	t.Run("AuthAccount.StorageCapabilities", func(t *testing.T) {
+	t.Run("Account.StorageCapabilities", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1028,7 +1031,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath1 = /storage/r
                           let storagePath2 = /storage/r2
 
@@ -1062,7 +1065,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Act
                           let controller1: &StorageCapabilityController? =
                               signer.capabilities.storage.getController(byCapabilityID: 0)
@@ -1087,10 +1090,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           let controller: &StorageCapabilityController? =
@@ -1115,7 +1118,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath1 = /storage/r
                           let storagePath2 = /storage/r2
 
@@ -1172,7 +1175,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath1 = /storage/r
                           let storagePath2 = /storage/r2
 
@@ -1225,7 +1228,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath = /storage/r
 
                           // Act
@@ -1257,7 +1260,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath1 = /storage/r
                           let storagePath2 = /storage/r2
 
@@ -1325,7 +1328,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath = /storage/r
 
                           // Arrange
@@ -1364,7 +1367,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath = /storage/r
 
                           // Arrange
@@ -1397,7 +1400,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath = /storage/r
 
                           // Arrange
@@ -1433,7 +1436,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath = /storage/r
 
                           // Arrange
@@ -1466,7 +1469,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath = /storage/r
 
                           // Arrange
@@ -1493,7 +1496,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		})
 	})
 
-	t.Run("AuthAccount.AccountCapabilities", func(t *testing.T) {
+	t.Run("Account.AccountCapabilities", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1505,14 +1508,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Act
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap3: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Assert
                           assert(issuedCap1.id == 1)
@@ -1533,7 +1536,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Act
                           let controller1: &AccountCapabilityController? =
                               signer.capabilities.account.getController(byCapabilityID: 0)
@@ -1558,7 +1561,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
                           let issuedCap: Capability<&AnyStruct> =
                               signer.capabilities.storage.issue<&AnyStruct>(/storage/x)
@@ -1584,14 +1587,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap3: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           let controller1: &AccountCapabilityController? =
@@ -1603,13 +1606,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                           // Assert
                           assert(controller1!.capabilityID == 1)
-                          assert(controller1!.borrowType == Type<&AuthAccount>())
+                          assert(controller1!.borrowType == Type<&Account>())
 
                           assert(controller2!.capabilityID == 2)
-                          assert(controller2!.borrowType == Type<&AuthAccount>())
+                          assert(controller2!.borrowType == Type<&Account>())
 
                           assert(controller3!.capabilityID == 3)
-                          assert(controller3!.borrowType == Type<&AuthAccount>())
+                          assert(controller3!.borrowType == Type<&Account>())
                       }
                   }
                 `,
@@ -1627,15 +1630,15 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
 
                           // Arrange
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap3: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           let controllers: [&AccountCapabilityController] =
@@ -1671,7 +1674,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
 
                           // Act
                           var called = false
@@ -1701,14 +1704,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap3: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap3: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           let controllers: [&AccountCapabilityController] = []
@@ -1749,12 +1752,12 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap1: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
-                          let issuedCap2: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap1: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
+                          let issuedCap2: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
 
                           // Act
                           var stopped = false
@@ -1783,15 +1786,15 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          signer.capabilities.account.issue<&AuthAccount>()
+                          signer.capabilities.account.issue<&Account>()
 
                           // Act
                           signer.capabilities.account.forEachController(
                               fun (controller: &AccountCapabilityController): Bool {
 
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                                  signer.capabilities.account.issue<&Account>()
 
                                   return true
                               }
@@ -1814,15 +1817,15 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          signer.capabilities.account.issue<&AuthAccount>()
+                          signer.capabilities.account.issue<&Account>()
 
                           // Act
                           signer.capabilities.account.forEachController(
                               fun (controller: &AccountCapabilityController): Bool {
 
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                                  signer.capabilities.account.issue<&Account>()
 
                                   return false
                               }
@@ -1842,9 +1845,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          signer.capabilities.account.issue<&AuthAccount>()
+                          signer.capabilities.account.issue<&Account>()
 
                           // Act
                           signer.capabilities.account.forEachController(
@@ -1873,9 +1876,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          signer.capabilities.account.issue<&AuthAccount>()
+                          signer.capabilities.account.issue<&Account>()
 
                           // Act
                           signer.capabilities.account.forEachController(
@@ -1907,7 +1910,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Storage, Capabilities) &Account) {
                           let storagePath = /storage/r
                           let resourceID = 42
 
@@ -1944,7 +1947,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           let storagePath = /storage/r
 
                           // Arrange
@@ -1988,7 +1991,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath1 = /storage/r
                               let storagePath2 = /storage/r2
 
@@ -2092,7 +2095,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath1 = /storage/r
                               let storagePath2 = /storage/empty
                               let resourceID = 42
@@ -2131,7 +2134,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath1 = /storage/r
                               let storagePath2 = /storage/r2
                               let resourceID1 = 42
@@ -2173,7 +2176,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath1 = /storage/r
                               let storagePath2 = /storage/s
                               let resourceID = 42
@@ -2218,7 +2221,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath = /storage/r
 
                               // Arrange
@@ -2257,7 +2260,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath = /storage/r
 
                               // Arrange
@@ -2287,7 +2290,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath = /storage/r
 
                               // Arrange
@@ -2317,7 +2320,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath = /storage/r
 
                               // Arrange
@@ -2347,7 +2350,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath = /storage/r
 
                               // Arrange
@@ -2382,7 +2385,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                       import Test from 0x1
 
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               let storagePath = /storage/r
                               let resourceID = 42
 
@@ -2425,11 +2428,11 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                   import Test from 0x1
 
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
 
 						  // Arrange
-                          let issuedCap: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
                           let controller1: &AccountCapabilityController =
                               signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
                           let controller2: &AccountCapabilityController =
@@ -2440,8 +2443,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                           let controller2Cap = controller2.capability
 
                           // Assert
-                          assert(controller1Cap.borrow<&AuthAccount>() != nil)
-                          assert(controller2Cap.borrow<&AuthAccount>() != nil)
+                          assert(controller1Cap.borrow<&Account>() != nil)
+                          assert(controller2Cap.borrow<&Account>() != nil)
                       }
                   }
                 `,
@@ -2456,10 +2459,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// language=cadence
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Capabilities) &Account) {
                           // Arrange
-                          let issuedCap: Capability<&AuthAccount> =
-                              signer.capabilities.account.issue<&AuthAccount>()
+                          let issuedCap: Capability<&Account> =
+                              signer.capabilities.account.issue<&Account>()
                           let controller1: &AccountCapabilityController =
                               signer.capabilities.account.getController(byCapabilityID: issuedCap.id)!
                           let controller2: &AccountCapabilityController =
@@ -2496,10 +2499,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					// language=cadence
 					`
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               // Arrange
-                              let issuedCap: Capability<&AuthAccount> =
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                              let issuedCap: Capability<&Account> =
+                                  signer.capabilities.account.issue<&Account>()
                               let controller: &AccountCapabilityController? =
                                   signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
 
@@ -2531,10 +2534,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					// language=cadence
 					`
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               // Arrange
-                              let issuedCap: Capability<&AuthAccount> =
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                              let issuedCap: Capability<&Account> =
+                                  signer.capabilities.account.issue<&Account>()
                               let controller: &AccountCapabilityController? =
                                   signer.capabilities.account.getController(byCapabilityID: issuedCap.id)
 
@@ -2557,10 +2560,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					// language=cadence
 					`
                       transaction {
-                          prepare(signer: AuthAccount) {
+                          prepare(signer: auth(Capabilities) &Account) {
                               // Arrange
-                              let issuedCap: Capability<&AuthAccount> =
-                                  signer.capabilities.account.issue<&AuthAccount>()
+                              let issuedCap: Capability<&Account> =
+                                  signer.capabilities.account.issue<&Account>()
                               assert(issuedCap.check())
                               assert(issuedCap.borrow() != nil)
 
@@ -2609,14 +2612,14 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
         import Test from 0x01
 
         transaction {
-            prepare(acct: AuthAccount) {
-                acct.save(<- Test.createVaultImpl(), to: /storage/r)
+            prepare(acct: auth(Storage, Capabilities) &Account) {
+                acct.storage.save(<-Test.createVaultImpl(), to: /storage/r)
 
                 let cap = acct.capabilities.storage.issue<&{Test.Balance}>(/storage/r)
                 acct.capabilities.publish(cap, at: /public/r)
 
-                let vaultRef = acct.capabilities.get<&{Test.Balance}>(/public/r)!
-                    .borrow() ?? panic("Could not borrow Balance reference to the Vault")
+                let vaultRef = acct.capabilities.borrow<&{Test.Balance}>(/public/r)
+                    ?? panic("Could not borrow Balance reference to the Vault")
             }
         }
     `)

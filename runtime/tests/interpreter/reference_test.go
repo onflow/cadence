@@ -541,11 +541,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -563,14 +559,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let ref = &r as &R
 
                 // Move the resource into the account
-                account.save(<-r, to: /storage/r)
+                account.storage.save(<-r, to: /storage/r)
 
                 // Update the reference
                 ref.setID(2)
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
+            }`, sema.Config{}, errorHandler(t))
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -583,11 +576,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -601,14 +590,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let ref = &r as &R
 
                 // Move the resource into the account
-                account.save(<-r, to: /storage/r)
+                account.storage.save(<-r, to: /storage/r)
 
                 // 'Read' a field from the reference
                 let id = ref.id
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
+            }`, sema.Config{}, errorHandler(t))
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -885,11 +871,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -904,17 +886,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
              fun test() {
                 let r1 <-create R()
-                account.save(<-r1, to: /storage/r)
+                account.storage.save(<-r1, to: /storage/r)
 
-                let r1Ref = account.borrow<&R>(from: /storage/r)!
+                let r1Ref = account.storage.borrow<&R>(from: /storage/r)!
 
-                let r2 <- account.load<@R>(from: /storage/r)!
+                let r2 <- account.storage.load<@R>(from: /storage/r)!
 
                 r1Ref.setID(2)
                 destroy r2
-            }`,
-			sema.Config{},
-		)
+            }`, sema.Config{})
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -1388,11 +1368,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -1413,10 +1389,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
                 // Update the reference
                 ref.setID(2)
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
+            }`, sema.Config{}, errorHandler(t))
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

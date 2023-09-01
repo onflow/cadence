@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
@@ -100,15 +101,15 @@ func TestEncodeOptional(t *testing.T) {
 			Fields: []cadence.Field{
 				{
 					Identifier: "a",
-					Type:       cadence.NewOptionalType(cadence.NewIntType()),
+					Type:       cadence.NewOptionalType(cadence.IntType),
 				},
 				{
 					Identifier: "b",
-					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewIntType())),
+					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.IntType)),
 				},
 				{
 					Identifier: "c",
-					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewIntType()))),
+					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewOptionalType(cadence.IntType))),
 				},
 			},
 		}
@@ -121,15 +122,15 @@ func TestEncodeOptional(t *testing.T) {
 			Fields: []cadence.Field{
 				{
 					Identifier: "a",
-					Type:       cadence.NewOptionalType(cadence.NewAnyStructType()),
+					Type:       cadence.NewOptionalType(cadence.AnyStructType),
 				},
 				{
 					Identifier: "b",
-					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewAnyStructType())),
+					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.AnyStructType)),
 				},
 				{
 					Identifier: "c",
-					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewAnyStructType()))),
+					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewOptionalType(cadence.AnyStructType))),
 				},
 			},
 		}
@@ -805,7 +806,7 @@ func TestEncodeOptional(t *testing.T) {
 					Fields: []cadence.Field{
 						{
 							Identifier: "bar",
-							Type:       cadence.IntType{},
+							Type:       cadence.IntType,
 						},
 					},
 				}
@@ -2862,7 +2863,7 @@ func TestEncodeArray(t *testing.T) {
 		name: "Empty",
 		val: cadence.NewArray(
 			[]cadence.Value{},
-		).WithType(cadence.NewVariableSizedArrayType(cadence.NewIntType())),
+		).WithType(cadence.NewVariableSizedArrayType(cadence.IntType)),
 		expected: []byte{
 			// language=json, format=json-cdc
 			// {"type":"Array","value":[]}
@@ -2895,7 +2896,7 @@ func TestEncodeArray(t *testing.T) {
 			cadence.NewInt(1),
 			cadence.NewInt(2),
 			cadence.NewInt(3),
-		}).WithType(cadence.NewConstantSizedArrayType(3, cadence.NewIntType())),
+		}).WithType(cadence.NewConstantSizedArrayType(3, cadence.IntType)),
 		expected: []byte{
 			// language=json, format=json-cdc
 			// {"type":"Array","value":[{"type":"Int","value":"1"},{"type":"Int","value":"2"},{"type":"Int","value":"3"}]}
@@ -2950,7 +2951,7 @@ func TestEncodeArray(t *testing.T) {
 			cadence.NewInt(1),
 			cadence.NewInt(2),
 			cadence.NewInt(3),
-		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewIntType())),
+		}).WithType(cadence.NewVariableSizedArrayType(cadence.IntType)),
 		expected: []byte{
 			// language=json, format=json-cdc
 			// {"type":"Array","value":[{"type":"Int","value":"1"},{"type":"Int","value":"2"},{"type":"Int","value":"3"}]}
@@ -3000,14 +3001,14 @@ func TestEncodeArray(t *testing.T) {
 		val: cadence.NewArray([]cadence.Value{
 			cadence.NewArray([]cadence.Value{
 				cadence.NewInt(1),
-			}).WithType(cadence.NewVariableSizedArrayType(cadence.NewIntType())),
+			}).WithType(cadence.NewVariableSizedArrayType(cadence.IntType)),
 			cadence.NewArray([]cadence.Value{
 				cadence.NewInt(2),
-			}).WithType(cadence.NewVariableSizedArrayType(cadence.NewIntType())),
+			}).WithType(cadence.NewVariableSizedArrayType(cadence.IntType)),
 			cadence.NewArray([]cadence.Value{
 				cadence.NewInt(3),
-			}).WithType(cadence.NewVariableSizedArrayType(cadence.NewIntType())),
-		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewVariableSizedArrayType(cadence.NewIntType()))),
+			}).WithType(cadence.NewVariableSizedArrayType(cadence.IntType)),
+		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewVariableSizedArrayType(cadence.IntType))),
 		expected: []byte{
 			// language=json, format=json-cdc
 			// {"value":[{"value":[{"value":"1","type":"Int"}],"type":"Array"},{"value":[{"value":"2","type":"Int"}],"type":"Array"},{"value":[{"value":"3","type":"Int"}],"type":"Array"}],"type":"Array"}
@@ -3325,7 +3326,7 @@ func TestEncodeArray(t *testing.T) {
 			cadence.NewInt(1),
 			s,
 			cadence.NewBool(true),
-		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewAnyStructType())),
+		}).WithType(cadence.NewVariableSizedArrayType(cadence.AnyStructType)),
 		expected: []byte{
 			// language=json, format=json-cdc
 			// {"type":"Array","value":[{"type":"Int","value":"1"},{"type":"String","value":"a"},{"type":"Bool","value":true}]}
@@ -3397,7 +3398,7 @@ func TestEncodeArray(t *testing.T) {
 			cadence.NewInt8(1),
 			cadence.NewInt16(2),
 			cadence.NewInt32(3),
-		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewNumberType())),
+		}).WithType(cadence.NewVariableSizedArrayType(cadence.NumberType)),
 		expected: []byte{
 			// language=json, format=json-cdc
 			// {"value":[{"value":"1","type":"Int8"},{"value":"2","type":"Int16"},{"value":"3","type":"Int32"}],"type":"Array"}
@@ -3466,7 +3467,7 @@ func TestEncodeArray(t *testing.T) {
 				cadence.NewResource([]cadence.Value{
 					cadence.NewInt(1),
 				}).WithType(fooResourceType),
-			}).WithType(cadence.NewVariableSizedArrayType(cadence.NewAnyStructType()))
+			}).WithType(cadence.NewVariableSizedArrayType(cadence.AnyStructType))
 		}(),
 		expected: []byte{
 			// language=json, format=json-cdc
@@ -3929,7 +3930,7 @@ func TestEncodeArray(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       cadence.IntType{},
+						Type:       cadence.IntType,
 					},
 				},
 			}
@@ -4071,7 +4072,7 @@ func TestEncodeArray(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       cadence.IntType{},
+						Type:       cadence.IntType,
 					},
 				},
 			}
@@ -4224,7 +4225,7 @@ func TestEncodeDictionary(t *testing.T) {
 		name: "empty",
 		val: cadence.NewDictionary(
 			[]cadence.KeyValuePair{},
-		).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+		).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 		expected: []byte{
 			// language=json, format=json-cdc
 			// {"value":[],"type":"Dictionary"}
@@ -4271,7 +4272,7 @@ func TestEncodeDictionary(t *testing.T) {
 				Key:   cadence.String("a"),
 				Value: cadence.NewInt(1),
 			},
-		}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+		}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 		expectedVal: cadence.NewDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.String("a"),
@@ -4285,7 +4286,7 @@ func TestEncodeDictionary(t *testing.T) {
 				Key:   cadence.String("c"),
 				Value: cadence.NewInt(3),
 			},
-		}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+		}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 		expected: []byte{
 			// language=json, format=json-cdc
 			// {"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Int","value":"1"}},{"key":{"type":"String","value":"b"},"value":{"type":"Int","value":"2"}},{"key":{"type":"String","value":"c"},"value":{"type":"Int","value":"3"}}]}
@@ -4358,7 +4359,7 @@ func TestEncodeDictionary(t *testing.T) {
 						Key:   cadence.String("3"),
 						Value: cadence.NewInt(3),
 					},
-				}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+				}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 			},
 			{
 				Key: cadence.String("b"),
@@ -4367,7 +4368,7 @@ func TestEncodeDictionary(t *testing.T) {
 						Key:   cadence.String("2"),
 						Value: cadence.NewInt(2),
 					},
-				}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+				}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 			},
 			{
 				Key: cadence.String("a"),
@@ -4376,11 +4377,11 @@ func TestEncodeDictionary(t *testing.T) {
 						Key:   cadence.String("1"),
 						Value: cadence.NewInt(1),
 					},
-				}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+				}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 			},
 		}).WithType(cadence.NewDictionaryType(
-			cadence.NewStringType(),
-			cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+			cadence.StringType,
+			cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 		),
 		expectedVal: cadence.NewDictionary([]cadence.KeyValuePair{
 			{
@@ -4390,7 +4391,7 @@ func TestEncodeDictionary(t *testing.T) {
 						Key:   cadence.String("1"),
 						Value: cadence.NewInt(1),
 					},
-				}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+				}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 			},
 			{
 				Key: cadence.String("b"),
@@ -4399,7 +4400,7 @@ func TestEncodeDictionary(t *testing.T) {
 						Key:   cadence.String("2"),
 						Value: cadence.NewInt(2),
 					},
-				}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+				}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 			},
 			{
 				Key: cadence.String("c"),
@@ -4408,11 +4409,11 @@ func TestEncodeDictionary(t *testing.T) {
 						Key:   cadence.String("3"),
 						Value: cadence.NewInt(3),
 					},
-				}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+				}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 			},
 		}).WithType(cadence.NewDictionaryType(
-			cadence.NewStringType(),
-			cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType())),
+			cadence.StringType,
+			cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
 		),
 		expected: []byte{
 			// language=json, format=json-cdc
@@ -4530,7 +4531,7 @@ func TestEncodeDictionary(t *testing.T) {
 					}).WithType(fooResourceType),
 				},
 			}).WithType(cadence.NewDictionaryType(
-				cadence.NewStringType(),
+				cadence.StringType,
 				fooResourceType,
 			)),
 			expectedVal: cadence.NewDictionary([]cadence.KeyValuePair{
@@ -4553,7 +4554,7 @@ func TestEncodeDictionary(t *testing.T) {
 					}).WithType(fooResourceType),
 				},
 			}).WithType(cadence.NewDictionaryType(
-				cadence.NewStringType(),
+				cadence.StringType,
 				fooResourceType,
 			)),
 			expected: []byte{
@@ -4675,7 +4676,7 @@ func TestEncodeDictionary(t *testing.T) {
 				Key:   cadence.NewBool(true),
 				Value: cadence.NewInt(3),
 			},
-		}).WithType(cadence.NewDictionaryType(cadence.NewAnyStructType(), cadence.NewAnyStructType())),
+		}).WithType(cadence.NewDictionaryType(cadence.AnyStructType, cadence.AnyStructType)),
 		expectedVal: cadence.NewDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.NewBool(true),
@@ -4689,7 +4690,7 @@ func TestEncodeDictionary(t *testing.T) {
 				Key:   cadence.NewInt(0),
 				Value: cadence.NewInt(1),
 			},
-		}).WithType(cadence.NewDictionaryType(cadence.NewAnyStructType(), cadence.NewAnyStructType())),
+		}).WithType(cadence.NewDictionaryType(cadence.AnyStructType, cadence.AnyStructType)),
 		expected: []byte{
 			// language=json, format=json-cdc
 			// {"value":[{"key":{"value":"c","type":"String"},"value":{"value":"2","type":"Int"}},{"key":{"value":"0","type":"Int"},"value":{"value":"1","type":"Int"}},{"key":{"value":true,"type":"Bool"},"value":{"value":"3","type":"Int"}}],"type":"Dictionary"}
@@ -4832,7 +4833,7 @@ func TestEncodeSortedDictionary(t *testing.T) {
 			Key:   cadence.String("b"),
 			Value: cadence.NewInt(2),
 		},
-	}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType()))
+	}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType))
 
 	expectedDict := cadence.NewDictionary([]cadence.KeyValuePair{
 		{
@@ -4847,7 +4848,7 @@ func TestEncodeSortedDictionary(t *testing.T) {
 			Key:   cadence.String("c"),
 			Value: cadence.NewInt(3),
 		},
-	}).WithType(cadence.NewDictionaryType(cadence.NewStringType(), cadence.NewIntType()))
+	}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType))
 
 	simpleDict := testCase{
 		"Simple",
@@ -4996,8 +4997,8 @@ func TestEncodeResource(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Foo",
 			[]cadence.Field{
-				{Type: cadence.NewIntType(), Identifier: "bar"},
-				{Type: cadence.NewUInt64Type(), Identifier: "uuid"},
+				{Type: cadence.IntType, Identifier: "bar"},
+				{Type: cadence.UInt64Type, Identifier: "uuid"},
 			},
 			nil,
 		))
@@ -5112,8 +5113,8 @@ func TestEncodeResource(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Foo",
 			[]cadence.Field{
-				{Type: cadence.NewIntType(), Identifier: "bar"},
-				{Type: cadence.NewUInt64Type(), Identifier: "uuid"},
+				{Type: cadence.IntType, Identifier: "bar"},
+				{Type: cadence.UInt64Type, Identifier: "uuid"},
 			},
 			nil,
 		))
@@ -5236,8 +5237,8 @@ func TestEncodeResource(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Bar",
 			[]cadence.Field{
-				{Type: cadence.NewIntType(), Identifier: "x"},
-				{Type: cadence.NewUInt64Type(), Identifier: "uuid"},
+				{Type: cadence.IntType, Identifier: "x"},
+				{Type: cadence.UInt64Type, Identifier: "uuid"},
 			},
 			nil,
 		)
@@ -5257,7 +5258,7 @@ func TestEncodeResource(t *testing.T) {
 			"Foo",
 			[]cadence.Field{
 				{Type: expectedBarResourceType, Identifier: "bar"},
-				{Type: cadence.NewUInt64Type(), Identifier: "uuid"},
+				{Type: cadence.UInt64Type, Identifier: "uuid"},
 			},
 			nil,
 		))
@@ -5465,11 +5466,11 @@ func TestEncodeStruct(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       cadence.IntType{},
+						Type:       cadence.IntType,
 					},
 					{
 						Identifier: "b",
-						Type:       cadence.StringType{},
+						Type:       cadence.StringType,
 					},
 				},
 			}
@@ -5713,11 +5714,11 @@ func TestEncodeEvent(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       cadence.IntType{},
+						Type:       cadence.IntType,
 					},
 					{
 						Identifier: "b",
-						Type:       cadence.StringType{},
+						Type:       cadence.StringType,
 					},
 				},
 			}
@@ -5816,11 +5817,11 @@ func TestEncodeEvent(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       cadence.IntType{},
+						Type:       cadence.IntType,
 					},
 					{
 						Identifier: "b",
-						Type:       cadence.AnyStructType{},
+						Type:       cadence.AnyStructType,
 					},
 				},
 			}
@@ -5830,7 +5831,7 @@ func TestEncodeEvent(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "c",
-						Type:       cadence.StringType{},
+						Type:       cadence.StringType,
 					},
 				},
 			}
@@ -5976,7 +5977,7 @@ func TestEncodeEvent(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       cadence.StringType{},
+						Type:       cadence.StringType,
 					},
 					{
 						Identifier: "b",
@@ -6144,11 +6145,11 @@ func TestEncodeContract(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       cadence.IntType{},
+						Type:       cadence.IntType,
 					},
 					{
 						Identifier: "b",
-						Type:       cadence.StringType{},
+						Type:       cadence.StringType,
 					},
 				},
 			}
@@ -6247,7 +6248,7 @@ func TestEncodeContract(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "c",
-						Type:       cadence.StringType{},
+						Type:       cadence.StringType,
 					},
 				},
 			}
@@ -6257,11 +6258,11 @@ func TestEncodeContract(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       cadence.IntType{},
+						Type:       cadence.IntType,
 					},
 					{
 						Identifier: "b",
-						Type:       cadence.AnyStructType{},
+						Type:       cadence.AnyStructType,
 					},
 				},
 			}
@@ -6407,7 +6408,7 @@ func TestEncodeContract(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       cadence.StringType{},
+						Type:       cadence.StringType,
 					},
 					{
 						Identifier: "b",
@@ -6558,7 +6559,7 @@ func TestEncodeEnum(t *testing.T) {
 				Fields: []cadence.Field{
 					{
 						Identifier: "raw",
-						Type:       cadence.UInt8Type{},
+						Type:       cadence.UInt8Type,
 					},
 				},
 			}
@@ -6654,8 +6655,8 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Stats",
 			[]cadence.Field{
-				cadence.NewField("count", cadence.NewIntType()),
-				cadence.NewField("sum", cadence.NewIntType()),
+				cadence.NewField("count", cadence.IntType),
+				cadence.NewField("sum", cadence.IntType),
 			},
 			nil,
 		)
@@ -6680,8 +6681,8 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Stats",
 			[]cadence.Field{
-				cadence.NewField("sum", cadence.NewIntType()),
-				cadence.NewField("count", cadence.NewIntType()),
+				cadence.NewField("sum", cadence.IntType),
+				cadence.NewField("count", cadence.IntType),
 			},
 			nil,
 		)
@@ -6868,8 +6869,8 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Stats",
 			[]cadence.Field{
-				cadence.NewField("count", cadence.NewIntType()),
-				cadence.NewField("sum", cadence.NewIntType()),
+				cadence.NewField("count", cadence.IntType),
+				cadence.NewField("sum", cadence.IntType),
 			},
 			nil,
 		)
@@ -6894,8 +6895,8 @@ func TestEncodeValueOfIntersectionType(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Stats",
 			[]cadence.Field{
-				cadence.NewField("sum", cadence.NewIntType()),
-				cadence.NewField("count", cadence.NewIntType()),
+				cadence.NewField("sum", cadence.IntType),
+				cadence.NewField("count", cadence.IntType),
 			},
 			nil,
 		)
@@ -7075,7 +7076,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			Fields: []cadence.Field{
 				{
 					Identifier: "a",
-					Type:       cadence.StringType{},
+					Type:       cadence.StringType,
 				},
 			},
 		}
@@ -7088,7 +7089,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			cadence.String("a"),
 			cadence.String("b"),
 		}).WithType(cadence.NewVariableSizedArrayType(
-			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.NewStringType()),
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.StringType),
 		)),
 		expected: []byte{
 			// language=json, format=json-cdc
@@ -7136,7 +7137,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			cadence.NewOptional(cadence.String("a")),
 			cadence.NewOptional(nil),
 		}).WithType(cadence.NewVariableSizedArrayType(
-			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.NewOptionalType(cadence.NewStringType())),
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.NewOptionalType(cadence.StringType)),
 		)),
 		expected: []byte{
 			// language=json, format=json-cdc
@@ -7182,10 +7183,10 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 		name: "dictionary of optional reference to Int",
 		val: func() cadence.Value {
 			dictionaryType := &cadence.DictionaryType{
-				KeyType: cadence.TheStringType,
+				KeyType: cadence.StringType,
 				ElementType: &cadence.OptionalType{
 					Type: &cadence.ReferenceType{
-						Type:          cadence.TheInt128Type,
+						Type:          cadence.Int128Type,
 						Authorization: cadence.UnauthorizedAccess,
 					},
 				},
@@ -7262,7 +7263,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			cadence.String("a"),
 			cadence.NewUInt8(1),
 		}).WithType(cadence.NewVariableSizedArrayType(
-			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.NewAnyStructType()),
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.AnyStructType),
 		)),
 		expected: []byte{
 			// language=json, format=json-cdc
@@ -7423,7 +7424,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 					cadence.String("b"),
 				}).WithType(simpleStructType),
 			}).WithType(cadence.NewVariableSizedArrayType(
-				cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.NewAnyStructType()),
+				cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.AnyStructType),
 			))
 		}(),
 		expected: []byte{
@@ -7529,7 +7530,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 		}).WithType(cadence.NewVariableSizedArrayType(
 			cadence.NewReferenceType(
 				cadence.UnauthorizedAccess,
-				cadence.NewOptionalType(cadence.NewAnyStructType()),
+				cadence.NewOptionalType(cadence.AnyStructType),
 			))),
 		expected: []byte{
 			// language=json, format=json-cdc
@@ -7601,7 +7602,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			cadence.NewOptionalType(
 				cadence.NewReferenceType(
 					cadence.UnauthorizedAccess,
-					cadence.NewAnyStructType(),
+					cadence.AnyStructType,
 				)))),
 		expected: []byte{
 			// language=json, format=json-cdc
@@ -7674,7 +7675,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 				cadence.NewReferenceType(
 					cadence.UnauthorizedAccess,
 					cadence.NewOptionalType(
-						cadence.NewAnyStructType(),
+						cadence.AnyStructType,
 					))))),
 		expected: []byte{
 			// language=json, format=json-cdc
@@ -7755,68 +7756,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 
 	t.Parallel()
 
-	type simpleTypes struct {
-		typ              cadence.Type
-		cborSimpleTypeID int
-	}
-
-	var tests []encodeTest
-
-	for _, ty := range []simpleTypes{
-		{cadence.AnyType{}, ccf.TypeAny},
-		{cadence.AnyResourceType{}, ccf.TypeAnyResource},
-		{cadence.AnyStructAttachmentType{}, ccf.TypeAnyStructAttachmentType},
-		{cadence.AnyResourceAttachmentType{}, ccf.TypeAnyResourceAttachmentType},
-		{cadence.MetaType{}, ccf.TypeMetaType},
-		{cadence.VoidType{}, ccf.TypeVoid},
-		{cadence.NeverType{}, ccf.TypeNever},
-		{cadence.BoolType{}, ccf.TypeBool},
-		{cadence.StringType{}, ccf.TypeString},
-		{cadence.CharacterType{}, ccf.TypeCharacter},
-		{cadence.BytesType{}, ccf.TypeBytes},
-		{cadence.AddressType{}, ccf.TypeAddress},
-		{cadence.SignedNumberType{}, ccf.TypeSignedNumber},
-		{cadence.IntegerType{}, ccf.TypeInteger},
-		{cadence.SignedIntegerType{}, ccf.TypeSignedInteger},
-		{cadence.FixedPointType{}, ccf.TypeFixedPoint},
-		{cadence.SignedFixedPointType{}, ccf.TypeSignedFixedPoint},
-		{cadence.IntType{}, ccf.TypeInt},
-		{cadence.Int8Type{}, ccf.TypeInt8},
-		{cadence.Int16Type{}, ccf.TypeInt16},
-		{cadence.Int32Type{}, ccf.TypeInt32},
-		{cadence.Int64Type{}, ccf.TypeInt64},
-		{cadence.Int128Type{}, ccf.TypeInt128},
-		{cadence.Int256Type{}, ccf.TypeInt256},
-		{cadence.UIntType{}, ccf.TypeUInt},
-		{cadence.UInt8Type{}, ccf.TypeUInt8},
-		{cadence.UInt16Type{}, ccf.TypeUInt16},
-		{cadence.UInt32Type{}, ccf.TypeUInt32},
-		{cadence.UInt64Type{}, ccf.TypeUInt64},
-		{cadence.UInt128Type{}, ccf.TypeUInt128},
-		{cadence.UInt256Type{}, ccf.TypeUInt256},
-		{cadence.Word8Type{}, ccf.TypeWord8},
-		{cadence.Word16Type{}, ccf.TypeWord16},
-		{cadence.Word32Type{}, ccf.TypeWord32},
-		{cadence.Word64Type{}, ccf.TypeWord64},
-		{cadence.Word128Type{}, ccf.TypeWord128},
-		{cadence.Word256Type{}, ccf.TypeWord256},
-		{cadence.Fix64Type{}, ccf.TypeFix64},
-		{cadence.UFix64Type{}, ccf.TypeUFix64},
-		{cadence.BlockType{}, ccf.TypeBlock},
-		{cadence.PathType{}, ccf.TypePath},
-		{cadence.CapabilityPathType{}, ccf.TypeCapabilityPath},
-		{cadence.StoragePathType{}, ccf.TypeStoragePath},
-		{cadence.PublicPathType{}, ccf.TypePublicPath},
-		{cadence.PrivatePathType{}, ccf.TypePrivatePath},
-		{cadence.AccountKeyType{}, ccf.TypeAccountKey},
-		{cadence.AuthAccountContractsType{}, ccf.TypeAuthAccountContracts},
-		{cadence.AuthAccountKeysType{}, ccf.TypeAuthAccountKeys},
-		{cadence.AuthAccountType{}, ccf.TypeAuthAccount},
-		{cadence.PublicAccountContractsType{}, ccf.TypePublicAccountContracts},
-		{cadence.PublicAccountKeysType{}, ccf.TypePublicAccountKeys},
-		{cadence.PublicAccountType{}, ccf.TypePublicAccount},
-		{cadence.DeployedContractType{}, ccf.TypeDeployedContract},
-	} {
+	expected := func(ty ccf.SimpleType) []byte {
 		var w bytes.Buffer
 
 		cborEncMode := func() cbor.EncMode {
@@ -7845,17 +7785,136 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = encoder.EncodeInt(ty.cborSimpleTypeID)
+		err = encoder.EncodeUint64(uint64(ty))
 		require.NoError(t, err)
 
-		encoder.Flush()
+		err = encoder.Flush()
+		require.NoError(t, err)
+
+		return w.Bytes()
+	}
+
+	var tests []encodeTest
+
+	testCases := map[ccf.SimpleType]cadence.Type{
+		ccf.SimpleTypeAny:                              cadence.AnyType,
+		ccf.SimpleTypeAnyResource:                      cadence.AnyResourceType,
+		ccf.SimpleTypeAnyStruct:                        cadence.AnyStructType,
+		ccf.SimpleTypeAnyStructAttachmentType:          cadence.AnyStructAttachmentType,
+		ccf.SimpleTypeAnyResourceAttachmentType:        cadence.AnyResourceAttachmentType,
+		ccf.SimpleTypeMetaType:                         cadence.MetaType,
+		ccf.SimpleTypeVoid:                             cadence.VoidType,
+		ccf.SimpleTypeNever:                            cadence.NeverType,
+		ccf.SimpleTypeBool:                             cadence.BoolType,
+		ccf.SimpleTypeString:                           cadence.StringType,
+		ccf.SimpleTypeCharacter:                        cadence.CharacterType,
+		ccf.SimpleTypeBytes:                            cadence.TheBytesType,
+		ccf.SimpleTypeAddress:                          cadence.AddressType,
+		ccf.SimpleTypeNumber:                           cadence.NumberType,
+		ccf.SimpleTypeSignedNumber:                     cadence.SignedNumberType,
+		ccf.SimpleTypeInteger:                          cadence.IntegerType,
+		ccf.SimpleTypeSignedInteger:                    cadence.SignedIntegerType,
+		ccf.SimpleTypeFixedPoint:                       cadence.FixedPointType,
+		ccf.SimpleTypeSignedFixedPoint:                 cadence.SignedFixedPointType,
+		ccf.SimpleTypeInt:                              cadence.IntType,
+		ccf.SimpleTypeInt8:                             cadence.Int8Type,
+		ccf.SimpleTypeInt16:                            cadence.Int16Type,
+		ccf.SimpleTypeInt32:                            cadence.Int32Type,
+		ccf.SimpleTypeInt64:                            cadence.Int64Type,
+		ccf.SimpleTypeInt128:                           cadence.Int128Type,
+		ccf.SimpleTypeInt256:                           cadence.Int256Type,
+		ccf.SimpleTypeUInt:                             cadence.UIntType,
+		ccf.SimpleTypeUInt8:                            cadence.UInt8Type,
+		ccf.SimpleTypeUInt16:                           cadence.UInt16Type,
+		ccf.SimpleTypeUInt32:                           cadence.UInt32Type,
+		ccf.SimpleTypeUInt64:                           cadence.UInt64Type,
+		ccf.SimpleTypeUInt128:                          cadence.UInt128Type,
+		ccf.SimpleTypeUInt256:                          cadence.UInt256Type,
+		ccf.SimpleTypeWord8:                            cadence.Word8Type,
+		ccf.SimpleTypeWord16:                           cadence.Word16Type,
+		ccf.SimpleTypeWord32:                           cadence.Word32Type,
+		ccf.SimpleTypeWord64:                           cadence.Word64Type,
+		ccf.SimpleTypeWord128:                          cadence.Word128Type,
+		ccf.SimpleTypeWord256:                          cadence.Word256Type,
+		ccf.SimpleTypeFix64:                            cadence.Fix64Type,
+		ccf.SimpleTypeUFix64:                           cadence.UFix64Type,
+		ccf.SimpleTypeBlock:                            cadence.BlockType,
+		ccf.SimpleTypePath:                             cadence.PathType,
+		ccf.SimpleTypeCapabilityPath:                   cadence.CapabilityPathType,
+		ccf.SimpleTypeStoragePath:                      cadence.StoragePathType,
+		ccf.SimpleTypePublicPath:                       cadence.PublicPathType,
+		ccf.SimpleTypePrivatePath:                      cadence.PrivatePathType,
+		ccf.SimpleTypeDeployedContract:                 cadence.DeployedContractType,
+		ccf.SimpleTypeStorageCapabilityController:      cadence.StorageCapabilityControllerType,
+		ccf.SimpleTypeAccountCapabilityController:      cadence.AccountCapabilityControllerType,
+		ccf.SimpleTypeAccount:                          cadence.AccountType,
+		ccf.SimpleTypeAccount_Contracts:                cadence.Account_ContractsType,
+		ccf.SimpleTypeAccount_Keys:                     cadence.Account_KeysType,
+		ccf.SimpleTypeAccount_Inbox:                    cadence.Account_InboxType,
+		ccf.SimpleTypeAccount_StorageCapabilities:      cadence.Account_StorageCapabilitiesType,
+		ccf.SimpleTypeAccount_AccountCapabilities:      cadence.Account_AccountCapabilitiesType,
+		ccf.SimpleTypeAccount_Capabilities:             cadence.Account_CapabilitiesType,
+		ccf.SimpleTypeAccount_Storage:                  cadence.Account_StorageType,
+		ccf.SimpleTypeMutate:                           cadence.MutateType,
+		ccf.SimpleTypeInsert:                           cadence.InsertType,
+		ccf.SimpleTypeRemove:                           cadence.RemoveType,
+		ccf.SimpleTypeIdentity:                         cadence.IdentityType,
+		ccf.SimpleTypeStorage:                          cadence.StorageType,
+		ccf.SimpleTypeSaveValue:                        cadence.SaveValueType,
+		ccf.SimpleTypeLoadValue:                        cadence.LoadValueType,
+		ccf.SimpleTypeBorrowValue:                      cadence.BorrowValueType,
+		ccf.SimpleTypeContracts:                        cadence.ContractsType,
+		ccf.SimpleTypeAddContract:                      cadence.AddContractType,
+		ccf.SimpleTypeUpdateContract:                   cadence.UpdateContractType,
+		ccf.SimpleTypeRemoveContract:                   cadence.RemoveContractType,
+		ccf.SimpleTypeKeys:                             cadence.KeysType,
+		ccf.SimpleTypeAddKey:                           cadence.AddKeyType,
+		ccf.SimpleTypeRevokeKey:                        cadence.RevokeKeyType,
+		ccf.SimpleTypeInbox:                            cadence.InboxType,
+		ccf.SimpleTypePublishInboxCapability:           cadence.PublishInboxCapabilityType,
+		ccf.SimpleTypeUnpublishInboxCapability:         cadence.UnpublishInboxCapabilityType,
+		ccf.SimpleTypeClaimInboxCapability:             cadence.ClaimInboxCapabilityType,
+		ccf.SimpleTypeCapabilities:                     cadence.CapabilitiesType,
+		ccf.SimpleTypeStorageCapabilities:              cadence.StorageCapabilitiesType,
+		ccf.SimpleTypeAccountCapabilities:              cadence.AccountCapabilitiesType,
+		ccf.SimpleTypePublishCapability:                cadence.PublishCapabilityType,
+		ccf.SimpleTypeUnpublishCapability:              cadence.UnpublishCapabilityType,
+		ccf.SimpleTypeGetStorageCapabilityController:   cadence.GetStorageCapabilityControllerType,
+		ccf.SimpleTypeIssueStorageCapabilityController: cadence.IssueStorageCapabilityControllerType,
+		ccf.SimpleTypeGetAccountCapabilityController:   cadence.GetAccountCapabilityControllerType,
+		ccf.SimpleTypeIssueAccountCapabilityController: cadence.IssueAccountCapabilityControllerType,
+		ccf.SimpleTypeCapabilitiesMapping:              cadence.CapabilitiesMappingType,
+		ccf.SimpleTypeAccountMapping:                   cadence.AccountMappingType,
+	}
+
+	var missingTests []string
+
+	for ty := ccf.SimpleType(0); ty < ccf.SimpleType_Count; ty++ {
+		if ty == ccf.SimpleTypeFunction {
+			continue
+		}
+
+		_, ok := testCases[ty]
+
+		name := ty.String()
+		if ok || strings.Contains(name, "(") {
+			continue
+		}
+		missingTests = append(missingTests, name)
+	}
+
+	if len(missingTests) > 0 {
+		assert.Failf(t, "missing test cases", strings.Join(missingTests, ", "))
+	}
+
+	for simpleType, cadenceType := range testCases {
 
 		tests = append(tests, encodeTest{
-			name: fmt.Sprintf("with static %s", ty.typ.ID()),
+			name: fmt.Sprintf("with static %s", cadenceType.ID()),
 			val: cadence.TypeValue{
-				StaticType: ty.typ,
+				StaticType: cadenceType,
 			},
-			expected: w.Bytes(),
+			expected: expected(simpleType),
 			// language=json, format=json-cdc
 			// {"type":"Type","value":{"staticType":{"kind":"[ty.ID()]"}}}
 			//
@@ -7877,7 +7936,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.OptionalType{Type: cadence.IntType{}},
+				StaticType: &cadence.OptionalType{Type: cadence.IntType},
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -7914,7 +7973,7 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.OptionalType{
 					Type: &cadence.OptionalType{
-						Type: cadence.IntType{},
+						Type: cadence.IntType,
 					},
 				},
 			},
@@ -7953,7 +8012,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.VariableSizedArrayType{
-					ElementType: cadence.IntType{},
+					ElementType: cadence.IntType,
 				},
 			},
 			[]byte{
@@ -7990,7 +8049,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.ConstantSizedArrayType{
-					ElementType: cadence.IntType{},
+					ElementType: cadence.IntType,
 					Size:        3,
 				},
 			},
@@ -8032,8 +8091,8 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.DictionaryType{
-					ElementType: cadence.StringType{},
-					KeyType:     cadence.IntType{},
+					ElementType: cadence.StringType,
+					KeyType:     cadence.IntType,
 				},
 			},
 			[]byte{
@@ -8128,13 +8187,13 @@ func TestEncodeType(t *testing.T) {
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "S",
 				Fields: []cadence.Field{
-					{Identifier: "foo", Type: cadence.IntType{}},
-					{Identifier: "bar", Type: cadence.IntType{}},
+					{Identifier: "foo", Type: cadence.IntType},
+					{Identifier: "bar", Type: cadence.IntType},
 				},
 				Initializers: [][]cadence.Parameter{
 					{
-						{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 					},
 				},
 			},
@@ -8251,13 +8310,13 @@ func TestEncodeType(t *testing.T) {
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "S",
 					Fields: []cadence.Field{
-						{Identifier: "foo", Type: cadence.IntType{}},
-						{Identifier: "bar", Type: cadence.IntType{}},
+						{Identifier: "foo", Type: cadence.IntType},
+						{Identifier: "bar", Type: cadence.IntType},
 					},
 					Initializers: [][]cadence.Parameter{
 						{
-							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
 				},
@@ -8352,13 +8411,13 @@ func TestEncodeType(t *testing.T) {
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "S",
 					Fields: []cadence.Field{
-						{Identifier: "bar", Type: cadence.IntType{}},
-						{Identifier: "foo", Type: cadence.IntType{}},
+						{Identifier: "bar", Type: cadence.IntType},
+						{Identifier: "foo", Type: cadence.IntType},
 					},
 					Initializers: [][]cadence.Parameter{
 						{
-							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
 				},
@@ -8513,12 +8572,12 @@ func TestEncodeType(t *testing.T) {
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "R",
 					Fields: []cadence.Field{
-						{Identifier: "foo", Type: cadence.IntType{}},
+						{Identifier: "foo", Type: cadence.IntType},
 					},
 					Initializers: [][]cadence.Parameter{
 						{
-							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
 				},
@@ -8611,12 +8670,12 @@ func TestEncodeType(t *testing.T) {
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "C",
 					Fields: []cadence.Field{
-						{Identifier: "foo", Type: cadence.IntType{}},
+						{Identifier: "foo", Type: cadence.IntType},
 					},
 					Initializers: [][]cadence.Parameter{
 						{
-							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
 				},
@@ -8709,12 +8768,12 @@ func TestEncodeType(t *testing.T) {
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "S",
 					Fields: []cadence.Field{
-						{Identifier: "foo", Type: cadence.IntType{}},
+						{Identifier: "foo", Type: cadence.IntType},
 					},
 					Initializers: [][]cadence.Parameter{
 						{
-							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
 				},
@@ -8807,12 +8866,12 @@ func TestEncodeType(t *testing.T) {
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "R",
 					Fields: []cadence.Field{
-						{Identifier: "foo", Type: cadence.IntType{}},
+						{Identifier: "foo", Type: cadence.IntType},
 					},
 					Initializers: [][]cadence.Parameter{
 						{
-							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
 				},
@@ -8905,12 +8964,12 @@ func TestEncodeType(t *testing.T) {
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "C",
 					Fields: []cadence.Field{
-						{Identifier: "foo", Type: cadence.IntType{}},
+						{Identifier: "foo", Type: cadence.IntType},
 					},
 					Initializers: [][]cadence.Parameter{
 						{
-							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
 				},
@@ -9003,11 +9062,11 @@ func TestEncodeType(t *testing.T) {
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "E",
 					Fields: []cadence.Field{
-						{Identifier: "foo", Type: cadence.IntType{}},
+						{Identifier: "foo", Type: cadence.IntType},
 					},
 					Initializer: []cadence.Parameter{
-						{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 					},
 				},
 			},
@@ -9098,14 +9157,14 @@ func TestEncodeType(t *testing.T) {
 				StaticType: &cadence.EnumType{
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "E",
-					RawType:             cadence.StringType{},
+					RawType:             cadence.StringType,
 					Fields: []cadence.Field{
-						{Identifier: "foo", Type: cadence.IntType{}},
+						{Identifier: "foo", Type: cadence.IntType},
 					},
 					Initializers: [][]cadence.Parameter{
 						{
-							{Label: "foo", Identifier: "bar", Type: cadence.IntType{}},
-							{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
 				},
@@ -9198,7 +9257,7 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.ReferenceType{
 					Authorization: cadence.UnauthorizedAccess,
-					Type:          cadence.IntType{},
+					Type:          cadence.IntType,
 				},
 			},
 			[]byte{
@@ -9240,12 +9299,12 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.FunctionType{
 					TypeParameters: []cadence.TypeParameter{
-						{Name: "T", TypeBound: cadence.AnyStructType{}},
+						{Name: "T", TypeBound: cadence.AnyStructType},
 					},
 					Parameters: []cadence.Parameter{
-						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 					},
-					ReturnType: cadence.IntType{},
+					ReturnType: cadence.IntType,
 				},
 			},
 			[]byte{
@@ -9315,9 +9374,9 @@ func TestEncodeType(t *testing.T) {
 						{Name: "T"},
 					},
 					Parameters: []cadence.Parameter{
-						{Label: "qux", Identifier: "baz", Type: cadence.StringType{}},
+						{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 					},
-					ReturnType: cadence.IntType{},
+					ReturnType: cadence.IntType,
 				},
 			},
 			[]byte{
@@ -9415,7 +9474,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.CapabilityType{
-					BorrowType: cadence.IntType{},
+					BorrowType: cadence.IntType,
 				},
 			},
 			[]byte{
@@ -9516,7 +9575,7 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.IntersectionType{
 					Types: []cadence.Type{
-						cadence.StringType{},
+						cadence.StringType,
 					},
 				},
 			},
@@ -9549,7 +9608,7 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.IntersectionType{
 					Types: []cadence.Type{
-						cadence.StringType{},
+						cadence.StringType,
 					},
 				},
 			},
@@ -9565,8 +9624,8 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.IntersectionType{
 					Types: []cadence.Type{
-						cadence.NewAnyStructType(),
-						cadence.StringType{},
+						cadence.AnyStructType,
+						cadence.StringType,
 					},
 				},
 			},
@@ -9603,8 +9662,8 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.IntersectionType{
 					Types: []cadence.Type{
-						cadence.StringType{},
-						cadence.NewAnyStructType(),
+						cadence.StringType,
+						cadence.AnyStructType,
 					},
 				},
 			},
@@ -9831,7 +9890,7 @@ func TestEncodeCapability(t *testing.T) {
 			Fields: []cadence.Field{
 				{
 					Identifier: "bar",
-					Type:       cadence.IntType{},
+					Type:       cadence.IntType,
 				},
 			},
 		}
@@ -9839,7 +9898,7 @@ func TestEncodeCapability(t *testing.T) {
 		capability1 := cadence.Capability{
 			ID:         42,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			BorrowType: cadence.IntType{},
+			BorrowType: cadence.IntType,
 		}
 
 		capability2 := cadence.Capability{
@@ -9964,7 +10023,7 @@ func TestEncodeCapability(t *testing.T) {
 			cadence.Capability{
 				ID:         42,
 				Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				BorrowType: cadence.IntType{},
+				BorrowType: cadence.IntType,
 			},
 			[]byte{
 				// language=edn, format=ccf
@@ -10002,12 +10061,12 @@ func TestEncodeCapability(t *testing.T) {
 		capability1 := cadence.Capability{
 			ID:         42,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			BorrowType: cadence.IntType{},
+			BorrowType: cadence.IntType,
 		}
 		capability2 := cadence.Capability{
 			ID:         43,
 			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			BorrowType: cadence.IntType{},
+			BorrowType: cadence.IntType,
 		}
 
 		testEncodeAndDecode(
@@ -10015,7 +10074,7 @@ func TestEncodeCapability(t *testing.T) {
 			cadence.NewArray([]cadence.Value{
 				capability1,
 				capability2,
-			}).WithType(cadence.NewVariableSizedArrayType(cadence.NewCapabilityType(cadence.NewIntType()))),
+			}).WithType(cadence.NewVariableSizedArrayType(cadence.NewCapabilityType(cadence.IntType))),
 			[]byte{
 				// language=edn, format=ccf
 				// 130([139(144([137(4)])), [[h'0000000102030405', 42], [h'0000000102030405', 43]]])
@@ -11137,7 +11196,7 @@ func TestEncodePath(t *testing.T) {
 			storagePath,
 			privatePath,
 			publicPath,
-		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewStoragePathType()))
+		}).WithType(cadence.NewVariableSizedArrayType(cadence.StoragePathType))
 
 		testEncodeAndDecode(
 			t,
@@ -11209,7 +11268,7 @@ func TestEncodePath(t *testing.T) {
 			storagePath,
 			privatePath,
 			publicPath,
-		}).WithType(cadence.NewVariableSizedArrayType(cadence.NewPathType()))
+		}).WithType(cadence.NewVariableSizedArrayType(cadence.PathType))
 
 		testEncodeAndDecode(
 			t,
@@ -11525,7 +11584,7 @@ func newResourceStructType() *cadence.StructType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
-				Type:       cadence.StringType{},
+				Type:       cadence.StringType,
 			},
 			{
 				Identifier: "b",
@@ -11542,7 +11601,7 @@ func newFooResourceType() *cadence.ResourceType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "bar",
-				Type:       cadence.IntType{},
+				Type:       cadence.IntType,
 			},
 		},
 	}
@@ -11555,11 +11614,11 @@ func newFoooResourceTypeWithAbstractField() *cadence.ResourceType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "bar",
-				Type:       cadence.IntType{},
+				Type:       cadence.IntType,
 			},
 			{
 				Identifier: "baz",
-				Type:       cadence.AnyStructType{},
+				Type:       cadence.AnyStructType,
 			},
 		},
 	}
@@ -11952,7 +12011,7 @@ func TestExportFunctionValue(t *testing.T) {
 		cadence.Function{
 			FunctionType: &cadence.FunctionType{
 				Parameters: []cadence.Parameter{},
-				ReturnType: cadence.VoidType{},
+				ReturnType: cadence.VoidType,
 			},
 		},
 		[]byte{
@@ -12817,15 +12876,15 @@ func newFlowFeesFeesDeductedEventType() *cadence.EventType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "amount",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 			{
 				Identifier: "inclusionEffort",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 			{
 				Identifier: "executionEffort",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 		},
 	}
@@ -12861,7 +12920,7 @@ func newFlowFeesTokensWithdrawnEventType() *cadence.EventType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "amount",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 		},
 	}
@@ -12893,12 +12952,12 @@ func newFlowTokenTokensDepositedEventType() *cadence.EventType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "amount",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 			{
 				Identifier: "to",
 				Type: &cadence.OptionalType{
-					Type: cadence.NewAddressType(),
+					Type: cadence.AddressType,
 				},
 			},
 		},
@@ -12951,7 +13010,7 @@ func newFlowTokenTokensMintedEventType() *cadence.EventType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "amount",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 		},
 	}
@@ -12983,12 +13042,12 @@ func newFlowTokenTokensWithdrawnEventType() *cadence.EventType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "amount",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 			{
 				Identifier: "from",
 				Type: &cadence.OptionalType{
-					Type: cadence.NewAddressType(),
+					Type: cadence.AddressType,
 				},
 			},
 		},
@@ -13025,15 +13084,15 @@ func newFlowIDTableStakingDelegatorRewardsPaidEventType() *cadence.EventType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "nodeID",
-				Type:       cadence.StringType{},
+				Type:       cadence.StringType,
 			},
 			{
 				Identifier: "delegatorID",
-				Type:       cadence.UInt32Type{},
+				Type:       cadence.UInt32Type,
 			},
 			{
 				Identifier: "amount",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 		},
 	}
@@ -13069,19 +13128,19 @@ func newFlowIDTableStakingEpochTotalRewardsPaidEventType() *cadence.EventType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "total",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 			{
 				Identifier: "fromFees",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 			{
 				Identifier: "minted",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 			{
 				Identifier: "feesBurned",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 		},
 	}
@@ -13119,7 +13178,7 @@ func newFlowIDTableStakingNewWeeklyPayoutEventType() *cadence.EventType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "newPayout",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 		},
 	}
@@ -13151,11 +13210,11 @@ func newFlowIDTableStakingRewardsPaidEventType() *cadence.EventType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "nodeID",
-				Type:       cadence.StringType{},
+				Type:       cadence.StringType,
 			},
 			{
 				Identifier: "amount",
-				Type:       cadence.UFix64Type{},
+				Type:       cadence.UFix64Type,
 			},
 		},
 	}
@@ -14247,13 +14306,13 @@ func TestCyclicReferenceValue(t *testing.T) {
 			}).WithType(&cadence.VariableSizedArrayType{
 				ElementType: &cadence.ReferenceType{
 					Authorization: cadence.Unauthorized{},
-					Type:          cadence.AnyStructType{},
+					Type:          cadence.AnyStructType,
 				},
 			}),
 		}).WithType(&cadence.VariableSizedArrayType{
 			ElementType: &cadence.ReferenceType{
 				Authorization: cadence.Unauthorized{},
-				Type:          cadence.AnyStructType{},
+				Type:          cadence.AnyStructType,
 			},
 		})
 
@@ -14359,8 +14418,8 @@ func TestSortOptions(t *testing.T) {
 		common.NewStringLocation(nil, "test"),
 		"Stats",
 		[]cadence.Field{
-			cadence.NewField("count", cadence.NewIntType()),
-			cadence.NewField("sum", cadence.NewIntType()),
+			cadence.NewField("count", cadence.IntType),
+			cadence.NewField("sum", cadence.IntType),
 		},
 		nil,
 	)
@@ -14386,8 +14445,8 @@ func TestSortOptions(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Stats",
 			[]cadence.Field{
-				cadence.NewField("count", cadence.NewIntType()),
-				cadence.NewField("sum", cadence.NewIntType()),
+				cadence.NewField("count", cadence.IntType),
+				cadence.NewField("sum", cadence.IntType),
 			},
 			nil,
 		)
@@ -14575,8 +14634,8 @@ func TestSortOptions(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Stats",
 			[]cadence.Field{
-				cadence.NewField("sum", cadence.NewIntType()),
-				cadence.NewField("count", cadence.NewIntType()),
+				cadence.NewField("sum", cadence.IntType),
+				cadence.NewField("count", cadence.IntType),
 			},
 			nil,
 		)
@@ -14764,8 +14823,8 @@ func TestSortOptions(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Stats",
 			[]cadence.Field{
-				cadence.NewField("count", cadence.NewIntType()),
-				cadence.NewField("sum", cadence.NewIntType()),
+				cadence.NewField("count", cadence.IntType),
+				cadence.NewField("sum", cadence.IntType),
 			},
 			nil,
 		)
@@ -14953,8 +15012,8 @@ func TestSortOptions(t *testing.T) {
 			common.NewStringLocation(nil, "test"),
 			"Stats",
 			[]cadence.Field{
-				cadence.NewField("sum", cadence.NewIntType()),
-				cadence.NewField("count", cadence.NewIntType()),
+				cadence.NewField("sum", cadence.IntType),
+				cadence.NewField("count", cadence.IntType),
 			},
 			nil,
 		)

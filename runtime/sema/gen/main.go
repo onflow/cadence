@@ -34,6 +34,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
 )
@@ -575,7 +576,7 @@ func (*generator) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) str
 
 func (g *generator) VisitEntitlementDeclaration(decl *ast.EntitlementDeclaration) (_ struct{}) {
 	entitlementName := decl.Identifier.Identifier
-	typeVarName := entitlementVarName(entitlementName)
+	typeVarName := typeVarName(entitlementName)
 	typeVarDecl := entitlementTypeLiteral(entitlementName)
 
 	g.addDecls(
@@ -588,9 +589,20 @@ func (g *generator) VisitEntitlementDeclaration(decl *ast.EntitlementDeclaration
 	return
 }
 
-func (*generator) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) struct{} {
-	// TODO
-	panic("entitlement declarations are not supported")
+func (g *generator) VisitEntitlementMappingDeclaration(decl *ast.EntitlementMappingDeclaration) (_ struct{}) {
+
+	entitlementMappingName := decl.Identifier.Identifier
+	typeVarName := typeVarName(entitlementMappingName)
+	typeVarDecl := entitlementMapTypeLiteral(entitlementMappingName, decl.Elements)
+
+	g.addDecls(
+		goVarDecl(
+			typeVarName,
+			typeVarDecl,
+		),
+	)
+
+	return
 }
 
 func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{}) {
@@ -653,9 +665,15 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 				},
 			}
 		default:
+			var fullIdentifier strings.Builder
+			fullIdentifier.WriteString(escapeTypeName(identifier))
+
 			for _, nestedIdentifier := range t.NestedIdentifiers {
-				identifier += nestedIdentifier.Identifier
+				fullIdentifier.WriteByte(typeNameSeparator)
+				fullIdentifier.WriteString(escapeTypeName(nestedIdentifier.Identifier))
 			}
+
+			identifier = fullIdentifier.String()
 		}
 
 		return typeVarIdent(identifier)
@@ -978,12 +996,23 @@ func (*generator) VisitImportDeclaration(_ *ast.ImportDeclaration) struct{} {
 	panic("import declarations are not supported")
 }
 
+const typeNameSeparator = '_'
+
 func (g *generator) newFullTypeName(typeName string) string {
 	if len(g.typeStack) == 0 {
 		return typeName
 	}
 	parentFullTypeName := g.typeStack[len(g.typeStack)-1].fullTypeName
-	return parentFullTypeName + typeName
+	return fmt.Sprintf(
+		"%s%c%s",
+		escapeTypeName(parentFullTypeName),
+		typeNameSeparator,
+		escapeTypeName(typeName),
+	)
+}
+
+func escapeTypeName(typeName string) string {
+	return strings.ReplaceAll(typeName, string(typeNameSeparator), "__")
 }
 
 func (g *generator) currentTypeID() string {
@@ -1012,55 +1041,42 @@ func (g *generator) currentMemberID(memberName string) string {
 
 func (g *generator) generateTypeInit(program *ast.Program) {
 
-	// Currently this only generate registering of entitlements.
+	// Currently this only generate registering of entitlements and entitlement mappings.
 	// It is possible to extend this to register other types as well.
 	// So they are not needed to be manually added to the base activation.
+	//
+	// Generates the following:
+	//
+	//   func init() {
+	//       BuiltinEntitlements[FooEntitlement.Identifier] = FooEntitlement
+	//       addToBaseActivation(FooEntitlement)
+	//
+	//       ...
+	//
+	//       BuiltinEntitlements[BarEntitlementMapping.Identifier] = BarEntitlementMapping
+	//       addToBaseActivation(BarEntitlementMapping)
+	//
+	//       ...
+	//   }
+	//
 
-	/* Generates the following:
+	var stmts []dst.Stmt
 
-	   func init() {
-	       BuiltinEntitlements[Foo.Identifier] = Foo
-	       addToBaseActivation(Foo)
-	       ...
-	   }
-	*/
+	for _, declaration := range program.EntitlementMappingDeclarations() {
+		stmts = append(stmts, entitlementMapInitStatements(declaration)...)
+	}
 
-	if len(program.EntitlementDeclarations()) == 0 {
+	for _, declaration := range program.EntitlementDeclarations() {
+		stmts = append(stmts, entitlementInitStatements(declaration)...)
+	}
+
+	if len(stmts) == 0 {
 		return
 	}
 
-	stmts := make([]dst.Stmt, 0)
-
-	for _, declaration := range program.EntitlementDeclarations() {
-		const entitlementsName = "BuiltinEntitlements"
-		varName := entitlementVarName(declaration.Identifier.Identifier)
-
-		mapUpdateStmt := &dst.AssignStmt{
-			Lhs: []dst.Expr{
-				&dst.IndexExpr{
-					X: dst.NewIdent(entitlementsName),
-					Index: &dst.SelectorExpr{
-						X:   dst.NewIdent(varName),
-						Sel: dst.NewIdent("Identifier"),
-					},
-				},
-			},
-			Tok: token.ASSIGN,
-			Rhs: []dst.Expr{
-				dst.NewIdent(varName),
-			},
-		}
-
-		typeRegisterStmt := &dst.ExprStmt{
-			X: &dst.CallExpr{
-				Fun: dst.NewIdent("addToBaseActivation"),
-				Args: []dst.Expr{
-					dst.NewIdent(varName),
-				},
-			},
-		}
-
-		stmts = append(stmts, mapUpdateStmt, typeRegisterStmt)
+	for _, stmt := range stmts {
+		stmt.Decorations().Before = dst.NewLine
+		stmt.Decorations().After = dst.NewLine
 	}
 
 	initDecl := &dst.FuncDecl{
@@ -1072,6 +1088,76 @@ func (g *generator) generateTypeInit(program *ast.Program) {
 	}
 
 	g.addDecls(initDecl)
+}
+
+func entitlementMapInitStatements(declaration *ast.EntitlementMappingDeclaration) []dst.Stmt {
+	const mapName = "BuiltinEntitlementMappings"
+	varName := typeVarName(declaration.Identifier.Identifier)
+
+	mapUpdateStmt := &dst.AssignStmt{
+		Lhs: []dst.Expr{
+			&dst.IndexExpr{
+				X: dst.NewIdent(mapName),
+				Index: &dst.SelectorExpr{
+					X:   dst.NewIdent(varName),
+					Sel: dst.NewIdent("Identifier"),
+				},
+			},
+		},
+		Tok: token.ASSIGN,
+		Rhs: []dst.Expr{
+			dst.NewIdent(varName),
+		},
+	}
+
+	typeRegisterStmt := &dst.ExprStmt{
+		X: &dst.CallExpr{
+			Fun: dst.NewIdent("addToBaseActivation"),
+			Args: []dst.Expr{
+				dst.NewIdent(varName),
+			},
+		},
+	}
+
+	return []dst.Stmt{
+		mapUpdateStmt,
+		typeRegisterStmt,
+	}
+}
+
+func entitlementInitStatements(declaration *ast.EntitlementDeclaration) []dst.Stmt {
+	const mapName = "BuiltinEntitlements"
+	varName := typeVarName(declaration.Identifier.Identifier)
+
+	mapUpdateStmt := &dst.AssignStmt{
+		Lhs: []dst.Expr{
+			&dst.IndexExpr{
+				X: dst.NewIdent(mapName),
+				Index: &dst.SelectorExpr{
+					X:   dst.NewIdent(varName),
+					Sel: dst.NewIdent("Identifier"),
+				},
+			},
+		},
+		Tok: token.ASSIGN,
+		Rhs: []dst.Expr{
+			dst.NewIdent(varName),
+		},
+	}
+
+	typeRegisterStmt := &dst.ExprStmt{
+		X: &dst.CallExpr{
+			Fun: dst.NewIdent("addToBaseActivation"),
+			Args: []dst.Expr{
+				dst.NewIdent(varName),
+			},
+		},
+	}
+
+	return []dst.Stmt{
+		mapUpdateStmt,
+		typeRegisterStmt,
+	}
 }
 
 func goField(name string, ty dst.Expr) *dst.Field {
@@ -1153,10 +1239,6 @@ func compositeKindExpr(compositeKind common.CompositeKind) *dst.Ident {
 
 func typeVarName(typeName string) string {
 	return fmt.Sprintf("%sType", typeName)
-}
-
-func entitlementVarName(typeName string) string {
-	return fmt.Sprintf("%sEntitlement", typeName)
 }
 
 func typeVarIdent(typeName string) *dst.Ident {
@@ -1359,10 +1441,62 @@ func simpleType() *dst.StarExpr {
 	return &dst.StarExpr{X: dst.NewIdent("SimpleType")}
 }
 
-func accessIdent(access ast.Access) *dst.Ident {
-	return &dst.Ident{
-		Name: access.String(),
-		Path: "github.com/onflow/cadence/runtime/ast",
+func accessExpr(access ast.Access) dst.Expr {
+	switch access := access.(type) {
+	case ast.PrimitiveAccess:
+		return &dst.CallExpr{
+			Fun: dst.NewIdent("PrimitiveAccess"),
+			Args: []dst.Expr{
+				&dst.Ident{
+					Name: access.String(),
+					Path: "github.com/onflow/cadence/runtime/ast",
+				},
+			},
+		}
+
+	case ast.EntitlementAccess:
+		entitlements := access.EntitlementSet.Entitlements()
+
+		entitlementExprs := make([]dst.Expr, 0, len(entitlements))
+
+		for _, nominalType := range entitlements {
+			entitlementExpr := typeExpr(nominalType, nil)
+			entitlementExprs = append(entitlementExprs, entitlementExpr)
+		}
+
+		var setKind dst.Expr
+
+		switch access.EntitlementSet.Separator() {
+		case ast.Conjunction:
+			setKind = dst.NewIdent("Conjunction")
+		case ast.Disjunction:
+			setKind = dst.NewIdent("Disjunction")
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		args := []dst.Expr{
+			&dst.CompositeLit{
+				Type: &dst.ArrayType{
+					Elt: dst.NewIdent("Type"),
+				},
+				Elts: entitlementExprs,
+			},
+			setKind,
+		}
+
+		for _, arg := range args {
+			arg.Decorations().Before = dst.NewLine
+			arg.Decorations().After = dst.NewLine
+		}
+
+		return &dst.CallExpr{
+			Fun:  dst.NewIdent("newEntitlementAccess"),
+			Args: args,
+		}
+
+	default:
+		panic(fmt.Errorf("unsupported access: %#+v\n", access))
 	}
 }
 
@@ -1395,7 +1529,7 @@ func newDeclarationMember(
 	if fieldDeclaration, ok := declaration.(*ast.FieldDeclaration); ok {
 		args := []dst.Expr{
 			dst.NewIdent(containerTypeVariableIdentifier),
-			accessIdent(access),
+			accessExpr(access),
 			variableKindIdent(fieldDeclaration.VariableKind),
 			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(fieldTypeVarName(fullTypeName, declarationName)),
@@ -1420,7 +1554,7 @@ func newDeclarationMember(
 	if declarationKind == common.DeclarationKindFunction {
 		args := []dst.Expr{
 			dst.NewIdent(containerTypeVariableIdentifier),
-			accessIdent(access),
+			accessExpr(access),
 			dst.NewIdent(memberNameVariableIdentifier),
 			dst.NewIdent(functionTypeVarName(fullTypeName, declarationName)),
 			dst.NewIdent(functionDocStringVarName(fullTypeName, declarationName)),
@@ -1576,15 +1710,66 @@ func entitlementTypeLiteral(name string) dst.Expr {
 	//	Identifier: "Foo",
 	//}
 
-	elements := []dst.Expr{
-		goKeyValue("Identifier", goStringLit(name)),
+	return &dst.UnaryExpr{
+		Op: token.AND,
+		X: &dst.CompositeLit{
+			Type: dst.NewIdent("EntitlementType"),
+			Elts: []dst.Expr{
+				goKeyValue("Identifier", goStringLit(name)),
+			},
+		},
+	}
+}
+
+func entitlementMapTypeLiteral(name string, elements []ast.EntitlementMapElement) dst.Expr {
+	// &sema.EntitlementMapType{
+	//	Identifier: "Foo",
+	//	Relations: []EntitlementRelation{
+	//		{
+	//			Input: BarType,
+	//			Output: BazType,
+	//		},
+	//	}
+	// }
+
+	relationExprs := make([]dst.Expr, 0, len(elements))
+
+	for _, element := range elements {
+
+		relation, ok := element.(*ast.EntitlementMapRelation)
+		if !ok {
+			panic(fmt.Errorf("non-relation map element is not supported: %s", element))
+		}
+
+		relationExpr := &dst.CompositeLit{
+			Type: dst.NewIdent("EntitlementRelation"),
+			Elts: []dst.Expr{
+				goKeyValue("Input", typeExpr(relation.Input, nil)),
+				goKeyValue("Output", typeExpr(relation.Output, nil)),
+			},
+		}
+
+		relationExpr.Decorations().Before = dst.NewLine
+		relationExpr.Decorations().After = dst.NewLine
+
+		relationExprs = append(relationExprs, relationExpr)
+	}
+
+	relationsExpr := &dst.CompositeLit{
+		Type: &dst.ArrayType{
+			Elt: dst.NewIdent("EntitlementRelation"),
+		},
+		Elts: relationExprs,
 	}
 
 	return &dst.UnaryExpr{
 		Op: token.AND,
 		X: &dst.CompositeLit{
-			Type: dst.NewIdent("EntitlementType"),
-			Elts: elements,
+			Type: dst.NewIdent("EntitlementMapType"),
+			Elts: []dst.Expr{
+				goKeyValue("Identifier", goStringLit(name)),
+				goKeyValue("Relations", relationsExpr),
+			},
 		},
 	}
 }
@@ -1603,7 +1788,7 @@ func parseCadenceFile(path string) *ast.Program {
 	return program
 }
 
-func gen(inPath string, outFile *os.File, registerTypes bool) {
+func gen(inPath string, outFile *os.File) {
 	program := parseCadenceFile(inPath)
 
 	var gen generator
@@ -1612,9 +1797,7 @@ func gen(inPath string, outFile *os.File, registerTypes bool) {
 		_ = ast.AcceptDeclaration[struct{}](declaration, &gen)
 	}
 
-	if registerTypes {
-		gen.generateTypeInit(program)
-	}
+	gen.generateTypeInit(program)
 
 	writeGoFile(inPath, outFile, gen.decls)
 }
@@ -1655,8 +1838,5 @@ func main() {
 	}
 	defer outFile.Close()
 
-	// Register generated test types in base activation.
-	const registerTypes = true
-
-	gen(inPath, outFile, registerTypes)
+	gen(inPath, outFile)
 }

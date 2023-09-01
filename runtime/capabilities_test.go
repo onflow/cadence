@@ -113,7 +113,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun setup() {
                   let r <- create R()
-                  self.account.save(<-r, to: /storage/r)
+                  self.account.storage.save(<-r, to: /storage/r)
 
                   let rCap = self.account.capabilities.storage.issue<&R>(/storage/r)
                   self.account.capabilities.publish(rCap, at: /public/r)
@@ -218,11 +218,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               fun testSwap(): Int {
                  let ref = self.account.capabilities.get<&R>(/public/r)!.borrow()!
 
-                 let r <- self.account.load<@R>(from: /storage/r)
+                 let r <- self.account.storage.load<@R>(from: /storage/r)
                  destroy r
 
                  let r2 <- create R2()
-                 self.account.save(<-r2, to: /storage/r)
+                 self.account.storage.save(<-r2, to: /storage/r)
 
                  return ref.foo
               }
@@ -341,7 +341,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun setup() {
                   let s = S()
-                  self.account.save(s, to: /storage/s)
+                  self.account.storage.save(s, to: /storage/s)
 
                   let sCap = self.account.capabilities.storage.issue<&S>(/storage/s)
                   self.account.capabilities.publish(sCap, at: /public/s)
@@ -446,10 +446,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               fun testSwap(): Int {
                  let ref = self.account.capabilities.get<&S>(/public/s)!.borrow()!
 
-                 self.account.load<S>(from: /storage/s)
+                 self.account.storage.load<S>(from: /storage/s)
 
                  let s2 = S2()
-                 self.account.save(s2, to: /storage/s)
+                 self.account.storage.save(s2, to: /storage/s)
 
                  return ref.foo
               }
@@ -536,14 +536,14 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               entitlement X
 
               init() {
-                  self.cap = self.account.capabilities.account.issue<&AuthAccount>()
+                  self.cap = self.account.capabilities.account.issue<&Account>()
               }
 
               access(all)
               fun test() {
 
                   assert(
-                      self.cap.check<&AuthAccount>(),
+                      self.cap.check<&Account>(),
                       message: "check failed"
                   )
 
@@ -552,7 +552,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                       message: "invalid cap address"
                   )
 
-                  let ref = self.cap.borrow<&AuthAccount>()
+                  let ref = self.cap.borrow<&Account>()
                   assert(
                       ref != nil,
                       message: "borrow failed"
@@ -567,7 +567,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testAuth() {
                   assert(
-                      !self.cap.check<auth(X) &AuthAccount>(),
+                      !self.cap.check<auth(X) &Account>(),
                       message: "invalid check"
                   )
 
@@ -577,7 +577,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   )
 
                   assert(
-                      self.cap.borrow<auth(X) &AuthAccount>() == nil,
+                      self.cap.borrow<auth(X) &Account>() == nil,
                       message: "invalid borrow"
                   )
               }

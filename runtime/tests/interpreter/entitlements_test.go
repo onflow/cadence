@@ -382,21 +382,16 @@ func TestInterpretEntitledReferences(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 			entitlement Y
 			resource R {}
 			fun test(): auth(X) &R {
 				let r <- create R()
-				account.save(<-r, to: /storage/foo)
-				return account.borrow<auth(X) &R>(from: /storage/foo)!
+				account.storage.save(<-r, to: /storage/foo)
+				return account.storage.borrow<auth(X) &R>(from: /storage/foo)!
 			}
-			`,
-			sema.Config{},
-		)
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -418,10 +413,7 @@ func TestInterpretEntitledReferences(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 			access(all) fun test(): Bool {
 				let ref = &1 as auth(X) &Int
@@ -430,9 +422,7 @@ func TestInterpretEntitledReferences(t *testing.T) {
 				let downDownRef = downRef as? auth(X) &Int
 				return downDownRef == nil
 			}
-			`,
-			sema.Config{},
-		)
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -729,10 +719,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 			entitlement Y
 
@@ -740,9 +727,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upCap = capXY as Capability<auth(X) &Int>
 				return upCap as? Capability<auth(X, Y) &Int> == nil
 			}
-			`,
-			sema.Config{},
-		)
+			`, sema.Config{})
 
 		capXY := interpreter.NewCapabilityValue(
 			nil,
@@ -777,19 +762,14 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(capX: Capability<auth(X) &Int>): Capability {
 				let upCap = capX as Capability
 				return (upCap as? Capability<auth(X) &Int>)!
 			}
-			`,
-			sema.Config{},
-		)
+			`, sema.Config{})
 
 		capX := interpreter.NewCapabilityValue(
 			nil,
@@ -822,10 +802,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(): Bool {
@@ -833,8 +810,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upArr = arr as &Int
 				return upArr as? auth(X) &Int == nil
 			}
-			`,
-			sema.Config{})
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -853,10 +829,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(): Bool {
@@ -865,8 +838,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upArr = arr as &Int?
 				return upArr as? auth(X) &Int? == nil
 			}
-			`,
-			sema.Config{})
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -885,10 +857,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(): Bool {
@@ -896,8 +865,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upArr = arr as [&Int]
 				return upArr as? [auth(X) &Int] == nil
 			}
-			`,
-			sema.Config{})
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -916,10 +884,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(): Bool {
@@ -927,8 +892,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upArr = arr as [&Int; 2]
 				return upArr as? [auth(X) &Int; 2] == nil
 			}
-			`,
-			sema.Config{})
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -947,10 +911,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(): Bool {
@@ -958,8 +919,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upArr = arr as [auth(X) &Int; 2]
 				return upArr as? [auth(X) &Int; 2] == nil
 			}
-			`,
-			sema.Config{})
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -978,10 +938,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(): Bool {
@@ -989,8 +946,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upArr = arr as [&Int]
 				return upArr[0] as? auth(X) &Int == nil
 			}
-			`,
-			sema.Config{})
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1009,10 +965,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(): Bool {
@@ -1020,8 +973,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upArr = arr as [&Int; 2]
 				return upArr[0] as? auth(X) &Int == nil
 			}
-			`,
-			sema.Config{})
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1040,10 +992,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(): Bool {
@@ -1051,8 +1000,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upDict = dict as {String: &Int}
 				return upDict as? {String: auth(X) &Int} == nil
 			}
-			`,
-			sema.Config{})
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1071,10 +1019,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 
 			fun test(): Bool {
@@ -1082,8 +1027,7 @@ func TestInterpretEntitledReferenceCasting(t *testing.T) {
 				let upDict = dict as {String: &Int}
 				return upDict["foo"]! as? auth(X) &Int == nil
 			}
-			`,
-			sema.Config{})
+			`, sema.Config{})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1472,7 +1416,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
 		entitlement X
 		entitlement Y
 		entitlement E
@@ -1492,8 +1436,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		}
 		fun test(): auth(Y) &Int {
 			let s = S()
-			account.save(s, to: /storage/foo)
-			let ref = account.borrow<auth(X) &S>(from: /storage/foo)
+			account.storage.save(s, to: /storage/foo)
+			let ref = account.storage.borrow<auth(X) &S>(from: /storage/foo)
 			let i = ref?.foo()
 			return i!
 		}
@@ -2504,7 +2448,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 			entitlement Y 
 			entitlement Z 
@@ -2522,8 +2466,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			access(M) attachment A for R {}
 			fun test(): auth(F, G) &A {
 				let r <- attach A() to <-create R()
-				account.save(<-r, to: /storage/foo)
-				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
+				account.storage.save(<-r, to: /storage/foo)
+				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
 				return ref[A]!
 			}
 		`, sema.Config{
@@ -2550,7 +2494,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 			entitlement Y 
 			entitlement Z 
@@ -2572,8 +2516,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			}
 			fun test(): auth(F, G, Y, Z) &A {
 				let r <- attach A() to <-create R()
-				account.save(<-r, to: /storage/foo)
-				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
+				account.storage.save(<-r, to: /storage/foo)
+				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
 				return ref[A]!.entitled()
 			}
 		`, sema.Config{
@@ -2600,7 +2544,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
 			entitlement Y 
 			entitlement Z 
@@ -2623,8 +2567,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			}
 			fun test(): auth(X) &R {
 				let r <- attach A() to <-create R() with (X)
-				account.save(<-r, to: /storage/foo)
-				let ref = account.borrow<auth(E) &R>(from: /storage/foo)!
+				account.storage.save(<-r, to: /storage/foo)
+				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
 				return ref[A]!.entitled()
 			}
 		`, sema.Config{

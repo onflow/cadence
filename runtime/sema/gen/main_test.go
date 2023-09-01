@@ -50,10 +50,7 @@ func TestFiles(t *testing.T) {
 			require.NoError(t, err)
 			defer outFile.Close()
 
-			// Do not register generated test types in base activation.
-			const registerTypes = false
-
-			gen(inputPath, outFile, registerTypes)
+			gen(inputPath, outFile)
 
 			goldenPath := filepath.Join(testDataDirectory, testname+".golden.go")
 			want, err := os.ReadFile(goldenPath)

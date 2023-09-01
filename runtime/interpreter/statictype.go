@@ -578,6 +578,8 @@ type Unauthorized struct{}
 
 var UnauthorizedAccess Authorization = Unauthorized{}
 
+var FullyEntitledAccountAccess = ConvertSemaAccessToStaticAuthorization(nil, sema.FullyEntitledAccountAccess)
+
 func (Unauthorized) isAuthorization() {}
 
 func (Unauthorized) String() string {
@@ -877,19 +879,19 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		)
 
 	case *sema.IntersectionType:
-		var intersectedTypess []InterfaceStaticType
+		var intersectedTypes []InterfaceStaticType
 		typeCount := len(t.Types)
 		if typeCount > 0 {
-			intersectedTypess = make([]InterfaceStaticType, typeCount)
+			intersectedTypes = make([]InterfaceStaticType, typeCount)
 
 			for i, typ := range t.Types {
-				intersectedTypess[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, typ)
+				intersectedTypes[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(memoryGauge, typ)
 			}
 		}
 
 		return NewIntersectionStaticType(
 			memoryGauge,
-			intersectedTypess,
+			intersectedTypes,
 		)
 
 	case *sema.ReferenceType:
@@ -943,7 +945,7 @@ func ConvertSemaDictionaryTypeToStaticDictionaryType(
 	)
 }
 
-func ConvertSemaAccesstoStaticAuthorization(
+func ConvertSemaAccessToStaticAuthorization(
 	memoryGauge common.MemoryGauge,
 	access sema.Access,
 ) Authorization {
@@ -972,7 +974,7 @@ func ConvertSemaAccesstoStaticAuthorization(
 			access.SetKind,
 		)
 
-	case sema.EntitlementMapAccess:
+	case *sema.EntitlementMapAccess:
 		typeId := access.Type.ID()
 		return NewEntitlementMapAuthorization(memoryGauge, typeId)
 	}
@@ -985,7 +987,7 @@ func ConvertSemaReferenceTypeToStaticReferenceType(
 ) ReferenceStaticType {
 	return NewReferenceStaticType(
 		memoryGauge,
-		ConvertSemaAccesstoStaticAuthorization(memoryGauge, t.Authorization),
+		ConvertSemaAccessToStaticAuthorization(memoryGauge, t.Authorization),
 		ConvertSemaToStaticType(memoryGauge, t.Type),
 	)
 }
@@ -1029,6 +1031,7 @@ func ConvertStaticAuthorizationToSemaAccess(
 			return nil, err
 		}
 		return sema.NewEntitlementMapAccess(entitlement), nil
+
 	case EntitlementSetAuthorization:
 		var entitlements []*sema.EntitlementType
 		err := auth.Entitlements.ForeachWithError(func(id common.TypeID, value struct{}) error {
@@ -1044,13 +1047,14 @@ func ConvertStaticAuthorizationToSemaAccess(
 		}
 		return sema.NewEntitlementSetAccess(entitlements, auth.SetKind), nil
 	}
+
 	panic(errors.NewUnreachableError())
 }
 
 func ConvertStaticToSemaType(
 	memoryGauge common.MemoryGauge,
 	typ StaticType,
-	getInterface func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error),
+	getInterface func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error),
 	getComposite func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error),
 	getEntitlement func(typeID TypeID) (*sema.EntitlementType, error),
 	getEntitlementMapType func(typeID TypeID) (*sema.EntitlementMapType, error),
@@ -1060,7 +1064,7 @@ func ConvertStaticToSemaType(
 		return getComposite(t.Location, t.QualifiedIdentifier, t.TypeID)
 
 	case InterfaceStaticType:
-		return getInterface(t.Location, t.QualifiedIdentifier)
+		return getInterface(t.Location, t.QualifiedIdentifier, t.TypeID)
 
 	case VariableSizedStaticType:
 		ty, err := ConvertStaticToSemaType(
@@ -1148,7 +1152,7 @@ func ConvertStaticToSemaType(
 			intersectedTypes = make([]*sema.InterfaceType, typeCount)
 
 			for i, typ := range t.Types {
-				intersectedTypes[i], err = getInterface(typ.Location, typ.QualifiedIdentifier)
+				intersectedTypes[i], err = getInterface(typ.Location, typ.QualifiedIdentifier, typ.TypeID)
 				if err != nil {
 					return nil, err
 				}

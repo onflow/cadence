@@ -180,12 +180,19 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		// Return true to check runtime type.
 		return true
 
+	case cadence.BytesType,
+		*cadence.FunctionType:
+		// TODO: Maybe there are more types that we can skip checking runtime type for composite type.
+
+		return false
+	}
+
+	switch typ {
 	case cadence.VoidType,
 		cadence.BoolType,
 		cadence.NeverType,
 		cadence.CharacterType,
 		cadence.StringType,
-		cadence.BytesType,
 		cadence.AddressType,
 		cadence.IntType,
 		cadence.Int8Type,
@@ -214,20 +221,19 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		cadence.PublicPathType,
 		cadence.PrivatePathType,
 		cadence.MetaType,
-		*cadence.FunctionType,
 		cadence.NumberType,
 		cadence.SignedNumberType,
 		cadence.IntegerType,
 		cadence.SignedIntegerType,
 		cadence.FixedPointType,
 		cadence.SignedFixedPointType:
+
 		// TODO: Maybe there are more types that we can skip checking runtime type for composite type.
 
 		return false
-
-	default:
-		return true
 	}
+
+	return true
 }
 
 func (ct *compositeTypes) add(t cadence.Type) bool {

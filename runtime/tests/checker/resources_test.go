@@ -3977,7 +3977,7 @@ func TestCheckInvalidResourceDictionaryKeysForeach(t *testing.T) {
             xs.forEachKey(fun (x: @X): Bool {
                 destroy x
                 return true
-            }) 
+            })
             destroy xs
         }
     `)
@@ -5064,9 +5064,9 @@ func TestCheckInvalidResourceOwnerField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       resource Test {
-          let owner: PublicAccount
+          let owner: &Account
 
-          init(owner: PublicAccount) {
+          init(owner: &Account) {
               self.owner = owner
           }
       }
@@ -5083,7 +5083,7 @@ func TestCheckInvalidResourceInterfaceOwnerField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
      resource interface Test {
-         let owner: PublicAccount
+         let owner: &Account
      }
    `)
 
@@ -5129,7 +5129,7 @@ func TestCheckResourceOwnerFieldUse(t *testing.T) {
 	_, err := ParseAndCheck(t, `
      resource Test {
 
-         fun test(): PublicAccount? {
+         fun test(): &Account? {
              return self.owner
          }
      }
@@ -5154,6 +5154,45 @@ func TestCheckResourceInterfaceOwnerFieldUse(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckResourceOwnerFieldType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      var owner: &Account? = nil
+
+      resource Test {
+
+          init() {
+              owner = self.owner
+          }
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckResourceOwnerFieldTypeAccess(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+      resource Test {}
+
+      let r <- create Test()
+      let owner = r.owner
+    `)
+
+	require.NoError(t, err)
+
+	ownerType := RequireGlobalValue(t, checker.Elaboration, "owner")
+	require.Equal(t,
+		sema.NewOptionalType(nil, sema.AccountReferenceType),
+		ownerType,
+	)
+}
+
 func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
 
 	t.Parallel()
@@ -5161,7 +5200,7 @@ func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
 	_, err := ParseAndCheck(t, `
      resource Test {
 
-         init(owner: PublicAccount) {
+         init(owner: &Account) {
              self.owner = owner
          }
      }

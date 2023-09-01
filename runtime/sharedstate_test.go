@@ -144,7 +144,7 @@ func TestRuntimeSharedState(t *testing.T) {
                 import C1 from 0x1
 
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         C1.hello()
                     }
                 }
