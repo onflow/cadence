@@ -1033,7 +1033,10 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 	test := func(t *testing.T, auth sema.Access, kind common.CompositeKind) {
 
-		authKeyword := auth.AuthKeyword()
+		var authKeyword string
+		if auth != sema.UnauthorizedAccess {
+			authKeyword = fmt.Sprintf("auth(%s)", auth.QualifiedString())
+		}
 
 		testName := fmt.Sprintf("%s, auth: %v", kind.Name(), auth)
 

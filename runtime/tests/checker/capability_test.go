@@ -97,7 +97,10 @@ func TestCheckCapability_borrow(t *testing.T) {
 		}}, sema.Conjunction),
 	} {
 
-		authKeyword := auth.AuthKeyword()
+		var authKeyword string
+		if auth != sema.UnauthorizedAccess {
+			authKeyword = fmt.Sprintf("auth(%s)", auth.QualifiedString())
+		}
 
 		testName := fmt.Sprintf(
 			"explicit type argument, %s reference",
@@ -320,7 +323,10 @@ func TestCheckCapability_check(t *testing.T) {
 			Identifier: "X",
 		}}, sema.Conjunction),
 	} {
-		authKeyword := auth.AuthKeyword()
+		var authKeyword string
+		if auth != sema.UnauthorizedAccess {
+			authKeyword = fmt.Sprintf("auth(%s)", auth.QualifiedString())
+		}
 
 		testName := fmt.Sprintf(
 			"explicit type argument, %s reference",

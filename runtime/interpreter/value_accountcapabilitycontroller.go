@@ -30,7 +30,7 @@ import (
 // AccountCapabilityControllerValue
 
 type AccountCapabilityControllerValue struct {
-	BorrowType   ReferenceStaticType
+	BorrowType   *ReferenceStaticType
 	CapabilityID UInt64Value
 
 	// tag is locally cached result of GetTag, and not stored.
@@ -49,7 +49,7 @@ type AccountCapabilityControllerValue struct {
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	return &AccountCapabilityControllerValue{
@@ -60,7 +60,7 @@ func NewUnmeteredAccountCapabilityControllerValue(
 
 func NewAccountCapabilityControllerValue(
 	memoryGauge common.MemoryGauge,
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	// Constant because its constituents are already metered.
@@ -81,7 +81,7 @@ func (*AccountCapabilityControllerValue) isValue() {}
 
 func (*AccountCapabilityControllerValue) isCapabilityControllerValue() {}
 
-func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() ReferenceStaticType {
+func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() *ReferenceStaticType {
 	return v.BorrowType
 }
 

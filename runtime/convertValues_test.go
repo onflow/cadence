@@ -188,7 +188,7 @@ func TestRuntimeExportValue(t *testing.T) {
 				return interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					common.ZeroAddress,
@@ -205,7 +205,7 @@ func TestRuntimeExportValue(t *testing.T) {
 				return interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					common.ZeroAddress,
@@ -226,7 +226,7 @@ func TestRuntimeExportValue(t *testing.T) {
 				return interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -244,7 +244,7 @@ func TestRuntimeExportValue(t *testing.T) {
 				return interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -639,7 +639,7 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewArrayValue(
 				newTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 				common.ZeroAddress,
@@ -657,7 +657,7 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewArrayValue(
 				newTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 				common.ZeroAddress,
@@ -673,7 +673,7 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -689,7 +689,7 @@ func TestRuntimeImportValue(t *testing.T) {
 			expected: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -1188,7 +1188,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			actual: &cadence.OptionalType{
 				Type: cadence.IntType,
 			},
-			expected: interpreter.OptionalStaticType{
+			expected: &interpreter.OptionalStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
@@ -1197,7 +1197,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			actual: &cadence.VariableSizedArrayType{
 				ElementType: cadence.IntType,
 			},
-			expected: interpreter.VariableSizedStaticType{
+			expected: &interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
@@ -1207,7 +1207,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				ElementType: cadence.IntType,
 				Size:        3,
 			},
-			expected: interpreter.ConstantSizedStaticType{
+			expected: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 3,
 			},
@@ -1218,7 +1218,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				ElementType: cadence.IntType,
 				KeyType:     cadence.StringType,
 			},
-			expected: interpreter.DictionaryStaticType{
+			expected: &interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -1229,7 +1229,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				Authorization: cadence.UnauthorizedAccess,
 				Type:          cadence.IntType,
 			},
-			expected: interpreter.ReferenceStaticType{
+			expected: &interpreter.ReferenceStaticType{
 				Authorization:  interpreter.UnauthorizedAccess,
 				ReferencedType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -1243,7 +1243,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				},
 				Type: cadence.IntType,
 			},
-			expected: interpreter.ReferenceStaticType{
+			expected: &interpreter.ReferenceStaticType{
 				Authorization: interpreter.NewEntitlementSetAuthorization(
 					nil,
 					func() []common.TypeID { return []common.TypeID{"E", "F"} },
@@ -1263,7 +1263,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				},
 				Type: cadence.IntType,
 			},
-			expected: interpreter.ReferenceStaticType{
+			expected: &interpreter.ReferenceStaticType{
 				Authorization: interpreter.NewEntitlementSetAuthorization(
 					nil,
 					func() []common.TypeID { return []common.TypeID{"E", "F"} },
@@ -1280,7 +1280,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				},
 				Type: cadence.IntType,
 			},
-			expected: interpreter.ReferenceStaticType{
+			expected: &interpreter.ReferenceStaticType{
 				Authorization: interpreter.EntitlementMapAuthorization{
 					TypeID: "M",
 				},
@@ -1292,7 +1292,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			actual: &cadence.CapabilityType{
 				BorrowType: cadence.IntType,
 			},
-			expected: interpreter.CapabilityStaticType{
+			expected: &interpreter.CapabilityStaticType{
 				BorrowType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
@@ -1371,7 +1371,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				},
 			},
 			expected: &interpreter.IntersectionStaticType{
-				Types: []interpreter.InterfaceStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "T"),
 				},
 			},
@@ -1493,11 +1493,9 @@ func TestRuntimeExportStructValue(t *testing.T) {
 	}
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewStruct([]cadence.Value{
-			cadence.NewInt(42),
-		}).WithType(fooStructType),
-	)
+	expected := cadence.NewStruct([]cadence.Value{
+		cadence.NewInt(42),
+	}).WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -1521,12 +1519,10 @@ func TestRuntimeExportResourceValue(t *testing.T) {
     `
 
 	actual := exportValueFromScript(t, script)
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(1),
-			cadence.NewInt(42),
-		}).WithType(newFooResourceType()),
-	)
+	expected := cadence.NewResource([]cadence.Value{
+		cadence.NewUInt64(1),
+		cadence.NewInt(42),
+	}).WithType(newFooResourceType())
 
 	assert.Equal(t, expected, actual)
 }
@@ -1551,37 +1547,33 @@ func TestRuntimeExportResourceArrayValue(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	actual := cadence.ValueWithCachedTypeID(
-		exportValueFromScript(t, script),
-	)
+	actual := exportValueFromScript(t, script)
 
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewArray([]cadence.Value{
-			cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(1),
-				cadence.NewInt(3),
-			}).WithType(fooResourceType),
-			cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(2),
-				cadence.NewInt(4),
-			}).WithType(fooResourceType),
-		}).WithType(&cadence.VariableSizedArrayType{
-			ElementType: &cadence.ResourceType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "uuid",
-						Type:       cadence.UInt64Type,
-					},
-					{
-						Identifier: "bar",
-						Type:       cadence.IntType,
-					},
+	expected := cadence.NewArray([]cadence.Value{
+		cadence.NewResource([]cadence.Value{
+			cadence.NewUInt64(1),
+			cadence.NewInt(3),
+		}).WithType(fooResourceType),
+		cadence.NewResource([]cadence.Value{
+			cadence.NewUInt64(2),
+			cadence.NewInt(4),
+		}).WithType(fooResourceType),
+	}).WithType(&cadence.VariableSizedArrayType{
+		ElementType: &cadence.ResourceType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "uuid",
+					Type:       cadence.UInt64Type,
+				},
+				{
+					Identifier: "bar",
+					Type:       cadence.IntType,
 				},
 			},
-		}),
-	)
+		},
+	})
 
 	assert.Equal(t, expected, actual)
 }
@@ -1609,44 +1601,40 @@ func TestRuntimeExportResourceDictionaryValue(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	actual := cadence.ValueWithCachedTypeID(
-		exportValueFromScript(t, script),
-	)
+	actual := exportValueFromScript(t, script)
 
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewDictionary([]cadence.KeyValuePair{
-			{
-				Key: cadence.String("b"),
-				Value: cadence.NewResource([]cadence.Value{
-					cadence.NewUInt64(2),
-					cadence.NewInt(4),
-				}).WithType(fooResourceType),
-			},
-			{
-				Key: cadence.String("a"),
-				Value: cadence.NewResource([]cadence.Value{
-					cadence.NewUInt64(1),
-					cadence.NewInt(3),
-				}).WithType(fooResourceType),
-			},
-		}).WithType(&cadence.DictionaryType{
-			KeyType: cadence.StringType,
-			ElementType: &cadence.ResourceType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "uuid",
-						Type:       cadence.UInt64Type,
-					},
-					{
-						Identifier: "bar",
-						Type:       cadence.IntType,
-					},
+	expected := cadence.NewDictionary([]cadence.KeyValuePair{
+		{
+			Key: cadence.String("b"),
+			Value: cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(2),
+				cadence.NewInt(4),
+			}).WithType(fooResourceType),
+		},
+		{
+			Key: cadence.String("a"),
+			Value: cadence.NewResource([]cadence.Value{
+				cadence.NewUInt64(1),
+				cadence.NewInt(3),
+			}).WithType(fooResourceType),
+		},
+	}).WithType(&cadence.DictionaryType{
+		KeyType: cadence.StringType,
+		ElementType: &cadence.ResourceType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "uuid",
+					Type:       cadence.UInt64Type,
+				},
+				{
+					Identifier: "bar",
+					Type:       cadence.IntType,
 				},
 			},
-		}),
-	)
+		},
+	})
 
 	assert.Equal(t, expected, actual)
 }
@@ -1711,18 +1699,14 @@ func TestRuntimeExportNestedResourceValueFromScript(t *testing.T) {
         }
     `
 
-	actual := cadence.ValueWithCachedTypeID(
-		exportValueFromScript(t, script),
-	)
-	expected := cadence.ValueWithCachedTypeID(
+	actual := exportValueFromScript(t, script)
+	expected := cadence.NewResource([]cadence.Value{
+		cadence.NewUInt64(2),
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(2),
-			cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(1),
-				cadence.NewInt(42),
-			}).WithType(barResourceType),
-		}).WithType(fooResourceType),
-	)
+			cadence.NewUInt64(1),
+			cadence.NewInt(42),
+		}).WithType(barResourceType),
+	}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2148,7 +2132,7 @@ func TestRuntimeExportTypeValue(t *testing.T) {
 
 		ty := interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
-				Types: []interpreter.InterfaceStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "SI"),
 				},
 			},
@@ -2294,20 +2278,16 @@ func TestRuntimeExportCompositeValueWithFunctionValueField(t *testing.T) {
 		},
 	}
 
-	actual := cadence.ValueWithCachedTypeID(
-		exportValueFromScript(t, script),
-	)
+	actual := exportValueFromScript(t, script)
 
-	expected := cadence.ValueWithCachedTypeID(
-		cadence.NewStruct([]cadence.Value{
-			cadence.NewInt(42),
-			cadence.Function{
-				FunctionType: &cadence.FunctionType{
-					ReturnType: cadence.VoidType,
-				},
+	expected := cadence.NewStruct([]cadence.Value{
+		cadence.NewInt(42),
+		cadence.Function{
+			FunctionType: &cadence.FunctionType{
+				ReturnType: cadence.VoidType,
 			},
-		}).WithType(fooStructType),
-	)
+		},
+	}).WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -2432,10 +2412,7 @@ func TestRuntimeEnumValue(t *testing.T) {
 		expected := newEnumValue()
 		actual := exportValueFromScript(t, script)
 
-		assert.Equal(t,
-			cadence.ValueWithCachedTypeID(expected),
-			cadence.ValueWithCachedTypeID(actual),
-		)
+		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("test import", func(t *testing.T) {
@@ -2496,10 +2473,6 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 			Location:  common.ScriptLocation{},
 		},
 	)
-
-	if err == nil {
-		value = cadence.ValueWithCachedTypeID(value)
-	}
 
 	return value, err
 }
@@ -2748,7 +2721,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			require.NoError(t, err)
 
 			if !test.skipExport {
-				expected := cadence.ValueWithCachedTypeID(test.exportedValue)
+				expected := test.exportedValue
 				assert.Equal(t, expected, actual)
 			}
 		})
@@ -2909,7 +2882,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
 
-	expected := cadence.ValueWithCachedTypeID(complexStructValue)
+	expected := complexStructValue
 	assert.Equal(t, expected, actual)
 
 }
@@ -3021,7 +2994,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
 
-	expected := cadence.ValueWithCachedTypeID(complexStructValue)
+	expected := complexStructValue
 	assert.Equal(t, expected, actual)
 }
 
@@ -3339,7 +3312,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		value := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -3385,7 +3358,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
 				common.ZeroAddress,
@@ -3403,7 +3376,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		value := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -3458,7 +3431,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 				common.ZeroAddress,
@@ -3501,8 +3474,8 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
+					Type: &interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 				},
@@ -3510,7 +3483,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.ZeroAddress,
@@ -3520,7 +3493,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 					common.ZeroAddress,
@@ -3544,7 +3517,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		value := interpreter.NewDictionaryValue(
 			newTestInterpreter(t),
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -3594,7 +3567,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -3612,7 +3585,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		value := interpreter.NewDictionaryValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -3681,7 +3654,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -3742,9 +3715,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType: interpreter.PrimitiveStaticTypeString,
-					ValueType: interpreter.DictionaryStaticType{
+					ValueType: &interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -3754,7 +3727,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeInt8,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -3766,7 +3739,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -4709,6 +4682,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		)
 
+		RequireError(t, err)
 		assert.Contains(t, err.Error(),
 			"invalid argument at index 0: cannot import value of type 'PublicKey'. missing field 'publicKey'")
 		assert.False(t, publicKeyValidated)
@@ -4782,6 +4756,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		)
 
+		RequireError(t, err)
 		assert.Contains(t, err.Error(),
 			"invalid argument at index 0: cannot import value of type 'PublicKey'. missing field 'signatureAlgorithm'")
 		assert.False(t, publicKeyValidated)
@@ -4807,7 +4782,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Type: sema.AnyStructType,
 	}
 
-	staticArrayType := interpreter.VariableSizedStaticType{
+	staticArrayType := &interpreter.VariableSizedStaticType{
 		Type: interpreter.PrimitiveStaticTypeAnyStruct,
 	}
 
@@ -4838,7 +4813,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		ValueType: semaArrayType,
 	}
 
-	staticDictionaryType := interpreter.DictionaryStaticType{
+	staticDictionaryType := &interpreter.DictionaryStaticType{
 		KeyType:   interpreter.PrimitiveStaticTypeString,
 		ValueType: staticArrayType,
 	}

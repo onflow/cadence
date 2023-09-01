@@ -659,8 +659,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						Authorization: interpreter.NewEntitlementSetAuthorization(
 							nil,
 							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
@@ -687,8 +687,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						// Reference was converted
 						Authorization:  interpreter.UnauthorizedAccess,
 						ReferencedType: interpreter.PrimitiveStaticTypeInt,
@@ -712,8 +712,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						Authorization: interpreter.NewEntitlementSetAuthorization(
 							nil,
 							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
@@ -743,8 +743,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						// Reference was converted
 						Authorization:  interpreter.UnauthorizedAccess,
 						ReferencedType: interpreter.PrimitiveStaticTypeInt,
@@ -772,8 +772,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						Authorization: interpreter.NewEntitlementSetAuthorization(
 							nil,
 							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
@@ -792,7 +792,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.VariableSizedStaticType{
+				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			},

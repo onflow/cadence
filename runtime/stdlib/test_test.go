@@ -2144,8 +2144,8 @@ func TestBlockchain(t *testing.T) {
 						eventsInvoked = true
 						assert.NotNil(t, eventType)
 
-						require.IsType(t, interpreter.CompositeStaticType{}, eventType)
-						compositeType := eventType.(interpreter.CompositeStaticType)
+						require.IsType(t, &interpreter.CompositeStaticType{}, eventType)
+						compositeType := eventType.(*interpreter.CompositeStaticType)
 						assert.Equal(t, "Foo", compositeType.QualifiedIdentifier)
 
 						return interpreter.NewArrayValue(

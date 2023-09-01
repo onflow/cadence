@@ -21,10 +21,10 @@ package cadence
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -39,7 +39,7 @@ type Type interface {
 // This type should not be used when encoding values,
 // and should only be used for decoding values that were encoded
 // using an older format of the JSON encoding (<v0.3.0)
-type TypeID string
+type TypeID common.TypeID
 
 func (TypeID) isType() {}
 
@@ -54,8 +54,7 @@ func (t TypeID) Equal(other Type) bool {
 // OptionalType
 
 type OptionalType struct {
-	Type   Type
-	typeID string
+	Type Type
 }
 
 var _ Type = &OptionalType{}
@@ -72,10 +71,7 @@ func NewMeteredOptionalType(gauge common.MemoryGauge, typ Type) *OptionalType {
 func (*OptionalType) isType() {}
 
 func (t *OptionalType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = fmt.Sprintf("%s?", t.Type.ID())
-	}
-	return t.typeID
+	return sema.FormatOptionalTypeID(t.Type.ID())
 }
 
 func (t *OptionalType) Equal(other Type) bool {
@@ -112,7 +108,7 @@ var _ Type = PrimitiveType(interpreter.PrimitiveStaticTypeUnknown)
 func (p PrimitiveType) isType() {}
 
 func (p PrimitiveType) ID() string {
-	return string(interpreter.PrimitiveStaticType(p).SemaType().ID())
+	return string(interpreter.PrimitiveStaticType(p).ID())
 }
 
 func (p PrimitiveType) Equal(other Type) bool {
@@ -232,7 +228,6 @@ type ArrayType interface {
 
 type VariableSizedArrayType struct {
 	ElementType Type
-	typeID      string
 }
 
 var _ Type = &VariableSizedArrayType{}
@@ -254,10 +249,7 @@ func NewMeteredVariableSizedArrayType(
 func (*VariableSizedArrayType) isType() {}
 
 func (t *VariableSizedArrayType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = fmt.Sprintf("[%s]", t.ElementType.ID())
-	}
-	return t.typeID
+	return sema.FormatVariableSizedTypeID(t.ElementType.ID())
 }
 
 func (t *VariableSizedArrayType) Element() Type {
@@ -278,7 +270,6 @@ func (t *VariableSizedArrayType) Equal(other Type) bool {
 type ConstantSizedArrayType struct {
 	ElementType Type
 	Size        uint
-	typeID      string
 }
 
 var _ Type = &ConstantSizedArrayType{}
@@ -305,10 +296,7 @@ func NewMeteredConstantSizedArrayType(
 func (*ConstantSizedArrayType) isType() {}
 
 func (t *ConstantSizedArrayType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
-	}
-	return t.typeID
+	return sema.FormatConstantSizedTypeID(t.ElementType.ID(), int64(t.Size))
 }
 
 func (t *ConstantSizedArrayType) Element() Type {
@@ -330,7 +318,6 @@ func (t *ConstantSizedArrayType) Equal(other Type) bool {
 type DictionaryType struct {
 	KeyType     Type
 	ElementType Type
-	typeID      string
 }
 
 var _ Type = &DictionaryType{}
@@ -357,14 +344,10 @@ func NewMeteredDictionaryType(
 func (*DictionaryType) isType() {}
 
 func (t *DictionaryType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = fmt.Sprintf(
-			"{%s:%s}",
-			t.KeyType.ID(),
-			t.ElementType.ID(),
-		)
-	}
-	return t.typeID
+	return sema.FormatDictionaryTypeID(
+		t.KeyType.ID(),
+		t.ElementType.ID(),
+	)
 }
 
 func (t *DictionaryType) Equal(other Type) bool {
@@ -674,7 +657,6 @@ type StructType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewStructType(
@@ -705,10 +687,7 @@ func NewMeteredStructType(
 func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*StructType) isCompositeType() {}
@@ -750,7 +729,6 @@ type ResourceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewResourceType(
@@ -781,10 +759,7 @@ func NewMeteredResourceType(
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*ResourceType) isCompositeType() {}
@@ -820,13 +795,13 @@ func (t *ResourceType) Equal(other Type) bool {
 }
 
 // AttachmentType
+
 type AttachmentType struct {
 	Location            common.Location
 	BaseType            Type
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewAttachmentType(
@@ -866,10 +841,7 @@ func NewMeteredAttachmentType(
 func (*AttachmentType) isType() {}
 
 func (t *AttachmentType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*AttachmentType) isCompositeType() {}
@@ -915,7 +887,6 @@ type EventType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializer         []Parameter
-	typeID              string
 }
 
 func NewEventType(
@@ -946,10 +917,7 @@ func NewMeteredEventType(
 func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*EventType) isCompositeType() {}
@@ -991,7 +959,6 @@ type ContractType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewContractType(
@@ -1022,10 +989,7 @@ func NewMeteredContractType(
 func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*ContractType) isCompositeType() {}
@@ -1079,7 +1043,6 @@ type StructInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewStructInterfaceType(
@@ -1110,10 +1073,7 @@ func NewMeteredStructInterfaceType(
 func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*StructInterfaceType) isInterfaceType() {}
@@ -1155,7 +1115,6 @@ type ResourceInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewResourceInterfaceType(
@@ -1186,10 +1145,7 @@ func NewMeteredResourceInterfaceType(
 func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*ResourceInterfaceType) isInterfaceType() {}
@@ -1231,7 +1187,6 @@ type ContractInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewContractInterfaceType(
@@ -1262,10 +1217,7 @@ func NewMeteredContractInterfaceType(
 func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*ContractInterfaceType) isInterfaceType() {}
@@ -1314,7 +1266,6 @@ type FunctionType struct {
 	Parameters     []Parameter
 	ReturnType     Type
 	Purity         FunctionPurity
-	typeID         string
 }
 
 func NewFunctionType(
@@ -1345,41 +1296,38 @@ func NewMeteredFunctionType(
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) ID() string {
-	if t.typeID == "" {
 
-		var purity string
-		if t.Purity == FunctionPurityView {
-			purity = "view"
-		}
-
-		typeParameterCount := len(t.TypeParameters)
-		var typeParameters []string
-		if typeParameterCount > 0 {
-			typeParameters = make([]string, typeParameterCount)
-			for i, typeParameter := range t.TypeParameters {
-				typeParameters[i] = typeParameter.Name
-			}
-		}
-
-		parameterCount := len(t.Parameters)
-		var parameters []string
-		if parameterCount > 0 {
-			parameters = make([]string, parameterCount)
-			for i, parameter := range t.Parameters {
-				parameters[i] = parameter.Type.ID()
-			}
-		}
-
-		returnType := t.ReturnType.ID()
-
-		t.typeID = sema.FormatFunctionTypeID(
-			purity,
-			typeParameters,
-			parameters,
-			returnType,
-		)
+	var purity string
+	if t.Purity == FunctionPurityView {
+		purity = "view"
 	}
-	return t.typeID
+
+	typeParameterCount := len(t.TypeParameters)
+	var typeParameters []string
+	if typeParameterCount > 0 {
+		typeParameters = make([]string, typeParameterCount)
+		for i, typeParameter := range t.TypeParameters {
+			typeParameters[i] = typeParameter.Name
+		}
+	}
+
+	parameterCount := len(t.Parameters)
+	var parameters []string
+	if parameterCount > 0 {
+		parameters = make([]string, parameterCount)
+		for i, parameter := range t.Parameters {
+			parameters[i] = parameter.Type.ID()
+		}
+	}
+
+	returnType := t.ReturnType.ID()
+
+	return sema.FormatFunctionTypeID(
+		purity,
+		typeParameters,
+		parameters,
+		returnType,
+	)
 }
 
 func (t *FunctionType) Equal(other Type) bool {
@@ -1439,23 +1387,18 @@ var UnauthorizedAccess Authorization = Unauthorized{}
 func (Unauthorized) isAuthorization() {}
 
 func (Unauthorized) ID() string {
-	return ""
+	panic(errors.NewUnreachableError())
 }
 
-func (Unauthorized) Equal(auth Authorization) bool {
-	switch auth.(type) {
-	case Unauthorized:
-		return true
-	}
-	return false
+func (Unauthorized) Equal(other Authorization) bool {
+	_, ok := other.(Unauthorized)
+	return ok
 }
 
-type EntitlementSetKind uint8
+type EntitlementSetKind = sema.EntitlementSetKind
 
-const (
-	Conjunction EntitlementSetKind = iota
-	Disjunction
-)
+const Conjunction = sema.Conjunction
+const Disjunction = sema.Disjunction
 
 type EntitlementSetAuthorization struct {
 	Entitlements []common.TypeID
@@ -1464,7 +1407,11 @@ type EntitlementSetAuthorization struct {
 
 var _ Authorization = EntitlementSetAuthorization{}
 
-func NewEntitlementSetAuthorization(gauge common.MemoryGauge, entitlements []common.TypeID, kind EntitlementSetKind) EntitlementSetAuthorization {
+func NewEntitlementSetAuthorization(
+	gauge common.MemoryGauge,
+	entitlements []common.TypeID,
+	kind EntitlementSetKind,
+) EntitlementSetAuthorization {
 	common.UseMemory(gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceEntitlementSetAccess,
 		Amount: uint64(len(entitlements)),
@@ -1478,24 +1425,16 @@ func NewEntitlementSetAuthorization(gauge common.MemoryGauge, entitlements []com
 func (EntitlementSetAuthorization) isAuthorization() {}
 
 func (e EntitlementSetAuthorization) ID() string {
-	var builder strings.Builder
-	builder.WriteString("auth(")
-	var separator string
-
-	if e.Kind == Conjunction {
-		separator = ", "
-	} else if e.Kind == Disjunction {
-		separator = " | "
+	entitlementTypeIDs := make([]string, 0, len(e.Entitlements))
+	for _, typeID := range e.Entitlements {
+		entitlementTypeIDs = append(
+			entitlementTypeIDs,
+			string(typeID),
+		)
 	}
 
-	for i, entitlement := range e.Entitlements {
-		builder.WriteString(string(entitlement))
-		if i < len(e.Entitlements) {
-			builder.WriteString(separator)
-		}
-	}
-	builder.WriteString(")")
-	return builder.String()
+	// FormatEntitlementSetTypeID sorts
+	return sema.FormatEntitlementSetTypeID(entitlementTypeIDs, e.Kind)
 }
 
 func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
@@ -1531,15 +1470,15 @@ func NewEntitlementMapAuthorization(gauge common.MemoryGauge, id common.TypeID) 
 func (EntitlementMapAuthorization) isAuthorization() {}
 
 func (e EntitlementMapAuthorization) ID() string {
-	return fmt.Sprintf("auth(%s)", e.TypeID)
+	return string(e.TypeID)
 }
 
-func (e EntitlementMapAuthorization) Equal(auth Authorization) bool {
-	switch auth := auth.(type) {
-	case EntitlementMapAuthorization:
-		return e.TypeID == auth.TypeID
+func (e EntitlementMapAuthorization) Equal(other Authorization) bool {
+	auth, ok := other.(EntitlementMapAuthorization)
+	if !ok {
+		return false
 	}
-	return false
+	return e.TypeID == auth.TypeID
 }
 
 // ReferenceType
@@ -1547,7 +1486,6 @@ func (e EntitlementMapAuthorization) Equal(auth Authorization) bool {
 type ReferenceType struct {
 	Type          Type
 	Authorization Authorization
-	typeID        string
 }
 
 var _ Type = &ReferenceType{}
@@ -1574,10 +1512,14 @@ func NewMeteredReferenceType(
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) ID() string {
-	if t.typeID == "" {
-		t.typeID = fmt.Sprintf("%s&%s", t.Authorization.ID(), t.Type.ID())
+	var authorization string
+	if t.Authorization != UnauthorizedAccess {
+		authorization = t.Authorization.ID()
 	}
-	return t.typeID
+	return sema.FormatReferenceTypeID(
+		authorization,
+		t.Type.ID(),
+	)
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -1595,7 +1537,6 @@ func (t *ReferenceType) Equal(other Type) bool {
 type IntersectionSet = map[Type]struct{}
 
 type IntersectionType struct {
-	typeID              string
 	Types               []Type
 	intersectionSet     IntersectionSet
 	intersectionSetOnce sync.Once
@@ -1620,18 +1561,16 @@ func NewMeteredIntersectionType(
 func (*IntersectionType) isType() {}
 
 func (t *IntersectionType) ID() string {
-	if t.typeID == "" {
-		var typeStrings []string
-		typeCount := len(t.Types)
-		if typeCount > 0 {
-			typeStrings = make([]string, 0, typeCount)
-			for _, typ := range t.Types {
-				typeStrings = append(typeStrings, typ.ID())
-			}
+	var interfaceTypeIDs []string
+	typeCount := len(t.Types)
+	if typeCount > 0 {
+		interfaceTypeIDs = make([]string, 0, typeCount)
+		for _, typ := range t.Types {
+			interfaceTypeIDs = append(interfaceTypeIDs, typ.ID())
 		}
-		t.typeID = sema.FormatIntersectionTypeID(typeStrings)
 	}
-	return t.typeID
+	// FormatIntersectionTypeID sorts
+	return sema.FormatIntersectionTypeID(interfaceTypeIDs)
 }
 
 func (t *IntersectionType) Equal(other Type) bool {
@@ -1675,7 +1614,6 @@ func (t *IntersectionType) IntersectionSet() IntersectionSet {
 
 type CapabilityType struct {
 	BorrowType Type
-	typeID     string
 }
 
 var _ Type = &CapabilityType{}
@@ -1695,15 +1633,12 @@ func NewMeteredCapabilityType(
 func (*CapabilityType) isType() {}
 
 func (t *CapabilityType) ID() string {
-	if t.typeID == "" {
-		var borrowTypeString string
-		borrowType := t.BorrowType
-		if borrowType != nil {
-			borrowTypeString = borrowType.ID()
-		}
-		t.typeID = sema.FormatCapabilityTypeID(borrowTypeString)
+	var borrowTypeID string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeID = borrowType.ID()
 	}
-	return t.typeID
+	return sema.FormatCapabilityTypeID(borrowTypeID)
 }
 
 func (t *CapabilityType) Equal(other Type) bool {
@@ -1720,13 +1655,13 @@ func (t *CapabilityType) Equal(other Type) bool {
 }
 
 // EnumType
+
 type EnumType struct {
 	Location            common.Location
 	QualifiedIdentifier string
 	RawType             Type
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewEnumType(
@@ -1760,10 +1695,7 @@ func NewMeteredEnumType(
 func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*EnumType) isCompositeType() {}
@@ -1796,39 +1728,4 @@ func (t *EnumType) Equal(other Type) bool {
 
 	return t.Location == otherType.Location &&
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
-}
-
-// TypeWithCachedTypeID recursively caches type ID of type t.
-// This is needed because each type ID is lazily cached on
-// its first use in ID() to avoid performance penalty.
-func TypeWithCachedTypeID(t Type) Type {
-	if t == nil {
-		return t
-	}
-
-	// Cache type ID by calling ID()
-	t.ID()
-
-	switch t := t.(type) {
-
-	case CompositeType:
-		fields := t.CompositeFields()
-		for _, f := range fields {
-			TypeWithCachedTypeID(f.Type)
-		}
-
-		initializers := t.CompositeInitializers()
-		for _, params := range initializers {
-			for _, p := range params {
-				TypeWithCachedTypeID(p.Type)
-			}
-		}
-
-	case *IntersectionType:
-		for _, typ := range t.Types {
-			TypeWithCachedTypeID(typ)
-		}
-	}
-
-	return t
 }

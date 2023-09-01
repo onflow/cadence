@@ -3288,8 +3288,8 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, opti
 
 	assert.Equal(
 		t,
-		cadence.ValueWithCachedTypeID(expectedVal),
-		cadence.ValueWithCachedTypeID(decodedVal),
+		expectedVal,
+		decodedVal,
 	)
 }
 

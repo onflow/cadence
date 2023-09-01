@@ -720,7 +720,10 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 
 	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth sema.Access) {
 
-		authKeyword := auth.AuthKeyword()
+		var authKeyword string
+		if auth != sema.UnauthorizedAccess {
+			authKeyword = fmt.Sprintf("auth(%s)", auth.QualifiedString())
+		}
 
 		testName := fmt.Sprintf(
 			"explicit type argument, %s reference, %s",

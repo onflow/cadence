@@ -25,6 +25,8 @@ import (
 	"strings"
 	"sync"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -615,12 +617,12 @@ func (t *OptionalType) QualifiedString() string {
 	return fmt.Sprintf("%s?", t.Type.QualifiedString())
 }
 
-func OptionalTypeID(elementTypeID TypeID) TypeID {
-	return TypeID(fmt.Sprintf("%s?", elementTypeID))
+func FormatOptionalTypeID[T ~string](elementTypeID T) T {
+	return T(fmt.Sprintf("%s?", elementTypeID))
 }
 
 func (t *OptionalType) ID() TypeID {
-	return OptionalTypeID(t.Type.ID())
+	return FormatOptionalTypeID(t.Type.ID())
 }
 
 func (t *OptionalType) Equal(other Type) bool {
@@ -2589,12 +2591,12 @@ func (t *VariableSizedType) QualifiedString() string {
 	return fmt.Sprintf("[%s]", t.Type.QualifiedString())
 }
 
-func VariableSizedTypeID(elementTypeID TypeID) TypeID {
-	return TypeID(fmt.Sprintf("[%s]", elementTypeID))
+func FormatVariableSizedTypeID[T ~string](elementTypeID T) T {
+	return T(fmt.Sprintf("[%s]", elementTypeID))
 }
 
 func (t *VariableSizedType) ID() TypeID {
-	return VariableSizedTypeID(t.Type.ID())
+	return FormatVariableSizedTypeID(t.Type.ID())
 }
 
 func (t *VariableSizedType) Equal(other Type) bool {
@@ -2759,12 +2761,12 @@ func (t *ConstantSizedType) QualifiedString() string {
 	return fmt.Sprintf("[%s; %d]", t.Type.QualifiedString(), t.Size)
 }
 
-func ConstantSizedTypeID(elementTypeID TypeID, size int64) TypeID {
-	return TypeID(fmt.Sprintf("[%s;%d]", elementTypeID, size))
+func FormatConstantSizedTypeID[T ~string](elementTypeID T, size int64) T {
+	return T(fmt.Sprintf("[%s;%d]", elementTypeID, size))
 }
 
 func (t *ConstantSizedType) ID() TypeID {
-	return ConstantSizedTypeID(t.Type.ID(), t.Size)
+	return FormatConstantSizedTypeID(t.Type.ID(), t.Size)
 }
 
 func (t *ConstantSizedType) Equal(other Type) bool {
@@ -5430,8 +5432,8 @@ func (t *DictionaryType) QualifiedString() string {
 	)
 }
 
-func DictionaryTypeID(keyTypeID TypeID, valueTypeID TypeID) TypeID {
-	return TypeID(fmt.Sprintf(
+func FormatDictionaryTypeID[T ~string](keyTypeID T, valueTypeID T) T {
+	return T(fmt.Sprintf(
 		"{%s:%s}",
 		keyTypeID,
 		valueTypeID,
@@ -5439,7 +5441,10 @@ func DictionaryTypeID(keyTypeID TypeID, valueTypeID TypeID) TypeID {
 }
 
 func (t *DictionaryType) ID() TypeID {
-	return DictionaryTypeID(t.KeyType.ID(), t.ValueType.ID())
+	return FormatDictionaryTypeID(
+		t.KeyType.ID(),
+		t.ValueType.ID(),
+	)
 }
 
 func (t *DictionaryType) Equal(other Type) bool {
@@ -5851,7 +5856,11 @@ var _ TypeIndexableType = &ReferenceType{}
 
 var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessAll)
 
-func NewReferenceType(memoryGauge common.MemoryGauge, typ Type, authorization Access) *ReferenceType {
+func NewReferenceType(
+	memoryGauge common.MemoryGauge,
+	authorization Access,
+	typ Type,
+) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceSemaTypeMemoryUsage)
 	return &ReferenceType{
 		Type:          typ,
@@ -5865,57 +5874,61 @@ func (t *ReferenceType) Tag() TypeTag {
 	return ReferenceTypeTag
 }
 
-func formatReferenceType(
+func formatReferenceType[T ~string](
 	separator string,
-	authorization string,
-	typeString string,
+	authorization T,
+	typeString T,
 ) string {
 	var builder strings.Builder
 	if authorization != "" {
 		builder.WriteString("auth(")
-		builder.WriteString(authorization)
+		builder.WriteString(string(authorization))
 		builder.WriteString(")")
 		builder.WriteString(separator)
 	}
 	builder.WriteByte('&')
-	builder.WriteString(typeString)
+	builder.WriteString(string(typeString))
 	return builder.String()
 }
 
-func FormatReferenceTypeID(authorization string, typeString string) string {
-	return formatReferenceType("", authorization, typeString)
-}
-
-func (t *ReferenceType) string(typeFormatter func(Type) string) string {
-	if t.Type == nil {
-		return "reference"
-	}
-	if t.Authorization != UnauthorizedAccess {
-		return formatReferenceType(" ", t.Authorization.string(typeFormatter), typeFormatter(t.Type))
-	}
-	return formatReferenceType(" ", "", typeFormatter(t.Type))
+func FormatReferenceTypeID[T ~string](authorization T, borrowTypeID T) T {
+	return T(formatReferenceType("", authorization, borrowTypeID))
 }
 
 func (t *ReferenceType) String() string {
-	return t.string(func(t Type) string {
-		return t.String()
-	})
+	if t.Type == nil {
+		return "reference"
+	}
+	var authorization string
+	if t.Authorization != UnauthorizedAccess {
+		authorization = t.Authorization.String()
+	}
+	return formatReferenceType(" ", authorization, t.Type.String())
 }
 
 func (t *ReferenceType) QualifiedString() string {
-	return t.string(func(t Type) string {
-		return t.QualifiedString()
-	})
+	if t.Type == nil {
+		return "reference"
+	}
+	var authorization string
+	if t.Authorization != UnauthorizedAccess {
+		authorization = t.Authorization.QualifiedString()
+	}
+	return formatReferenceType(" ", authorization, t.Type.QualifiedString())
 }
 
 func (t *ReferenceType) ID() TypeID {
 	if t.Type == nil {
 		return "reference"
 	}
+	var authorization TypeID
 	if t.Authorization != UnauthorizedAccess {
-		return TypeID(FormatReferenceTypeID(t.Authorization.AccessKeyword(), string(t.Type.ID())))
+		authorization = t.Authorization.ID()
 	}
-	return TypeID(FormatReferenceTypeID("", string(t.Type.ID())))
+	return FormatReferenceTypeID(
+		authorization,
+		t.Type.ID(),
+	)
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -5963,8 +5976,8 @@ func (*ReferenceType) ContainFieldsOrElements() bool {
 	return false
 }
 
-func (r *ReferenceType) TypeAnnotationState() TypeAnnotationState {
-	if r.Type.TypeAnnotationState() == TypeAnnotationStateDirectEntitlementTypeAnnotation {
+func (t *ReferenceType) TypeAnnotationState() TypeAnnotationState {
+	if t.Type.TypeAnnotationState() == TypeAnnotationStateDirectEntitlementTypeAnnotation {
 		return TypeAnnotationStateDirectEntitlementTypeAnnotation
 	}
 	return TypeAnnotationStateValid
@@ -5984,11 +5997,7 @@ func (t *ReferenceType) RewriteWithIntersectionTypes() (Type, bool) {
 
 func (t *ReferenceType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	mappedType := t.Type.Map(gauge, typeParamMap, f)
-	return f(NewReferenceType(
-		gauge,
-		mappedType,
-		t.Authorization,
-	))
+	return f(NewReferenceType(gauge, t.Authorization, mappedType))
 }
 
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
@@ -6860,22 +6869,23 @@ func (t *IntersectionType) Tag() TypeTag {
 	return IntersectionTypeTag
 }
 
-func formatIntersectionType(separator string, intersectionStrings []string) string {
+func formatIntersectionType[T ~string](separator string, interfaceStrings []T) string {
 	var result strings.Builder
 	result.WriteByte('{')
-	for i, intersectionString := range intersectionStrings {
+	for i, interfaceString := range interfaceStrings {
 		if i > 0 {
 			result.WriteByte(',')
 			result.WriteString(separator)
 		}
-		result.WriteString(intersectionString)
+		result.WriteString(string(interfaceString))
 	}
 	result.WriteByte('}')
 	return result.String()
 }
 
-func FormatIntersectionTypeID(intersectionStrings []string) string {
-	return formatIntersectionType("", intersectionStrings)
+func FormatIntersectionTypeID[T ~string](interfaceTypeIDs []T) T {
+	slices.Sort(interfaceTypeIDs)
+	return T(formatIntersectionType("", interfaceTypeIDs))
 }
 
 func (t *IntersectionType) string(separator string, typeFormatter func(Type) string) string {
@@ -6903,11 +6913,16 @@ func (t *IntersectionType) QualifiedString() string {
 }
 
 func (t *IntersectionType) ID() TypeID {
-	return TypeID(
-		t.string("", func(ty Type) string {
-			return string(ty.ID())
-		}),
-	)
+	var interfaceTypeIDs []TypeID
+	typeCount := len(t.Types)
+	if typeCount > 0 {
+		interfaceTypeIDs = make([]TypeID, 0, typeCount)
+		for _, typ := range t.Types {
+			interfaceTypeIDs = append(interfaceTypeIDs, typ.ID())
+		}
+	}
+	// FormatIntersectionTypeID sorts
+	return FormatIntersectionTypeID(interfaceTypeIDs)
 }
 
 func (t *IntersectionType) Equal(other Type) bool {
@@ -7126,19 +7141,19 @@ func (t *CapabilityType) Tag() TypeTag {
 	return CapabilityTypeTag
 }
 
-func formatCapabilityType(borrowTypeString string) string {
+func formatCapabilityType[T ~string](borrowTypeString T) string {
 	var builder strings.Builder
 	builder.WriteString("Capability")
 	if borrowTypeString != "" {
 		builder.WriteByte('<')
-		builder.WriteString(borrowTypeString)
+		builder.WriteString(string(borrowTypeString))
 		builder.WriteByte('>')
 	}
 	return builder.String()
 }
 
-func FormatCapabilityTypeID(borrowTypeString string) string {
-	return formatCapabilityType(borrowTypeString)
+func FormatCapabilityTypeID[T ~string](borrowTypeID T) T {
+	return T(formatCapabilityType(borrowTypeID))
 }
 
 func (t *CapabilityType) String() string {
@@ -7160,12 +7175,12 @@ func (t *CapabilityType) QualifiedString() string {
 }
 
 func (t *CapabilityType) ID() TypeID {
-	var borrowTypeString string
+	var borrowTypeID TypeID
 	borrowType := t.BorrowType
 	if borrowType != nil {
-		borrowTypeString = string(borrowType.ID())
+		borrowTypeID = borrowType.ID()
 	}
-	return TypeID(FormatCapabilityTypeID(borrowTypeString))
+	return FormatCapabilityTypeID(borrowTypeID)
 }
 
 func (t *CapabilityType) Equal(other Type) bool {

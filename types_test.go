@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -2168,4 +2169,269 @@ func TestDecodeFields(t *testing.T) {
 			assert.Equal(t, errCase.ExpectedErr, err.Error())
 		})
 	}
+}
+
+func TestIntersectionStaticType_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level, single", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			[]Type{
+				NewStructInterfaceType(testLocation, "I", nil, nil),
+			},
+		)
+		assert.Equal(t,
+			"{S.test.I}",
+			intersectionType.ID(),
+		)
+	})
+
+	t.Run("top-level, two", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			[]Type{
+				// NOTE: order
+				NewStructInterfaceType(testLocation, "I2", nil, nil),
+				NewStructInterfaceType(testLocation, "I1", nil, nil),
+			},
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"{S.test.I1,S.test.I2}",
+			intersectionType.ID(),
+		)
+	})
+
+	t.Run("nested, two", func(t *testing.T) {
+		t.Parallel()
+
+		interfaceType1 := NewStructInterfaceType(testLocation, "C.I1", nil, nil)
+		interfaceType2 := NewStructInterfaceType(testLocation, "C.I2", nil, nil)
+
+		intersectionType := NewIntersectionType(
+			[]Type{
+				// NOTE: order
+				interfaceType2,
+				interfaceType1,
+			},
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"{S.test.C.I1,S.test.C.I2}",
+			intersectionType.ID(),
+		)
+	})
+}
+
+func TestEntitlementMapAuthorization_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "M")
+		authorization := NewEntitlementMapAuthorization(nil, mapTypeID)
+		assert.Equal(t, "S.test.M", authorization.ID())
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "C.M")
+		authorization := NewEntitlementMapAuthorization(nil, mapTypeID)
+		assert.Equal(t, "S.test.C.M", authorization.ID())
+	})
+}
+
+func TestEntitlementSetAuthorization_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("single", func(t *testing.T) {
+		t.Parallel()
+
+		authorization := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				testLocation.TypeID(nil, "E"),
+			},
+			sema.Conjunction,
+		)
+		assert.Equal(t,
+			"S.test.E",
+			authorization.ID(),
+		)
+	})
+
+	t.Run("two, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "E2"),
+				testLocation.TypeID(nil, "E1"),
+			},
+			sema.Conjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"S.test.E1,S.test.E2",
+			access.ID(),
+		)
+	})
+
+	t.Run("two, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "E2"),
+				testLocation.TypeID(nil, "E1"),
+			},
+			sema.Disjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"S.test.E1|S.test.E2",
+			access.ID(),
+		)
+	})
+
+	t.Run("three, nested, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "C.E3"),
+				testLocation.TypeID(nil, "C.E2"),
+				testLocation.TypeID(nil, "C.E1"),
+			},
+			sema.Conjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"S.test.C.E1,S.test.C.E2,S.test.C.E3",
+			access.ID(),
+		)
+	})
+
+	t.Run("three, nested, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "C.E3"),
+				testLocation.TypeID(nil, "C.E2"),
+				testLocation.TypeID(nil, "C.E1"),
+			},
+			sema.Disjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"S.test.C.E1|S.test.C.E2|S.test.C.E3",
+			access.ID(),
+		)
+	})
+}
+
+func TestReferenceStaticType_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level, unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		referenceType := NewReferenceType(UnauthorizedAccess, IntType)
+		assert.Equal(t,
+			"&Int",
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("top-level, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "M")
+		access := NewEntitlementMapAuthorization(nil, mapTypeID)
+
+		referenceType := NewReferenceType(access, IntType)
+		assert.Equal(t,
+			"auth(S.test.M)&Int",
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("top-level, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "E2"),
+				testLocation.TypeID(nil, "E1"),
+			},
+			sema.Conjunction,
+		)
+
+		referenceType := NewReferenceType(access, IntType)
+
+		// NOTE: sorted
+		assert.Equal(t,
+			"auth(S.test.E1,S.test.E2)&Int",
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("nested, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "C.M")
+		access := NewEntitlementMapAuthorization(nil, mapTypeID)
+
+		referenceType := NewReferenceType(access, IntType)
+		assert.Equal(t,
+			"auth(S.test.C.M)&Int",
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("nested, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "C.E2"),
+				testLocation.TypeID(nil, "C.E1"),
+			},
+			sema.Conjunction,
+		)
+
+		referenceType := NewReferenceType(access, IntType)
+
+		// NOTE: sorted
+		assert.Equal(t,
+			"auth(S.test.C.E1,S.test.C.E2)&Int",
+			referenceType.ID(),
+		)
+	})
 }

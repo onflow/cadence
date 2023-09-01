@@ -1720,7 +1720,11 @@ func (v Struct) ToGoValue() any {
 }
 
 func (v Struct) String() string {
-	return formatComposite(v.StructType.ID(), v.StructType.Fields, v.Fields)
+	return formatComposite(
+		v.StructType.ID(),
+		v.StructType.Fields,
+		v.Fields,
+	)
 }
 
 func (v Struct) GetFields() []Field {
@@ -1815,7 +1819,11 @@ func (v Resource) ToGoValue() any {
 }
 
 func (v Resource) String() string {
-	return formatComposite(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
+	return formatComposite(
+		v.ResourceType.ID(),
+		v.ResourceType.Fields,
+		v.Fields,
+	)
 }
 
 func (v Resource) GetFields() []Field {
@@ -1889,7 +1897,11 @@ func (v Attachment) ToGoValue() any {
 }
 
 func (v Attachment) String() string {
-	return formatComposite(v.AttachmentType.ID(), v.AttachmentType.Fields, v.Fields)
+	return formatComposite(
+		v.AttachmentType.ID(),
+		v.AttachmentType.Fields,
+		v.Fields,
+	)
 }
 
 func (v Attachment) GetFields() []Field {
@@ -1962,7 +1974,11 @@ func (v Event) ToGoValue() any {
 	return ret
 }
 func (v Event) String() string {
-	return formatComposite(v.EventType.ID(), v.EventType.Fields, v.Fields)
+	return formatComposite(
+		v.EventType.ID(),
+		v.EventType.Fields,
+		v.Fields,
+	)
 }
 
 func (v Event) GetFields() []Field {
@@ -2036,7 +2052,11 @@ func (v Contract) ToGoValue() any {
 }
 
 func (v Contract) String() string {
-	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
+	return formatComposite(
+		v.ContractType.ID(),
+		v.ContractType.Fields,
+		v.Fields,
+	)
 }
 
 func (v Contract) GetFields() []Field {
@@ -2267,7 +2287,11 @@ func (v Enum) ToGoValue() any {
 }
 
 func (v Enum) String() string {
-	return formatComposite(v.EnumType.ID(), v.EnumType.Fields, v.Fields)
+	return formatComposite(
+		v.EnumType.ID(),
+		v.EnumType.Fields,
+		v.Fields,
+	)
 }
 
 func (v Enum) GetFields() []Field {
@@ -2322,64 +2346,4 @@ func (Function) ToGoValue() any {
 func (v Function) String() string {
 	// TODO: include function type
 	return "fun ..."
-}
-
-// ValueWithCachedTypeID recursively caches type ID of value v's type.
-// This is needed because each type ID is lazily cached on
-// its first use in ID() to avoid performance penalty.
-func ValueWithCachedTypeID[T Value](value T) T {
-	var v Value = value
-
-	if v == nil {
-		return value
-	}
-
-	TypeWithCachedTypeID(value.Type())
-
-	switch v := v.(type) {
-
-	case TypeValue:
-		TypeWithCachedTypeID(v.StaticType)
-
-	case Optional:
-		ValueWithCachedTypeID(v.Value)
-
-	case Array:
-		for _, v := range v.Values {
-			ValueWithCachedTypeID(v)
-		}
-
-	case Dictionary:
-		for _, p := range v.Pairs {
-			ValueWithCachedTypeID(p.Key)
-			ValueWithCachedTypeID(p.Value)
-		}
-
-	case Struct:
-		for _, f := range v.Fields {
-			ValueWithCachedTypeID(f)
-		}
-
-	case Resource:
-		for _, f := range v.Fields {
-			ValueWithCachedTypeID(f)
-		}
-
-	case Event:
-		for _, f := range v.Fields {
-			ValueWithCachedTypeID(f)
-		}
-
-	case Contract:
-		for _, f := range v.Fields {
-			ValueWithCachedTypeID(f)
-		}
-
-	case Enum:
-		for _, f := range v.Fields {
-			ValueWithCachedTypeID(f)
-		}
-	}
-
-	return value
 }
