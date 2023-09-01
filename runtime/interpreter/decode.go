@@ -1020,7 +1020,7 @@ func (d StorableDecoder) decodeStorageCapabilityController() (*StorageCapability
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid storage capability controller borrow type encoding: %w", err)
 	}
-	borrowReferenceStaticType, ok := borrowStaticType.(ReferenceStaticType)
+	borrowReferenceStaticType, ok := borrowStaticType.(*ReferenceStaticType)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid storage capability controller borrow type encoding: expected reference static type, got %T",
@@ -1092,7 +1092,7 @@ func (d StorableDecoder) decodeAccountCapabilityController() (*AccountCapability
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid account capability controller borrow type encoding: %w", err)
 	}
-	borrowReferenceStaticType, ok := borrowStaticType.(ReferenceStaticType)
+	borrowReferenceStaticType, ok := borrowStaticType.(*ReferenceStaticType)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid account capability controller borrow type encoding: expected reference static type, got %T",
@@ -1354,36 +1354,34 @@ func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
 	return NewCompositeStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
 }
 
-func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
+func (d TypeDecoder) decodeInterfaceStaticType() (*InterfaceStaticType, error) {
 	const expectedLength = encodedInterfaceStaticTypeLength
 
 	size, err := d.decoder.DecodeArrayHead()
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return InterfaceStaticType{},
-				errors.NewUnexpectedError(
-					"invalid interface static type encoding: expected [%d]any, got %s",
-					expectedLength,
-					e.ActualType.String(),
-				)
+			return nil, errors.NewUnexpectedError(
+				"invalid interface static type encoding: expected [%d]any, got %s",
+				expectedLength,
+				e.ActualType.String(),
+			)
 		}
-		return InterfaceStaticType{}, err
+		return nil, err
 	}
 
 	if size != expectedLength {
-		return InterfaceStaticType{},
-			errors.NewUnexpectedError(
-				"invalid interface static type encoding: expected [%d]any, got [%d]any",
-				expectedLength,
-				size,
-			)
+		return nil, errors.NewUnexpectedError(
+			"invalid interface static type encoding: expected [%d]any, got [%d]any",
+			expectedLength,
+			size,
+		)
 	}
 
 	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKey
 	location, err := d.DecodeLocation()
 	if err != nil {
-		return InterfaceStaticType{}, errors.NewUnexpectedError(
+		return nil, errors.NewUnexpectedError(
 			"invalid interface static type location encoding: %w",
 			err,
 		)
@@ -1393,13 +1391,12 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	qualifiedIdentifier, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return InterfaceStaticType{},
-				errors.NewUnexpectedError(
-					"invalid interface static type qualified identifier encoding: %s",
-					e.ActualType.String(),
-				)
+			return nil, errors.NewUnexpectedError(
+				"invalid interface static type qualified identifier encoding: %s",
+				e.ActualType.String(),
+			)
 		}
-		return InterfaceStaticType{}, err
+		return nil, err
 	}
 
 	return NewInterfaceStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
@@ -1752,9 +1749,9 @@ func (d TypeDecoder) decodeIntersectionStaticType() (StaticType, error) {
 		return nil, err
 	}
 
-	var intersections []InterfaceStaticType
+	var intersections []*InterfaceStaticType
 	if intersectionSize > 0 {
-		intersections = make([]InterfaceStaticType, intersectionSize)
+		intersections = make([]*InterfaceStaticType, intersectionSize)
 		for i := 0; i < int(intersectionSize); i++ {
 
 			number, err := d.decoder.DecodeTagNumber()

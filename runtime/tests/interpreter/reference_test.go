@@ -641,7 +641,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
@@ -746,7 +746,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array1 := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			common.Address{0x1},
@@ -770,7 +770,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array2 := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			common.Address{0x2},
@@ -841,7 +841,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
@@ -965,7 +965,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
@@ -1340,6 +1340,178 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
             fun getRef(_ ref: &Bar?): &Bar? {
                 return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("reference created by field access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let bar: @Bar
+                init() {
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                var foo <- create Foo()
+                var fooRef = &foo as &Foo
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var barRef = getRef(fooRef.bar)
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                barRef.id
+
+                destroy foo2
+            }
+
+            fun getRef(_ ref: &Bar): &Bar {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("reference created by index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                let array <- [<- create Foo()]
+                var arrayRef = &array as &[Foo]
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var fooRef = getRef(arrayRef[0])
+
+                // Move the outer resource
+                var array2 <- array
+
+                // Access the moved resource
+                fooRef.id
+
+                destroy array2
+            }
+
+            fun getRef(_ ref: &Foo): &Foo {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("reference created by field and index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+             resource Foo {
+                let bar: @Bar
+                init() {
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                let array <- [<- create Foo()]
+                var arrayRef = &array as &[Foo]
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var barRef = getRef(arrayRef[0].bar)
+
+                // Move the outer resource
+                var array2 <- array
+
+                // Access the moved resource
+                barRef.id
+
+                destroy array2
+            }
+
+            fun getRef(_ ref: &Bar): &Bar {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("downcasted reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+             resource Foo {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                var foo <- create Foo()
+                var fooRef = &foo as &Foo
+
+                var anyStruct: AnyStruct = fooRef
+
+                var downCastedRef = anyStruct as! &Foo
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                downCastedRef.id
+
+                destroy foo2
             }
         `,
 		)

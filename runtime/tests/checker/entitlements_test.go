@@ -962,9 +962,16 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F) &Int")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(M) &Int")
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			"auth(F) &Int",
+			typeMismatchError.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(M) &Int",
+			typeMismatchError.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("accessor function with complex impl", func(t *testing.T) {
@@ -1063,23 +1070,24 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.Y"),
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.RestrictingAccess,
 		)
 		// in this case `M` functions like a generic name for an entitlement,
 		// so we use `M` as the access for `x` here
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
-			sema.NewEntitlementMapAccess(checker.Elaboration.EntitlementMapType("S.test.M")),
+		assert.Equal(t,
+			sema.NewEntitlementMapAccess(
+				checker.Elaboration.EntitlementMapType("S.test.M"),
+			),
+			invalidAccessErr.PossessedAccess,
 		)
 	})
 
@@ -1157,31 +1165,29 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.Z"),
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.RestrictingAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.Y"),
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.PossessedAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+		assert.Equal(t,
 			"reference needs entitlement `Z`",
+			invalidAccessErr.SecondaryError(),
 		)
 	})
 
@@ -1301,9 +1307,16 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(NM) &Int")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Z) &Int")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(NM) &Int",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(Z) &Int",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("accessor function with superset composed mapping object access input", func(t *testing.T) {
@@ -1381,9 +1394,16 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(NM) &Int")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Z) &Int")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(NM) &Int",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(Z) &Int",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("accessor function with composed mapping object access included intermediate step", func(t *testing.T) {
@@ -3889,14 +3909,26 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		typeMismatchError := &sema.TypeMismatchError{}
+		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errs[0], &typeMismatchError)
-		require.Equal(t, typeMismatchError.ExpectedType.QualifiedString(), "S?")
-		require.Equal(t, typeMismatchError.ActualType.QualifiedString(), "S")
+		assert.Equal(t,
+			"S?",
+			typeMismatchError.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"S",
+			typeMismatchError.ActualType.QualifiedString(),
+		)
 
 		require.ErrorAs(t, errs[1], &typeMismatchError)
-		require.Equal(t, typeMismatchError.ExpectedType.QualifiedString(), "auth(F, Y) &Int?")
-		require.Equal(t, typeMismatchError.ActualType.QualifiedString(), "auth(Y) &Int?")
+		assert.Equal(t,
+			"auth(F, Y) &Int?",
+			typeMismatchError.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(Y) &Int?",
+			typeMismatchError.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("basic with optional function call return invalid", func(t *testing.T) {
@@ -3923,9 +3955,16 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &Int?")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &Int?")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(X, Y) &Int?",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(Y) &Int?",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("multiple outputs", func(t *testing.T) {
@@ -3951,9 +3990,16 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F, Y) &Int")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(F | Y) &Int")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y, F) &Int",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(Y | F) &Int",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("optional", func(t *testing.T) {
@@ -3996,9 +4042,16 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		// X is not retained in the entitlements for ref
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X) &Int")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &Int")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(X) &Int",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(Y) &Int",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("different views", func(t *testing.T) {
@@ -4024,9 +4077,16 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		// access gives B, not Y
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &Int")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(B) &Int")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y) &Int",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(B) &Int",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("safe disjoint", func(t *testing.T) {
@@ -4154,9 +4214,16 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		// access results in access(all) access because D is not mapped
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(D) &Int")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&Int")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(D) &Int",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"&Int",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("multiple output with upcasting", func(t *testing.T) {
@@ -4264,9 +4331,16 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		// access gives B & C, not X & Y
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &Int")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(B, C) &Int")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(X, Y) &Int",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(B, C) &Int",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("unauthorized", func(t *testing.T) {
@@ -4309,9 +4383,16 @@ func TestCheckEntitlementMapAccess(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		// result is not authorized
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &Int")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&Int")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y) &Int",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"&Int",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("basic with init", func(t *testing.T) {
@@ -4526,12 +4607,26 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &A")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &A")
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X) &S")
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&S")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(X, Y) &A",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(Y) &A",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
+
+		require.ErrorAs(t, errs[1], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(X) &S",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"&S",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("base type with too few requirements", func(t *testing.T) {
@@ -4557,9 +4652,16 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X, Y) &S")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(X) &S")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(X, Y) &S",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(X) &S",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("base type with no requirements", func(t *testing.T) {
@@ -4584,9 +4686,16 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X) &S")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&S")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			typeMismatchErr.ExpectedType.QualifiedString(),
+			"auth(X) &S",
+		)
+		assert.Equal(t,
+			"&S",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("base type", func(t *testing.T) {
@@ -4641,9 +4750,16 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(E, F, Y) &A")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(F, Y) &A")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(F, Y, E) &A",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(Y, F) &A",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("missing in codomain", func(t *testing.T) {
@@ -4666,8 +4782,12 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidAttachmentEntitlementError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.InvalidAttachmentEntitlementError).InvalidEntitlement.QualifiedString(), "E")
+		var invalidAttachmentEntitlementErr *sema.InvalidAttachmentEntitlementError
+		require.ErrorAs(t, errs[0], &invalidAttachmentEntitlementErr)
+		assert.Equal(t,
+			"E",
+			invalidAttachmentEntitlementErr.InvalidEntitlement.QualifiedString(),
+		)
 	})
 
 	t.Run("missing in codomain in set", func(t *testing.T) {
@@ -4690,8 +4810,12 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidAttachmentEntitlementError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.InvalidAttachmentEntitlementError).InvalidEntitlement.QualifiedString(), "E")
+		var invalidAttachmentEntitlementErr *sema.InvalidAttachmentEntitlementError
+		require.ErrorAs(t, errs[0], &invalidAttachmentEntitlementErr)
+		assert.Equal(t,
+			"E",
+			invalidAttachmentEntitlementErr.InvalidEntitlement.QualifiedString(),
+		)
 	})
 
 	t.Run("multiple missing in codomain", func(t *testing.T) {
@@ -4712,10 +4836,18 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.InvalidAttachmentEntitlementError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.InvalidAttachmentEntitlementError).InvalidEntitlement.QualifiedString(), "X")
-		require.IsType(t, &sema.InvalidAttachmentEntitlementError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.InvalidAttachmentEntitlementError).InvalidEntitlement.QualifiedString(), "E")
+		var invalidAttachmentEntitlementErr *sema.InvalidAttachmentEntitlementError
+		require.ErrorAs(t, errs[0], &invalidAttachmentEntitlementErr)
+		assert.Equal(t,
+			"X",
+			invalidAttachmentEntitlementErr.InvalidEntitlement.QualifiedString(),
+		)
+
+		require.ErrorAs(t, errs[1], &invalidAttachmentEntitlementErr)
+		assert.Equal(t,
+			"E",
+			invalidAttachmentEntitlementErr.InvalidEntitlement.QualifiedString(),
+		)
 	})
 
 	t.Run("mapped field", func(t *testing.T) {
@@ -4763,12 +4895,27 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 4)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A")
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(X) &S")
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&S")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y) &A",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"&A",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
+
+		require.ErrorAs(t, errs[1], &typeMismatchErr)
+		require.Equal(t,
+			"auth(X) &S",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		require.Equal(t,
+			"&S",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
+
 		require.IsType(t, &sema.InvalidAttachmentEntitlementError{}, errs[2])
 		require.IsType(t, &sema.InvalidAttachmentEntitlementError{}, errs[3])
 	})
@@ -4871,13 +5018,26 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(F) &A?")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(Y) &A?")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(F) &A?",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(Y) &A?",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
-		require.Equal(t, errs[1].(*sema.TypeMismatchError).ActualType.QualifiedString(), "auth(F) &A?")
+		require.ErrorAs(t, errs[1], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y) &A?",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(F) &A?",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("access(all) access entitled attachment", func(t *testing.T) {
@@ -4900,9 +5060,16 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y) &A?",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"&A?",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("entitled access access(all) attachment", func(t *testing.T) {
@@ -4927,9 +5094,16 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y) &A?",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"&A?",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("access(all) access access(all) attachment", func(t *testing.T) {
@@ -4955,9 +5129,16 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ExpectedType.QualifiedString(), "auth(Y) &A?")
-		require.Equal(t, errs[0].(*sema.TypeMismatchError).ActualType.QualifiedString(), "&A?")
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y) &A?",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"&A?",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 
 	t.Run("unrepresentable access mapping", func(t *testing.T) {
@@ -5084,29 +5265,30 @@ func TestCheckEntitlementConditions(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 3)
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
 		assert.Equal(
 			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.X"),
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.RestrictingAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+		assert.Equal(t,
 			sema.UnauthorizedAccess,
+			invalidAccessErr.PossessedAccess,
 		)
+
 		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
-		require.IsType(t, &sema.InvalidAccessError{}, errs[2])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+
+		require.ErrorAs(t, errs[2], &invalidAccessErr)
+		assert.Equal(t,
 			"reference needs entitlement `X`",
+			invalidAccessErr.SecondaryError(),
 		)
 	})
 
@@ -5161,26 +5343,25 @@ func TestCheckEntitlementConditions(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.X"),
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.RestrictingAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+		assert.Equal(t,
 			sema.UnauthorizedAccess,
+			invalidAccessErr.PossessedAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+		assert.Equal(t,
 			"reference needs entitlement `X`",
+			invalidAccessErr.SecondaryError(),
 		)
 	})
 
@@ -5513,10 +5694,10 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					sema.InsertType,
@@ -5524,16 +5705,15 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 				},
 				sema.Disjunction,
 			),
+			invalidAccessErr.RestrictingAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+		assert.Equal(t,
 			sema.UnauthorizedAccess,
+			invalidAccessErr.PossessedAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+		assert.Equal(t,
 			"reference needs one of entitlements `Insert` or `Mutate`",
+			invalidAccessErr.SecondaryError(),
 		)
 	})
 }
@@ -5785,8 +5965,12 @@ func TestCheckAttachProvidedEntitlements(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.RequiredEntitlementNotProvidedError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "F")
+		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
+		require.ErrorAs(t, errs[0], &requiredEntitlementNotProvidedErr)
+		assert.Equal(t,
+			"F",
+			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
+		)
 	})
 
 	t.Run("one missing with extra provided", func(t *testing.T) {
@@ -5808,8 +5992,12 @@ func TestCheckAttachProvidedEntitlements(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.RequiredEntitlementNotProvidedError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "F")
+		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
+		require.ErrorAs(t, errs[0], &requiredEntitlementNotProvidedErr)
+		assert.Equal(t,
+			"F",
+			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
+		)
 	})
 
 	t.Run("two missing", func(t *testing.T) {
@@ -5830,11 +6018,18 @@ func TestCheckAttachProvidedEntitlements(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.RequiredEntitlementNotProvidedError{}, errs[0])
-		require.Equal(t, errs[0].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "E")
+		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
+		require.ErrorAs(t, errs[0], &requiredEntitlementNotProvidedErr)
+		assert.Equal(t,
+			"E",
+			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
+		)
 
-		require.IsType(t, &sema.RequiredEntitlementNotProvidedError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "F")
+		require.ErrorAs(t, errs[1], &requiredEntitlementNotProvidedErr)
+		assert.Equal(t,
+			"F",
+			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
+		)
 	})
 
 	t.Run("mapping provided", func(t *testing.T) {
@@ -5856,8 +6051,12 @@ func TestCheckAttachProvidedEntitlements(t *testing.T) {
 
 		require.IsType(t, &sema.InvalidNonEntitlementProvidedError{}, errs[0])
 
-		require.IsType(t, &sema.RequiredEntitlementNotProvidedError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "E")
+		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
+		require.ErrorAs(t, errs[1], &requiredEntitlementNotProvidedErr)
+		assert.Equal(t,
+			"E",
+			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
+		)
 	})
 
 	t.Run("int provided", func(t *testing.T) {
@@ -5878,8 +6077,12 @@ func TestCheckAttachProvidedEntitlements(t *testing.T) {
 
 		require.IsType(t, &sema.InvalidNonEntitlementProvidedError{}, errs[0])
 
-		require.IsType(t, &sema.RequiredEntitlementNotProvidedError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "E")
+		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
+		require.ErrorAs(t, errs[1], &requiredEntitlementNotProvidedErr)
+		assert.Equal(t,
+			"E",
+			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
+		)
 	})
 
 	t.Run("struct provided", func(t *testing.T) {
@@ -5900,8 +6103,12 @@ func TestCheckAttachProvidedEntitlements(t *testing.T) {
 
 		require.IsType(t, &sema.InvalidNonEntitlementProvidedError{}, errs[0])
 
-		require.IsType(t, &sema.RequiredEntitlementNotProvidedError{}, errs[1])
-		require.Equal(t, errs[1].(*sema.RequiredEntitlementNotProvidedError).RequiredEntitlement.Identifier, "E")
+		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
+		require.ErrorAs(t, errs[1], &requiredEntitlementNotProvidedErr)
+		assert.Equal(t,
+			"E",
+			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
+		)
 	})
 }
 
@@ -5975,7 +6182,7 @@ func TestCheckIdentityMapping(t *testing.T) {
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
+		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errors[0], &typeMismatchError)
 
 		require.IsType(t, &sema.ReferenceType{}, typeMismatchError.ActualType)
@@ -6012,8 +6219,7 @@ func TestCheckIdentityMapping(t *testing.T) {
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
-		require.ErrorAs(t, errors[0], &typeMismatchError)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 
 	t.Run("basic entitled ref", func(t *testing.T) {
@@ -6166,8 +6372,7 @@ func TestCheckIdentityMapping(t *testing.T) {
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		invalidMapping := &sema.InvalidMappedEntitlementMemberError{}
-		require.ErrorAs(t, errors[0], &invalidMapping)
+		require.IsType(t, errors[0], &sema.InvalidMappedEntitlementMemberError{})
 	})
 
 	t.Run("owned value, with entitlements, function ref typed field", func(t *testing.T) {
@@ -6204,7 +6409,7 @@ func TestCheckIdentityMapping(t *testing.T) {
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
+		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errors[0], &typeMismatchError)
 
 		actualType := typeMismatchError.ActualType
@@ -6243,15 +6448,14 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 		for _, typeDef := range tests {
 			t.Run(typeDef, func(t *testing.T) {
 				_, err := ParseAndCheck(t, fmt.Sprintf(`
-					%s
-					entitlement mapping M {
-						include X
-					}
-				`, typeDef))
+                    %s
+                    entitlement mapping M {
+                        include X
+                    }
+                `, typeDef))
 
 				errors := RequireCheckerErrors(t, err, 1)
-				invalidIncludeError := &sema.InvalidEntitlementMappingInclusionError{}
-				require.ErrorAs(t, errors[0], &invalidIncludeError)
+				require.IsType(t, errors[0], &sema.InvalidEntitlementMappingInclusionError{})
 			})
 		}
 	})
@@ -6261,14 +6465,14 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement G 
+            entitlement F
+            entitlement G
 
-			entitlement mapping M {
-				E -> F
-				include Identity 
-				F -> G
-			}
+            entitlement mapping M {
+                E -> F
+                include Identity
+                F -> G
+            }
         `)
 
 		require.NoError(t, err)
@@ -6280,13 +6484,13 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement G 
+            entitlement F
+            entitlement G
 
-			entitlement mapping M {
-				E -> F
-				F -> G
-			}
+            entitlement mapping M {
+                E -> F
+                F -> G
+            }
         `)
 
 		require.NoError(t, err)
@@ -6298,18 +6502,17 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement G 
+            entitlement F
+            entitlement G
 
-			entitlement mapping M {
-				include Identity 
-				include Identity 
-			}
+            entitlement mapping M {
+                include Identity
+                include Identity
+            }
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		duplicateIncludeError := &sema.DuplicateEntitlementMappingInclusionError{}
-		require.ErrorAs(t, errors[0], &duplicateIncludeError)
+		require.IsType(t, errors[0], &sema.DuplicateEntitlementMappingInclusionError{})
 	})
 
 	t.Run("duplicate include non-identity", func(t *testing.T) {
@@ -6318,32 +6521,31 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             entitlement mapping X {}
 
-			entitlement mapping M {
-				include X
-				include Identity 
-				include X 
-			}
+            entitlement mapping M {
+                include X
+                include Identity
+                include X
+            }
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		duplicateIncludeError := &sema.DuplicateEntitlementMappingInclusionError{}
-		require.ErrorAs(t, errors[0], &duplicateIncludeError)
+		require.IsType(t, &sema.DuplicateEntitlementMappingInclusionError{}, errors[0])
 	})
 
 	t.Run("non duplicate across hierarchy", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			entitlement mapping Y {
-				include X
-			}
+            entitlement mapping Y {
+                include X
+            }
 
-			entitlement mapping X {}
+            entitlement mapping X {}
 
-			entitlement mapping M {
-				include X
-				include Y
-			}
+            entitlement mapping M {
+                include X
+                include Y
+            }
         `)
 
 		require.NoError(t, err)
@@ -6353,42 +6555,40 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			entitlement mapping Y {
-				include Y
-			}
+            entitlement mapping Y {
+                include Y
+            }
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		cycleError := &sema.CyclicEntitlementMappingError{}
-		require.ErrorAs(t, errors[0], &cycleError)
+		require.IsType(t, &sema.CyclicEntitlementMappingError{}, errors[0])
 	})
 
 	t.Run("complex cycle detection", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			entitlement mapping Y {
-				include X
-			}
+            entitlement mapping Y {
+                include X
+            }
 
-			entitlement mapping X {
-				include Y
-				include Z
-			}
+            entitlement mapping X {
+                include Y
+                include Z
+            }
 
-			entitlement mapping M {
-				include X
-				include Y
-			}
+            entitlement mapping M {
+                include X
+                include Y
+            }
 
-			entitlement mapping Z {
-				include Identity
-			}
+            entitlement mapping Z {
+                include Identity
+            }
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		cycleError := &sema.CyclicEntitlementMappingError{}
-		require.ErrorAs(t, errors[0], &cycleError)
+		require.IsType(t, &sema.CyclicEntitlementMappingError{}, errors[0])
 	})
 
 }
@@ -6402,22 +6602,22 @@ func TestCheckIdentityIncludedMaps(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement G 
+            entitlement F
+            entitlement G
 
-			entitlement mapping M {
-				include Identity 
-			}
+            entitlement mapping M {
+                include Identity
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E, F) &S): auth(E, F) &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E, F) &S): auth(E, F) &Int {
+                return s.foo()
+            }
         `)
 
 		require.NoError(t, err)
@@ -6428,28 +6628,31 @@ func TestCheckIdentityIncludedMaps(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement G 
+            entitlement F
+            entitlement G
 
-			entitlement mapping M {
-				include Identity 
-			}
+            entitlement mapping M {
+                include Identity
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E, F) &S): auth(E, F, G) &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E, F) &S): auth(E, F, G) &Int {
+                return s.foo()
+            }
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
+		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errors[0], &typeMismatchError)
-		require.Equal(t, errors[0].(*sema.TypeMismatchError).ActualType.String(), "auth(E, F) &Int")
+		assert.Equal(t,
+			"auth(E, F) &Int",
+			typeMismatchError.ActualType.String(),
+		)
 	})
 
 	t.Run("identity included with relations", func(t *testing.T) {
@@ -6457,23 +6660,23 @@ func TestCheckIdentityIncludedMaps(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement G 
+            entitlement F
+            entitlement G
 
-			entitlement mapping M {
-				include Identity 
-				F -> G
-			}
+            entitlement mapping M {
+                include Identity
+                F -> G
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E, F) &S): auth(E, F, G) &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E, F) &S): auth(E, F, G) &Int {
+                return s.foo()
+            }
         `)
 
 		require.NoError(t, err)
@@ -6484,38 +6687,37 @@ func TestCheckIdentityIncludedMaps(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement G 
+            entitlement F
+            entitlement G
 
-			// this is functionally equivalent to
-			// entitlement mapping M {
-				//	E -> E 
-				//	F -> F 
-				//	G -> G 
-				//	F -> G
-			// }
-			entitlement mapping M {
-				include Identity 
-				F -> G
-			}
+            // this is functionally equivalent to
+            // entitlement mapping M {
+                //    E -> E
+                //    F -> F
+                //    G -> G
+                //    F -> G
+            // }
+            entitlement mapping M {
+                include Identity
+                F -> G
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E | F) &S): &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E | F) &S): &Int {
+                return s.foo()
+            }
         `)
 
 		// because the Identity map will always try to create conjunctions of the input with
 		// any additional relations, it is functionally impossible to map a disjointly authorized
 		// reference through any non-trivial map including the Identity
 		errors := RequireCheckerErrors(t, err, 1)
-		unrepresentableError := &sema.UnrepresentableEntitlementMapOutputError{}
-		require.ErrorAs(t, errors[0], &unrepresentableError)
+		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errors[0])
 	})
 }
 
@@ -6525,28 +6727,28 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement X
-			entitlement Y
+            entitlement F
+            entitlement X
+            entitlement Y
 
-			entitlement mapping M {
-				include N
-			}
+            entitlement mapping M {
+                include N
+            }
 
-			entitlement mapping N {
-				E -> F 
-				X -> Y
-			}
+            entitlement mapping N {
+                E -> F
+                X -> Y
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E, X) &S): auth(F, Y) &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E, X) &S): auth(F, Y) &Int {
+                return s.foo()
+            }
         `)
 
 		require.NoError(t, err)
@@ -6557,32 +6759,32 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement X
-			entitlement Y
+            entitlement F
+            entitlement X
+            entitlement Y
 
-			entitlement mapping M {
-				include A
-				include B
-			}
+            entitlement mapping M {
+                include A
+                include B
+            }
 
-			entitlement mapping A {
-				E -> F
-			}
+            entitlement mapping A {
+                E -> F
+            }
 
-			entitlement mapping B {
-				X -> Y
-			}
+            entitlement mapping B {
+                X -> Y
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E, X) &S): auth(F, Y) &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E, X) &S): auth(F, Y) &Int {
+                return s.foo()
+            }
         `)
 
 		require.NoError(t, err)
@@ -6593,35 +6795,35 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement X
-			entitlement Y
+            entitlement F
+            entitlement X
+            entitlement Y
 
-			entitlement mapping A {
-				E -> F
-				F -> X
-				X -> Y
-			}
+            entitlement mapping A {
+                E -> F
+                F -> X
+                X -> Y
+            }
 
-			entitlement mapping B {
-				X -> Y
-			}
+            entitlement mapping B {
+                X -> Y
+            }
 
-			entitlement mapping M {
-				include A
-				include B
-				F -> X
-			}
+            entitlement mapping M {
+                include A
+                include B
+                F -> X
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
+                return s.foo()
+            }
         `)
 
 		require.NoError(t, err)
@@ -6632,33 +6834,33 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement X
-			entitlement Y
+            entitlement F
+            entitlement X
+            entitlement Y
 
-			entitlement mapping M {
-				include B
-			}
+            entitlement mapping M {
+                include B
+            }
 
-			entitlement mapping B {
-				include A
-				X -> Y
-			}
+            entitlement mapping B {
+                include A
+                X -> Y
+            }
 
-			entitlement mapping A {
-				E -> F
-				F -> X
-			}
+            entitlement mapping A {
+                E -> F
+                F -> X
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
+                return s.foo()
+            }
         `)
 
 		require.NoError(t, err)
@@ -6669,38 +6871,38 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement X
-			entitlement Y
+            entitlement F
+            entitlement X
+            entitlement Y
 
-			entitlement mapping M {
-				include B
-				include C
-			}
+            entitlement mapping M {
+                include B
+                include C
+            }
 
-			entitlement mapping C {
-				include A
-				X -> Y
-			}
+            entitlement mapping C {
+                include A
+                X -> Y
+            }
 
-			entitlement mapping B {
-				F -> X
-				include A
-			}
+            entitlement mapping B {
+                F -> X
+                include A
+            }
 
-			entitlement mapping A {
-				E -> F
-			}
+            entitlement mapping A {
+                E -> F
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E, X, F) &S): auth(F, Y, X) &Int {
+                return s.foo()
+            }
         `)
 
 		require.NoError(t, err)
@@ -6711,34 +6913,34 @@ func TestCheckGeneralIncludedMaps(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `
             entitlement E
-			entitlement F
-			entitlement X
-			entitlement Y
+            entitlement F
+            entitlement X
+            entitlement Y
 
-			entitlement mapping M {
-				include B
-			}
+            entitlement mapping M {
+                include B
+            }
 
-			entitlement mapping B {
-				include A
-				X -> Y
-			}
+            entitlement mapping B {
+                include A
+                X -> Y
+            }
 
-			entitlement mapping A {
-				include Identity
-				E -> F
-				F -> X
-			}
+            entitlement mapping A {
+                include Identity
+                E -> F
+                F -> X
+            }
 
-			struct S {
-				access(M) fun foo(): auth(M) &Int {
-					return &3
-				}
-			}
+            struct S {
+                access(M) fun foo(): auth(M) &Int {
+                    return &3
+                }
+            }
 
-			fun foo(s: auth(E, X, F) &S): auth(E, F, Y, X) &Int {
-				return s.foo()
-			}
+            fun foo(s: auth(E, X, F) &S): auth(E, F, Y, X) &Int {
+                return s.foo()
+            }
         `)
 
 		require.NoError(t, err)
@@ -6776,10 +6978,10 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.X"),
@@ -6788,10 +6990,9 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.RestrictingAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.A"),
@@ -6799,11 +7000,11 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.PossessedAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+		assert.Equal(t,
 			"reference needs all of entitlements `X`, `Y`, and `Z`",
+			invalidAccessErr.SecondaryError(),
 		)
 	})
 
@@ -6834,10 +7035,10 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.X"),
@@ -6846,10 +7047,9 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.RestrictingAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.A"),
@@ -6858,11 +7058,11 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.PossessedAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+		assert.Equal(t,
 			"reference needs all of entitlements `X` and `Z`",
+			invalidAccessErr.SecondaryError(),
 		)
 	})
 
@@ -6893,10 +7093,10 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.X"),
@@ -6905,10 +7105,9 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 				},
 				sema.Disjunction,
 			),
+			invalidAccessErr.RestrictingAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.A"),
@@ -6916,11 +7115,11 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 				},
 				sema.Conjunction,
 			),
+			invalidAccessErr.PossessedAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+		assert.Equal(t,
 			"reference needs one of entitlements `X`, `Y`, or `Z`",
+			invalidAccessErr.SecondaryError(),
 		)
 	})
 
@@ -6951,10 +7150,10 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.X"),
@@ -6963,10 +7162,9 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 				},
 				sema.Disjunction,
 			),
+			invalidAccessErr.RestrictingAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+		assert.Equal(t,
 			sema.NewEntitlementSetAccess(
 				[]*sema.EntitlementType{
 					checker.Elaboration.EntitlementType("S.test.A"),
@@ -6974,11 +7172,11 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 				},
 				sema.Disjunction,
 			),
+			invalidAccessErr.PossessedAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+		assert.Equal(t,
 			"",
+			invalidAccessErr.SecondaryError(),
 		)
 	})
 
@@ -6987,7 +7185,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		_, err := ParseAndCheckWithOptions(t, `
         entitlement A
         entitlement B
-        
+
         struct S {
             view access(self) fun foo(): Bool {
                 return true
@@ -7006,21 +7204,21 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+		assert.Equal(t,
 			sema.PrimitiveAccess(ast.AccessSelf),
+			invalidAccessErr.RestrictingAccess,
 		)
-		assert.Equal(
-			t,
-			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+		assert.Equal(t,
 			nil,
+			invalidAccessErr.PossessedAccess,
 		)
 		assert.Equal(
 			t,
-			errs[0].(*sema.InvalidAccessError).SecondaryError(),
 			"",
+			invalidAccessErr.SecondaryError(),
 		)
 	})
 }

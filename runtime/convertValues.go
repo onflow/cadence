@@ -1245,7 +1245,7 @@ func (i valueImporter) importDictionaryValue(
 		keysAndValues[pairIndex*2+1] = value
 	}
 
-	var dictionaryStaticType interpreter.DictionaryStaticType
+	var dictionaryStaticType *interpreter.DictionaryStaticType
 	if dictionaryType != nil {
 		dictionaryStaticType = interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(inter, dictionaryType)
 	} else {

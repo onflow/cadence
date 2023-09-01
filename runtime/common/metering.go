@@ -257,10 +257,12 @@ var (
 
 	// Static types string representations
 
-	VariableSizedStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(2)  // []
-	DictionaryStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(4)  // {: }
-	OptionalStaticTypeStringMemoryUsage      = NewRawStringMemoryUsage(1)  // ?
-	CapabilityStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(12) // Capability<>
+	VariableSizedStaticTypeStringMemoryUsage         = NewRawStringMemoryUsage(2)  // []
+	DictionaryStaticTypeStringMemoryUsage            = NewRawStringMemoryUsage(4)  // {: }
+	OptionalStaticTypeStringMemoryUsage              = NewRawStringMemoryUsage(1)  // ?
+	CapabilityStaticTypeStringMemoryUsage            = NewRawStringMemoryUsage(12) // Capability<>
+	IntersectionStaticTypeStringMemoryUsage          = NewRawStringMemoryUsage(2)  // {}
+	IntersectionStaticTypeSeparatorStringMemoryUsage = NewRawStringMemoryUsage(2)  // ,
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

@@ -1210,8 +1210,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 		ty,
 	)
 
-	actual := cadence.ValueWithCachedTypeID(value)
-	require.Equal(t, expected, actual)
+	require.Equal(t, expected, value)
 }
 
 func TestRuntimeStorageReferenceCast(t *testing.T) {

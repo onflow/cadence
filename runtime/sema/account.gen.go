@@ -1928,92 +1928,9 @@ var IssueAccountCapabilityControllerType = &EntitlementType{
 }
 
 var AccountMappingType = &EntitlementMapType{
-	Identifier: "AccountMapping",
+	Identifier:       "AccountMapping",
+	IncludesIdentity: true,
 	Relations: []EntitlementRelation{
-		EntitlementRelation{
-			Input:  StorageType,
-			Output: StorageType,
-		},
-		EntitlementRelation{
-			Input:  ContractsType,
-			Output: ContractsType,
-		},
-		EntitlementRelation{
-			Input:  KeysType,
-			Output: KeysType,
-		},
-		EntitlementRelation{
-			Input:  InboxType,
-			Output: InboxType,
-		},
-		EntitlementRelation{
-			Input:  CapabilitiesType,
-			Output: CapabilitiesType,
-		},
-		EntitlementRelation{
-			Input:  SaveValueType,
-			Output: SaveValueType,
-		},
-		EntitlementRelation{
-			Input:  LoadValueType,
-			Output: LoadValueType,
-		},
-		EntitlementRelation{
-			Input:  BorrowValueType,
-			Output: BorrowValueType,
-		},
-		EntitlementRelation{
-			Input:  AddContractType,
-			Output: AddContractType,
-		},
-		EntitlementRelation{
-			Input:  UpdateContractType,
-			Output: UpdateContractType,
-		},
-		EntitlementRelation{
-			Input:  RemoveContractType,
-			Output: RemoveContractType,
-		},
-		EntitlementRelation{
-			Input:  AddKeyType,
-			Output: AddKeyType,
-		},
-		EntitlementRelation{
-			Input:  RevokeKeyType,
-			Output: RevokeKeyType,
-		},
-		EntitlementRelation{
-			Input:  PublishInboxCapabilityType,
-			Output: PublishInboxCapabilityType,
-		},
-		EntitlementRelation{
-			Input:  UnpublishInboxCapabilityType,
-			Output: UnpublishInboxCapabilityType,
-		},
-		EntitlementRelation{
-			Input:  StorageCapabilitiesType,
-			Output: StorageCapabilitiesType,
-		},
-		EntitlementRelation{
-			Input:  AccountCapabilitiesType,
-			Output: AccountCapabilitiesType,
-		},
-		EntitlementRelation{
-			Input:  GetStorageCapabilityControllerType,
-			Output: GetStorageCapabilityControllerType,
-		},
-		EntitlementRelation{
-			Input:  IssueStorageCapabilityControllerType,
-			Output: IssueStorageCapabilityControllerType,
-		},
-		EntitlementRelation{
-			Input:  GetAccountCapabilityControllerType,
-			Output: GetAccountCapabilityControllerType,
-		},
-		EntitlementRelation{
-			Input:  IssueAccountCapabilityControllerType,
-			Output: IssueAccountCapabilityControllerType,
-		},
 		EntitlementRelation{
 			Input:  StorageType,
 			Output: SaveValueType,
@@ -2070,36 +1987,9 @@ var AccountMappingType = &EntitlementMapType{
 }
 
 var CapabilitiesMappingType = &EntitlementMapType{
-	Identifier: "CapabilitiesMapping",
+	Identifier:       "CapabilitiesMapping",
+	IncludesIdentity: true,
 	Relations: []EntitlementRelation{
-		EntitlementRelation{
-			Input:  CapabilitiesType,
-			Output: CapabilitiesType,
-		},
-		EntitlementRelation{
-			Input:  StorageCapabilitiesType,
-			Output: StorageCapabilitiesType,
-		},
-		EntitlementRelation{
-			Input:  AccountCapabilitiesType,
-			Output: AccountCapabilitiesType,
-		},
-		EntitlementRelation{
-			Input:  GetStorageCapabilityControllerType,
-			Output: GetStorageCapabilityControllerType,
-		},
-		EntitlementRelation{
-			Input:  IssueStorageCapabilityControllerType,
-			Output: IssueStorageCapabilityControllerType,
-		},
-		EntitlementRelation{
-			Input:  GetAccountCapabilityControllerType,
-			Output: GetAccountCapabilityControllerType,
-		},
-		EntitlementRelation{
-			Input:  IssueAccountCapabilityControllerType,
-			Output: IssueAccountCapabilityControllerType,
-		},
 		EntitlementRelation{
 			Input:  StorageCapabilitiesType,
 			Output: GetStorageCapabilityControllerType,

@@ -6125,8 +6125,8 @@ func TestEncodeEvent(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(
 				t,
-				cadence.ValueWithCachedTypeID(tc.val),
-				cadence.ValueWithCachedTypeID(decodedVal),
+				tc.val,
+				decodedVal,
 			)
 		})
 	}
@@ -8295,8 +8295,8 @@ func TestEncodeType(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(
 			t,
-			cadence.ValueWithCachedTypeID(val),
-			cadence.ValueWithCachedTypeID(decodedVal),
+			val,
+			decodedVal,
 		)
 	})
 
@@ -11571,8 +11571,8 @@ func testDecode(t *testing.T, actualCBOR []byte, expectedVal cadence.Value) {
 	require.NoError(t, err)
 	assert.Equal(
 		t,
-		cadence.ValueWithCachedTypeID(expectedVal),
-		cadence.ValueWithCachedTypeID(decodedVal),
+		expectedVal,
+		decodedVal,
 	)
 }
 
@@ -12853,8 +12853,8 @@ func TestDeployedEvents(t *testing.T) {
 			// Since event encoding doesn't sort fields, make sure that input event is identical to decoded event.
 			require.Equal(
 				t,
-				cadence.ValueWithCachedTypeID(tc.event),
-				cadence.ValueWithCachedTypeID(decodedEvent),
+				tc.event,
+				decodedEvent,
 			)
 		})
 	}
@@ -14616,8 +14616,8 @@ func TestSortOptions(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(
 			t,
-			cadence.ValueWithCachedTypeID(expectedVal),
-			cadence.ValueWithCachedTypeID(decodedVal),
+			expectedVal,
+			decodedVal,
 		)
 
 		// Decode value enforcing sorting of composite fields should return error.
@@ -14805,8 +14805,8 @@ func TestSortOptions(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(
 			t,
-			cadence.ValueWithCachedTypeID(expectedVal),
-			cadence.ValueWithCachedTypeID(decodedVal),
+			expectedVal,
+			decodedVal,
 		)
 
 		// Decode value without enforcing sorting should return no error.
@@ -14994,8 +14994,8 @@ func TestSortOptions(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(
 			t,
-			cadence.ValueWithCachedTypeID(expectedVal),
-			cadence.ValueWithCachedTypeID(decodedVal),
+			expectedVal,
+			decodedVal,
 		)
 
 		// Decode value without enforcing sorting should return no error.
@@ -15183,8 +15183,8 @@ func TestSortOptions(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(
 			t,
-			cadence.ValueWithCachedTypeID(expectedVal),
-			cadence.ValueWithCachedTypeID(decodedVal),
+			expectedVal,
+			decodedVal,
 		)
 
 		// Decode value without enforcing sorting should return no error.

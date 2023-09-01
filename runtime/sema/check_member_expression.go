@@ -108,7 +108,7 @@ func (checker *Checker) getReferenceType(typ Type, substituteAuthorization bool,
 		auth = authorization
 	}
 
-	return NewReferenceType(checker.memoryGauge, typ, auth)
+	return NewReferenceType(checker.memoryGauge, auth, typ)
 }
 
 func shouldReturnReference(parentType, memberType Type) bool {
@@ -311,12 +311,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	substituteConcreteAuthorization := func(resultingType Type) Type {
 		switch ty := resultingType.(type) {
 		case *ReferenceType:
-			return NewReferenceType(checker.memoryGauge, ty.Type, resultingAuthorization)
+			return NewReferenceType(checker.memoryGauge, resultingAuthorization, ty.Type)
 		case *OptionalType:
 			switch innerTy := ty.Type.(type) {
 			case *ReferenceType:
 				return NewOptionalType(checker.memoryGauge,
-					NewReferenceType(checker.memoryGauge, innerTy.Type, resultingAuthorization))
+					NewReferenceType(checker.memoryGauge, resultingAuthorization, innerTy.Type))
 			}
 		}
 		return resultingType
