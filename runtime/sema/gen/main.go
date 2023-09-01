@@ -1740,7 +1740,7 @@ func entitlementMapTypeLiteral(name string, elements []ast.EntitlementMapElement
 		relation, isRelation := element.(*ast.EntitlementMapRelation)
 		include, isInclude := element.(*ast.NominalType)
 		if !isRelation && !isInclude {
-			panic(fmt.Errorf("non-relation map element is not supported: %s", element))
+			panic(fmt.Errorf("invalid map element: expected relations or include, got '%s'", element))
 		}
 		if isInclude && include.Identifier.Identifier == "Identity" {
 			includesIdentity = true
