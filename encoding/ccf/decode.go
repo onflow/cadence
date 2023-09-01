@@ -1470,7 +1470,7 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 		return d.decodeReferenceType(visited, d.decodeTypeValue)
 
 	case CBORTagIntersectionTypeValue:
-		return d.decodeIntersectionType(visited, d.decodeNullableTypeValue, d.decodeTypeValue)
+		return d.decodeIntersectionType(visited, d.decodeTypeValue)
 
 	case CBORTagFunctionTypeValue:
 		return d.decodeFunctionTypeValue(visited)
