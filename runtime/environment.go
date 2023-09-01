@@ -681,6 +681,10 @@ func (e *interpreterEnvironment) Hash(data []byte, tag string, algorithm sema.Ha
 	return e.runtimeInterface.Hash(data, tag, algorithm)
 }
 
+func (e *interpreterEnvironment) CompileWebAssembly(bytes []byte) (stdlib.WebAssemblyModule, error) {
+	return e.runtimeInterface.CompileWebAssembly(bytes)
+}
+
 func (e *interpreterEnvironment) DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error) {
 	return e.runtimeInterface.DecodeArgument(argument, argumentType)
 }

@@ -227,6 +227,7 @@ type testRuntimeInterface struct {
 	interactionUsed            func() (uint64, error)
 	updatedContractCode        bool
 	generateAccountID          func(address common.Address) (uint64, error)
+	compileWebAssembly         func(bytes []byte) (stdlib.WebAssemblyModule, error)
 
 	uuid       uint64
 	accountIDs map[common.Address]uint64
@@ -616,6 +617,14 @@ func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*stdlib.PublicKey) 
 	}
 
 	return i.blsAggregatePublicKeys(keys)
+}
+
+func (i *testRuntimeInterface) CompileWebAssembly(bytes []byte) (stdlib.WebAssemblyModule, error) {
+	if i.compileWebAssembly == nil {
+		return nil, nil
+	}
+
+	return i.compileWebAssembly(bytes)
 }
 
 func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]string, error) {

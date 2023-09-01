@@ -402,6 +402,10 @@ func (*StandardLibraryHandler) BLSAggregateSignatures(_ [][]byte) ([]byte, error
 	return nil, goerrors.New("crypto functionality is not available in this environment")
 }
 
+func (*StandardLibraryHandler) CompileWebAssembly(_ []byte) (stdlib.WebAssemblyModule, error) {
+	return nil, goerrors.New("WebAssembly functionality is not available in this environment")
+}
+
 func (h *StandardLibraryHandler) NewOnEventEmittedHandler() interpreter.OnEventEmittedFunc {
 	return func(
 		inter *interpreter.Interpreter,

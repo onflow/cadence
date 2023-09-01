@@ -34,6 +34,7 @@ type StandardLibraryHandler interface {
 	BLSPublicKeyAggregator
 	BLSSignatureAggregator
 	Hasher
+	WebAssemblyContractHandler
 }
 
 func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
@@ -51,6 +52,7 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		NewPublicKeyConstructor(handler, handler, handler),
 		NewBLSContract(nil, handler),
 		NewHashAlgorithmConstructor(handler),
+		NewWebAssemblyContract(nil, handler),
 	}
 }
 
