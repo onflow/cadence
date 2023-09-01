@@ -469,8 +469,6 @@ entitlement mapping AccountMapping {
 entitlement mapping CapabilitiesMapping {
     include Identity
 
-    // ---
-
     StorageCapabilities -> GetStorageCapabilityController
     StorageCapabilities -> IssueStorageCapabilityController
 
