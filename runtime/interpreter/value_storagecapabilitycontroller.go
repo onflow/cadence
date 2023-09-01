@@ -30,7 +30,7 @@ import (
 type CapabilityControllerValue interface {
 	Value
 	isCapabilityControllerValue()
-	CapabilityControllerBorrowType() ReferenceStaticType
+	CapabilityControllerBorrowType() *ReferenceStaticType
 	ReferenceValue(
 		interpreter *Interpreter,
 		capabilityAddress common.Address,
@@ -42,7 +42,7 @@ type CapabilityControllerValue interface {
 // StorageCapabilityControllerValue
 
 type StorageCapabilityControllerValue struct {
-	BorrowType   ReferenceStaticType
+	BorrowType   *ReferenceStaticType
 	CapabilityID UInt64Value
 	TargetPath   PathValue
 
@@ -64,7 +64,7 @@ type StorageCapabilityControllerValue struct {
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 	targetPath PathValue,
 ) *StorageCapabilityControllerValue {
@@ -77,7 +77,7 @@ func NewUnmeteredStorageCapabilityControllerValue(
 
 func NewStorageCapabilityControllerValue(
 	memoryGauge common.MemoryGauge,
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 	targetPath PathValue,
 ) *StorageCapabilityControllerValue {
@@ -100,7 +100,7 @@ func (*StorageCapabilityControllerValue) isValue() {}
 
 func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
 
-func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() ReferenceStaticType {
+func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *ReferenceStaticType {
 	return v.BorrowType
 }
 

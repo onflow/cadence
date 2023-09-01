@@ -102,7 +102,7 @@ func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 	)
 }
 
-var BlockIDStaticType = interpreter.ConstantSizedStaticType{
+var BlockIDStaticType = &interpreter.ConstantSizedStaticType{
 	Type: interpreter.PrimitiveStaticTypeUInt8, // unmetered
 	Size: 32,
 }

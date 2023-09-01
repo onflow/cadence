@@ -1712,13 +1712,10 @@ func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.
 		switch refType := t.(type) {
 		case *sema.ReferenceType:
 			if _, isMappedAuth := refType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
-				return sema.NewReferenceType(
-					interpreter,
-					refType.Type,
-					interpreter.MustConvertStaticAuthorizationToSemaAccess(
-						interpreter.SharedState.currentEntitlementMappedValue,
-					),
+				authorization := interpreter.MustConvertStaticAuthorizationToSemaAccess(
+					interpreter.SharedState.currentEntitlementMappedValue,
 				)
+				return sema.NewReferenceType(interpreter, authorization, refType.Type)
 			}
 		}
 		return t
@@ -1790,7 +1787,7 @@ func (interpreter *Interpreter) convertStaticType(
 	targetSemaType sema.Type,
 ) StaticType {
 	switch valueStaticType := valueStaticType.(type) {
-	case ReferenceStaticType:
+	case *ReferenceStaticType:
 		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
 			return NewReferenceStaticType(
 				interpreter,
@@ -1798,7 +1795,8 @@ func (interpreter *Interpreter) convertStaticType(
 				valueStaticType.ReferencedType,
 			)
 		}
-	case OptionalStaticType:
+
+	case *OptionalStaticType:
 		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
 			return NewOptionalStaticType(
 				interpreter,
@@ -1808,7 +1806,8 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
-	case DictionaryStaticType:
+
+	case *DictionaryStaticType:
 		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
 			return NewDictionaryStaticType(
 				interpreter,
@@ -1822,7 +1821,8 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
-	case VariableSizedStaticType:
+
+	case *VariableSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
 			return NewVariableSizedStaticType(
 				interpreter,
@@ -1832,7 +1832,8 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
-	case ConstantSizedStaticType:
+
+	case *ConstantSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
 			return NewConstantSizedStaticType(
 				interpreter,
@@ -1844,7 +1845,7 @@ func (interpreter *Interpreter) convertStaticType(
 			)
 		}
 
-	case CapabilityStaticType:
+	case *CapabilityStaticType:
 		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
 			return NewCapabilityStaticType(
 				interpreter,
@@ -1870,6 +1871,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		switch value := value.(type) {
 		case NilValue:
 			return value
+
 		case *SomeValue:
 			if !optionalValueType.Type.Equal(unwrappedTargetType) {
 				innerValue := interpreter.convert(value.value, optionalValueType.Type, unwrappedTargetType, locationRange)
@@ -2046,7 +2048,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
 
 			oldDictStaticType := dictValue.StaticType(interpreter)
-			dictStaticType := interpreter.convertStaticType(oldDictStaticType, unwrappedTargetType).(DictionaryStaticType)
+			dictStaticType := interpreter.convertStaticType(oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
 
 			if oldDictStaticType.Equal(dictStaticType) {
 				return value
@@ -2099,7 +2101,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 			switch capability := value.(type) {
 			case *CapabilityValue:
-				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
+				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
 				return NewCapabilityValue(
 					interpreter,
@@ -3555,12 +3557,12 @@ func intersectionTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	var staticIntersections []InterfaceStaticType
+	var staticIntersections []*InterfaceStaticType
 	var semaIntersections []*sema.InterfaceType
 
 	count := intersectionIDs.Count()
 	if count > 0 {
-		staticIntersections = make([]InterfaceStaticType, 0, count)
+		staticIntersections = make([]*InterfaceStaticType, 0, count)
 		semaIntersections = make([]*sema.InterfaceType, 0, count)
 
 		var invalidIntersectionID bool
@@ -3578,7 +3580,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 			staticIntersections = append(
 				staticIntersections,
-				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(InterfaceStaticType),
+				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(*InterfaceStaticType),
 			)
 			semaIntersections = append(semaIntersections, intersectedInterface)
 
@@ -3779,7 +3781,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				ty := typeValue.Type
 				// Capabilities must hold references
-				_, ok = ty.(ReferenceStaticType)
+				_, ok = ty.(*ReferenceStaticType)
 				if !ok {
 					return Nil
 				}
@@ -3860,7 +3862,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 	}
 
 	switch subType := subType.(type) {
-	case OptionalStaticType:
+	case *OptionalStaticType:
 		if superType, ok := superType.(*sema.OptionalType); ok {
 			return interpreter.IsSubTypeOfSemaType(subType.Type, superType.Type)
 		}
@@ -3870,7 +3872,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 			return interpreter.IsSubTypeOfSemaType(subType.Type, superType)
 		}
 
-	case ReferenceStaticType:
+	case *ReferenceStaticType:
 		if superType, ok := superType.(*sema.ReferenceType); ok {
 
 			// First, check that the static type of the referenced value
@@ -4090,7 +4092,7 @@ func (interpreter *Interpreter) checkValue(
 		// So take the borrow type from the value itself
 
 		// Capability values always have a `CapabilityStaticType` static type.
-		borrowType := staticType.(CapabilityStaticType).BorrowType
+		borrowType := staticType.(*CapabilityStaticType).BorrowType
 
 		var borrowSemaType sema.Type
 		borrowSemaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
@@ -4917,11 +4919,11 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
-		case ConstantSizedStaticType:
+		case *ConstantSizedStaticType:
 			return info.Equal(other.(StaticType))
-		case VariableSizedStaticType:
+		case *VariableSizedStaticType:
 			return info.Equal(other.(StaticType))
-		case DictionaryStaticType:
+		case *DictionaryStaticType:
 			return info.Equal(other.(StaticType))
 		case compositeTypeInfo:
 			return info.Equal(other)

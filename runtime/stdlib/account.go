@@ -2158,8 +2158,8 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 	)
 }
 
-var storageCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
-	Type: interpreter.ReferenceStaticType{
+var storageCapabilityControllerReferencesArrayStaticType = &interpreter.VariableSizedStaticType{
+	Type: &interpreter.ReferenceStaticType{
 		ReferencedType: interpreter.PrimitiveStaticTypeStorageCapabilityController,
 		Authorization:  interpreter.UnauthorizedAccess,
 	},
@@ -2391,7 +2391,7 @@ func issueStorageCapabilityController(
 	targetPathValue interpreter.PathValue,
 ) (
 	interpreter.UInt64Value,
-	interpreter.ReferenceStaticType,
+	*interpreter.ReferenceStaticType,
 ) {
 	// Create and write StorageCapabilityController
 
@@ -2473,7 +2473,7 @@ func issueAccountCapabilityController(
 	borrowType *sema.ReferenceType,
 ) (
 	interpreter.UInt64Value,
-	interpreter.ReferenceStaticType,
+	*interpreter.ReferenceStaticType,
 ) {
 	// Create and write AccountCapabilityController
 
@@ -2735,7 +2735,7 @@ func newStorageCapabilityControllerDeleteFunction(
 	)
 }
 
-var capabilityIDSetStaticType = interpreter.DictionaryStaticType{
+var capabilityIDSetStaticType = &interpreter.DictionaryStaticType{
 	KeyType:   interpreter.PrimitiveStaticTypeUInt64,
 	ValueType: interpreter.NilStaticType,
 }
@@ -3472,8 +3472,8 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 	)
 }
 
-var accountCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
-	Type: interpreter.ReferenceStaticType{
+var accountCapabilityControllerReferencesArrayStaticType = &interpreter.VariableSizedStaticType{
+	Type: &interpreter.ReferenceStaticType{
 		ReferencedType: interpreter.PrimitiveStaticTypeAccountCapabilityController,
 		Authorization:  interpreter.UnauthorizedAccess,
 	},

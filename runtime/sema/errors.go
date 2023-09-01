@@ -790,7 +790,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		return fmt.Sprintf(
 			"invalid access modifier for %s: `%s`%s",
 			e.DeclarationKind.Name(),
-			e.Access.AccessKeyword(),
+			e.Access.String(),
 			explanation,
 		)
 	}
@@ -805,7 +805,7 @@ func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge)
 		return e.Pos
 	}
 
-	length := len(e.Access.AccessKeyword())
+	length := len(e.Access.String())
 	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
@@ -3014,7 +3014,7 @@ func (e *InvalidAccessError) Error() string {
 		} else {
 			possessedDescription = fmt.Sprintf(
 				", but reference only has `%s` authorization",
-				e.PossessedAccess.Description(),
+				e.PossessedAccess.String(),
 			)
 		}
 	}
@@ -3023,7 +3023,7 @@ func (e *InvalidAccessError) Error() string {
 		"cannot access `%s`: %s requires `%s` authorization%s",
 		e.Name,
 		e.DeclarationKind.Name(),
-		e.RestrictingAccess.Description(),
+		e.RestrictingAccess.String(),
 		possessedDescription,
 	)
 }
@@ -3116,7 +3116,7 @@ func (e *InvalidAssignmentAccessError) Error() string {
 		"cannot assign to `%s`: %s has `%s` access",
 		e.Name,
 		e.DeclarationKind.Name(),
-		e.RestrictingAccess.Description(),
+		e.RestrictingAccess.String(),
 	)
 }
 
@@ -3148,13 +3148,13 @@ func (e *UnauthorizedReferenceAssignmentError) Error() string {
 	if e.FoundAccess == UnauthorizedAccess {
 		foundAccess = "non-auth"
 	} else {
-		foundAccess = fmt.Sprintf("(%s)", e.FoundAccess.Description())
+		foundAccess = fmt.Sprintf("(%s)", e.FoundAccess.String())
 	}
 
 	return fmt.Sprintf(
 		"invalid assignment: can only assign to a reference with (%s) or (%s) access, but found a %s reference",
-		e.RequiredAccess[0].Description(),
-		e.RequiredAccess[1].Description(),
+		e.RequiredAccess[0].String(),
+		e.RequiredAccess[1].String(),
 		foundAccess,
 	)
 }
@@ -3162,8 +3162,8 @@ func (e *UnauthorizedReferenceAssignmentError) Error() string {
 func (e *UnauthorizedReferenceAssignmentError) SecondaryError() string {
 	return fmt.Sprintf(
 		"consider taking a reference with `%s` or `%s` access",
-		e.RequiredAccess[0].Description(),
-		e.RequiredAccess[1].Description(),
+		e.RequiredAccess[0].String(),
+		e.RequiredAccess[1].String(),
 	)
 }
 
@@ -4312,7 +4312,7 @@ func (*UnrepresentableEntitlementMapOutputError) IsUserError() {}
 func (e *UnrepresentableEntitlementMapOutputError) Error() string {
 	return fmt.Sprintf(
 		"cannot map `%s` through `%s` because the output is unrepresentable",
-		e.Input.AccessKeyword(),
+		e.Input.String(),
 		e.Map.QualifiedString(),
 	)
 }

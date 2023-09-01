@@ -564,7 +564,7 @@ func exportAuthorization(
 		})
 		return cadence.EntitlementSetAuthorization{
 			Entitlements: entitlements,
-			Kind:         cadence.EntitlementSetKind(access.SetKind),
+			Kind:         access.SetKind,
 		}
 	}
 	panic(fmt.Sprintf("cannot export authorization with access %T", access))
@@ -619,7 +619,7 @@ func exportCapabilityType(
 	)
 }
 
-func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) interpreter.InterfaceStaticType {
+func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) *interpreter.InterfaceStaticType {
 	return interpreter.NewInterfaceStaticTypeComputeTypeID(
 		memoryGauge,
 		t.InterfaceTypeLocation(),
@@ -627,7 +627,7 @@ func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType
 	)
 }
 
-func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) interpreter.CompositeStaticType {
+func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) *interpreter.CompositeStaticType {
 	return interpreter.NewCompositeStaticTypeComputeTypeID(
 		memoryGauge,
 		t.CompositeTypeLocation(),
@@ -646,7 +646,7 @@ func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorizat
 			memoryGauge,
 			func() []common.TypeID { return auth.Entitlements },
 			len(auth.Entitlements),
-			sema.EntitlementSetKind(auth.Kind),
+			auth.Kind,
 		)
 	}
 	panic(fmt.Sprintf("cannot import authorization of type %T", auth))
@@ -712,7 +712,7 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 		)
 
 	case *cadence.IntersectionType:
-		types := make([]interpreter.InterfaceStaticType, 0, len(t.Types))
+		types := make([]*interpreter.InterfaceStaticType, 0, len(t.Types))
 		for _, typ := range t.Types {
 			intf, ok := typ.(cadence.InterfaceType)
 			if !ok {

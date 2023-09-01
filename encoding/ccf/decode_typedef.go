@@ -193,7 +193,7 @@ func (d *Decoder) decodeTypeDef(
 ) {
 	tagNum, err := d.dec.DecodeTagNumber()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), nil, err
+		return ccfTypeID(0), "", nil, err
 	}
 
 	switch tagNum {
@@ -296,7 +296,7 @@ func (d *Decoder) decodeTypeDef(
 
 	default:
 		return ccfTypeID(0),
-			cadenceTypeID(""),
+			"",
 			nil,
 			fmt.Errorf("unsupported type definition with CBOR tag number %d", tagNum)
 	}
@@ -329,32 +329,32 @@ func (d *Decoder) decodeCompositeType(
 	// Decode array head of length 3.
 	err := decodeCBORArrayWithKnownSize(d.dec, 3)
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), nil, err
+		return ccfTypeID(0), "", nil, err
 	}
 
 	// element 0: id
 	ccfID, err := d.decodeCCFTypeID()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), nil, err
+		return ccfTypeID(0), "", nil, err
 	}
 
 	// "Valid CCF Encoding Requirements" in CCF specs:
 	//
 	//   "composite-type.id MUST be unique in ccf-typedef-message or ccf-typedef-and-value-message."
 	if types.has(ccfID) {
-		return ccfTypeID(0), cadenceTypeID(""), nil, fmt.Errorf("found duplicate CCF type ID %d in composite-type", ccfID)
+		return ccfTypeID(0), "", nil, fmt.Errorf("found duplicate CCF type ID %d in composite-type", ccfID)
 	}
 
 	// element 1: cadence-type-id
 	cadenceID, location, identifier, err := d.decodeCadenceTypeID()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), nil, err
+		return ccfTypeID(0), "", nil, err
 	}
 
 	// element 2: fields
 	rawField, err := d.dec.DecodeRawBytes()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), nil, err
+		return ccfTypeID(0), "", nil, err
 	}
 
 	// The return value can be ignored, because its non-existence was already checked above
@@ -476,26 +476,26 @@ func (d *Decoder) decodeInterfaceType(
 	// Decode array head of length 2.
 	err := decodeCBORArrayWithKnownSize(d.dec, 2)
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), nil, err
+		return ccfTypeID(0), "", nil, err
 	}
 
 	// element 0: id
 	ccfID, err := d.decodeCCFTypeID()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), nil, err
+		return ccfTypeID(0), "", nil, err
 	}
 
 	// "Valid CCF Encoding Requirements" in CCF specs:
 	//
 	//   "composite-type.id MUST be unique in ccf-typedef-message or ccf-typedef-and-value-message."
 	if types.has(ccfID) {
-		return ccfTypeID(0), cadenceTypeID(""), nil, fmt.Errorf("found duplicate CCF type ID %d in interface-type", ccfID)
+		return ccfTypeID(0), "", nil, fmt.Errorf("found duplicate CCF type ID %d in interface-type", ccfID)
 	}
 
 	// element 1: cadence-type-id
 	cadenceID, location, identifier, err := d.decodeCadenceTypeID()
 	if err != nil {
-		return ccfTypeID(0), cadenceTypeID(""), nil, err
+		return ccfTypeID(0), "", nil, err
 	}
 
 	// The return value can be ignored, because its non-existence was already checked above

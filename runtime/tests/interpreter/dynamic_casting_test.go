@@ -1365,7 +1365,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						expectedDictionary := interpreter.NewDictionaryValue(
 							inter,
 							interpreter.EmptyLocationRange,
-							interpreter.DictionaryStaticType{
+							&interpreter.DictionaryStaticType{
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
 							},

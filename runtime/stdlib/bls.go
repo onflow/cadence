@@ -187,7 +187,7 @@ func NewBLSContract(
 	}
 
 	blsContractValue := interpreter.NewSimpleCompositeValue(
-		nil,
+		gauge,
 		BLSType.ID(),
 		BLSTypeStaticType,
 		nil,
@@ -198,7 +198,7 @@ func NewBLSContract(
 	)
 
 	return StandardLibraryValue{
-		Name:  "BLS",
+		Name:  BLSTypeName,
 		Type:  BLSType,
 		Value: blsContractValue,
 		Kind:  common.DeclarationKindContract,

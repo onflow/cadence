@@ -28,7 +28,19 @@ var BarType = &EntitlementType{
 }
 
 var BazType = &EntitlementMapType{
-	Identifier: "Baz",
+	Identifier:       "Baz",
+	IncludesIdentity: false,
+	Relations: []EntitlementRelation{
+		EntitlementRelation{
+			Input:  FooType,
+			Output: BarType,
+		},
+	},
+}
+
+var QuxType = &EntitlementMapType{
+	Identifier:       "Qux",
+	IncludesIdentity: true,
 	Relations: []EntitlementRelation{
 		EntitlementRelation{
 			Input:  FooType,
@@ -40,6 +52,8 @@ var BazType = &EntitlementMapType{
 func init() {
 	BuiltinEntitlementMappings[BazType.Identifier] = BazType
 	addToBaseActivation(BazType)
+	BuiltinEntitlementMappings[QuxType.Identifier] = QuxType
+	addToBaseActivation(QuxType)
 	BuiltinEntitlements[FooType.Identifier] = FooType
 	addToBaseActivation(FooType)
 	BuiltinEntitlements[BarType.Identifier] = BarType
