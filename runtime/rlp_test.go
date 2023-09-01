@@ -136,14 +136,14 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 			result, err := runtime.ExecuteScript(
 				Script{
 					Source: script,
-					Arguments: encodeArgs([]cadence.Value{
+					Arguments: encodeArgs(
 						cadence.Array{
 							ArrayType: &cadence.VariableSizedArrayType{
 								ElementType: cadence.UInt8Type,
 							},
 							Values: test.input,
 						},
-					}),
+					),
 				},
 				Context{
 					Interface: runtimeInterface,
@@ -295,14 +295,14 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 			result, err := runtime.ExecuteScript(
 				Script{
 					Source: script,
-					Arguments: encodeArgs([]cadence.Value{
+					Arguments: encodeArgs(
 						cadence.Array{
 							ArrayType: &cadence.VariableSizedArrayType{
 								ElementType: cadence.UInt8Type,
 							},
 							Values: test.input,
 						},
-					}),
+					),
 				},
 				Context{
 					Interface: runtimeInterface,

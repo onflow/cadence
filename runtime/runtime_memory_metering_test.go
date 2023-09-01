@@ -228,9 +228,9 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.NewInt(12),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -271,9 +271,9 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					largeInt,
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -307,9 +307,9 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.NewInt8(12),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -343,9 +343,9 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.NewInt16(12),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -379,9 +379,9 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.NewInt32(12),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -415,9 +415,9 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.NewInt64(12),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -451,9 +451,9 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.NewInt128(12),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -487,9 +487,9 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.NewInt256(12),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -989,7 +989,7 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source:    script,
-				Arguments: encodeArgs(args),
+				Arguments: encodeArgs(args...),
 			},
 			Context{
 				Interface: runtimeInterface(meter),

@@ -8075,9 +8075,9 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 	result, err := rt.ExecuteScript(
 		Script{
 			Source: script,
-			Arguments: encodeArgs([]cadence.Value{
+			Arguments: encodeArgs(
 				cadence.Address(common.MustBytesToAddress([]byte{0x1})),
-			}),
+			),
 		},
 		Context{
 			Interface: runtimeInterface,
