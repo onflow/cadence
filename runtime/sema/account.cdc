@@ -445,38 +445,7 @@ entitlement IssueAccountCapabilityController
 /* Entitlement mappings */
 
 entitlement mapping AccountMapping {
-    // TODO: include Identity
-
-    Storage -> Storage
-    Contracts -> Contracts
-    Keys -> Keys
-    Inbox -> Inbox
-    Capabilities -> Capabilities
-
-    SaveValue -> SaveValue
-    LoadValue -> LoadValue
-    BorrowValue -> BorrowValue
-
-    AddContract -> AddContract
-    UpdateContract -> UpdateContract
-    RemoveContract -> RemoveContract
-
-    AddKey -> AddKey
-    RevokeKey -> RevokeKey
-
-    PublishInboxCapability -> PublishInboxCapability
-    UnpublishInboxCapability -> UnpublishInboxCapability
-
-    StorageCapabilities -> StorageCapabilities
-    AccountCapabilities -> AccountCapabilities
-
-    GetStorageCapabilityController -> GetStorageCapabilityController
-    IssueStorageCapabilityController -> IssueStorageCapabilityController
-
-    GetAccountCapabilityController -> GetAccountCapabilityController
-    IssueAccountCapabilityController -> IssueAccountCapabilityController
-
-    // ---
+    include Identity
 
     Storage -> SaveValue
     Storage -> LoadValue
@@ -498,18 +467,7 @@ entitlement mapping AccountMapping {
 }
 
 entitlement mapping CapabilitiesMapping {
-    // TODO: include Identity
-
-    Capabilities -> Capabilities
-
-    StorageCapabilities -> StorageCapabilities
-    AccountCapabilities -> AccountCapabilities
-
-    GetStorageCapabilityController -> GetStorageCapabilityController
-    IssueStorageCapabilityController -> IssueStorageCapabilityController
-
-    GetAccountCapabilityController -> GetAccountCapabilityController
-    IssueAccountCapabilityController -> IssueAccountCapabilityController
+    include Identity
 
     // ---
 
