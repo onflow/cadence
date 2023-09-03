@@ -354,3 +354,50 @@ func TestCheckStringToLower(t *testing.T) {
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
+
+func TestCheckStringJoin(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+		let s_default_sep = String.join(["👪", "❤️", "Abc"])
+		let s = String.join(["👪", "❤️", "Abc"], "/")
+	`)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.StringType,
+		RequireGlobalValue(t, checker.Elaboration, "s_default_sep"),
+	)
+
+	assert.Equal(t,
+		sema.StringType,
+		RequireGlobalValue(t, checker.Elaboration, "s"),
+	)
+}
+
+func TestCheckStringJoinTypeMismatchStrs(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		let s = String.join([1], "/")
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckStringJoinTypeMismatchSeparator(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		let s = String.join(["Abc", "1"], 1234)
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}

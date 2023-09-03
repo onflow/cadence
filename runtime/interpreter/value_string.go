@@ -108,6 +108,73 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 	return NewUnmeteredStringValue(builder.String())
 }
 
+func stringFunctionJoin(invocation Invocation) Value {
+	argument, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	inter := invocation.Interpreter
+
+	var separator *StringValue
+	if len(invocation.Arguments) > 1 {
+		separator, ok = invocation.Arguments[1].(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+	} else {
+		separator = NewStringValue(
+			inter,
+			common.MemoryUsage{
+				Kind:   common.MemoryKindStringValue,
+				Amount: 1,
+			},
+			func() string {
+				return ","
+			})
+	}
+
+	common.UseMemory(inter,
+		common.MemoryUsage{
+			Kind:   common.MemoryKindStringValue,
+			Amount: 1,
+		},
+	)
+	var builder strings.Builder
+	first := true
+
+	argument.Iterate(inter, func(element Value) (resume bool) {
+		// Add separator
+		if !first {
+			common.UseMemory(inter,
+				common.MemoryUsage{
+					Kind:   common.MemoryKindStringValue,
+					Amount: uint64(len(separator.Str)),
+				},
+			)
+			builder.WriteString(separator.Str)
+		}
+		first = false
+
+		str, ok := element.(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		common.UseMemory(inter,
+			common.MemoryUsage{
+				Kind:   common.MemoryKindStringValue,
+				Amount: uint64(len(str.Str)),
+			},
+		)
+		builder.WriteString(str.Str)
+
+		return true
+	})
+
+	return NewUnmeteredStringValue(builder.String())
+}
+
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
 var stringFunction = func() Value {
 	functionValue := NewUnmeteredHostFunctionValue(
@@ -147,6 +214,14 @@ var stringFunction = func() Value {
 		NewUnmeteredHostFunctionValue(
 			sema.StringTypeFromCharactersFunctionType,
 			stringFunctionFromCharacters,
+		),
+	)
+
+	addMember(
+		sema.StringTypeJoinFunctionName,
+		NewUnmeteredHostFunctionValue(
+			sema.StringTypeJoinFunctionType,
+			stringFunctionJoin,
 		),
 	)
 
