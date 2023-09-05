@@ -108,6 +108,8 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 	return NewUnmeteredStringValue(builder.String())
 }
 
+var StringTypeJoinDefaultSeparator = NewUnmeteredStringValue(",")
+
 func stringFunctionJoin(invocation Invocation) Value {
 	argument, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {
@@ -116,6 +118,13 @@ func stringFunctionJoin(invocation Invocation) Value {
 
 	inter := invocation.Interpreter
 
+	switch argument.Count() {
+	case 0:
+		return EmptyString
+	case 1:
+		return argument.Get(inter, invocation.LocationRange, 0)
+	}
+
 	var separator *StringValue
 	if len(invocation.Arguments) > 1 {
 		separator, ok = invocation.Arguments[1].(*StringValue)
@@ -123,15 +132,7 @@ func stringFunctionJoin(invocation Invocation) Value {
 			panic(errors.NewUnreachableError())
 		}
 	} else {
-		separator = NewStringValue(
-			inter,
-			common.MemoryUsage{
-				Kind:   common.MemoryKindStringValue,
-				Amount: 1,
-			},
-			func() string {
-				return ","
-			})
+		separator = StringTypeJoinDefaultSeparator
 	}
 
 	common.UseMemory(inter,
