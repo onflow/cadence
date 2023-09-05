@@ -100,7 +100,7 @@ struct Account {
         /// The given type must not necessarily be exactly the same as the type of the copied structure.
         ///
         /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-        access(all)
+        access(Storage | CopyValue)
         view fun copy<T: AnyStruct>(from: StoragePath): T?
 
         /// Returns true if the object in account storage under the given path satisfies the given type,
@@ -401,6 +401,7 @@ entitlement Storage
 
 entitlement SaveValue
 entitlement LoadValue
+entitlement CopyValue
 entitlement BorrowValue
 
 /* Contract entitlements */
@@ -449,6 +450,7 @@ entitlement mapping AccountMapping {
 
     Storage -> SaveValue
     Storage -> LoadValue
+    Storage -> CopyValue
     Storage -> BorrowValue
 
     Contracts -> AddContract

@@ -226,6 +226,7 @@ const (
 	PrimitiveStaticTypeStorage
 	PrimitiveStaticTypeSaveValue
 	PrimitiveStaticTypeLoadValue
+	PrimitiveStaticTypeCopyValue
 	PrimitiveStaticTypeBorrowValue
 	PrimitiveStaticTypeContracts
 	PrimitiveStaticTypeAddContract
@@ -351,6 +352,7 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeStorage,
 		PrimitiveStaticTypeSaveValue,
 		PrimitiveStaticTypeLoadValue,
+		PrimitiveStaticTypeCopyValue,
 		PrimitiveStaticTypeBorrowValue,
 		PrimitiveStaticTypeContracts,
 		PrimitiveStaticTypeAddContract,
@@ -604,6 +606,8 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 		return sema.SaveValueType
 	case PrimitiveStaticTypeLoadValue:
 		return sema.LoadValueType
+	case PrimitiveStaticTypeCopyValue:
+		return sema.CopyValueType
 	case PrimitiveStaticTypeBorrowValue:
 		return sema.BorrowValueType
 	case PrimitiveStaticTypeContracts:
@@ -817,6 +821,8 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeSaveValue
 	case sema.LoadValueType:
 		typ = PrimitiveStaticTypeLoadValue
+	case sema.CopyValueType:
+		typ = PrimitiveStaticTypeCopyValue
 	case sema.BorrowValueType:
 		typ = PrimitiveStaticTypeBorrowValue
 	case sema.ContractsType:

@@ -517,6 +517,20 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(storage: &Account.Storage) {
+              storage.copy<Int>(from: /storage/foo)
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
 	testMissingTypeArgument := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
@@ -533,7 +547,7 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 					`
                       struct S {}
 
-                      fun test(storage: &Account.Storage) {
+                      fun test(storage: auth(Storage) &Account.Storage) {
                           let s = storage.copy(from: /%s/s)
                       }
                     `,
@@ -575,7 +589,7 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 						`
                           struct S {}
 
-                          fun test(storage: &Account.Storage) {
+                          fun test(storage: auth(Storage) &Account.Storage) {
                               let s = storage.copy<S>(from: /%s/s)
                           }
                         `,
@@ -601,7 +615,7 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 						`
                           resource R {}
 
-                          fun test(storage: &Account.Storage) {
+                          fun test(storage: auth(Storage) &Account.Storage) {
                               let r <- storage.copy<@R>(from: /%s/r)
                               destroy r
                           }
