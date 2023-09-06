@@ -3722,6 +3722,7 @@ func init() {
 			HashAlgorithmType,
 			StorageCapabilityControllerType,
 			AccountCapabilityControllerType,
+			DeploymentResultType,
 		},
 	)
 

@@ -220,7 +220,7 @@ const (
 	anyStructAttachmentMask
 	storageCapabilityControllerTypeMask
 	accountCapabilityControllerTypeMask
-
+	deploymentResultMask
 	interfaceTypeMask
 	functionTypeMask
 
@@ -344,6 +344,7 @@ var (
 	AnyStructAttachmentTypeTag         = newTypeTagFromUpperMask(anyStructAttachmentMask)
 	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
 	AccountCapabilityControllerTypeTag = newTypeTagFromUpperMask(accountCapabilityControllerTypeMask)
+	DeploymentResultTypeTag            = newTypeTagFromUpperMask(deploymentResultMask)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.

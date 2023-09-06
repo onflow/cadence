@@ -164,8 +164,9 @@ type typeDecl struct {
 }
 
 type generator struct {
-	typeStack []*typeDecl
-	decls     []dst.Decl
+	typeStack     []*typeDecl
+	decls         []dst.Decl
+	leadingPragma map[string]struct{}
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &generator{}
@@ -365,24 +366,30 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		g.typeStack = g.typeStack[:lastIndex]
 	}()
 
-	// We can generate a SimpleType declaration,
-	// if this is a top-level type,
-	// and this declaration has no nested type declarations.
-	// Otherwise, we have to generate a CompositeType
+	var generateSimpleType bool
 
-	canGenerateSimpleType := len(g.typeStack) == 1
-	if canGenerateSimpleType {
-		switch compositeKind {
-		case common.CompositeKindStructure,
-			common.CompositeKindResource:
-			break
-		default:
-			canGenerateSimpleType = false
+	// Check if the declaration is explicit marked to generate a composite type.
+	if _, ok := g.leadingPragma["compositeType"]; ok {
+		generateSimpleType = false
+	} else {
+		// We can generate a SimpleType declaration,
+		// if this is a top-level type,
+		// and this declaration has no nested type declarations.
+		// Otherwise, we have to generate a CompositeType
+		generateSimpleType = len(g.typeStack) == 1
+		if generateSimpleType {
+			switch compositeKind {
+			case common.CompositeKindStructure,
+				common.CompositeKindResource:
+				break
+			default:
+				generateSimpleType = false
+			}
 		}
 	}
 
 	for _, memberDeclaration := range decl.Members.Declarations() {
-		ast.AcceptDeclaration[struct{}](memberDeclaration, g)
+		generateDeclaration(g, memberDeclaration)
 
 		// Visiting unsupported declarations panics,
 		// so only supported member declarations are added
@@ -391,14 +398,14 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 			memberDeclaration,
 		)
 
-		if canGenerateSimpleType {
+		if generateSimpleType {
 			switch memberDeclaration.(type) {
 			case *ast.FieldDeclaration,
 				*ast.FunctionDeclaration:
 				break
 
 			default:
-				canGenerateSimpleType = false
+				generateSimpleType = false
 			}
 		}
 	}
@@ -406,7 +413,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 	for _, conformance := range decl.Conformances {
 		switch conformance.Identifier.Identifier {
 		case "Storable":
-			if !canGenerateSimpleType {
+			if !generateSimpleType {
 				panic(fmt.Errorf(
 					"composite types cannot be explicitly marked as storable: %s",
 					g.currentTypeID(),
@@ -415,7 +422,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 			typeDecl.storable = true
 
 		case "Equatable":
-			if !canGenerateSimpleType {
+			if !generateSimpleType {
 				panic(fmt.Errorf(
 					"composite types cannot be explicitly marked as equatable: %s",
 					g.currentTypeID(),
@@ -424,7 +431,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 			typeDecl.equatable = true
 
 		case "Comparable":
-			if !canGenerateSimpleType {
+			if !generateSimpleType {
 				panic(fmt.Errorf(
 					"composite types cannot be explicitly marked as comparable: %s",
 					g.currentTypeID(),
@@ -433,7 +440,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 			typeDecl.comparable = true
 
 		case "Exportable":
-			if !canGenerateSimpleType {
+			if !generateSimpleType {
 				panic(fmt.Errorf(
 					"composite types cannot be explicitly marked as exportable: %s",
 					g.currentTypeID(),
@@ -445,7 +452,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 			typeDecl.importable = true
 
 		case "ContainFields":
-			if !canGenerateSimpleType {
+			if !generateSimpleType {
 				panic(fmt.Errorf(
 					"composite types cannot be explicitly marked as having fields: %s",
 					g.currentTypeID(),
@@ -456,7 +463,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 	}
 
 	var typeVarDecl dst.Expr
-	if canGenerateSimpleType {
+	if generateSimpleType {
 		typeVarDecl = simpleTypeLiteral(typeDecl)
 	} else {
 		typeVarDecl = compositeTypeExpr(typeDecl)
@@ -479,7 +486,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 
 	if len(memberDeclarations) > 0 {
 
-		if canGenerateSimpleType {
+		if generateSimpleType {
 
 			// func init() {
 			//   t.Members = func(t *SimpleType) map[string]MemberResolver {
@@ -1075,8 +1082,20 @@ func (*generator) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) struct{} 
 	panic("enum case declarations are not supported")
 }
 
-func (*generator) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) struct{} {
-	panic("pragma declarations are not supported")
+func (g *generator) VisitPragmaDeclaration(pragma *ast.PragmaDeclaration) (_ struct{}) {
+	// Treat pragmas as part of the declaration to follow.
+
+	identifierExpr, ok := pragma.Expression.(*ast.IdentifierExpression)
+	if !ok {
+		panic("only identifier pragmas are supported")
+	}
+
+	if g.leadingPragma == nil {
+		g.leadingPragma = map[string]struct{}{}
+	}
+	g.leadingPragma[identifierExpr.Identifier.Identifier] = struct{}{}
+
+	return
 }
 
 func (*generator) VisitImportDeclaration(_ *ast.ImportDeclaration) struct{} {
@@ -1954,12 +1973,25 @@ func gen(inPath string, outFile *os.File, packagePath string) {
 	var gen generator
 
 	for _, declaration := range program.Declarations() {
-		_ = ast.AcceptDeclaration[struct{}](declaration, &gen)
+		generateDeclaration(&gen, declaration)
 	}
 
 	gen.generateTypeInit(program)
 
 	writeGoFile(inPath, outFile, gen.decls, packagePath)
+}
+
+func generateDeclaration(gen *generator, declaration ast.Declaration) {
+	// Treat leading pragmas as part of this declaration.
+	// Reset them after finishing the current decl. This is to handle nested declarations.
+	if declaration.DeclarationKind() != common.DeclarationKindPragma {
+		prevLeadingPragma := gen.leadingPragma
+		defer func() {
+			gen.leadingPragma = prevLeadingPragma
+		}()
+	}
+
+	_ = ast.AcceptDeclaration[struct{}](declaration, gen)
 }
 
 func writeGoFile(inPath string, outFile *os.File, decls []dst.Decl, packagePath string) {
