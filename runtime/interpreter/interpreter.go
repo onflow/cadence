@@ -3634,19 +3634,21 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					panic(errors.NewUnreachableError())
 				}
 
+				inter := invocation.Interpreter
+
 				ty := typeValue.Type
 				// InclusiveRanges must hold integers
-				elemSemaTy := invocation.Interpreter.MustConvertStaticToSemaType(ty)
+				elemSemaTy := inter.MustConvertStaticToSemaType(ty)
 				if !elemSemaTy.Tag().BelongsTo(sema.IntegerTypeTag) {
 					return Nil
 				}
 
 				return NewSomeValueNonCopying(
-					invocation.Interpreter,
+					inter,
 					NewTypeValue(
-						invocation.Interpreter,
+						inter,
 						NewInclusiveRangeStaticType(
-							invocation.Interpreter,
+							inter,
 							ty,
 						),
 					),
