@@ -79,6 +79,10 @@ type Blockchain interface {
 	Reset(uint64)
 
 	MoveTime(int64)
+
+	CreateSnapshot(string) error
+
+	LoadSnapshot(string) error
 }
 
 type ScriptResult struct {

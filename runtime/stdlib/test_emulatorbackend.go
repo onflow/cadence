@@ -47,6 +47,8 @@ type testEmulatorBackendType struct {
 	eventsFunctionType                 *sema.FunctionType
 	resetFunctionType                  *sema.FunctionType
 	moveTimeFunctionType               *sema.FunctionType
+	createSnapshotFunctionType         *sema.FunctionType
+	loadSnapshotFunctionType           *sema.FunctionType
 }
 
 func newTestEmulatorBackendType(
@@ -110,6 +112,16 @@ func newTestEmulatorBackendType(
 	moveTimeFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeMoveTimeFunctionName,
+	)
+
+	createSnapshotFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeCreateSnapshotFunctionName,
+	)
+
+	loadSnapshotFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeLoadSnapshotFunctionName,
 	)
 
 	compositeType := &sema.CompositeType{
@@ -194,6 +206,18 @@ func newTestEmulatorBackendType(
 			moveTimeFunctionType,
 			testEmulatorBackendTypeMoveTimeFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeCreateSnapshotFunctionName,
+			createSnapshotFunctionType,
+			testEmulatorBackendTypeCreateSnapshotFunctionDocString,
+		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeLoadSnapshotFunctionName,
+			loadSnapshotFunctionType,
+			testEmulatorBackendTypeLoadSnapshotFunctionDocString,
+		),
 	}
 
 	compositeType.Members = sema.MembersAsMap(members)
@@ -213,6 +237,8 @@ func newTestEmulatorBackendType(
 		eventsFunctionType:                 eventsFunctionType,
 		resetFunctionType:                  resetFunctionType,
 		moveTimeFunctionType:               moveTimeFunctionType,
+		createSnapshotFunctionType:         createSnapshotFunctionType,
+		loadSnapshotFunctionType:           loadSnapshotFunctionType,
 	}
 }
 
@@ -739,6 +765,58 @@ func (t *testEmulatorBackendType) newMoveTimeFunction(
 	)
 }
 
+// 'Emulator.createSnapshot' function
+
+const testEmulatorBackendTypeCreateSnapshotFunctionName = "createSnapshot"
+
+const testEmulatorBackendTypeCreateSnapshotFunctionDocString = `
+Creates a snapshot of the blockchain, at the
+current ledger state, with the given name.
+`
+
+func (t *testEmulatorBackendType) newCreateSnapshotFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.createSnapshotFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			name, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			err := blockchain.CreateSnapshot(name.Str)
+			return newErrorValue(invocation.Interpreter, err)
+		},
+	)
+}
+
+// 'Emulator.loadSnapshot' function
+
+const testEmulatorBackendTypeLoadSnapshotFunctionName = "loadSnapshot"
+
+const testEmulatorBackendTypeLoadSnapshotFunctionDocString = `
+Loads a snapshot of the blockchain, with the given name, and
+updates the current ledger state.
+`
+
+func (t *testEmulatorBackendType) newLoadSnapshotFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.loadSnapshotFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			name, ok := invocation.Arguments[0].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			err := blockchain.LoadSnapshot(name.Str)
+			return newErrorValue(invocation.Interpreter, err)
+		},
+	)
+}
+
 func (t *testEmulatorBackendType) newEmulatorBackend(
 	inter *interpreter.Interpreter,
 	blockchain Blockchain,
@@ -791,6 +869,14 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeMoveTimeFunctionName,
 			Value: t.newMoveTimeFunction(blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeCreateSnapshotFunctionName,
+			Value: t.newCreateSnapshotFunction(blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeLoadSnapshotFunctionName,
+			Value: t.newLoadSnapshotFunction(blockchain),
 		},
 	}
 

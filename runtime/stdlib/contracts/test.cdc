@@ -134,6 +134,29 @@ pub contract Test {
         pub fun moveTime(by delta: Fix64) {
             self.backend.moveTime(by: delta)
         }
+
+        /// Creates a snapshot of the blockchain, at the
+        /// current ledger state, with the given name.
+        ///
+        access(all)
+        fun createSnapshot(name: String) {
+            let err = self.backend.createSnapshot(name: name)
+            if err != nil {
+                panic(err!.message)
+            }
+        }
+
+        /// Loads a snapshot of the blockchain, with the
+        /// given name, and updates the current ledger
+        /// state.
+        ///
+        access(all)
+        fun loadSnapshot(name: String) {
+            let err = self.backend.loadSnapshot(name: name)
+            if err != nil {
+                panic(err!.message)
+            }
+        }
     }
 
     pub struct Matcher {
@@ -324,6 +347,19 @@ pub contract Test {
         /// which should be passed in the form of seconds.
         ///
         pub fun moveTime(by delta: Fix64)
+
+        /// Creates a snapshot of the blockchain, at the
+        /// current ledger state, with the given name.
+        ///
+        access(all)
+        fun createSnapshot(name: String): Error?
+
+        /// Loads a snapshot of the blockchain, with the
+        /// given name, and updates the current ledger
+        /// state.
+        ///
+        access(all)
+        fun loadSnapshot(name: String): Error?
     }
 
     /// Returns a new matcher that negates the test of the given matcher.
