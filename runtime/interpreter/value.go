@@ -17141,7 +17141,7 @@ func (v *CompositeValue) ConformsToStaticType(
 			// InclusiveRange is non-covariant.
 			// For e.g. we disallow assigning InclusiveRange<Int> to an InclusiveRange<Integer>.
 			// Hence we do an exact equality check instead of a sub-type check.
-			if fieldStaticType != expectedMemberStaticType {
+			if !fieldStaticType.Equal(expectedMemberStaticType) {
 				return false
 			}
 
