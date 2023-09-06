@@ -361,7 +361,7 @@ func TestCheckStringJoin(t *testing.T) {
 
 	checker, err := ParseAndCheck(t, `
 		let s_default_sep = String.join(["👪", "❤️", "Abc"])
-		let s = String.join(["👪", "❤️", "Abc"], "/")
+		let s = String.join(["👪", "❤️", "Abc"], separator: "/")
 	`)
 	require.NoError(t, err)
 
@@ -381,7 +381,7 @@ func TestCheckStringJoinTypeMismatchStrs(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		let s = String.join([1], "/")
+		let s = String.join([1], separator: "/")
 	`)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -394,10 +394,23 @@ func TestCheckStringJoinTypeMismatchSeparator(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		let s = String.join(["Abc", "1"], 1234)
+		let s = String.join(["Abc", "1"], separator: 1234)
 	`)
 
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckStringJoinTypeMissingArgumentLabelSeparator(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	let s = String.join(["👪", "❤️", "Abc"], "/")
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
 }

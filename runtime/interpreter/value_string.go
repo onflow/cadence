@@ -84,22 +84,14 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 
 	inter := invocation.Interpreter
 
-	common.UseMemory(inter,
-		common.MemoryUsage{
-			Kind:   common.MemoryKindStringValue,
-			Amount: 1,
-		},
-	)
+	// NewStringMemoryUsage already accounts for empty string.
+	common.UseMemory(inter, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 
 	argument.Iterate(inter, func(element Value) (resume bool) {
 		character := element.(CharacterValue)
-		common.UseMemory(inter,
-			common.MemoryUsage{
-				Kind:   common.MemoryKindStringValue,
-				Amount: uint64(len(character)),
-			},
-		)
+		// -1 to offset the double counting for empty string.
+		common.UseMemory(inter, common.NewStringMemoryUsage(len(character)-1))
 		builder.WriteString(string(character))
 
 		return true
@@ -135,24 +127,16 @@ func stringFunctionJoin(invocation Invocation) Value {
 		separator = StringTypeJoinDefaultSeparator
 	}
 
-	common.UseMemory(inter,
-		common.MemoryUsage{
-			Kind:   common.MemoryKindStringValue,
-			Amount: 1,
-		},
-	)
+	// NewStringMemoryUsage already accounts for empty string.
+	common.UseMemory(inter, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 	first := true
 
 	argument.Iterate(inter, func(element Value) (resume bool) {
 		// Add separator
 		if !first {
-			common.UseMemory(inter,
-				common.MemoryUsage{
-					Kind:   common.MemoryKindStringValue,
-					Amount: uint64(len(separator.Str)),
-				},
-			)
+			// -1 to offset the double counting for empty string.
+			common.UseMemory(inter, common.NewStringMemoryUsage(len(separator.Str)))
 			builder.WriteString(separator.Str)
 		}
 		first = false
@@ -162,12 +146,8 @@ func stringFunctionJoin(invocation Invocation) Value {
 			panic(errors.NewUnreachableError())
 		}
 
-		common.UseMemory(inter,
-			common.MemoryUsage{
-				Kind:   common.MemoryKindStringValue,
-				Amount: uint64(len(str.Str)),
-			},
-		)
+		// -1 to offset the double counting for empty string.
+		common.UseMemory(inter, common.NewStringMemoryUsage(len(str.Str)))
 		builder.WriteString(str.Str)
 
 		return true

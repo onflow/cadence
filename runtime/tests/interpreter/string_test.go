@@ -473,15 +473,15 @@ func TestInterpretStringJoin(t *testing.T) {
 		}
 
 		fun test(): String {
-			return String.join(["👪", "❤️"], "//")
+			return String.join(["👪", "❤️"], separator: "//")
 		}
 
 		fun testEmptyArray(): String {
-			return String.join([], "//")
+			return String.join([], separator: "//")
 		}
 
 		fun testSingletonArray(): String {
-			return String.join(["pqrS"], "//")
+			return String.join(["pqrS"], separator: "//")
 		}
 	`)
 
