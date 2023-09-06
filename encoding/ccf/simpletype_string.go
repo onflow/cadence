@@ -74,41 +74,42 @@ func _() {
 	_ = x[SimpleTypeStorage-70]
 	_ = x[SimpleTypeSaveValue-71]
 	_ = x[SimpleTypeLoadValue-72]
-	_ = x[SimpleTypeBorrowValue-73]
-	_ = x[SimpleTypeContracts-74]
-	_ = x[SimpleTypeAddContract-75]
-	_ = x[SimpleTypeUpdateContract-76]
-	_ = x[SimpleTypeRemoveContract-77]
-	_ = x[SimpleTypeKeys-78]
-	_ = x[SimpleTypeAddKey-79]
-	_ = x[SimpleTypeRevokeKey-80]
-	_ = x[SimpleTypeInbox-81]
-	_ = x[SimpleTypePublishInboxCapability-82]
-	_ = x[SimpleTypeUnpublishInboxCapability-83]
-	_ = x[SimpleTypeClaimInboxCapability-84]
-	_ = x[SimpleTypeCapabilities-85]
-	_ = x[SimpleTypeStorageCapabilities-86]
-	_ = x[SimpleTypeAccountCapabilities-87]
-	_ = x[SimpleTypePublishCapability-88]
-	_ = x[SimpleTypeUnpublishCapability-89]
-	_ = x[SimpleTypeGetStorageCapabilityController-90]
-	_ = x[SimpleTypeIssueStorageCapabilityController-91]
-	_ = x[SimpleTypeGetAccountCapabilityController-92]
-	_ = x[SimpleTypeIssueAccountCapabilityController-93]
-	_ = x[SimpleTypeCapabilitiesMapping-94]
-	_ = x[SimpleTypeAccountMapping-95]
-	_ = x[SimpleType_Count-96]
+	_ = x[SimpleTypeCopyValue-73]
+	_ = x[SimpleTypeBorrowValue-74]
+	_ = x[SimpleTypeContracts-75]
+	_ = x[SimpleTypeAddContract-76]
+	_ = x[SimpleTypeUpdateContract-77]
+	_ = x[SimpleTypeRemoveContract-78]
+	_ = x[SimpleTypeKeys-79]
+	_ = x[SimpleTypeAddKey-80]
+	_ = x[SimpleTypeRevokeKey-81]
+	_ = x[SimpleTypeInbox-82]
+	_ = x[SimpleTypePublishInboxCapability-83]
+	_ = x[SimpleTypeUnpublishInboxCapability-84]
+	_ = x[SimpleTypeClaimInboxCapability-85]
+	_ = x[SimpleTypeCapabilities-86]
+	_ = x[SimpleTypeStorageCapabilities-87]
+	_ = x[SimpleTypeAccountCapabilities-88]
+	_ = x[SimpleTypePublishCapability-89]
+	_ = x[SimpleTypeUnpublishCapability-90]
+	_ = x[SimpleTypeGetStorageCapabilityController-91]
+	_ = x[SimpleTypeIssueStorageCapabilityController-92]
+	_ = x[SimpleTypeGetAccountCapabilityController-93]
+	_ = x[SimpleTypeIssueAccountCapabilityController-94]
+	_ = x[SimpleTypeCapabilitiesMapping-95]
+	_ = x[SimpleTypeAccountMapping-96]
+	_ = x[SimpleType_Count-97]
 }
 
 const (
 	_SimpleType_name_0 = "SimpleTypeBoolSimpleTypeStringSimpleTypeCharacterSimpleTypeAddressSimpleTypeIntSimpleTypeInt8SimpleTypeInt16SimpleTypeInt32SimpleTypeInt64SimpleTypeInt128SimpleTypeInt256SimpleTypeUIntSimpleTypeUInt8SimpleTypeUInt16SimpleTypeUInt32SimpleTypeUInt64SimpleTypeUInt128SimpleTypeUInt256SimpleTypeWord8SimpleTypeWord16SimpleTypeWord32SimpleTypeWord64SimpleTypeFix64SimpleTypeUFix64SimpleTypePathSimpleTypeCapabilityPathSimpleTypeStoragePathSimpleTypePublicPathSimpleTypePrivatePath"
 	_SimpleType_name_1 = "SimpleTypeDeployedContract"
-	_SimpleType_name_2 = "SimpleTypeBlockSimpleTypeAnySimpleTypeAnyStructSimpleTypeAnyResourceSimpleTypeMetaTypeSimpleTypeNeverSimpleTypeNumberSimpleTypeSignedNumberSimpleTypeIntegerSimpleTypeSignedIntegerSimpleTypeFixedPointSimpleTypeSignedFixedPointSimpleTypeBytesSimpleTypeVoidSimpleTypeFunctionSimpleTypeWord128SimpleTypeWord256SimpleTypeAnyStructAttachmentTypeSimpleTypeAnyResourceAttachmentTypeSimpleTypeStorageCapabilityControllerSimpleTypeAccountCapabilityControllerSimpleTypeAccountSimpleTypeAccount_ContractsSimpleTypeAccount_KeysSimpleTypeAccount_InboxSimpleTypeAccount_StorageCapabilitiesSimpleTypeAccount_AccountCapabilitiesSimpleTypeAccount_CapabilitiesSimpleTypeAccount_StorageSimpleTypeMutateSimpleTypeInsertSimpleTypeRemoveSimpleTypeIdentitySimpleTypeStorageSimpleTypeSaveValueSimpleTypeLoadValueSimpleTypeBorrowValueSimpleTypeContractsSimpleTypeAddContractSimpleTypeUpdateContractSimpleTypeRemoveContractSimpleTypeKeysSimpleTypeAddKeySimpleTypeRevokeKeySimpleTypeInboxSimpleTypePublishInboxCapabilitySimpleTypeUnpublishInboxCapabilitySimpleTypeClaimInboxCapabilitySimpleTypeCapabilitiesSimpleTypeStorageCapabilitiesSimpleTypeAccountCapabilitiesSimpleTypePublishCapabilitySimpleTypeUnpublishCapabilitySimpleTypeGetStorageCapabilityControllerSimpleTypeIssueStorageCapabilityControllerSimpleTypeGetAccountCapabilityControllerSimpleTypeIssueAccountCapabilityControllerSimpleTypeCapabilitiesMappingSimpleTypeAccountMappingSimpleType_Count"
+	_SimpleType_name_2 = "SimpleTypeBlockSimpleTypeAnySimpleTypeAnyStructSimpleTypeAnyResourceSimpleTypeMetaTypeSimpleTypeNeverSimpleTypeNumberSimpleTypeSignedNumberSimpleTypeIntegerSimpleTypeSignedIntegerSimpleTypeFixedPointSimpleTypeSignedFixedPointSimpleTypeBytesSimpleTypeVoidSimpleTypeFunctionSimpleTypeWord128SimpleTypeWord256SimpleTypeAnyStructAttachmentTypeSimpleTypeAnyResourceAttachmentTypeSimpleTypeStorageCapabilityControllerSimpleTypeAccountCapabilityControllerSimpleTypeAccountSimpleTypeAccount_ContractsSimpleTypeAccount_KeysSimpleTypeAccount_InboxSimpleTypeAccount_StorageCapabilitiesSimpleTypeAccount_AccountCapabilitiesSimpleTypeAccount_CapabilitiesSimpleTypeAccount_StorageSimpleTypeMutateSimpleTypeInsertSimpleTypeRemoveSimpleTypeIdentitySimpleTypeStorageSimpleTypeSaveValueSimpleTypeLoadValueSimpleTypeCopyValueSimpleTypeBorrowValueSimpleTypeContractsSimpleTypeAddContractSimpleTypeUpdateContractSimpleTypeRemoveContractSimpleTypeKeysSimpleTypeAddKeySimpleTypeRevokeKeySimpleTypeInboxSimpleTypePublishInboxCapabilitySimpleTypeUnpublishInboxCapabilitySimpleTypeClaimInboxCapabilitySimpleTypeCapabilitiesSimpleTypeStorageCapabilitiesSimpleTypeAccountCapabilitiesSimpleTypePublishCapabilitySimpleTypeUnpublishCapabilitySimpleTypeGetStorageCapabilityControllerSimpleTypeIssueStorageCapabilityControllerSimpleTypeGetAccountCapabilityControllerSimpleTypeIssueAccountCapabilityControllerSimpleTypeCapabilitiesMappingSimpleTypeAccountMappingSimpleType_Count"
 )
 
 var (
 	_SimpleType_index_0 = [...]uint16{0, 14, 30, 49, 66, 79, 93, 108, 123, 138, 154, 170, 184, 199, 215, 231, 247, 264, 281, 296, 312, 328, 344, 359, 375, 389, 413, 434, 454, 475}
-	_SimpleType_index_2 = [...]uint16{0, 15, 28, 47, 68, 86, 101, 117, 139, 156, 179, 199, 225, 240, 254, 272, 289, 306, 339, 374, 411, 448, 465, 492, 514, 537, 574, 611, 641, 666, 682, 698, 714, 732, 749, 768, 787, 808, 827, 848, 872, 896, 910, 926, 945, 960, 992, 1026, 1056, 1078, 1107, 1136, 1163, 1192, 1232, 1274, 1314, 1356, 1385, 1409, 1425}
+	_SimpleType_index_2 = [...]uint16{0, 15, 28, 47, 68, 86, 101, 117, 139, 156, 179, 199, 225, 240, 254, 272, 289, 306, 339, 374, 411, 448, 465, 492, 514, 537, 574, 611, 641, 666, 682, 698, 714, 732, 749, 768, 787, 806, 827, 846, 867, 891, 915, 929, 945, 964, 979, 1011, 1045, 1075, 1097, 1126, 1155, 1182, 1211, 1251, 1293, 1333, 1375, 1404, 1428, 1444}
 )
 
 func (i SimpleType) String() string {
@@ -117,7 +118,7 @@ func (i SimpleType) String() string {
 		return _SimpleType_name_0[_SimpleType_index_0[i]:_SimpleType_index_0[i+1]]
 	case i == 35:
 		return _SimpleType_name_1
-	case 37 <= i && i <= 96:
+	case 37 <= i && i <= 97:
 		i -= 37
 		return _SimpleType_name_2[_SimpleType_index_2[i]:_SimpleType_index_2[i+1]]
 	default:

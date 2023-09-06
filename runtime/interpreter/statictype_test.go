@@ -880,7 +880,7 @@ func TestPrimitiveStaticTypeCount(t *testing.T) {
 	// (before the PrimitiveStaticType_Count of course).
 	// Only update this test if you are certain your change to this enum was to append new types to the end.
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(151), byte(PrimitiveStaticType_Count))
+		require.Equal(t, byte(152), byte(PrimitiveStaticType_Count))
 	})
 }
 
@@ -1288,6 +1288,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "LoadValue",
 			semaType:   sema.LoadValueType,
 			staticType: PrimitiveStaticTypeLoadValue,
+		},
+		{
+			name:       "CopyValue",
+			semaType:   sema.CopyValueType,
+			staticType: PrimitiveStaticTypeCopyValue,
 		},
 		{
 			name:       "BorrowValue",

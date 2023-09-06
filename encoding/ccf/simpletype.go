@@ -110,6 +110,7 @@ const ( // Cadence simple type IDs
 	SimpleTypeStorage
 	SimpleTypeSaveValue
 	SimpleTypeLoadValue
+	SimpleTypeCopyValue
 	SimpleTypeBorrowValue
 	SimpleTypeContracts
 	SimpleTypeAddContract
@@ -275,6 +276,8 @@ func simpleTypeIDByType(typ cadence.Type) (SimpleType, bool) {
 		return SimpleTypeSaveValue, true
 	case cadence.LoadValueType:
 		return SimpleTypeLoadValue, true
+	case cadence.CopyValueType:
+		return SimpleTypeCopyValue, true
 	case cadence.BorrowValueType:
 		return SimpleTypeBorrowValue, true
 	case cadence.ContractsType:
@@ -464,6 +467,8 @@ func typeBySimpleTypeID(simpleTypeID SimpleType) cadence.Type {
 		return cadence.SaveValueType
 	case SimpleTypeLoadValue:
 		return cadence.LoadValueType
+	case SimpleTypeCopyValue:
+		return cadence.CopyValueType
 	case SimpleTypeBorrowValue:
 		return cadence.BorrowValueType
 	case SimpleTypeContracts:

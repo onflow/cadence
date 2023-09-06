@@ -515,7 +515,10 @@ func init() {
 		),
 		NewUnmeteredFunctionMember(
 			Account_StorageType,
-			PrimitiveAccess(ast.AccessAll),
+			newEntitlementAccess(
+				[]Type{StorageType, CopyValueType},
+				Disjunction,
+			),
 			Account_StorageTypeCopyFunctionName,
 			Account_StorageTypeCopyFunctionType,
 			Account_StorageTypeCopyFunctionDocString,
@@ -1843,6 +1846,10 @@ var LoadValueType = &EntitlementType{
 	Identifier: "LoadValue",
 }
 
+var CopyValueType = &EntitlementType{
+	Identifier: "CopyValue",
+}
+
 var BorrowValueType = &EntitlementType{
 	Identifier: "BorrowValue",
 }
@@ -1941,6 +1948,10 @@ var AccountMappingType = &EntitlementMapType{
 		},
 		EntitlementRelation{
 			Input:  StorageType,
+			Output: CopyValueType,
+		},
+		EntitlementRelation{
+			Input:  StorageType,
 			Output: BorrowValueType,
 		},
 		EntitlementRelation{
@@ -2020,6 +2031,8 @@ func init() {
 	addToBaseActivation(SaveValueType)
 	BuiltinEntitlements[LoadValueType.Identifier] = LoadValueType
 	addToBaseActivation(LoadValueType)
+	BuiltinEntitlements[CopyValueType.Identifier] = CopyValueType
+	addToBaseActivation(CopyValueType)
 	BuiltinEntitlements[BorrowValueType.Identifier] = BorrowValueType
 	addToBaseActivation(BorrowValueType)
 	BuiltinEntitlements[ContractsType.Identifier] = ContractsType
