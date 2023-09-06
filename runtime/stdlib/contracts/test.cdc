@@ -138,8 +138,9 @@ pub contract Test {
         /// Creates a snapshot of the blockchain, at the
         /// current ledger state, with the given name.
         ///
-        pub fun createSnapshot(_ name: String) {
-            let err = self.backend.createSnapshot(name)
+        access(all)
+        fun createSnapshot(name: String) {
+            let err = self.backend.createSnapshot(name: name)
             if err != nil {
                 panic(err!.message)
             }
@@ -149,8 +150,9 @@ pub contract Test {
         /// given name, and updates the current ledger
         /// state.
         ///
-        pub fun loadSnapshot(_ name: String) {
-            let err = self.backend.loadSnapshot(name)
+        access(all)
+        fun loadSnapshot(name: String) {
+            let err = self.backend.loadSnapshot(name: name)
             if err != nil {
                 panic(err!.message)
             }
@@ -349,13 +351,15 @@ pub contract Test {
         /// Creates a snapshot of the blockchain, at the
         /// current ledger state, with the given name.
         ///
-        pub fun createSnapshot(_ name: String): Error?
+        access(all)
+        fun createSnapshot(name: String): Error?
 
         /// Loads a snapshot of the blockchain, with the
         /// given name, and updates the current ledger
         /// state.
         ///
-        pub fun loadSnapshot(_ name: String): Error?
+        access(all)
+        fun loadSnapshot(name: String): Error?
     }
 
     /// Returns a new matcher that negates the test of the given matcher.

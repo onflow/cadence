@@ -2348,7 +2348,7 @@ func TestBlockchain(t *testing.T) {
 
             pub fun test() {
                 let blockchain = Test.newEmulatorBlockchain()
-                blockchain.createSnapshot("adminCreated")
+                blockchain.createSnapshot(name: "adminCreated")
             }
 		`
 
@@ -2384,7 +2384,7 @@ func TestBlockchain(t *testing.T) {
 
             pub fun test() {
                 let blockchain = Test.newEmulatorBlockchain()
-                blockchain.createSnapshot("adminCreated")
+                blockchain.createSnapshot(name: "adminCreated")
             }
 		`
 
@@ -2420,8 +2420,8 @@ func TestBlockchain(t *testing.T) {
 
             pub fun test() {
                 let blockchain = Test.newEmulatorBlockchain()
-                blockchain.createSnapshot("adminCreated")
-				blockchain.loadSnapshot("adminCreated")
+                blockchain.createSnapshot(name: "adminCreated")
+                blockchain.loadSnapshot(name: "adminCreated")
             }
 		`
 
@@ -2462,8 +2462,8 @@ func TestBlockchain(t *testing.T) {
 
             pub fun test() {
                 let blockchain = Test.newEmulatorBlockchain()
-                blockchain.createSnapshot("adminCreated")
-				blockchain.loadSnapshot("contractDeployed")
+                blockchain.createSnapshot(name: "adminCreated")
+                blockchain.loadSnapshot(name: "contractDeployed")
             }
 		`
 
