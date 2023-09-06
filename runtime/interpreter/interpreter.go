@@ -2360,19 +2360,19 @@ func (interpreter *Interpreter) WriteStored(
 // Get the provided int8 value in the required staticType.
 // Note: Assumes that the provided value fits within the constraints of the staticType.
 func GetValueForIntegerType(value int8, staticType StaticType) IntegerValue {
-	typedCache, typedOk := cachedIntegerValues[staticType]
-	if typedOk {
-		val, ok := typedCache[value]
-		if ok {
-			return val
-		}
+	typeCache, ok := cachedIntegerValues[staticType]
+	if !ok {
+		typeCache = make(map[int8]IntegerValue)
+		cachedIntegerValues[staticType] = typeCache
 	}
 
-	val := getValueForIntegerType(value, staticType)
-	if !typedOk {
-		cachedIntegerValues[staticType] = make(map[int8]IntegerValue)
+	val, ok := typeCache[value]
+	if !ok {
+		val = getValueForIntegerType(value, staticType)
+		typeCache[value] = val
 	}
-	cachedIntegerValues[staticType][value] = val
+
+	return val
 	return val
 }
 
