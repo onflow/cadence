@@ -516,7 +516,7 @@ func TestParseIntersectionType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "restricted types have been removed; replace with an intersection type",
+					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -532,7 +532,7 @@ func TestParseIntersectionType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "restricted types have been removed; replace with an intersection type",
+					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -548,7 +548,7 @@ func TestParseIntersectionType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "restricted types have been removed; replace with an intersection type",
+					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},

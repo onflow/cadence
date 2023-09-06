@@ -503,8 +503,7 @@ func defineIntersectionOrDictionaryType() {
 				return left, nil, true
 			}
 
-			// It was determined that a restricted type is parsed, so error
-			return nil, p.syntaxError("restricted types have been removed; replace with an intersection type"), true
+			return nil, p.syntaxError("restricted types have been removed; replace with the concrete type or an equivalent intersection type"), true
 		},
 	)
 }
