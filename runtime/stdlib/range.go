@@ -135,15 +135,15 @@ var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 				rangeStaticType,
 				rangeSemaType,
 			)
-		} else {
-			return interpreter.NewInclusiveRangeValue(
-				inter,
-				locationRange,
-				start,
-				end,
-				rangeStaticType,
-				rangeSemaType,
-			)
 		}
+
+		return interpreter.NewInclusiveRangeValue(
+			inter,
+			locationRange,
+			start,
+			end,
+			rangeStaticType,
+			rangeSemaType,
+		)
 	},
 )
