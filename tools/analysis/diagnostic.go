@@ -21,12 +21,12 @@ package analysis
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
-type SuggestedFix = sema.SuggestedFix
+type SuggestedFix = errors.SuggestedFix[ast.TextEdit]
 
-type TextEdit = sema.TextEdit
+type TextEdit = ast.TextEdit
 
 type Diagnostic struct {
 	Location         common.Location

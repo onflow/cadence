@@ -91,6 +91,41 @@ func (e *SyntaxError) Error() string {
 	return e.Message
 }
 
+// SyntaxErrorWithSuggestedFix
+
+type SyntaxErrorWithSuggestedFix struct {
+	Message      string
+	SuggestedFix string
+	Pos          ast.Position
+}
+
+func NewSyntaxErrorWithSuggestedFix(pos ast.Position, message string, suggestedFix string) *SyntaxErrorWithSuggestedFix {
+	return &SyntaxErrorWithSuggestedFix{
+		Pos:          pos,
+		Message:      message,
+		SuggestedFix: suggestedFix,
+	}
+}
+
+var _ ParseError = &SyntaxErrorWithSuggestedFix{}
+var _ errors.UserError = &SyntaxErrorWithSuggestedFix{}
+
+func (*SyntaxErrorWithSuggestedFix) isParseError() {}
+
+func (*SyntaxErrorWithSuggestedFix) IsUserError() {}
+
+func (e *SyntaxErrorWithSuggestedFix) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *SyntaxErrorWithSuggestedFix) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *SyntaxErrorWithSuggestedFix) Error() string {
+	return e.Message
+}
+
 // JuxtaposedUnaryOperatorsError
 
 type JuxtaposedUnaryOperatorsError struct {
