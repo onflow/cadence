@@ -9788,9 +9788,10 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations(" pub fun foo ( ) { }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "`pub` is no longer a valid access keyword",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&SyntaxErrorWithSuggestedFix{
+					Message:      "`pub` is no longer a valid access keyword",
+					Pos:          ast.Position{Offset: 1, Line: 1, Column: 1},
+					SuggestedFix: "`access(all)`",
 				},
 			},
 			errs,
@@ -9805,9 +9806,10 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations(" priv fun foo ( ) { }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "`priv` is no longer a valid access keyword",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&SyntaxErrorWithSuggestedFix{
+					Message:      "`priv` is no longer a valid access keyword",
+					Pos:          ast.Position{Offset: 1, Line: 1, Column: 1},
+					SuggestedFix: "`access(self)`",
 				},
 			},
 			errs,
@@ -9822,9 +9824,10 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations(" pub(set) fun foo ( ) { }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "`pub` is no longer a valid access keyword",
-					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				&SyntaxErrorWithSuggestedFix{
+					Message:      "`pub` is no longer a valid access keyword",
+					Pos:          ast.Position{Offset: 1, Line: 1, Column: 1},
+					SuggestedFix: "`access(all)`",
 				},
 			},
 			errs,

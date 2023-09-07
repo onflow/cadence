@@ -195,6 +195,10 @@ func (p *parser) syntaxError(message string, params ...any) error {
 	return NewSyntaxError(p.current.StartPos, message, params...)
 }
 
+func (p *parser) syntaxErrorWithSuggestedFix(message string, suggestedFix string) error {
+	return NewSyntaxErrorWithSuggestedFix(p.current.StartPos, message, suggestedFix)
+}
+
 func (p *parser) reportSyntaxError(message string, params ...any) {
 	err := p.syntaxError(message, params...)
 	p.report(err)

@@ -99,6 +99,8 @@ type SyntaxErrorWithSuggestedFix struct {
 	Pos          ast.Position
 }
 
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &SyntaxErrorWithSuggestedFix{}
+
 func NewSyntaxErrorWithSuggestedFix(pos ast.Position, message string, suggestedFix string) *SyntaxErrorWithSuggestedFix {
 	return &SyntaxErrorWithSuggestedFix{
 		Pos:          pos,
@@ -124,6 +126,23 @@ func (e *SyntaxErrorWithSuggestedFix) EndPosition(_ common.MemoryGauge) ast.Posi
 
 func (e *SyntaxErrorWithSuggestedFix) Error() string {
 	return e.Message
+}
+
+func (e *SyntaxErrorWithSuggestedFix) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: fmt.Sprintf("replace with %s", e.SuggestedFix),
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: e.SuggestedFix,
+					Range: ast.Range{
+						StartPos: e.Pos,
+						EndPos:   e.Pos,
+					},
+				},
+			},
+		},
+	}
 }
 
 // JuxtaposedUnaryOperatorsError
