@@ -90,8 +90,14 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 
 	argument.Iterate(inter, func(element Value) (resume bool) {
 		character := element.(CharacterValue)
-		// -1 to offset the double counting for empty string.
-		common.UseMemory(inter, common.NewStringMemoryUsage(len(character)-1))
+		// Construct directly instead of using NewStringMemoryUsage to avoid
+		// having to decrement by 1 due to double counting of empty string.
+		common.UseMemory(inter,
+			common.MemoryUsage{
+				Kind:   common.MemoryKindStringValue,
+				Amount: uint64(len(character)),
+			},
+		)
 		builder.WriteString(string(character))
 
 		return true
@@ -103,18 +109,18 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 var StringTypeJoinDefaultSeparator = NewUnmeteredStringValue(",")
 
 func stringFunctionJoin(invocation Invocation) Value {
-	argument, ok := invocation.Arguments[0].(*ArrayValue)
+	stringArray, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	inter := invocation.Interpreter
 
-	switch argument.Count() {
+	switch stringArray.Count() {
 	case 0:
 		return EmptyString
 	case 1:
-		return argument.Get(inter, invocation.LocationRange, 0)
+		return stringArray.Get(inter, invocation.LocationRange, 0)
 	}
 
 	var separator *StringValue
@@ -132,11 +138,17 @@ func stringFunctionJoin(invocation Invocation) Value {
 	var builder strings.Builder
 	first := true
 
-	argument.Iterate(inter, func(element Value) (resume bool) {
+	stringArray.Iterate(inter, func(element Value) (resume bool) {
 		// Add separator
 		if !first {
-			// -1 to offset the double counting for empty string.
-			common.UseMemory(inter, common.NewStringMemoryUsage(len(separator.Str)))
+			// Construct directly instead of using NewStringMemoryUsage to avoid
+			// having to decrement by 1 due to double counting of empty string.
+			common.UseMemory(inter,
+				common.MemoryUsage{
+					Kind:   common.MemoryKindStringValue,
+					Amount: uint64(len(separator.Str)),
+				},
+			)
 			builder.WriteString(separator.Str)
 		}
 		first = false
@@ -146,8 +158,14 @@ func stringFunctionJoin(invocation Invocation) Value {
 			panic(errors.NewUnreachableError())
 		}
 
-		// -1 to offset the double counting for empty string.
-		common.UseMemory(inter, common.NewStringMemoryUsage(len(str.Str)))
+		// Construct directly instead of using NewStringMemoryUsage to avoid
+		// having to decrement by 1 due to double counting of empty string.
+		common.UseMemory(inter,
+			common.MemoryUsage{
+				Kind:   common.MemoryKindStringValue,
+				Amount: uint64(len(str.Str)),
+			},
+		)
 		builder.WriteString(str.Str)
 
 		return true
