@@ -93,52 +93,40 @@ func (e *SyntaxError) Error() string {
 
 // SyntaxErrorWithSuggestedFix
 
-type SyntaxErrorWithSuggestedFix struct {
+type SyntaxErrorWithSuggestedReplacement struct {
 	Message      string
 	SuggestedFix string
-	Pos          ast.Position
+	ast.Range
 }
 
-var _ errors.HasSuggestedFixes[ast.TextEdit] = &SyntaxErrorWithSuggestedFix{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &SyntaxErrorWithSuggestedReplacement{}
 
-func NewSyntaxErrorWithSuggestedFix(pos ast.Position, message string, suggestedFix string) *SyntaxErrorWithSuggestedFix {
-	return &SyntaxErrorWithSuggestedFix{
-		Pos:          pos,
+func NewSyntaxErrorWithSuggestedReplacement(r ast.Range, message string, suggestedFix string) *SyntaxErrorWithSuggestedReplacement {
+	return &SyntaxErrorWithSuggestedReplacement{
+		Range:        r,
 		Message:      message,
 		SuggestedFix: suggestedFix,
 	}
 }
 
-var _ ParseError = &SyntaxErrorWithSuggestedFix{}
-var _ errors.UserError = &SyntaxErrorWithSuggestedFix{}
+var _ ParseError = &SyntaxErrorWithSuggestedReplacement{}
+var _ errors.UserError = &SyntaxErrorWithSuggestedReplacement{}
 
-func (*SyntaxErrorWithSuggestedFix) isParseError() {}
+func (*SyntaxErrorWithSuggestedReplacement) isParseError() {}
 
-func (*SyntaxErrorWithSuggestedFix) IsUserError() {}
-
-func (e *SyntaxErrorWithSuggestedFix) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *SyntaxErrorWithSuggestedFix) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.Pos
-}
-
-func (e *SyntaxErrorWithSuggestedFix) Error() string {
+func (*SyntaxErrorWithSuggestedReplacement) IsUserError() {}
+func (e *SyntaxErrorWithSuggestedReplacement) Error() string {
 	return e.Message
 }
 
-func (e *SyntaxErrorWithSuggestedFix) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: fmt.Sprintf("replace with %s", e.SuggestedFix),
 			TextEdits: []ast.TextEdit{
 				{
 					Replacement: e.SuggestedFix,
-					Range: ast.Range{
-						StartPos: e.Pos,
-						EndPos:   e.Pos,
-					},
+					Range:       e.Range,
 				},
 			},
 		},
