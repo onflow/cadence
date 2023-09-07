@@ -2373,9 +2373,13 @@ func GetValueForIntegerType(value int8, staticType StaticType) IntegerValue {
 	}
 
 	return val
-	return val
 }
 
+// It is important to not meter the memory usage in this function, as it would lead to
+// non-determinism as the values produced by this function are cached.
+// It could happen that on some execution nodes the value might be cached due to executing a
+// transaction or script that needed the value previously, while on other execution nodes it might
+// not be cached yet.
 func getValueForIntegerType(value int8, staticType StaticType) IntegerValue {
 	switch staticType {
 	case PrimitiveStaticTypeInt:
