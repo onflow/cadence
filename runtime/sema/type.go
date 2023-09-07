@@ -5259,16 +5259,24 @@ func (r *InclusiveRangeType) String() string {
 }
 
 func (r *InclusiveRangeType) QualifiedString() string {
+	memberString := ""
+	if r.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", r.MemberType.String())
+	}
 	return fmt.Sprintf(
 		"InclusiveRange<%s>",
-		r.MemberType.QualifiedString(),
+		memberString,
 	)
 }
 
 func (r *InclusiveRangeType) ID() TypeID {
+	memberID := ""
+	if r.MemberType != nil {
+		memberID = fmt.Sprintf("<%s>", r.MemberType.ID())
+	}
 	return TypeID(fmt.Sprintf(
 		"InclusiveRange<%s>",
-		r.MemberType.ID(),
+		memberID,
 	))
 }
 
@@ -5313,23 +5321,24 @@ func (*InclusiveRangeType) IsComparable() bool {
 }
 
 func (r *InclusiveRangeType) TypeAnnotationState() TypeAnnotationState {
-	elementTypeAnnotationState := r.MemberType.TypeAnnotationState()
-	if elementTypeAnnotationState != TypeAnnotationStateValid {
-		return elementTypeAnnotationState
+	if r.MemberType == nil {
+		return TypeAnnotationStateValid
 	}
 
-	return TypeAnnotationStateValid
+	return r.MemberType.TypeAnnotationState()
 }
 
 func (r *InclusiveRangeType) RewriteWithRestrictedTypes() (Type, bool) {
-	rewrittenElementType, elementTypeRewritten := r.MemberType.RewriteWithRestrictedTypes()
-	if elementTypeRewritten {
-		return &InclusiveRangeType{
-			MemberType: rewrittenElementType,
-		}, true
-	} else {
+	if r.MemberType == nil {
 		return r, false
 	}
+	rewrittenMemberType, rewritten := r.MemberType.RewriteWithRestrictedTypes()
+	if rewritten {
+		return &InclusiveRangeType{
+			MemberType: rewrittenMemberType,
+		}, true
+	}
+	return r, false
 }
 
 func (t *InclusiveRangeType) BaseType() Type {
