@@ -2061,10 +2061,10 @@ type InclusiveRange struct {
 	fields             []Field
 }
 
-var _ Value = InclusiveRange{}
+var _ Value = &InclusiveRange{}
 
-func NewInclusiveRange(start, end, step Value) InclusiveRange {
-	return InclusiveRange{
+func NewInclusiveRange(start, end, step Value) *InclusiveRange {
+	return &InclusiveRange{
 		Start: start,
 		End:   end,
 		Step:  step,
@@ -2074,14 +2074,14 @@ func NewInclusiveRange(start, end, step Value) InclusiveRange {
 func NewMeteredInclusiveRange(
 	gauge common.MemoryGauge,
 	start, end, step Value,
-) InclusiveRange {
+) *InclusiveRange {
 	common.UseMemory(gauge, common.CadenceInclusiveRangeValueMemoryUsage)
 	return NewInclusiveRange(start, end, step)
 }
 
-func (InclusiveRange) isValue() {}
+func (*InclusiveRange) isValue() {}
 
-func (v InclusiveRange) Type() Type {
+func (v *InclusiveRange) Type() Type {
 	if v.InclusiveRangeType == nil {
 		// Return nil Type instead of Type referencing nil *InclusiveRangeType,
 		// so caller can check if v's type is nil and also prevent nil pointer dereference.
@@ -2090,16 +2090,16 @@ func (v InclusiveRange) Type() Type {
 	return v.InclusiveRangeType
 }
 
-func (v InclusiveRange) MeteredType(common.MemoryGauge) Type {
+func (v *InclusiveRange) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v InclusiveRange) WithType(typ *InclusiveRangeType) InclusiveRange {
+func (v *InclusiveRange) WithType(typ *InclusiveRangeType) *InclusiveRange {
 	v.InclusiveRangeType = typ
 	return v
 }
 
-func (v InclusiveRange) ToGoValue() any {
+func (v *InclusiveRange) ToGoValue() any {
 	return []any{
 		v.Start.ToGoValue(),
 		v.End.ToGoValue(),
@@ -2107,7 +2107,7 @@ func (v InclusiveRange) ToGoValue() any {
 	}
 }
 
-func (v InclusiveRange) String() string {
+func (v *InclusiveRange) String() string {
 	if v.InclusiveRangeType == nil {
 		return ""
 	}

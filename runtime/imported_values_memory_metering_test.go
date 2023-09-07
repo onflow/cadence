@@ -407,7 +407,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
-		inclusiveRangeValue := cadence.InclusiveRange{
+		inclusiveRangeValue := &cadence.InclusiveRange{
 			InclusiveRangeType: &cadence.InclusiveRangeType{
 				ElementType: cadence.IntType{},
 			},

@@ -872,7 +872,7 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	))
 }
 
-func (d *Decoder) decodeInclusiveRange(valueJSON any) cadence.InclusiveRange {
+func (d *Decoder) decodeInclusiveRange(valueJSON any) *cadence.InclusiveRange {
 	obj := toObject(valueJSON)
 
 	start := obj.GetValue(d, startKey)

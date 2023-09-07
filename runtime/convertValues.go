@@ -630,7 +630,7 @@ func exportCompositeValueAsInclusiveRange(
 	locationRange interpreter.LocationRange,
 	seenReferences seenReferences,
 ) (
-	cadence.InclusiveRange,
+	*cadence.InclusiveRange,
 	error,
 ) {
 	compositeValue, ok := v.(*interpreter.CompositeValue)
@@ -656,17 +656,17 @@ func exportCompositeValueAsInclusiveRange(
 
 	startValue, err := getNonComputedField(sema.InclusiveRangeTypeStartFieldName)
 	if err != nil {
-		return cadence.InclusiveRange{}, err
+		return &cadence.InclusiveRange{}, err
 	}
 
 	endValue, err := getNonComputedField(sema.InclusiveRangeTypeEndFieldName)
 	if err != nil {
-		return cadence.InclusiveRange{}, err
+		return &cadence.InclusiveRange{}, err
 	}
 
 	stepValue, err := getNonComputedField(sema.InclusiveRangeTypeStepFieldName)
 	if err != nil {
-		return cadence.InclusiveRange{}, err
+		return &cadence.InclusiveRange{}, err
 	}
 
 	inclusiveRange := cadence.NewMeteredInclusiveRange(
@@ -920,7 +920,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			v.EnumType.Fields,
 			v.Fields,
 		)
-	case cadence.InclusiveRange:
+	case *cadence.InclusiveRange:
 		return i.importInclusiveRangeValue(v, expectedType)
 	case cadence.TypeValue:
 		return i.importTypeValue(v.StaticType)
@@ -1452,7 +1452,7 @@ func (i valueImporter) importDictionaryValue(
 }
 
 func (i valueImporter) importInclusiveRangeValue(
-	v cadence.InclusiveRange,
+	v *cadence.InclusiveRange,
 	expectedType sema.Type,
 ) (
 	*interpreter.CompositeValue,

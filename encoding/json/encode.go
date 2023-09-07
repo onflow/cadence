@@ -343,7 +343,7 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareArray(v)
 	case cadence.Dictionary:
 		return prepareDictionary(v)
-	case cadence.InclusiveRange:
+	case *cadence.InclusiveRange:
 		return prepareInclusiveRange(v)
 	case cadence.Struct:
 		return prepareStruct(v)
@@ -606,7 +606,7 @@ func prepareDictionary(v cadence.Dictionary) jsonValue {
 	}
 }
 
-func prepareInclusiveRange(v cadence.InclusiveRange) jsonValue {
+func prepareInclusiveRange(v *cadence.InclusiveRange) jsonValue {
 	return jsonValueObject{
 		Type: inclusiveRangeTypeStr,
 		Value: jsonInclusiveRangeValue{

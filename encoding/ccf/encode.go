@@ -564,7 +564,7 @@ func (e *Encoder) encodeValue(
 	case cadence.Dictionary:
 		return e.encodeDictionary(v, tids)
 
-	case cadence.InclusiveRange:
+	case *cadence.InclusiveRange:
 		return e.encodeInclusiveRange(v, tids)
 
 	case cadence.Struct:
@@ -984,7 +984,7 @@ func encodeAndSortKeyValuePairs(
 // encodeInclusiveRange encodes cadence.InclusiveRange as
 // language=CDDL
 // inclusiverange-value = [3*3 (key: value, value: value)]
-func (e *Encoder) encodeInclusiveRange(v cadence.InclusiveRange, tids ccfTypeIDByCadenceType) error {
+func (e *Encoder) encodeInclusiveRange(v *cadence.InclusiveRange, tids ccfTypeIDByCadenceType) error {
 	staticElementType := v.InclusiveRangeType.ElementType
 
 	// Encode array head with array size of 3.
