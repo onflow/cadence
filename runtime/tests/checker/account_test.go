@@ -1083,6 +1083,33 @@ func TestCheckAccountContractsUpdate(t *testing.T) {
         `)
 		require.NoError(t, err)
 	})
+
+	t.Run("try update, unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: &Account.Contracts): DeploymentResult {
+                return contracts.tryUpdate(name: "foo", code: "012".decodeHex())
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errors[0], &invalidAccessErr)
+		assert.Equal(t, "tryUpdate", invalidAccessErr.Name)
+	})
+
+	t.Run("try update, authorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: auth(Contracts) &Account.Contracts): DeploymentResult {
+                return contracts.tryUpdate(name: "foo", code: "012".decodeHex())
+            }
+        `)
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckAccountContractsRemove(t *testing.T) {

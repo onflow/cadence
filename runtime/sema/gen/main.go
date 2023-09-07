@@ -368,10 +368,12 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 
 	var generateSimpleType bool
 
-	// Check if the declaration is explicit marked to generate a composite type.
+	// Check if the declaration is explicitly marked to be generated as a composite type.
 	if _, ok := g.leadingPragma["compositeType"]; ok {
 		generateSimpleType = false
 	} else {
+		// If not, decide what to generate depending on the type.
+
 		// We can generate a SimpleType declaration,
 		// if this is a top-level type,
 		// and this declaration has no nested type declarations.
