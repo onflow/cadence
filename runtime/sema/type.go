@@ -7368,18 +7368,23 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 const CapabilityTypeBorrowFunctionName = "borrow"
 
 const capabilityTypeBorrowFunctionDocString = `
-Returns a reference to the object targeted by the capability.
+Returns a reference to the targeted object.
 
-If no object is stored at the target path, the function returns nil.
+If the capability is revoked, the function returns nil.
 
-If there is an object stored, a reference is returned as an optional, provided it can be borrowed using the given type.
-If the stored object cannot be borrowed using the given type, the function panics.
+If the capability targets an object in account storage,
+and and no object is stored at the target storage path,
+the function returns nil.
+
+If the targeted object cannot be borrowed using the given type,
+the function panics.
 `
 
 const CapabilityTypeCheckFunctionName = "check"
 
 const capabilityTypeCheckFunctionDocString = `
-Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
+Returns true if the capability currently targets an object that satisfies the given type,
+i.e. could be borrowed using the given type
 `
 
 var CapabilityTypeAddressFieldType = TheAddressType
@@ -7387,7 +7392,7 @@ var CapabilityTypeAddressFieldType = TheAddressType
 const CapabilityTypeAddressFieldName = "address"
 
 const capabilityTypeAddressFieldDocString = `
-The address of the capability
+The address of the account which the capability targets.
 `
 
 func (t *CapabilityType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
