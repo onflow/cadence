@@ -334,6 +334,10 @@ struct Account {
     access(all)
     struct StorageCapabilities {
 
+        /// Issue/create a new storage capability.
+        access(Capabilities | StorageCapabilities | IssueStorageCapabilityController)
+        fun issue<T: &Any>(_ path: StoragePath): Capability<T>
+
         /// Get the storage capability controller for the capability with the specified ID.
         ///
         /// Returns nil if the ID does not reference an existing storage capability.
@@ -359,14 +363,14 @@ struct Account {
             forPath: StoragePath,
             _ function: fun(&StorageCapabilityController): Bool
         )
-
-        /// Issue/create a new storage capability.
-        access(Capabilities | StorageCapabilities | IssueStorageCapabilityController)
-        fun issue<T: &Any>(_ path: StoragePath): Capability<T>
     }
 
     access(all)
     struct AccountCapabilities {
+        /// Issue/create a new account capability.
+        access(Capabilities | AccountCapabilities | IssueAccountCapabilityController)
+        fun issue<T: &Account>(): Capability<T>
+
         /// Get capability controller for capability with the specified ID.
         ///
         /// Returns nil if the ID does not reference an existing account capability.
@@ -388,10 +392,6 @@ struct Account {
         /// Otherwise, iteration aborts.
         access(Capabilities | AccountCapabilities | GetAccountCapabilityController)
         fun forEachController(_ function: fun(&AccountCapabilityController): Bool)
-
-        /// Issue/create a new account capability.
-        access(Capabilities | AccountCapabilities | IssueAccountCapabilityController)
-        fun issue<T: &Account>(): Capability<T>
     }
 }
 
