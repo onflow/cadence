@@ -18,12 +18,15 @@
 
 package stdlib
 
+import "github.com/onflow/cadence/runtime/sema"
+
+var UInt8Type = sema.UInt8Type
+
 type StandardLibraryHandler interface {
 	Logger
 	UnsafeRandomGenerator
 	BlockAtHeightProvider
 	CurrentBlockProvider
-	PublicAccountHandler
 	AccountCreator
 	PublicKeyValidator
 	PublicKeySignatureVerifier
@@ -44,7 +47,7 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		NewGetBlockFunction(handler),
 		NewGetCurrentBlockFunction(handler),
 		NewGetAccountFunction(handler),
-		NewAuthAccountConstructor(handler),
+		NewAccountConstructor(handler),
 		NewPublicKeyConstructor(handler, handler, handler),
 		NewBLSContract(nil, handler),
 		NewHashAlgorithmConstructor(handler),

@@ -50,6 +50,7 @@ The code of the contract.
 const DeployedContractTypePublicTypesFunctionName = "publicTypes"
 
 var DeployedContractTypePublicTypesFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
 			Type: MetaType,
@@ -84,6 +85,7 @@ var DeployedContractType = &SimpleType{
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
+	ContainFields: true,
 }
 
 func init() {
@@ -91,7 +93,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DeployedContractTypeAddressFieldName,
 				DeployedContractTypeAddressFieldType,
@@ -99,7 +101,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DeployedContractTypeNameFieldName,
 				DeployedContractTypeNameFieldType,
@@ -107,7 +109,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DeployedContractTypeCodeFieldName,
 				DeployedContractTypeCodeFieldType,
@@ -115,7 +117,7 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				DeployedContractTypePublicTypesFunctionName,
 				DeployedContractTypePublicTypesFunctionType,
 				DeployedContractTypePublicTypesFunctionDocString,

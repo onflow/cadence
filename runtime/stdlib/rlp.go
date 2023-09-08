@@ -18,66 +18,15 @@
 
 package stdlib
 
+//go:generate go run ../sema/gen -p stdlib rlp.cdc rlp.gen.go
+
 import (
 	"fmt"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib/rlp"
-)
-
-var rlpContractType = func() *sema.CompositeType {
-	ty := &sema.CompositeType{
-		Identifier: "RLP",
-		Kind:       common.CompositeKindContract,
-	}
-
-	ty.Members = sema.MembersAsMap([]*sema.Member{
-		sema.NewUnmeteredPublicFunctionMember(
-			ty,
-			rlpDecodeListFunctionName,
-			rlpDecodeListFunctionType,
-			rlpDecodeListFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			ty,
-			rlpDecodeStringFunctionName,
-			rlpDecodeStringFunctionType,
-			rlpDecodeStringFunctionDocString,
-		),
-	})
-	return ty
-}()
-
-var rlpContractTypeID = rlpContractType.ID()
-var rlpContractStaticType interpreter.StaticType = interpreter.CompositeStaticType{
-	QualifiedIdentifier: rlpContractType.Identifier,
-	TypeID:              rlpContractTypeID,
-}
-
-const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
-
-const rlpDecodeStringFunctionDocString = `
-Decodes an RLP-encoded byte array (called string in the context of RLP). 
-The byte array should only contain of a single encoded value for a string;
-if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
-If any error is encountered while decoding, the program aborts.
-`
-
-const rlpDecodeStringFunctionName = "decodeString"
-
-var rlpDecodeStringFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityView,
-	[]sema.Parameter{
-		{
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     "input",
-			TypeAnnotation: sema.ByteArrayTypeAnnotation,
-		},
-	},
-	sema.ByteArrayTypeAnnotation,
 )
 
 type RLPDecodeStringError struct {
@@ -93,8 +42,10 @@ func (e RLPDecodeStringError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode string: %s", e.Msg)
 }
 
+const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
+
 var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
-	rlpDecodeStringFunctionType,
+	RLPTypeDecodeStringFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -129,28 +80,6 @@ var rlpDecodeStringFunction = interpreter.NewUnmeteredHostFunctionValue(
 	},
 )
 
-const rlpDecodeListFunctionDocString = `
-Decodes an RLP-encoded list into an array of RLP-encoded items.
-Note that this function does not recursively decode, so each element of the resulting array is RLP-encoded data. 
-The byte array should only contain of a single encoded value for a list;
-if the encoded value type does not match, or it has trailing unnecessary bytes, the program aborts.
-If any error is encountered while decoding, the program aborts.
-`
-
-const rlpDecodeListFunctionName = "decodeList"
-
-var rlpDecodeListFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityView,
-	[]sema.Parameter{
-		{
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     "input",
-			TypeAnnotation: sema.ByteArrayTypeAnnotation,
-		},
-	},
-	sema.ByteArrayArrayTypeAnnotation,
-)
-
 type RLPDecodeListError struct {
 	interpreter.LocationRange
 	Msg string
@@ -165,7 +94,7 @@ func (e RLPDecodeListError) Error() string {
 }
 
 var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
-	rlpDecodeListFunctionType,
+	RLPTypeDecodeListFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		input, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 		if !ok {
@@ -219,14 +148,16 @@ var rlpDecodeListFunction = interpreter.NewUnmeteredHostFunctionValue(
 )
 
 var rlpContractFields = map[string]interpreter.Value{
-	rlpDecodeListFunctionName:   rlpDecodeListFunction,
-	rlpDecodeStringFunctionName: rlpDecodeStringFunction,
+	RLPTypeDecodeListFunctionName:   rlpDecodeListFunction,
+	RLPTypeDecodeStringFunctionName: rlpDecodeStringFunction,
 }
+
+var RLPTypeStaticType = interpreter.ConvertSemaToStaticType(nil, RLPType)
 
 var rlpContractValue = interpreter.NewSimpleCompositeValue(
 	nil,
-	rlpContractType.ID(),
-	rlpContractStaticType,
+	RLPType.ID(),
+	RLPTypeStaticType,
 	nil,
 	rlpContractFields,
 	nil,
@@ -235,8 +166,8 @@ var rlpContractValue = interpreter.NewSimpleCompositeValue(
 )
 
 var RLPContract = StandardLibraryValue{
-	Name:  "RLP",
-	Type:  rlpContractType,
+	Name:  RLPTypeName,
+	Type:  RLPType,
 	Value: rlpContractValue,
 	Kind:  common.DeclarationKindContract,
 }

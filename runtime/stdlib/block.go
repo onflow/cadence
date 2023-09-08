@@ -102,7 +102,7 @@ func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 	)
 }
 
-var BlockIDStaticType = interpreter.ConstantSizedStaticType{
+var BlockIDStaticType = &interpreter.ConstantSizedStaticType{
 	Type: interpreter.PrimitiveStaticTypeUInt8, // unmetered
 	Size: 32,
 }
@@ -179,7 +179,7 @@ func getBlockAtHeight(
 		block, exists, err = provider.GetBlockAtHeight(height)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 
 	return block, exists
@@ -204,7 +204,7 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 				height, err = provider.GetCurrentBlockHeight()
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			block, exists := getBlockAtHeight(

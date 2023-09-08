@@ -21,6 +21,7 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -52,7 +53,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		true,
 	)
 
-	inheritedMembers := map[string]*Member{}
+	inheritedMembers := map[string][]*Member{}
 	inheritedTypes := map[string]Type{}
 
 	for _, conformance := range interfaceType.EffectiveInterfaceConformances() {
@@ -79,14 +80,23 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 
 	checker.checkNestedIdentifiers(declaration.Members)
 
-	// Activate new scope for nested types
+	// Activate new scope for nested types and values
 
 	checker.typeActivations.Enter()
 	defer checker.typeActivations.Leave(declaration.EndPosition)
 
+	checker.enterValueScope()
+	defer checker.leaveValueScope(declaration.EndPosition, false)
+
 	// Declare nested types
 
 	checker.declareInterfaceNestedTypes(declaration)
+
+	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
+			checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration)
+		}
+	}
 
 	checker.checkInitializers(
 		declaration.Members.Initializers(),
@@ -146,16 +156,11 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	}
 
 	for _, nestedComposite := range declaration.Members.Composites() {
-		// Composite declarations nested in interface declarations are type requirements,
-		// i.e. they should be checked like interfaces
-
-		checker.visitCompositeLikeDeclaration(nestedComposite, kind)
-	}
-
-	for _, nestedAttachments := range declaration.Members.Attachments() {
-		// Attachment declarations nested in interface declarations are type requirements,
-		// i.e. they should be checked like interfaces
-		checker.visitAttachmentDeclaration(nestedAttachments, kind)
+		// only event types may be declared in interfaces.
+		// However, the error will be reported later in `declareNestedDeclarations``
+		if nestedComposite.Kind() == common.CompositeKindEvent {
+			checker.visitCompositeLikeDeclaration(nestedComposite)
+		}
 	}
 
 	return
@@ -342,13 +347,42 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	return interfaceType
 }
 
-// declareInterfaceMembers declares the members for the given interface declaration,
+func (checker *Checker) declareNestedEvent(
+	nestedCompositeDeclaration ast.CompositeLikeDeclaration,
+	eventMembers *orderedmap.OrderedMap[string, *Member],
+	interfaceType Type,
+) {
+	checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration)
+
+	// Declare nested composites' values (constructor/instance) as members of the containing composite
+	identifier := *nestedCompositeDeclaration.DeclarationIdentifier()
+
+	// Find the value declaration
+	nestedCompositeDeclarationVariable :=
+		checker.valueActivations.Find(identifier.Identifier)
+
+	eventMembers.Set(
+		nestedCompositeDeclarationVariable.Identifier,
+		&Member{
+			Identifier:            identifier,
+			Access:                checker.accessFromAstAccess(nestedCompositeDeclaration.DeclarationAccess()),
+			ContainerType:         interfaceType,
+			TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
+			DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
+			VariableKind:          ast.VariableKindConstant,
+			ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
+			IgnoreInSerialization: true,
+			DocString:             nestedCompositeDeclaration.DeclarationDocString(),
+		})
+}
+
+// declareInterfaceMembersAndValue declares the members for the given interface declaration,
 // and recursively for all nested declarations.
 //
 // NOTE: This function assumes that the interface type and the nested declarations' types
 // were previously declared using `declareInterfaceType` and exists
 // in the elaboration's `InterfaceDeclarationTypes` and `InterfaceNestedDeclarations` fields.
-func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclaration) {
+func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.InterfaceDeclaration) {
 
 	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
 	if interfaceType == nil {
@@ -357,62 +391,62 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	compositeKind := declaration.Kind()
 
-	// Activate new scope for nested declarations
+	eventMembers := orderedmap.New[StringMemberOrderedMap](len(declaration.Members.Composites()))
 
-	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave(declaration.EndPosition)
+	(func() { // Activate new scope for nested declarations
 
-	checker.enterValueScope()
-	defer checker.leaveValueScope(declaration.EndPosition, false)
+		checker.typeActivations.Enter()
+		defer checker.typeActivations.Leave(declaration.EndPosition)
 
-	// Declare nested types
+		checker.enterValueScope()
+		defer checker.leaveValueScope(declaration.EndPosition, false)
 
-	checker.declareInterfaceNestedTypes(declaration)
+		// Declare nested types
 
-	// Declare members
+		checker.declareInterfaceNestedTypes(declaration)
 
-	members, fields, origins := checker.defaultMembersAndOrigins(
-		declaration.Members,
-		interfaceType,
-		ContainerKindInterface,
-		declaration.DeclarationKind(),
-	)
+		// Declare members
 
-	if interfaceType.CompositeKind == common.CompositeKindContract {
-		checker.checkMemberStorability(members)
-	}
+		members, fields, origins := checker.defaultMembersAndOrigins(
+			declaration.Members,
+			interfaceType,
+			ContainerKindInterface,
+			declaration.DeclarationKind(),
+		)
 
-	interfaceType.Members = members
-	interfaceType.Fields = fields
-	if checker.PositionInfo != nil {
-		checker.PositionInfo.recordMemberOrigins(interfaceType, origins)
-	}
+		if interfaceType.CompositeKind == common.CompositeKindContract {
+			checker.checkMemberStorability(members)
+		}
 
-	// NOTE: determine initializer parameter types while nested types are in scope,
-	// and after declaring nested types as the initializer may use nested type in parameters
+		interfaceType.Members = members
+		interfaceType.Fields = fields
+		if checker.PositionInfo != nil {
+			checker.PositionInfo.recordMemberOrigins(interfaceType, origins)
+		}
 
-	initializers := declaration.Members.Initializers()
-	interfaceType.InitializerParameters = checker.initializerParameters(initializers)
-	interfaceType.InitializerPurity = checker.initializerPurity(compositeKind, initializers)
+		// NOTE: determine initializer parameter types while nested types are in scope,
+		// and after declaring nested types as the initializer may use nested type in parameters
 
-	// Declare nested declarations' members
+		initializers := declaration.Members.Initializers()
+		interfaceType.InitializerParameters = checker.initializerParameters(initializers)
+		interfaceType.InitializerPurity = checker.initializerPurity(compositeKind, initializers)
 
-	for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
-		// resolve conformances
-		nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
-		nestedInterfaceType.ExplicitInterfaceConformances =
-			checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
+		// Declare nested declarations' members
+		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
+			// resolve conformances
+			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
+			nestedInterfaceType.ExplicitInterfaceConformances =
+				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
 
-		checker.declareInterfaceMembers(nestedInterfaceDeclaration)
-	}
+			checker.declareInterfaceMembersAndValue(nestedInterfaceDeclaration)
+		}
 
-	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-		checker.declareCompositeLikeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
-	}
-
-	for _, nestedAttachmentDeclaration := range declaration.Members.Attachments() {
-		checker.declareAttachmentMembersAndValue(nestedAttachmentDeclaration, ContainerKindInterface)
-	}
+		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
+				checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
+			}
+		}
+	})()
 }
 
 func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDeclaration) *EntitlementType {
@@ -485,9 +519,11 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 		)
 	}
 
-	entitlementRelations := make([]EntitlementRelation, 0, len(declaration.Associations))
+	relations := declaration.Relations()
 
-	for _, association := range declaration.Associations {
+	entitlementRelations := make([]EntitlementRelation, 0, len(relations))
+
+	for _, association := range relations {
 		input := checker.convertNominalType(association.Input)
 		inputEntitlement, isEntitlement := input.(*EntitlementType)
 
@@ -538,6 +574,9 @@ func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.Enti
 		declaration.StartPos,
 		true,
 	)
+
+	entitlementMapType.resolveEntitlementMappingInclusions(checker, declaration, map[*EntitlementMapType]struct{}{})
+
 	return
 }
 
@@ -549,7 +588,7 @@ func (checker *Checker) checkInterfaceConformance(
 	interfaceDeclaration *ast.InterfaceDeclaration,
 	interfaceType *InterfaceType,
 	conformance *InterfaceType,
-	inheritedMembers map[string]*Member,
+	inheritedMembersByName map[string][]*Member,
 	inheritedNestedTypes map[string]Type,
 ) {
 
@@ -564,17 +603,18 @@ func (checker *Checker) checkInterfaceConformance(
 		var isDuplicate bool
 
 		// Check if the members coming from other conformances have conflicts.
-		if conflictingMember, ok := inheritedMembers[name]; ok {
-			conflictingInterface := conflictingMember.ContainerType.(*InterfaceType)
-			isDuplicate = checker.checkDuplicateInterfaceMember(
-				conformance,
-				conformanceMember,
-				conflictingInterface,
-				conflictingMember,
-				func() ast.Range {
-					return ast.NewRangeFromPositioned(checker.memoryGauge, interfaceDeclaration.Identifier)
-				},
-			)
+		inheritedMembers, ok := inheritedMembersByName[name]
+		if ok {
+			for _, conflictingMember := range inheritedMembers {
+				conflictingInterface := conflictingMember.ContainerType.(*InterfaceType)
+				isDuplicate = checker.checkDuplicateInterfaceMember(
+					conformance,
+					conformanceMember,
+					conflictingInterface,
+					conflictingMember,
+					interfaceDeclaration.Identifier,
+				)
+			}
 		}
 
 		// Check if the members coming from the current declaration have conflicts.
@@ -585,64 +625,14 @@ func (checker *Checker) checkInterfaceConformance(
 				declarationMember,
 				conformance,
 				conformanceMember,
-				func() ast.Range {
-					return ast.NewRangeFromPositioned(checker.memoryGauge, declarationMember.Identifier)
-				},
+				declarationMember.Identifier,
 			)
 		}
 
 		// Add to the inherited members list, only if it's not a duplicated, to avoid redundant errors.
 		if !isDuplicate {
-			inheritedMembers[name] = conformanceMember
-		}
-	})
-
-	// Check for nested type conflicts
-
-	reportTypeConflictError := func(typeName string, typ CompositeKindedType, otherType Type) {
-		otherCompositeType, ok := otherType.(CompositeKindedType)
-		if !ok {
-			return
-		}
-
-		_, isInterface := typ.(*InterfaceType)
-		_, isOtherTypeInterface := otherCompositeType.(*InterfaceType)
-
-		checker.report(&InterfaceMemberConflictError{
-			InterfaceType:            interfaceType,
-			ConflictingInterfaceType: conformance,
-			MemberName:               typeName,
-			MemberKind:               typ.GetCompositeKind().DeclarationKind(isInterface),
-			ConflictingMemberKind:    otherCompositeType.GetCompositeKind().DeclarationKind(isOtherTypeInterface),
-			Range: ast.NewRangeFromPositioned(
-				checker.memoryGauge,
-				interfaceDeclaration.Identifier,
-			),
-		})
-	}
-
-	conformance.NestedTypes.Foreach(func(name string, typeRequirement Type) {
-		compositeType, ok := typeRequirement.(CompositeKindedType)
-		if !ok {
-			return
-		}
-
-		// Check if the type definitions coming from other conformances have conflicts.
-		if inheritedType, ok := inheritedNestedTypes[name]; ok {
-			inheritedCompositeType, ok := inheritedType.(CompositeKindedType)
-			if !ok {
-				return
-			}
-
-			reportTypeConflictError(name, compositeType, inheritedCompositeType)
-		}
-
-		inheritedNestedTypes[name] = typeRequirement
-
-		// Check if the type definitions coming from the current declaration have conflicts.
-		nestedType, ok := interfaceType.NestedTypes.Get(name)
-		if ok {
-			reportTypeConflictError(name, compositeType, nestedType)
+			inheritedMembers = append(inheritedMembers, conformanceMember)
+			inheritedMembersByName[name] = inheritedMembers
 		}
 	})
 }
@@ -652,7 +642,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	interfaceMember *Member,
 	conflictingInterfaceType *InterfaceType,
 	conflictingMember *Member,
-	getRange func() ast.Range,
+	hasPosition ast.HasPosition,
 ) (isDuplicate bool) {
 
 	reportMemberConflictError := func() {
@@ -662,23 +652,47 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 			MemberName:               interfaceMember.Identifier.Identifier,
 			MemberKind:               interfaceMember.DeclarationKind,
 			ConflictingMemberKind:    conflictingMember.DeclarationKind,
-			Range:                    getRange(),
+			Range:                    ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
 		})
 
 		isDuplicate = true
 	}
 
 	// Check if the two members have identical signatures.
-	// If yes, they are allowed, but subject to the conditions below.
 	// If not, report an error.
 	if !checker.memberSatisfied(interfaceType, interfaceMember, conflictingMember) {
 		reportMemberConflictError()
 		return
 	}
 
-	if interfaceMember.HasImplementation || conflictingMember.HasImplementation {
-		reportMemberConflictError()
-		return
+	// If yes, they are allowed, but subject to the conditions below.
+	// - Can have at-most one default implementation
+	// - A default implementation can only co-exist with a function with conditions
+	// i.e. Considering three possibilities for the conflicting functions:
+	//   (1) Declaration only: `fun foo()`
+	//   (2) Conditions only:  `fun foo() { pre{} }`
+	//   (3) Default funcs:    `fun foo() { ... }`
+	//
+	// Having conflicting identical functions with:
+	//  - (1) and (1) - OK
+	//  - (1) and (2) - OK
+	//  - (1) and (3) - Not OK
+	//  - (2) and (2) - OK
+	//  - (2) and (3) - OK
+	//  - (3) and (3) - Not OK
+
+	if interfaceMember.HasImplementation {
+		if conflictingMember.HasImplementation || !conflictingMember.HasConditions {
+			reportMemberConflictError()
+			return
+		}
+	}
+
+	if conflictingMember.HasImplementation {
+		if !interfaceMember.HasConditions {
+			reportMemberConflictError()
+			return
+		}
 	}
 
 	return

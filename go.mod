@@ -1,6 +1,6 @@
 module github.com/onflow/cadence
 
-go 1.18
+go 1.20
 
 require (
 	github.com/bits-and-blooms/bitset v1.2.2
@@ -9,10 +9,10 @@ require (
 	github.com/go-test/deep v1.0.5
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/leanovate/gopter v0.2.9
-	github.com/onflow/atree v0.5.0
+	github.com/onflow/atree v0.6.1-0.20230711151834-86040b30171f
 	github.com/rivo/uniseg v0.2.1-0.20211004051800-57c86be7915a
 	github.com/schollz/progressbar/v3 v3.8.3
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/pretty v1.2.1
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d
 	go.opentelemetry.io/otel v1.8.0
@@ -35,6 +35,7 @@ require (
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/k0kubun/pp/v3 v3.2.0
 	github.com/logrusorgru/aurora/v4 v4.0.0
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )
 
 require github.com/zeebo/xxh3 v1.0.2 // indirect
@@ -53,7 +54,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
-	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/term v0.1.0 // indirect

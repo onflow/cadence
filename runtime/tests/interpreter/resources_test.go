@@ -24,8 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -145,80 +143,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		)
 	})
 
-	t.Run("reference, shift statement, member expression", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R2 {
-                let value: String
-
-                init() {
-                    self.value = "test"
-                }
-            }
-
-            resource R1 {
-                var r2: @R2?
-
-                init() {
-                    self.r2 <- nil
-                }
-
-                destroy() {
-                    destroy self.r2
-                }
-            }
-
-            fun createR1(): @R1 {
-                return <- create R1()
-            }
-
-            fun test(r1: &R1): String? {
-                r1.r2 <-! create R2()
-                // The second assignment should not lead to the resource being cleared,
-                // it must be fully moved out of this container before,
-                // not just assigned to the new variable
-                let optR2 <- r1.r2 <- nil
-                let value = optR2?.value
-                destroy optR2
-                return value
-            }
-        `)
-
-		r1, err := inter.Invoke("createR1")
-		require.NoError(t, err)
-
-		r1 = r1.Transfer(
-			inter,
-			interpreter.EmptyLocationRange,
-			atree.Address{1},
-			false,
-			nil,
-			nil,
-		)
-
-		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
-
-		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
-			r1,
-			r1Type,
-		)
-
-		value, err := inter.Invoke("test", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.NewUnmeteredStringValue("test"),
-			),
-			value,
-		)
-	})
-
 	t.Run("resource, if-let statement, member expression", func(t *testing.T) {
 
 		t.Parallel()
@@ -261,82 +185,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
         `)
 
 		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.NewUnmeteredStringValue("test"),
-			),
-			value,
-		)
-	})
-
-	t.Run("reference, if-let statement, member expression", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R2 {
-                let value: String
-
-                init() {
-                    self.value = "test"
-                }
-            }
-
-            resource R1 {
-                var r2: @R2?
-
-                init() {
-                    self.r2 <- nil
-                }
-
-                destroy() {
-                    destroy self.r2
-                }
-            }
-
-            fun createR1(): @R1 {
-                return <- create R1()
-            }
-
-            fun test(r1: &R1): String? {
-                r1.r2 <-! create R2()
-                // The second assignment should not lead to the resource being cleared,
-                // it must be fully moved out of this container before,
-                // not just assigned to the new variable
-                if let r2 <- r1.r2 <- nil {
-                    let value = r2.value
-                    destroy r2
-                    return value
-                }
-                return nil
-            }
-        `)
-
-		r1, err := inter.Invoke("createR1")
-		require.NoError(t, err)
-
-		r1 = r1.Transfer(
-			inter,
-			interpreter.EmptyLocationRange,
-			atree.Address{1},
-			false,
-			nil,
-			nil,
-		)
-
-		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
-
-		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
-			r1,
-			r1Type,
-		)
-
-		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
@@ -400,88 +248,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		)
 	})
 
-	t.Run("reference, shift statement, index expression", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R2 {
-                let value: String
-
-                init() {
-                    self.value = "test"
-                }
-            }
-
-            resource R1 {
-                access(all) var r2s: @{Int: R2}
-
-				access(all) fun setR2(i: Int, r: @R2) {
-					self.r2s[i] <-! r
-                }
-
-				access(all) fun move(i: Int, r: @R2?): @R2? {
-					let optR2 <- self.r2s[i] <- r
-					return <- optR2
-                }
-
-                init() {
-                    self.r2s <- {}
-                }
-
-                destroy() {
-                    destroy self.r2s
-                }
-            }
-
-            fun createR1(): @R1 {
-                return <- create R1()
-            }
-
-            fun test(r1: &R1): String? {
-				r1.setR2(i: 0, r: <- create R2())
-                // The second assignment should not lead to the resource being cleared,
-                // it must be fully moved out of this container before,
-                // not just assigned to the new variable
-				let optR2 <- r1.move(i: 0, r: nil)
-                let value = optR2?.value
-                destroy optR2
-                return value
-            }
-        `)
-
-		r1, err := inter.Invoke("createR1")
-		require.NoError(t, err)
-
-		r1 = r1.Transfer(
-			inter,
-			interpreter.EmptyLocationRange,
-			atree.Address{1},
-			false,
-			nil,
-			nil,
-		)
-
-		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
-
-		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
-			r1,
-			r1Type,
-		)
-		value, err := inter.Invoke("test", ref)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.NewUnmeteredStringValue("test"),
-			),
-			value,
-		)
-	})
-
 	t.Run("resource, if-let statement, index expression", func(t *testing.T) {
 
 		t.Parallel()
@@ -524,82 +290,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
         `)
 
 		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.NewUnmeteredStringValue("test"),
-			),
-			value,
-		)
-	})
-
-	t.Run("reference, if-let statement, index expression", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R2 {
-                let value: String
-
-                init() {
-                    self.value = "test"
-                }
-            }
-
-            resource R1 {
-                var r2s: @{Int: R2}
-
-                init() {
-                    self.r2s <- {}
-                }
-
-                destroy() {
-                    destroy self.r2s
-                }
-            }
-
-            fun createR1(): @R1 {
-                return <- create R1()
-            }
-
-            fun test(r1: &R1): String? {
-                r1.r2s[0] <-! create R2()
-                // The second assignment should not lead to the resource being cleared,
-                // it must be fully moved out of this container before,
-                // not just assigned to the new variable
-                if let r2 <- r1.r2s[0] <- nil {
-                    let value = r2.value
-                    destroy r2
-                    return value
-                }
-                return nil
-            }
-        `)
-
-		r1, err := inter.Invoke("createR1")
-		require.NoError(t, err)
-
-		r1 = r1.Transfer(
-			inter,
-			interpreter.EmptyLocationRange,
-			atree.Address{1},
-			false,
-			nil,
-			nil,
-		)
-
-		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
-
-		ref := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
-			r1,
-			r1Type,
-		)
-
-		value, err := inter.Invoke("test", ref)
 		require.NoError(t, err)
 
 		AssertValuesEqual(
@@ -2053,7 +1743,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 	})
 }
 
-func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
+func TestInterpretResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
 
 	t.Parallel()
 
@@ -2358,11 +2048,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccount(
-		t,
-		address,
-		true,
-		`
+	inter, _ := testAccount(t, address, true, nil, `
           resource R {
               access(all) let id: Int
 
@@ -2372,18 +2058,16 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
           }
 
           fun test() {
-              account.save(<-{0 : <-create R()}, to: /storage/x)
-              let collection = account.borrow<&{Int: R}>(from: /storage/x)!
+              account.storage.save(<-{0 : <-create R()}, to: /storage/x)
+              let collection = account.storage.borrow<auth(Remove) &{Int: R}>(from: /storage/x)!
 
-              let resourceRef = (&collection[0] as &R?)!
+              let resourceRef = collection[0]!
               let token <- collection.remove(key: 0)
 
               let x = resourceRef.id
               destroy token
           }
-        `,
-		sema.Config{},
-	)
+        `, sema.Config{})
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
@@ -2396,11 +2080,7 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccount(
-		t,
-		address,
-		true,
-		`
+	inter, _ := testAccount(t, address, true, nil, `
           resource R {
               access(all) let id: Int
 
@@ -2410,18 +2090,16 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
           }
 
           fun test() {
-              account.save(<-[<-create R()], to: /storage/x)
-              let collection = account.borrow<&[R?]>(from: /storage/x)!
+              account.storage.save(<-[<-create R()], to: /storage/x)
+              let collection = account.storage.borrow<auth(Remove) &[R?]>(from: /storage/x)!
 
-              let resourceRef = (&collection[0] as &R?)!
+              let resourceRef = collection[0]!
               let token <- collection.remove(at: 0)
 
               let x = resourceRef.id
               destroy token
           }
-        `,
-		sema.Config{},
-	)
+        `, sema.Config{})
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
@@ -2662,7 +2340,7 @@ func TestInterpretResourceFunctionInvocationAfterDestruction(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestInterpretResourceFunctionReferenceValidity(t *testing.T) {

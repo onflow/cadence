@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -82,7 +81,7 @@ var _ FunctionValue = &InterpretedFunctionValue{}
 func (*InterpretedFunctionValue) isValue() {}
 
 func (f *InterpretedFunctionValue) String() string {
-	return format.Function(f.Type.String())
+	return f.Type.String()
 }
 
 func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
@@ -179,7 +178,7 @@ type HostFunctionValue struct {
 }
 
 func (f *HostFunctionValue) String() string {
-	return format.Function(f.Type.String())
+	return f.Type.String()
 }
 
 func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
@@ -391,12 +390,9 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	self := f.Self
 	invocation.Self = self
 	if self != nil {
-		if resource, ok := (*self).(ResourceKindedValue); ok && resource.IsDestroyed() {
-			panic(DestroyedResourceError{
-				LocationRange: invocation.LocationRange,
-			})
-		}
+		invocation.Interpreter.checkReferencedResourceNotMovedOrDestroyed(*self, invocation.LocationRange)
 	}
+
 	invocation.Base = f.Base
 	invocation.BoundAuthorization = f.BoundAuthorization
 	return f.Function.invoke(invocation)

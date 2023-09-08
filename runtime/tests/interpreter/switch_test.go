@@ -196,7 +196,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 				t,
 				inter,
 				expectedValues,
-				arrayElements(inter, arrayValue),
+				ArrayElements(inter, arrayValue),
 			)
 		}
 	})

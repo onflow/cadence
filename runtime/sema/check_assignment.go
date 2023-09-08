@@ -312,27 +312,33 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 	return variable.Type
 }
 
+var mutableEntitledAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{MutateType},
+	Disjunction,
+)
+
+var insertAndRemoveEntitledAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{InsertType, RemoveType},
+	Conjunction,
+)
+
 func (checker *Checker) visitIndexExpressionAssignment(
 	indexExpression *ast.IndexExpression,
 ) (elementType Type) {
 
 	elementType = checker.visitIndexExpression(indexExpression, true)
 
-	if targetExpression, ok := indexExpression.TargetExpression.(*ast.MemberExpression); ok {
-		// visitMember caches its result, so visiting the target expression again,
-		// after it had been previously visited by visiting the outer index expression,
-		// performs no computation
-		_, _, member, _ := checker.visitMember(targetExpression)
-		if member != nil && !checker.isMutatableMember(member) {
-			checker.report(
-				&ExternalMutationError{
-					Name:            member.Identifier.Identifier,
-					DeclarationKind: member.DeclarationKind,
-					Range:           ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
-					ContainerType:   member.ContainerType,
-				},
-			)
-		}
+	indexExprTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
+	indexedRefType, isReference := referenceType(indexExprTypes.IndexedType)
+
+	if isReference &&
+		!mutableEntitledAccess.PermitsAccess(indexedRefType.Authorization) &&
+		!insertAndRemoveEntitledAccess.PermitsAccess(indexedRefType.Authorization) {
+		checker.report(&UnauthorizedReferenceAssignmentError{
+			RequiredAccess: [2]Access{mutableEntitledAccess, insertAndRemoveEntitledAccess},
+			FoundAccess:    indexedRefType.Authorization,
+			Range:          ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
+		})
 	}
 
 	if elementType == nil {

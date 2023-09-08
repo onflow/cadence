@@ -28,13 +28,12 @@ import (
 )
 
 type interpreterTransactionExecutorPreparation struct {
-	codesAndPrograms codesAndPrograms
+	codesAndPrograms CodesAndPrograms
 	environment      Environment
 	preprocessErr    error
 	transactionType  *sema.TransactionType
 	storage          *Storage
 	program          *interpreter.Program
-	authorizers      []Address
 	preprocessOnce   sync.Once
 }
 
@@ -92,7 +91,7 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 	location := context.Location
 	script := executor.script
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
 	interpreterRuntime := executor.runtime
@@ -144,19 +143,18 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 	transactionType := transactions[0]
 	executor.transactionType = transactionType
 
-	var authorizers []Address
+	var authorizerAddresses []Address
 	errors.WrapPanic(func() {
-		authorizers, err = runtimeInterface.GetSigningAccounts()
+		authorizerAddresses, err = runtimeInterface.GetSigningAccounts()
 	})
 	if err != nil {
 		return newError(err, location, codesAndPrograms)
 	}
-	executor.authorizers = authorizers
 
 	// check parameter count
 
 	argumentCount := len(script.Arguments)
-	authorizerCount := len(authorizers)
+	authorizerCount := len(authorizerAddresses)
 
 	transactionParameterCount := len(transactionType.Parameters)
 	if argumentCount != transactionParameterCount {
@@ -167,7 +165,9 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 		return newError(err, location, codesAndPrograms)
 	}
 
-	transactionAuthorizerCount := len(transactionType.PrepareParameters)
+	prepareParameters := transactionType.PrepareParameters
+
+	transactionAuthorizerCount := len(prepareParameters)
 	if authorizerCount != transactionAuthorizerCount {
 		err = InvalidTransactionAuthorizerCountError{
 			Expected: transactionAuthorizerCount,
@@ -178,23 +178,54 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 
 	// gather authorizers
 
-	executor.interpret = executor.transactionExecutionFunction(executor.authorizerValues)
+	executor.interpret = executor.transactionExecutionFunction(
+		func(inter *interpreter.Interpreter) []interpreter.Value {
+			return executor.authorizerValues(
+				inter,
+				authorizerAddresses,
+				prepareParameters,
+			)
+		},
+	)
 
 	return nil
 }
 
-func (executor *interpreterTransactionExecutor) authorizerValues(inter *interpreter.Interpreter) []interpreter.Value {
+func (executor *interpreterTransactionExecutor) authorizerValues(
+	inter *interpreter.Interpreter,
+	addresses []Address,
+	parameters []sema.Parameter,
+) []interpreter.Value {
 
 	// gather authorizers
 
-	authorizerValues := make([]interpreter.Value, 0, len(executor.authorizers))
+	authorizerValues := make([]interpreter.Value, 0, len(addresses))
 
-	for _, address := range executor.authorizers {
+	for i, address := range addresses {
+		parameter := parameters[i]
+
 		addressValue := interpreter.NewAddressValue(inter, address)
-		authorizerValues = append(
-			authorizerValues,
-			executor.environment.NewAuthAccountValue(addressValue),
+
+		accountValue := executor.environment.NewAccountValue(addressValue)
+
+		referenceType, ok := parameter.TypeAnnotation.Type.(*sema.ReferenceType)
+		if !ok || referenceType.Type != sema.AccountType {
+			panic(errors.NewUnreachableError())
+		}
+
+		authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
+			inter,
+			referenceType.Authorization,
 		)
+
+		accountReferenceValue := interpreter.NewEphemeralReferenceValue(
+			inter,
+			authorization,
+			accountValue,
+			sema.AccountType,
+		)
+
+		authorizerValues = append(authorizerValues, accountReferenceValue)
 	}
 
 	return authorizerValues
@@ -250,8 +281,6 @@ func (executor *interpreterTransactionExecutor) transactionExecutionFunction(
 		defer inter.RecoverErrors(func(internalErr error) {
 			err = internalErr
 		})
-
-		inter.ConfigureAccountLinkingAllowed()
 
 		values, err := validateArgumentParams(
 			inter,

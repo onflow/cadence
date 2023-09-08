@@ -452,11 +452,11 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 		assert.Equal(t, "foo", identifier)
 	})
 
-	t.Run("public account container", func(t *testing.T) {
+	t.Run("account container", func(t *testing.T) {
 		t.Parallel()
 
-		identifier := qualifiedIdentifier("foo", PublicAccountType)
-		assert.Equal(t, "PublicAccount.foo", identifier)
+		identifier := qualifiedIdentifier("foo", AccountType)
+		assert.Equal(t, "Account.foo", identifier)
 	})
 }
 
@@ -508,12 +508,12 @@ func TestIdentifierCacheUpdate(t *testing.T) {
               fun test(): Bool
           }
 
-          struct Nested: NestedInterface {}
+          struct interface Nested: NestedInterface {}
       }
 
       contract TestImpl {
 
-          struct Nested {
+          struct Nested: Test.Nested {
               fun test(): Bool {
                   return true
               }
@@ -668,7 +668,16 @@ func TestCommonSuperType(t *testing.T) {
 		var tests []testCase
 
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
 			typ := variable.Type
+
 			tests = append(tests, testCase{
 				name: name,
 				types: []Type{
@@ -905,7 +914,7 @@ func TestCommonSuperType(t *testing.T) {
 				name: "mixed type structs",
 				types: []Type{
 					PublicKeyType,
-					AuthAccountType,
+					AccountType,
 				},
 				expectedSuperType: AnyStructType,
 			},
@@ -1770,6 +1779,14 @@ func TestTypeInclusions(t *testing.T) {
 		t.Parallel()
 
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
 			t.Run(name, func(t *testing.T) {
 
 				typ := variable.Type
@@ -1790,6 +1807,14 @@ func TestTypeInclusions(t *testing.T) {
 		t.Parallel()
 
 		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
 			t.Run(name, func(t *testing.T) {
 
 				typ := variable.Type
@@ -1850,7 +1875,7 @@ func BenchmarkSuperTypeInference(b *testing.B) {
 	b.Run("composites", func(b *testing.B) {
 		types := []Type{
 			PublicKeyType,
-			AuthAccountType,
+			AccountType,
 		}
 
 		b.ReportAllocs()
@@ -1911,8 +1936,8 @@ func TestMapType(t *testing.T) {
 	t.Run("map reference type", func(t *testing.T) {
 		t.Parallel()
 		mapType := NewEntitlementMapAccess(&EntitlementMapType{Identifier: "X"})
-		original := NewReferenceType(nil, StringType, mapType)
-		mapped := NewReferenceType(nil, BoolType, mapType)
+		original := NewReferenceType(nil, mapType, StringType)
+		mapped := NewReferenceType(nil, mapType, BoolType)
 
 		require.Equal(t, mapped, original.Map(nil, make(map[*TypeParameter]*TypeParameter), mapFn))
 	})
@@ -2019,5 +2044,455 @@ func TestMapType(t *testing.T) {
 		require.Equal(t, mapped, outputFunction)
 		require.IsType(t, &GenericType{}, outputFunction.Parameters[0].TypeAnnotation.Type)
 		require.True(t, outputFunction.Parameters[0].TypeAnnotation.Type.(*GenericType).TypeParameter == outputFunction.TypeParameters[0])
+	})
+}
+
+func TestReferenceType_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	containerType := &CompositeType{
+		Location:   testLocation,
+		Identifier: "C",
+	}
+
+	t.Run("top-level, unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		referenceType := NewReferenceType(nil, UnauthorizedAccess, IntType)
+		assert.Equal(t,
+			TypeID("&Int"),
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("top-level, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementMapAccess(NewEntitlementMapType(nil, testLocation, "M"))
+
+		referenceType := NewReferenceType(nil, access, IntType)
+		assert.Equal(t,
+			TypeID("auth(S.test.M)&Int"),
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("top-level, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Conjunction,
+		)
+
+		referenceType := NewReferenceType(nil, access, IntType)
+
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("auth(S.test.E1,S.test.E2)&Int"),
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("nested, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapType := NewEntitlementMapType(nil, testLocation, "M")
+		mapType.SetContainerType(containerType)
+
+		access := NewEntitlementMapAccess(mapType)
+
+		referenceType := NewReferenceType(nil, access, IntType)
+		assert.Equal(t,
+			TypeID("auth(S.test.C.M)&Int"),
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("nested, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		entitlementType1 := NewEntitlementType(nil, testLocation, "E1")
+		entitlementType1.SetContainerType(containerType)
+
+		entitlementType2 := NewEntitlementType(nil, testLocation, "E2")
+		entitlementType2.SetContainerType(containerType)
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				entitlementType2,
+				entitlementType1,
+			},
+			Conjunction,
+		)
+
+		referenceType := NewReferenceType(nil, access, IntType)
+
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("auth(S.test.C.E1,S.test.C.E2)&Int"),
+			referenceType.ID(),
+		)
+	})
+}
+
+func TestReferenceType_String(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		referenceType := NewReferenceType(nil, UnauthorizedAccess, IntType)
+		assert.Equal(t, "&Int", referenceType.String())
+	})
+
+	t.Run("top-level, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementMapAccess(NewEntitlementMapType(nil, testLocation, "M"))
+
+		referenceType := NewReferenceType(nil, access, IntType)
+		assert.Equal(t,
+			"auth(M) &Int",
+			referenceType.String(),
+		)
+	})
+
+	t.Run("top-level, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Conjunction,
+		)
+
+		referenceType := NewReferenceType(nil, access, IntType)
+
+		// NOTE: order
+		assert.Equal(t,
+			"auth(E2, E1) &Int",
+			referenceType.String(),
+		)
+	})
+}
+
+func TestReferenceType_QualifiedString(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	containerType := &CompositeType{
+		Location:   testLocation,
+		Identifier: "C",
+	}
+
+	t.Run("top-level, unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		referenceType := NewReferenceType(nil, UnauthorizedAccess, IntType)
+		assert.Equal(t,
+			"&Int",
+			referenceType.QualifiedString(),
+		)
+	})
+
+	t.Run("top-level, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementMapAccess(NewEntitlementMapType(nil, testLocation, "M"))
+
+		referenceType := NewReferenceType(nil, access, IntType)
+		assert.Equal(t,
+			"auth(M) &Int",
+			referenceType.QualifiedString(),
+		)
+	})
+
+	t.Run("top-level, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				NewEntitlementType(nil, testLocation, "E2"),
+				NewEntitlementType(nil, testLocation, "E1"),
+			},
+			Conjunction,
+		)
+
+		referenceType := NewReferenceType(nil, access, IntType)
+
+		// NOTE: order
+		assert.Equal(t,
+			"auth(E2, E1) &Int",
+			referenceType.QualifiedString(),
+		)
+	})
+
+	t.Run("nested, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapType := NewEntitlementMapType(nil, testLocation, "M")
+		mapType.SetContainerType(containerType)
+
+		access := NewEntitlementMapAccess(mapType)
+
+		referenceType := NewReferenceType(nil, access, IntType)
+		assert.Equal(t,
+			"auth(C.M) &Int",
+			referenceType.QualifiedString(),
+		)
+	})
+
+	t.Run("nested, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		entitlementType1 := NewEntitlementType(nil, testLocation, "E1")
+		entitlementType1.SetContainerType(containerType)
+
+		entitlementType2 := NewEntitlementType(nil, testLocation, "E2")
+		entitlementType2.SetContainerType(containerType)
+
+		access := NewEntitlementSetAccess(
+			[]*EntitlementType{
+				// NOTE: order
+				entitlementType2,
+				entitlementType1,
+			},
+			Conjunction,
+		)
+
+		referenceType := NewReferenceType(nil, access, IntType)
+		assert.Equal(t,
+			"auth(C.E2, C.E1) &Int",
+			referenceType.QualifiedString(),
+		)
+	})
+}
+
+func TestIntersectionType_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	containerType := &CompositeType{
+		Location:   testLocation,
+		Identifier: "C",
+	}
+
+	t.Run("top-level, single", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			nil,
+			[]*InterfaceType{
+				{
+					Location:   testLocation,
+					Identifier: "I",
+				},
+			},
+		)
+		assert.Equal(t,
+			TypeID("{S.test.I}"),
+			intersectionType.ID(),
+		)
+	})
+
+	t.Run("top-level, two", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			nil,
+			[]*InterfaceType{
+				// NOTE: order
+				{
+					Location:   testLocation,
+					Identifier: "I2",
+				},
+				{
+					Location:   testLocation,
+					Identifier: "I1",
+				},
+			},
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("{S.test.I1,S.test.I2}"),
+			intersectionType.ID(),
+		)
+	})
+
+	t.Run("nested, two", func(t *testing.T) {
+		t.Parallel()
+
+		interfaceType1 := &InterfaceType{
+			Location:   testLocation,
+			Identifier: "I1",
+		}
+		interfaceType1.SetContainerType(containerType)
+
+		interfaceType2 := &InterfaceType{
+			Location:   testLocation,
+			Identifier: "I2",
+		}
+		interfaceType2.SetContainerType(containerType)
+
+		intersectionType := NewIntersectionType(
+			nil,
+			[]*InterfaceType{
+				// NOTE: order
+				interfaceType2,
+				interfaceType1,
+			},
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("{S.test.C.I1,S.test.C.I2}"),
+			intersectionType.ID(),
+		)
+	})
+}
+
+func TestIntersectionType_String(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level, single", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			nil,
+			[]*InterfaceType{
+				{
+					Location:   testLocation,
+					Identifier: "I",
+				},
+			},
+		)
+		assert.Equal(t,
+			"{I}",
+			intersectionType.String(),
+		)
+	})
+
+	t.Run("top-level, two", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			nil,
+			[]*InterfaceType{
+				// NOTE: order
+				{
+					Location:   testLocation,
+					Identifier: "I2",
+				},
+				{
+					Location:   testLocation,
+					Identifier: "I1",
+				},
+			},
+		)
+		// NOTE: order
+		assert.Equal(t,
+			"{I2, I1}",
+			intersectionType.String(),
+		)
+	})
+}
+
+func TestIntersectionType_QualifiedString(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	containerType := &CompositeType{
+		Location:   testLocation,
+		Identifier: "C",
+	}
+
+	t.Run("top-level, single", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			nil,
+			[]*InterfaceType{
+				{
+					Location:   testLocation,
+					Identifier: "I",
+				},
+			},
+		)
+		assert.Equal(t,
+			"{I}",
+			intersectionType.QualifiedString(),
+		)
+	})
+
+	t.Run("top-level, two", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			nil,
+			[]*InterfaceType{
+				// NOTE: order
+				{
+					Location:   testLocation,
+					Identifier: "I2",
+				},
+				{
+					Location:   testLocation,
+					Identifier: "I1",
+				},
+			},
+		)
+		// NOTE: order
+		assert.Equal(t,
+			"{I2, I1}",
+			intersectionType.QualifiedString(),
+		)
+	})
+
+	t.Run("nested, two", func(t *testing.T) {
+		t.Parallel()
+
+		interfaceType1 := &InterfaceType{
+			Location:   testLocation,
+			Identifier: "I1",
+		}
+		interfaceType1.SetContainerType(containerType)
+
+		interfaceType2 := &InterfaceType{
+			Location:   testLocation,
+			Identifier: "I2",
+		}
+		interfaceType2.SetContainerType(containerType)
+
+		intersectionType := NewIntersectionType(
+			nil,
+			[]*InterfaceType{
+				// NOTE: order
+				interfaceType2,
+				interfaceType1,
+			},
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"{C.I2, C.I1}",
+			intersectionType.QualifiedString(),
+		)
 	})
 }

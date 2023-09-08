@@ -214,8 +214,11 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				purity = parsePurityAnnotation(p)
 				continue
 
-			case KeywordPub, KeywordPriv:
-				return nil, p.syntaxError(fmt.Sprintf("`%s` is no longer a valid access keyword", p.currentTokenSource()))
+			case KeywordPub:
+				return nil, p.syntaxErrorWithSuggestedFix("`pub` is no longer a valid access keyword", "`access(all)`")
+
+			case KeywordPriv:
+				return nil, p.syntaxErrorWithSuggestedFix("`priv` is no longer a valid access keyword", "`access(self)`")
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -999,7 +1002,7 @@ func parseFieldWithVariableKind(
 // parseEntitlementMapping parses an entitlement mapping
 //
 //	entitlementMapping : nominalType '->' nominalType
-func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapElement, error) {
+func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRelation, error) {
 	inputType, err := parseType(p, lowestBindingPower)
 	if err != nil {
 		return nil, err
@@ -1036,14 +1039,12 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapEl
 
 	p.skipSpaceAndComments()
 
-	return ast.NewEntitlementMapElement(p.memoryGauge, inputNominalType, outputNominalType), nil
+	return ast.NewEntitlementMapRelation(p.memoryGauge, inputNominalType, outputNominalType), nil
 }
 
 // parseEntitlementMappings parses entitlement mappings
-//
-//	membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
-func parseEntitlementMappings(p *parser, endTokenType lexer.TokenType) ([]*ast.EntitlementMapElement, error) {
-	var mappings []*ast.EntitlementMapElement
+func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenType) ([]ast.EntitlementMapElement, error) {
+	var elements []ast.EntitlementMapElement
 
 	for {
 		_, docString := p.parseTrivia(triviaOptions{
@@ -1054,15 +1055,35 @@ func parseEntitlementMappings(p *parser, endTokenType lexer.TokenType) ([]*ast.E
 		switch p.current.Type {
 
 		case endTokenType, lexer.TokenEOF:
-			return mappings, nil
+			return elements, nil
 
 		default:
-			mapping, err := parseEntitlementMapping(p, docString)
-			if err != nil {
-				return nil, err
-			}
+			if string(p.currentTokenSource()) == KeywordInclude {
+				// Skip the `include` keyword
+				p.nextSemanticToken()
+				outputType, err := parseType(p, lowestBindingPower)
+				if err != nil {
+					return nil, err
+				}
 
-			mappings = append(mappings, mapping)
+				outputNominalType, ok := outputType.(*ast.NominalType)
+				if !ok {
+					p.reportSyntaxError(
+						"expected nominal type, got %s",
+						outputType,
+					)
+				}
+
+				p.skipSpaceAndComments()
+				elements = append(elements, outputNominalType)
+			} else {
+				mapping, err := parseEntitlementMapping(p, docString)
+				if err != nil {
+					return nil, err
+				}
+
+				elements = append(elements, mapping)
+			}
 		}
 	}
 }
@@ -1119,7 +1140,7 @@ func parseEntitlementOrMappingDeclaration(
 		if err != nil {
 			return nil, err
 		}
-		mappings, err := parseEntitlementMappings(p, lexer.TokenBraceClose)
+		elements, err := parseEntitlementMappingsAndInclusions(p, lexer.TokenBraceClose)
 		if err != nil {
 			return nil, err
 		}
@@ -1140,7 +1161,7 @@ func parseEntitlementOrMappingDeclaration(
 			p.memoryGauge,
 			access,
 			identifier,
-			mappings,
+			elements,
 			docString,
 			declarationRange,
 		), nil
@@ -1643,8 +1664,11 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				purity = parsePurityAnnotation(p)
 				continue
 
-			case KeywordPub, KeywordPriv:
-				return nil, p.syntaxError(fmt.Sprintf("`%s` is no longer a valid access keyword", p.currentTokenSource()))
+			case KeywordPub:
+				return nil, p.syntaxErrorWithSuggestedFix("`pub` is no longer a valid access keyword", "`access(all)`")
+
+			case KeywordPriv:
+				return nil, p.syntaxErrorWithSuggestedFix("`priv` is no longer a valid access keyword", "`access(self)`")
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {

@@ -25,6 +25,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+var PublicKeyType = sema.PublicKeyType
+
 const publicKeyConstructorFunctionDocString = `
 Constructs a new public key
 `
@@ -68,6 +70,9 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 		errors.WrapPanic(func() {
 			err = validator.ValidatePublicKey(publicKey)
 		})
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
 		return err
 	}
 }
@@ -255,7 +260,7 @@ func newPublicKeyVerifySignatureFunction(
 
 			inter.ExpectType(
 				publicKeyValue,
-				sema.PublicKeyType,
+				PublicKeyType,
 				locationRange,
 			)
 
@@ -291,7 +296,7 @@ func newPublicKeyVerifySignatureFunction(
 			})
 
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return interpreter.AsBoolValue(valid)
@@ -325,7 +330,7 @@ func newPublicKeyVerifyPoPFunction(
 
 			inter.ExpectType(
 				publicKeyValue,
-				sema.PublicKeyType,
+				PublicKeyType,
 				locationRange,
 			)
 
@@ -344,7 +349,7 @@ func newPublicKeyVerifyPoPFunction(
 				valid, err = verifier.BLSVerifyPOP(publicKey, signature)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 			return interpreter.AsBoolValue(valid)
 		},

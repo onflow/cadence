@@ -62,7 +62,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(AddContract) &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -89,13 +89,13 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                  transaction {
-                     prepare(signer: AuthAccount) {
+                     prepare(signer: auth(UpdateContract) &Account) {
 
                          let contract1 = signer.contracts.get(name: %[1]q)
                          log(contract1?.name)
                          log(contract1?.code)
 
-                         let contract2 = signer.contracts.update__experimental(name: %[1]q, code: "%[2]s".decodeHex())
+                         let contract2 = signer.contracts.update(name: %[1]q, code: "%[2]s".decodeHex())
                          log(contract2.name)
                          log(contract2.code)
 
@@ -114,7 +114,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(RemoveContract) &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -136,7 +136,7 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Contracts) &Account) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -639,7 +639,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			fmt.Sprintf(
 				`
                   transaction {
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Contracts) &Account) {
                           signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
                       }
                    }
@@ -708,7 +708,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
           import A from 0x1
 
           transaction {
-              prepare(signer: AuthAccount) {
+              prepare(signer: &Account) {
                   log(A.a())
               }
           }
@@ -733,7 +733,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
          import B from 0x1
 
          transaction {
-             prepare(signer: AuthAccount) {
+             prepare(signer: &Account) {
                  log(B.b())
              }
          }
@@ -758,7 +758,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
           import C from 0x1
 
           transaction {
-              prepare(signer: AuthAccount) {
+              prepare(signer: &Account) {
                   log(C.c())
               }
           }
@@ -777,4 +777,240 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		)
 		require.NoError(t, err)
 	})
+}
+
+func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
+		access(all) contract interface TestInterface {
+			access(all) event Foo(x: Int)
+
+			access(all) fun foo() {
+				emit Foo(x: 3)
+			}
+		}
+	`))
+
+	deployTx := DeploymentTransaction("TestContract", []byte(`
+		import TestInterface from 0x1
+		access(all) contract TestContract: TestInterface {
+			access(all) event Foo(x: String, y: Int)
+
+			access(all) fun bar() {
+				emit Foo(x: "", y: 2)
+			}
+		}
+	`))
+
+	transaction1 := []byte(`
+		import TestContract from 0x1
+		transaction {
+			prepare(signer: &Account) {
+				TestContract.foo()
+				TestContract.bar()
+			}
+		}
+	 `)
+
+	var actualEvents []cadence.Event
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log:     func(message string) {},
+		emitEvent: func(event cadence.Event) error {
+			actualEvents = append(actualEvents, event)
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployInterfaceTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: transaction1,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// first two events are `AccountContractAdded`
+	require.Len(t, actualEvents, 4)
+
+	intfEvent := actualEvents[2]
+	concreteEvent := actualEvents[3]
+
+	require.Equal(t, intfEvent.EventType.QualifiedIdentifier, "TestInterface.Foo")
+	require.Equal(t, concreteEvent.EventType.QualifiedIdentifier, "TestContract.Foo")
+
+	require.Len(t, intfEvent.Fields, 1)
+	require.Len(t, concreteEvent.Fields, 2)
+
+	require.Equal(t, intfEvent.Fields[0], cadence.NewInt(3))
+	require.Equal(t, concreteEvent.Fields[0], cadence.String(""))
+	require.Equal(t, concreteEvent.Fields[1], cadence.NewInt(2))
+}
+
+func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
+	t.Parallel()
+
+	storage := newTestLedger(nil, nil)
+	rt := newTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
+		access(all)
+        contract interface TestInterface {
+
+			access(all)
+            event Foo(x: Int)
+
+			access(all) fun bar() {
+				post {
+					emit Foo(x: 3)
+				}
+			}
+		}
+	`))
+
+	deployTx := DeploymentTransaction("TestContract", []byte(`
+		import TestInterface from 0x1
+
+		access(all)
+        contract TestContract: TestInterface {
+
+			access(all)
+            event Foo(x: String, y: Int)
+
+			access(all)
+            fun bar() {
+				emit Foo(x: "", y: 2)
+			}
+		}
+	`))
+
+	transaction1 := []byte(`
+		import TestContract from 0x1
+
+		transaction {
+			prepare(signer: &Account) {
+				TestContract.bar()
+			}
+		}
+	 `)
+
+	var actualEvents []cadence.Event
+
+	runtimeInterface1 := &testRuntimeInterface{
+		storage: storage,
+		log:     func(message string) {},
+		emitEvent: func(event cadence.Event) error {
+			actualEvents = append(actualEvents, event)
+			return nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployInterfaceTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: transaction1,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// first two events are `AccountContractAdded`
+	require.Len(t, actualEvents, 4)
+
+	intfEvent := actualEvents[3]
+	concreteEvent := actualEvents[2]
+
+	require.Equal(t, intfEvent.EventType.QualifiedIdentifier, "TestInterface.Foo")
+	require.Equal(t, concreteEvent.EventType.QualifiedIdentifier, "TestContract.Foo")
+
+	require.Len(t, intfEvent.Fields, 1)
+	require.Len(t, concreteEvent.Fields, 2)
+
+	require.Equal(t, intfEvent.Fields[0], cadence.NewInt(3))
+	require.Equal(t, concreteEvent.Fields[0], cadence.String(""))
+	require.Equal(t, concreteEvent.Fields[1], cadence.NewInt(2))
 }

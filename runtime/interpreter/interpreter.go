@@ -114,16 +114,8 @@ type OnMeterComputationFunc func(
 	intensity uint,
 )
 
-// OnAccountLinkedFunc is a function that is triggered when an account is linked by the program.
-type OnAccountLinkedFunc func(
-	inter *Interpreter,
-	locationRange LocationRange,
-	address AddressValue,
-	path PathValue,
-) error
-
-// IDCapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
-type IDCapabilityBorrowHandlerFunc func(
+// CapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
+type CapabilityBorrowHandlerFunc func(
 	inter *Interpreter,
 	locationRange LocationRange,
 	address AddressValue,
@@ -132,8 +124,8 @@ type IDCapabilityBorrowHandlerFunc func(
 	capabilityBorrowType *sema.ReferenceType,
 ) ReferenceValue
 
-// IDCapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
-type IDCapabilityCheckHandlerFunc func(
+// CapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
+type CapabilityCheckHandlerFunc func(
 	inter *Interpreter,
 	locationRange LocationRange,
 	address AddressValue,
@@ -164,15 +156,9 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
-// AuthAccountHandlerFunc is a function that handles retrieving an auth account at a given address.
-// The account returned must be of type `AuthAccount`.
-type AuthAccountHandlerFunc func(
-	address AddressValue,
-) Value
-
-// PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
-// The account returned must be of type `PublicAccount`.
-type PublicAccountHandlerFunc func(
+// AccountHandlerFunc is a function that handles retrieving an auth account at a given address.
+// The account returned must be of type `Account`.
+type AccountHandlerFunc func(
 	address AddressValue,
 ) Value
 
@@ -180,7 +166,7 @@ type PublicAccountHandlerFunc func(
 type UUIDHandlerFunc func() (uint64, error)
 
 // CompositeTypeHandlerFunc is a function that loads composite types.
-type CompositeTypeHandlerFunc func(location common.Location, typeID common.TypeID) *sema.CompositeType
+type CompositeTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.CompositeType
 
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
@@ -196,7 +182,7 @@ type CompositeTypeCode struct {
 type FunctionWrapper = func(inner FunctionValue) FunctionValue
 
 // WrapperCode contains the "prepared" / "callable" "code"
-// for inherited types (interfaces and type requirements).
+// for inherited types.
 //
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
@@ -208,11 +194,10 @@ type WrapperCode struct {
 }
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
-// of all composite types, interface types, and type requirements.
+// of all composite types and interface types.
 type TypeCodes struct {
-	CompositeCodes       map[sema.TypeID]CompositeTypeCode
-	InterfaceCodes       map[sema.TypeID]WrapperCode
-	TypeRequirementCodes map[sema.TypeID]WrapperCode
+	CompositeCodes map[sema.TypeID]CompositeTypeCode
+	InterfaceCodes map[sema.TypeID]WrapperCode
 }
 
 func (c TypeCodes) Merge(codes TypeCodes) {
@@ -226,10 +211,6 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 
 	for typeID, code := range codes.InterfaceCodes { //nolint:maprange
 		c.InterfaceCodes[typeID] = code
-	}
-
-	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprange
-		c.TypeRequirementCodes[typeID] = code
 	}
 }
 
@@ -521,20 +502,8 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		var err error
-
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		switch r := r.(type) {
-		case Error,
-			errors.ExternalError,
-			errors.InternalError,
-			errors.UserError:
-			err = r.(error)
-		case error:
-			err = errors.NewUnexpectedErrorFromCause(r)
-		default:
-			err = errors.NewUnexpectedError("%s", r)
-		}
+		err := asCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -561,6 +530,31 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 		interpreterErr.StackTrace = interpreter.CallStack()
 
 		onError(interpreterErr)
+	}
+}
+
+func asCadenceError(r any) error {
+	err, isError := r.(error)
+	if !isError {
+		return errors.NewUnexpectedError("%s", r)
+	}
+
+	rootError := err
+
+	for {
+		switch typedError := err.(type) {
+		case Error,
+			errors.ExternalError,
+			errors.InternalError,
+			errors.UserError:
+			return typedError
+		case xerrors.Wrapper:
+			err = typedError.Unwrap()
+		case error:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		default:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		}
 	}
 }
 
@@ -817,7 +811,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 					SetKind:      sema.Conjunction,
 					Entitlements: supportedEntitlements,
 				}
-				auth = ConvertSemaAccesstoStaticAuthorization(interpreter, access)
+				auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
 			}
 		}
 		return auth
@@ -1191,24 +1185,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	}
 
-	// NOTE: First the conditions of the type requirements are evaluated,
-	//  then the conditions of this composite's conformances
-	//
-	// Because the conditions are wrappers, they have to be applied
-	// in reverse order: first the conformances, then the type requirements;
-	// each conformances and type requirements in reverse order as well.
-
 	conformances := compositeType.EffectiveInterfaceConformances()
 	for i := len(conformances) - 1; i >= 0; i-- {
 		conformance := conformances[i].InterfaceType
 		wrapFunctions(interpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
-	}
-
-	typeRequirements := compositeType.TypeRequirements()
-
-	for i := len(typeRequirements) - 1; i >= 0; i-- {
-		typeRequirement := typeRequirements[i]
-		wrapFunctions(interpreter.SharedState.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
 	interpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
@@ -1311,7 +1291,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					// the constructor can only be called when in possession of the base resource
 					// if the attachment is declared with access(all) access, then self is unauthorized
 					if attachmentType.AttachmentEntitlementAccess != nil {
-						auth = ConvertSemaAccesstoStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
+						auth = ConvertSemaAccessToStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
 					}
 					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType)
 
@@ -1731,12 +1711,11 @@ func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.
 	return ty.Map(interpreter, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
 		switch refType := t.(type) {
 		case *sema.ReferenceType:
-			if _, isMappedAuth := refType.Authorization.(sema.EntitlementMapAccess); isMappedAuth {
-				return sema.NewReferenceType(
-					interpreter,
-					refType.Type,
-					interpreter.MustConvertStaticAuthorizationToSemaAccess(interpreter.SharedState.currentEntitlementMappedValue),
+			if _, isMappedAuth := refType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
+				authorization := interpreter.MustConvertStaticAuthorizationToSemaAccess(
+					interpreter.SharedState.currentEntitlementMappedValue,
 				)
+				return sema.NewReferenceType(interpreter, authorization, refType.Type)
 			}
 		}
 		return t
@@ -1808,15 +1787,16 @@ func (interpreter *Interpreter) convertStaticType(
 	targetSemaType sema.Type,
 ) StaticType {
 	switch valueStaticType := valueStaticType.(type) {
-	case ReferenceStaticType:
+	case *ReferenceStaticType:
 		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
 			return NewReferenceStaticType(
 				interpreter,
-				ConvertSemaAccesstoStaticAuthorization(interpreter, targetReferenceType.Authorization),
+				ConvertSemaAccessToStaticAuthorization(interpreter, targetReferenceType.Authorization),
 				valueStaticType.ReferencedType,
 			)
 		}
-	case OptionalStaticType:
+
+	case *OptionalStaticType:
 		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
 			return NewOptionalStaticType(
 				interpreter,
@@ -1826,7 +1806,8 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
-	case DictionaryStaticType:
+
+	case *DictionaryStaticType:
 		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
 			return NewDictionaryStaticType(
 				interpreter,
@@ -1840,7 +1821,8 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
-	case VariableSizedStaticType:
+
+	case *VariableSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
 			return NewVariableSizedStaticType(
 				interpreter,
@@ -1850,7 +1832,8 @@ func (interpreter *Interpreter) convertStaticType(
 				),
 			)
 		}
-	case ConstantSizedStaticType:
+
+	case *ConstantSizedStaticType:
 		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
 			return NewConstantSizedStaticType(
 				interpreter,
@@ -1862,7 +1845,7 @@ func (interpreter *Interpreter) convertStaticType(
 			)
 		}
 
-	case CapabilityStaticType:
+	case *CapabilityStaticType:
 		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
 			return NewCapabilityStaticType(
 				interpreter,
@@ -1888,6 +1871,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		switch value := value.(type) {
 		case NilValue:
 			return value
+
 		case *SomeValue:
 			if !optionalValueType.Type.Equal(unwrappedTargetType) {
 				innerValue := interpreter.convert(value.value, optionalValueType.Type, unwrappedTargetType, locationRange)
@@ -2064,7 +2048,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
 
 			oldDictStaticType := dictValue.StaticType(interpreter)
-			dictStaticType := interpreter.convertStaticType(oldDictStaticType, unwrappedTargetType).(DictionaryStaticType)
+			dictStaticType := interpreter.convertStaticType(oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
 
 			if oldDictStaticType.Equal(dictStaticType) {
 				return value
@@ -2116,19 +2100,10 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
 
 			switch capability := value.(type) {
-			case *PathCapabilityValue:
-				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
+			case *CapabilityValue:
+				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
-				return NewPathCapabilityValue(
-					interpreter,
-					capability.Address,
-					capability.Path,
-					borrowType,
-				)
-			case *IDCapabilityValue:
-				valueBorrowType := capability.BorrowType.(ReferenceStaticType)
-				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
-				return NewIDCapabilityValue(
+				return NewCapabilityValue(
 					interpreter,
 					capability.ID,
 					capability.Address,
@@ -2149,7 +2124,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *EphemeralReferenceValue:
 				return NewEphemeralReferenceValue(
 					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.Value,
 					unwrappedTargetType.Type,
 				)
@@ -2157,17 +2132,9 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *StorageReferenceValue:
 				return NewStorageReferenceValue(
 					interpreter,
-					ConvertSemaAccesstoStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.TargetStorageAddress,
 					ref.TargetPath,
-					unwrappedTargetType.Type,
-				)
-
-			case *AccountReferenceValue:
-				return NewAccountReferenceValue(
-					interpreter,
-					ref.Address,
-					ref.SourcePath,
 					unwrappedTargetType.Type,
 				)
 
@@ -2250,7 +2217,12 @@ func (interpreter *Interpreter) declareInterface(
 		}
 
 		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
+			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
+				interpreter.declareNonEnumCompositeValue(nestedCompositeDeclaration, lexicalScope)
+			} else {
+				// this is statically prevented in the checker
+				panic(errors.NewUnreachableError())
+			}
 		}
 	})()
 
@@ -2267,46 +2239,6 @@ func (interpreter *Interpreter) declareInterface(
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.SharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
-		InitializerFunctionWrapper: initializerFunctionWrapper,
-		DestructorFunctionWrapper:  destructorFunctionWrapper,
-		FunctionWrappers:           functionWrappers,
-		Functions:                  defaultFunctions,
-	}
-}
-
-func (interpreter *Interpreter) declareTypeRequirement(
-	declaration *ast.CompositeDeclaration,
-	lexicalScope *VariableActivation,
-) {
-	// Evaluate nested declarations in a new scope, so values
-	// of nested declarations won't be visible after the containing declaration
-
-	(func() {
-		interpreter.activations.PushNewWithCurrent()
-		defer interpreter.activations.Pop()
-
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
-			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
-		}
-
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
-		}
-	})()
-
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
-	typeID := compositeType.ID()
-
-	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(
-		declaration.Members,
-		compositeType.ConstructorParameters,
-		lexicalScope,
-	)
-	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
-	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
-	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
-
-	interpreter.SharedState.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
@@ -3312,7 +3244,7 @@ func lookupInterface(interpreter *Interpreter, typeID string) (*sema.InterfaceTy
 		return nil, err
 	}
 
-	typ, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
+	typ, err := interpreter.GetInterfaceType(location, qualifiedIdentifier, TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -3327,7 +3259,7 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 		return nil, err
 	}
 
-	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
+	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -3389,7 +3321,7 @@ func init() {
 	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
 	defineBaseValue(
 		BaseActivation,
-		"DictionaryType",
+		sema.DictionaryTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.DictionaryTypeFunctionType,
 			dictionaryTypeFunction,
@@ -3397,7 +3329,7 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"CompositeType",
+		sema.CompositeTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.CompositeTypeFunctionType,
 			compositeTypeFunction,
@@ -3406,7 +3338,7 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"ReferenceType",
+		sema.ReferenceTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.ReferenceTypeFunctionType,
 			referenceTypeFunction,
@@ -3415,7 +3347,7 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"InterfaceType",
+		sema.InterfaceTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.InterfaceTypeFunctionType,
 			interfaceTypeFunction,
@@ -3424,7 +3356,7 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"FunctionType",
+		sema.FunctionTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.FunctionTypeFunctionType,
 			functionTypeFunction,
@@ -3433,7 +3365,7 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"IntersectionType",
+		sema.IntersectionTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.IntersectionTypeFunctionType,
 			intersectionTypeFunction,
@@ -3485,33 +3417,40 @@ func referenceTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	var authorization Authorization = UnauthorizedAccess
-	var entitlements []common.TypeID = make([]common.TypeID, 0, entitlementValues.Count())
+	authorization := UnauthorizedAccess
 	errInIteration := false
+	entitlementsCount := entitlementValues.Count()
 
-	entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
-		entitlementString, isString := element.(*StringValue)
-		if !isString {
-			errInIteration = true
-			return false
-		}
+	if entitlementsCount > 0 {
+		authorization = NewEntitlementSetAuthorization(
+			invocation.Interpreter,
+			func() []common.TypeID {
+				entitlements := make([]common.TypeID, 0, entitlementsCount)
+				entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
+					entitlementString, isString := element.(*StringValue)
+					if !isString {
+						errInIteration = true
+						return false
+					}
 
-		_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
-		if err != nil {
-			errInIteration = true
-			return false
-		}
-		entitlements = append(entitlements, common.TypeID(entitlementString.Str))
+					_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
+					if err != nil {
+						errInIteration = true
+						return false
+					}
+					entitlements = append(entitlements, common.TypeID(entitlementString.Str))
 
-		return true
-	})
+					return true
+				})
+				return entitlements
+			},
+			entitlementsCount,
+			sema.Conjunction,
+		)
+	}
 
 	if errInIteration {
 		return Nil
-	}
-
-	if len(entitlements) > 0 {
-		authorization = NewEntitlementSetAuthorization(invocation.Interpreter, entitlements, sema.Conjunction)
 	}
 
 	return NewSomeValueNonCopying(
@@ -3618,12 +3557,12 @@ func intersectionTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	var staticIntersections []InterfaceStaticType
+	var staticIntersections []*InterfaceStaticType
 	var semaIntersections []*sema.InterfaceType
 
 	count := intersectionIDs.Count()
 	if count > 0 {
-		staticIntersections = make([]InterfaceStaticType, 0, count)
+		staticIntersections = make([]*InterfaceStaticType, 0, count)
 		semaIntersections = make([]*sema.InterfaceType, 0, count)
 
 		var invalidIntersectionID bool
@@ -3641,7 +3580,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 			staticIntersections = append(
 				staticIntersections,
-				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(InterfaceStaticType),
+				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(*InterfaceStaticType),
 			)
 			semaIntersections = append(semaIntersections, intersectedInterface)
 
@@ -3764,7 +3703,7 @@ type runtimeTypeConstructor struct {
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
-		name: "OptionalType",
+		name: sema.OptionalTypeFunctionName,
 		converter: NewUnmeteredHostFunctionValue(
 			sema.OptionalTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3784,7 +3723,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		),
 	},
 	{
-		name: "VariableSizedArrayType",
+		name: sema.VariableSizedArrayTypeFunctionName,
 		converter: NewUnmeteredHostFunctionValue(
 			sema.VariableSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3805,7 +3744,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		),
 	},
 	{
-		name: "ConstantSizedArrayType",
+		name: sema.ConstantSizedArrayTypeFunctionName,
 		converter: NewUnmeteredHostFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3831,7 +3770,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		),
 	},
 	{
-		name: "CapabilityType",
+		name: sema.CapabilityTypeFunctionName,
 		converter: NewUnmeteredHostFunctionValue(
 			sema.CapabilityTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3842,7 +3781,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				ty := typeValue.Type
 				// Capabilities must hold references
-				_, ok = ty.(ReferenceStaticType)
+				_, ok = ty.(*ReferenceStaticType)
 				if !ok {
 					return Nil
 				}
@@ -3923,7 +3862,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 	}
 
 	switch subType := subType.(type) {
-	case OptionalStaticType:
+	case *OptionalStaticType:
 		if superType, ok := superType.(*sema.OptionalType); ok {
 			return interpreter.IsSubTypeOfSemaType(subType.Type, superType.Type)
 		}
@@ -3933,7 +3872,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superTyp
 			return interpreter.IsSubTypeOfSemaType(subType.Type, superType)
 		}
 
-	case ReferenceStaticType:
+	case *ReferenceStaticType:
 		if superType, ok := superType.(*sema.ReferenceType); ok {
 
 			// First, check that the static type of the referenced value
@@ -3973,7 +3912,12 @@ func (interpreter *Interpreter) domainPaths(address common.Address, domain commo
 	return paths
 }
 
-func (interpreter *Interpreter) accountPaths(addressValue AddressValue, locationRange LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
+func (interpreter *Interpreter) accountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+	domain common.PathDomain,
+	pathType StaticType,
+) *ArrayValue {
 	address := addressValue.ToAddress()
 	values := interpreter.domainPaths(address, domain)
 	return NewArrayValue(
@@ -3985,16 +3929,28 @@ func (interpreter *Interpreter) accountPaths(addressValue AddressValue, location
 	)
 }
 
-func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainPublic, PrimitiveStaticTypePublicPath)
+func (interpreter *Interpreter) publicAccountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+) *ArrayValue {
+	return interpreter.accountPaths(
+		addressValue,
+		locationRange,
+		common.PathDomainPublic,
+		PrimitiveStaticTypePublicPath,
+	)
 }
 
-func (interpreter *Interpreter) privateAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainPrivate, PrimitiveStaticTypePrivatePath)
-}
-
-func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
+func (interpreter *Interpreter) storageAccountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+) *ArrayValue {
+	return interpreter.accountPaths(
+		addressValue,
+		locationRange,
+		common.PathDomainStorage,
+		PrimitiveStaticTypeStoragePath,
+	)
 }
 
 func (interpreter *Interpreter) recordStorageMutation() {
@@ -4042,12 +3998,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}()
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
+
 				staticType := value.StaticType(inter)
 
-				// Perform a forced type loading to see if the underlying type is not broken.
+				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
-				typeError := inter.checkTypeLoading(staticType)
-				if typeError != nil {
+				valueError := inter.checkValue(
+					value,
+					staticType,
+					invocation.LocationRange,
+				)
+
+				if valueError != nil {
 					continue
 				}
 
@@ -4097,14 +4059,19 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 	)
 }
 
-func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeError error) {
+func (interpreter *Interpreter) checkValue(
+	value Value,
+	staticType StaticType,
+	locationRange LocationRange,
+) (valueError error) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			rootError := r
 			for {
 				switch err := r.(type) {
 				case errors.UserError, errors.ExternalError:
-					typeError = err.(error)
+					valueError = err.(error)
 					return
 				case xerrors.Wrapper:
 					r = err.Unwrap()
@@ -4115,8 +4082,43 @@ func (interpreter *Interpreter) checkTypeLoading(staticType StaticType) (typeErr
 		}
 	}()
 
-	// Here it is only interested in whether the type can be properly loaded.
-	_, typeError = interpreter.ConvertStaticToSemaType(staticType)
+	// Here, the value at the path could be either:
+	//	1) The actual stored value (storage path)
+	//	2) A capability to the value at the storage (private/public paths)
+
+	if capability, ok := value.(*CapabilityValue); ok {
+		// If, the value is a capability, try to load the value at the capability target.
+		// However, borrow type is not statically known.
+		// So take the borrow type from the value itself
+
+		// Capability values always have a `CapabilityStaticType` static type.
+		borrowType := staticType.(*CapabilityStaticType).BorrowType
+
+		var borrowSemaType sema.Type
+		borrowSemaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
+		if valueError != nil {
+			return valueError
+		}
+
+		referenceType, ok := borrowSemaType.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		_ = interpreter.SharedState.Config.CapabilityCheckHandler(
+			interpreter,
+			locationRange,
+			capability.Address,
+			capability.ID,
+			referenceType,
+			referenceType,
+		)
+
+	} else {
+		// For all other values, trying to load the type is sufficient.
+		// Here it is only interested in whether the type can be properly loaded.
+		_, valueError = interpreter.ConvertStaticToSemaType(staticType)
+	}
 
 	return
 }
@@ -4128,7 +4130,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeSaveFunctionType,
+		sema.Account_StorageTypeSaveFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4188,7 +4190,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeTypeFunctionType,
+		sema.Account_StorageTypeTypeFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4234,8 +4236,8 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 	return NewHostFunctionValue(
 		interpreter,
-		// same as sema.AuthAccountTypeCopyFunctionType
-		sema.AuthAccountTypeLoadFunctionType,
+		// same as sema.Account_StorageTypeCopyFunctionType
+		sema.Account_StorageTypeLoadFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4314,7 +4316,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeBorrowFunctionType,
+		sema.Account_StorageTypeBorrowFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4337,7 +4339,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 			reference := NewStorageReferenceValue(
 				interpreter,
-				ConvertSemaAccesstoStaticAuthorization(interpreter, referenceType.Authorization),
+				ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization),
 				address,
 				path,
 				referenceType.Type,
@@ -4367,7 +4369,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 
 	return NewHostFunctionValue(
 		interpreter,
-		sema.AuthAccountTypeCheckFunctionType,
+		sema.Account_StorageTypeCheckFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
@@ -4404,552 +4406,23 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 	)
 }
 
-func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.AuthAccountTypeLinkFunctionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			targetPath, ok := invocation.Arguments[1].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
-			newCapabilityIdentifier := newCapabilityPath.Identifier
-
-			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
-
-			if interpreter.StoredValueExists(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-			) {
-				return Nil
-			}
-
-			// Write new value
-
-			borrowStaticType := ConvertSemaToStaticType(interpreter, borrowType)
-
-			// Note that this will be metered twice if Atree validation is enabled.
-			pathLink := NewPathLinkValue(interpreter, targetPath, borrowStaticType)
-
-			interpreter.WriteStored(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-				pathLink,
-			)
-
-			return NewSomeValueNonCopying(
-				interpreter,
-				NewPathCapabilityValue(
-					interpreter,
-					addressValue,
-					newCapabilityPath,
-					borrowStaticType,
-				),
-			)
-
-		},
-	)
-}
-
-var AuthAccountReferenceStaticType = ReferenceStaticType{
-	ReferencedType: PrimitiveStaticTypeAuthAccount,
-	Authorization:  UnauthorizedAccess,
-}
-
-// Linking
-//
-// When linking to a path with the `AuthAccount.link function`,
-// an interpreter.PathLink (formerly Link) is stored in storage.
-//
-// When linking to an account with the new AuthAccount.linkAccount function,
-// an interpreter.AccountLink is stored in the account.
-//
-// In both cases, when acquiring a capability, e.g. using getCapability,
-// a PathCapabilityValue is returned.
-// This is because in both cases, we are looking up a path in an account.
-// Depending on what is stored in the path, PathLink or AccountLink,
-// we return a respective reference value, a StorageReferenceValue for PathLink
-// (after following the links to the final target),
-// or an AccountReferenceValue for an AccountLink.
-//
-// Again, in both cases for StorageReferenceValue and AccountReferenceValue,
-// for each use, e.g. member access,
-// we dereference/check that the link still exists after the capability was borrowed.
-
-func (interpreter *Interpreter) authAccountLinkAccountFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.AuthAccountTypeLinkAccountFunctionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			if !interpreter.SharedState.Config.AccountLinkingAllowed {
-				panic(AccountLinkingForbiddenError{
-					LocationRange: invocation.LocationRange,
-				})
-			}
-
-			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
-			newCapabilityIdentifier := newCapabilityPath.Identifier
-
-			storageMapKey := StringStorageMapKey(newCapabilityIdentifier)
-
-			if interpreter.StoredValueExists(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-			) {
-				return Nil
-			}
-
-			accountLinkValue := NewAccountLinkValue(interpreter)
-
-			interpreter.WriteStored(
-				address,
-				newCapabilityDomain,
-				storageMapKey,
-				accountLinkValue,
-			)
-
-			onAccountLinked := interpreter.SharedState.Config.OnAccountLinked
-			if onAccountLinked != nil {
-				err := onAccountLinked(
-					interpreter,
-					invocation.LocationRange,
-					addressValue,
-					newCapabilityPath,
-				)
-				if err != nil {
-					panic(err)
-				}
-			}
-
-			return NewSomeValueNonCopying(
-				interpreter,
-				NewPathCapabilityValue(
-					interpreter,
-					addressValue,
-					newCapabilityPath,
-					AuthAccountReferenceStaticType,
-				),
-			)
-
-		},
-	)
-}
-
-func (interpreter *Interpreter) accountGetLinkTargetFunction(
-	functionType *sema.FunctionType,
-	addressValue AddressValue,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		functionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			capabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := capabilityPath.Domain.Identifier()
-			identifier := capabilityPath.Identifier
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-
-			if value == nil {
-				return Nil
-			}
-
-			link, ok := value.(PathLinkValue)
-			if !ok {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(
-				interpreter,
-				link.TargetPath,
-			)
-		},
-	)
-}
-
-func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.AuthAccountTypeUnlinkFunctionType,
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
-
-			capabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := capabilityPath.Domain.Identifier()
-			identifier := capabilityPath.Identifier
-
-			// Write new value
-
-			storageMapKey := StringStorageMapKey(identifier)
-
-			interpreter.WriteStored(
-				address,
-				domain,
-				storageMapKey,
-				nil,
-			)
-
-			return Void
-		},
-	)
-}
-
-func (interpreter *Interpreter) pathCapabilityBorrowFunction(
-	addressValue AddressValue,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.CapabilityTypeBorrowFunctionType(borrowType),
-		func(invocation Invocation) Value {
-
-			interpreter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				borrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-			}
-
-			if borrowType == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			target, authorization, err :=
-				interpreter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					borrowType,
-					true,
-					locationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			var reference ReferenceValue
-
-			switch target := target.(type) {
-			case nil:
-				reference = nil
-
-			case AccountCapabilityTarget:
-				reference = NewAccountReferenceValue(
-					interpreter,
-					address,
-					pathValue,
-					borrowType.Type,
-				)
-
-			case PathCapabilityTarget:
-				targetPath := PathValue(target)
-
-				storageReference := NewStorageReferenceValue(
-					interpreter,
-					authorization,
-					address,
-					targetPath,
-					borrowType.Type,
-				)
-
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				value, err := storageReference.dereference(interpreter, locationRange)
-				if err != nil {
-					panic(err)
-				}
-				if value != nil {
-					reference = storageReference
-				}
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			if reference == nil {
-				return Nil
-			}
-			return NewSomeValueNonCopying(interpreter, reference)
-		},
-	)
-}
-
-func (interpreter *Interpreter) pathCapabilityCheckFunction(
-	addressValue AddressValue,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		sema.CapabilityTypeCheckFunctionType(borrowType),
-		func(invocation Invocation) Value {
-
-			interpreter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				borrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-			}
-
-			if borrowType == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			target, authorized, err :=
-				interpreter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					borrowType,
-					true,
-					locationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			if target == nil {
-				return FalseValue
-			}
-
-			switch target := target.(type) {
-			case AccountCapabilityTarget:
-				return TrueValue
-
-			case PathCapabilityTarget:
-				targetPath := PathValue(target)
-
-				reference := NewStorageReferenceValue(
-					interpreter,
-					authorized,
-					address,
-					targetPath,
-					borrowType.Type,
-				)
-
-				// Attempt to dereference,
-				// which reads the stored value
-				// and performs a dynamic type check
-
-				return AsBoolValue(
-					reference.ReferencedValue(interpreter, invocation.LocationRange, false) != nil,
-				)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		},
-	)
-}
-
-func (interpreter *Interpreter) GetPathCapabilityFinalTarget(
-	address common.Address,
-	path PathValue,
-	wantedBorrowType *sema.ReferenceType,
-	checkTargetExists bool,
-	locationRange LocationRange,
-) (
-	target CapabilityTarget,
-	authorization Authorization,
-	err error,
-) {
-
-	seenPaths := map[PathValue]struct{}{}
-	paths := []PathValue{path}
-
-	for {
-		// Detect cyclic links
-
-		if _, ok := seenPaths[path]; ok {
-			return nil, UnauthorizedAccess, CyclicLinkError{
-				Address:       address,
-				Paths:         paths,
-				LocationRange: locationRange,
-			}
-		} else {
-			seenPaths[path] = struct{}{}
-		}
-
-		domain := path.Domain.Identifier()
-		identifier := path.Identifier
-
-		storageMapKey := StringStorageMapKey(identifier)
-
-		switch path.Domain {
-		case common.PathDomainStorage:
-
-			if checkTargetExists &&
-				!interpreter.StoredValueExists(address, domain, storageMapKey) {
-				return nil, UnauthorizedAccess, nil
-			}
-
-			return PathCapabilityTarget(path),
-				ConvertSemaAccesstoStaticAuthorization(interpreter, wantedBorrowType.Authorization),
-				nil
-
-		case common.PathDomainPublic,
-			common.PathDomainPrivate:
-
-			value := interpreter.ReadStored(address, domain, storageMapKey)
-			if value == nil {
-				return nil, UnauthorizedAccess, nil
-			}
-
-			switch value := value.(type) {
-			case PathLinkValue:
-				allowedType := interpreter.MustConvertStaticToSemaType(value.Type)
-
-				if !sema.IsSubType(allowedType, wantedBorrowType) {
-					return nil, UnauthorizedAccess, nil
-				}
-
-				targetPath := value.TargetPath
-				paths = append(paths, targetPath)
-				path = targetPath
-
-			case AccountLinkValue:
-				if !interpreter.IsSubTypeOfSemaType(
-					AuthAccountReferenceStaticType,
-					wantedBorrowType,
-				) {
-					return nil, UnauthorizedAccess, nil
-				}
-
-				return AccountCapabilityTarget(address),
-					UnauthorizedAccess,
-					nil
-
-			case *IDCapabilityValue:
-
-				// For backwards-compatibility, follow ID capability values
-				// which are published in the public or private domain
-
-				capabilityBorrowType, ok :=
-					interpreter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				reference := interpreter.SharedState.Config.IDCapabilityBorrowHandler(
-					interpreter,
-					locationRange,
-					value.Address,
-					value.ID,
-					wantedBorrowType,
-					capabilityBorrowType,
-				)
-				if reference == nil {
-					return nil, UnauthorizedAccess, nil
-				}
-
-				switch reference := reference.(type) {
-				case *StorageReferenceValue:
-					address = reference.TargetStorageAddress
-					targetPath := reference.TargetPath
-					paths = append(paths, targetPath)
-					path = targetPath
-
-				case *AccountReferenceValue:
-					return AccountCapabilityTarget(reference.Address),
-						UnauthorizedAccess,
-						nil
-
-				default:
-					return nil, UnauthorizedAccess, nil
-				}
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		}
-	}
-}
-
 func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.EntitlementType, error) {
-	location, _, _ := common.DecodeTypeID(interpreter, string(typeID))
+	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	if location == nil {
+		ty := sema.BuiltinEntitlements[qualifiedIdentifier]
+		if ty == nil {
+			return nil, TypeLoadingError{
+				TypeID: typeID,
+			}
+		}
+
+		return ty, nil
+	}
+
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return nil, TypeLoadingError{
@@ -4968,7 +4441,22 @@ func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.Enti
 }
 
 func (interpreter *Interpreter) getEntitlementMapType(typeID common.TypeID) (*sema.EntitlementMapType, error) {
-	location, _, _ := common.DecodeTypeID(interpreter, string(typeID))
+	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	if location == nil {
+		ty := sema.BuiltinEntitlementMappings[qualifiedIdentifier]
+		if ty == nil {
+			return nil, TypeLoadingError{
+				TypeID: typeID,
+			}
+		}
+
+		return ty, nil
+	}
+
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return nil, TypeLoadingError{
@@ -4991,10 +4479,10 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	return ConvertStaticToSemaType(
 		config.MemoryGauge,
 		staticType,
-		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
-			return interpreter.getInterfaceType(location, qualifiedIdentifier)
+		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error) {
+			return interpreter.GetInterfaceType(location, qualifiedIdentifier, typeID)
 		},
-		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
 			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
 		},
 		interpreter.getEntitlement,
@@ -5015,7 +4503,12 @@ func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticTyp
 }
 
 func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth Authorization) sema.Access {
-	access, err := ConvertStaticAuthorizationToSemaAccess(interpreter, auth, interpreter.getEntitlement, interpreter.getEntitlementMapType)
+	access, err := ConvertStaticAuthorizationToSemaAccess(
+		interpreter,
+		auth,
+		interpreter.getEntitlement,
+		interpreter.getEntitlementMapType,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -5062,7 +4555,7 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 func (interpreter *Interpreter) GetCompositeType(
 	location common.Location,
 	qualifiedIdentifier string,
-	typeID common.TypeID,
+	typeID TypeID,
 ) (*sema.CompositeType, error) {
 	var compositeType *sema.CompositeType
 	if location == nil {
@@ -5071,16 +4564,16 @@ func (interpreter *Interpreter) GetCompositeType(
 			return compositeType, nil
 		}
 	} else {
-		compositeType = interpreter.getUserCompositeType(location, typeID)
-		if compositeType != nil {
-			return compositeType, nil
+		config := interpreter.SharedState.Config
+		compositeTypeHandler := config.CompositeTypeHandler
+		if compositeTypeHandler != nil {
+			compositeType = compositeTypeHandler(location, typeID)
+			if compositeType != nil {
+				return compositeType, nil
+			}
 		}
-	}
 
-	config := interpreter.SharedState.Config
-	compositeTypeHandler := config.CompositeTypeHandler
-	if compositeTypeHandler != nil {
-		compositeType = compositeTypeHandler(location, typeID)
+		compositeType = interpreter.getUserCompositeType(location, typeID)
 		if compositeType != nil {
 			return compositeType, nil
 		}
@@ -5091,7 +4584,7 @@ func (interpreter *Interpreter) GetCompositeType(
 	}
 }
 
-func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID common.TypeID) *sema.CompositeType {
+func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID TypeID) *sema.CompositeType {
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return nil
@@ -5100,12 +4593,14 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 	return elaboration.CompositeType(typeID)
 }
 
-func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+func (interpreter *Interpreter) GetInterfaceType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID TypeID,
+) (*sema.InterfaceType, error) {
 	if location == nil {
 		return nil, InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
 	}
-
-	typeID := location.TypeID(interpreter, qualifiedIdentifier)
 
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
@@ -5189,11 +4684,18 @@ func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string)
 	return &member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
 }
 
-func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAccess *sema.Access, resultValue Value) Value {
+func (interpreter *Interpreter) mapMemberValueAuthorization(
+	self Value,
+	memberAccess *sema.Access,
+	resultValue Value,
+	resultingType sema.Type,
+) Value {
+
 	if memberAccess == nil {
 		return resultValue
 	}
-	if mappedAccess, isMappedAccess := (*memberAccess).(sema.EntitlementMapAccess); isMappedAccess {
+
+	if mappedAccess, isMappedAccess := (*memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
 		var auth Authorization
 		switch selfValue := self.(type) {
 		case AuthorizedValue:
@@ -5202,9 +4704,19 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 			if err != nil {
 				panic(err)
 			}
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, imageAccess)
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, imageAccess)
+
 		default:
-			auth = ConvertSemaAccesstoStaticAuthorization(interpreter, mappedAccess.Codomain())
+			var access sema.Access
+			if mappedAccess.Type == sema.IdentityType {
+				access = sema.AllSupportedEntitlements(resultingType)
+			}
+
+			if access == nil {
+				access = mappedAccess.Codomain()
+			}
+
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
 		}
 
 		switch refValue := resultValue.(type) {
@@ -5219,15 +4731,21 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(self Value, memberAc
 	return resultValue
 }
 
-func (interpreter *Interpreter) getMemberWithAuthMapping(self Value, locationRange LocationRange, identifier string) Value {
+func (interpreter *Interpreter) getMemberWithAuthMapping(
+	self Value,
+	locationRange LocationRange,
+	identifier string,
+	memberAccessInfo sema.MemberAccessInfo,
+) Value {
+
 	result := interpreter.getMember(self, locationRange, identifier)
 	if result == nil {
 		return nil
 	}
 	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
-	// on the runtime authorizations of the acccessing reference or composite
+	// on the runtime authorizations of the accessing reference or composite
 	memberAccess := interpreter.getAccessOfMember(self, identifier)
-	return interpreter.mapMemberValueAuthorization(self, memberAccess, result)
+	return interpreter.mapMemberValueAuthorization(self, memberAccess, result, memberAccessInfo.ResultingType)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
@@ -5401,11 +4919,11 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
-		case ConstantSizedStaticType:
+		case *ConstantSizedStaticType:
 			return info.Equal(other.(StaticType))
-		case VariableSizedStaticType:
+		case *VariableSizedStaticType:
 			return info.Equal(other.(StaticType))
-		case DictionaryStaticType:
+		case *DictionaryStaticType:
 			return info.Equal(other.(StaticType))
 		case compositeTypeInfo:
 			return info.Equal(other)
@@ -5546,25 +5064,66 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	values[value] = struct{}{}
 }
 
-func (interpreter *Interpreter) updateReferencedResource(
-	currentStorageID atree.StorageID,
-	newStorageID atree.StorageID,
-	updateFunc func(value ReferenceTrackedResourceKindedValue),
-) {
-	values := interpreter.SharedState.referencedResourceKindedValues[currentStorageID]
+func (interpreter *Interpreter) invalidateReferencedResources(value Value, destroyed bool) {
+	// skip non-resource typed values
+	if !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	var storageID atree.StorageID
+
+	switch value := value.(type) {
+	case *CompositeValue:
+		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) {
+			interpreter.invalidateReferencedResources(fieldValue, destroyed)
+		})
+		storageID = value.StorageID()
+	case *DictionaryValue:
+		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
+			interpreter.invalidateReferencedResources(value, destroyed)
+			return true
+		})
+		storageID = value.StorageID()
+	case *ArrayValue:
+		value.IterateLoaded(interpreter, func(element Value) (resume bool) {
+			interpreter.invalidateReferencedResources(element, destroyed)
+			return true
+		})
+		storageID = value.StorageID()
+	case *SomeValue:
+		interpreter.invalidateReferencedResources(value.value, destroyed)
+		return
+	default:
+		// skip non-container typed values.
+		return
+	}
+
+	values := interpreter.SharedState.referencedResourceKindedValues[storageID]
 	if values == nil {
 		return
 	}
+
 	for value := range values { //nolint:maprange
-		updateFunc(value)
+		switch value := value.(type) {
+		case *CompositeValue:
+			value.dictionary = nil
+			value.isDestroyed = destroyed
+		case *DictionaryValue:
+			value.dictionary = nil
+			value.isDestroyed = destroyed
+		case *ArrayValue:
+			value.array = nil
+			value.isDestroyed = destroyed
+		default:
+			panic(errors.NewUnreachableError())
+		}
 	}
 
-	// If the move is to a new location, then the resources are already cleared via the update function above.
-	// So no need to track those stale resources anymore.
-	if newStorageID != currentStorageID {
-		interpreter.SharedState.referencedResourceKindedValues[newStorageID] = values
-		interpreter.SharedState.referencedResourceKindedValues[currentStorageID] = nil
-	}
+	// The old resource instances are already cleared/invalidated above.
+	// So no need to track those stale resources anymore. We will not need to update/clear them again.
+	// Therefore, remove them from the mapping.
+	// This is only to allow GC. No impact to the behavior.
+	delete(interpreter.SharedState.referencedResourceKindedValues, storageID)
 }
 
 // startResourceTracking starts tracking the life-span of a resource.
@@ -5701,35 +5260,7 @@ func (interpreter *Interpreter) Storage() Storage {
 	return interpreter.SharedState.Config.Storage
 }
 
-// ConfigureAccountLinkingAllowed configures if execution is allowed to use account linking,
-// depending on the occurrence of the pragma declaration #allowAccountLinking.
-//
-// The pragma declaration must appear as a top-level declaration (i.e. not nested in the program),
-// and must appear before all other declarations (i.e. at the top of the program).
-//
-// This requirement is also checked statically.
-//
-// This is a temporary feature, which is planned to get replaced by capability controllers,
-// and a new Account type with entitlements.
-func (interpreter *Interpreter) ConfigureAccountLinkingAllowed() {
-	config := interpreter.SharedState.Config
-
-	config.AccountLinkingAllowed = false
-
-	declarations := interpreter.Program.Program.Declarations()
-	if len(declarations) < 1 {
-		return
-	}
-
-	pragmaDeclaration, isPragma := declarations[0].(*ast.PragmaDeclaration)
-	if !isPragma || !sema.IsAllowAccountLinkingPragma(pragmaDeclaration) {
-		return
-	}
-
-	config.AccountLinkingAllowed = true
-}
-
-func (interpreter *Interpreter) idCapabilityBorrowFunction(
+func (interpreter *Interpreter) capabilityBorrowFunction(
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -5754,7 +5285,7 @@ func (interpreter *Interpreter) idCapabilityBorrowFunction(
 				}
 			}
 
-			referenceValue := inter.SharedState.Config.IDCapabilityBorrowHandler(
+			referenceValue := inter.SharedState.Config.CapabilityBorrowHandler(
 				inter,
 				locationRange,
 				addressValue,
@@ -5770,7 +5301,7 @@ func (interpreter *Interpreter) idCapabilityBorrowFunction(
 	)
 }
 
-func (interpreter *Interpreter) idCapabilityCheckFunction(
+func (interpreter *Interpreter) capabilityCheckFunction(
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -5798,7 +5329,7 @@ func (interpreter *Interpreter) idCapabilityCheckFunction(
 				}
 			}
 
-			return inter.SharedState.Config.IDCapabilityCheckHandler(
+			return inter.SharedState.Config.CapabilityCheckHandler(
 				inter,
 				locationRange,
 				addressValue,

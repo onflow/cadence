@@ -1,3 +1,4 @@
+// Code generated from testdata/member_accessible.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -18,14 +19,18 @@
 
 package sema
 
-//go:generate go run ./gen authaccount.cdc authaccount.gen.go
+const TestTypeName = "Test"
 
-var AuthAccountTypeLinkAccountFunctionTypePathParameterTypeAnnotation = AuthAccountTypeLinkAccountFunctionType.Parameters[0].TypeAnnotation
-
-var AuthAccountTypeAnnotation = NewTypeAnnotation(AuthAccountType)
-
-func init() {
-	AuthAccountContractsTypeAddFunctionType.Arity = &Arity{Min: 2}
-	AuthAccountTypeGetCapabilityFunctionTypeParameterT.Optional = true
-	PublicAccountTypeGetCapabilityFunctionTypeParameterT.Optional = true
+var TestType = &SimpleType{
+	Name:          TestTypeName,
+	QualifiedName: TestTypeName,
+	TypeID:        TestTypeName,
+	tag:           TestTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Equatable:     false,
+	Comparable:    false,
+	Exportable:    false,
+	Importable:    false,
+	ContainFields: true,
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 
@@ -97,7 +98,7 @@ func DeploymentTransaction(name string, contract []byte) []byte {
 		`
           transaction {
 
-              prepare(signer: AuthAccount) {
+              prepare(signer: auth(Contracts) &Account) {
                   signer.contracts.add(name: "%s", code: "%s".decodeHex())
               }
           }
@@ -112,7 +113,7 @@ func RemovalTransaction(name string) []byte {
 		`
           transaction {
 
-              prepare(signer: AuthAccount) {
+              prepare(signer: auth(Contracts) &Account) {
                   signer.contracts.remove(name: "%s")
               }
           }
@@ -126,8 +127,8 @@ func UpdateTransaction(name string, contract []byte) []byte {
 		`
           transaction {
 
-              prepare(signer: AuthAccount) {
-                  signer.contracts.update__experimental(name: "%s", code: "%s".decodeHex())
+              prepare(signer: auth(Contracts) &Account) {
+                  signer.contracts.update(name: "%s", code: "%s".decodeHex())
               }
           }
         `,
@@ -212,6 +213,16 @@ func RequireError(t *testing.T, err error) {
 
 	_ = err.Error()
 
+	if hasImportLocation, ok := err.(common.HasLocation); ok {
+		location := hasImportLocation.ImportLocation()
+		assert.NotNil(t, location)
+	}
+
+	if hasPosition, ok := err.(ast.HasPosition); ok {
+		_ = hasPosition.StartPosition()
+		_ = hasPosition.EndPosition(nil)
+	}
+
 	if hasErrorNotes, ok := err.(errors.ErrorNotes); ok {
 		for _, note := range hasErrorNotes.ErrorNotes() {
 			_ = note.Message()
@@ -221,4 +232,76 @@ func RequireError(t *testing.T, err error) {
 	if hasSecondaryError, ok := err.(errors.SecondaryError); ok {
 		_ = hasSecondaryError.SecondaryError()
 	}
+
+	if hasSuggestedFixes, ok := err.(errors.HasSuggestedFixes[ast.TextEdit]); ok {
+		_ = hasSuggestedFixes.SuggestFixes("")
+	}
+}
+
+func ArrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue) []interpreter.Value {
+	count := array.Count()
+	result := make([]interpreter.Value, count)
+	for i := 0; i < count; i++ {
+		result[i] = array.Get(inter, interpreter.EmptyLocationRange, i)
+	}
+	return result
+}
+
+func DictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.DictionaryValue) []interpreter.Value {
+	count := dict.Count() * 2
+	result := make([]interpreter.Value, count)
+	i := 0
+	dict.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
+		result[i*2] = key
+		result[i*2+1] = value
+		i++
+
+		return true
+	})
+	return result
+}
+
+type DictionaryEntry[K, V any] struct {
+	Key   K
+	Value V
+}
+
+// DictionaryEntries is similar to DictionaryKeyValues,
+// attempting to map untyped Values to concrete values using the provided morphisms.
+// If a conversion fails, then this function returns (nil, false).
+// Useful in contexts when Cadence values need to be extracted into their go counterparts.
+func DictionaryEntries[K, V any](
+	inter *interpreter.Interpreter,
+	dict *interpreter.DictionaryValue,
+	fromKey func(interpreter.Value) (K, bool),
+	fromVal func(interpreter.Value) (V, bool),
+) ([]DictionaryEntry[K, V], bool) {
+
+	count := dict.Count()
+	res := make([]DictionaryEntry[K, V], count)
+
+	iterStatus := true
+	idx := 0
+	dict.Iterate(inter, func(rawKey, rawValue interpreter.Value) (resume bool) {
+		key, ok := fromKey(rawKey)
+
+		if !ok {
+			iterStatus = false
+			return iterStatus
+		}
+
+		value, ok := fromVal(rawValue)
+		if !ok {
+			iterStatus = false
+			return iterStatus
+		}
+
+		res[idx] = DictionaryEntry[K, V]{
+			Key:   key,
+			Value: value,
+		}
+		return iterStatus
+	})
+
+	return res, iterStatus
 }

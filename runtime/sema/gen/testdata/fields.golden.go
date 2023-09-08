@@ -71,6 +71,17 @@ const TestTypeTestConstIntsFieldDocString = `
 This is a test constant-sized integer array.
 `
 
+const TestTypeTestIntDictFieldName = "testIntDict"
+
+var TestTypeTestIntDictFieldType = &DictionaryType{
+	KeyType:   UInt64Type,
+	ValueType: BoolType,
+}
+
+const TestTypeTestIntDictFieldDocString = `
+This is a test integer dictionary.
+`
+
 const TestTypeTestParamFieldName = "testParam"
 
 var TestTypeTestParamFieldType = MustInstantiate(
@@ -140,6 +151,7 @@ var TestType = &SimpleType{
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
+	ContainFields: false,
 }
 
 func init() {
@@ -147,7 +159,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestIntFieldName,
 				TestTypeTestIntFieldType,
@@ -155,7 +167,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestOptIntFieldName,
 				TestTypeTestOptIntFieldType,
@@ -163,7 +175,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestRefIntFieldName,
 				TestTypeTestRefIntFieldType,
@@ -171,7 +183,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestVarIntsFieldName,
 				TestTypeTestVarIntsFieldType,
@@ -179,7 +191,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestConstIntsFieldName,
 				TestTypeTestConstIntsFieldType,
@@ -187,7 +199,15 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
+				ast.VariableKindConstant,
+				TestTypeTestIntDictFieldName,
+				TestTypeTestIntDictFieldType,
+				TestTypeTestIntDictFieldDocString,
+			),
+			NewUnmeteredFieldMember(
+				t,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestParamFieldName,
 				TestTypeTestParamFieldType,
@@ -195,7 +215,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestAddressFieldName,
 				TestTypeTestAddressFieldType,
@@ -203,7 +223,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestTypeFieldName,
 				TestTypeTestTypeFieldType,
@@ -211,7 +231,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestCapFieldName,
 				TestTypeTestCapFieldType,
@@ -219,7 +239,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestCapIntFieldName,
 				TestTypeTestCapIntFieldType,
@@ -227,7 +247,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestIntersectionWithoutTypeFieldName,
 				TestTypeTestIntersectionWithoutTypeFieldType,

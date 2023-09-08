@@ -19,6 +19,8 @@
 package stdlib
 
 import (
+	"encoding/binary"
+
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -39,9 +41,8 @@ var unsafeRandomFunctionType = sema.NewSimpleFunctionType(
 )
 
 type UnsafeRandomGenerator interface {
-	// UnsafeRandom returns a random uint64,
-	// where the process of random number derivation is not cryptographically secure.
-	UnsafeRandom() (uint64, error)
+	// ReadRandom reads pseudo-random bytes into the input slice, using distributed randomness.
+	ReadRandom([]byte) error
 }
 
 func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryValue {
@@ -53,15 +54,15 @@ func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryVal
 			return interpreter.NewUInt64Value(
 				invocation.Interpreter,
 				func() uint64 {
-					var rand uint64
+					var buffer [8]byte
 					var err error
 					errors.WrapPanic(func() {
-						rand, err = generator.UnsafeRandom()
+						err = generator.ReadRandom(buffer[:])
 					})
 					if err != nil {
-						panic(err)
+						panic(interpreter.WrappedExternalError(err))
 					}
-					return rand
+					return binary.LittleEndian.Uint64(buffer[:])
 				},
 			)
 		},

@@ -693,38 +693,26 @@ func TestInterpretCompositeMetering(t *testing.T) {
 func TestInterpretSimpleCompositeMetering(t *testing.T) {
 	t.Parallel()
 
-	t.Run("auth account", func(t *testing.T) {
+	t.Run("Account", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(a: AuthAccount) {
-            
-            }
+            access(all) fun main(a: &Account) {}
         `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		_, err := inter.Invoke("main", newTestAuthAccountValue(meter, randomAddressValue()))
-		require.NoError(t, err)
+		address := common.MustBytesToAddress([]byte{0x1})
 
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValue))
-	})
+		account := stdlib.NewAccountReferenceValue(
+			meter,
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.UnauthorizedAccess,
+		)
 
-	t.Run("public account", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            access(all) fun main(a: PublicAccount) {
-            
-            }
-        `
-
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		_, err := inter.Invoke("main", newTestPublicAccountValue(meter, randomAddressValue()))
+		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindSimpleCompositeValueBase))
@@ -6667,15 +6655,27 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 		script := `
               resource R {}
 
-              access(all) fun main(account: AuthAccount) {
-                  account.borrow<&R>(from: /storage/r)
+              access(all) fun main(account: auth(Storage) &Account) {
+                  account.storage.borrow<&R>(from: /storage/r)
               }
             `
 
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
+		address := common.MustBytesToAddress([]byte{0x1})
+		authorization := interpreter.NewEntitlementSetAuthorization(
+			meter,
+			func() []common.TypeID {
+				return []common.TypeID{
+					sema.StorageType.ID(),
+				}
+			},
+			1,
+			sema.Conjunction,
+		)
+		account := stdlib.NewAccountReferenceValue(meter, nil, interpreter.AddressValue(address), authorization)
+
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
 
@@ -6964,121 +6964,17 @@ func TestInterpretPathValueMetering(t *testing.T) {
 	})
 }
 
-func TestInterpretPathCapabilityValueMetering(t *testing.T) {
+func TestInterpretCapabilityValueMetering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creation", func(t *testing.T) {
 		t.Parallel()
 
-		script := `
-            resource R {}
-
-            access(all) fun main(account: AuthAccount) {
-                let r <- create R()
-                account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/cap, target: /storage/r)
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindPathCapabilityValue))
-		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindPathValue))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
-	})
-
-	t.Run("array element", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            resource R {}
-
-            access(all) fun main(account: AuthAccount) {
-                let r <- create R()
-                account.save(<-r, to: /storage/r)
-                let x = account.link<&R>(/public/cap, target: /storage/r)
-
-                let y = [x]
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindCapabilityStaticType))
-	})
-}
-
-// TODO: IDCapability
-
-func TestInterpretPathLinkValueMetering(t *testing.T) {
-	t.Parallel()
-
-	t.Run("creation", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            resource R {}
-
-            access(all) fun main(account: AuthAccount) {
-                account.link<&R>(/public/cap, target: /private/p)
-            }
-        `
-		meter := newTestMemoryGauge()
-		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		// Metered twice only when Atree validation is enabled.
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindPathLinkValue))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindReferenceStaticType))
-	})
-}
-
-func TestInterpretAccountLinkValueMetering(t *testing.T) {
-	t.Parallel()
-
-	t.Run("creation", func(t *testing.T) {
-		t.Parallel()
-
-		const script = `
-          #allowAccountLinking
-
-          access(all) fun main(account: AuthAccount) {
-              account.linkAccount(/private/cap)
-          }
-        `
-
 		meter := newTestMemoryGauge()
 
-		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(
-			t,
-			script,
-			ParseCheckAndInterpretOptions{
-				CheckerConfig: &sema.Config{
-					AccountLinkingEnabled: true,
-				},
-			},
-			meter,
-		)
-		require.NoError(t, err)
+		_ = interpreter.NewCapabilityValue(meter, 1, interpreter.AddressValue{}, nil)
 
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err = inter.Invoke("main", account)
-		require.NoError(t, err)
-
-		// Metered twice only when Atree validation is enabled.
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAccountLinkValue))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindReferenceStaticType))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCapabilityValue))
 	})
 }
 
@@ -7899,14 +7795,14 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 		script := `
             struct S {}
 
-            access(all) fun main(account: AuthAccount) {
+            access(all) fun main() {
                 let s = CompositeType("")
             }
         `
 		meter := newTestMemoryGauge()
 		inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-		account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err := inter.Invoke("main", account)
+
+		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
 		emptyLocationStringCount := meter.getMemory(common.MemoryKindRawString)
@@ -7916,15 +7812,15 @@ func TestInterpreterStringLocationMetering(t *testing.T) {
 		script = `
             struct S {}
 
-            access(all) fun main(account: AuthAccount) {
+            access(all) fun main() {
                 let s = CompositeType("S.test.S")
             }
         `
 
 		meter = newTestMemoryGauge()
 		inter = parseCheckAndInterpretWithMemoryMetering(t, script, meter)
-		account = newTestAuthAccountValue(meter, interpreter.AddressValue{})
-		_, err = inter.Invoke("main", account)
+
+		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
 		testLocationStringCount := meter.getMemory(common.MemoryKindRawString)
@@ -8691,7 +8587,7 @@ func TestInterpretStaticTypeConversionMetering(t *testing.T) {
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindVariableSizedSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindConstantSizedSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindOptionalSemaType))
-		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindIntersectionSemaType))
+		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindIntersectionSemaType))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindReferenceSemaType))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCapabilitySemaType))
 	})
@@ -8703,23 +8599,38 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 	script := `
         resource R {}
 
-        access(all) fun main(account: AuthAccount) {
+        access(all) fun main(account: auth(Storage) &Account) {
             let r <- create R()
-            account.save(<-r, to: /storage/r)
-            account.link<&R>(/public/cap, target: /storage/r)
-            account.borrow<&R>(from: /storage/r)
+            account.storage.save(<-r, to: /storage/r)
         }
     `
 
 	meter := newTestMemoryGauge()
 	inter := parseCheckAndInterpretWithMemoryMetering(t, script, meter)
 
-	account := newTestAuthAccountValue(meter, interpreter.AddressValue{})
+	address := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
+	authorization := interpreter.NewEntitlementSetAuthorization(
+		meter,
+		func() []common.TypeID {
+			return []common.TypeID{
+				sema.StorageType.ID(),
+			}
+		},
+		1,
+		sema.Conjunction,
+	)
+	account := stdlib.NewAccountReferenceValue(
+		meter,
+		nil,
+		address,
+		authorization,
+	)
+
 	_, err := inter.Invoke("main", account)
 	require.NoError(t, err)
 
-	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindStorageMap))
-	assert.Equal(t, uint64(5), meter.getMemory(common.MemoryKindStorageKey))
+	assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindStorageMap))
+	assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindStorageKey))
 }
 
 func TestInterpretValueStringConversion(t *testing.T) {
@@ -9024,7 +8935,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		testValueStringConversion(t, script)
 	})
 
-	t.Run("path Capability", func(t *testing.T) {
+	t.Run("Capability", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -9038,42 +8949,10 @@ func TestInterpretValueStringConversion(t *testing.T) {
 
 		testValueStringConversion(t,
 			script,
-			interpreter.NewUnmeteredPathCapabilityValue(
-				interpreter.AddressValue{1},
-				interpreter.PathValue{
-					Domain:     common.PathDomainPublic,
-					Identifier: "somepath",
-				},
-				interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Bar",
-					TypeID:              "S.test.Bar",
-				},
-			))
-	})
-
-	t.Run("ID Capability", func(t *testing.T) {
-		t.Parallel()
-
-		script := `
-            access(all) fun main(a: Capability<&{Foo}>) {
-                log(a)
-            }
-
-            struct interface Foo {}
-            struct Bar: Foo {}
-        `
-
-		testValueStringConversion(t,
-			script,
-			interpreter.NewUnmeteredIDCapabilityValue(
+			interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.AddressValue{1},
-				interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Bar",
-					TypeID:              "S.test.Bar",
-				},
+				interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "Bar"),
 			))
 	})
 
@@ -9160,12 +9039,26 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				continue
 			}
 
+			semaType := primitiveStaticType.SemaType()
+
+			// Some primitive static types are deprecated,
+			// and only exist for migration purposes,
+			// so do not have an equivalent sema type
+			if semaType == nil {
+				continue
+			}
+
+			switch semaType.(type) {
+			case *sema.EntitlementType,
+				*sema.EntitlementMapType:
+				continue
+			}
+
 			script := fmt.Sprintf(`
                 access(all) fun main() {
                     log(Type<%s>())
                 }`,
-				sema.NewTypeAnnotation(primitiveStaticType.SemaType()).
-					QualifiedString(),
+				sema.NewTypeAnnotation(semaType).QualifiedString(),
 			)
 
 			testStaticTypeStringConversion(t, script)

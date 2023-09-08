@@ -36,7 +36,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       fun test(): AnyStruct {
           let map: {String: AnyStruct} = {}
-          let mapRef = &map as &{String: AnyStruct}
+          let mapRef = &map as auth(Mutate) &{String: AnyStruct}
           mapRef["mapRef"] = mapRef
           return map
       }
@@ -103,7 +103,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
 				common.ZeroAddress,
@@ -269,7 +269,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
 			common.ZeroAddress,

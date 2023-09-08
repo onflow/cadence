@@ -192,13 +192,13 @@ func TestRuntimeError(t *testing.T) {
 					panic("42")
 				}
 			}
-		
+
 			access(all) fun createResource(): @Resource{
 				return <- create Resource(
 					s: "argument"
 				)
 			}
-			
+
 			access(all) fun main() {
 				destroy createResource()
 			}
@@ -492,8 +492,8 @@ func TestRuntimeDefaultFunctionConflictPrintingError(t *testing.T) {
 		return []byte(fmt.Sprintf(
 			`
               transaction {
-                prepare(signer: AuthAccount) {
-                  let acct = AuthAccount(payer: signer)
+                prepare(signer: auth(BorrowValue) &Account) {
+                  let acct = Account(payer: signer)
                   acct.contracts.add(name: "%s", code: "%s".decodeHex())
                 }
               }
@@ -513,7 +513,7 @@ func TestRuntimeDefaultFunctionConflictPrintingError(t *testing.T) {
           }
 
 		  access(all) resource interface B {
-			access(all) fun foo() 
+			access(all) fun foo()
 		}
       }
     `
@@ -619,8 +619,8 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 		return []byte(fmt.Sprintf(
 			`
               transaction {
-                prepare(signer: AuthAccount) {
-                  let acct = AuthAccount(payer: signer)
+                prepare(signer: auth(BorrowValue) &Account) {
+                  let acct = Account(payer: signer)
                   acct.contracts.add(name: "%s", code: "%s".decodeHex())
                 }
               }

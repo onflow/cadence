@@ -30,7 +30,7 @@ import (
 // AccountCapabilityControllerValue
 
 type AccountCapabilityControllerValue struct {
-	BorrowType   ReferenceStaticType
+	BorrowType   *ReferenceStaticType
 	CapabilityID UInt64Value
 
 	// tag is locally cached result of GetTag, and not stored.
@@ -41,6 +41,7 @@ type AccountCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
+	GetCapability  func() *CapabilityValue
 	GetTag         func() *StringValue
 	SetTag         func(*StringValue)
 	DeleteFunction FunctionValue
@@ -48,7 +49,7 @@ type AccountCapabilityControllerValue struct {
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	return &AccountCapabilityControllerValue{
@@ -59,7 +60,7 @@ func NewUnmeteredAccountCapabilityControllerValue(
 
 func NewAccountCapabilityControllerValue(
 	memoryGauge common.MemoryGauge,
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	// Constant because its constituents are already metered.
@@ -80,7 +81,7 @@ func (*AccountCapabilityControllerValue) isValue() {}
 
 func (*AccountCapabilityControllerValue) isCapabilityControllerValue() {}
 
-func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() ReferenceStaticType {
+func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() *ReferenceStaticType {
 	return v.BorrowType
 }
 
@@ -111,7 +112,10 @@ func (v *AccountCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 	)
 }
 
-func (v *AccountCapabilityControllerValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *AccountCapabilityControllerValue) MeteredString(
+	memoryGauge common.MemoryGauge,
+	seenReferences SeenReferences,
+) string {
 	common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueStringMemoryUsage)
 
 	return format.AccountCapabilityController(
@@ -128,7 +132,11 @@ func (v *AccountCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *AccountCapabilityControllerValue) Equal(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	other Value,
+) bool {
 	otherController, ok := other.(*AccountCapabilityControllerValue)
 	if !ok {
 		return false
@@ -142,7 +150,14 @@ func (*AccountCapabilityControllerValue) IsStorable() bool {
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v *AccountCapabilityControllerValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (
+	atree.Storable,
+	error,
+) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
@@ -218,6 +233,9 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 
 	case sema.AccountCapabilityControllerTypeDeleteFunctionName:
 		return v.DeleteFunction
+
+	case sema.AccountCapabilityControllerTypeCapabilityFieldName:
+		return v.GetCapability()
 	}
 
 	return nil
@@ -228,9 +246,28 @@ func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 	panic(errors.NewUnreachableError())
 }
 
-func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
-	// Account capability controllers have no settable members (fields / functions)
+func (v *AccountCapabilityControllerValue) SetMember(
+	_ *Interpreter,
+	_ LocationRange,
+	identifier string,
+	value Value,
+) bool {
+	switch identifier {
+	case sema.AccountCapabilityControllerTypeTagFieldName:
+		stringValue, ok := value.(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		v.tag = stringValue
+		v.SetTag(stringValue)
+		return true
+	}
+
 	panic(errors.NewUnreachableError())
+}
+
+func (v *AccountCapabilityControllerValue) ControllerCapabilityID() UInt64Value {
+	return v.CapabilityID
 }
 
 func (v *AccountCapabilityControllerValue) ReferenceValue(
@@ -238,11 +275,25 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
 ) ReferenceValue {
-	return NewAccountReferenceValue(
+	config := interpreter.SharedState.Config
+
+	account := config.AccountHandler(AddressValue(capabilityAddress))
+
+	// Account must be of `Account` type.
+	interpreter.ExpectType(
+		account,
+		sema.AccountType,
+		EmptyLocationRange,
+	)
+
+	authorization := ConvertSemaAccessToStaticAuthorization(
 		interpreter,
-		capabilityAddress,
-		// NOTE: no source path, not a path capability (linking API)
-		EmptyPathValue,
+		resultBorrowType.Authorization,
+	)
+	return NewEphemeralReferenceValue(
+		interpreter,
+		authorization,
+		account,
 		resultBorrowType.Type,
 	)
 }
@@ -274,7 +325,7 @@ func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) 
 	)
 }
 
-func (controller *AccountCapabilityControllerValue) newSetTagFunction(
+func (v *AccountCapabilityControllerValue) newSetTagFunction(
 	inter *Interpreter,
 ) *HostFunctionValue {
 	return NewHostFunctionValue(
@@ -286,8 +337,8 @@ func (controller *AccountCapabilityControllerValue) newSetTagFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			controller.tag = newTagValue
-			controller.SetTag(newTagValue)
+			v.tag = newTagValue
+			v.SetTag(newTagValue)
 
 			return Void
 		},

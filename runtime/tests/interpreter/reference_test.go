@@ -113,7 +113,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: &S1} = {}
-              let dictRef = &dict as &{Int: &AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: &AnyStruct}
 
               let s2 = S2()
               dictRef[0] = &s2 as &AnyStruct
@@ -148,7 +148,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: S1} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = S2()
 
@@ -186,7 +186,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
          fun test(): Int {
              let dict: {Int: &S1} = {}
-             let dictRef = &dict as &{Int: &AnyStruct}
+             let dictRef = &dict as auth(Mutate) &{Int: &AnyStruct}
 
              let s2 = S2()
              dictRef[0] = &s2 as &AnyStruct
@@ -225,7 +225,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
          fun test(): Int {
              let dict: {Int: S1} = {}
-             let dictRef = &dict as &{Int: AnyStruct}
+             let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
              dictRef[0] = S2()
 
@@ -267,7 +267,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
               let s2 = S2()
 
-              let dictRef = &dict as &{Int: &AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: &AnyStruct}
               dictRef[0] = &s2 as &AnyStruct
 
               dict.values[0].value = 1
@@ -308,7 +308,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: S1} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = S2()
 
@@ -340,7 +340,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
               let s2 = S2()
 
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
               dictRef[0] = s2
 
               let x = dict.values[0]
@@ -369,7 +369,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test(): Int {
               let dict: {Int: fun(): Int} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = f2
 
@@ -393,7 +393,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: [UInt8]} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = "not an [UInt8] array, but a String"
 
@@ -417,7 +417,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
           fun test() {
               let dict: {Int: [UInt8]} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+              let dictRef = &dict as auth(Mutate) &{Int: AnyStruct}
 
               dictRef[0] = "not an [UInt8] array, but a String"
 
@@ -541,11 +541,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -563,14 +559,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let ref = &r as &R
 
                 // Move the resource into the account
-                account.save(<-r, to: /storage/r)
+                account.storage.save(<-r, to: /storage/r)
 
                 // Update the reference
                 ref.setID(2)
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
+            }`, sema.Config{}, errorHandler(t))
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -583,11 +576,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -601,14 +590,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let ref = &r as &R
 
                 // Move the resource into the account
-                account.save(<-r, to: /storage/r)
+                account.storage.save(<-r, to: /storage/r)
 
                 // 'Read' a field from the reference
                 let id = ref.id
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
+            }`, sema.Config{}, errorHandler(t))
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -632,11 +618,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target: &[R]) {
+            fun test(target: auth(Mutate) &[R]) {
                 target.append(<- create R())
 
                 // Take reference while in the account
-                let ref = &target[0] as &R
+                let ref = target[0]
 
                 // Move the resource out of the account onto the stack
                 let movedR <- target.remove(at: 0)
@@ -655,14 +641,19 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
+				sema.Conjunction,
+			),
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -734,11 +725,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target1: &[R], target2: &[R]) {
+            fun test(target1: auth(Mutate) &[R], target2: auth(Mutate) &[R]) {
                 target1.append(<- create R())
 
                 // Take reference while in the account_1
-                let ref = &target1[0] as &R
+                let ref = target1[0]
 
                 // Move the resource out of the account_1 into the account_2
                 target2.append(<- target1.remove(at: 0))
@@ -755,14 +746,19 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array1 := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			common.Address{0x1},
 		)
 
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
+				sema.Conjunction,
+			),
 			array1,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -774,14 +770,19 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array2 := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			common.Address{0x2},
 		)
 
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
+				sema.Conjunction,
+			),
 			array2,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -810,11 +811,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 }
             }
 
-            fun test(target: &[R]): Int {
+            fun test(target: auth(Mutate) &[R]): Int {
                 target.append(<- create R())
 
                 // Take reference while in the account
-                let ref = &target[0] as &R
+                let ref = target[0]
 
                 // Move the resource out of the account onto the stack. This should invalidate the reference.
                 let movedR <- target.remove(at: 0)
@@ -840,14 +841,19 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
+				sema.Conjunction,
+			),
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -865,11 +871,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -884,17 +886,15 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 
              fun test() {
                 let r1 <-create R()
-                account.save(<-r1, to: /storage/r)
+                account.storage.save(<-r1, to: /storage/r)
 
-                let r1Ref = account.borrow<&R>(from: /storage/r)!
+                let r1Ref = account.storage.borrow<&R>(from: /storage/r)!
 
-                let r2 <- account.load<@R>(from: /storage/r)!
+                let r2 <- account.storage.load<@R>(from: /storage/r)!
 
                 r1Ref.setID(2)
                 destroy r2
-            }`,
-			sema.Config{},
-		)
+            }`, sema.Config{})
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
@@ -918,11 +918,11 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
             var ref2: &R? = nil
             var ref3: &R? = nil
 
-            fun setup(collection: &[R]) {
+            fun setup(collection: auth(Mutate) &[R]) {
                 collection.append(<- create R())
 
                 // Take reference while in the account
-                ref1 = &collection[0] as &R
+                ref1 = collection[0]
 
                 // Move the resource out of the account onto the stack. This should invalidate ref1.
                 let movedR <- collection.remove(at: 0)
@@ -937,7 +937,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 collection.append(<- movedR)
 
                 // Take another reference
-                ref3 = &collection[1] as &R
+                ref3 = collection[1]
             }
 
             fun getRef1Id(): Int {
@@ -965,14 +965,19 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(nil, rType),
 			},
 			address,
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
-			interpreter.UnauthorizedAccess,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"Mutate"} },
+				1,
+				sema.Conjunction,
+			),
 			array,
 			&sema.VariableSizedType{
 				Type: rType,
@@ -1169,6 +1174,352 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
+
+	t.Run("nested resource in composite", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let id: UInt8  // non resource typed field
+                let bar: @Bar   // resource typed field
+                init() {
+                    self.id = 1
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let baz: @Baz
+                init() {
+                    self.baz <-create Baz()
+                }
+                destroy() {
+                    destroy self.baz
+                }
+            }
+
+            resource Baz {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                var foo <- create Foo()
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var bazRef = getRef(&foo.bar.baz as &Baz)
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                bazRef.id
+
+                destroy foo2
+            }
+
+            fun getRef(_ ref: &Baz): &Baz {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested resource in dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            fun main() {
+                var dict <- {"levelOne": <- {"levelTwo": <- create Foo()}}
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var dictRef = getRef(&dict["levelOne"] as &{String: Foo}?)!
+
+                // Move the outer resource
+                var dict2 <- dict
+
+                // Access the inner moved resource
+                var fooRef = dictRef["levelTwo"]
+
+                destroy dict2
+            }
+
+            fun getRef(_ ref: &{String: Foo}?): &{String: Foo}? {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested resource in array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            fun main() {
+                var array <- [<-[<- create Foo()]]
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var arrayRef = getRef(&array[0] as &[Foo])
+
+                // Move the outer resource
+                var array2 <- array
+
+                // Access the inner moved resource
+                var fooRef = arrayRef[0]
+
+                destroy array2
+            }
+
+            fun getRef(_ ref: &[Foo]): &[Foo] {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("nested optional resource", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let optionalBar: @Bar?
+                init() {
+                    self.optionalBar <-create Bar()
+                }
+                destroy() {
+                    destroy self.optionalBar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                var foo <- create Foo()
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var barRef = getRef(&foo.optionalBar as &Bar?)
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                barRef!.id
+
+                destroy foo2
+            }
+
+            fun getRef(_ ref: &Bar?): &Bar? {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("reference created by field access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let bar: @Bar
+                init() {
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                var foo <- create Foo()
+                var fooRef = &foo as &Foo
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var barRef = getRef(fooRef.bar)
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                barRef.id
+
+                destroy foo2
+            }
+
+            fun getRef(_ ref: &Bar): &Bar {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("reference created by index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                let array <- [<- create Foo()]
+                var arrayRef = &array as &[Foo]
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var fooRef = getRef(arrayRef[0])
+
+                // Move the outer resource
+                var array2 <- array
+
+                // Access the moved resource
+                fooRef.id
+
+                destroy array2
+            }
+
+            fun getRef(_ ref: &Foo): &Foo {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("reference created by field and index access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+             resource Foo {
+                let bar: @Bar
+                init() {
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                let array <- [<- create Foo()]
+                var arrayRef = &array as &[Foo]
+
+                // Get a reference to the inner resource.
+                // Function call is just to trick the checker.
+                var barRef = getRef(arrayRef[0].bar)
+
+                // Move the outer resource
+                var array2 <- array
+
+                // Access the moved resource
+                barRef.id
+
+                destroy array2
+            }
+
+            fun getRef(_ ref: &Bar): &Bar {
+                return ref
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("downcasted reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+             resource Foo {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+
+            fun main() {
+                var foo <- create Foo()
+                var fooRef = &foo as &Foo
+
+                var anyStruct: AnyStruct = fooRef
+
+                var downCastedRef = anyStruct as! &Foo
+
+                // Move the outer resource
+                var foo2 <- foo
+
+                // Access the moved resource
+                downCastedRef.id
+
+                destroy foo2
+            }
+        `,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
 }
 
 func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
@@ -1189,11 +1540,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccountWithErrorHandler(
-			t,
-			address,
-			true,
-			`
+		inter, _ := testAccountWithErrorHandler(t, address, true, nil, `
             resource R {
                 access(all) var id: Int
 
@@ -1214,10 +1561,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
                 // Update the reference
                 ref.setID(2)
-            }`,
-			sema.Config{},
-			errorHandler(t),
-		)
+            }`, sema.Config{}, errorHandler(t))
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

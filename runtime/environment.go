@@ -41,7 +41,7 @@ type Environment interface {
 	Declare(valueDeclaration stdlib.StandardLibraryValue)
 	Configure(
 		runtimeInterface Interface,
-		codesAndPrograms codesAndPrograms,
+		codesAndPrograms CodesAndPrograms,
 		storage *Storage,
 		coverageReport *CoverageReport,
 	)
@@ -63,8 +63,7 @@ type Environment interface {
 		error,
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
-	NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value
-	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
+	NewAccountValue(address interpreter.AddressValue) interpreter.Value
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
@@ -73,7 +72,7 @@ type interpreterEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	storage          *Storage
 	coverageReport   *CoverageReport
-	codesAndPrograms codesAndPrograms
+	codesAndPrograms CodesAndPrograms
 }
 
 type interpreterEnvironment struct {
@@ -93,10 +92,9 @@ var _ stdlib.Logger = &interpreterEnvironment{}
 var _ stdlib.UnsafeRandomGenerator = &interpreterEnvironment{}
 var _ stdlib.BlockAtHeightProvider = &interpreterEnvironment{}
 var _ stdlib.CurrentBlockProvider = &interpreterEnvironment{}
-var _ stdlib.PublicAccountHandler = &interpreterEnvironment{}
+var _ stdlib.AccountHandler = &interpreterEnvironment{}
 var _ stdlib.AccountCreator = &interpreterEnvironment{}
 var _ stdlib.EventEmitter = &interpreterEnvironment{}
-var _ stdlib.AuthAccountHandler = &interpreterEnvironment{}
 var _ stdlib.PublicKeyValidator = &interpreterEnvironment{}
 var _ stdlib.PublicKeySignatureVerifier = &interpreterEnvironment{}
 var _ stdlib.BLSPoPVerifier = &interpreterEnvironment{}
@@ -127,13 +125,11 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		MemoryGauge:                          e,
 		BaseActivation:                       e.baseActivation,
 		OnEventEmitted:                       e.newOnEventEmittedHandler(),
-		OnAccountLinked:                      e.newOnAccountLinkedHandler(),
 		InjectedCompositeFieldsHandler:       e.newInjectedCompositeFieldsHandler(),
 		UUIDHandler:                          e.newUUIDHandler(),
 		ContractValueHandler:                 e.newContractValueHandler(),
 		ImportLocationHandler:                e.newImportLocationHandler(),
-		PublicAccountHandler:                 e.newPublicAccountHandler(),
-		AuthAccountHandler:                   e.newAuthAccountHandler(),
+		AccountHandler:                       e.NewAccountValue,
 		OnRecordTrace:                        e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:                 e.newCompositeTypeHandler(),
@@ -149,8 +145,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnMeterComputation:            e.newOnMeterComputation(),
 		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
-		IDCapabilityBorrowHandler:     stdlib.BorrowCapabilityController,
-		IDCapabilityCheckHandler:      stdlib.CheckCapabilityController,
+		CapabilityBorrowHandler:       stdlib.BorrowCapabilityController,
+		CapabilityCheckHandler:        stdlib.CheckCapabilityController,
 	}
 }
 
@@ -162,9 +158,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		LocationHandler:                  e.newLocationHandler(),
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
-		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
 		AttachmentsEnabled:               e.config.AttachmentsEnabled,
-		CapabilityControllersEnabled:     e.config.CapabilityControllersEnabled,
 	}
 }
 
@@ -186,7 +180,7 @@ func NewScriptInterpreterEnvironment(config Config) Environment {
 
 func (e *interpreterEnvironment) Configure(
 	runtimeInterface Interface,
-	codesAndPrograms codesAndPrograms,
+	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
 	coverageReport *CoverageReport,
 ) {
@@ -203,24 +197,16 @@ func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibrary
 	interpreter.Declare(e.baseActivation, valueDeclaration)
 }
 
-func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
-	return stdlib.NewAuthAccountValue(e, e, address)
-}
-
-func (e *interpreterEnvironment) NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value {
-	return stdlib.NewPublicAccountValue(e, e, address)
-}
-
 func (e *interpreterEnvironment) MeterMemory(usage common.MemoryUsage) error {
 	return e.runtimeInterface.MeterMemory(usage)
 }
 
-func (e *interpreterEnvironment) ProgramLog(message string) error {
+func (e *interpreterEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
 	return e.runtimeInterface.ProgramLog(message)
 }
 
-func (e *interpreterEnvironment) UnsafeRandom() (uint64, error) {
-	return e.runtimeInterface.UnsafeRandom()
+func (e *interpreterEnvironment) ReadRandom(buffer []byte) error {
+	return e.runtimeInterface.ReadRandom(buffer)
 }
 
 func (e *interpreterEnvironment) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
@@ -427,6 +413,10 @@ func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
 		errors.WrapPanic(func() {
 			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
 		})
+
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
 		return
 	}
 }
@@ -556,6 +546,11 @@ func (e *interpreterEnvironment) getProgram(
 			if panicErr != nil {
 				return nil, panicErr
 			}
+
+			if err != nil {
+				err = interpreter.WrappedExternalError(err)
+			}
+
 			return
 		})
 	})
@@ -573,6 +568,11 @@ func (e *interpreterEnvironment) getCode(location common.Location) (code []byte,
 			code, err = e.runtimeInterface.GetCode(location)
 		})
 	}
+
+	if err != nil {
+		err = interpreter.WrappedExternalError(err)
+	}
+
 	return
 }
 
@@ -639,16 +639,8 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 	}
 }
 
-func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
-	return func(address interpreter.AddressValue) interpreter.Value {
-		return stdlib.NewPublicAccountValue(e, e, address)
-	}
-}
-
-func (e *interpreterEnvironment) newAuthAccountHandler() interpreter.AuthAccountHandlerFunc {
-	return func(address interpreter.AddressValue) interpreter.Value {
-		return stdlib.NewAuthAccountValue(e, e, address)
-	}
+func (e *interpreterEnvironment) NewAccountValue(address interpreter.AddressValue) interpreter.Value {
+	return stdlib.NewAccountValue(e, e, address)
 }
 
 func (e *interpreterEnvironment) ValidatePublicKey(publicKey *stdlib.PublicKey) error {
@@ -741,6 +733,10 @@ func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 		errors.WrapPanic(func() {
 			uuid, err = e.runtimeInterface.GenerateUUID()
 		})
+
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
 		return
 	}
 }
@@ -760,26 +756,6 @@ func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventE
 			e.runtimeInterface.EmitEvent,
 		)
 
-		return nil
-	}
-}
-
-func (e *interpreterEnvironment) newOnAccountLinkedHandler() interpreter.OnAccountLinkedFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		addressValue interpreter.AddressValue,
-		pathValue interpreter.PathValue,
-	) error {
-		e.EmitEvent(
-			inter,
-			stdlib.AccountLinkedEventType,
-			[]interpreter.Value{
-				addressValue,
-				pathValue,
-			},
-			locationRange,
-		)
 		return nil
 	}
 }
@@ -814,10 +790,11 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 				)
 
 				return map[string]interpreter.Value{
-					sema.ContractAccountFieldName: stdlib.NewAuthAccountValue(
+					sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
 						inter,
 						e,
 						addressValue,
+						interpreter.FullyEntitledAccountAccess,
 					),
 				}
 			}
@@ -937,7 +914,7 @@ func (e *interpreterEnvironment) newOnMeterComputation() interpreter.OnMeterComp
 			err = e.runtimeInterface.MeterComputation(compKind, intensity)
 		})
 		if err != nil {
-			panic(err)
+			panic(interpreter.WrappedExternalError(err))
 		}
 	}
 }

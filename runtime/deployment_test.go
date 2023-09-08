@@ -151,7 +151,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			`
               transaction {
 
-                  prepare(signer: AuthAccount) {
+                  prepare(signer: auth(AddContract) &Account) {
                       signer.contracts.add(name: "Test", code: %s%s)
                   }
               }

@@ -21,6 +21,14 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
+const AccountCapabilityControllerTypeCapabilityFieldName = "capability"
+
+var AccountCapabilityControllerTypeCapabilityFieldType = &CapabilityType{}
+
+const AccountCapabilityControllerTypeCapabilityFieldDocString = `
+The capability that is controlled by this controller.
+`
+
 const AccountCapabilityControllerTypeTagFieldName = "tag"
 
 var AccountCapabilityControllerTypeTagFieldType = StringType
@@ -101,6 +109,7 @@ var AccountCapabilityControllerType = &SimpleType{
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
+	ContainFields: true,
 }
 
 func init() {
@@ -108,7 +117,15 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
+				ast.VariableKindConstant,
+				AccountCapabilityControllerTypeCapabilityFieldName,
+				AccountCapabilityControllerTypeCapabilityFieldType,
+				AccountCapabilityControllerTypeCapabilityFieldDocString,
+			),
+			NewUnmeteredFieldMember(
+				t,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindVariable,
 				AccountCapabilityControllerTypeTagFieldName,
 				AccountCapabilityControllerTypeTagFieldType,
@@ -116,14 +133,14 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				AccountCapabilityControllerTypeSetTagFunctionName,
 				AccountCapabilityControllerTypeSetTagFunctionType,
 				AccountCapabilityControllerTypeSetTagFunctionDocString,
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				AccountCapabilityControllerTypeBorrowTypeFieldName,
 				AccountCapabilityControllerTypeBorrowTypeFieldType,
@@ -131,7 +148,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				AccountCapabilityControllerTypeCapabilityIDFieldName,
 				AccountCapabilityControllerTypeCapabilityIDFieldType,
@@ -139,7 +156,7 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				AccountCapabilityControllerTypeDeleteFunctionName,
 				AccountCapabilityControllerTypeDeleteFunctionType,
 				AccountCapabilityControllerTypeDeleteFunctionDocString,

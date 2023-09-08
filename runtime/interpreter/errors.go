@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -463,34 +464,6 @@ func (e OverwriteError) Error() string {
 	)
 }
 
-// CyclicLinkError
-type CyclicLinkError struct {
-	LocationRange
-	Paths   []PathValue
-	Address common.Address
-}
-
-var _ errors.UserError = CyclicLinkError{}
-
-func (CyclicLinkError) IsUserError() {}
-
-func (e CyclicLinkError) Error() string {
-	var builder strings.Builder
-	for i, path := range e.Paths {
-		if i > 0 {
-			builder.WriteString(" -> ")
-		}
-		builder.WriteString(path.String())
-	}
-	paths := builder.String()
-
-	return fmt.Sprintf(
-		"cyclic link in account %s: %s",
-		e.Address.ShortHexWithPrefix(),
-		paths,
-	)
-}
-
 // ArrayIndexOutOfBoundsError
 type ArrayIndexOutOfBoundsError struct {
 	LocationRange
@@ -611,7 +584,7 @@ func (e UUIDUnavailableError) Error() string {
 
 // TypeLoadingError
 type TypeLoadingError struct {
-	TypeID common.TypeID
+	TypeID TypeID
 }
 
 var _ errors.UserError = TypeLoadingError{}
@@ -975,21 +948,6 @@ func (e InvalidAttachmentOperationTargetError) Error() string {
 	)
 }
 
-// AccountLinkingForbiddenError is the error which is reported
-// when a user uses the account link function,
-// but account linking is not allowed
-type AccountLinkingForbiddenError struct {
-	LocationRange
-}
-
-var _ errors.UserError = AccountLinkingForbiddenError{}
-
-func (AccountLinkingForbiddenError) IsUserError() {}
-
-func (e AccountLinkingForbiddenError) Error() string {
-	return "account linking is not allowed"
-}
-
 // RecursiveTransferError
 type RecursiveTransferError struct {
 	LocationRange
@@ -1001,4 +959,23 @@ func (RecursiveTransferError) IsUserError() {}
 
 func (RecursiveTransferError) Error() string {
 	return "recursive transfer of value"
+}
+
+func WrappedExternalError(err error) error {
+	switch err := err.(type) {
+	case
+		// If the error is a go-runtime error, don't wrap.
+		// These are crashers.
+		runtime.Error,
+
+		// If the error is already a cadence error, then avoid redundant wrapping.
+		errors.InternalError,
+		errors.UserError,
+		errors.ExternalError,
+		Error:
+		return err
+
+	default:
+		return errors.NewExternalError(err)
+	}
 }

@@ -108,7 +108,7 @@ func TestOwnerNewArray(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		common.ZeroAddress,
@@ -162,7 +162,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		common.ZeroAddress,
@@ -218,7 +218,7 @@ func TestOwnerArrayElement(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
@@ -261,7 +261,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
@@ -312,7 +312,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
@@ -358,7 +358,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
@@ -403,7 +403,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 	array := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		owner,
@@ -450,7 +450,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 	dictionary := NewDictionaryValue(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -496,7 +496,7 @@ func TestOwnerDictionary(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -555,7 +555,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -615,7 +615,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -669,7 +669,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -725,7 +725,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -785,7 +785,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -1008,7 +1008,7 @@ func TestStringer(t *testing.T) {
 			value: NewArrayValue(
 				newTestInterpreter(t),
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
 				common.ZeroAddress,
@@ -1021,7 +1021,7 @@ func TestStringer(t *testing.T) {
 			value: NewDictionaryValue(
 				newTestInterpreter(t),
 				EmptyLocationRange,
-				DictionaryStaticType{
+				&DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeString,
 					ValueType: PrimitiveStaticTypeUInt8,
 				},
@@ -1086,20 +1086,6 @@ func TestStringer(t *testing.T) {
 			}(),
 			expected: "y --> bar",
 		},
-		"PathLink": {
-			value: PathLinkValue{
-				TargetPath: NewUnmeteredPathValue(
-					common.PathDomainStorage,
-					"foo",
-				),
-				Type: PrimitiveStaticTypeInt,
-			},
-			expected: "PathLink<Int>(/storage/foo)",
-		},
-		"AccountLink": {
-			value:    AccountLinkValue{},
-			expected: "AccountLink()",
-		},
 		"Path": {
 			value: NewUnmeteredPathValue(
 				common.PathDomainStorage,
@@ -1111,30 +1097,8 @@ func TestStringer(t *testing.T) {
 			value:    NewUnmeteredTypeValue(PrimitiveStaticTypeInt),
 			expected: "Type<Int>()",
 		},
-		"path Capability with borrow type": {
-			value: NewUnmeteredPathCapabilityValue(
-				NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-				NewUnmeteredPathValue(
-					common.PathDomainPublic,
-					"foo",
-				),
-				PrimitiveStaticTypeInt,
-			),
-			expected: "Capability<Int>(address: 0x0000000102030405, path: /public/foo)",
-		},
-		"path Capability without borrow type": {
-			value: NewUnmeteredPathCapabilityValue(
-				NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-				NewUnmeteredPathValue(
-					common.PathDomainPublic,
-					"foo",
-				),
-				nil,
-			),
-			expected: "Capability(address: 0x0000000102030405, path: /public/foo)",
-		},
 		"ID Capability with borrow type": {
-			value: NewUnmeteredIDCapabilityValue(
+			value: NewUnmeteredCapabilityValue(
 				6,
 				NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
 				PrimitiveStaticTypeInt,
@@ -1148,7 +1112,7 @@ func TestStringer(t *testing.T) {
 				array := NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
 					common.ZeroAddress,
@@ -1209,7 +1173,7 @@ func TestVisitor(t *testing.T) {
 	value = NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		common.ZeroAddress,
@@ -1219,7 +1183,7 @@ func TestVisitor(t *testing.T) {
 	value = NewDictionaryValue(
 		inter,
 		EmptyLocationRange,
-		DictionaryStaticType{
+		&DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAny,
 		},
@@ -1755,7 +1719,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	assert.True(t, conforms)
 }
 
-func TestPathCapabilityValue_Equal(t *testing.T) {
+func TestCapabilityValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
@@ -1766,190 +1730,14 @@ func TestPathCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			NewUnmeteredPathCapabilityValue(
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				NewUnmeteredPathValue(
-					common.PathDomainPublic,
-					"test",
-				),
-				PrimitiveStaticTypeInt,
-			).Equal(
-				inter,
-				EmptyLocationRange,
-				NewUnmeteredPathCapabilityValue(
-					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-					NewUnmeteredPathValue(
-						common.PathDomainPublic,
-						"test",
-					),
-					PrimitiveStaticTypeInt,
-				),
-			),
-		)
-	})
-
-	t.Run("equal, no borrow type", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.True(t,
-			NewUnmeteredPathCapabilityValue(
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				NewUnmeteredPathValue(
-					common.PathDomainPublic,
-					"test",
-				),
-				nil,
-			).Equal(
-				inter,
-				EmptyLocationRange,
-				NewUnmeteredPathCapabilityValue(
-					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-					NewUnmeteredPathValue(
-						common.PathDomainPublic,
-						"test",
-					),
-					nil,
-				),
-			),
-		)
-	})
-
-	t.Run("different paths", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.False(t,
-			NewUnmeteredPathCapabilityValue(
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				NewUnmeteredPathValue(
-					common.PathDomainPublic,
-					"test1",
-				),
-				PrimitiveStaticTypeInt,
-			).Equal(
-				inter,
-				EmptyLocationRange,
-				NewUnmeteredPathCapabilityValue(
-					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-					NewUnmeteredPathValue(
-						common.PathDomainPublic,
-						"test2",
-					),
-					PrimitiveStaticTypeInt,
-				),
-			),
-		)
-	})
-
-	t.Run("different addresses", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.False(t,
-			NewUnmeteredPathCapabilityValue(
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				NewUnmeteredPathValue(
-					common.PathDomainPublic,
-					"test",
-				),
-				PrimitiveStaticTypeInt,
-			).Equal(
-				inter,
-				EmptyLocationRange,
-				NewUnmeteredPathCapabilityValue(
-					NewUnmeteredAddressValueFromBytes([]byte{0x2}),
-					NewUnmeteredPathValue(
-						common.PathDomainPublic,
-						"test",
-					),
-					PrimitiveStaticTypeInt,
-				),
-			),
-		)
-	})
-
-	t.Run("different borrow types", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.False(t,
-			NewUnmeteredPathCapabilityValue(
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				NewUnmeteredPathValue(
-					common.PathDomainPublic,
-					"test",
-				),
-				PrimitiveStaticTypeInt,
-			).Equal(
-				inter,
-				EmptyLocationRange,
-				NewUnmeteredPathCapabilityValue(
-					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-					NewUnmeteredPathValue(
-						common.PathDomainPublic,
-						"test",
-					),
-					PrimitiveStaticTypeString,
-				),
-			),
-		)
-	})
-
-	t.Run("different kind", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.False(t,
-			NewUnmeteredPathCapabilityValue(
-				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				NewUnmeteredPathValue(
-					common.PathDomainPublic,
-					"test",
-				),
-				PrimitiveStaticTypeInt,
-			).Equal(
-				inter,
-				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
-					4,
-					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-					PrimitiveStaticTypeInt,
-				),
-			),
-		)
-	})
-}
-
-func TestIDCapabilityValue_Equal(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("equal, borrow type", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.True(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
 			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
+				NewUnmeteredCapabilityValue(
 					4,
 					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					PrimitiveStaticTypeInt,
@@ -1965,14 +1753,14 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
 			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
+				NewUnmeteredCapabilityValue(
 					4,
 					NewUnmeteredAddressValueFromBytes([]byte{0x2}),
 					PrimitiveStaticTypeInt,
@@ -1988,14 +1776,14 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
 			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
+				NewUnmeteredCapabilityValue(
 					4,
 					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					PrimitiveStaticTypeString,
@@ -2011,14 +1799,14 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
 			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredIDCapabilityValue(
+				NewUnmeteredCapabilityValue(
 					5,
 					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 					PrimitiveStaticTypeInt,
@@ -2034,21 +1822,14 @@ func TestIDCapabilityValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			NewUnmeteredIDCapabilityValue(
+			NewUnmeteredCapabilityValue(
 				4,
 				NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				PrimitiveStaticTypeInt,
 			).Equal(
 				inter,
 				EmptyLocationRange,
-				NewUnmeteredPathCapabilityValue(
-					NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-					NewUnmeteredPathValue(
-						common.PathDomainPublic,
-						"test",
-					),
-					PrimitiveStaticTypeInt,
-				),
+				FalseValue,
 			),
 		)
 	})
@@ -2473,118 +2254,11 @@ func TestPathValue_Equal(t *testing.T) {
 	})
 }
 
-func TestPathLinkValue_Equal(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("equal, borrow type", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.True(t,
-			PathLinkValue{
-				TargetPath: NewUnmeteredPathValue(
-					common.PathDomainStorage,
-					"test",
-				),
-				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				inter,
-				EmptyLocationRange,
-				PathLinkValue{
-					TargetPath: NewUnmeteredPathValue(
-						common.PathDomainStorage,
-						"test",
-					),
-					Type: PrimitiveStaticTypeInt,
-				},
-			),
-		)
-	})
-
-	t.Run("different paths", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.False(t,
-			PathLinkValue{
-				TargetPath: NewUnmeteredPathValue(
-					common.PathDomainStorage,
-					"test1",
-				),
-				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				inter,
-				EmptyLocationRange,
-				PathLinkValue{
-					TargetPath: NewUnmeteredPathValue(
-						common.PathDomainStorage,
-						"test2",
-					),
-					Type: PrimitiveStaticTypeInt,
-				},
-			),
-		)
-	})
-
-	t.Run("different types", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.False(t,
-			PathLinkValue{
-				TargetPath: NewUnmeteredPathValue(
-					common.PathDomainStorage,
-					"test",
-				),
-				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				inter,
-				EmptyLocationRange,
-				PathLinkValue{
-					TargetPath: NewUnmeteredPathValue(
-						common.PathDomainStorage,
-						"test",
-					),
-					Type: PrimitiveStaticTypeString,
-				},
-			),
-		)
-	})
-
-	t.Run("different kind", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		require.False(t,
-			PathLinkValue{
-				TargetPath: NewUnmeteredPathValue(
-					common.PathDomainStorage,
-					"test",
-				),
-				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				inter,
-				EmptyLocationRange,
-				NewUnmeteredStringValue("test"),
-			),
-		)
-	})
-}
-
 func TestArrayValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
-	uint8ArrayStaticType := VariableSizedStaticType{
+	uint8ArrayStaticType := &VariableSizedStaticType{
 		Type: PrimitiveStaticTypeUInt8,
 	}
 
@@ -2708,7 +2382,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		uint16ArrayStaticType := VariableSizedStaticType{
+		uint16ArrayStaticType := &VariableSizedStaticType{
 			Type: PrimitiveStaticTypeUInt16,
 		}
 
@@ -2832,7 +2506,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
-	byteStringDictionaryType := DictionaryStaticType{
+	byteStringDictionaryType := &DictionaryStaticType{
 		KeyType:   PrimitiveStaticTypeUInt8,
 		ValueType: PrimitiveStaticTypeString,
 	}
@@ -2994,7 +2668,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		stringByteDictionaryStaticType := DictionaryStaticType{
+		stringByteDictionaryStaticType := &DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeUInt8,
 		}
@@ -3510,7 +3184,7 @@ func TestPublicKeyValue(t *testing.T) {
 		publicKey := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -3563,7 +3237,7 @@ func TestPublicKeyValue(t *testing.T) {
 		publicKey := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -4233,38 +3907,16 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 	})
 
-	t.Run("PathCapabilityValue", func(t *testing.T) {
+	t.Run("CapabilityValue", func(t *testing.T) {
 
 		t.Parallel()
 
 		test(
 			func(_ *Interpreter) Value {
-				return NewUnmeteredPathCapabilityValue(
-					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
-					NewUnmeteredPathValue(
-						common.PathDomainPublic,
-						"test",
-					),
-					ReferenceStaticType{
-						Authorization:  UnauthorizedAccess,
-						ReferencedType: PrimitiveStaticTypeBool,
-					},
-				)
-			},
-			true,
-		)
-	})
-
-	t.Run("IDCapabilityValue", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			func(_ *Interpreter) Value {
-				return NewUnmeteredIDCapabilityValue(
+				return NewUnmeteredCapabilityValue(
 					NewUnmeteredUInt64Value(4),
 					NewUnmeteredAddressValueFromBytes(testAddress.Bytes()),
-					ReferenceStaticType{
+					&ReferenceStaticType{
 						Authorization:  UnauthorizedAccess,
 						ReferencedType: PrimitiveStaticTypeBool,
 					},
@@ -4283,7 +3935,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeNumber,
 					},
 					testAddress,
@@ -4299,7 +3951,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
 					testAddress,
@@ -4315,7 +3967,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeInteger,
 					},
 					testAddress,
@@ -4331,7 +3983,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					VariableSizedStaticType{
+					&VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
 					testAddress,
@@ -4351,7 +4003,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewDictionaryValueWithAddress(
 					inter,
 					EmptyLocationRange,
-					DictionaryStaticType{
+					&DictionaryStaticType{
 						KeyType:   PrimitiveStaticTypeString,
 						ValueType: PrimitiveStaticTypeNumber,
 					},
@@ -4370,7 +4022,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewDictionaryValueWithAddress(
 					inter,
 					EmptyLocationRange,
-					DictionaryStaticType{
+					&DictionaryStaticType{
 						KeyType:   PrimitiveStaticTypeString,
 						ValueType: PrimitiveStaticTypeAnyStruct,
 					},
@@ -4389,7 +4041,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewDictionaryValueWithAddress(
 					inter,
 					EmptyLocationRange,
-					DictionaryStaticType{
+					&DictionaryStaticType{
 						KeyType:   PrimitiveStaticTypeAnyStruct,
 						ValueType: PrimitiveStaticTypeNumber,
 					},
@@ -4408,7 +4060,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		//test(
 		//	NewDictionaryValueWithAddress(
 		//		inter,
-		//		DictionaryStaticType{
+		//		&DictionaryStaticTypeX{
 		//			KeyType:   PrimitiveStaticTypeInt,
 		//			ValueType: PrimitiveStaticTypeNumber,
 		//		},
@@ -4424,7 +4076,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		//test(
 		//	NewDictionaryValueWithAddress(
 		//		inter,
-		//		DictionaryStaticType{
+		//		&DictionaryStaticTypeX{
 		//			KeyType:   PrimitiveStaticTypeAnyStruct,
 		//			ValueType: PrimitiveStaticTypeInteger,
 		//		},
@@ -4442,7 +4094,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 				return NewDictionaryValueWithAddress(
 					inter,
 					EmptyLocationRange,
-					DictionaryStaticType{
+					&DictionaryStaticType{
 						KeyType:   PrimitiveStaticTypeAnyStruct,
 						ValueType: PrimitiveStaticTypeAnyStruct,
 					},

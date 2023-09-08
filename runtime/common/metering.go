@@ -146,13 +146,9 @@ var (
 	BoundFunctionValueMemoryUsage               = NewConstantMemoryUsage(MemoryKindBoundFunctionValue)
 	HostFunctionValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindHostFunctionValue)
 	InterpretedFunctionValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindInterpretedFunctionValue)
-	PathCapabilityValueMemoryUsage              = NewConstantMemoryUsage(MemoryKindPathCapabilityValue)
-	IDCapabilityValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindIDCapabilityValue)
+	CapabilityValueMemoryUsage                  = NewConstantMemoryUsage(MemoryKindCapabilityValue)
 	EphemeralReferenceValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
 	StorageReferenceValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)
-	AccountReferenceValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindAccountReferenceValue)
-	PathLinkValueMemoryUsage                    = NewConstantMemoryUsage(MemoryKindPathLinkValue)
-	AccountLinkValueMemoryUsage                 = NewConstantMemoryUsage(MemoryKindAccountLinkValue)
 	PathValueMemoryUsage                        = NewConstantMemoryUsage(MemoryKindPathValue)
 	OptionalValueMemoryUsage                    = NewConstantMemoryUsage(MemoryKindOptionalValue)
 	TypeValueMemoryUsage                        = NewConstantMemoryUsage(MemoryKindTypeValue)
@@ -205,12 +201,9 @@ var (
 	CadenceEnumValueBaseMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceEnumValueBase)
 	CadenceAddressValueMemoryUsage        = NewConstantMemoryUsage(MemoryKindCadenceAddressValue)
 	CadenceBoolValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceBoolValue)
-	CadenceIDCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceIDCapabilityValue)
-	CadencePathCapabilityValueMemoryUsage = NewConstantMemoryUsage(MemoryKindCadencePathCapabilityValue)
+	CadenceCapabilityValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceCapabilityValue)
 	CadenceFunctionValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceFunctionValue)
 	CadenceKeyValuePairMemoryUsage        = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
-	CadencePathLinkValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadencePathLinkValue)
-	CadenceAccountLinkValueMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadencePathLinkValue)
 	CadenceOptionalValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)
 	CadencePathValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadencePathValue)
 	CadenceVoidValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceVoidValue)
@@ -245,37 +238,31 @@ var (
 	TypeValueStringMemoryUsage                        = NewRawStringMemoryUsage(len("Type<>()"))
 	NilValueStringMemoryUsage                         = NewRawStringMemoryUsage(len("nil"))
 	StorageReferenceValueStringMemoryUsage            = NewRawStringMemoryUsage(len("StorageReference()"))
-	AccountReferenceValueStringMemoryUsage            = NewRawStringMemoryUsage(len("AccountReference()"))
 	SeenReferenceStringMemoryUsage                    = NewRawStringMemoryUsage(3)                   // len(ellipsis)
 	AddressValueStringMemoryUsage                     = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
 	HostFunctionValueStringMemoryUsage                = NewRawStringMemoryUsage(len("Function(...)"))
-	AuthAccountValueStringMemoryUsage                 = NewRawStringMemoryUsage(len("AuthAccount()"))
-	PublicAccountValueStringMemoryUsage               = NewRawStringMemoryUsage(len("PublicAccount()"))
-	AuthAccountContractsStringMemoryUsage             = NewRawStringMemoryUsage(len("AuthAccount.Contracts()"))
-	PublicAccountContractsStringMemoryUsage           = NewRawStringMemoryUsage(len("PublicAccount.Contracts()"))
-	AuthAccountKeysStringMemoryUsage                  = NewRawStringMemoryUsage(len("AuthAccount.Keys()"))
-	PublicAccountKeysStringMemoryUsage                = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
-	AuthAccountStorageCapabilitiesStringMemoryUsage   = NewRawStringMemoryUsage(len("AuthAccount.StorageCapabilities()"))
-	AuthAccountAccountCapabilitiesStringMemoryUsage   = NewRawStringMemoryUsage(len("AuthAccount.AccountCapabilities()"))
-	AuthAccountCapabilitiesStringMemoryUsage          = NewRawStringMemoryUsage(len("AuthAccount.Capabilities()"))
-	PublicAccountCapabilitiesStringMemoryUsage        = NewRawStringMemoryUsage(len("PublicAccount.Capabilities()"))
-	AuthAccountInboxStringMemoryUsage                 = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
-	IDCapabilityValueStringMemoryUsage                = NewRawStringMemoryUsage(len("Capability<>(address: , id: )"))
-	PathCapabilityValueStringMemoryUsage              = NewRawStringMemoryUsage(len("Capability<>(address: , path: )"))
+	AccountValueStringMemoryUsage                     = NewRawStringMemoryUsage(len("Account()"))
+	AccountContractsStringMemoryUsage                 = NewRawStringMemoryUsage(len("Account.Contracts()"))
+	AccountKeysStringMemoryUsage                      = NewRawStringMemoryUsage(len("Account.Keys()"))
+	AccountStorageCapabilitiesStringMemoryUsage       = NewRawStringMemoryUsage(len("Account.StorageCapabilities()"))
+	AccountAccountCapabilitiesStringMemoryUsage       = NewRawStringMemoryUsage(len("Account.AccountCapabilities()"))
+	AccountCapabilitiesStringMemoryUsage              = NewRawStringMemoryUsage(len("Account.Capabilities()"))
+	AccountInboxStringMemoryUsage                     = NewRawStringMemoryUsage(len("Account.Inbox()"))
+	AccountStorageStringMemoryUsage                   = NewRawStringMemoryUsage(len("Account.Storage()"))
+	CapabilityValueStringMemoryUsage                  = NewRawStringMemoryUsage(len("Capability<>(address: , id: )"))
 	StorageCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("StorageCapabilityController(borrowType: , capabilityID: , target: )"))
 	AccountCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("AccountCapabilityController(borrowType: , capabilityID: )"))
-	PathLinkValueStringMemoryUsage                    = NewRawStringMemoryUsage(len("PathLink<>()"))
 	PublishedValueStringMemoryUsage                   = NewRawStringMemoryUsage(len("PublishedValue<>()"))
 	AuthStringMemoryUsage                             = NewRawStringMemoryUsage(len("auth() "))
 
 	// Static types string representations
 
-	VariableSizedStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(2)  // []
-	DictionaryStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(4)  // {: }
-	OptionalStaticTypeStringMemoryUsage      = NewRawStringMemoryUsage(1)  // ?
-	AuthReferenceStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(5)  // auth&
-	ReferenceStaticTypeStringMemoryUsage     = NewRawStringMemoryUsage(1)  // &
-	CapabilityStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(12) // Capability<>
+	VariableSizedStaticTypeStringMemoryUsage         = NewRawStringMemoryUsage(2)  // []
+	DictionaryStaticTypeStringMemoryUsage            = NewRawStringMemoryUsage(4)  // {: }
+	OptionalStaticTypeStringMemoryUsage              = NewRawStringMemoryUsage(1)  // ?
+	CapabilityStaticTypeStringMemoryUsage            = NewRawStringMemoryUsage(12) // Capability<>
+	IntersectionStaticTypeStringMemoryUsage          = NewRawStringMemoryUsage(2)  // {}
+	IntersectionStaticTypeSeparatorStringMemoryUsage = NewRawStringMemoryUsage(2)  // ,
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

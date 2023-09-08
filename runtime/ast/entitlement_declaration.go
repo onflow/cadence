@@ -125,19 +125,26 @@ func (d *EntitlementDeclaration) String() string {
 	return Prettier(d)
 }
 
-type EntitlementMapElement struct {
+type EntitlementMapElement interface {
+	isEntitlementMapElement()
+	Doc() prettier.Doc
+}
+
+type EntitlementMapRelation struct {
 	Input  *NominalType
 	Output *NominalType
 }
 
-func NewEntitlementMapElement(
+var _ EntitlementMapElement = &EntitlementMapRelation{}
+
+func NewEntitlementMapRelation(
 	gauge common.MemoryGauge,
 	input *NominalType,
 	output *NominalType,
-) *EntitlementMapElement {
+) *EntitlementMapRelation {
 	common.UseMemory(gauge, common.EntitlementMappingElementMemoryUsage)
 
-	return &EntitlementMapElement{
+	return &EntitlementMapRelation{
 		Input:  input,
 		Output: output,
 	}
@@ -145,7 +152,9 @@ func NewEntitlementMapElement(
 
 var arrowKeywordSpaceDoc = prettier.Text(" -> ")
 
-func (d EntitlementMapElement) Doc() prettier.Doc {
+func (*EntitlementMapRelation) isEntitlementMapElement() {}
+
+func (d *EntitlementMapRelation) Doc() prettier.Doc {
 	var doc prettier.Concat
 
 	return append(
@@ -158,10 +167,10 @@ func (d EntitlementMapElement) Doc() prettier.Doc {
 
 // EntitlementMappingDeclaration
 type EntitlementMappingDeclaration struct {
-	Access       Access
-	DocString    string
-	Identifier   Identifier
-	Associations []*EntitlementMapElement
+	Access     Access
+	DocString  string
+	Identifier Identifier
+	Elements   []EntitlementMapElement
 	Range
 }
 
@@ -173,18 +182,18 @@ func NewEntitlementMappingDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
 	identifier Identifier,
-	associations []*EntitlementMapElement,
+	elements []EntitlementMapElement,
 	docString string,
 	declRange Range,
 ) *EntitlementMappingDeclaration {
 	common.UseMemory(gauge, common.EntitlementMappingDeclarationMemoryUsage)
 
 	return &EntitlementMappingDeclaration{
-		Access:       access,
-		Identifier:   identifier,
-		Associations: associations,
-		DocString:    docString,
-		Range:        declRange,
+		Access:     access,
+		Identifier: identifier,
+		Elements:   elements,
+		DocString:  docString,
+		Range:      declRange,
 	}
 }
 
@@ -195,6 +204,24 @@ func (*EntitlementMappingDeclaration) ElementType() ElementType {
 func (*EntitlementMappingDeclaration) Walk(_ func(Element)) {}
 
 func (*EntitlementMappingDeclaration) isDeclaration() {}
+
+func (d *EntitlementMappingDeclaration) Inclusions() (inclusions []*NominalType) {
+	for _, element := range d.Elements {
+		if inclusion, isNominalType := element.(*NominalType); isNominalType {
+			inclusions = append(inclusions, inclusion)
+		}
+	}
+	return
+}
+
+func (d *EntitlementMappingDeclaration) Relations() (relations []*EntitlementMapRelation) {
+	for _, element := range d.Elements {
+		if relation, isRelation := element.(*EntitlementMapRelation); isRelation {
+			relations = append(relations, relation)
+		}
+	}
+	return
+}
 
 // NOTE: statement, so it can be represented in the AST,
 // but will be rejected in semantic analysis
@@ -232,6 +259,7 @@ func (d *EntitlementMappingDeclaration) MarshalJSON() ([]byte, error) {
 }
 
 var mappingKeywordSpaceDoc = prettier.Text("mapping ")
+var includeKeywordSpaceDoc = prettier.Text("include ")
 var mappingStartDoc prettier.Doc = prettier.Text("{")
 var mappingEndDoc prettier.Doc = prettier.Text("}")
 
@@ -246,15 +274,20 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		)
 	}
 
-	var mappingAssociationsDoc prettier.Concat
+	var mappingElementsDoc prettier.Concat
 
-	for _, decl := range d.Associations {
-		mappingAssociationsDoc = append(
-			mappingAssociationsDoc,
-			prettier.Concat{
-				prettier.HardLine{},
-				decl.Doc(),
-			},
+	for _, element := range d.Elements {
+		var elementDoc prettier.Concat
+
+		if _, isNominalType := element.(*NominalType); isNominalType {
+			elementDoc = append(elementDoc, includeKeywordSpaceDoc)
+		}
+
+		elementDoc = append(elementDoc, element.Doc())
+
+		mappingElementsDoc = append(
+			mappingElementsDoc,
+			elementDoc,
 		)
 	}
 
@@ -265,10 +298,11 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		prettier.Text(d.Identifier.Identifier),
 		prettier.Space,
 		mappingStartDoc,
+		prettier.HardLine{},
 		prettier.Indent{
 			Doc: prettier.Join(
 				prettier.HardLine{},
-				mappingAssociationsDoc...,
+				mappingElementsDoc...,
 			),
 		},
 		prettier.HardLine{},

@@ -38,7 +38,7 @@ func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) 
 	}
 }
 
-func TestImportedValueMemoryMetering(t *testing.T) {
+func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -406,7 +406,7 @@ func (testMemoryError) Error() string {
 	return "memory limit exceeded"
 }
 
-func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
+func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 
 	t.Parallel()
 
@@ -455,60 +455,6 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 				Domain:     common.PathDomainStorage,
 				Identifier: "id3",
 			},
-		},
-
-		// Verify Capability and its composing values, Path and Type.
-		// NOTE: ID Capability is not importable, so no test necessary.
-		{
-			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindPathCapabilityValue,
-			Weight:     1,
-			TypeInstance: cadence.NewPathCapability(
-				cadence.Address{},
-				cadence.Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "foobarrington",
-				},
-				&cadence.ReferenceType{
-					Authorization: cadence.UnauthorizedAccess,
-					Type:          cadence.AnyType{},
-				},
-			),
-		},
-		{
-			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindPathValue,
-			Weight:     1,
-			TypeInstance: cadence.NewPathCapability(
-				cadence.Address{},
-				cadence.Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "foobarrington",
-				},
-				&cadence.ReferenceType{
-					Authorization: cadence.UnauthorizedAccess,
-					Type:          cadence.AnyType{},
-				},
-			),
-		},
-		{
-			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindRawString,
-			Weight:     (1 + 13) + (1 + 13),
-			TypeInstance: cadence.NewPathCapability(
-				cadence.Address{},
-				cadence.Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "foobarrington",
-				},
-				&cadence.ReferenceType{
-					Authorization: cadence.EntitlementSetAuthorization{
-						Entitlements: []common.TypeID{common.NewTypeIDFromQualifiedName(nil, common.ScriptLocation{}, "X")},
-						Kind:         cadence.Conjunction,
-					},
-					Type: cadence.AnyType{},
-				},
-			),
 		},
 
 		// Verify Optional and its composing type
@@ -583,7 +529,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 	}
 }
 
-func TestScriptDecodedLocationMetering(t *testing.T) {
+func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 
 	t.Parallel()
 

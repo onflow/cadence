@@ -193,7 +193,7 @@ var AccountEventCodeHashParameter = sema.Parameter{
 var AccountEventPublicKeyParameterAsCompositeType = sema.Parameter{
 	Identifier: "publicKey",
 	TypeAnnotation: sema.NewTypeAnnotation(
-		sema.PublicKeyType,
+		PublicKeyType,
 	),
 }
 
@@ -286,13 +286,4 @@ var AccountInboxClaimedEventType = newFlowEventType(
 	AccountEventProviderParameter,
 	AccountEventRecipientParameter,
 	AccountEventNameParameter,
-)
-
-var AccountLinkedEventType = newFlowEventType(
-	"AccountLinked",
-	AccountEventAddressParameter,
-	sema.Parameter{
-		Identifier:     "path",
-		TypeAnnotation: sema.AuthAccountTypeLinkAccountFunctionTypePathParameterTypeAnnotation,
-	},
 )

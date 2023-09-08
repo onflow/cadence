@@ -1,3 +1,4 @@
+// Code generated from entitlements.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -16,18 +17,25 @@
  * limitations under the License.
  */
 
-package format
+package sema
 
-import (
-	"fmt"
-)
-
-func PathLink(ty string, targetPath string) string {
-	return fmt.Sprintf(
-		"PathLink<%s>(%s)",
-		ty,
-		targetPath,
-	)
+var MutateType = &EntitlementType{
+	Identifier: "Mutate",
 }
 
-const AccountLink = "AccountLink()"
+var InsertType = &EntitlementType{
+	Identifier: "Insert",
+}
+
+var RemoveType = &EntitlementType{
+	Identifier: "Remove",
+}
+
+func init() {
+	BuiltinEntitlements[MutateType.Identifier] = MutateType
+	addToBaseActivation(MutateType)
+	BuiltinEntitlements[InsertType.Identifier] = InsertType
+	addToBaseActivation(InsertType)
+	BuiltinEntitlements[RemoveType.Identifier] = RemoveType
+	addToBaseActivation(RemoveType)
+}

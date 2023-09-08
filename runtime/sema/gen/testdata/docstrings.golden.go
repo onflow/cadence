@@ -114,6 +114,7 @@ var DocstringsType = &SimpleType{
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
+	ContainFields: false,
 }
 
 func init() {
@@ -121,7 +122,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DocstringsTypeOwoFieldName,
 				DocstringsTypeOwoFieldType,
@@ -129,7 +130,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DocstringsTypeUwuFieldName,
 				DocstringsTypeUwuFieldType,
@@ -137,14 +138,14 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				DocstringsTypeNwnFunctionName,
 				DocstringsTypeNwnFunctionType,
 				DocstringsTypeNwnFunctionDocString,
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DocstringsTypeWithBlanksFieldName,
 				DocstringsTypeWithBlanksFieldType,
@@ -152,14 +153,14 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				DocstringsTypeIsSmolBeanFunctionName,
 				DocstringsTypeIsSmolBeanFunctionType,
 				DocstringsTypeIsSmolBeanFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				DocstringsTypeRunningOutOfIdeasFunctionName,
 				DocstringsTypeRunningOutOfIdeasFunctionType,
 				DocstringsTypeRunningOutOfIdeasFunctionDocString,

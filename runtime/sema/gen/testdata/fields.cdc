@@ -14,6 +14,9 @@ access(all) struct Test {
     /// This is a test constant-sized integer array.
     access(all) let testConstInts: [UInt64; 2]
 
+    /// This is a test integer dictionary.
+    access(all) let testIntDict: {UInt64: Bool}
+
     /// This is a test parameterized-type field.
     access(all) let testParam: Foo<Bar>
 

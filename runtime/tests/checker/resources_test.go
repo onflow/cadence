@@ -3977,7 +3977,7 @@ func TestCheckInvalidResourceDictionaryKeysForeach(t *testing.T) {
             xs.forEachKey(fun (x: @X): Bool {
                 destroy x
                 return true
-            }) 
+            })
             destroy xs
         }
     `)
@@ -4680,29 +4680,6 @@ func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
-
-	t.Run("contract interface resource to contract to resource", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-          contract interface CI {
-              resource R {}
-          }
-
-          contract C: CI {
-              resource R {}
-          }
-
-          fun test(r: @CI.R) {
-              if let r2 <- r as? @C.R {
-                  destroy r2
-              }
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-	})
 }
 
 func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {
@@ -5087,9 +5064,9 @@ func TestCheckInvalidResourceOwnerField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       resource Test {
-          let owner: PublicAccount
+          let owner: &Account
 
-          init(owner: PublicAccount) {
+          init(owner: &Account) {
               self.owner = owner
           }
       }
@@ -5106,7 +5083,7 @@ func TestCheckInvalidResourceInterfaceOwnerField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
      resource interface Test {
-         let owner: PublicAccount
+         let owner: &Account
      }
    `)
 
@@ -5152,7 +5129,7 @@ func TestCheckResourceOwnerFieldUse(t *testing.T) {
 	_, err := ParseAndCheck(t, `
      resource Test {
 
-         fun test(): PublicAccount? {
+         fun test(): &Account? {
              return self.owner
          }
      }
@@ -5177,6 +5154,45 @@ func TestCheckResourceInterfaceOwnerFieldUse(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckResourceOwnerFieldType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      var owner: &Account? = nil
+
+      resource Test {
+
+          init() {
+              owner = self.owner
+          }
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckResourceOwnerFieldTypeAccess(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+      resource Test {}
+
+      let r <- create Test()
+      let owner = r.owner
+    `)
+
+	require.NoError(t, err)
+
+	ownerType := RequireGlobalValue(t, checker.Elaboration, "owner")
+	require.Equal(t,
+		sema.NewOptionalType(nil, sema.AccountReferenceType),
+		ownerType,
+	)
+}
+
 func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
 
 	t.Parallel()
@@ -5184,7 +5200,7 @@ func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
 	_, err := ParseAndCheck(t, `
      resource Test {
 
-         init(owner: PublicAccount) {
+         init(owner: &Account) {
              self.owner = owner
          }
      }
@@ -9353,7 +9369,7 @@ func TestCheckBadResourceInterface(t *testing.T) {
 
 		_, err := ParseAndCheck(t, "resource interface foo{struct d:foo{ struct d:foo{ }struct d:foo{ struct d:foo{ }}}}")
 
-		errs := RequireCheckerErrors(t, err, 17)
+		errs := RequireCheckerErrors(t, err, 6)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -9361,24 +9377,13 @@ func TestCheckBadResourceInterface(t *testing.T) {
 		assert.IsType(t, &sema.RedeclarationError{}, errs[3])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[5])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[6])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[7])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[8])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[9])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
-		assert.IsType(t, &sema.ConformanceError{}, errs[12])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[13])
-		assert.IsType(t, &sema.ConformanceError{}, errs[14])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[15])
-		assert.IsType(t, &sema.ConformanceError{}, errs[16])
 	})
 
 	t.Run("bad resource interface: longer", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, "resource interface foo{struct d:foo{ contract d:foo{ contract x:foo{ struct d{} contract d:foo{ contract d:foo {}}}}}}")
 
-		errs := RequireCheckerErrors(t, err, 22)
+		errs := RequireCheckerErrors(t, err, 9)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -9389,19 +9394,6 @@ func TestCheckBadResourceInterface(t *testing.T) {
 		assert.IsType(t, &sema.RedeclarationError{}, errs[6])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[7])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[8])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[9])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
-		assert.IsType(t, &sema.ConformanceError{}, errs[12])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[13])
-		assert.IsType(t, &sema.ConformanceError{}, errs[14])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[15])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[16])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[17])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[18])
-		assert.IsType(t, &sema.ConformanceError{}, errs[19])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[20])
-		assert.IsType(t, &sema.ConformanceError{}, errs[21])
 	})
 }
 
@@ -9445,6 +9437,24 @@ func TestCheckConditionalResourceCreationAndReturn(t *testing.T) {
     `)
 
 	require.NoError(t, err)
+}
+
+func TestCheckIndexExpressionResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun test() {
+          let rs <- [<-create R()]
+          rs[0]
+          destroy rs
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
 
 func TestCheckResourceWithFunction(t *testing.T) {

@@ -405,15 +405,15 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	// Declare interfaces' and composites' members
 
 	for _, declaration := range program.InterfaceDeclarations() {
-		checker.declareInterfaceMembers(declaration)
+		checker.declareInterfaceMembersAndValue(declaration)
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
-		checker.declareCompositeLikeMembersAndValue(declaration, ContainerKindComposite)
+		checker.declareCompositeLikeMembersAndValue(declaration)
 	}
 
 	for _, declaration := range program.AttachmentDeclarations() {
-		checker.declareAttachmentMembersAndValue(declaration, ContainerKindComposite)
+		checker.declareAttachmentMembersAndValue(declaration)
 	}
 
 	// Declare events, functions, and transactions
@@ -432,29 +432,7 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	checker.checkTopLevelDeclarationsValidity(declarations)
 
-	var rejectAllowAccountLinkingPragma bool
-
 	for _, declaration := range declarations {
-
-		// A pragma declaration #allowAccountLinking determines
-		// if the program is allowed to use account linking.
-		//
-		// It must appear as a top-level declaration (i.e. not nested in the program),
-		// and must appear before all other declarations (i.e. at the top of the program).
-		//
-		// This is a temporary feature, which is planned to get replaced by capability controllers,
-		// and a new Account type with entitlements.
-
-		if pragmaDeclaration, isPragma := declaration.(*ast.PragmaDeclaration); isPragma {
-			if IsAllowAccountLinkingPragma(pragmaDeclaration) {
-				if rejectAllowAccountLinkingPragma {
-					checker.reportInvalidNonHeaderPragma(pragmaDeclaration)
-				}
-				continue
-			}
-		}
-
-		rejectAllowAccountLinkingPragma = true
 
 		// Skip import declarations, they are already handled above
 		if _, isImport := declaration.(*ast.ImportDeclaration); isImport {
@@ -995,33 +973,7 @@ func CheckIntersectionType(
 		panic(errors.NewUnreachableError())
 	}
 
-	var compositeType *CompositeType
-
-	// If the intersection type is a composite type,
-	// check that the intersections are conformances
-
-	if compositeType != nil {
-
-		// Prepare a set of all the conformances
-
-		conformances := compositeType.EffectiveInterfaceConformanceSet()
-
-		for _, intersectedType := range types {
-			// The intersected type must be an explicit or implicit conformance
-			// of the composite (intersection type)
-
-			if !conformances.Contains(intersectedType) {
-				report(func(t *ast.IntersectionType) error {
-					return &InvalidNonConformanceIntersectionError{
-						Type:  intersectedType,
-						Range: intersectionRanges[intersectedType](t),
-					}
-				})
-			}
-		}
-	}
-
-	return &IntersectionType{Types: types}
+	return NewIntersectionType(memoryGauge, types)
 }
 
 func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
@@ -1076,7 +1028,7 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 	if t.Authorization != nil {
 		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
 		switch mapAccess := access.(type) {
-		case EntitlementMapAccess:
+		case *EntitlementMapAccess:
 			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
 			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
 				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
@@ -1311,7 +1263,7 @@ func (checker *Checker) functionType(
 		// to allow entitlement mapping types to be used in the return annotation only of
 		// a mapped accessor function, we introduce a "variable" into the typing scope while
 		// checking the return
-		if mapAccess, isMapAccess := access.(EntitlementMapAccess); isMapAccess {
+		if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
 			checker.entitlementMappingInScope = mapAccess.Type
 		}
 		convertedReturnTypeAnnotation =
@@ -1740,7 +1692,6 @@ func (checker *Checker) checkDeclarationAccessModifier(
 	isConstant bool,
 ) {
 	if checker.functionActivations.IsLocal() {
-
 		if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 			checker.report(
 				&InvalidAccessModifierError{
@@ -1751,158 +1702,189 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				},
 			)
 		}
-	} else {
+		return
+	}
 
-		isTypeDeclaration := declarationKind.IsTypeDeclaration()
+	switch access := access.(type) {
+	case PrimitiveAccess:
+		checker.checkPrimitiveAccess(access, isConstant, declarationKind, startPos)
+	case *EntitlementMapAccess:
+		checker.checkEntitlementMapAccess(access, declarationKind, declarationType, containerKind, startPos)
+	case EntitlementSetAccess:
+		checker.checkEntitlementSetAccess(declarationType, containerKind, startPos)
+	}
+}
 
-		switch access := access.(type) {
-		case PrimitiveAccess:
-			switch ast.PrimitiveAccess(access) {
-			case ast.AccessSelf:
-				// Type declarations must be public for now
+func (checker *Checker) checkPrimitiveAccess(
+	access PrimitiveAccess,
+	isConstant bool,
+	declarationKind common.DeclarationKind,
+	startPos ast.Position,
+) {
 
-				if isTypeDeclaration {
+	isTypeDeclaration := declarationKind.IsTypeDeclaration()
 
-					checker.report(
-						&InvalidAccessModifierError{
-							Access:          access,
-							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
-							DeclarationKind: declarationKind,
-							Pos:             startPos,
-						},
-					)
-				}
+	switch ast.PrimitiveAccess(access) {
+	case ast.AccessSelf:
+		// Type declarations must be public for now
 
-			case ast.AccessContract,
-				ast.AccessAccount:
+		if isTypeDeclaration {
 
-				// Type declarations must be public for now
+			checker.report(
+				&InvalidAccessModifierError{
+					Access:          access,
+					Explanation:     invalidTypeDeclarationAccessModifierExplanation,
+					DeclarationKind: declarationKind,
+					Pos:             startPos,
+				},
+			)
+		}
 
-				if isTypeDeclaration {
-					checker.report(
-						&InvalidAccessModifierError{
-							Access:          access,
-							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
-							DeclarationKind: declarationKind,
-							Pos:             startPos,
-						},
-					)
-				}
+	case ast.AccessContract,
+		ast.AccessAccount:
 
-			case ast.AccessNotSpecified:
+		// Type declarations must be public for now
 
-				// Type declarations cannot be effectively private for now
+		if isTypeDeclaration {
+			checker.report(
+				&InvalidAccessModifierError{
+					Access:          access,
+					Explanation:     invalidTypeDeclarationAccessModifierExplanation,
+					DeclarationKind: declarationKind,
+					Pos:             startPos,
+				},
+			)
+		}
 
-				if isTypeDeclaration &&
-					checker.Config.AccessCheckMode == AccessCheckModeNotSpecifiedRestricted {
+	case ast.AccessNotSpecified:
 
-					checker.report(
-						&MissingAccessModifierError{
-							DeclarationKind: declarationKind,
-							Explanation:     invalidTypeDeclarationAccessModifierExplanation,
-							Pos:             startPos,
-						},
-					)
-				}
+		// Type declarations cannot be effectively private for now
 
-				// In strict mode, access modifiers must be given
+		if isTypeDeclaration &&
+			checker.Config.AccessCheckMode == AccessCheckModeNotSpecifiedRestricted {
 
-				if checker.Config.AccessCheckMode == AccessCheckModeStrict {
-					checker.report(
-						&MissingAccessModifierError{
-							DeclarationKind: declarationKind,
-							Pos:             startPos,
-						},
-					)
-				}
-			}
+			checker.report(
+				&MissingAccessModifierError{
+					DeclarationKind: declarationKind,
+					Explanation:     invalidTypeDeclarationAccessModifierExplanation,
+					Pos:             startPos,
+				},
+			)
+		}
 
-		case EntitlementMapAccess:
-			// attachments may be declared with an entitlement map access
-			if declarationKind == common.DeclarationKindAttachment {
+		// In strict mode, access modifiers must be given
+
+		if checker.Config.AccessCheckMode == AccessCheckModeStrict {
+			checker.report(
+				&MissingAccessModifierError{
+					DeclarationKind: declarationKind,
+					Pos:             startPos,
+				},
+			)
+		}
+	}
+}
+
+func (checker *Checker) checkEntitlementMapAccess(
+	access *EntitlementMapAccess,
+	declarationKind common.DeclarationKind,
+	declarationType Type,
+	containerKind *common.CompositeKind,
+	startPos ast.Position,
+) {
+	// attachments may be declared with an entitlement map access
+	if declarationKind == common.DeclarationKindAttachment {
+		return
+	}
+
+	// otherwise, mapped entitlements may only be used in structs, resources and attachments
+	if containerKind == nil ||
+		(*containerKind != common.CompositeKindResource &&
+			*containerKind != common.CompositeKindStructure &&
+			*containerKind != common.CompositeKindAttachment) {
+		checker.report(
+			&InvalidMappedEntitlementMemberError{
+				Pos: startPos,
+			},
+		)
+		return
+	}
+
+	// mapped entitlement fields must be, one of:
+	// 1) An [optional] reference that is authorized to the same mapped entitlement.
+	// 2) A function that return an [optional] reference authorized to the same mapped entitlement.
+	// 3) A container - So if the parent is a reference, entitlements can be granted to the resulting field reference.
+
+	entitledType := declarationType
+
+	if functionType, isFunction := declarationType.(*FunctionType); isFunction {
+		if declarationKind == common.DeclarationKindFunction {
+			entitledType = functionType.ReturnTypeAnnotation.Type
+		}
+	}
+
+	switch ty := entitledType.(type) {
+	case *ReferenceType:
+		if ty.Authorization.Equal(access) {
+			return
+		}
+	case *OptionalType:
+		switch optionalType := ty.Type.(type) {
+		case *ReferenceType:
+			if optionalType.Authorization.Equal(access) {
 				return
 			}
+		}
+	default:
+		// Also allow entitlement mappings for container-typed fields
+		if declarationType.ContainFieldsOrElements() {
+			return
+		}
+	}
 
-			// otherwise, mapped entitlements may only be used in structs and resources
-			if containerKind == nil ||
-				(*containerKind != common.CompositeKindResource &&
-					*containerKind != common.CompositeKindStructure) {
+	checker.report(
+		&InvalidMappedEntitlementMemberError{
+			Pos: startPos,
+		},
+	)
+}
+
+func (checker *Checker) checkEntitlementSetAccess(
+	declarationType Type,
+	containerKind *common.CompositeKind,
+	startPos ast.Position,
+) {
+	if containerKind == nil ||
+		(*containerKind != common.CompositeKindResource &&
+			*containerKind != common.CompositeKindStructure &&
+			*containerKind != common.CompositeKindAttachment) {
+		checker.report(
+			&InvalidEntitlementAccessError{
+				Pos: startPos,
+			},
+		)
+		return
+	}
+
+	// when using entitlement set access, it is not permitted for the value to be declared with a mapped entitlement
+	switch ty := declarationType.(type) {
+	case *ReferenceType:
+		if _, isMap := ty.Authorization.(*EntitlementMapAccess); isMap {
+			checker.report(
+				&InvalidMappedEntitlementMemberError{
+					Pos: startPos,
+				},
+			)
+		}
+	case *OptionalType:
+		switch optionalType := ty.Type.(type) {
+		case *ReferenceType:
+			if _, isMap := optionalType.Authorization.(*EntitlementMapAccess); isMap {
 				checker.report(
 					&InvalidMappedEntitlementMemberError{
 						Pos: startPos,
 					},
 				)
-				return
-			}
-
-			// mapped entitlement fields must be (optional) references that are authorized to the same mapped entitlement,
-			// or functions that return an (optional) reference authorized to the same mapped entitlement
-			requireIsPotentiallyOptionalReference := func(typ Type) {
-				switch ty := typ.(type) {
-				case *ReferenceType:
-					if ty.Authorization.Equal(access) {
-						return
-					}
-				case *OptionalType:
-					switch optionalType := ty.Type.(type) {
-					case *ReferenceType:
-						if optionalType.Authorization.Equal(access) {
-							return
-						}
-					}
-				}
-				checker.report(
-					&InvalidMappedEntitlementMemberError{
-						Pos: startPos,
-					},
-				)
-			}
-
-			switch ty := declarationType.(type) {
-			case *FunctionType:
-				if declarationKind == common.DeclarationKindFunction {
-					requireIsPotentiallyOptionalReference(ty.ReturnTypeAnnotation.Type)
-				} else {
-					requireIsPotentiallyOptionalReference(ty)
-				}
-			default:
-				requireIsPotentiallyOptionalReference(ty)
-			}
-
-		case EntitlementSetAccess:
-			if containerKind == nil ||
-				(*containerKind != common.CompositeKindResource &&
-					*containerKind != common.CompositeKindStructure &&
-					*containerKind != common.CompositeKindAttachment) {
-				checker.report(
-					&InvalidEntitlementAccessError{
-						Pos: startPos,
-					},
-				)
-				return
-			}
-
-			// when using entitlement set access, it is not permitted for the value to be declared with a mapped entitlement
-			switch ty := declarationType.(type) {
-			case *ReferenceType:
-				if _, isMap := ty.Authorization.(EntitlementMapAccess); isMap {
-					checker.report(
-						&InvalidMappedEntitlementMemberError{
-							Pos: startPos,
-						},
-					)
-				}
-			case *OptionalType:
-				switch optionalType := ty.Type.(type) {
-				case *ReferenceType:
-					if _, isMap := optionalType.Authorization.(EntitlementMapAccess); isMap {
-						checker.report(
-							&InvalidMappedEntitlementMemberError{
-								Pos: startPos,
-							},
-						)
-					}
-				}
 			}
 		}
 	}
@@ -2030,9 +2012,21 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 }
 
 const ResourceOwnerFieldName = "owner"
+
+var ResourceOwnerFieldType = &OptionalType{
+	Type: AccountReferenceType,
+}
+
 const ResourceUUIDFieldName = "uuid"
 
+var ResourceUUIDFieldType = UInt64Type
+
 const ContractAccountFieldName = "account"
+
+var ContractAccountFieldType = &ReferenceType{
+	Type:          AccountType,
+	Authorization: FullyEntitledAccountAccess,
+}
 
 const contractAccountFieldDocString = `
 The account where the contract is deployed in
@@ -2098,12 +2092,12 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		case common.CompositeKindContract:
 
 			// All contracts have a predeclared member
-			// `access(self) let account: AuthAccount`,
+			// `access(self) let account: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account`,
 			// which is ignored in serialization
 
 			addPredeclaredMember(
 				ContractAccountFieldName,
-				AuthAccountType,
+				ContractAccountFieldType,
 				common.DeclarationKindField,
 				ast.AccessSelf,
 				true,
@@ -2114,14 +2108,12 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			// All resources have two predeclared fields:
 
-			// `access(all) let owner: PublicAccount?`,
+			// `access(all) let owner: &Account?`,
 			// ignored in serialization
 
 			addPredeclaredMember(
 				ResourceOwnerFieldName,
-				&OptionalType{
-					Type: PublicAccountType,
-				},
+				ResourceOwnerFieldType,
 				common.DeclarationKindField,
 				ast.AccessAll,
 				true,
@@ -2133,7 +2125,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			addPredeclaredMember(
 				ResourceUUIDFieldName,
-				UInt64Type,
+				ResourceUUIDFieldType,
 				common.DeclarationKindField,
 				ast.AccessAll,
 				false,
@@ -2584,25 +2576,4 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 			},
 		)
 	}
-}
-
-func (checker *Checker) isAvailableMember(expressionType Type, identifier string) bool {
-	switch expressionType {
-	case AuthAccountType:
-		switch identifier {
-		case AuthAccountTypeLinkAccountFunctionName:
-			return checker.Config.AccountLinkingEnabled
-
-		case AuthAccountTypeCapabilitiesFieldName:
-			return checker.Config.CapabilityControllersEnabled
-		}
-
-	case PublicAccountType:
-		switch identifier {
-		case PublicAccountTypeCapabilitiesFieldName:
-			return checker.Config.CapabilityControllersEnabled
-		}
-	}
-
-	return true
 }

@@ -32,19 +32,34 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-const authAccountFunctionDocString = `
+const accountFunctionDocString = `
 Creates a new account, paid by the given existing account
 `
 
-var authAccountFunctionType = sema.NewSimpleFunctionType(
+// accountFunctionType is the type
+//
+//	fun Account(payer: auth(BorrowValue | Storage) &Account):
+//	  auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account
+var accountFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
 	[]sema.Parameter{
 		{
-			Identifier:     "payer",
-			TypeAnnotation: sema.AuthAccountTypeAnnotation,
+			Identifier: "payer",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.ReferenceType{
+					Authorization: sema.NewEntitlementSetAccess(
+						[]*sema.EntitlementType{
+							sema.BorrowValueType,
+							sema.StorageType,
+						},
+						sema.Disjunction,
+					),
+					Type: sema.AccountType,
+				},
+			),
 		},
 	},
-	sema.AuthAccountTypeAnnotation,
+	sema.FullyEntitledAccountReferenceTypeAnnotation,
 )
 
 type EventEmitter interface {
@@ -61,28 +76,27 @@ type AccountIDGenerator interface {
 	GenerateAccountID(address common.Address) (uint64, error)
 }
 
-type AuthAccountHandler interface {
+type AccountHandler interface {
 	AccountIDGenerator
 	BalanceProvider
 	AvailableBalanceProvider
-	StorageUsedProvider
-	StorageCapacityProvider
-	AuthAccountKeysHandler
-	AuthAccountContractsHandler
+	AccountStorageHandler
+	AccountKeysHandler
+	AccountContractsHandler
 }
 
 type AccountCreator interface {
 	EventEmitter
-	AuthAccountHandler
+	AccountHandler
 	// CreateAccount creates a new account.
 	CreateAccount(payer common.Address) (address common.Address, err error)
 }
 
-func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
+func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
 	return NewStandardLibraryFunction(
-		"AuthAccount",
-		authAccountFunctionType,
-		authAccountFunctionDocString,
+		"Account",
+		accountFunctionType,
+		accountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			payer, ok := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
@@ -95,14 +109,14 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 
 			inter.ExpectType(
 				payer,
-				sema.AuthAccountType,
+				sema.AccountReferenceType,
 				locationRange,
 			)
 
 			payerValue := payer.GetMember(
 				inter,
 				locationRange,
-				sema.AuthAccountTypeAddressFieldName,
+				sema.AccountTypeAddressFieldName,
 			)
 			if payerValue == nil {
 				panic(errors.NewUnexpectedError("payer address is not set"))
@@ -123,7 +137,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 						address, err = creator.CreateAccount(payerAddress)
 					})
 					if err != nil {
-						panic(err)
+						panic(interpreter.WrappedExternalError(err))
 					}
 
 					return
@@ -137,36 +151,54 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				locationRange,
 			)
 
-			return NewAuthAccountValue(
+			return NewAccountReferenceValue(
 				inter,
 				creator,
 				addressValue,
+				interpreter.FullyEntitledAccountAccess,
 			)
 		},
 	)
 }
 
-const getAuthAccountDocString = `
-Returns the AuthAccount for the given address. Only available in scripts
+const getAuthAccountFunctionName = "getAuthAccount"
+const getAuthAccountFunctionDocString = `
+Returns the account for the given address. Only available in scripts
 `
 
-var getAuthAccountFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityView,
-	[]sema.Parameter{
-		{
-			Label:          sema.ArgumentLabelNotRequired,
-			Identifier:     "address",
-			TypeAnnotation: sema.AddressTypeAnnotation,
-		},
-	},
-	sema.AuthAccountTypeAnnotation,
-)
+// getAuthAccountFunctionType represents the type
+//
+//	fun getAuthAccount<T: &Account>(_ address: Address): T
+var getAuthAccountFunctionType = func() *sema.FunctionType {
 
-func NewGetAuthAccountFunction(handler AuthAccountHandler) StandardLibraryValue {
+	typeParam := &sema.TypeParameter{
+		Name:      "T",
+		TypeBound: sema.AccountReferenceType,
+	}
+
+	return &sema.FunctionType{
+		Purity:         sema.FunctionPurityView,
+		TypeParameters: []*sema.TypeParameter{typeParam},
+		Parameters: []sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "address",
+				TypeAnnotation: sema.AddressTypeAnnotation,
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			&sema.GenericType{
+				TypeParameter: typeParam,
+			},
+		),
+	}
+}()
+
+func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 	return NewStandardLibraryFunction(
-		"getAuthAccount",
+		getAuthAccountFunctionName,
 		getAuthAccountFunctionType,
-		getAuthAccountDocString,
+		getAuthAccountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
 			if !ok {
@@ -175,50 +207,89 @@ func NewGetAuthAccountFunction(handler AuthAccountHandler) StandardLibraryValue 
 
 			gauge := invocation.Interpreter
 
-			return NewAuthAccountValue(
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			ty := typeParameterPair.Value
+
+			referenceType, ok := ty.(*sema.ReferenceType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
+				gauge,
+				referenceType.Authorization,
+			)
+
+			return NewAccountReferenceValue(
 				gauge,
 				handler,
 				accountAddress,
+				authorization,
 			)
 		},
 	)
 }
 
-func NewAuthAccountValue(
+func NewAccountReferenceValue(
 	gauge common.MemoryGauge,
-	handler AuthAccountHandler,
+	handler AccountHandler,
+	addressValue interpreter.AddressValue,
+	authorization interpreter.Authorization,
+) interpreter.Value {
+	account := NewAccountValue(gauge, handler, addressValue)
+	return interpreter.NewEphemeralReferenceValue(
+		gauge,
+		authorization,
+		account,
+		sema.AccountType,
+	)
+}
+
+func NewAccountValue(
+	gauge common.MemoryGauge,
+	handler AccountHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	return interpreter.NewAuthAccountValue(
+
+	return interpreter.NewAccountValue(
 		gauge,
 		addressValue,
 		newAccountBalanceGetFunction(gauge, handler, addressValue),
 		newAccountAvailableBalanceGetFunction(gauge, handler, addressValue),
-		newStorageUsedGetFunction(handler, addressValue),
-		newStorageCapacityGetFunction(handler, addressValue),
 		func() interpreter.Value {
-			return newAuthAccountContractsValue(
+			return newAccountStorageValue(
 				gauge,
 				handler,
 				addressValue,
 			)
 		},
 		func() interpreter.Value {
-			return newAuthAccountKeysValue(
+			return newAccountContractsValue(
 				gauge,
 				handler,
 				addressValue,
 			)
 		},
 		func() interpreter.Value {
-			return newAuthAccountInboxValue(
+			return newAccountKeysValue(
 				gauge,
 				handler,
 				addressValue,
 			)
 		},
 		func() interpreter.Value {
-			return newAuthAccountCapabilitiesValue(
+			return newAccountInboxValue(
+				gauge,
+				handler,
+				addressValue,
+			)
+		},
+		func() interpreter.Value {
+			return newAccountCapabilitiesValue(
 				gauge,
 				handler,
 				addressValue,
@@ -227,48 +298,48 @@ func NewAuthAccountValue(
 	)
 }
 
-type AuthAccountContractsHandler interface {
+type AccountContractsHandler interface {
 	AccountContractProvider
 	AccountContractAdditionHandler
 	AccountContractRemovalHandler
 	AccountContractNamesProvider
 }
 
-func newAuthAccountContractsValue(
+func newAccountContractsValue(
 	gauge common.MemoryGauge,
-	handler AuthAccountContractsHandler,
+	handler AccountContractsHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	return interpreter.NewAuthAccountContractsValue(
+	return interpreter.NewAccountContractsValue(
 		gauge,
 		addressValue,
-		newAuthAccountContractsChangeFunction(
-			sema.AuthAccountContractsTypeAddFunctionType,
+		newAccountContractsChangeFunction(
+			sema.Account_ContractsTypeAddFunctionType,
 			gauge,
 			handler,
 			addressValue,
 			false,
 		),
-		newAuthAccountContractsChangeFunction(
-			sema.AuthAccountContractsTypeUpdate__experimentalFunctionType,
+		newAccountContractsChangeFunction(
+			sema.Account_ContractsTypeUpdateFunctionType,
 			gauge,
 			handler,
 			addressValue,
 			true,
 		),
 		newAccountContractsGetFunction(
-			sema.AuthAccountContractsTypeGetFunctionType,
+			sema.Account_ContractsTypeGetFunctionType,
 			gauge,
 			handler,
 			addressValue,
 		),
 		newAccountContractsBorrowFunction(
-			sema.AuthAccountContractsTypeBorrowFunctionType,
+			sema.Account_ContractsTypeBorrowFunctionType,
 			gauge,
 			handler,
 			addressValue,
 		),
-		newAuthAccountContractsRemoveFunction(
+		newAccountContractsRemoveFunction(
 			gauge,
 			handler,
 			addressValue,
@@ -280,18 +351,36 @@ func newAuthAccountContractsValue(
 	)
 }
 
-type AuthAccountKeysHandler interface {
+type AccountStorageHandler interface {
+	StorageUsedProvider
+	StorageCapacityProvider
+}
+
+func newAccountStorageValue(
+	gauge common.MemoryGauge,
+	handler AccountStorageHandler,
+	addressValue interpreter.AddressValue,
+) interpreter.Value {
+	return interpreter.NewAccountStorageValue(
+		gauge,
+		addressValue,
+		newStorageUsedGetFunction(handler, addressValue),
+		newStorageCapacityGetFunction(handler, addressValue),
+	)
+}
+
+type AccountKeysHandler interface {
 	AccountKeyProvider
 	AccountKeyAdditionHandler
 	AccountKeyRevocationHandler
 }
 
-func newAuthAccountKeysValue(
+func newAccountKeysValue(
 	gauge common.MemoryGauge,
-	handler AuthAccountKeysHandler,
+	handler AccountKeysHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	return interpreter.NewAuthAccountKeysValue(
+	return interpreter.NewAccountKeysValue(
 		gauge,
 		addressValue,
 		newAccountKeysAddFunction(
@@ -300,7 +389,7 @@ func newAuthAccountKeysValue(
 			addressValue,
 		),
 		newAccountKeysGetFunction(
-			sema.AuthAccountKeysTypeGetFunctionType,
+			sema.Account_KeysTypeGetFunctionType,
 			gauge,
 			handler,
 			addressValue,
@@ -311,7 +400,7 @@ func newAuthAccountKeysValue(
 			addressValue,
 		),
 		newAccountKeysForEachFunction(
-			sema.AuthAccountKeysTypeForEachFunctionType,
+			sema.Account_KeysTypeForEachFunctionType,
 			gauge,
 			handler,
 			addressValue,
@@ -341,7 +430,7 @@ func newAccountBalanceGetFunction(
 				balance, err = provider.GetAccountBalance(address)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return
@@ -370,7 +459,7 @@ func newAccountAvailableBalanceGetFunction(
 				balance, err = provider.GetAccountAvailableBalance(address)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return
@@ -409,7 +498,7 @@ func newStorageUsedGetFunction(
 					capacity, err = provider.GetStorageUsed(address)
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 				return capacity
 			},
@@ -448,7 +537,7 @@ func newStorageCapacityGetFunction(
 					capacity, err = provider.GetStorageCapacity(address)
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 				return capacity
 			},
@@ -478,7 +567,7 @@ func newAccountKeysAddFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountKeysTypeAddFunctionType,
+		sema.Account_KeysTypeAddFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
 			if !ok {
@@ -505,7 +594,7 @@ func newAccountKeysAddFunction(
 				accountKey, err = handler.AddAccountKey(address, publicKey, hashAlgo, weight)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			handler.EmitEvent(
@@ -576,7 +665,7 @@ func newAccountKeysGetFunction(
 			})
 
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -604,7 +693,7 @@ func newAccountKeysGetFunction(
 }
 
 // accountKeysForEachCallbackTypeParams are the parameter types of the callback function of
-// `Auth/PublicAccount.Keys.forEachKey(_ f: fun(AccountKey): Bool)`
+// `Account.Keys.forEachKey(_ f: fun(AccountKey): Bool)`
 var accountKeysForEachCallbackTypeParams = []sema.Type{sema.AccountKeyType}
 
 func newAccountKeysForEachFunction(
@@ -660,7 +749,7 @@ func newAccountKeysForEachFunction(
 			})
 
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			var accountKey *AccountKey
@@ -670,7 +759,7 @@ func newAccountKeysForEachFunction(
 					accountKey, err = provider.GetAccountKey(address, int(index))
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 
 				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -724,7 +813,7 @@ func newAccountKeysCountGetter(
 			if err != nil {
 				// The provider might not be able to fetch the number of account keys
 				// e.g. when the account does not exist
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return count
@@ -753,7 +842,7 @@ func newAccountKeysRevokeFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountKeysTypeRevokeFunctionType,
+		sema.Account_KeysTypeRevokeFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
 			if !ok {
@@ -768,7 +857,7 @@ func newAccountKeysRevokeFunction(
 				accountKey, err = handler.RevokeAccountKey(address, index)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -805,73 +894,9 @@ func newAccountKeysRevokeFunction(
 	)
 }
 
-type PublicAccountKeysHandler interface {
-	AccountKeyProvider
-}
-
-func newPublicAccountKeysValue(
-	gauge common.MemoryGauge,
-	handler PublicAccountKeysHandler,
-	addressValue interpreter.AddressValue,
-) interpreter.Value {
-	return interpreter.NewPublicAccountKeysValue(
-		gauge,
-		addressValue,
-		newAccountKeysGetFunction(
-			sema.PublicAccountKeysTypeGetFunctionType,
-			gauge,
-			handler,
-			addressValue,
-		),
-		newAccountKeysForEachFunction(
-			sema.PublicAccountKeysTypeForEachFunctionType,
-			gauge,
-			handler,
-			addressValue,
-		),
-		newAccountKeysCountGetter(
-			gauge,
-			handler,
-			addressValue,
-		),
-	)
-}
-
-type PublicAccountContractsHandler interface {
-	AccountContractNamesProvider
-	AccountContractProvider
-}
-
-func newPublicAccountContractsValue(
-	gauge common.MemoryGauge,
-	handler PublicAccountContractsHandler,
-	addressValue interpreter.AddressValue,
-) interpreter.Value {
-	return interpreter.NewPublicAccountContractsValue(
-		gauge,
-		addressValue,
-		newAccountContractsGetFunction(
-			sema.PublicAccountContractsTypeGetFunctionType,
-			gauge,
-			handler,
-			addressValue,
-		),
-		newAccountContractsBorrowFunction(
-			sema.PublicAccountContractsTypeBorrowFunctionType,
-			gauge,
-			handler,
-			addressValue,
-		),
-		newAccountContractsGetNamesFunction(
-			handler,
-			addressValue,
-		),
-	)
-}
-
 const InboxStorageDomain = "inbox"
 
-func newAuthAccountInboxPublishFunction(
+func newAccountInboxPublishFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
@@ -879,9 +904,9 @@ func newAuthAccountInboxPublishFunction(
 	provider := providerValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountInboxTypePublishFunctionType,
+		sema.Account_InboxTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
+			value, ok := invocation.Arguments[0].(*interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -934,7 +959,7 @@ func newAuthAccountInboxPublishFunction(
 	)
 }
 
-func newAuthAccountInboxUnpublishFunction(
+func newAccountInboxUnpublishFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
@@ -942,7 +967,7 @@ func newAuthAccountInboxUnpublishFunction(
 	provider := providerValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountInboxTypeUnpublishFunctionType,
+		sema.Account_InboxTypeUnpublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -1009,14 +1034,14 @@ func newAuthAccountInboxUnpublishFunction(
 	)
 }
 
-func newAuthAccountInboxClaimFunction(
+func newAccountInboxClaimFunction(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
 	recipientValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountInboxTypePublishFunctionType,
+		sema.Account_InboxTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -1096,17 +1121,17 @@ func newAuthAccountInboxClaimFunction(
 	)
 }
 
-func newAuthAccountInboxValue(
+func newAccountInboxValue(
 	gauge common.MemoryGauge,
 	handler EventEmitter,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	return interpreter.NewAuthAccountInboxValue(
+	return interpreter.NewAccountInboxValue(
 		gauge,
 		addressValue,
-		newAuthAccountInboxPublishFunction(gauge, handler, addressValue),
-		newAuthAccountInboxUnpublishFunction(gauge, handler, addressValue),
-		newAuthAccountInboxClaimFunction(gauge, handler, addressValue),
+		newAccountInboxPublishFunction(gauge, handler, addressValue),
+		newAccountInboxUnpublishFunction(gauge, handler, addressValue),
+		newAccountInboxClaimFunction(gauge, handler, addressValue),
 	)
 }
 
@@ -1136,7 +1161,7 @@ func newAccountContractsGetNamesFunction(
 			names, err = provider.GetAccountContractNames(address)
 		})
 		if err != nil {
-			panic(err)
+			panic(interpreter.WrappedExternalError(err))
 		}
 
 		values := make([]interpreter.Value, len(names))
@@ -1201,7 +1226,7 @@ func newAccountContractsGetFunction(
 				code, err = provider.GetAccountContractCode(location)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			if len(code) > 0 {
@@ -1227,7 +1252,7 @@ func newAccountContractsGetFunction(
 func newAccountContractsBorrowFunction(
 	functionType *sema.FunctionType,
 	gauge common.MemoryGauge,
-	handler PublicAccountContractsHandler,
+	handler AccountContractsHandler,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 
@@ -1267,7 +1292,7 @@ func newAccountContractsBorrowFunction(
 				code, err = handler.GetAccountContractCode(location)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 			if len(code) == 0 {
 				return interpreter.Nil
@@ -1330,10 +1355,10 @@ type AccountContractAdditionHandler interface {
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 }
 
-// newAuthAccountContractsChangeFunction called when e.g.
-// - adding: `AuthAccount.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
-// - updating: `AuthAccount.contracts.update__experimental(name: "Foo", code: [...])` (isUpdate = true)
-func newAuthAccountContractsChangeFunction(
+// newAccountContractsChangeFunction called when e.g.
+// - adding: `Account.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
+// - updating: `Account.contracts.update(name: "Foo", code: [...])` (isUpdate = true)
+func newAccountContractsChangeFunction(
 	functionType *sema.FunctionType,
 	gauge common.MemoryGauge,
 	handler AccountContractAdditionHandler,
@@ -1680,7 +1705,7 @@ func updateAccountContractCode(
 	// If a contract is deployed, it is only instantiated
 	// when options.createContract is true,
 	// i.e. the Cadence `add` function is used.
-	// If the Cadence `update__experimental` function is used,
+	// If the Cadence `update` function is used,
 	// the new contract will NOT be deployed (options.createContract is false).
 
 	var contractValue *interpreter.CompositeValue
@@ -1709,7 +1734,7 @@ func updateAccountContractCode(
 		err = handler.UpdateAccountContractCode(location, code)
 	})
 	if err != nil {
-		return err
+		return interpreter.WrappedExternalError(err)
 	}
 
 	if createContract {
@@ -1836,7 +1861,7 @@ type AccountContractRemovalHandler interface {
 	RecordContractRemoval(location common.AddressLocation)
 }
 
-func newAuthAccountContractsRemoveFunction(
+func newAccountContractsRemoveFunction(
 	gauge common.MemoryGauge,
 	handler AccountContractRemovalHandler,
 	addressValue interpreter.AddressValue,
@@ -1847,7 +1872,7 @@ func newAuthAccountContractsRemoveFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountContractsTypeRemoveFunctionType,
+		sema.Account_ContractsTypeRemoveFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -1866,7 +1891,7 @@ func newAuthAccountContractsRemoveFunction(
 				code, err = handler.GetAccountContractCode(location)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			// Only remove the contract code, remove the contract value, and emit an event,
@@ -1894,7 +1919,7 @@ func newAuthAccountContractsRemoveFunction(
 					err = handler.RemoveAccountContractCode(location)
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 
 				// NOTE: the contract recording function delays the write
@@ -1949,33 +1974,22 @@ func (e *ContractRemovalError) Error() string {
 }
 
 const getAccountFunctionDocString = `
-Returns the public account for the given address
+Returns the account for the given address
 `
 
 var getAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
 	[]sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "address",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.TheAddressType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "address",
+			TypeAnnotation: sema.AddressTypeAnnotation,
 		},
 	},
-	sema.PublicAccountTypeAnnotation,
+	sema.AccountReferenceTypeAnnotation,
 )
 
-type PublicAccountHandler interface {
-	BalanceProvider
-	AvailableBalanceProvider
-	StorageUsedProvider
-	StorageCapacityProvider
-	PublicAccountKeysHandler
-	PublicAccountContractsHandler
-}
-
-func NewGetAccountFunction(handler PublicAccountHandler) StandardLibraryValue {
+func NewGetAccountFunction(handler AccountHandler) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		"getAccount",
 		getAccountFunctionType,
@@ -1986,45 +2000,11 @@ func NewGetAccountFunction(handler PublicAccountHandler) StandardLibraryValue {
 				panic(errors.NewUnreachableError())
 			}
 
-			return NewPublicAccountValue(
+			return NewAccountReferenceValue(
 				invocation.Interpreter,
 				handler,
 				accountAddress,
-			)
-		},
-	)
-}
-
-func NewPublicAccountValue(
-	gauge common.MemoryGauge,
-	handler PublicAccountHandler,
-	addressValue interpreter.AddressValue,
-) interpreter.Value {
-	return interpreter.NewPublicAccountValue(
-		gauge,
-		addressValue,
-		newAccountBalanceGetFunction(gauge, handler, addressValue),
-		newAccountAvailableBalanceGetFunction(gauge, handler, addressValue),
-		newStorageUsedGetFunction(handler, addressValue),
-		newStorageCapacityGetFunction(handler, addressValue),
-		func() interpreter.Value {
-			return newPublicAccountKeysValue(
-				gauge,
-				handler,
-				addressValue,
-			)
-		},
-		func() interpreter.Value {
-			return newPublicAccountContractsValue(
-				gauge,
-				handler,
-				addressValue,
-			)
-		},
-		func() interpreter.Value {
-			return newPublicAccountCapabilitiesValue(
-				gauge,
-				addressValue,
+				interpreter.UnauthorizedAccess,
 			)
 		},
 	)
@@ -2088,58 +2068,57 @@ func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.A
 	return interpreter.ByteSliceToConstantSizedByteArrayValue(inter, codeHash[:])
 }
 
-func newAuthAccountStorageCapabilitiesValue(
+func newAccountStorageCapabilitiesValue(
 	gauge common.MemoryGauge,
 	accountIDGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	return interpreter.NewAuthAccountStorageCapabilitiesValue(
+	return interpreter.NewAccountStorageCapabilitiesValue(
 		gauge,
 		addressValue,
-		newAuthAccountStorageCapabilitiesGetControllerFunction(gauge, addressValue),
-		newAuthAccountStorageCapabilitiesGetControllersFunction(gauge, addressValue),
-		newAuthAccountStorageCapabilitiesForEachControllerFunction(gauge, addressValue),
-		newAuthAccountStorageCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
+		newAccountStorageCapabilitiesGetControllerFunction(gauge, addressValue),
+		newAccountStorageCapabilitiesGetControllersFunction(gauge, addressValue),
+		newAccountStorageCapabilitiesForEachControllerFunction(gauge, addressValue),
+		newAccountStorageCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
 	)
 }
 
-func newAuthAccountAccountCapabilitiesValue(
+func newAccountAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	accountIDGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	return interpreter.NewAuthAccountAccountCapabilitiesValue(
+	return interpreter.NewAccountAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		newAuthAccountAccountCapabilitiesGetControllerFunction(gauge, addressValue),
-		newAuthAccountAccountCapabilitiesGetControllersFunction(gauge, addressValue),
-		newAuthAccountAccountCapabilitiesForEachControllerFunction(gauge, addressValue),
-		newAuthAccountAccountCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
+		newAccountAccountCapabilitiesGetControllerFunction(gauge, addressValue),
+		newAccountAccountCapabilitiesGetControllersFunction(gauge, addressValue),
+		newAccountAccountCapabilitiesForEachControllerFunction(gauge, addressValue),
+		newAccountAccountCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
 	)
 }
 
-func newAuthAccountCapabilitiesValue(
+func newAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	idGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
-	return interpreter.NewAuthAccountCapabilitiesValue(
+	return interpreter.NewAccountCapabilitiesValue(
 		gauge,
 		addressValue,
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, false),
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.AuthAccountType, true),
-		newAuthAccountCapabilitiesPublishFunction(gauge, addressValue),
-		newAuthAccountCapabilitiesUnpublishFunction(gauge, addressValue),
-		newAuthAccountCapabilitiesMigrateLinkFunction(gauge, idGenerator, addressValue),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, false),
+		newAccountCapabilitiesGetFunction(gauge, addressValue, true),
+		newAccountCapabilitiesPublishFunction(gauge, addressValue),
+		newAccountCapabilitiesUnpublishFunction(gauge, addressValue),
 		func() interpreter.Value {
-			return newAuthAccountStorageCapabilitiesValue(
+			return newAccountStorageCapabilitiesValue(
 				gauge,
 				idGenerator,
 				addressValue,
 			)
 		},
 		func() interpreter.Value {
-			return newAuthAccountAccountCapabilitiesValue(
+			return newAccountAccountCapabilitiesValue(
 				gauge,
 				idGenerator,
 				addressValue,
@@ -2148,14 +2127,14 @@ func newAuthAccountCapabilitiesValue(
 	)
 }
 
-func newAuthAccountStorageCapabilitiesGetControllerFunction(
+func newAccountStorageCapabilitiesGetControllerFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) interpreter.FunctionValue {
 	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountStorageCapabilitiesTypeGetControllerFunctionType,
+		sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -2179,21 +2158,21 @@ func newAuthAccountStorageCapabilitiesGetControllerFunction(
 	)
 }
 
-var storageCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
-	Type: interpreter.ReferenceStaticType{
+var storageCapabilityControllerReferencesArrayStaticType = &interpreter.VariableSizedStaticType{
+	Type: &interpreter.ReferenceStaticType{
 		ReferencedType: interpreter.PrimitiveStaticTypeStorageCapabilityController,
 		Authorization:  interpreter.UnauthorizedAccess,
 	},
 }
 
-func newAuthAccountStorageCapabilitiesGetControllersFunction(
+func newAccountStorageCapabilitiesGetControllersFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) interpreter.FunctionValue {
 	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountStorageCapabilitiesTypeGetControllersFunctionType,
+		sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -2242,14 +2221,14 @@ func newAuthAccountStorageCapabilitiesGetControllersFunction(
 
 // `(&StorageCapabilityController)` in
 // `forEachController(forPath: StoragePath, _ function: fun(&StorageCapabilityController): Bool)`
-var authAccountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
+var accountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	&sema.ReferenceType{
 		Type:          sema.StorageCapabilityControllerType,
 		Authorization: sema.UnauthorizedAccess,
 	},
 }
 
-func newAuthAccountStorageCapabilitiesForEachControllerFunction(
+func newAccountStorageCapabilitiesForEachControllerFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
@@ -2257,7 +2236,7 @@ func newAuthAccountStorageCapabilitiesForEachControllerFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountStorageCapabilitiesTypeForEachControllerFunctionType,
+		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -2315,7 +2294,7 @@ func newAuthAccountStorageCapabilitiesForEachControllerFunction(
 					nil,
 					nil,
 					[]interpreter.Value{referenceValue},
-					authAccountStorageCapabilitiesForEachControllerCallbackTypeParams,
+					accountStorageCapabilitiesForEachControllerCallbackTypeParams,
 					nil,
 					locationRange,
 				)
@@ -2355,7 +2334,7 @@ func newAuthAccountStorageCapabilitiesForEachControllerFunction(
 	)
 }
 
-func newAuthAccountStorageCapabilitiesIssueFunction(
+func newAccountStorageCapabilitiesIssueFunction(
 	gauge common.MemoryGauge,
 	idGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
@@ -2363,7 +2342,7 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountStorageCapabilitiesTypeIssueFunctionType,
+		sema.Account_StorageCapabilitiesTypeIssueFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -2393,7 +2372,7 @@ func newAuthAccountStorageCapabilitiesIssueFunction(
 				targetPathValue,
 			)
 
-			return interpreter.NewIDCapabilityValue(
+			return interpreter.NewCapabilityValue(
 				gauge,
 				capabilityIDValue,
 				addressValue,
@@ -2412,7 +2391,7 @@ func issueStorageCapabilityController(
 	targetPathValue interpreter.PathValue,
 ) (
 	interpreter.UInt64Value,
-	interpreter.ReferenceStaticType,
+	*interpreter.ReferenceStaticType,
 ) {
 	// Create and write StorageCapabilityController
 
@@ -2424,7 +2403,7 @@ func issueStorageCapabilityController(
 		capabilityID, err = idGenerator.GenerateAccountID(address)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 	if capabilityID == 0 {
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
@@ -2445,7 +2424,7 @@ func issueStorageCapabilityController(
 	return capabilityIDValue, borrowStaticType
 }
 
-func newAuthAccountAccountCapabilitiesIssueFunction(
+func newAccountAccountCapabilitiesIssueFunction(
 	gauge common.MemoryGauge,
 	idGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
@@ -2453,7 +2432,7 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountAccountCapabilitiesTypeIssueFunctionType,
+		sema.Account_AccountCapabilitiesTypeIssueFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -2476,7 +2455,7 @@ func newAuthAccountAccountCapabilitiesIssueFunction(
 					borrowType,
 				)
 
-			return interpreter.NewIDCapabilityValue(
+			return interpreter.NewCapabilityValue(
 				gauge,
 				capabilityIDValue,
 				addressValue,
@@ -2494,7 +2473,7 @@ func issueAccountCapabilityController(
 	borrowType *sema.ReferenceType,
 ) (
 	interpreter.UInt64Value,
-	interpreter.ReferenceStaticType,
+	*interpreter.ReferenceStaticType,
 ) {
 	// Create and write AccountCapabilityController
 
@@ -2506,7 +2485,7 @@ func issueAccountCapabilityController(
 		capabilityID, err = idGenerator.GenerateAccountID(address)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 	if capabilityID == 0 {
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
@@ -2607,10 +2586,15 @@ func getCapabilityController(
 	// Inject functions
 	switch controller := controller.(type) {
 	case *interpreter.StorageCapabilityControllerValue:
+		capabilityID := controller.CapabilityID
+
+		controller.GetCapability =
+			newCapabilityControllerGetCapabilityFunction(inter, address, controller)
+
 		controller.GetTag =
-			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
+			newCapabilityControllerGetTagFunction(inter, address, capabilityID)
 		controller.SetTag =
-			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+			newCapabilityControllerSetTagFunction(inter, address, capabilityID)
 
 		controller.TargetFunction =
 			newStorageCapabilityControllerTargetFunction(inter, controller)
@@ -2620,10 +2604,15 @@ func getCapabilityController(
 			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
 
 	case *interpreter.AccountCapabilityControllerValue:
+		capabilityID := controller.CapabilityID
+
+		controller.GetCapability =
+			newCapabilityControllerGetCapabilityFunction(inter, address, controller)
+
 		controller.GetTag =
-			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
+			newCapabilityControllerGetTagFunction(inter, address, capabilityID)
 		controller.SetTag =
-			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+			newCapabilityControllerSetTagFunction(inter, address, capabilityID)
 
 		controller.DeleteFunction =
 			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
@@ -2746,7 +2735,7 @@ func newStorageCapabilityControllerDeleteFunction(
 	)
 }
 
-var capabilityIDSetStaticType = interpreter.DictionaryStaticType{
+var capabilityIDSetStaticType = &interpreter.DictionaryStaticType{
 	KeyType:   interpreter.PrimitiveStaticTypeUInt64,
 	ValueType: interpreter.NilStaticType,
 }
@@ -3018,28 +3007,25 @@ func getAccountCapabilityControllerIDsIterator(
 	return
 }
 
-func newAuthAccountCapabilitiesPublishFunction(
+func newAccountCapabilitiesPublishFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountCapabilitiesTypePublishFunctionType,
+		sema.Account_CapabilitiesTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
 			// Get capability argument
 
-			var capabilityValue *interpreter.IDCapabilityValue
+			var capabilityValue *interpreter.CapabilityValue
 
 			firstValue := invocation.Arguments[0]
 			switch firstValue := firstValue.(type) {
-			case *interpreter.IDCapabilityValue:
+			case *interpreter.CapabilityValue:
 				capabilityValue = firstValue
-
-			case *interpreter.PathCapabilityValue:
-				panic(errors.NewDefaultUserError("cannot publish linked capability"))
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -3082,7 +3068,7 @@ func newAuthAccountCapabilitiesPublishFunction(
 				true,
 				nil,
 				nil,
-			).(*interpreter.IDCapabilityValue)
+			).(*interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3101,14 +3087,14 @@ func newAuthAccountCapabilitiesPublishFunction(
 	)
 }
 
-func newAuthAccountCapabilitiesUnpublishFunction(
+func newAccountCapabilitiesUnpublishFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountCapabilitiesTypeUnpublishFunctionType,
+		sema.Account_CapabilitiesTypeUnpublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -3133,13 +3119,10 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 				return interpreter.Nil
 			}
 
-			var capabilityValue *interpreter.IDCapabilityValue
+			var capabilityValue *interpreter.CapabilityValue
 			switch readValue := readValue.(type) {
-			case *interpreter.IDCapabilityValue:
+			case *interpreter.CapabilityValue:
 				capabilityValue = readValue
-
-			case interpreter.LinkValue:
-				panic(errors.NewDefaultUserError("cannot unpublish linked capability"))
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -3152,7 +3135,7 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 				true,
 				nil,
 				nil,
-			).(*interpreter.IDCapabilityValue)
+			).(*interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3166,166 +3149,6 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 
 			return interpreter.NewSomeValueNonCopying(inter, capabilityValue)
 		},
-	)
-}
-
-func newAuthAccountCapabilitiesMigrateLinkFunction(
-	gauge common.MemoryGauge,
-	idGenerator AccountIDGenerator,
-	addressValue interpreter.AddressValue,
-) *interpreter.HostFunctionValue {
-	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		sema.AuthAccountCapabilitiesTypeMigrateLinkFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// Get path argument
-
-			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := pathValue.Domain.Identifier()
-			identifier := pathValue.Identifier
-
-			// Read stored link, if any
-
-			storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-			readValue := inter.ReadStored(address, domain, storageMapKey)
-			if readValue == nil {
-				return interpreter.Nil
-			}
-
-			var borrowStaticType interpreter.ReferenceStaticType
-
-			switch readValue := readValue.(type) {
-			case *interpreter.IDCapabilityValue:
-				// Already migrated
-				return interpreter.Nil
-
-			case interpreter.PathLinkValue:
-				borrowStaticType, ok = readValue.Type.(interpreter.ReferenceStaticType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-			case interpreter.AccountLinkValue:
-				borrowStaticType = interpreter.AuthAccountReferenceStaticType
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			borrowType, ok := inter.MustConvertStaticToSemaType(borrowStaticType).(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			// Get target
-
-			target, _, err :=
-				inter.GetPathCapabilityFinalTarget(
-					address,
-					pathValue,
-					// Use top-most type to follow link all the way to final target
-					&sema.ReferenceType{
-						Type:          sema.AnyType,
-						Authorization: sema.UnauthorizedAccess,
-					},
-					false,
-					locationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			// Issue appropriate capability controller
-
-			var capabilityID interpreter.UInt64Value
-
-			switch target := target.(type) {
-			case nil:
-				return interpreter.Nil
-
-			case interpreter.PathCapabilityTarget:
-
-				targetPath := interpreter.PathValue(target)
-
-				capabilityID, _ = issueStorageCapabilityController(
-					inter,
-					locationRange,
-					idGenerator,
-					address,
-					borrowType,
-					targetPath,
-				)
-
-			case interpreter.AccountCapabilityTarget:
-
-				capabilityID, _ = issueAccountCapabilityController(
-					inter,
-					locationRange,
-					idGenerator,
-					address,
-					borrowType,
-				)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-
-			// Publish: overwrite link value with capability,
-			// for both public and private links.
-			//
-			// Private links need to be replaced,
-			// because another link might target it.
-
-			capabilityValue := interpreter.NewIDCapabilityValue(
-				inter,
-				capabilityID,
-				addressValue,
-				borrowStaticType,
-			)
-
-			capabilityValue, ok = capabilityValue.Transfer(
-				inter,
-				locationRange,
-				atree.Address(address),
-				true,
-				nil,
-				nil,
-			).(*interpreter.IDCapabilityValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			inter.WriteStored(
-				address,
-				domain,
-				storageMapKey,
-				capabilityValue,
-			)
-
-			return interpreter.NewSomeValueNonCopying(inter, capabilityID)
-		},
-	)
-}
-
-func newPublicAccountCapabilitiesValue(
-	gauge common.MemoryGauge,
-	addressValue interpreter.AddressValue,
-) interpreter.Value {
-	return interpreter.NewPublicAccountCapabilitiesValue(
-		gauge,
-		addressValue,
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, false),
-		newAccountCapabilitiesGetFunction(gauge, addressValue, sema.PublicAccountType, true),
 	)
 }
 
@@ -3474,27 +3297,16 @@ func CheckCapabilityController(
 func newAccountCapabilitiesGetFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
-	accountType *sema.CompositeType,
 	borrow bool,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
 
 	var funcType *sema.FunctionType
-	switch accountType {
-	case sema.AuthAccountType:
-		if borrow {
-			funcType = sema.AuthAccountCapabilitiesTypeBorrowFunctionType
-		} else {
-			funcType = sema.AuthAccountCapabilitiesTypeGetFunctionType
-		}
-	case sema.PublicAccountType:
-		if borrow {
-			funcType = sema.PublicAccountCapabilitiesTypeBorrowFunctionType
-		} else {
-			funcType = sema.PublicAccountCapabilitiesTypeGetFunctionType
-		}
-	default:
-		panic(errors.NewUnreachableError())
+
+	if borrow {
+		funcType = sema.Account_CapabilitiesTypeBorrowFunctionType
+	} else {
+		funcType = sema.Account_CapabilitiesTypeGetFunctionType
 	}
 
 	return interpreter.NewHostFunctionValue(
@@ -3532,15 +3344,11 @@ func newAccountCapabilitiesGetFunction(
 				return interpreter.Nil
 			}
 
-			var readCapabilityValue *interpreter.IDCapabilityValue
+			var readCapabilityValue *interpreter.CapabilityValue
 
 			switch readValue := readValue.(type) {
-			case *interpreter.IDCapabilityValue:
+			case *interpreter.CapabilityValue:
 				readCapabilityValue = readValue
-
-			case interpreter.LinkValue:
-				// TODO: return PathCapabilityValue?
-				return interpreter.Nil
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -3588,7 +3396,7 @@ func newAccountCapabilitiesGetFunction(
 						panic(errors.NewUnreachableError())
 					}
 
-					resultValue = interpreter.NewIDCapabilityValue(
+					resultValue = interpreter.NewCapabilityValue(
 						inter,
 						capabilityID,
 						capabilityAddress,
@@ -3633,14 +3441,14 @@ func getAccountCapabilityControllerReference(
 	)
 }
 
-func newAuthAccountAccountCapabilitiesGetControllerFunction(
+func newAccountAccountCapabilitiesGetControllerFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) interpreter.FunctionValue {
 	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountAccountCapabilitiesTypeGetControllerFunctionType,
+		sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -3664,21 +3472,21 @@ func newAuthAccountAccountCapabilitiesGetControllerFunction(
 	)
 }
 
-var accountCapabilityControllerReferencesArrayStaticType = interpreter.VariableSizedStaticType{
-	Type: interpreter.ReferenceStaticType{
+var accountCapabilityControllerReferencesArrayStaticType = &interpreter.VariableSizedStaticType{
+	Type: &interpreter.ReferenceStaticType{
 		ReferencedType: interpreter.PrimitiveStaticTypeAccountCapabilityController,
 		Authorization:  interpreter.UnauthorizedAccess,
 	},
 }
 
-func newAuthAccountAccountCapabilitiesGetControllersFunction(
+func newAccountAccountCapabilitiesGetControllersFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) interpreter.FunctionValue {
 	address := addressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountAccountCapabilitiesTypeGetControllersFunctionType,
+		sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -3720,7 +3528,7 @@ func newAuthAccountAccountCapabilitiesGetControllersFunction(
 
 // `(&AccountCapabilityController)` in
 // `forEachController(_ function: fun(&AccountCapabilityController): Bool)`
-var authAccountAccountCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
+var accountAccountCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 	&sema.ReferenceType{
 		Type:          sema.AccountCapabilityControllerType,
 		Authorization: sema.UnauthorizedAccess,
@@ -3740,7 +3548,7 @@ func (CapabilityControllersMutatedDuringIterationError) Error() string {
 	return "capability controller iteration continued after changes to controllers"
 }
 
-func newAuthAccountAccountCapabilitiesForEachControllerFunction(
+func newAccountAccountCapabilitiesForEachControllerFunction(
 	gauge common.MemoryGauge,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
@@ -3748,7 +3556,7 @@ func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		sema.AuthAccountAccountCapabilitiesTypeForEachControllerFunctionType,
+		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
@@ -3798,7 +3606,7 @@ func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 					nil,
 					nil,
 					[]interpreter.Value{referenceValue},
-					authAccountAccountCapabilitiesForEachControllerCallbackTypeParams,
+					accountAccountCapabilitiesForEachControllerCallbackTypeParams,
 					nil,
 					locationRange,
 				)
@@ -3897,6 +3705,26 @@ func getCapabilityControllerTag(
 	}
 
 	return stringValue
+}
+
+func newCapabilityControllerGetCapabilityFunction(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	controller interpreter.CapabilityControllerValue,
+) func() *interpreter.CapabilityValue {
+
+	addressValue := interpreter.AddressValue(address)
+	capabilityID := controller.ControllerCapabilityID()
+	borrowType := controller.CapabilityControllerBorrowType()
+
+	return func() *interpreter.CapabilityValue {
+		return interpreter.NewCapabilityValue(
+			inter,
+			capabilityID,
+			addressValue,
+			borrowType,
+		)
+	}
 }
 
 func newCapabilityControllerGetTagFunction(

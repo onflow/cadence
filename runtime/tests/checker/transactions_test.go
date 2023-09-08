@@ -86,7 +86,7 @@ func TestCheckTransactions(t *testing.T) {
 			`
               transaction {
 
-                  prepare(x: AuthAccount, y: AuthAccount) {}
+                  prepare(x: &Account, y: &Account) {}
               }
             `,
 			nil,

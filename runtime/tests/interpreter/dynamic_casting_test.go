@@ -1214,7 +1214,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							t,
 							inter,
 							expectedElements,
-							arrayElements(inter, yArray),
+							ArrayElements(inter, yArray),
 						)
 
 						zValue := inter.Globals.Get("z").GetValue()
@@ -1229,7 +1229,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							t,
 							inter,
 							expectedElements,
-							arrayElements(inter, innerArray),
+							ArrayElements(inter, innerArray),
 						)
 					})
 				}
@@ -1365,7 +1365,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						expectedDictionary := interpreter.NewDictionaryValue(
 							inter,
 							interpreter.EmptyLocationRange,
-							interpreter.DictionaryStaticType{
+							&interpreter.DictionaryStaticType{
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
 							},
@@ -3326,7 +3326,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 	test := func(
 		name string,
-		newCapabilityValue func(borrowType interpreter.StaticType) interpreter.CapabilityValue,
+		newCapabilityValue func(borrowType interpreter.StaticType) *interpreter.CapabilityValue,
 	) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -3482,19 +3482,9 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		})
 	}
 
-	test(
-		"path capability",
-		func(borrowType interpreter.StaticType) interpreter.CapabilityValue {
-			return interpreter.NewUnmeteredPathCapabilityValue(
-				interpreter.AddressValue{},
-				interpreter.EmptyPathValue,
-				borrowType,
-			)
-		},
-	)
-	test("path capability",
-		func(borrowType interpreter.StaticType) interpreter.CapabilityValue {
-			return interpreter.NewUnmeteredIDCapabilityValue(
+	test("capability",
+		func(borrowType interpreter.StaticType) *interpreter.CapabilityValue {
+			return interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.AddressValue{},
 				borrowType,

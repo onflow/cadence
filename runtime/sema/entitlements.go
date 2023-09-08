@@ -16,12 +16,6 @@
  * limitations under the License.
  */
 
-package format
+package sema
 
-import (
-	"fmt"
-)
-
-func Function(signature string) string {
-	return fmt.Sprintf("Function%s", signature)
-}
+//go:generate go run ./gen entitlements.cdc entitlements.gen.go

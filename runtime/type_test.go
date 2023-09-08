@@ -36,16 +36,16 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	tx1 := []byte(`
       transaction {
-        prepare(signer: AuthAccount) {
-          signer.save(Type<Int>(), to: /storage/intType)
+        prepare(signer: auth(Storage) &Account) {
+          signer.storage.save(Type<Int>(), to: /storage/intType)
         }
       }
     `)
 
 	tx2 := []byte(`
       transaction {
-        prepare(signer: AuthAccount) {
-          let intType = signer.load<Type>(from: /storage/intType)
+        prepare(signer: auth(Storage) &Account) {
+          let intType = signer.storage.load<Type>(from: /storage/intType)
           log(intType?.identifier)
         }
       }
@@ -209,8 +209,8 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 		values := value.(cadence.Array).Values
 
 		require.Equal(t, 2, len(values))
-		assert.IsType(t, cadence.UFix64Type{}, values[0].Type())
-		assert.IsType(t, cadence.UFix64Type{}, values[1].Type())
+		assert.IsType(t, cadence.UFix64Type, values[0].Type())
+		assert.IsType(t, cadence.UFix64Type, values[1].Type())
 
 		assert.Equal(
 			t,

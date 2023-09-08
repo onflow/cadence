@@ -61,6 +61,9 @@ func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
 	case *AddressType:
 		return true
 
+	case *ReferenceType:
+		return IsValidEventParameterType(t.Type, results)
+
 	case *OptionalType:
 		return IsValidEventParameterType(t.Type, results)
 
