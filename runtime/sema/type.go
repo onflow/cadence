@@ -2478,6 +2478,7 @@ func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
 	return &FunctionType{
 		Parameters:           []Parameter{},
 		ReturnTypeAnnotation: NewTypeAnnotation(arrayType),
+		Purity:               FunctionPurityView,
 	}
 }
 
