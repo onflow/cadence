@@ -10330,7 +10330,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 			let emptyVals: [Int] = []
 
 			let onlyEven =
-				fun (_ x: Int): Bool {
+				view fun (_ x: Int): Bool {
 					return x % 2 == 0
 				}
 
@@ -10368,7 +10368,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 			let xs = [1, 2, 3, 100, 201]
 
 			let onlyEven =
-				fun (_ x: Int): Bool {
+				view fun (_ x: Int): Bool {
 					return x % 2 == 0
 				}
 
@@ -10425,7 +10425,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 			}
 
 			let onlyOddStruct =
-				fun (_ x: TestStruct): Bool {
+				view fun (_ x: TestStruct): Bool {
 					return x.test % 2 == 1
 				}
 
@@ -10485,7 +10485,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 			let emptyVals_fixed: [Int; 0] = []
 
 			let onlyEven =
-				fun (_ x: Int): Bool {
+				view fun (_ x: Int): Bool {
 					return x % 2 == 0
 				}
 
@@ -10529,7 +10529,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 			let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
 
 			let onlyEven =
-				fun (_ x: Int): Bool {
+				view fun (_ x: Int): Bool {
 					return x % 2 == 0
 				}
 
@@ -10587,7 +10587,7 @@ func TestInterpretArrayFilter(t *testing.T) {
 			}
 
 			let onlyOddStruct =
-				fun (_ x: TestStruct): Bool {
+				view fun (_ x: TestStruct): Bool {
 					return x.test % 2 == 1
 				}
 

@@ -2492,6 +2492,7 @@ func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+		Purity:               FunctionPurityView,
 	}
 
 	return &FunctionType{
@@ -2503,6 +2504,7 @@ func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(NewVariableSizedType(memoryGauge, elementType)),
+		Purity:               FunctionPurityView,
 	}
 }
 
