@@ -214,8 +214,11 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				purity = parsePurityAnnotation(p)
 				continue
 
-			case KeywordPub, KeywordPriv:
-				return nil, p.syntaxError(fmt.Sprintf("`%s` is no longer a valid access keyword", p.currentTokenSource()))
+			case KeywordPub:
+				return nil, p.syntaxErrorWithSuggestedFix("`pub` is no longer a valid access keyword", "`access(all)`")
+
+			case KeywordPriv:
+				return nil, p.syntaxErrorWithSuggestedFix("`priv` is no longer a valid access keyword", "`access(self)`")
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -1661,8 +1664,11 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				purity = parsePurityAnnotation(p)
 				continue
 
-			case KeywordPub, KeywordPriv:
-				return nil, p.syntaxError(fmt.Sprintf("`%s` is no longer a valid access keyword", p.currentTokenSource()))
+			case KeywordPub:
+				return nil, p.syntaxErrorWithSuggestedFix("`pub` is no longer a valid access keyword", "`access(all)`")
+
+			case KeywordPriv:
+				return nil, p.syntaxErrorWithSuggestedFix("`priv` is no longer a valid access keyword", "`access(self)`")
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {

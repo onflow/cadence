@@ -77,23 +77,6 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
-// SuggestedFix
-
-type HasSuggestedFixes interface {
-	SuggestFixes(code string) []SuggestedFix
-}
-
-type SuggestedFix struct {
-	Message   string
-	TextEdits []TextEdit
-}
-
-type TextEdit struct {
-	Replacement string
-	Insertion   string
-	ast.Range
-}
-
 // InvalidPragmaError
 
 type InvalidPragmaError struct {
@@ -496,7 +479,7 @@ type MissingArgumentLabelError struct {
 
 var _ SemanticError = &MissingArgumentLabelError{}
 var _ errors.UserError = &MissingArgumentLabelError{}
-var _ HasSuggestedFixes = &MissingArgumentLabelError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingArgumentLabelError{}
 
 func (*MissingArgumentLabelError) isSemanticError() {}
 
@@ -509,11 +492,11 @@ func (e *MissingArgumentLabelError) Error() string {
 	)
 }
 
-func (e *MissingArgumentLabelError) SuggestFixes(_ string) []SuggestedFix {
-	return []SuggestedFix{
+func (e *MissingArgumentLabelError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "insert argument label",
-			TextEdits: []TextEdit{
+			TextEdits: []ast.TextEdit{
 				{
 					Insertion: fmt.Sprintf("%s: ", e.ExpectedArgumentLabel),
 					Range: ast.NewUnmeteredRange(
@@ -537,7 +520,7 @@ type IncorrectArgumentLabelError struct {
 var _ SemanticError = &IncorrectArgumentLabelError{}
 var _ errors.UserError = &IncorrectArgumentLabelError{}
 var _ errors.SecondaryError = &IncorrectArgumentLabelError{}
-var _ HasSuggestedFixes = &IncorrectArgumentLabelError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &IncorrectArgumentLabelError{}
 
 func (*IncorrectArgumentLabelError) isSemanticError() {}
 
@@ -559,12 +542,12 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 	)
 }
 
-func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []SuggestedFix {
+func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	if len(e.ExpectedArgumentLabel) > 0 {
-		return []SuggestedFix{
+		return []errors.SuggestedFix[ast.TextEdit]{
 			{
 				Message: "replace argument label",
-				TextEdits: []TextEdit{
+				TextEdits: []ast.TextEdit{
 					{
 						Replacement: fmt.Sprintf("%s:", e.ExpectedArgumentLabel),
 						Range:       e.Range,
@@ -586,10 +569,10 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []SuggestedFix {
 
 		adjustedEndPos := endPos.Shifted(nil, whitespaceSuffixLength)
 
-		return []SuggestedFix{
+		return []errors.SuggestedFix[ast.TextEdit]{
 			{
 				Message: "remove argument label",
-				TextEdits: []TextEdit{
+				TextEdits: []ast.TextEdit{
 					{
 						Replacement: "",
 						Range: ast.Range{
@@ -1024,7 +1007,7 @@ type NotDeclaredMemberError struct {
 var _ SemanticError = &NotDeclaredMemberError{}
 var _ errors.UserError = &NotDeclaredMemberError{}
 var _ errors.SecondaryError = &NotDeclaredMemberError{}
-var _ HasSuggestedFixes = &NotDeclaredMemberError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &NotDeclaredMemberError{}
 
 func (*NotDeclaredMemberError) isSemanticError() {}
 
@@ -1064,7 +1047,7 @@ func (e *NotDeclaredMemberError) SecondaryError() string {
 	return "unknown member"
 }
 
-func (e *NotDeclaredMemberError) SuggestFixes(_ string) []SuggestedFix {
+func (e *NotDeclaredMemberError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	optionalMember := e.findOptionalMember()
 	if optionalMember == "" {
 		return nil
@@ -1072,10 +1055,10 @@ func (e *NotDeclaredMemberError) SuggestFixes(_ string) []SuggestedFix {
 
 	accessPos := e.Expression.AccessPos
 
-	return []SuggestedFix{
+	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "use optional chaining",
-			TextEdits: []TextEdit{
+			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "?",
 					Range: ast.Range{

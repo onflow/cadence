@@ -32,7 +32,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -234,7 +233,7 @@ func RequireError(t *testing.T, err error) {
 		_ = hasSecondaryError.SecondaryError()
 	}
 
-	if hasSuggestedFixes, ok := err.(sema.HasSuggestedFixes); ok {
+	if hasSuggestedFixes, ok := err.(errors.HasSuggestedFixes[ast.TextEdit]); ok {
 		_ = hasSuggestedFixes.SuggestFixes("")
 	}
 }

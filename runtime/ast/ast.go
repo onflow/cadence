@@ -23,3 +23,9 @@
 // Elements also implement the json.Marshaler interface
 // so can be serialized to a standardized/stable JSON format.
 package ast
+
+type TextEdit struct {
+	Replacement string
+	Insertion   string
+	Range
+}

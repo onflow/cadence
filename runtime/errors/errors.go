@@ -114,6 +114,17 @@ type MemoryError struct {
 	Err error
 }
 
+// SuggestedFix
+
+type HasSuggestedFixes[T any] interface {
+	SuggestFixes(code string) []SuggestedFix[T]
+}
+
+type SuggestedFix[T any] struct {
+	Message   string
+	TextEdits []T
+}
+
 var _ UserError = MemoryError{}
 
 func (MemoryError) IsUserError() {}
