@@ -468,10 +468,6 @@ func TestInterpretStringJoin(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-		fun testDefaultSeparator(): String {
-			return String.join(["👪", "❤️"])
-		}
-
 		fun test(): String {
 			return String.join(["👪", "❤️"], separator: "//")
 		}
@@ -499,7 +495,6 @@ func TestInterpretStringJoin(t *testing.T) {
 		})
 	}
 
-	testCase(t, "testDefaultSeparator", interpreter.NewUnmeteredStringValue("👪,❤️"))
 	testCase(t, "test", interpreter.NewUnmeteredStringValue("👪//❤️"))
 	testCase(t, "testEmptyArray", interpreter.NewUnmeteredStringValue(""))
 	testCase(t, "testSingletonArray", interpreter.NewUnmeteredStringValue("pqrS"))

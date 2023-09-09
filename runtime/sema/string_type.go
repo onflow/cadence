@@ -39,8 +39,7 @@ Returns a string from the given array of characters
 
 const StringTypeJoinFunctionName = "join"
 const StringTypeJoinFunctionDocString = `
-Returns a string after joining the array of strings with the optional separator if provided.
-Uses ',' as the default separator when not provided.
+Returns a string after joining the array of strings with the provided separator.
 `
 
 // StringType represents the string type
@@ -327,6 +326,5 @@ var StringTypeJoinFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(StringType),
-	// separator is optional
-	Arity: &Arity{Min: 1, Max: 2},
+	Arity:                &Arity{Min: 2, Max: 2},
 }

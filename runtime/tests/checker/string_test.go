@@ -360,15 +360,9 @@ func TestCheckStringJoin(t *testing.T) {
 	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
-		let s_default_sep = String.join(["👪", "❤️", "Abc"])
 		let s = String.join(["👪", "❤️", "Abc"], separator: "/")
 	`)
 	require.NoError(t, err)
-
-	assert.Equal(t,
-		sema.StringType,
-		RequireGlobalValue(t, checker.Elaboration, "s_default_sep"),
-	)
 
 	assert.Equal(t,
 		sema.StringType,
