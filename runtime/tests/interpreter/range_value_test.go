@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,6 +33,14 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
+
+var getValueForIntegerTypeMutex sync.Mutex
+
+func synchronizedGetValueForIntegerType(value int8, staticType interpreter.StaticType) interpreter.IntegerValue {
+	getValueForIntegerTypeMutex.Lock()
+	defer getValueForIntegerTypeMutex.Unlock()
+	return interpreter.GetValueForIntegerType(value, staticType)
+}
 
 type containsTestCase struct {
 	param               int64
@@ -417,9 +426,9 @@ func TestInclusiveRange(t *testing.T) {
 				expectedRangeValue = interpreter.NewInclusiveRangeValueWithStep(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.GetValueForIntegerType(testCase.s, elementType),
-					interpreter.GetValueForIntegerType(testCase.e, elementType),
-					interpreter.GetValueForIntegerType(testCase.step, elementType),
+					synchronizedGetValueForIntegerType(testCase.s, elementType),
+					synchronizedGetValueForIntegerType(testCase.e, elementType),
+					synchronizedGetValueForIntegerType(testCase.step, elementType),
 					rangeType,
 					rangeSemaType,
 				)
@@ -427,8 +436,8 @@ func TestInclusiveRange(t *testing.T) {
 				expectedRangeValue = interpreter.NewInclusiveRangeValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.GetValueForIntegerType(testCase.s, elementType),
-					interpreter.GetValueForIntegerType(testCase.e, elementType),
+					synchronizedGetValueForIntegerType(testCase.s, elementType),
+					synchronizedGetValueForIntegerType(testCase.e, elementType),
 					rangeType,
 					rangeSemaType,
 				)
@@ -482,7 +491,7 @@ func TestGetValueForIntegerType(t *testing.T) {
 		staticType := interpreter.ConvertSemaToStaticType(nil, integerType)
 
 		// Panics if not handled.
-		_ = interpreter.GetValueForIntegerType(int8(1), staticType)
+		_ = synchronizedGetValueForIntegerType(int8(1), staticType)
 	}
 }
 
