@@ -5297,7 +5297,7 @@ func (r *InclusiveRangeType) IsResourceType() bool {
 }
 
 func (r *InclusiveRangeType) IsInvalidType() bool {
-	return r.MemberType.IsInvalidType()
+	return r.MemberType != nil && r.MemberType.IsInvalidType()
 }
 
 func (r *InclusiveRangeType) IsStorable(results map[*Member]bool) bool {
