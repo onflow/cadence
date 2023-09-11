@@ -274,7 +274,7 @@ func newPublicKeyVerifySignatureFunction(
 				panic(errors.NewUnexpectedError("failed to get signed data. %w", err))
 			}
 
-			domainSeparationTag := domainSeparationTagValue.Str
+			domainSeparationTag := domainSeparationTagValue.Str(inter)
 
 			hashAlgorithm := NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)
 

@@ -945,7 +945,7 @@ func newAccountInboxPublishFunction(
 				nil,
 			)
 
-			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str(inter))
 
 			inter.WriteStored(
 				provider,
@@ -977,7 +977,7 @@ func newAccountInboxUnpublishFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str(inter))
 
 			readValue := inter.ReadStored(provider, InboxStorageDomain, storageMapKey)
 			if readValue == nil {
@@ -1058,7 +1058,7 @@ func newAccountInboxClaimFunction(
 
 			providerAddress := providerValue.ToAddress()
 
-			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
+			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str(inter))
 
 			readValue := inter.ReadStored(providerAddress, InboxStorageDomain, storageMapKey)
 			if readValue == nil {
@@ -1213,12 +1213,14 @@ func newAccountContractsGetFunction(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			name := nameValue.Str
-			location := common.NewAddressLocation(invocation.Interpreter, address, name)
+
+			location := common.NewAddressLocation(inter, address, nameValue.Str(inter))
 
 			var code []byte
 			var err error
@@ -1231,13 +1233,13 @@ func newAccountContractsGetFunction(
 
 			if len(code) > 0 {
 				return interpreter.NewSomeValueNonCopying(
-					invocation.Interpreter,
+					inter,
 					interpreter.NewDeployedContractValue(
-						invocation.Interpreter,
+						inter,
 						addressValue,
 						nameValue,
 						interpreter.ByteSliceToByteArrayValue(
-							invocation.Interpreter,
+							inter,
 							code,
 						),
 					),
@@ -1270,8 +1272,9 @@ func newAccountContractsBorrowFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			name := nameValue.Str
-			location := common.NewAddressLocation(invocation.Interpreter, address, name)
+
+			name := nameValue.Str(inter)
+			location := common.NewAddressLocation(inter, address, name)
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
@@ -1369,7 +1372,7 @@ func newAccountContractsChangeFunction(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-
+			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
 			const requiredArgumentCount = 2
@@ -1387,14 +1390,14 @@ func newAccountContractsChangeFunction(
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
+			code, err := interpreter.ByteArrayValueToByteSlice(inter, newCodeValue, locationRange)
 			if err != nil {
 				panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 			}
 
 			// Get the existing code
 
-			contractName := nameValue.Str
+			contractName := nameValue.Str(inter)
 
 			if contractName == "" {
 				panic(errors.NewDefaultUserError(
@@ -1404,7 +1407,7 @@ func newAccountContractsChangeFunction(
 			}
 
 			address := addressValue.ToAddress()
-			location := common.NewAddressLocation(invocation.Interpreter, address, contractName)
+			location := common.NewAddressLocation(inter, address, contractName)
 
 			existingCode, err := handler.GetAccountContractCode(location)
 			if err != nil {
@@ -1562,8 +1565,6 @@ func newAccountContractsChangeFunction(
 				err = validator.Validate()
 				handleContractUpdateError(err)
 			}
-
-			inter := invocation.Interpreter
 
 			err = updateAccountContractCode(
 				handler,
@@ -1874,14 +1875,15 @@ func newAccountContractsRemoveFunction(
 		gauge,
 		sema.Account_ContractsTypeRemoveFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-
 			inter := invocation.Interpreter
+
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			name := nameValue.Str
-			location := common.NewAddressLocation(invocation.Interpreter, address, name)
+
+			name := nameValue.Str(inter)
+			location := common.NewAddressLocation(inter, address, name)
 
 			// Get the current code
 

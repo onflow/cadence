@@ -77,6 +77,8 @@ var testTypeAssertFunctionType = &sema.FunctionType{
 var testTypeAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 	testTypeAssertFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
+		inter := invocation.Interpreter
+
 		condition, ok := invocation.Arguments[0].(interpreter.BoolValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -88,7 +90,7 @@ var testTypeAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			message = messageValue.Str
+			message = messageValue.Str(inter)
 		}
 
 		if !condition {
@@ -194,13 +196,15 @@ var testTypeFailFunctionType = &sema.FunctionType{
 var testTypeFailFunction = interpreter.NewUnmeteredHostFunctionValue(
 	testTypeFailFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
+		inter := invocation.Interpreter
+
 		var message string
 		if len(invocation.Arguments) > 0 {
 			messageValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			message = messageValue.Str
+			message = messageValue.Str(inter)
 		}
 
 		panic(AssertionError{
@@ -351,12 +355,14 @@ func newTestTypeReadFileFunction(testFramework TestFramework) *interpreter.HostF
 	return interpreter.NewUnmeteredHostFunctionValue(
 		testTypeReadFileFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
 			pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			content, err := testFramework.ReadFile(pathString.Str)
+			content, err := testFramework.ReadFile(pathString.Str(inter))
 			if err != nil {
 				panic(err)
 			}
@@ -903,7 +909,10 @@ func newTestTypeExpectFailureFunction(
 			defer inter.RecoverErrors(func(internalErr error) {
 				if !failedAsExpected {
 					panic(internalErr)
-				} else if !strings.Contains(internalErr.Error(), errorMessage.Str) {
+				} else if !strings.Contains(
+					internalErr.Error(),
+					errorMessage.Str(inter),
+				) {
 					msg := fmt.Sprintf(
 						"Expected error message to include: %s.",
 						errorMessage,

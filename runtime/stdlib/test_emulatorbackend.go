@@ -269,7 +269,11 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 
-			result := blockchain.RunScript(inter, script.Str, args)
+			result := blockchain.RunScript(
+				inter,
+				script.Str(inter),
+				args,
+			)
 
 			return newScriptResult(inter, result.Value, result)
 		},
@@ -421,7 +425,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 
 			err = blockchain.AddTransaction(
 				inter,
-				code.Str,
+				code.Str(inter),
 				authorizers,
 				signerAccounts,
 				args,
@@ -531,8 +535,8 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 
 			err = blockchain.DeployContract(
 				inter,
-				name.Str,
-				code.Str,
+				name.Str(inter),
+				code.Str(inter),
 				account,
 				args,
 			)
@@ -587,7 +591,9 @@ func (t *testEmulatorBackendType) newUseConfigFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				mapping[location.Str] = common.Address(address)
+				locationStr := location.Str(inter)
+
+				mapping[locationStr] = common.Address(address)
 
 				return true
 			})
@@ -780,12 +786,14 @@ func (t *testEmulatorBackendType) newCreateSnapshotFunction(
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.createSnapshotFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
 			name, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			err := blockchain.CreateSnapshot(name.Str)
+			err := blockchain.CreateSnapshot(name.Str(inter))
 			return newErrorValue(invocation.Interpreter, err)
 		},
 	)
@@ -806,12 +814,14 @@ func (t *testEmulatorBackendType) newLoadSnapshotFunction(
 	return interpreter.NewUnmeteredHostFunctionValue(
 		t.loadSnapshotFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
+			inter := invocation.Interpreter
+
 			name, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			err := blockchain.LoadSnapshot(name.Str)
+			err := blockchain.LoadSnapshot(name.Str(inter))
 			return newErrorValue(invocation.Interpreter, err)
 		},
 	)

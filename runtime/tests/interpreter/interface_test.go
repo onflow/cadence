@@ -578,7 +578,8 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 			logFunctionType,
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
-				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
+				inter := invocation.Interpreter
+				msg := invocation.Arguments[0].(*interpreter.StringValue).Str(inter)
 				logs = append(logs, msg)
 				return interpreter.Void
 			},
@@ -686,7 +687,8 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 			logFunctionType,
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
-				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
+				inter := invocation.Interpreter
+				msg := invocation.Arguments[0].(*interpreter.StringValue).Str(inter)
 				logs = append(logs, msg)
 				return interpreter.Void
 			},
@@ -794,7 +796,8 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 			logFunctionType,
 			"",
 			func(invocation interpreter.Invocation) interpreter.Value {
-				msg := invocation.Arguments[0].(*interpreter.StringValue).Str
+				inter := invocation.Interpreter
+				msg := invocation.Arguments[0].(*interpreter.StringValue).Str(inter)
 				logs = append(logs, msg)
 				return interpreter.Void
 			},

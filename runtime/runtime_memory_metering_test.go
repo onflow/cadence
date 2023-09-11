@@ -97,7 +97,7 @@ func TestRuntimeInterpreterAddressLocationMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAddressLocation))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindElaboration))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(21), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 }
@@ -783,10 +783,8 @@ func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			storage: newTestLedger(nil, nil),
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
+			storage:     newTestLedger(nil, nil),
+			meterMemory: meter.MeterMemory,
 			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
@@ -818,7 +816,7 @@ func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 	diffOfActualLen := nonEmptyStrActualLen - emptyStrActualLen
 	diffOfMeteredAmount := nonEmptyStrMeteredAmount - emptyStrMeteredAmount
 
-	assert.Equal(t, diffOfActualLen, diffOfMeteredAmount)
+	assert.Equal(t, diffOfActualLen*2, diffOfMeteredAmount)
 }
 
 func TestRuntimeStorageCommitsMetering(t *testing.T) {

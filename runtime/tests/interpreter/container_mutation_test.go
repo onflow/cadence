@@ -539,7 +539,11 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val)
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredStringValue("baz"),
+			val,
+		)
 	})
 
 	t.Run("simple dictionary invalid", func(t *testing.T) {
@@ -618,7 +622,11 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 		assert.True(t, present)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val)
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredStringValue("baz"),
+			val,
+		)
 	})
 
 	t.Run("dictionary insert invalid", func(t *testing.T) {
@@ -1058,7 +1066,11 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("name"),
 		)
 		assert.True(t, present)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("hello"), val)
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredStringValue("hello"),
+			val,
+		)
 	})
 
 	t.Run("dictionary", func(t *testing.T) {
@@ -1093,6 +1105,10 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("name"),
 		)
 		assert.True(t, present)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("foo"), val)
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredStringValue("foo"),
+			val,
+		)
 	})
 }

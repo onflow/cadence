@@ -57,6 +57,10 @@ func NewDeployedContractValue(
 	)
 }
 
+var MetaTypeArrayStaticType = &VariableSizedStaticType{
+	Type: PrimitiveStaticTypeMetaType,
+}
+
 func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, name *StringValue) FunctionValue {
 	// public types only need to be computed once per contract
 	var publicTypes *ArrayValue
@@ -67,12 +71,12 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 		sema.DeployedContractTypePublicTypesFunctionType,
 		func(inv Invocation) Value {
 			if publicTypes == nil {
-				innerInter := inv.Interpreter
-				contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
+				inter := inv.Interpreter
+				qualifiedIdentifier := name.Str(inter)
+				contractLocation := common.NewAddressLocation(inter, address, qualifiedIdentifier)
 				// we're only looking at the contract as a whole, so no need to construct a nested path
-				qualifiedIdent := name.Str
-				typeID := common.NewTypeIDFromQualifiedName(innerInter, contractLocation, qualifiedIdent)
-				compositeType, err := innerInter.GetCompositeType(contractLocation, qualifiedIdent, typeID)
+				typeID := common.NewTypeIDFromQualifiedName(inter, contractLocation, qualifiedIdentifier)
+				compositeType, err := inter.GetCompositeType(contractLocation, qualifiedIdentifier, typeID)
 				if err != nil {
 					panic(err)
 				}
@@ -85,14 +89,14 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 					if pair == nil {
 						return nil
 					}
-					typeValue := NewTypeValue(innerInter, ConvertSemaToStaticType(innerInter, pair.Value))
+					typeValue := NewTypeValue(inter, ConvertSemaToStaticType(inter, pair.Value))
 					pair = pair.Next()
 					return typeValue
 				}
 
 				publicTypes = NewArrayValueWithIterator(
-					innerInter,
-					NewVariableSizedStaticType(innerInter, PrimitiveStaticTypeMetaType),
+					inter,
+					MetaTypeArrayStaticType,
 					common.Address{},
 					uint64(nestedTypes.Len()),
 					yieldNext,

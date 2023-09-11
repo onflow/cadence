@@ -275,7 +275,8 @@ func (v *StringValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	return e.CBOR.EncodeString(v.Str)
+	// TODO: write normalized? no memory gauge available
+	return e.CBOR.EncodeString(v._str)
 }
 
 // Encode encodes the value as a CBOR string

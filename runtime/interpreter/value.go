@@ -505,7 +505,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // HashInput returns a byte slice containing:
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
-func (v TypeValue) HashInput(interpreter *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v TypeValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
 	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)
@@ -1014,15 +1014,20 @@ type StringValue struct {
 	// which is initialized lazily and reused/reset in functions
 	// that are based on grapheme clusters
 	graphemes *uniseg.Graphemes
-	Str       string
+	// Deprecated: Use Str().
+	// _str is the raw string value.
+	// At construction, it is not normalized yet.
+	// On use (via Str()), it gets normalized.
+	_str string
 	// length is the cached length of the string, based on grapheme clusters.
 	// a negative value indicates the length has not been initialized, see Length()
-	length int
+	length     int
+	normalized bool
 }
 
 func NewUnmeteredStringValue(str string) *StringValue {
 	return &StringValue{
-		Str: str,
+		_str: str,
 		// a negative value indicates the length has not been initialized, see Length()
 		length: -1,
 	}
@@ -1047,9 +1052,9 @@ var _ ValueIndexableValue = &StringValue{}
 var _ MemberAccessibleValue = &StringValue{}
 var _ IterableValue = &StringValue{}
 
-func (v *StringValue) prepareGraphemes() {
+func (v *StringValue) prepareGraphemes(memoryGauge common.MemoryGauge) {
 	if v.graphemes == nil {
-		v.graphemes = uniseg.NewGraphemes(v.Str)
+		v.graphemes = uniseg.NewGraphemes(v.Str(memoryGauge))
 	} else {
 		v.graphemes.Reset()
 	}
@@ -1074,7 +1079,7 @@ func (*StringValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (v *StringValue) String() string {
-	return format.String(v.Str)
+	return format.String(v.Str(nil))
 }
 
 func (v *StringValue) RecursiveString(_ SeenReferences) string {
@@ -1082,17 +1087,17 @@ func (v *StringValue) RecursiveString(_ SeenReferences) string {
 }
 
 func (v *StringValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
-	l := format.FormattedStringLength(v.Str)
+	l := format.FormattedStringLength(v.Str(memoryGauge))
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
 
-func (v *StringValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+func (v *StringValue) Equal(interpreter *Interpreter, _ LocationRange, other Value) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
 	}
-	return v.NormalForm() == otherString.NormalForm()
+	return v.Str(interpreter) == otherString.Str(interpreter)
 }
 
 func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1105,8 +1110,7 @@ func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, loca
 			LocationRange: locationRange,
 		})
 	}
-
-	return AsBoolValue(v.NormalForm() < otherString.NormalForm())
+	return AsBoolValue(v.Str(interpreter) < otherString.Str(interpreter))
 }
 
 func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1120,7 +1124,7 @@ func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue,
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() <= otherString.NormalForm())
+	return AsBoolValue(v.Str(interpreter) <= otherString.Str(interpreter))
 }
 
 func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1134,7 +1138,7 @@ func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, l
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() > otherString.NormalForm())
+	return AsBoolValue(v.Str(interpreter) > otherString.Str(interpreter))
 }
 
 func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1148,14 +1152,14 @@ func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableVal
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() >= otherString.NormalForm())
+	return AsBoolValue(v.Str(interpreter) >= otherString.Str(interpreter))
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeString (1 byte)
 // - string value (n bytes)
-func (v *StringValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
-	length := 1 + len(v.Str)
+func (v *StringValue) HashInput(inter *Interpreter, _ LocationRange, scratch []byte) []byte {
+	length := 1 + len(v.Str(inter))
 	var buffer []byte
 	if length <= len(scratch) {
 		buffer = scratch[:length]
@@ -1164,18 +1168,26 @@ func (v *StringValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte)
 	}
 
 	buffer[0] = byte(HashInputTypeString)
-	copy(buffer[1:], v.Str)
+	copy(buffer[1:], v.Str(inter))
 	return buffer
 }
 
-func (v *StringValue) NormalForm() string {
-	return norm.NFC.String(v.Str)
+func (v *StringValue) Str(memoryGauge common.MemoryGauge) string {
+	if !v.normalized {
+		common.UseMemory(
+			memoryGauge,
+			common.NewRawStringMemoryUsage(len(v._str)),
+		)
+		v._str = norm.NFC.String(v._str)
+		v.normalized = true
+	}
+	return v._str
 }
 
 func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locationRange LocationRange) Value {
 
-	firstLength := len(v.Str)
-	secondLength := len(other.Str)
+	firstLength := len(v.Str(interpreter))
+	secondLength := len(other.Str(interpreter))
 
 	newLength := safeAdd(firstLength, secondLength, locationRange)
 
@@ -1187,8 +1199,8 @@ func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locat
 		func() string {
 			var sb strings.Builder
 
-			sb.WriteString(v.Str)
-			sb.WriteString(other.Str)
+			sb.WriteString(v.Str(interpreter))
+			sb.WriteString(other.Str(interpreter))
 
 			return sb.String()
 		},
@@ -1197,12 +1209,12 @@ func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locat
 
 var EmptyString = NewUnmeteredStringValue("")
 
-func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRange) Value {
+func (v *StringValue) Slice(interpreter *Interpreter, from IntValue, to IntValue, locationRange LocationRange) Value {
 	fromIndex := from.ToInt(locationRange)
 
 	toIndex := to.ToInt(locationRange)
 
-	length := v.Length()
+	length := v.Length(interpreter)
 
 	if fromIndex < 0 || fromIndex > length || toIndex < 0 || toIndex > length {
 		panic(StringSliceIndicesError{
@@ -1225,7 +1237,7 @@ func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRa
 		return EmptyString
 	}
 
-	v.prepareGraphemes()
+	v.prepareGraphemes(interpreter)
 
 	j := 0
 
@@ -1241,11 +1253,11 @@ func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRa
 
 	// NOTE: string slicing in Go does not copy,
 	// see https://stackoverflow.com/questions/52395730/does-slice-of-string-perform-copy-of-underlying-data
-	return NewUnmeteredStringValue(v.Str[start:end])
+	return NewUnmeteredStringValue(v.Str(interpreter)[start:end])
 }
 
-func (v *StringValue) checkBounds(index int, locationRange LocationRange) {
-	length := v.Length()
+func (v *StringValue) checkBounds(memoryGauge common.MemoryGauge, index int, locationRange LocationRange) {
+	length := v.Length(memoryGauge)
 
 	if index < 0 || index >= length {
 		panic(StringIndexOutOfBoundsError{
@@ -1258,9 +1270,9 @@ func (v *StringValue) checkBounds(index int, locationRange LocationRange) {
 
 func (v *StringValue) GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt(locationRange)
-	v.checkBounds(index, locationRange)
+	v.checkBounds(interpreter, index, locationRange)
 
-	v.prepareGraphemes()
+	v.prepareGraphemes(interpreter)
 
 	for j := 0; j <= index; j++ {
 		v.graphemes.Next()
@@ -1288,14 +1300,14 @@ func (*StringValue) RemoveKey(_ *Interpreter, _ LocationRange, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *StringValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.StringTypeLengthFieldName:
-		length := v.Length()
+		length := v.Length(interpreter)
 		return NewIntValueFromInt64(interpreter, int64(length))
 
 	case sema.StringTypeUtf8FieldName:
-		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
+		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str(interpreter)))
 
 	case sema.StringTypeConcatFunctionName:
 		return NewHostFunctionValue(
@@ -1303,6 +1315,8 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			sema.StringTypeConcatFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				otherArray, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1316,6 +1330,9 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			sema.StringTypeSliceFunctionType,
 			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				from, ok := invocation.Arguments[0].(IntValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1326,7 +1343,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.Slice(from, to, invocation.LocationRange)
+				return v.Slice(interpreter, from, to, locationRange)
 			},
 		)
 
@@ -1366,10 +1383,10 @@ func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 }
 
 // Length returns the number of characters (grapheme clusters)
-func (v *StringValue) Length() int {
+func (v *StringValue) Length(memoryGauge common.MemoryGauge) int {
 	if v.length < 0 {
 		var length int
-		v.prepareGraphemes()
+		v.prepareGraphemes(memoryGauge)
 		for v.graphemes.Next() {
 			length++
 		}
@@ -1380,12 +1397,14 @@ func (v *StringValue) Length() int {
 
 func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 
+	str := v.Str(interpreter)
+
 	// Over-estimate resulting string length,
 	// as an uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
 	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
 
 	var lengthEstimate int
-	for _, r := range v.Str {
+	for _, r := range str {
 		if r < unicode.MaxASCII {
 			lengthEstimate += 1
 		} else {
@@ -1399,7 +1418,7 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 		interpreter,
 		memoryUsage,
 		func() string {
-			return strings.ToLower(v.Str)
+			return strings.ToLower(str)
 		},
 	)
 }
@@ -1430,8 +1449,8 @@ func (v *StringValue) Transfer(
 	return v
 }
 
-func (v *StringValue) Clone(_ *Interpreter) Value {
-	return NewUnmeteredStringValue(v.Str)
+func (v *StringValue) Clone(inter *Interpreter) Value {
+	return NewUnmeteredStringValue(v.Str(inter))
 }
 
 func (*StringValue) DeepRemove(_ *Interpreter) {
@@ -1439,7 +1458,8 @@ func (*StringValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v *StringValue) ByteSize() uint32 {
-	return cborTagSize + getBytesCBORSize([]byte(v.Str))
+	// TODO: write normalized? no memory gauge available
+	return cborTagSize + getBytesCBORSize([]byte(v._str))
 }
 
 func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -1455,7 +1475,7 @@ var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(nil, sema.ByteAr
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 func (v *StringValue) DecodeHex(interpreter *Interpreter, locationRange LocationRange) *ArrayValue {
-	bs, err := hex.DecodeString(v.Str)
+	bs, err := hex.DecodeString(v.Str(interpreter))
 	if err != nil {
 		if err, ok := err.(hex.InvalidByteError); ok {
 			panic(InvalidHexByteError{
@@ -1507,9 +1527,9 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *StringValue) Iterator(interpreter *Interpreter) ValueIterator {
 	return StringValueIterator{
-		graphemes: uniseg.NewGraphemes(v.Str),
+		graphemes: uniseg.NewGraphemes(v.Str(interpreter)),
 	}
 }
 
@@ -20603,17 +20623,18 @@ func AddressFromBytes(invocation Invocation) Value {
 }
 
 func AddressFromString(invocation Invocation) Value {
+	inter := invocation.Interpreter
+
 	argument, ok := invocation.Arguments[0].(*StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	addr, err := common.HexToAddressAssertPrefix(argument.Str)
+	addr, err := common.HexToAddressAssertPrefix(argument.Str(inter))
 	if err != nil {
 		return Nil
 	}
 
-	inter := invocation.Interpreter
 	return NewSomeValueNonCopying(inter, NewAddressValue(inter, addr))
 }
 
@@ -20785,9 +20806,11 @@ func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value
 		return Nil
 	}
 
+	str := stringValue.Str(interpreter)
+
 	_, err := sema.CheckPathLiteral(
 		domain.Identifier(),
-		stringValue.Str,
+		str,
 		ReturnEmptyRange,
 		ReturnEmptyRange,
 	)
@@ -20800,7 +20823,7 @@ func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value
 		NewPathValue(
 			interpreter,
 			domain,
-			stringValue.Str,
+			str,
 		),
 	)
 }

@@ -58,6 +58,8 @@ var AssertFunction = NewStandardLibraryFunction(
 	assertFunctionType,
 	assertFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
+		inter := invocation.Interpreter
+
 		result, ok := invocation.Arguments[0].(interpreter.BoolValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
@@ -70,7 +72,7 @@ var AssertFunction = NewStandardLibraryFunction(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				message = messageValue.Str
+				message = messageValue.Str(inter)
 			}
 			panic(AssertionError{
 				Message:       message,

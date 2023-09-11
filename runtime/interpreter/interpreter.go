@@ -871,7 +871,7 @@ func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast
 		var message string
 		if messageExpression != nil {
 			messageValue := interpreter.evalExpression(messageExpression)
-			message = messageValue.(*StringValue).Str
+			message = messageValue.(*StringValue).Str(interpreter)
 		}
 
 		panic(ConditionError{
@@ -2571,7 +2571,7 @@ func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFun
 				panic(errors.NewUnreachableError())
 			}
 			inter := invocation.Interpreter
-			return parser(inter, argument.Str)
+			return parser(inter, argument.Str(inter))
 		},
 	)
 	return fromStringFunctionValue{
@@ -3407,6 +3407,8 @@ func dictionaryTypeFunction(invocation Invocation) Value {
 }
 
 func referenceTypeFunction(invocation Invocation) Value {
+	inter := invocation.Interpreter
+
 	entitlementValues, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -3423,22 +3425,23 @@ func referenceTypeFunction(invocation Invocation) Value {
 
 	if entitlementsCount > 0 {
 		authorization = NewEntitlementSetAuthorization(
-			invocation.Interpreter,
+			inter,
 			func() []common.TypeID {
 				entitlements := make([]common.TypeID, 0, entitlementsCount)
-				entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
+				entitlementValues.Iterate(inter, func(element Value) (resume bool) {
 					entitlementString, isString := element.(*StringValue)
 					if !isString {
 						errInIteration = true
 						return false
 					}
 
-					_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
+					entitlementStr := entitlementString.Str(inter)
+					_, err := lookupEntitlement(inter, entitlementStr)
 					if err != nil {
 						errInIteration = true
 						return false
 					}
-					entitlements = append(entitlements, common.TypeID(entitlementString.Str))
+					entitlements = append(entitlements, common.TypeID(entitlementStr))
 
 					return true
 				})
@@ -3454,11 +3457,11 @@ func referenceTypeFunction(invocation Invocation) Value {
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.Interpreter,
+		inter,
 		NewTypeValue(
-			invocation.Interpreter,
+			inter,
 			NewReferenceStaticType(
-				invocation.Interpreter,
+				inter,
 				authorization,
 				typeValue.Type,
 			),
@@ -3467,43 +3470,47 @@ func referenceTypeFunction(invocation Invocation) Value {
 }
 
 func compositeTypeFunction(invocation Invocation) Value {
+	inter := invocation.Interpreter
+
 	typeIDValue, ok := invocation.Arguments[0].(*StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	typeID := typeIDValue.Str
+	typeID := typeIDValue.Str(inter)
 
-	composite, err := lookupComposite(invocation.Interpreter, typeID)
+	composite, err := lookupComposite(inter, typeID)
 	if err != nil {
 		return Nil
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.Interpreter,
+		inter,
 		NewTypeValue(
-			invocation.Interpreter,
-			ConvertSemaToStaticType(invocation.Interpreter, composite),
+			inter,
+			ConvertSemaToStaticType(inter, composite),
 		),
 	)
 }
 
 func interfaceTypeFunction(invocation Invocation) Value {
+	inter := invocation.Interpreter
+
 	typeIDValue, ok := invocation.Arguments[0].(*StringValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	typeID := typeIDValue.Str
+	typeID := typeIDValue.Str(inter)
 
-	interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
+	interfaceType, err := lookupInterface(inter, typeID)
 	if err != nil {
 		return Nil
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.Interpreter,
+		inter,
 		NewTypeValue(
-			invocation.Interpreter,
-			ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
+			inter,
+			ConvertSemaToStaticType(inter, interfaceType),
 		),
 	)
 }
@@ -3552,6 +3559,8 @@ func functionTypeFunction(invocation Invocation) Value {
 }
 
 func intersectionTypeFunction(invocation Invocation) Value {
+	inter := invocation.Interpreter
+
 	intersectionIDs, ok := invocation.Arguments[0].(*ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -3566,13 +3575,13 @@ func intersectionTypeFunction(invocation Invocation) Value {
 		semaIntersections = make([]*sema.InterfaceType, 0, count)
 
 		var invalidIntersectionID bool
-		intersectionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
+		intersectionIDs.Iterate(inter, func(typeID Value) bool {
 			typeIDValue, ok := typeID.(*StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			intersectedInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+			intersectedInterface, err := lookupInterface(inter, typeIDValue.Str(inter))
 			if err != nil {
 				invalidIntersectionID = true
 				return true
@@ -3580,7 +3589,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 			staticIntersections = append(
 				staticIntersections,
-				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(*InterfaceStaticType),
+				ConvertSemaToStaticType(inter, intersectedInterface).(*InterfaceStaticType),
 			)
 			semaIntersections = append(semaIntersections, intersectedInterface)
 
@@ -3597,7 +3606,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 
 	var invalidIntersectionType bool
 	sema.CheckIntersectionType(
-		invocation.Interpreter,
+		inter,
 		semaIntersections,
 		func(_ func(*ast.IntersectionType) error) {
 			invalidIntersectionType = true
@@ -3611,11 +3620,11 @@ func intersectionTypeFunction(invocation Invocation) Value {
 	}
 
 	return NewSomeValueNonCopying(
-		invocation.Interpreter,
+		inter,
 		NewTypeValue(
-			invocation.Interpreter,
+			inter,
 			NewIntersectionStaticType(
-				invocation.Interpreter,
+				inter,
 				staticIntersections,
 			),
 		),

@@ -88,11 +88,12 @@ func exportValueWithInterpreter(
 	case interpreter.BoolValue:
 		return cadence.NewMeteredBool(inter, bool(v)), nil
 	case *interpreter.StringValue:
+		str := v.Str(inter)
 		return cadence.NewMeteredString(
 			inter,
-			common.NewCadenceStringMemoryUsage(len(v.Str)),
+			common.NewCadenceStringMemoryUsage(len(str)),
 			func() string {
-				return v.Str
+				return str
 			},
 		)
 	case interpreter.CharacterValue:

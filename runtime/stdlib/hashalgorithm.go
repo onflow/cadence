@@ -144,7 +144,7 @@ func hash(
 
 	var tag string
 	if tagValue != nil {
-		tag = tagValue.Str
+		tag = tagValue.Str(inter)
 	}
 
 	hashAlgorithm := NewHashAlgorithmFromValue(inter, locationRange, hashAlgorithmValue)

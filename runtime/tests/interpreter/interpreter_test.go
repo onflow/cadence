@@ -4491,39 +4491,45 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
       let f = x[Type<@TestResource>()]
     `)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
+		inter,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("a"),
 		),
 		inter.Globals.Get("a").GetValue(),
 	)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
+		inter,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("b"),
 		),
 		inter.Globals.Get("b").GetValue(),
 	)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
+		inter,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("c"),
 		),
 		inter.Globals.Get("c").GetValue(),
 	)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
+		inter,
 		interpreter.Nil,
 		inter.Globals.Get("d").GetValue(),
 	)
 
 	// types need to match exactly, subtypes won't cut it
-	assert.Equal(t,
+	AssertValuesEqual(t,
+		inter,
 		interpreter.Nil,
 		inter.Globals.Get("e").GetValue(),
 	)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
+		inter,
 		interpreter.NewUnmeteredSomeValueNonCopying(
 			interpreter.NewUnmeteredStringValue("f"),
 		),
