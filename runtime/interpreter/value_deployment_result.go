@@ -31,7 +31,7 @@ var deploymentResultFieldNames []string = nil
 
 func NewDeploymentResultValue(
 	gauge common.MemoryGauge,
-	deployedContract Value,
+	deployedContract OptionalValue,
 ) Value {
 
 	return NewSimpleCompositeValue(

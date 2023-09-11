@@ -1110,6 +1110,21 @@ func TestCheckAccountContractsUpdate(t *testing.T) {
         `)
 		require.NoError(t, err)
 	})
+
+	t.Run("deployment result fields", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: auth(Contracts) &Account.Contracts) {
+                let deploymentResult: DeploymentResult = contracts.tryUpdate(name: "foo", code: "012".decodeHex())
+                let deployedContract: DeployedContract = deploymentResult.deployedContract!
+                let name: String = deployedContract.name
+                let address: Address = deployedContract.address
+                let code: [UInt8] = deployedContract.code
+            }
+        `)
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckAccountContractsRemove(t *testing.T) {

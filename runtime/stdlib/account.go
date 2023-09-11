@@ -1664,11 +1664,14 @@ func newAccountContractsTryUpdateFunction(
 					}
 				}
 
+				var optionalDeployedContract interpreter.OptionalValue
 				if deployedContract == nil {
-					deployedContract = interpreter.Nil
+					optionalDeployedContract = interpreter.NilOptionalValue
+				} else {
+					optionalDeployedContract = interpreter.NewSomeValueNonCopying(invocation.Interpreter, deployedContract)
 				}
 
-				deploymentResult = interpreter.NewDeploymentResultValue(gauge, deployedContract)
+				deploymentResult = interpreter.NewDeploymentResultValue(gauge, optionalDeployedContract)
 			}()
 
 			deployedContract = changeAccountContracts(invocation, handler, addressValue, true)

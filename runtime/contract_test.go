@@ -1060,10 +1060,17 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 		updateTx := []byte(`
 			transaction {
 				prepare(signer: auth(UpdateContract) &Account) {
-					signer.contracts.tryUpdate(
+					let code = "access(all) contract Foo { access(all) fun sayHello(): String {return \"hello\"} }".utf8
+
+					let deploymentResult = signer.contracts.tryUpdate(
 						name: "Foo",
-						code: "access(all) contract Foo { access(all) fun sayHello(): String {return \"hello\"} }".utf8,
+						code: code,
 					)
+
+					let deployedContract = deploymentResult.deployedContract!
+					assert(deployedContract.name == "Foo")
+					assert(deployedContract.address == 0x1)
+					assert(deployedContract.code == code)
 				}
 			}
 		`)
