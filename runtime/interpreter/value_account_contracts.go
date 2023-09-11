@@ -38,6 +38,7 @@ func NewAccountContractsValue(
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
+	tryUpdateFunction FunctionValue,
 	getFunction FunctionValue,
 	borrowFunction FunctionValue,
 	removeFunction FunctionValue,
@@ -45,11 +46,12 @@ func NewAccountContractsValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.Account_ContractsTypeAddFunctionName:    addFunction,
-		sema.Account_ContractsTypeGetFunctionName:    getFunction,
-		sema.Account_ContractsTypeBorrowFunctionName: borrowFunction,
-		sema.Account_ContractsTypeRemoveFunctionName: removeFunction,
-		sema.Account_ContractsTypeUpdateFunctionName: updateFunction,
+		sema.Account_ContractsTypeAddFunctionName:       addFunction,
+		sema.Account_ContractsTypeGetFunctionName:       getFunction,
+		sema.Account_ContractsTypeBorrowFunctionName:    borrowFunction,
+		sema.Account_ContractsTypeRemoveFunctionName:    removeFunction,
+		sema.Account_ContractsTypeUpdateFunctionName:    updateFunction,
+		sema.Account_ContractsTypeTryUpdateFunctionName: tryUpdateFunction,
 	}
 
 	computeField := func(

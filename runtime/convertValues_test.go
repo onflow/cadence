@@ -5242,3 +5242,153 @@ func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
+
+func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("import", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(v: DeploymentResult) {}
+        `
+
+		rt := newTestInterpreterRuntime()
+		runtimeInterface := &testRuntimeInterface{}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		RequireError(t, err)
+
+		var notImportableError *ScriptParameterTypeNotImportableError
+		require.ErrorAs(t, err, &notImportableError)
+	})
+
+	t.Run("export", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(): DeploymentResult? {
+                return nil
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+		runtimeInterface := &testRuntimeInterface{}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		RequireError(t, err)
+
+		var invalidReturnTypeError *InvalidScriptReturnTypeError
+		require.ErrorAs(t, err, &invalidReturnTypeError)
+	})
+}
+
+func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("import", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(v: Type) {
+                assert(v == Type<DeploymentResult>())
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+
+		typeValue := cadence.NewTypeValue(&cadence.StructType{
+			QualifiedIdentifier: "DeploymentResult",
+			Fields: []cadence.Field{
+				{
+					Type:       cadence.NewOptionalType(cadence.DeployedContractType),
+					Identifier: "deployedContract",
+				},
+			},
+		})
+
+		encodedArg, err := json.Encode(typeValue)
+		require.NoError(t, err)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("export", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(): Type {
+                return Type<DeploymentResult>()
+            }
+        `
+
+		rt := newTestInterpreterRuntime()
+		runtimeInterface := &testRuntimeInterface{}
+
+		result, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			cadence.NewTypeValue(&cadence.StructType{
+				QualifiedIdentifier: "DeploymentResult",
+				Fields: []cadence.Field{
+					{
+						Type:       cadence.NewOptionalType(cadence.DeployedContractType),
+						Identifier: "deployedContract",
+					},
+				},
+			}),
+			result,
+		)
+	})
+}
