@@ -34,21 +34,6 @@ func TestNewBiMap(t *testing.T) {
 	assert.Equal(t, expected, actual, "They should be equal")
 }
 
-func TestNewBiMapFrom(t *testing.T) {
-	actual := NewBiMapFromMap(map[string]string{
-		key: value,
-	})
-	actual.Insert(key, value)
-
-	fwdExpected := make(map[string]string)
-	invExpected := make(map[string]string)
-	fwdExpected[key] = value
-	invExpected[value] = key
-	expected := &BiMap[string, string]{forward: fwdExpected, backward: invExpected}
-
-	assert.Equal(t, expected, actual, "They should be equal")
-}
-
 func TestBiMap_Insert(t *testing.T) {
 	actual := NewBiMap[string, string]()
 	actual.Insert(key, value)
@@ -83,7 +68,7 @@ func TestBiMap_Exists(t *testing.T) {
 	actual := NewBiMap[string, string]()
 
 	actual.Insert(key, value)
-	assert.False(t, actual.Exists("ARBITARY_KEY"), "Key should not exist")
+	assert.False(t, actual.Exists("ARBITRARY_KEY"), "Key should not exist")
 	assert.True(t, actual.Exists(key), "Inserted key should exist")
 }
 
@@ -91,7 +76,7 @@ func TestBiMap_InverseExists(t *testing.T) {
 	actual := NewBiMap[string, string]()
 
 	actual.Insert(key, value)
-	assert.False(t, actual.ExistsInverse("ARBITARY_VALUE"), "Value should not exist")
+	assert.False(t, actual.ExistsInverse("ARBITRARY_VALUE"), "Value should not exist")
 	assert.True(t, actual.ExistsInverse(value), "Inserted value should exist")
 }
 
