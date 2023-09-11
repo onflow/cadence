@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/xerrors"
 
 	"github.com/onflow/atree"
 
@@ -326,6 +327,12 @@ func newAccountContractsValue(
 			handler,
 			addressValue,
 			true,
+		),
+		newAccountContractsTryUpdateFunction(
+			sema.Account_ContractsTypeUpdateFunctionType,
+			gauge,
+			handler,
+			addressValue,
 		),
 		newAccountContractsGetFunction(
 			sema.Account_ContractsTypeGetFunctionType,
@@ -1369,250 +1376,306 @@ func newAccountContractsChangeFunction(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
+			return changeAccountContracts(invocation, handler, addressValue, isUpdate)
+		},
+	)
+}
 
-			locationRange := invocation.LocationRange
+func changeAccountContracts(
+	invocation interpreter.Invocation,
+	handler AccountContractAdditionHandler,
+	addressValue interpreter.AddressValue,
+	isUpdate bool,
+) interpreter.Value {
 
-			const requiredArgumentCount = 2
+	locationRange := invocation.LocationRange
 
-			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
+	const requiredArgumentCount = 2
+
+	nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	constructorArguments := invocation.Arguments[requiredArgumentCount:]
+	constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
+
+	code, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
+	if err != nil {
+		panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
+	}
+
+	// Get the existing code
+
+	contractName := nameValue.Str
+
+	if contractName == "" {
+		panic(errors.NewDefaultUserError(
+			"contract name argument cannot be empty." +
+				"it must match the name of the deployed contract declaration or contract interface declaration",
+		))
+	}
+
+	address := addressValue.ToAddress()
+	location := common.NewAddressLocation(invocation.Interpreter, address, contractName)
+
+	existingCode, err := handler.GetAccountContractCode(location)
+	if err != nil {
+		panic(err)
+	}
+
+	if isUpdate {
+		// We are updating an existing contract.
+		// Ensure that there's a contract/contract-interface with the given name exists already
+
+		if len(existingCode) == 0 {
+			panic(errors.NewDefaultUserError(
+				"cannot update non-existing contract with name %q in account %s",
+				contractName,
+				address.ShortHexWithPrefix(),
+			))
+		}
+
+	} else {
+		// We are adding a new contract.
+		// Ensure that no contract/contract interface with the given name exists already
+
+		if len(existingCode) > 0 {
+			panic(errors.NewDefaultUserError(
+				"cannot overwrite existing contract with name %q in account %s",
+				contractName,
+				address.ShortHexWithPrefix(),
+			))
+		}
+	}
+
+	// Check the code
+	handleContractUpdateError := func(err error) {
+		if err == nil {
+			return
+		}
+
+		// Update the code for the error pretty printing
+		// NOTE: only do this when an error occurs
+
+		handler.TemporarilyRecordCode(location, code)
+
+		panic(&InvalidContractDeploymentError{
+			Err:           err,
+			LocationRange: locationRange,
+		})
+	}
+
+	// NOTE: do NOT use the program obtained from the host environment, as the current program.
+	// Always re-parse and re-check the new program.
+
+	// NOTE: *DO NOT* store the program – the new or updated program
+	// should not be effective during the execution
+
+	const getAndSetProgram = false
+
+	program, err := handler.ParseAndCheckProgram(
+		code,
+		location,
+		getAndSetProgram,
+	)
+	handleContractUpdateError(err)
+
+	// The code may declare exactly one contract or one contract interface.
+
+	var contractTypes []*sema.CompositeType
+	var contractInterfaceTypes []*sema.InterfaceType
+
+	program.Elaboration.ForEachGlobalType(func(_ string, variable *sema.Variable) {
+		switch ty := variable.Type.(type) {
+		case *sema.CompositeType:
+			if ty.Kind == common.CompositeKindContract {
+				contractTypes = append(contractTypes, ty)
 			}
 
-			newCodeValue, ok := invocation.Arguments[1].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
+		case *sema.InterfaceType:
+			if ty.CompositeKind == common.CompositeKindContract {
+				contractInterfaceTypes = append(contractInterfaceTypes, ty)
 			}
+		}
+	})
 
-			constructorArguments := invocation.Arguments[requiredArgumentCount:]
-			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
+	var deployedType sema.Type
+	var contractType *sema.CompositeType
+	var contractInterfaceType *sema.InterfaceType
+	var declaredName string
+	var declarationKind common.DeclarationKind
 
-			code, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
-			if err != nil {
-				panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
-			}
+	switch {
+	case len(contractTypes) == 1 && len(contractInterfaceTypes) == 0:
+		contractType = contractTypes[0]
+		declaredName = contractType.Identifier
+		deployedType = contractType
+		declarationKind = common.DeclarationKindContract
+	case len(contractInterfaceTypes) == 1 && len(contractTypes) == 0:
+		contractInterfaceType = contractInterfaceTypes[0]
+		declaredName = contractInterfaceType.Identifier
+		deployedType = contractInterfaceType
+		declarationKind = common.DeclarationKindContractInterface
+	}
 
-			// Get the existing code
+	if deployedType == nil {
+		// Update the code for the error pretty printing
+		// NOTE: only do this when an error occurs
 
-			contractName := nameValue.Str
+		handler.TemporarilyRecordCode(location, code)
 
-			if contractName == "" {
-				panic(errors.NewDefaultUserError(
-					"contract name argument cannot be empty." +
-						"it must match the name of the deployed contract declaration or contract interface declaration",
-				))
-			}
+		panic(errors.NewDefaultUserError(
+			"invalid %s: the code must declare exactly one contract or contract interface",
+			declarationKind.Name(),
+		))
+	}
 
-			address := addressValue.ToAddress()
-			location := common.NewAddressLocation(invocation.Interpreter, address, contractName)
+	// The declared contract or contract interface must have the name
+	// passed to the constructor as the first argument
 
-			existingCode, err := handler.GetAccountContractCode(location)
-			if err != nil {
-				panic(err)
-			}
+	if declaredName != contractName {
+		// Update the code for the error pretty printing
+		// NOTE: only do this when an error occurs
 
-			if isUpdate {
-				// We are updating an existing contract.
-				// Ensure that there's a contract/contract-interface with the given name exists already
+		handler.TemporarilyRecordCode(location, code)
 
-				if len(existingCode) == 0 {
-					panic(errors.NewDefaultUserError(
-						"cannot update non-existing contract with name %q in account %s",
-						contractName,
-						address.ShortHexWithPrefix(),
-					))
-				}
+		panic(errors.NewDefaultUserError(
+			"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
+			declarationKind.Name(),
+			contractName,
+			declaredName,
+		))
+	}
 
-			} else {
-				// We are adding a new contract.
-				// Ensure that no contract/contract interface with the given name exists already
+	// Validate the contract update
 
-				if len(existingCode) > 0 {
-					panic(errors.NewDefaultUserError(
-						"cannot overwrite existing contract with name %q in account %s",
-						contractName,
-						address.ShortHexWithPrefix(),
-					))
-				}
-			}
+	if isUpdate {
+		oldCode, err := handler.GetAccountContractCode(location)
+		handleContractUpdateError(err)
 
-			// Check the code
-			handleContractUpdateError := func(err error) {
-				if err == nil {
-					return
-				}
+		oldProgram, err := parser.ParseProgram(
+			invocation.Interpreter.SharedState.Config.MemoryGauge,
+			oldCode,
+			parser.Config{
+				IgnoreLeadingIdentifierEnabled: true,
+			},
+		)
 
-				// Update the code for the error pretty printing
-				// NOTE: only do this when an error occurs
-
-				handler.TemporarilyRecordCode(location, code)
-
-				panic(&InvalidContractDeploymentError{
-					Err:           err,
-					LocationRange: locationRange,
-				})
-			}
-
-			// NOTE: do NOT use the program obtained from the host environment, as the current program.
-			// Always re-parse and re-check the new program.
-
-			// NOTE: *DO NOT* store the program – the new or updated program
-			// should not be effective during the execution
-
-			const getAndSetProgram = false
-
-			program, err := handler.ParseAndCheckProgram(
-				code,
-				location,
-				getAndSetProgram,
-			)
+		if !ignoreUpdatedProgramParserError(err) {
 			handleContractUpdateError(err)
+		}
 
-			// The code may declare exactly one contract or one contract interface.
+		validator := NewContractUpdateValidator(
+			location,
+			contractName,
+			oldProgram,
+			program.Program,
+		)
+		err = validator.Validate()
+		handleContractUpdateError(err)
+	}
 
-			var contractTypes []*sema.CompositeType
-			var contractInterfaceTypes []*sema.InterfaceType
+	inter := invocation.Interpreter
 
-			program.Elaboration.ForEachGlobalType(func(_ string, variable *sema.Variable) {
-				switch ty := variable.Type.(type) {
-				case *sema.CompositeType:
-					if ty.Kind == common.CompositeKindContract {
-						contractTypes = append(contractTypes, ty)
-					}
+	err = updateAccountContractCode(
+		handler,
+		location,
+		program,
+		code,
+		contractType,
+		constructorArguments,
+		constructorArgumentTypes,
+		updateAccountContractCodeOptions{
+			createContract: !isUpdate,
+		},
+	)
+	if err != nil {
+		// Update the code for the error pretty printing
+		// NOTE: only do this when an error occurs
 
-				case *sema.InterfaceType:
-					if ty.CompositeKind == common.CompositeKindContract {
-						contractInterfaceTypes = append(contractInterfaceTypes, ty)
+		handler.TemporarilyRecordCode(location, code)
+
+		panic(err)
+	}
+
+	var eventType *sema.CompositeType
+
+	if isUpdate {
+		eventType = AccountContractUpdatedEventType
+	} else {
+		eventType = AccountContractAddedEventType
+	}
+
+	codeHashValue := CodeToHashValue(inter, code)
+
+	handler.EmitEvent(
+		inter,
+		eventType,
+		[]interpreter.Value{
+			addressValue,
+			codeHashValue,
+			nameValue,
+		},
+		locationRange,
+	)
+
+	return interpreter.NewDeployedContractValue(
+		inter,
+		addressValue,
+		nameValue,
+		newCodeValue,
+	)
+}
+
+func newAccountContractsTryUpdateFunction(
+	functionType *sema.FunctionType,
+	gauge common.MemoryGauge,
+	handler AccountContractAdditionHandler,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		functionType,
+		func(invocation interpreter.Invocation) (deploymentResult interpreter.Value) {
+			var deployedContract interpreter.Value
+
+			defer func() {
+				if r := recover(); r != nil {
+					rootError := r
+					for {
+						switch err := r.(type) {
+						case errors.UserError, errors.ExternalError:
+							// Error is ignored for now.
+							// Simply return with a `nil` deployed-contract
+						case xerrors.Wrapper:
+							r = err.Unwrap()
+							continue
+						default:
+							panic(rootError)
+						}
+
+						break
 					}
 				}
-			})
 
-			var deployedType sema.Type
-			var contractType *sema.CompositeType
-			var contractInterfaceType *sema.InterfaceType
-			var declaredName string
-			var declarationKind common.DeclarationKind
-
-			switch {
-			case len(contractTypes) == 1 && len(contractInterfaceTypes) == 0:
-				contractType = contractTypes[0]
-				declaredName = contractType.Identifier
-				deployedType = contractType
-				declarationKind = common.DeclarationKindContract
-			case len(contractInterfaceTypes) == 1 && len(contractTypes) == 0:
-				contractInterfaceType = contractInterfaceTypes[0]
-				declaredName = contractInterfaceType.Identifier
-				deployedType = contractInterfaceType
-				declarationKind = common.DeclarationKindContractInterface
-			}
-
-			if deployedType == nil {
-				// Update the code for the error pretty printing
-				// NOTE: only do this when an error occurs
-
-				handler.TemporarilyRecordCode(location, code)
-
-				panic(errors.NewDefaultUserError(
-					"invalid %s: the code must declare exactly one contract or contract interface",
-					declarationKind.Name(),
-				))
-			}
-
-			// The declared contract or contract interface must have the name
-			// passed to the constructor as the first argument
-
-			if declaredName != contractName {
-				// Update the code for the error pretty printing
-				// NOTE: only do this when an error occurs
-
-				handler.TemporarilyRecordCode(location, code)
-
-				panic(errors.NewDefaultUserError(
-					"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
-					declarationKind.Name(),
-					contractName,
-					declaredName,
-				))
-			}
-
-			// Validate the contract update
-
-			if isUpdate {
-				oldCode, err := handler.GetAccountContractCode(location)
-				handleContractUpdateError(err)
-
-				oldProgram, err := parser.ParseProgram(
-					gauge,
-					oldCode,
-					parser.Config{
-						IgnoreLeadingIdentifierEnabled: true,
-					},
-				)
-
-				if !ignoreUpdatedProgramParserError(err) {
-					handleContractUpdateError(err)
+				var optionalDeployedContract interpreter.OptionalValue
+				if deployedContract == nil {
+					optionalDeployedContract = interpreter.NilOptionalValue
+				} else {
+					optionalDeployedContract = interpreter.NewSomeValueNonCopying(invocation.Interpreter, deployedContract)
 				}
 
-				validator := NewContractUpdateValidator(
-					location,
-					contractName,
-					oldProgram,
-					program.Program,
-				)
-				err = validator.Validate()
-				handleContractUpdateError(err)
-			}
+				deploymentResult = interpreter.NewDeploymentResultValue(gauge, optionalDeployedContract)
+			}()
 
-			inter := invocation.Interpreter
-
-			err = updateAccountContractCode(
-				handler,
-				location,
-				program,
-				code,
-				contractType,
-				constructorArguments,
-				constructorArgumentTypes,
-				updateAccountContractCodeOptions{
-					createContract: !isUpdate,
-				},
-			)
-			if err != nil {
-				// Update the code for the error pretty printing
-				// NOTE: only do this when an error occurs
-
-				handler.TemporarilyRecordCode(location, code)
-
-				panic(err)
-			}
-
-			var eventType *sema.CompositeType
-
-			if isUpdate {
-				eventType = AccountContractUpdatedEventType
-			} else {
-				eventType = AccountContractAddedEventType
-			}
-
-			codeHashValue := CodeToHashValue(inter, code)
-
-			handler.EmitEvent(
-				inter,
-				eventType,
-				[]interpreter.Value{
-					addressValue,
-					codeHashValue,
-					nameValue,
-				},
-				locationRange,
-			)
-
-			return interpreter.NewDeployedContractValue(
-				inter,
-				addressValue,
-				nameValue,
-				newCodeValue,
-			)
+			deployedContract = changeAccountContracts(invocation, handler, addressValue, true)
+			return
 		},
 	)
 }
