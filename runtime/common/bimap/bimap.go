@@ -78,7 +78,7 @@ func (b *BiMap[K, V]) Delete(k K) {
 	delete(b.backward, val)
 }
 
-// DeleteInverse emoves a key-value pair from the BiMap for a given value. Returns if the value doesn't exist
+// DeleteInverse removes a key-value pair from the BiMap for a given value. Returns if the value doesn't exist
 func (b *BiMap[K, V]) DeleteInverse(v V) {
 	if !b.ExistsInverse(v) {
 		return
