@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/bimap"
 )
 
 type MemberAccessInfo struct {
@@ -111,17 +112,15 @@ type ExpressionTypes struct {
 }
 
 type Elaboration struct {
+	interfaceTypesAndDeclarationsBiMap      *bimap.BiMap[*InterfaceType, *ast.InterfaceDeclaration]
+	entitlementTypesAndDeclarationsBiMap    *bimap.BiMap[*EntitlementType, *ast.EntitlementDeclaration]
+	entitlementMapTypesAndDeclarationsBiMap *bimap.BiMap[*EntitlementMapType, *ast.EntitlementMappingDeclaration]
+
 	fixedPointExpressionTypes         map[*ast.FixedPointExpression]Type
-	interfaceTypeDeclarations         map[*InterfaceType]*ast.InterfaceDeclaration
-	entitlementTypeDeclarations       map[*EntitlementType]*ast.EntitlementDeclaration
-	entitlementMapTypeDeclarations    map[*EntitlementMapType]*ast.EntitlementMappingDeclaration
 	swapStatementTypes                map[*ast.SwapStatement]SwapStatementTypes
 	assignmentStatementTypes          map[*ast.AssignmentStatement]AssignmentStatementTypes
 	compositeDeclarationTypes         map[ast.CompositeLikeDeclaration]*CompositeType
 	compositeTypeDeclarations         map[*CompositeType]ast.CompositeLikeDeclaration
-	interfaceDeclarationTypes         map[*ast.InterfaceDeclaration]*InterfaceType
-	entitlementDeclarationTypes       map[*ast.EntitlementDeclaration]*EntitlementType
-	entitlementMapDeclarationTypes    map[*ast.EntitlementMappingDeclaration]*EntitlementMapType
 	transactionDeclarationTypes       map[*ast.TransactionDeclaration]*TransactionType
 	constructorFunctionTypes          map[*ast.SpecialFunctionDeclaration]*FunctionType
 	functionExpressionFunctionTypes   map[*ast.FunctionExpression]*FunctionType
@@ -301,105 +300,81 @@ func (e *Elaboration) SetCompositeTypeDeclaration(
 }
 
 func (e *Elaboration) InterfaceDeclarationType(declaration *ast.InterfaceDeclaration) *InterfaceType {
-	if e.interfaceDeclarationTypes == nil {
+	if e.interfaceTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.interfaceDeclarationTypes[declaration]
+	typ, _ := e.interfaceTypesAndDeclarationsBiMap.GetInverse(declaration)
+	return typ
 }
 
-func (e *Elaboration) SetInterfaceDeclarationType(
+func (e *Elaboration) SetInterfaceDeclarationWithType(
 	declaration *ast.InterfaceDeclaration,
 	interfaceType *InterfaceType,
 ) {
-	if e.interfaceDeclarationTypes == nil {
-		e.interfaceDeclarationTypes = map[*ast.InterfaceDeclaration]*InterfaceType{}
+	if e.interfaceTypesAndDeclarationsBiMap == nil {
+		e.interfaceTypesAndDeclarationsBiMap = bimap.NewBiMap[*InterfaceType, *ast.InterfaceDeclaration]()
 	}
-	e.interfaceDeclarationTypes[declaration] = interfaceType
+	e.interfaceTypesAndDeclarationsBiMap.Insert(interfaceType, declaration)
 }
 
 func (e *Elaboration) EntitlementDeclarationType(declaration *ast.EntitlementDeclaration) *EntitlementType {
-	if e.entitlementDeclarationTypes == nil {
+	if e.entitlementTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.entitlementDeclarationTypes[declaration]
+	typ, _ := e.entitlementTypesAndDeclarationsBiMap.GetInverse(declaration)
+	return typ
 }
 
-func (e *Elaboration) SetEntitlementDeclarationType(
+func (e *Elaboration) SetEntitlementDeclarationWithType(
 	declaration *ast.EntitlementDeclaration,
 	entitlementType *EntitlementType,
 ) {
-	if e.entitlementDeclarationTypes == nil {
-		e.entitlementDeclarationTypes = map[*ast.EntitlementDeclaration]*EntitlementType{}
+	if e.entitlementTypesAndDeclarationsBiMap == nil {
+		e.entitlementTypesAndDeclarationsBiMap = bimap.NewBiMap[*EntitlementType, *ast.EntitlementDeclaration]()
 	}
-	e.entitlementDeclarationTypes[declaration] = entitlementType
+	e.entitlementTypesAndDeclarationsBiMap.Insert(entitlementType, declaration)
 }
 
 func (e *Elaboration) EntitlementMapDeclarationType(declaration *ast.EntitlementMappingDeclaration) *EntitlementMapType {
-	if e.entitlementMapDeclarationTypes == nil {
+	if e.entitlementMapTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.entitlementMapDeclarationTypes[declaration]
+	typ, _ := e.entitlementMapTypesAndDeclarationsBiMap.GetInverse(declaration)
+	return typ
 }
 
-func (e *Elaboration) SetEntitlementMapDeclarationType(
+func (e *Elaboration) SetEntitlementMapDeclarationWithType(
 	declaration *ast.EntitlementMappingDeclaration,
 	entitlementMapType *EntitlementMapType,
 ) {
-	if e.entitlementMapDeclarationTypes == nil {
-		e.entitlementMapDeclarationTypes = map[*ast.EntitlementMappingDeclaration]*EntitlementMapType{}
+	if e.entitlementMapTypesAndDeclarationsBiMap == nil {
+		e.entitlementMapTypesAndDeclarationsBiMap = bimap.NewBiMap[*EntitlementMapType, *ast.EntitlementMappingDeclaration]()
 	}
-	e.entitlementMapDeclarationTypes[declaration] = entitlementMapType
+	e.entitlementMapTypesAndDeclarationsBiMap.Insert(entitlementMapType, declaration)
 }
 
 func (e *Elaboration) InterfaceTypeDeclaration(interfaceType *InterfaceType) *ast.InterfaceDeclaration {
-	if e.interfaceTypeDeclarations == nil {
+	if e.interfaceTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.interfaceTypeDeclarations[interfaceType]
-}
-
-func (e *Elaboration) SetInterfaceTypeDeclaration(
-	interfaceType *InterfaceType,
-	declaration *ast.InterfaceDeclaration,
-) {
-	if e.interfaceTypeDeclarations == nil {
-		e.interfaceTypeDeclarations = map[*InterfaceType]*ast.InterfaceDeclaration{}
-	}
-	e.interfaceTypeDeclarations[interfaceType] = declaration
+	decl, _ := e.interfaceTypesAndDeclarationsBiMap.Get(interfaceType)
+	return decl
 }
 
 func (e *Elaboration) EntitlementTypeDeclaration(entitlementType *EntitlementType) *ast.EntitlementDeclaration {
-	if e.entitlementTypeDeclarations == nil {
+	if e.entitlementTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.entitlementTypeDeclarations[entitlementType]
-}
-
-func (e *Elaboration) SetEntitlementTypeDeclaration(
-	entitlementType *EntitlementType,
-	declaration *ast.EntitlementDeclaration,
-) {
-	if e.entitlementTypeDeclarations == nil {
-		e.entitlementTypeDeclarations = map[*EntitlementType]*ast.EntitlementDeclaration{}
-	}
-	e.entitlementTypeDeclarations[entitlementType] = declaration
+	decl, _ := e.entitlementTypesAndDeclarationsBiMap.Get(entitlementType)
+	return decl
 }
 
 func (e *Elaboration) EntitlementMapTypeDeclaration(entitlementMapType *EntitlementMapType) *ast.EntitlementMappingDeclaration {
-	if e.entitlementMapTypeDeclarations == nil {
+	if e.entitlementMapTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.entitlementMapTypeDeclarations[entitlementMapType]
-}
-
-func (e *Elaboration) SetEntitlementMapTypeDeclaration(
-	entitlementMapType *EntitlementMapType,
-	declaration *ast.EntitlementMappingDeclaration,
-) {
-	if e.entitlementMapTypeDeclarations == nil {
-		e.entitlementMapTypeDeclarations = map[*EntitlementMapType]*ast.EntitlementMappingDeclaration{}
-	}
-	e.entitlementMapTypeDeclarations[entitlementMapType] = declaration
+	decl, _ := e.entitlementMapTypesAndDeclarationsBiMap.Get(entitlementMapType)
+	return decl
 }
 
 func (e *Elaboration) ConstructorFunctionType(initializer *ast.SpecialFunctionDeclaration) *FunctionType {

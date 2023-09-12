@@ -289,8 +289,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		)
 	}
 
-	checker.Elaboration.SetInterfaceDeclarationType(declaration, interfaceType)
-	checker.Elaboration.SetInterfaceTypeDeclaration(interfaceType, declaration)
+	checker.Elaboration.SetInterfaceDeclarationWithType(declaration, interfaceType)
 
 	if !declaration.CompositeKind.SupportsInterfaces() {
 		checker.report(
@@ -471,8 +470,7 @@ func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDecla
 		)
 	}
 
-	checker.Elaboration.SetEntitlementDeclarationType(declaration, entitlementType)
-	checker.Elaboration.SetEntitlementTypeDeclaration(entitlementType, declaration)
+	checker.Elaboration.SetEntitlementDeclarationWithType(declaration, entitlementType)
 
 	return entitlementType
 }
@@ -553,8 +551,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 
 	entitlementMapType.Relations = entitlementRelations
 
-	checker.Elaboration.SetEntitlementMapDeclarationType(declaration, entitlementMapType)
-	checker.Elaboration.SetEntitlementMapTypeDeclaration(entitlementMapType, declaration)
+	checker.Elaboration.SetEntitlementMapDeclarationWithType(declaration, entitlementMapType)
 
 	return entitlementMapType
 }
