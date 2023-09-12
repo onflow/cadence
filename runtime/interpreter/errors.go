@@ -979,3 +979,22 @@ func WrappedExternalError(err error) error {
 		return errors.NewExternalError(err)
 	}
 }
+
+// CapabilityAddressPublishingError
+type CapabilityAddressPublishingError struct {
+	LocationRange
+	CapabilityAddress AddressValue
+	AccountAddress    AddressValue
+}
+
+var _ errors.UserError = CapabilityAddressPublishingError{}
+
+func (CapabilityAddressPublishingError) IsUserError() {}
+
+func (e CapabilityAddressPublishingError) Error() string {
+	return fmt.Sprintf(
+		"cannot publish capability of account %s in account %s",
+		e.CapabilityAddress.String(),
+		e.AccountAddress.String(),
+	)
+}

@@ -1029,6 +1029,88 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					})
 				})
 
+				t.Run("publish different account", func(t *testing.T) {
+
+					t.Parallel()
+
+					t.Run("storage capability", func(t *testing.T) {
+
+						err, _ := testWithSignerCount(
+							t,
+							// language=cadence
+							`
+                               transaction {
+                                   prepare(
+                                       signer1: auth(Capabilities) &Account,
+                                       signer2: auth(Capabilities) &Account
+                                   ) {
+                                       let publicPath = /public/r
+                                       let storagePath = /storage/r
+
+                                       // Arrange
+                                       let issuedCap: Capability<&AnyStruct> =
+                                           signer1.capabilities.storage.issue<&AnyStruct>(storagePath)
+
+                                       // Act
+                                       signer2.capabilities.publish(issuedCap, at: publicPath)
+                                   }
+                               }
+                             `,
+							2,
+						)
+						RequireError(t, err)
+
+						var publishingError interpreter.CapabilityAddressPublishingError
+						require.ErrorAs(t, err, &publishingError)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+							publishingError.AccountAddress,
+						)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+							publishingError.CapabilityAddress,
+						)
+					})
+
+					t.Run("account capability", func(t *testing.T) {
+
+						err, _ := testWithSignerCount(
+							t,
+							// language=cadence
+							`
+                              transaction {
+                                  prepare(
+                                      signer1: auth(Capabilities) &Account,
+                                      signer2: auth(Capabilities) &Account
+                                  ) {
+                                      let publicPath = /public/r
+
+                                      // Arrange
+                                      let issuedCap: Capability<&Account> =
+                                          signer1.capabilities.account.issue<&Account>()
+
+                                      // Act
+                                      signer2.capabilities.publish(issuedCap, at: publicPath)
+                                  }
+                              }
+                            `,
+							2,
+						)
+						RequireError(t, err)
+
+						var publishingError interpreter.CapabilityAddressPublishingError
+						require.ErrorAs(t, err, &publishingError)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+							publishingError.AccountAddress,
+						)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+							publishingError.CapabilityAddress,
+						)
+					})
+				})
+
 				t.Run("unpublish non-existing", func(t *testing.T) {
 
 					t.Parallel()
