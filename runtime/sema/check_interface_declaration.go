@@ -470,8 +470,7 @@ func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDecla
 		)
 	}
 
-	checker.Elaboration.SetEntitlementDeclarationType(declaration, entitlementType)
-	checker.Elaboration.SetEntitlementTypeDeclaration(entitlementType, declaration)
+	checker.Elaboration.SetEntitlementDeclarationWithType(declaration, entitlementType)
 
 	return entitlementType
 }
@@ -552,8 +551,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 
 	entitlementMapType.Relations = entitlementRelations
 
-	checker.Elaboration.SetEntitlementMapDeclarationType(declaration, entitlementMapType)
-	checker.Elaboration.SetEntitlementMapTypeDeclaration(entitlementMapType, declaration)
+	checker.Elaboration.SetEntitlementMapDeclarationWithType(declaration, entitlementMapType)
 
 	return entitlementMapType
 }

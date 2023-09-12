@@ -112,32 +112,31 @@ type ExpressionTypes struct {
 }
 
 type Elaboration struct {
-	fixedPointExpressionTypes          map[*ast.FixedPointExpression]Type
-	interfaceTypesAndDeclarationsBiMap *bimap.BiMap[*InterfaceType, *ast.InterfaceDeclaration]
-	entitlementTypeDeclarations        map[*EntitlementType]*ast.EntitlementDeclaration
-	entitlementMapTypeDeclarations     map[*EntitlementMapType]*ast.EntitlementMappingDeclaration
-	swapStatementTypes                 map[*ast.SwapStatement]SwapStatementTypes
-	assignmentStatementTypes           map[*ast.AssignmentStatement]AssignmentStatementTypes
-	compositeDeclarationTypes          map[ast.CompositeLikeDeclaration]*CompositeType
-	compositeTypeDeclarations          map[*CompositeType]ast.CompositeLikeDeclaration
-	entitlementDeclarationTypes        map[*ast.EntitlementDeclaration]*EntitlementType
-	entitlementMapDeclarationTypes     map[*ast.EntitlementMappingDeclaration]*EntitlementMapType
-	transactionDeclarationTypes        map[*ast.TransactionDeclaration]*TransactionType
-	constructorFunctionTypes           map[*ast.SpecialFunctionDeclaration]*FunctionType
-	functionExpressionFunctionTypes    map[*ast.FunctionExpression]*FunctionType
-	invocationExpressionTypes          map[*ast.InvocationExpression]InvocationExpressionTypes
-	castingExpressionTypes             map[*ast.CastingExpression]CastingExpressionTypes
-	lock                               *sync.RWMutex
-	binaryExpressionTypes              map[*ast.BinaryExpression]BinaryExpressionTypes
-	memberExpressionMemberAccessInfos  map[*ast.MemberExpression]MemberAccessInfo
-	memberExpressionExpectedTypes      map[*ast.MemberExpression]Type
-	arrayExpressionTypes               map[*ast.ArrayExpression]ArrayExpressionTypes
-	dictionaryExpressionTypes          map[*ast.DictionaryExpression]DictionaryExpressionTypes
-	integerExpressionTypes             map[*ast.IntegerExpression]Type
-	stringExpressionTypes              map[*ast.StringExpression]Type
-	returnStatementTypes               map[*ast.ReturnStatement]ReturnStatementTypes
-	functionDeclarationFunctionTypes   map[*ast.FunctionDeclaration]*FunctionType
-	variableDeclarationTypes           map[*ast.VariableDeclaration]VariableDeclarationTypes
+	interfaceTypesAndDeclarationsBiMap      *bimap.BiMap[*InterfaceType, *ast.InterfaceDeclaration]
+	entitlementTypesAndDeclarationsBiMap    *bimap.BiMap[*EntitlementType, *ast.EntitlementDeclaration]
+	entitlementMapTypesAndDeclarationsBiMap *bimap.BiMap[*EntitlementMapType, *ast.EntitlementMappingDeclaration]
+
+	fixedPointExpressionTypes         map[*ast.FixedPointExpression]Type
+	swapStatementTypes                map[*ast.SwapStatement]SwapStatementTypes
+	assignmentStatementTypes          map[*ast.AssignmentStatement]AssignmentStatementTypes
+	compositeDeclarationTypes         map[ast.CompositeLikeDeclaration]*CompositeType
+	compositeTypeDeclarations         map[*CompositeType]ast.CompositeLikeDeclaration
+	transactionDeclarationTypes       map[*ast.TransactionDeclaration]*TransactionType
+	constructorFunctionTypes          map[*ast.SpecialFunctionDeclaration]*FunctionType
+	functionExpressionFunctionTypes   map[*ast.FunctionExpression]*FunctionType
+	invocationExpressionTypes         map[*ast.InvocationExpression]InvocationExpressionTypes
+	castingExpressionTypes            map[*ast.CastingExpression]CastingExpressionTypes
+	lock                              *sync.RWMutex
+	binaryExpressionTypes             map[*ast.BinaryExpression]BinaryExpressionTypes
+	memberExpressionMemberAccessInfos map[*ast.MemberExpression]MemberAccessInfo
+	memberExpressionExpectedTypes     map[*ast.MemberExpression]Type
+	arrayExpressionTypes              map[*ast.ArrayExpression]ArrayExpressionTypes
+	dictionaryExpressionTypes         map[*ast.DictionaryExpression]DictionaryExpressionTypes
+	integerExpressionTypes            map[*ast.IntegerExpression]Type
+	stringExpressionTypes             map[*ast.StringExpression]Type
+	returnStatementTypes              map[*ast.ReturnStatement]ReturnStatementTypes
+	functionDeclarationFunctionTypes  map[*ast.FunctionDeclaration]*FunctionType
+	variableDeclarationTypes          map[*ast.VariableDeclaration]VariableDeclarationTypes
 	// nestedResourceMoveExpressions indicates the index or member expression
 	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
@@ -319,37 +318,39 @@ func (e *Elaboration) SetInterfaceDeclarationWithType(
 }
 
 func (e *Elaboration) EntitlementDeclarationType(declaration *ast.EntitlementDeclaration) *EntitlementType {
-	if e.entitlementDeclarationTypes == nil {
+	if e.entitlementTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.entitlementDeclarationTypes[declaration]
+	typ, _ := e.entitlementTypesAndDeclarationsBiMap.GetInverse(declaration)
+	return typ
 }
 
-func (e *Elaboration) SetEntitlementDeclarationType(
+func (e *Elaboration) SetEntitlementDeclarationWithType(
 	declaration *ast.EntitlementDeclaration,
 	entitlementType *EntitlementType,
 ) {
-	if e.entitlementDeclarationTypes == nil {
-		e.entitlementDeclarationTypes = map[*ast.EntitlementDeclaration]*EntitlementType{}
+	if e.entitlementTypesAndDeclarationsBiMap == nil {
+		e.entitlementTypesAndDeclarationsBiMap = bimap.NewBiMap[*EntitlementType, *ast.EntitlementDeclaration]()
 	}
-	e.entitlementDeclarationTypes[declaration] = entitlementType
+	e.entitlementTypesAndDeclarationsBiMap.Insert(entitlementType, declaration)
 }
 
 func (e *Elaboration) EntitlementMapDeclarationType(declaration *ast.EntitlementMappingDeclaration) *EntitlementMapType {
-	if e.entitlementMapDeclarationTypes == nil {
+	if e.entitlementMapTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.entitlementMapDeclarationTypes[declaration]
+	typ, _ := e.entitlementMapTypesAndDeclarationsBiMap.GetInverse(declaration)
+	return typ
 }
 
-func (e *Elaboration) SetEntitlementMapDeclarationType(
+func (e *Elaboration) SetEntitlementMapDeclarationWithType(
 	declaration *ast.EntitlementMappingDeclaration,
 	entitlementMapType *EntitlementMapType,
 ) {
-	if e.entitlementMapDeclarationTypes == nil {
-		e.entitlementMapDeclarationTypes = map[*ast.EntitlementMappingDeclaration]*EntitlementMapType{}
+	if e.entitlementMapTypesAndDeclarationsBiMap == nil {
+		e.entitlementMapTypesAndDeclarationsBiMap = bimap.NewBiMap[*EntitlementMapType, *ast.EntitlementMappingDeclaration]()
 	}
-	e.entitlementMapDeclarationTypes[declaration] = entitlementMapType
+	e.entitlementMapTypesAndDeclarationsBiMap.Insert(entitlementMapType, declaration)
 }
 
 func (e *Elaboration) InterfaceTypeDeclaration(interfaceType *InterfaceType) *ast.InterfaceDeclaration {
@@ -361,37 +362,19 @@ func (e *Elaboration) InterfaceTypeDeclaration(interfaceType *InterfaceType) *as
 }
 
 func (e *Elaboration) EntitlementTypeDeclaration(entitlementType *EntitlementType) *ast.EntitlementDeclaration {
-	if e.entitlementTypeDeclarations == nil {
+	if e.entitlementTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.entitlementTypeDeclarations[entitlementType]
-}
-
-func (e *Elaboration) SetEntitlementTypeDeclaration(
-	entitlementType *EntitlementType,
-	declaration *ast.EntitlementDeclaration,
-) {
-	if e.entitlementTypeDeclarations == nil {
-		e.entitlementTypeDeclarations = map[*EntitlementType]*ast.EntitlementDeclaration{}
-	}
-	e.entitlementTypeDeclarations[entitlementType] = declaration
+	decl, _ := e.entitlementTypesAndDeclarationsBiMap.Get(entitlementType)
+	return decl
 }
 
 func (e *Elaboration) EntitlementMapTypeDeclaration(entitlementMapType *EntitlementMapType) *ast.EntitlementMappingDeclaration {
-	if e.entitlementMapTypeDeclarations == nil {
+	if e.entitlementMapTypesAndDeclarationsBiMap == nil {
 		return nil
 	}
-	return e.entitlementMapTypeDeclarations[entitlementMapType]
-}
-
-func (e *Elaboration) SetEntitlementMapTypeDeclaration(
-	entitlementMapType *EntitlementMapType,
-	declaration *ast.EntitlementMappingDeclaration,
-) {
-	if e.entitlementMapTypeDeclarations == nil {
-		e.entitlementMapTypeDeclarations = map[*EntitlementMapType]*ast.EntitlementMappingDeclaration{}
-	}
-	e.entitlementMapTypeDeclarations[entitlementMapType] = declaration
+	decl, _ := e.entitlementMapTypesAndDeclarationsBiMap.Get(entitlementMapType)
+	return decl
 }
 
 func (e *Elaboration) ConstructorFunctionType(initializer *ast.SpecialFunctionDeclaration) *FunctionType {
