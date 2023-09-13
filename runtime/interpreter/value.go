@@ -803,7 +803,7 @@ func (BoolValue) ChildStorables() []atree.Storable {
 type CharacterValue string
 
 func NewUnmeteredCharacterValue(r string) CharacterValue {
-	return CharacterValue(r)
+	return CharacterValue(norm.NFC.String(r))
 }
 
 func NewCharacterValue(
@@ -812,8 +812,9 @@ func NewCharacterValue(
 	characterConstructor func() string,
 ) CharacterValue {
 	common.UseMemory(memoryGauge, memoryUsage)
-
 	character := characterConstructor()
+	// NewUnmeteredCharacterValue normalizes (= allocates)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(character)))
 	return NewUnmeteredCharacterValue(character)
 }
 
@@ -856,16 +857,12 @@ func (v CharacterValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenRefe
 	return v.String()
 }
 
-func (v CharacterValue) NormalForm() string {
-	return norm.NFC.String(string(v))
-}
-
 func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
 	}
-	return v.NormalForm() == otherChar.NormalForm()
+	return v == otherChar
 }
 
 func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -873,7 +870,7 @@ func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRa
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v.NormalForm() < otherChar.NormalForm()
+	return v < otherChar
 }
 
 func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -881,7 +878,7 @@ func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ Locat
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v.NormalForm() <= otherChar.NormalForm()
+	return v <= otherChar
 }
 
 func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -889,7 +886,7 @@ func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ Locatio
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v.NormalForm() > otherChar.NormalForm()
+	return v > otherChar
 }
 
 func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -897,7 +894,7 @@ func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ Lo
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v.NormalForm() >= otherChar.NormalForm()
+	return v >= otherChar
 }
 
 func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
@@ -1022,7 +1019,7 @@ type StringValue struct {
 
 func NewUnmeteredStringValue(str string) *StringValue {
 	return &StringValue{
-		Str: str,
+		Str: norm.NFC.String(str),
 		// a negative value indicates the length has not been initialized, see Length()
 		length: -1,
 	}
@@ -1035,6 +1032,8 @@ func NewStringValue(
 ) *StringValue {
 	common.UseMemory(memoryGauge, memoryUsage)
 	str := stringConstructor()
+	// NewUnmeteredStringValue normalizes (= allocates)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(str)))
 	return NewUnmeteredStringValue(str)
 }
 
@@ -1092,7 +1091,7 @@ func (v *StringValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	if !ok {
 		return false
 	}
-	return v.NormalForm() == otherString.NormalForm()
+	return v.Str == otherString.Str
 }
 
 func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1106,7 +1105,7 @@ func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, loca
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() < otherString.NormalForm())
+	return AsBoolValue(v.Str < otherString.Str)
 }
 
 func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1120,7 +1119,7 @@ func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue,
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() <= otherString.NormalForm())
+	return AsBoolValue(v.Str <= otherString.Str)
 }
 
 func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1134,7 +1133,7 @@ func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, l
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() > otherString.NormalForm())
+	return AsBoolValue(v.Str > otherString.Str)
 }
 
 func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1148,7 +1147,7 @@ func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableVal
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() >= otherString.NormalForm())
+	return AsBoolValue(v.Str >= otherString.Str)
 }
 
 // HashInput returns a byte slice containing:
@@ -1166,10 +1165,6 @@ func (v *StringValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte)
 	buffer[0] = byte(HashInputTypeString)
 	copy(buffer[1:], v.Str)
 	return buffer
-}
-
-func (v *StringValue) NormalForm() string {
-	return norm.NFC.String(v.Str)
 }
 
 func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locationRange LocationRange) Value {
