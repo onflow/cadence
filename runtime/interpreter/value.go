@@ -17213,7 +17213,14 @@ func (v *CompositeValue) Transfer(
 			panic(errors.NewExternalError(err))
 		}
 
-		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
+		elementCount := v.dictionary.Count()
+
+		elementOverhead, dataUse, metaDataUse := common.NewAtreeMapMemoryUsages(elementCount, 0)
+		common.UseMemory(interpreter, elementOverhead)
+		common.UseMemory(interpreter, dataUse)
+		common.UseMemory(interpreter, metaDataUse)
+
+		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(elementCount, 0)
 		common.UseMemory(config.MemoryGauge, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
@@ -18942,8 +18949,18 @@ func (v *DictionaryValue) Transfer(
 			panic(errors.NewExternalError(err))
 		}
 
+		elementCount := v.dictionary.Count()
+
+		elementOverhead, dataUse, metaDataUse := common.NewAtreeMapMemoryUsages(
+			elementCount,
+			v.elementSize,
+		)
+		common.UseMemory(interpreter, elementOverhead)
+		common.UseMemory(interpreter, dataUse)
+		common.UseMemory(interpreter, metaDataUse)
+
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(
-			v.dictionary.Count(),
+			elementCount,
 			v.elementSize,
 		)
 		common.UseMemory(config.MemoryGauge, elementMemoryUse)
