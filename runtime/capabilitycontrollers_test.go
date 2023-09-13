@@ -203,11 +203,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						`
                             transaction {
                                 prepare(signer: auth(Capabilities) &Account) {
+                                    let path = /public/x
+
                                     // Act
                                     let gotCap: Capability<&AnyStruct>? =
-                                        %s.capabilities.get<&AnyStruct>(/public/x)
+                                        %[1]s.capabilities.get<&AnyStruct>(path)
 
                                     // Assert
+                                    assert(!%[1]s.capabilities.exists(path))
                                     assert(gotCap == nil)
                                 }
                             }
@@ -244,9 +247,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R> =
-                                          %s.capabilities.get<&Test.R>(publicPath)!
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)!
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.check())
                                       assert(gotCap.id == expectedCapID)
@@ -276,9 +280,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Account> =
-                                          %s.capabilities.get<&Account>(publicPath)!
+                                          %[1]s.capabilities.get<&Account>(publicPath)!
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.check())
                                       assert(gotCap.id == expectedCapID)
@@ -319,10 +324,11 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R> =
-                                          %s.capabilities.get<&Test.R>(publicPath)!
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)!
                                       let ref: &Test.R = gotCap.borrow()!
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.check())
                                       assert(gotCap.id == expectedCapID)
@@ -354,10 +360,11 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Account> =
-                                          %s.capabilities.get<&Account>(publicPath)!
+                                          %[1]s.capabilities.get<&Account>(publicPath)!
                                       let ref: &Account = gotCap.borrow()!
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.check())
                                       assert(gotCap.id == expectedCapID)
@@ -399,9 +406,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<auth(Test.X) &Test.R>? =
-                                          %s.capabilities.get<auth(Test.X) &Test.R>(publicPath)
+                                          %[1]s.capabilities.get<auth(Test.X) &Test.R>(publicPath)
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap == nil)
                                   }
@@ -433,9 +441,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R>? =
-                                          %s.capabilities.get<&Test.R>(publicPath)
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap == nil)
                                   }
@@ -475,9 +484,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.S>? =
-                                          %s.capabilities.get<&Test.S>(publicPath)
+                                          %[1]s.capabilities.get<&Test.S>(publicPath)
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap == nil)
                                   }
@@ -507,9 +517,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&AnyResource>? =
-                                          %s.capabilities.get<&AnyResource>(publicPath)
+                                          %[1]s.capabilities.get<&AnyResource>(publicPath)
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap == nil)
                                   }
@@ -549,9 +560,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R>? =
-                                          %s.capabilities.get<&Test.R>(publicPath)
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)
 
                                       // Assert
+                                      assert(!%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(unpublishedcap!.id == expectedCapID)
                                       assert(gotCap == nil)
@@ -582,9 +594,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Account>? =
-                                          %s.capabilities.get<&Account>(publicPath)
+                                          %[1]s.capabilities.get<&Account>(publicPath)
 
                                       // Assert
+                                      assert(!%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(unpublishedcap!.id == expectedCapID)
                                       assert(gotCap == nil)

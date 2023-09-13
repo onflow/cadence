@@ -1287,6 +1287,26 @@ Returns nil if the capability does not exist, or cannot be borrowed using the gi
 The function is equivalent to ` + "`get(path)?.borrow()`" + `.
 `
 
+const Account_CapabilitiesTypeExistsFunctionName = "exists"
+
+var Account_CapabilitiesTypeExistsFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
+
+const Account_CapabilitiesTypeExistsFunctionDocString = `
+Returns true if a capability exists at the given public path.
+`
+
 const Account_CapabilitiesTypePublishFunctionName = "publish"
 
 var Account_CapabilitiesTypePublishFunctionType = &FunctionType{
@@ -1388,6 +1408,13 @@ func init() {
 			Account_CapabilitiesTypeBorrowFunctionName,
 			Account_CapabilitiesTypeBorrowFunctionType,
 			Account_CapabilitiesTypeBorrowFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_CapabilitiesType,
+			PrimitiveAccess(ast.AccessAll),
+			Account_CapabilitiesTypeExistsFunctionName,
+			Account_CapabilitiesTypeExistsFunctionType,
+			Account_CapabilitiesTypeExistsFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			Account_CapabilitiesType,
