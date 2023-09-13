@@ -1884,10 +1884,7 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindInitializer
 
 	case KeywordDestroy:
-		if purity == ast.FunctionPurityView {
-			return nil, NewSyntaxError(*purityPos, "invalid view annotation on destructor")
-		}
-		declarationKind = common.DeclarationKindDestructor
+		p.report(NewSyntaxError(identifier.Pos, "custom destructor definitions are no longer permitted"))
 
 	case KeywordPrepare:
 		declarationKind = common.DeclarationKindPrepare

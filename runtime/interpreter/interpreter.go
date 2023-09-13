@@ -188,7 +188,6 @@ type FunctionWrapper = func(inner FunctionValue) FunctionValue
 // i.e. they wrap the functions / function wrappers that inherit them.
 type WrapperCode struct {
 	InitializerFunctionWrapper FunctionWrapper
-	DestructorFunctionWrapper  FunctionWrapper
 	FunctionWrappers           map[string]FunctionWrapper
 	Functions                  map[string]FunctionValue
 }
@@ -1149,15 +1148,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			initializerFunction = initializerFunctionWrapper(initializerFunction)
 		}
 
-		// Wrap destructor
-
-		destructorFunctionWrapper :=
-			code.DestructorFunctionWrapper
-
-		if destructorFunctionWrapper != nil {
-			destructorFunction = destructorFunctionWrapper(destructorFunction)
-		}
-
 		// Apply default functions, if conforming type does not provide the function
 
 		// Iterating over the map in a non-deterministic way is OK,
@@ -1541,41 +1531,15 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
-	destructor := compositeDeclaration.DeclarationMembers().Destructor()
-	if destructor == nil {
-		return nil
-	}
-
-	statements := destructor.FunctionDeclaration.FunctionBlock.Block.Statements
-
-	var preConditions ast.Conditions
-
-	conditions := destructor.FunctionDeclaration.FunctionBlock.PreConditions
-	if conditions != nil {
-		preConditions = *conditions
-	}
-
-	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
-
-	postConditions := destructor.FunctionDeclaration.FunctionBlock.PostConditions
-	if postConditions != nil {
-		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite(postConditions)
-
-		beforeStatements = postConditionsRewrite.BeforeStatements
-		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
-	}
-
 	return NewInterpretedFunctionValue(
 		interpreter,
 		nil,
 		emptyImpureFunctionType,
 		lexicalScope,
-		beforeStatements,
-		preConditions,
-		statements,
-		rewrittenPostConditions,
+		[]ast.Statement{},
+		ast.Conditions{},
+		[]ast.Statement{},
+		ast.Conditions{},
 	)
 }
 
@@ -2234,13 +2198,11 @@ func (interpreter *Interpreter) declareInterface(
 		interfaceType.InitializerParameters,
 		lexicalScope,
 	)
-	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.SharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
-		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
 		Functions:                  defaultFunctions,
 	}
@@ -2276,23 +2238,6 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 
 var voidFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-}
-
-func (interpreter *Interpreter) destructorFunctionWrapper(
-	members *ast.Members,
-	lexicalScope *VariableActivation,
-) FunctionWrapper {
-
-	destructor := members.Destructor()
-	if destructor == nil {
-		return nil
-	}
-
-	return interpreter.functionConditionsWrapper(
-		destructor.FunctionDeclaration,
-		voidFunctionType,
-		lexicalScope,
-	)
 }
 
 func (interpreter *Interpreter) functionConditionsWrapper(

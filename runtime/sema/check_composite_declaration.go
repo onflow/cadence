@@ -267,20 +267,6 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 		)
 	}
 
-	// NOTE: check destructors after initializer and functions
-
-	checker.withSelfResourceInvalidationAllowed(func() {
-		checker.checkDestructors(
-			members.Destructors(),
-			members.FieldsByIdentifier(),
-			compositeType.Members,
-			compositeType,
-			declaration.DeclarationKind(),
-			declaration.DeclarationDocString(),
-			ContainerKindComposite,
-		)
-	})
-
 	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
@@ -2288,8 +2274,7 @@ func (checker *Checker) checkNestedIdentifier(
 	// TODO: provide a more helpful error
 
 	switch name {
-	case common.DeclarationKindInitializer.Keywords(),
-		common.DeclarationKindDestructor.Keywords():
+	case common.DeclarationKindInitializer.Keywords():
 
 		checker.report(
 			&InvalidNameError{
@@ -2330,7 +2315,7 @@ func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) str
 func (checker *Checker) checkUnknownSpecialFunctions(functions []*ast.SpecialFunctionDeclaration) {
 	for _, function := range functions {
 		switch function.Kind {
-		case common.DeclarationKindInitializer, common.DeclarationKindDestructor:
+		case common.DeclarationKindInitializer:
 			continue
 
 		default:
@@ -2354,64 +2339,6 @@ func (checker *Checker) checkSpecialFunctionDefaultImplementation(declaration as
 				Identifier: specialFunction.DeclarationIdentifier(),
 				Container:  declaration,
 				KindName:   kindName,
-			},
-		)
-	}
-}
-
-func (checker *Checker) checkDestructors(
-	destructors []*ast.SpecialFunctionDeclaration,
-	fields map[string]*ast.FieldDeclaration,
-	members *StringMemberOrderedMap,
-	containerType CompositeKindedType,
-	containerDeclarationKind common.DeclarationKind,
-	containerDocString string,
-	containerKind ContainerKind,
-) {
-	count := len(destructors)
-
-	// only resource and resource interface declarations may
-	// declare a destructor
-
-	if !containerType.IsResourceType() {
-		if count > 0 {
-			firstDestructor := destructors[0]
-
-			checker.report(
-				&InvalidDestructorError{
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						firstDestructor.FunctionDeclaration.Identifier,
-					),
-				},
-			)
-		}
-
-		return
-	}
-
-	if count == 0 {
-		checker.checkNoDestructorNoResourceFields(members, fields, containerType, containerKind)
-		return
-	}
-
-	firstDestructor := destructors[0]
-	checker.checkDestructor(
-		firstDestructor,
-		containerType,
-		containerDocString,
-		containerKind,
-	)
-
-	// destructor overloading is not supported
-
-	if count > 1 {
-		secondDestructor := destructors[1]
-
-		checker.report(
-			&UnsupportedOverloadingError{
-				DeclarationKind: common.DeclarationKindDestructor,
-				Range:           ast.NewRangeFromPositioned(checker.memoryGauge, secondDestructor),
 			},
 		)
 	}
