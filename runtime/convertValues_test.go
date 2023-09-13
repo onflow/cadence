@@ -1688,10 +1688,6 @@ func TestRuntimeExportNestedResourceValueFromScript(t *testing.T) {
             init(bar: @Bar) {
                 self.bar <- bar
             }
-
-            destroy() {
-                destroy self.bar
-            }
         }
 
         access(all) fun main(): @Foo {

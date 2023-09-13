@@ -618,15 +618,6 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
 
 			t.Parallel()
 
-			destructor := ""
-			if kind == common.CompositeKindResource {
-				destructor = `
-                  destroy() {
-                      destroy self.t
-                  }
-                `
-			}
-
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
@@ -637,13 +628,10 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
                           init(t: @T) {
                               self.t %[2]s t
                           }
-
-                          %[3]s
                       }
                     `,
 					kind.Keyword(),
 					kind.TransferOperator(),
-					destructor,
 				),
 			)
 
@@ -690,15 +678,6 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
 
 			t.Parallel()
 
-			destructor := ""
-			if kind == common.CompositeKindResource {
-				destructor = `
-                  destroy() {
-                      destroy self.t
-                  }
-                `
-			}
-
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
@@ -709,13 +688,10 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
                           init(t: T) {
                               self.t %[2]s t
                           }
-
-                          %[3]s
                       }
                     `,
 					kind.Keyword(),
 					kind.TransferOperator(),
-					destructor,
 				),
 			)
 
@@ -3142,18 +3118,6 @@ func testResourceNesting(
 			)
 		}
 
-		destructor := ""
-		if !outerIsInterface &&
-			outerCompositeKind == common.CompositeKindResource &&
-			innerCompositeKind == common.CompositeKindResource {
-
-			destructor = `
-              destroy() {
-                  destroy self.t
-              }
-            `
-		}
-
 		innerBody := "{}"
 		if innerCompositeKind == common.CompositeKindEvent {
 			innerBody = "()"
@@ -3169,12 +3133,11 @@ func testResourceNesting(
 
 		program := fmt.Sprintf(
 			`
-              %[1]s %[2]s T%[10]s %[3]s
+              %[1]s %[2]s T%[9]s %[3]s
 
               %[4]s %[5]s U {
                   let t: %[6]s%[7]s
                   %[8]s
-                  %[9]s
               }
             `,
 			innerCompositeKind.Keyword(),
@@ -3185,7 +3148,6 @@ func testResourceNesting(
 			innerCompositeKind.Annotation(),
 			innerTypeAnnotation,
 			initializer,
-			destructor,
 			innerConformances,
 		)
 
@@ -3538,10 +3500,6 @@ func TestCheckInvalidResourceFieldMoveThroughVariableDeclaration(t *testing.T) {
           init(foo: @Foo) {
               self.foo <- foo
           }
-
-          destroy() {
-              destroy self.foo
-          }
       }
 
       fun test(): @[Foo] {
@@ -3576,10 +3534,6 @@ func TestCheckInvalidResourceFieldMoveThroughParameter(t *testing.T) {
 
           init(foo: @Foo) {
               self.foo <- foo
-          }
-
-          destroy() {
-              destroy self.foo
           }
       }
 
@@ -3621,10 +3575,6 @@ func TestCheckInvalidResourceFieldMoveSelf(t *testing.T) {
           fun test() {
              absorb(<-self.y)
           }
-
-          destroy() {
-              destroy self.y
-          }
       }
 
       fun absorb(_ y: @Y) {
@@ -3635,33 +3585,6 @@ func TestCheckInvalidResourceFieldMoveSelf(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
-}
-
-func TestCheckInvalidResourceFieldUseAfterDestroy(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      resource Y {}
-
-      resource X {
-
-          var y: @Y
-
-          init() {
-              self.y <- create Y()
-          }
-
-          destroy() {
-              destroy self.y
-              destroy self.y
-          }
-      }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
 
 func TestCheckResourceArrayAppend(t *testing.T) {
@@ -4042,10 +3965,6 @@ func TestCheckInvalidResourceConstantResourceFieldSwap(t *testing.T) {
           init(foo: @Foo) {
               self.foo <- foo
           }
-
-          destroy() {
-              destroy self.foo
-          }
       }
 
       fun test() {
@@ -4077,9 +3996,6 @@ func TestCheckResourceVariableResourceFieldSwap(t *testing.T) {
               self.foo <- foo
           }
 
-          destroy() {
-              destroy self.foo
-          }
       }
 
       fun test() {
@@ -4107,10 +4023,6 @@ func TestCheckInvalidResourceFieldDestroy(t *testing.T) {
 
          init(foo: @Foo) {
              self.foo <- foo
-         }
-
-         destroy() {
-             destroy self.foo
          }
      }
 
@@ -4204,10 +4116,6 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
          fun use() {
             let ri <- self.ris.remove(key: "first")
             absorb(<-ri)
-         }
-
-         destroy() {
-             destroy self.ris
          }
      }
 
@@ -5760,10 +5668,6 @@ func TestCheckOptionalResourceBindingWithSecondValue(t *testing.T) {
 
           init() {
               self.r <- create R()
-          }
-
-          destroy () {
-              destroy self.r
           }
 
           fun duplicate(): @R? {

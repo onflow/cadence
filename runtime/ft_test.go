@@ -272,10 +272,6 @@ access(all) contract FlowToken: FungibleToken {
             vault.balance = 0.0
             destroy vault
         }
-
-        destroy() {
-            FlowToken.totalSupply = FlowToken.totalSupply - self.balance
-        }
     }
 
     // createEmptyVault

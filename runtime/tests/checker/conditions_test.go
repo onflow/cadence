@@ -905,10 +905,6 @@ func TestCheckFunctionWithPostTestConditionAndResourceResult(t *testing.T) {
                 self.resources["duplicate"] <-! r
                 return true
             }
-
-            destroy() {
-                destroy self.resources
-            }
         }
     `)
 

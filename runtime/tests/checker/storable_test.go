@@ -270,7 +270,6 @@ func TestCheckStorable(t *testing.T) {
 				var interfaceKeyword string
 				var baseType string
 				var initializer string
-				var destructor string
 
 				if isInterface {
 					interfaceKeyword = "interface"
@@ -297,14 +296,6 @@ func TestCheckStorable(t *testing.T) {
 						typeName,
 						transferOperation.Operator(),
 					)
-
-					if isResource {
-						destructor = `
-                              destroy() {
-                                  destroy self.value
-                              }
-                        `
-					}
 				}
 
 				if compositeKind == common.CompositeKindAttachment {
@@ -320,14 +311,11 @@ func TestCheckStorable(t *testing.T) {
                               let value: %[1]s%[2]s
 
                               %[3]s
-
-                              %[4]s
                           }
                         `,
 						typeAnnotation,
 						typeName,
 						initializer,
-						destructor,
 					)
 				}
 
