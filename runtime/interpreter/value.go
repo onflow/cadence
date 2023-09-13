@@ -2803,7 +2803,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 
 			array, err := atree.NewArrayFromBatchData(
 				config.Storage,
-				v.StorageID().Address,
+				v.StorageAddress(),
 				v.array.Type(),
 				func() (atree.Value, error) {
 					value, err := iterator.Next()
