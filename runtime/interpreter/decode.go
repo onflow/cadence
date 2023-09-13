@@ -362,7 +362,9 @@ func (d StorableDecoder) decodeCharacter() (CharacterValue, error) {
 		)
 	}
 
-	// NOTE: already metered by decodeCharacter
+	// NOTE: character value memory usage already metered by decodeCharacter,
+	// but NewUnmeteredCharacterValue normalizes (= allocates)
+	common.UseMemory(d.memoryGauge, common.NewRawStringMemoryUsage(len(v)))
 	return NewUnmeteredCharacterValue(v), nil
 }
 
@@ -378,7 +380,9 @@ func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
 		return nil, err
 	}
 
-	// NOTE: already metered by decodeString
+	// NOTE: character value memory usage already metered by decodeString,
+	// but NewUnmeteredStringValue normalizes (= allocates)
+	common.UseMemory(d.memoryGauge, common.NewRawStringMemoryUsage(len(str)))
 	return NewUnmeteredStringValue(str), nil
 }
 
