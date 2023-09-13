@@ -17366,9 +17366,6 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 
 	config := interpreter.SharedState.Config
 
-	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
-	common.UseMemory(config.MemoryGauge, elementMemoryUse)
-
 	dictionary, err := atree.NewMapFromBatchData(
 		config.Storage,
 		v.StorageAddress(),
@@ -19058,9 +19055,6 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
-
-	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
-	common.UseMemory(config.MemoryGauge, elementMemoryUse)
 
 	orderedMap, err := atree.NewMapFromBatchData(
 		config.Storage,
