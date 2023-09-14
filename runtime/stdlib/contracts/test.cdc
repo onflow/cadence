@@ -27,6 +27,12 @@ pub contract Test {
             return self.backend.createAccount()
         }
 
+        /// Returns the account for the given address.
+        ///
+        pub fun getAccount(_ address: Address): Account {
+            return self.backend.getAccount(address)
+        }
+
         /// Add a transaction to the current block.
         ///
         pub fun addTransaction(_ tx: Transaction) {
@@ -77,14 +83,12 @@ pub contract Test {
         ///
         pub fun deployContract(
             name: String,
-            code: String,
-            account: Account,
+            path: String,
             arguments: [AnyStruct]
         ): Error? {
             return self.backend.deployContract(
                 name: name,
-                code: code,
-                account: account,
+                path: path,
                 arguments: arguments
             )
         }
@@ -297,6 +301,10 @@ pub contract Test {
         ///
         pub fun createAccount(): Account
 
+        /// Returns the account for the given address.
+        ///
+        pub fun getAccount(_ address: Address): Account
+
         /// Add a transaction to the current block.
         ///
         pub fun addTransaction(_ tx: Transaction)
@@ -315,8 +323,7 @@ pub contract Test {
         ///
         pub fun deployContract(
             name: String,
-            code: String,
-            account: Account,
+            path: String,
             arguments: [AnyStruct]
         ): Error?
 

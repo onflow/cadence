@@ -48,6 +48,14 @@ type TestContractType struct {
 	expectFailureFunction             interpreter.FunctionValue
 }
 
+// 'Test.blockchain' public field
+
+const testTypeBlockchainFieldName = "blockchain"
+
+const testTypeBlockchainFieldDocString = `
+An emulator-backed blockchain.
+`
+
 // 'Test.assert' function
 
 const testTypeAssertFunctionDocString = `
@@ -1072,6 +1080,16 @@ func newTestContractType() *TestContractType {
 
 	blockchainType := ty.blockchainType()
 
+	compositeType.Fields = []string{testTypeBlockchainFieldName}
+	blockchainField := sema.NewPublicConstantFieldMember(
+		nil,
+		compositeType,
+		testTypeBlockchainFieldName,
+		blockchainType,
+		testTypeBlockchainFieldDocString,
+	)
+	compositeType.Members.Set(testTypeBlockchainFieldName, blockchainField)
+
 	// Test.assert()
 	compositeType.Members.Set(
 		testTypeAssertFunctionName,
@@ -1367,6 +1385,36 @@ func (t *TestContractType) NewTestContract(
 	compositeValue.Functions[testTypeBeGreaterThanFunctionName] = t.beGreaterThanFunction
 	compositeValue.Functions[testTypeBeLessThanFunctionName] = t.beLessThanFunction
 	compositeValue.Functions[testExpectFailureFunctionName] = t.expectFailureFunction
+
+	// Create an `EmulatorBackend`
+	emulatorBackend := t.emulatorBackendType.newEmulatorBackend(
+		inter,
+		testFramework.NewEmulatorBackend(),
+		interpreter.EmptyLocationRange,
+	)
+
+	// Create a 'Blockchain' struct value, that wraps the emulator backend,
+	// by calling the constructor of 'Blockchain'.
+	blockchainConstructor := getNestedTypeConstructorValue(
+		compositeValue,
+		testBlockchainTypeName,
+	)
+	blockchain, err := inter.InvokeExternally(
+		blockchainConstructor,
+		blockchainConstructor.Type,
+		[]interpreter.Value{
+			emulatorBackend,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	compositeValue.SetMember(
+		inter,
+		interpreter.EmptyLocationRange,
+		testTypeBlockchainFieldName,
+		blockchain,
+	)
 
 	return compositeValue, nil
 }

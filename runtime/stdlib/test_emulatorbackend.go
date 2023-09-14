@@ -20,6 +20,8 @@
 package stdlib
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -49,6 +51,7 @@ type testEmulatorBackendType struct {
 	moveTimeFunctionType               *sema.FunctionType
 	createSnapshotFunctionType         *sema.FunctionType
 	loadSnapshotFunctionType           *sema.FunctionType
+	getAccountFunctionType             *sema.FunctionType
 }
 
 func newTestEmulatorBackendType(
@@ -122,6 +125,11 @@ func newTestEmulatorBackendType(
 	loadSnapshotFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeLoadSnapshotFunctionName,
+	)
+
+	getAccountFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeGetAccountFunctionName,
 	)
 
 	compositeType := &sema.CompositeType{
@@ -218,6 +226,12 @@ func newTestEmulatorBackendType(
 			loadSnapshotFunctionType,
 			testEmulatorBackendTypeLoadSnapshotFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeGetAccountFunctionName,
+			getAccountFunctionType,
+			testEmulatorBackendTypeGetAccountFunctionDocString,
+		),
 	}
 
 	compositeType.Members = sema.MembersAsMap(members)
@@ -239,6 +253,7 @@ func newTestEmulatorBackendType(
 		moveTimeFunctionType:               moveTimeFunctionType,
 		createSnapshotFunctionType:         createSnapshotFunctionType,
 		loadSnapshotFunctionType:           loadSnapshotFunctionType,
+		getAccountFunctionType:             getAccountFunctionType,
 	}
 }
 
@@ -346,6 +361,47 @@ func newTestAccountValue(
 	}
 
 	return accountValue
+}
+
+// 'EmulatorBackend.getAccount' function
+
+const testEmulatorBackendTypeGetAccountFunctionName = "getAccount"
+
+const testEmulatorBackendTypeGetAccountFunctionDocString = `
+Returns the account for the given address.
+`
+
+func (t *testEmulatorBackendType) newGetAccountFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.getAccountFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			address, ok := invocation.Arguments[0].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			account, err := blockchain.GetAccount(address)
+			if err != nil {
+				msg := fmt.Sprintf("account with address: %s was not found", address)
+				panic(PanicError{
+					Message:       msg,
+					LocationRange: invocation.LocationRange,
+				})
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			return newTestAccountValue(
+				blockchain,
+				inter,
+				locationRange,
+				account,
+			)
+		},
+	)
 }
 
 // 'EmulatorBackend.addTransaction' function
@@ -509,22 +565,14 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			// Contract code
-			code, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			// Contract file path
+			path, ok := invocation.Arguments[1].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-
-			// authorizer
-			accountValue, ok := invocation.Arguments[2].(interpreter.MemberAccessibleValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			account := accountFromValue(inter, accountValue, invocation.LocationRange)
 
 			// Contract init arguments
-			args, err := arrayValueToSlice(inter, invocation.Arguments[3])
+			args, err := arrayValueToSlice(inter, invocation.Arguments[2])
 			if err != nil {
 				panic(err)
 			}
@@ -532,8 +580,7 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 			err = blockchain.DeployContract(
 				inter,
 				name.Str,
-				code.Str,
-				account,
+				path.Str,
 				args,
 			)
 
@@ -877,6 +924,10 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeLoadSnapshotFunctionName,
 			Value: t.newLoadSnapshotFunction(blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeGetAccountFunctionName,
+			Value: t.newGetAccountFunction(blockchain),
 		},
 	}
 

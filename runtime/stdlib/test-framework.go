@@ -43,6 +43,8 @@ type Blockchain interface {
 
 	CreateAccount() (*Account, error)
 
+	GetAccount(interpreter.AddressValue) (*Account, error)
+
 	AddTransaction(
 		inter *interpreter.Interpreter,
 		code string,
@@ -58,8 +60,7 @@ type Blockchain interface {
 	DeployContract(
 		inter *interpreter.Interpreter,
 		name string,
-		code string,
-		account *Account,
+		path string,
 		arguments []interpreter.Value,
 	) error
 
