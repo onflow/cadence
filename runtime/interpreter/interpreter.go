@@ -43,14 +43,6 @@ import (
 
 //
 
-var emptyImpureFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityImpure,
-	nil,
-	sema.VoidTypeAnnotation,
-)
-
-//
-
 type getterSetter struct {
 	target Value
 	// allowMissing may be true when the got value is nil.
@@ -2208,10 +2200,6 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 		},
 		lexicalScope,
 	)
-}
-
-var voidFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 }
 
 func (interpreter *Interpreter) functionConditionsWrapper(
