@@ -874,7 +874,7 @@ func TestAssertEqual(t *testing.T) {
 		assert.ErrorContains(
 			t,
 			err,
-			"not equal: expected: {2: false, 1: true}, actual: {1: true, 2: true}",
+			"not equal: expected: {1: true, 2: false}, actual: {2: true, 1: true}",
 		)
 	})
 
@@ -2061,8 +2061,7 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                let events = blockchain.events()
+                let events = Test.events()
 
                 Test.expect(events, Test.beEmpty())
             }
@@ -2105,13 +2104,11 @@ func TestBlockchain(t *testing.T) {
             pub struct Foo {}
 
             pub fun test() {
-                let blockchain = Test.blockchain
-
                 // 'Foo' is not an event-type.
                 // But we just need to test the API, so it doesn't really matter.
                 let typ = Type<Foo>()
 
-                let events = blockchain.eventsOfType(typ)
+                let events = Test.eventsOfType(typ)
 
                 Test.expect(events, Test.beEmpty())
             }
@@ -2157,8 +2154,7 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                blockchain.reset(to: 5)
+                Test.reset(to: 5)
             }
 		`
 
@@ -2191,8 +2187,7 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                blockchain.reset(to: 5.5)
+                Test.reset(to: 5.5)
             }
 		`
 
@@ -2221,11 +2216,10 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun testMoveForward() {
-                let blockchain = Test.blockchain
                 // timeDelta is the representation of 35 days,
                 // in the form of seconds.
                 let timeDelta = Fix64(35 * 24 * 60 * 60)
-                blockchain.moveTime(by: timeDelta)
+                Test.moveTime(by: timeDelta)
             }
 		`
 
@@ -2258,11 +2252,10 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun testMoveBackward() {
-                let blockchain = Test.blockchain
                 // timeDelta is the representation of 35 days,
                 // in the form of seconds.
                 let timeDelta = Fix64(35 * 24 * 60 * 60) * -1.0
-                blockchain.moveTime(by: timeDelta)
+                Test.moveTime(by: timeDelta)
             }
 		`
 
@@ -2295,8 +2288,7 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun testMoveTime() {
-                let blockchain = Test.blockchain
-                blockchain.moveTime(by: 3000)
+                Test.moveTime(by: 3000)
             }
 		`
 
@@ -2318,36 +2310,6 @@ func TestBlockchain(t *testing.T) {
 		assert.False(t, moveTimeInvoked)
 	})
 
-	t.Run("blockchain", func(t *testing.T) {
-		t.Parallel()
-
-		const script = `
-            import Test
-
-            pub fun test() {
-                let blockchain = Test.blockchain
-                Test.assertEqual(Type<Test.Blockchain>(), blockchain.getType())
-            }
-		`
-
-		newEmulatorBackendInvoked := false
-
-		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
-				newEmulatorBackendInvoked = true
-				return &mockedBlockchain{}
-			},
-		}
-
-		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
-		require.NoError(t, err)
-
-		_, err = inter.Invoke("test")
-		require.NoError(t, err)
-
-		assert.True(t, newEmulatorBackendInvoked)
-	})
-
 	t.Run("createSnapshot", func(t *testing.T) {
 		t.Parallel()
 
@@ -2355,8 +2317,7 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                blockchain.createSnapshot(name: "adminCreated")
+                Test.createSnapshot(name: "adminCreated")
             }
 		`
 
@@ -2391,8 +2352,7 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                blockchain.createSnapshot(name: "adminCreated")
+                Test.createSnapshot(name: "adminCreated")
             }
 		`
 
@@ -2427,9 +2387,8 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                blockchain.createSnapshot(name: "adminCreated")
-                blockchain.loadSnapshot(name: "adminCreated")
+                Test.createSnapshot(name: "adminCreated")
+                Test.loadSnapshot(name: "adminCreated")
             }
 		`
 
@@ -2469,9 +2428,8 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                blockchain.createSnapshot(name: "adminCreated")
-                blockchain.loadSnapshot(name: "contractDeployed")
+                Test.createSnapshot(name: "adminCreated")
+                Test.loadSnapshot(name: "contractDeployed")
             }
 		`
 
@@ -2511,8 +2469,7 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                let err = blockchain.deployContract(
+                let err = Test.deployContract(
                     name: "FooContract",
                     path: "./contracts/FooContract.cdc",
                     arguments: ["Hey, there!"]
@@ -2562,8 +2519,7 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                let err = blockchain.deployContract(
+                let err = Test.deployContract(
                     name: "FooContract",
                     path: "./contracts/FooContract.cdc",
                     arguments: ["Hey, there!"]
@@ -2611,8 +2567,8 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                let account = blockchain.getAccount(0x0000000000000009)
+                let account = Test.getAccount(0x0000000000000009)
+                Test.assertEqual(0x0000000000000009 as Address, account.address)
             }
 		`
 
@@ -2657,8 +2613,7 @@ func TestBlockchain(t *testing.T) {
             import Test
 
             pub fun test() {
-                let blockchain = Test.blockchain
-                let account = blockchain.getAccount(0x0000000000000009)
+                let account = Test.getAccount(0x0000000000000009)
             }
 		`
 

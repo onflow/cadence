@@ -2,164 +2,161 @@
 ///
 pub contract Test {
 
-    /// Blockchain emulates a real network.
+    /// backend emulates a real network.
     ///
-    pub struct Blockchain {
+    pub let backend: AnyStruct{BlockchainBackend}
 
-        pub let backend: AnyStruct{BlockchainBackend}
+    init(backend: AnyStruct{BlockchainBackend}) {
+        self.backend = backend
+    }
 
-        init(backend: AnyStruct{BlockchainBackend}) {
-            self.backend = backend
-        }
+    /// Executes a script and returns the script return value and the status.
+    /// `returnValue` field of the result will be `nil` if the script failed.
+    ///
+    pub fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult {
+        return self.backend.executeScript(script, arguments)
+    }
 
-        /// Executes a script and returns the script return value and the status.
-        /// `returnValue` field of the result will be `nil` if the script failed.
-        ///
-        pub fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult {
-            return self.backend.executeScript(script, arguments)
-        }
+    /// Creates a signer account by submitting an account creation transaction.
+    /// The transaction is paid by the service account.
+    /// The returned account can be used to sign and authorize transactions.
+    ///
+    pub fun createAccount(): Account {
+        return self.backend.createAccount()
+    }
 
-        /// Creates a signer account by submitting an account creation transaction.
-        /// The transaction is paid by the service account.
-        /// The returned account can be used to sign and authorize transactions.
-        ///
-        pub fun createAccount(): Account {
-            return self.backend.createAccount()
-        }
+    /// Returns the account for the given address.
+    ///
+    pub fun getAccount(_ address: Address): Account {
+        return self.backend.getAccount(address)
+    }
 
-        /// Returns the account for the given address.
-        ///
-        pub fun getAccount(_ address: Address): Account {
-            return self.backend.getAccount(address)
-        }
+    /// Add a transaction to the current block.
+    ///
+    pub fun addTransaction(_ tx: Transaction) {
+        self.backend.addTransaction(tx)
+    }
 
-        /// Add a transaction to the current block.
-        ///
-        pub fun addTransaction(_ tx: Transaction) {
-            self.backend.addTransaction(tx)
-        }
+    /// Executes the next transaction in the block, if any.
+    /// Returns the result of the transaction, or nil if no transaction was scheduled.
+    ///
+    pub fun executeNextTransaction(): TransactionResult? {
+        return self.backend.executeNextTransaction()
+    }
 
-        /// Executes the next transaction in the block, if any.
-        /// Returns the result of the transaction, or nil if no transaction was scheduled.
-        ///
-        pub fun executeNextTransaction(): TransactionResult? {
-            return self.backend.executeNextTransaction()
-        }
+    /// Commit the current block.
+    /// Committing will fail if there are un-executed transactions in the block.
+    ///
+    pub fun commitBlock() {
+        self.backend.commitBlock()
+    }
 
-        /// Commit the current block.
-        /// Committing will fail if there are un-executed transactions in the block.
-        ///
-        pub fun commitBlock() {
-            self.backend.commitBlock()
-        }
+    /// Executes a given transaction and commit the current block.
+    ///
+    pub fun executeTransaction(_ tx: Transaction): TransactionResult {
+        self.addTransaction(tx)
+        let txResult = self.executeNextTransaction()!
+        self.commitBlock()
+        return txResult
+    }
 
-        /// Executes a given transaction and commit the current block.
-        ///
-        pub fun executeTransaction(_ tx: Transaction): TransactionResult {
+    /// Executes a given set of transactions and commit the current block.
+    ///
+    pub fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
+        for tx in transactions {
             self.addTransaction(tx)
+        }
+
+        var results: [TransactionResult] = []
+        for tx in transactions {
             let txResult = self.executeNextTransaction()!
-            self.commitBlock()
-            return txResult
+            results.append(txResult)
         }
 
-        /// Executes a given set of transactions and commit the current block.
-        ///
-        pub fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
-            for tx in transactions {
-                self.addTransaction(tx)
-            }
+        self.commitBlock()
+        return results
+    }
 
-            var results: [TransactionResult] = []
-            for tx in transactions {
-                let txResult = self.executeNextTransaction()!
-                results.append(txResult)
-            }
+    /// Deploys a given contract, and initilizes it with the arguments.
+    ///
+    pub fun deployContract(
+        name: String,
+        path: String,
+        arguments: [AnyStruct]
+    ): Error? {
+        return self.backend.deployContract(
+            name: name,
+            path: path,
+            arguments: arguments
+        )
+    }
 
-            self.commitBlock()
-            return results
+    /// Set the configuration to be used by the blockchain.
+    /// Overrides any existing configuration.
+    ///
+    pub fun useConfiguration(_ configuration: Configuration) {
+        self.backend.useConfiguration(configuration)
+    }
+
+    /// Returns all the logs from the blockchain, up to the calling point.
+    ///
+    pub fun logs(): [String] {
+        return self.backend.logs()
+    }
+
+    /// Returns the service account of the blockchain. Can be used to sign
+    /// transactions with this account.
+    ///
+    pub fun serviceAccount(): Account {
+        return self.backend.serviceAccount()
+    }
+
+    /// Returns all events emitted from the blockchain.
+    ///
+    pub fun events(): [AnyStruct] {
+        return self.backend.events(nil)
+    }
+
+    /// Returns all events emitted from the blockchain,
+    /// filtered by type.
+    ///
+    pub fun eventsOfType(_ type: Type): [AnyStruct] {
+        return self.backend.events(type)
+    }
+
+    /// Resets the state of the blockchain to the given height.
+    ///
+    pub fun reset(to height: UInt64) {
+        self.backend.reset(to: height)
+    }
+
+    /// Moves the time of the blockchain by the given delta,
+    /// which should be passed in the form of seconds.
+    ///
+    pub fun moveTime(by delta: Fix64) {
+        self.backend.moveTime(by: delta)
+    }
+
+    /// Creates a snapshot of the blockchain, at the
+    /// current ledger state, with the given name.
+    ///
+    access(all)
+    fun createSnapshot(name: String) {
+        let err = self.backend.createSnapshot(name: name)
+        if err != nil {
+            panic(err!.message)
         }
+    }
 
-        /// Deploys a given contract, and initilizes it with the arguments.
-        ///
-        pub fun deployContract(
-            name: String,
-            path: String,
-            arguments: [AnyStruct]
-        ): Error? {
-            return self.backend.deployContract(
-                name: name,
-                path: path,
-                arguments: arguments
-            )
-        }
-
-        /// Set the configuration to be used by the blockchain.
-        /// Overrides any existing configuration.
-        ///
-        pub fun useConfiguration(_ configuration: Configuration) {
-            self.backend.useConfiguration(configuration)
-        }
-
-        /// Returns all the logs from the blockchain, up to the calling point.
-        ///
-        pub fun logs(): [String] {
-            return self.backend.logs()
-        }
-
-        /// Returns the service account of the blockchain. Can be used to sign
-        /// transactions with this account.
-        ///
-        pub fun serviceAccount(): Account {
-            return self.backend.serviceAccount()
-        }
-
-        /// Returns all events emitted from the blockchain.
-        ///
-        pub fun events(): [AnyStruct] {
-            return self.backend.events(nil)
-        }
-
-        /// Returns all events emitted from the blockchain,
-        /// filtered by type.
-        ///
-        pub fun eventsOfType(_ type: Type): [AnyStruct] {
-            return self.backend.events(type)
-        }
-
-        /// Resets the state of the blockchain to the given height.
-        ///
-        pub fun reset(to height: UInt64) {
-            self.backend.reset(to: height)
-        }
-
-        /// Moves the time of the blockchain by the given delta,
-        /// which should be passed in the form of seconds.
-        ///
-        pub fun moveTime(by delta: Fix64) {
-            self.backend.moveTime(by: delta)
-        }
-
-        /// Creates a snapshot of the blockchain, at the
-        /// current ledger state, with the given name.
-        ///
-        access(all)
-        fun createSnapshot(name: String) {
-            let err = self.backend.createSnapshot(name: name)
-            if err != nil {
-                panic(err!.message)
-            }
-        }
-
-        /// Loads a snapshot of the blockchain, with the
-        /// given name, and updates the current ledger
-        /// state.
-        ///
-        access(all)
-        fun loadSnapshot(name: String) {
-            let err = self.backend.loadSnapshot(name: name)
-            if err != nil {
-                panic(err!.message)
-            }
+    /// Loads a snapshot of the blockchain, with the
+    /// given name, and updates the current ledger
+    /// state.
+    ///
+    access(all)
+    fun loadSnapshot(name: String) {
+        let err = self.backend.loadSnapshot(name: name)
+        if err != nil {
+            panic(err!.message)
         }
     }
 
