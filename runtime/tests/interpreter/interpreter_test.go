@@ -6495,10 +6495,6 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
           init(bar: Int) {
               self.bar = bar
           }
-
-          destroy() {
-              destroys = destroys + 1
-          }
       }
 
       fun test(): Int {
@@ -6528,12 +6524,7 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 		value,
 	)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("destroys").GetValue(),
-	)
+	// DestructorTODO: replace with test for destruction event
 }
 
 func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
@@ -6548,10 +6539,6 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 
           init(bar: Int) {
               self.bar = bar
-          }
-
-          destroy() {
-              destroys = destroys + 1
           }
       }
 
@@ -6573,12 +6560,7 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("destroys").GetValue(),
-	)
+	// DestructorTODO: replace with test for destruction event
 }
 
 func TestInterpretClosure(t *testing.T) {
@@ -6815,11 +6797,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
        var ranDestructor = false
 
-       resource R {
-           destroy() {
-               ranDestructor = true
-           }
-       }
+       resource R { }
 
        fun test() {
            let r <- create R()
@@ -6837,12 +6815,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.TrueValue,
-		inter.Globals.Get("ranDestructor").GetValue(),
-	)
+	// DestructorTODO: replace with test for destruction event
 }
 
 func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
@@ -6850,25 +6823,13 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      var ranDestructorA = false
-      var ranDestructorB = false
-
-      resource B {
-          destroy() {
-              ranDestructorB = true
-          }
-      }
+      resource B {}
 
       resource A {
           let b: @B
 
           init(b: @B) {
               self.b <- b
-          }
-
-          destroy() {
-              ranDestructorA = true
-              destroy self.b
           }
       }
 
@@ -6879,36 +6840,10 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
       }
     `)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.FalseValue,
-		inter.Globals.Get("ranDestructorA").GetValue(),
-	)
-
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.FalseValue,
-		inter.Globals.Get("ranDestructorB").GetValue(),
-	)
-
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.TrueValue,
-		inter.Globals.Get("ranDestructorA").GetValue(),
-	)
-
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.TrueValue,
-		inter.Globals.Get("ranDestructorB").GetValue(),
-	)
+	// DestructorTODO: replace with test for destruction event of both A and B
 }
 
 func TestInterpretResourceDestroyArray(t *testing.T) {
@@ -6916,13 +6851,7 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      var destructionCount = 0
-
-      resource R {
-          destroy() {
-              destructionCount = destructionCount + 1
-          }
-      }
+      resource R {}
 
       fun test() {
           let rs <- [<-create R(), <-create R()]
@@ -6930,22 +6859,10 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
       }
     `)
 
-	RequireValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals.Get("destructionCount").GetValue(),
-	)
-
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("destructionCount").GetValue(),
-	)
+	// DestructorTODO: replace with test for destruction event emitted twice
 }
 
 func TestInterpretResourceDestroyDictionary(t *testing.T) {
@@ -6953,13 +6870,7 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      var destructionCount = 0
-
-      resource R {
-          destroy() {
-              destructionCount = destructionCount + 1
-          }
-      }
+	  resource R { }
 
       fun test() {
           let rs <- {"r1": <-create R(), "r2": <-create R()}
@@ -6967,22 +6878,10 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
       }
     `)
 
-	RequireValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals.Get("destructionCount").GetValue(),
-	)
-
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(2),
-		inter.Globals.Get("destructionCount").GetValue(),
-	)
+	// DestructorTODO: replace with test for destruction event emitted twice
 }
 
 func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
@@ -6990,13 +6889,7 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      var destructionCount = 0
-
-      resource R {
-          destroy() {
-              destructionCount = destructionCount + 1
-          }
-      }
+      resource R { }
 
       fun test() {
           let maybeR: @R? <- create R()
@@ -7004,22 +6897,10 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
       }
     `)
 
-	RequireValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals.Get("destructionCount").GetValue(),
-	)
-
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(1),
-		inter.Globals.Get("destructionCount").GetValue(),
-	)
+	// DestructorTODO: replace with test for destruction event
 }
 
 func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
@@ -7027,13 +6908,7 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      var destructionCount = 0
-
-      resource R {
-          destroy() {
-              destructionCount = destructionCount + 1
-          }
-      }
+      resource R {}
 
       fun test() {
           let maybeR: @R? <- nil
@@ -7041,57 +6916,10 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
       }
     `)
 
-	RequireValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals.Get("destructionCount").GetValue(),
-	)
-
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewUnmeteredIntValueFromInt64(0),
-		inter.Globals.Get("destructionCount").GetValue(),
-	)
-}
-
-// TestInterpretResourceDestroyExpressionResourceInterfaceCondition tests that
-// the resource interface's destructor is called, even if the conforming resource
-// does not have an destructor
-func TestInterpretResourceDestroyExpressionResourceInterfaceCondition(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      resource interface I {
-          destroy() {
-              pre { false }
-          }
-      }
-
-      resource R: I {}
-
-      fun test() {
-          let r <- create R()
-          destroy r
-      }
-    `)
-
-	_, err := inter.Invoke("test")
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	interpreterErr := err.(interpreter.Error)
-
-	require.IsType(t,
-		interpreter.ConditionError{},
-		interpreterErr.Err,
-	)
+	// DestructorTODO: replace with test for destruction event not emitted
 }
 
 // TestInterpretInterfaceInitializer tests that the interface's initializer
@@ -9189,10 +9017,6 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
              init() {
                  self.x <-! create X()
              }
-
-             destroy() {
-                 destroy self.x
-             }
          }
 
          fun test() {
@@ -9538,11 +9362,6 @@ func TestInterpretNestedDestroy(t *testing.T) {
               init(_ id: Int){
                   self.id = id
               }
-
-              destroy(){
-                  log("destroying B with id:")
-                  log(self.id)
-              }
           }
 
           resource A {
@@ -9556,12 +9375,6 @@ func TestInterpretNestedDestroy(t *testing.T) {
 
               fun add(_ b: @B){
                   self.bs.append(<-b)
-              }
-
-              destroy() {
-                  log("destroying A with id:")
-                  log(self.id)
-                  destroy self.bs
               }
           }
 
@@ -9596,19 +9409,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 		value,
 	)
 
-	assert.Equal(t,
-		[]string{
-			`"destroying A with id:"`,
-			"1",
-			`"destroying B with id:"`,
-			"2",
-			`"destroying B with id:"`,
-			"3",
-			`"destroying B with id:"`,
-			"4",
-		},
-		logs,
-	)
+	// DestructorTODO: replace with test for destruction event for A and B
 }
 
 // TestInterpretInternalAssignment ensures that a modification of an "internal" value

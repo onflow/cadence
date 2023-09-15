@@ -176,7 +176,6 @@ type CompositeTypeHandlerFunc func(location common.Location, typeID TypeID) *sem
 // these are the "leaf" nodes in the call chain, and are functions.
 type CompositeTypeCode struct {
 	CompositeFunctions map[string]FunctionValue
-	DestructorFunction FunctionValue
 }
 
 type FunctionWrapper = func(inner FunctionValue) FunctionValue
@@ -1129,12 +1128,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	}
 
-	var destructorFunction FunctionValue
-	compositeDestructorFunction := interpreter.compositeDestructorFunction(declaration, lexicalScope)
-	if compositeDestructorFunction != nil {
-		destructorFunction = compositeDestructorFunction
-	}
-
 	functions := interpreter.compositeFunctions(declaration, lexicalScope)
 
 	wrapFunctions := func(code WrapperCode) {
@@ -1182,7 +1175,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	}
 
 	interpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
-		DestructorFunction: destructorFunction,
 		CompositeFunctions: functions,
 	}
 
@@ -1270,7 +1262,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				value.InjectedFields = injectedFields
 				value.Functions = functions
-				value.Destructor = destructorFunction
 
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {
@@ -1523,23 +1514,6 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 		preConditions,
 		statements,
 		rewrittenPostConditions,
-	)
-}
-
-func (interpreter *Interpreter) compositeDestructorFunction(
-	compositeDeclaration ast.CompositeLikeDeclaration,
-	lexicalScope *VariableActivation,
-) *InterpretedFunctionValue {
-
-	return NewInterpretedFunctionValue(
-		interpreter,
-		nil,
-		emptyImpureFunctionType,
-		lexicalScope,
-		[]ast.Statement{},
-		ast.Conditions{},
-		[]ast.Statement{},
-		ast.Conditions{},
 	)
 }
 

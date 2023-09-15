@@ -45,11 +45,6 @@ const resourceDictionaryContract = `
          access(all) fun increment() {
              self.value = self.value + 1
          }
-
-         destroy() {
-             log("destroying R")
-             log(self.value)
-         }
      }
 
      access(all) fun createR(_ value: Int): @R {
@@ -77,10 +72,6 @@ const resourceDictionaryContract = `
 		 access(all) fun forceInsert(_ id: String, _ r: @R) {
 			self.rs[id] <-! r
 		 }
-
-         destroy() {
-             destroy self.rs
-         }
      }
 
      access(all) fun createC(): @C {
@@ -277,12 +268,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"3",
-			`"destroying R"`,
-			"3",
 			"4",
 		},
 		loggedMessages,
 	)
+
+	// DestructorTODO: add test for destruction event of R
 
 	// Remove the key
 
@@ -316,12 +307,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"4",
-			`"destroying R"`,
-			"4",
 			"nil",
 		},
 		loggedMessages,
 	)
+
+	// DestructorTODO: add test for destruction event of R
 
 	// Read the deleted key
 
@@ -376,11 +367,11 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"1",
-			`"destroying R"`,
-			"1",
 		},
 		loggedMessages,
 	)
+
+	// DestructorTODO: add test for destruction event of R
 }
 
 func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
@@ -426,10 +417,6 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 			 access(all) fun forceInsert(_ id: String, _ r: @R) {
 				self.rs[id] <-! r
 			 }
-
-             destroy() {
-                 destroy self.rs
-             }
          }
 
          access(all) fun createC2(): @C2 {
@@ -446,10 +433,6 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
              init() {
                  self.c2s <- {}
-             }
-
-             destroy() {
-                 destroy self.c2s
              }
          }
 
@@ -624,10 +607,6 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
              init() {
                  self.rs <- {}
-             }
-
-             destroy() {
-                 destroy self.rs
              }
          }
 
@@ -991,15 +970,7 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		[]string{
-			`"destroying R"`,
-			"2",
-			`"destroying R"`,
-			"1",
-		},
-		loggedMessages,
-	)
+	// DestructorTODO: replace with test for destruction event of R twice
 }
 
 func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {

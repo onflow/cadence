@@ -1207,8 +1207,6 @@ func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpr
 func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyExpression) Value {
 	value := interpreter.evalExpression(expression.Expression)
 
-	interpreter.invalidateResource(value)
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: expression,

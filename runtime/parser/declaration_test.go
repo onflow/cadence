@@ -4065,12 +4065,11 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(`access(all) attachment E for S {
 			require entitlement 
-			destroy() {}
 		}`)
 		utils.AssertEqualWithDiff(t, []error{
 			&SyntaxError{
-				Pos:     ast.Position{Line: 3, Column: 10, Offset: 67},
-				Message: "unexpected '('",
+				Pos:     ast.Position{Line: 3, Column: 3, Offset: 60},
+				Message: "unexpected token in type: '}'",
 			},
 		}, errs)
 	})
@@ -4081,7 +4080,6 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(`access(all) attachment E for S {
 			require X 
-			destroy() {}
 		}`)
 		utils.AssertEqualWithDiff(t, []error{
 			&SyntaxError{
@@ -4097,7 +4095,6 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(`access(all) attachment E for S {
 			require entitlement [X]
-			destroy() {}
 		}`)
 		utils.AssertEqualWithDiff(t, []error{
 			&SyntaxError{
@@ -7771,7 +7768,6 @@ func TestParseInvalidCompositeFunctionNames(t *testing.T) {
 						`
                           %[1]s %[2]s Test %[4]s {
                               fun init() %[3]s
-                              fun destroy() %[3]s
                           }
                         `,
 						kind.Keyword(),
