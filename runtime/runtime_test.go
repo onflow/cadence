@@ -9453,5 +9453,8 @@ func TestRuntimeInvalidWrappedPrivateCapability(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.Error(t, err)
+	RequireError(t, err)
+
+	var argumentNotImportableErr *ArgumentNotImportableError
+	require.ErrorAs(t, err, &argumentNotImportableErr)
 }
