@@ -402,10 +402,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		if staticType != nil {
 			typeID = string(staticType.ID())
 		}
-		memoryUsage := common.MemoryUsage{
-			Kind:   common.MemoryKindStringValue,
-			Amount: uint64(len(typeID)),
-		}
+		memoryUsage := common.NewStringMemoryUsage(len(typeID))
 		return NewStringValue(interpreter, memoryUsage, func() string {
 			return typeID
 		})
