@@ -326,5 +326,4 @@ var StringTypeJoinFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(StringType),
-	Arity:                &Arity{Min: 2, Max: 2},
 }
