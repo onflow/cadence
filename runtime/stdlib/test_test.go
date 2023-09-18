@@ -2532,6 +2532,51 @@ func TestBlockchain(t *testing.T) {
 	// TODO: Add more tests for the remaining functions.
 }
 
+func TestBlockchainAccount(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("create account", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all) fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+                assert(account.address == 0x0100000000000000)
+            }
+		`
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					createAccount: func() (*Account, error) {
+						return &Account{
+							PublicKey: &PublicKey{
+								PublicKey: []byte{1, 2, 3},
+								SignAlgo:  sema.SignatureAlgorithmECDSA_P256,
+							},
+							Address: common.Address{1},
+						}, nil
+					},
+
+					stdlibHandler: func() StandardLibraryHandler {
+						return testStandardLibraryHandler{}
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}
+
 type mockedTestFramework struct {
 	newEmulatorBackend func() Blockchain
 	readFile           func(s string) (string, error)
@@ -2555,6 +2600,7 @@ func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
 	return m.readFile(fileName)
 }
 
+// mockedBlockchain is the implementation of `Blockchain` for testing purposes.
 type mockedBlockchain struct {
 	runScript          func(inter *interpreter.Interpreter, code string, arguments []interpreter.Value)
 	createAccount      func() (*Account, error)
@@ -2712,4 +2758,159 @@ func (m mockedBlockchain) LoadSnapshot(name string) error {
 	}
 
 	return m.loadSnapshot(name)
+}
+
+// testStandardLibraryHandler is the implementation of `StandardLibraryHandler` for testing purposes.
+type testStandardLibraryHandler struct {
+}
+
+var _ StandardLibraryHandler = testStandardLibraryHandler{}
+
+func (t testStandardLibraryHandler) ProgramLog(message string, locationRange interpreter.LocationRange) error {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) ReadRandom(bytes []byte) error {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GetBlockAtHeight(height uint64) (block Block, exists bool, err error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GetCurrentBlockHeight() (uint64, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) EmitEvent(
+	inter *interpreter.Interpreter,
+	eventType *sema.CompositeType,
+	values []interpreter.Value,
+	locationRange interpreter.LocationRange,
+) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GenerateAccountID(address common.Address) (uint64, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GetAccountBalance(address common.Address) (uint64, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GetAccountAvailableBalance(address common.Address) (uint64, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) CommitStorageTemporarily(inter *interpreter.Interpreter) error {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GetStorageUsed(address common.Address) (uint64, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GetStorageCapacity(address common.Address) (uint64, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) ValidatePublicKey(key *PublicKey) error {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) VerifySignature(
+	signature []byte,
+	tag string,
+	signedData []byte,
+	publicKey []byte,
+	signatureAlgorithm sema.SignatureAlgorithm,
+	hashAlgorithm sema.HashAlgorithm,
+) (bool, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) BLSVerifyPOP(publicKey *PublicKey, signature []byte) (bool, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) Hash(data []byte, tag string, algorithm sema.HashAlgorithm) ([]byte, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GetAccountKey(address common.Address, index int) (*AccountKey, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) AccountKeysCount(address common.Address) (uint64, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) AddAccountKey(
+	address common.Address,
+	key *PublicKey,
+	algo sema.HashAlgorithm,
+	weight int,
+) (*AccountKey, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) RevokeAccountKey(address common.Address, index int) (*AccountKey, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GetAccountContractCode(location common.AddressLocation) ([]byte, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) ParseAndCheckProgram(
+	code []byte,
+	location common.Location,
+	getAndSetProgram bool) (*interpreter.Program, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) UpdateAccountContractCode(location common.AddressLocation, code []byte) error {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) RecordContractUpdate(location common.AddressLocation, value *interpreter.CompositeValue) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) InterpretContract(
+	location common.AddressLocation,
+	program *interpreter.Program,
+	name string,
+	invocation DeployedContractConstructorInvocation,
+) (*interpreter.CompositeValue, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) RemoveAccountContractCode(location common.AddressLocation) error {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) RecordContractRemoval(location common.AddressLocation) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) GetAccountContractNames(address common.Address) ([]string, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) CreateAccount(payer common.Address) (address common.Address, err error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) BLSAggregatePublicKeys(publicKeys []*PublicKey) (*PublicKey, error) {
+	panic("not implemented")
+}
+
+func (t testStandardLibraryHandler) BLSAggregateSignatures(signatures [][]byte) ([]byte, error) {
+	panic("not implemented")
 }
