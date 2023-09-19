@@ -37,6 +37,11 @@ const StringTypeFromCharactersFunctionDocString = `
 Returns a string from the given array of characters
 `
 
+const StringTypeJoinFunctionName = "join"
+const StringTypeJoinFunctionDocString = `
+Returns a string after joining the array of strings with the provided separator.
+`
+
 // StringType represents the string type
 var StringType = &SimpleType{
 	Name:          "String",
@@ -252,6 +257,13 @@ var StringFunctionType = func() *FunctionType {
 		StringTypeFromCharactersFunctionDocString,
 	))
 
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		StringTypeJoinFunctionName,
+		StringTypeJoinFunctionType,
+		StringTypeJoinFunctionDocString,
+	))
+
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
@@ -301,6 +313,24 @@ var StringTypeFromCharactersFunctionType = NewSimpleFunctionType(
 			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
 				Type: CharacterType,
 			}),
+		},
+	},
+	StringTypeAnnotation,
+)
+
+var StringTypeJoinFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "strings",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+				Type: StringType,
+			}),
+		},
+		{
+			Identifier:     "separator",
+			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
 	StringTypeAnnotation,

@@ -462,3 +462,40 @@ func TestInterpretCompareCharacters(t *testing.T) {
 		inter.Globals.Get("z").GetValue(),
 	)
 }
+
+func TestInterpretStringJoin(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		fun test(): String {
+			return String.join(["👪", "❤️"], separator: "//")
+		}
+
+		fun testEmptyArray(): String {
+			return String.join([], separator: "//")
+		}
+
+		fun testSingletonArray(): String {
+			return String.join(["pqrS"], separator: "//")
+		}
+	`)
+
+	testCase := func(t *testing.T, funcName string, expected *interpreter.StringValue) {
+		t.Run(funcName, func(t *testing.T) {
+			result, err := inter.Invoke(funcName)
+			require.NoError(t, err)
+
+			RequireValuesEqual(
+				t,
+				inter,
+				expected,
+				result,
+			)
+		})
+	}
+
+	testCase(t, "test", interpreter.NewUnmeteredStringValue("👪//❤️"))
+	testCase(t, "testEmptyArray", interpreter.NewUnmeteredStringValue(""))
+	testCase(t, "testSingletonArray", interpreter.NewUnmeteredStringValue("pqrS"))
+}
