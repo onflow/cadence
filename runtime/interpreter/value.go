@@ -15356,16 +15356,22 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	v.ForEachField(interpreter, func(_ string, value Value) {
+	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
 		value.Accept(interpreter, visitor)
+
+		// continue iteration
+		return true
 	})
 }
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed field or functions!
 func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	v.ForEachField(interpreter, func(_ string, value Value) {
+	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
 		walkChild(value)
+
+		// continue iteration
+		return true
 	})
 }
 
@@ -15384,9 +15390,27 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 }
 
 func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
+	// Check type is importable
 	staticType := v.StaticType(inter)
 	semaType := inter.MustConvertStaticToSemaType(staticType)
-	return semaType.IsImportable(map[*sema.Member]bool{})
+	if !semaType.IsImportable(map[*sema.Member]bool{}) {
+		return false
+	}
+
+	// Check all field values are importable
+	importable := true
+	v.ForEachField(inter, func(_ string, value Value) (resume bool) {
+		if !value.IsImportable(inter) {
+			importable = false
+			// stop iteration
+			return false
+		}
+
+		// continue iteration
+		return true
+	})
+
+	return importable
 }
 
 func (v *CompositeValue) IsDestroyed() bool {
@@ -16414,14 +16438,17 @@ func (v *CompositeValue) GetOwner() common.Address {
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
-func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName string, fieldValue Value)) {
+func (v *CompositeValue) ForEachField(
+	gauge common.MemoryGauge,
+	f func(fieldName string, fieldValue Value) (resume bool),
+) {
 
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
-		f(
+		resume = f(
 			string(key.(StringAtreeValue)),
 			MustConvertStoredValue(gauge, value),
 		)
-		return true, nil
+		return
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))

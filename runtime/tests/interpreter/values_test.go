@@ -931,11 +931,14 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 	t.Run("iterate", func(t *testing.T) {
 		fieldCount := 0
-		testComposite.ForEachField(inter, func(name string, value interpreter.Value) {
+		testComposite.ForEachField(inter, func(name string, value interpreter.Value) (resume bool) {
 			orgValue, ok := orgFields[name]
 			require.True(t, ok)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 			fieldCount++
+
+			// continue iteration
+			return true
 		})
 
 		assert.Equal(t, len(orgFields), fieldCount)
