@@ -1,7 +1,7 @@
 name: Requesting a Feature or Improvement
 description: For feature requests. Please search for existing issues first. Also see CONTRIBUTING.
 labels: [Feature, Feedback]
-assignees: turbolent
+assignees: @onflow/cadence
 body:
   - type: markdown
     attributes:
