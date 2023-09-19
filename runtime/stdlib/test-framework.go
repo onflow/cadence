@@ -64,8 +64,6 @@ type Blockchain interface {
 		arguments []interpreter.Value,
 	) error
 
-	UseConfiguration(configuration *Configuration)
-
 	StandardLibraryHandler() StandardLibraryHandler
 
 	Logs() []string
@@ -98,8 +96,4 @@ type TransactionResult struct {
 type Account struct {
 	PublicKey *PublicKey
 	Address   common.Address
-}
-
-type Configuration struct {
-	Addresses map[string]common.Address
 }

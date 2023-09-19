@@ -91,13 +91,6 @@ pub contract Test {
         )
     }
 
-    /// Set the configuration to be used by the blockchain.
-    /// Overrides any existing configuration.
-    ///
-    pub fun useConfiguration(_ configuration: Configuration) {
-        self.backend.useConfiguration(configuration)
-    }
-
     /// Returns all the logs from the blockchain, up to the calling point.
     ///
     pub fun logs(): [String] {
@@ -323,11 +316,6 @@ pub contract Test {
             path: String,
             arguments: [AnyStruct]
         ): Error?
-
-        /// Set the configuration to be used by the blockchain.
-        /// Overrides any existing configuration.
-        ///
-        pub fun useConfiguration(_ configuration: Configuration)
 
         /// Returns all the logs from the blockchain, up to the calling point.
         ///

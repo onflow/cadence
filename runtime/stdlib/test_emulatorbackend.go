@@ -43,7 +43,6 @@ type testEmulatorBackendType struct {
 	executeNextTransactionFunctionType *sema.FunctionType
 	commitBlockFunctionType            *sema.FunctionType
 	deployContractFunctionType         *sema.FunctionType
-	useConfigFunctionType              *sema.FunctionType
 	logsFunctionType                   *sema.FunctionType
 	serviceAccountFunctionType         *sema.FunctionType
 	eventsFunctionType                 *sema.FunctionType
@@ -85,11 +84,6 @@ func newTestEmulatorBackendType(
 	deployContractFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeDeployContractFunctionName,
-	)
-
-	useConfigFunctionType := interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		testEmulatorBackendTypeUseConfigFunctionName,
 	)
 
 	logsFunctionType := interfaceFunctionType(
@@ -180,12 +174,6 @@ func newTestEmulatorBackendType(
 		),
 		sema.NewUnmeteredPublicFunctionMember(
 			compositeType,
-			testEmulatorBackendTypeUseConfigFunctionName,
-			useConfigFunctionType,
-			testEmulatorBackendTypeUseConfigFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			compositeType,
 			testEmulatorBackendTypeLogsFunctionName,
 			logsFunctionType,
 			testEmulatorBackendTypeLogsFunctionDocString,
@@ -245,7 +233,6 @@ func newTestEmulatorBackendType(
 		executeNextTransactionFunctionType: executeNextTransactionFunctionType,
 		commitBlockFunctionType:            commitBlockFunctionType,
 		deployContractFunctionType:         deployContractFunctionType,
-		useConfigFunctionType:              useConfigFunctionType,
 		logsFunctionType:                   logsFunctionType,
 		serviceAccountFunctionType:         serviceAccountFunctionType,
 		eventsFunctionType:                 eventsFunctionType,
@@ -589,65 +576,6 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 	)
 }
 
-// 'EmulatorBackend.useConfiguration' function
-
-const testEmulatorBackendTypeUseConfigFunctionName = "useConfiguration"
-
-const testEmulatorBackendTypeUseConfigFunctionDocString = `
-Set the configuration to be used by the blockchain.
-Overrides any existing configuration.
-`
-
-func (t *testEmulatorBackendType) newUseConfigFunction(
-	blockchain Blockchain,
-) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		t.useConfigFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-
-			// configurations
-			configsValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			addresses, ok := configsValue.GetMember(
-				inter,
-				invocation.LocationRange,
-				addressesFieldName,
-			).(*interpreter.DictionaryValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			mapping := make(map[string]common.Address, addresses.Count())
-
-			addresses.Iterate(inter, func(locationValue, addressValue interpreter.Value) bool {
-				location, ok := locationValue.(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				address, ok := addressValue.(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				mapping[location.Str] = common.Address(address)
-
-				return true
-			})
-
-			blockchain.UseConfiguration(&Configuration{
-				Addresses: mapping,
-			})
-
-			return interpreter.Void
-		},
-	)
-}
-
 // 'EmulatorBackend.logs' function
 
 const testEmulatorBackendTypeLogsFunctionName = "logs"
@@ -892,10 +820,6 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeDeployContractFunctionName,
 			Value: t.newDeployContractFunction(blockchain),
-		},
-		{
-			Name:  testEmulatorBackendTypeUseConfigFunctionName,
-			Value: t.newUseConfigFunction(blockchain),
 		},
 		{
 			Name:  testEmulatorBackendTypeLogsFunctionName,

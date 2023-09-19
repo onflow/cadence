@@ -2679,7 +2679,6 @@ type mockedBlockchain struct {
 	executeTransaction func() *stdlib.TransactionResult
 	commitBlock        func() error
 	deployContract     func(inter *interpreter.Interpreter, name string, path string, arguments []interpreter.Value) error
-	useConfiguration   func(configuration *stdlib.Configuration)
 	stdlibHandler      func() stdlib.StandardLibraryHandler
 	logs               func() []string
 	serviceAccount     func() (*stdlib.Account, error)
@@ -2761,14 +2760,6 @@ func (m mockedBlockchain) DeployContract(
 	}
 
 	return m.deployContract(inter, name, path, arguments)
-}
-
-func (m mockedBlockchain) UseConfiguration(configuration *stdlib.Configuration) {
-	if m.useConfiguration == nil {
-		panic("'UseConfiguration' is not implemented")
-	}
-
-	m.useConfiguration(configuration)
 }
 
 func (m mockedBlockchain) StandardLibraryHandler() stdlib.StandardLibraryHandler {
