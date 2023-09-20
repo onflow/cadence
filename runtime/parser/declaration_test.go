@@ -388,7 +388,7 @@ func TestParseParameterList(t *testing.T) {
 		return Parse(
 			nil,
 			[]byte(input),
-			parseParameterList,
+			func(p *parser) (*ast.ParameterList, error) { return parseParameterList(p, false) },
 			Config{},
 		)
 	}
@@ -2424,11 +2424,11 @@ func TestParseEvent(t *testing.T) {
 		)
 	})
 
-	t.Run("two parameters, private", func(t *testing.T) {
+	t.Run("default event", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations(" access(self) event E2 ( a : Int , b : String )")
+		result, errs := testParseDeclarations(` access(all) event ResourceDestroyed ( a : String = "foo")`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2458,70 +2458,53 @@ func TestParseEvent(t *testing.T) {
 														Column: 29,
 													},
 												},
+												DefaultArgument: &ast.StringExpression{
+													Value: "foo",
+													Range: ast.Range{
+														StartPos: ast.Position{
+															Offset: 52,
+															Line:   1,
+															Column: 52,
+														},
+														EndPos: ast.Position{
+															Offset: 56,
+															Line:   1,
+															Column: 56,
+														},
+													},
+												},
 												Identifier: ast.Identifier{
 													Identifier: "a",
 													Pos: ast.Position{
-														Offset: 25,
-														Line:   1,
-														Column: 25,
-													},
-												},
-												StartPos: ast.Position{
-													Offset: 25,
-													Line:   1,
-													Column: 25,
-												},
-											},
-											{
-												TypeAnnotation: &ast.TypeAnnotation{
-													Type: &ast.NominalType{
-														Identifier: ast.Identifier{
-															Identifier: "String",
-															Pos: ast.Position{
-																Offset: 39,
-																Line:   1,
-																Column: 39,
-															},
-														},
-													},
-													StartPos: ast.Position{
 														Offset: 39,
 														Line:   1,
 														Column: 39,
 													},
 												},
-												Identifier: ast.Identifier{
-													Identifier: "b",
-													Pos: ast.Position{
-														Offset: 35,
-														Line:   1,
-														Column: 35,
-													},
-												},
 												StartPos: ast.Position{
-													Offset: 35,
+													Offset: 39,
 													Line:   1,
-													Column: 35,
+													Column: 39,
 												},
 											},
 										},
 										Range: ast.Range{
 											StartPos: ast.Position{
-												Offset: 23,
+												Offset: 37,
 												Line:   1,
-												Column: 23,
+												Column: 37,
 											},
 											EndPos: ast.Position{
-												Offset: 46,
+												Offset: 57,
 												Line:   1,
-												Column: 46,
+												Column: 57,
 											},
 										},
 									},
 									StartPos: ast.Position{
-										Offset: 23,
+										Offset: 37,
 										Line:   1,
-										Column: 23,
+										Column: 37,
 									},
 									Access: ast.AccessNotSpecified,
 								},
@@ -2530,11 +2513,11 @@ func TestParseEvent(t *testing.T) {
 						},
 					),
 					Identifier: ast.Identifier{
-						Identifier: "E2",
+						Identifier: "ResourceDestroyed",
 						Pos: ast.Position{
-							Offset: 20,
+							Offset: 19,
 							Line:   1,
-							Column: 20,
+							Column: 19,
 						},
 					},
 					Range: ast.Range{
@@ -2544,17 +2527,45 @@ func TestParseEvent(t *testing.T) {
 							Column: 1,
 						},
 						EndPos: ast.Position{
-							Offset: 46,
+							Offset: 57,
 							Line:   1,
-							Column: 46,
+							Column: 57,
 						},
 					},
-					Access:        ast.AccessSelf,
+					Access:        ast.AccessAll,
 					CompositeKind: common.CompositeKindEvent,
 				},
 			},
 			result,
 		)
+	})
+
+	t.Run("default event with no default arg", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) event ResourceDestroyed ( a : Int )")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 47, Offset: 47},
+				Message: "expected a default argument after type annotation, got ')'",
+			},
+		}, errs)
+	})
+
+	t.Run("non-default event with default arg", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) event Foo ( a : Int = 3)")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 33, Offset: 33},
+				Message: "expected comma or end of parameter list, got '='",
+			},
+		}, errs)
 	})
 
 	t.Run("invalid event name", func(t *testing.T) {

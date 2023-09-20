@@ -26,7 +26,7 @@ import (
 
 type Parameter struct {
 	TypeAnnotation  *TypeAnnotation
-	DefaultArgument *Expression
+	DefaultArgument Expression
 	Label           string
 	Identifier      Identifier
 	StartPos        Position `json:"-"`
@@ -37,7 +37,7 @@ func NewParameter(
 	label string,
 	identifier Identifier,
 	typeAnnotation *TypeAnnotation,
-	defaultArgument *Expression,
+	defaultArgument Expression,
 	startPos Position,
 ) *Parameter {
 	common.UseMemory(gauge, common.ParameterMemoryUsage)
@@ -68,6 +68,9 @@ func (p *Parameter) StartPosition() Position {
 }
 
 func (p *Parameter) EndPosition(memoryGauge common.MemoryGauge) Position {
+	if p.HasDefaultArgument() {
+		return p.DefaultArgument.EndPosition(memoryGauge)
+	}
 	return p.TypeAnnotation.EndPosition(memoryGauge)
 }
 
