@@ -1043,6 +1043,8 @@ var _ ValueIndexableValue = &StringValue{}
 var _ MemberAccessibleValue = &StringValue{}
 var _ IterableValue = &StringValue{}
 
+var VarSizedArrayOfStringType = NewVariableSizedStaticType(nil, PrimitiveStaticTypeString)
+
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
 		v.graphemes = uniseg.NewGraphemes(v.Str)
@@ -1342,6 +1344,15 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 				return v.ToLower(invocation.Interpreter)
 			},
 		)
+
+	case sema.StringTypeSplitFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.StringTypeSplitFunctionType,
+			func(invocation Invocation) Value {
+				return v.Split(invocation)
+			},
+		)
 	}
 
 	return nil
@@ -1392,6 +1403,54 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 		memoryUsage,
 		func() string {
 			return strings.ToLower(v.Str)
+		},
+	)
+}
+
+func (v *StringValue) Split(invocation Invocation) Value {
+	inter := invocation.Interpreter
+
+	separator, ok := invocation.Arguments[0].(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	split := strings.Split(v.Str, separator.Str)
+
+	var index int
+	count := len(split)
+
+	return NewArrayValueWithIterator(
+		inter,
+		VarSizedArrayOfStringType,
+		common.ZeroAddress,
+		uint64(count),
+		func() Value {
+			if index >= count {
+				return nil
+			}
+
+			str := split[index]
+			strValue := NewStringValue(
+				inter,
+				common.NewStringMemoryUsage(len(str)),
+				func() string {
+					return str
+				},
+			)
+
+			index++
+
+			value := strValue.Transfer(
+				inter,
+				invocation.LocationRange,
+				atree.Address(common.ZeroAddress),
+				true,
+				nil,
+				nil,
+			)
+
+			return value
 		},
 	)
 }
