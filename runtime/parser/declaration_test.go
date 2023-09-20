@@ -2424,6 +2424,139 @@ func TestParseEvent(t *testing.T) {
 		)
 	})
 
+	t.Run("two parameters, private", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(" access(self) event E2 ( a : Int , b : String )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												TypeAnnotation: &ast.TypeAnnotation{
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "Int",
+															Pos: ast.Position{
+																Offset: 29,
+																Line:   1,
+																Column: 29,
+															},
+														},
+													},
+													StartPos: ast.Position{
+														Offset: 29,
+														Line:   1,
+														Column: 29,
+													},
+												},
+												Identifier: ast.Identifier{
+													Identifier: "a",
+													Pos: ast.Position{
+														Offset: 25,
+														Line:   1,
+														Column: 25,
+													},
+												},
+												StartPos: ast.Position{
+													Offset: 25,
+													Line:   1,
+													Column: 25,
+												},
+											},
+											{
+												TypeAnnotation: &ast.TypeAnnotation{
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "String",
+															Pos: ast.Position{
+																Offset: 39,
+																Line:   1,
+																Column: 39,
+															},
+														},
+													},
+													StartPos: ast.Position{
+														Offset: 39,
+														Line:   1,
+														Column: 39,
+													},
+												},
+												Identifier: ast.Identifier{
+													Identifier: "b",
+													Pos: ast.Position{
+														Offset: 35,
+														Line:   1,
+														Column: 35,
+													},
+												},
+												StartPos: ast.Position{
+													Offset: 35,
+													Line:   1,
+													Column: 35,
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 23,
+												Line:   1,
+												Column: 23,
+											},
+											EndPos: ast.Position{
+												Offset: 46,
+												Line:   1,
+												Column: 46,
+											},
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 23,
+										Line:   1,
+										Column: 23,
+									},
+									Access: ast.AccessNotSpecified,
+								},
+								Kind: common.DeclarationKindInitializer,
+							},
+						},
+					),
+					Identifier: ast.Identifier{
+						Identifier: "E2",
+						Pos: ast.Position{
+							Offset: 20,
+							Line:   1,
+							Column: 20,
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 1,
+							Line:   1,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 46,
+							Line:   1,
+							Column: 46,
+						},
+					},
+					Access:        ast.AccessSelf,
+					CompositeKind: common.CompositeKindEvent,
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("default event", func(t *testing.T) {
 
 		t.Parallel()
