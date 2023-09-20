@@ -172,6 +172,7 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 		argumentLabel,
 		identifier,
 		typeAnnotation,
+		nil,
 		startPos,
 	), nil
 }

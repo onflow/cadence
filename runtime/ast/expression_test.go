@@ -4414,6 +4414,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
                             "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                             "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                         },
+						"DefaultArgument": null,
                         "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
                         "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                     }

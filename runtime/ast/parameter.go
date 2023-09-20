@@ -25,10 +25,11 @@ import (
 )
 
 type Parameter struct {
-	TypeAnnotation *TypeAnnotation
-	Label          string
-	Identifier     Identifier
-	StartPos       Position `json:"-"`
+	TypeAnnotation  *TypeAnnotation
+	DefaultArgument *Expression
+	Label           string
+	Identifier      Identifier
+	StartPos        Position `json:"-"`
 }
 
 func NewParameter(
@@ -36,14 +37,16 @@ func NewParameter(
 	label string,
 	identifier Identifier,
 	typeAnnotation *TypeAnnotation,
+	defaultArgument *Expression,
 	startPos Position,
 ) *Parameter {
 	common.UseMemory(gauge, common.ParameterMemoryUsage)
 	return &Parameter{
-		Label:          label,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		StartPos:       startPos,
+		Label:           label,
+		Identifier:      identifier,
+		TypeAnnotation:  typeAnnotation,
+		DefaultArgument: defaultArgument,
+		StartPos:        startPos,
 	}
 }
 
@@ -66,6 +69,10 @@ func (p *Parameter) StartPosition() Position {
 
 func (p *Parameter) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return p.TypeAnnotation.EndPosition(memoryGauge)
+}
+
+func (p *Parameter) HasDefaultArgument() bool {
+	return p.DefaultArgument != nil
 }
 
 func (p *Parameter) MarshalJSON() ([]byte, error) {
