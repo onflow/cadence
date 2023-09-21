@@ -210,7 +210,20 @@ func (v *AccountCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+type deletionCheckedFunctionValue struct {
+	FunctionValue
+}
+
+func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) (result Value) {
+	defer func() {
+		switch typedResult := result.(type) {
+		case deletionCheckedFunctionValue:
+			result = typedResult.FunctionValue
+		case FunctionValue:
+			panic(errors.NewUnexpectedError("functions need to check deletion. Use newHostFunctionValue"))
+		}
+	}()
+
 	// NOTE: check if controller is already deleted
 	v.checkDeleted()
 
@@ -233,7 +246,8 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 		}
 		return v.deleteFunction
 
-		// NOTE: when adding new functions, ensure checkDeleted is called!
+		// NOTE: when adding new functions, ensure checkDeleted is called,
+		// by e.g. using AccountCapabilityControllerValue.newHostFunction
 	}
 
 	return nil
@@ -292,16 +306,32 @@ func (v *AccountCapabilityControllerValue) checkDeleted() {
 	}
 }
 
+func (v *AccountCapabilityControllerValue) newHostFunctionValue(
+	gauge common.MemoryGauge,
+	funcType *sema.FunctionType,
+	f func(invocation Invocation) Value,
+) FunctionValue {
+	return deletionCheckedFunctionValue{
+		FunctionValue: NewHostFunctionValue(
+			gauge,
+			funcType,
+			func(invocation Invocation) Value {
+				// NOTE: check if controller is already deleted
+				v.checkDeleted()
+
+				return f(invocation)
+			},
+		),
+	}
+}
+
 func (v *AccountCapabilityControllerValue) newDeleteFunction(
 	inter *Interpreter,
-) *HostFunctionValue {
-	return NewHostFunctionValue(
+) FunctionValue {
+	return v.newHostFunctionValue(
 		inter,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
 		func(invocation Invocation) Value {
-			// NOTE: check if controller is already deleted
-			v.checkDeleted()
-
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
