@@ -4607,20 +4607,6 @@ func (t *CompositeType) RewriteWithIntersectionTypes() (result Type, rewritten b
 	return t, false
 }
 
-func (t *CompositeType) InterfaceType() *InterfaceType {
-	return &InterfaceType{
-		Location:              t.Location,
-		Identifier:            t.Identifier,
-		CompositeKind:         t.Kind,
-		Members:               t.Members,
-		Fields:                t.Fields,
-		InitializerParameters: t.ConstructorParameters,
-		InitializerPurity:     t.ConstructorPurity,
-		containerType:         t.containerType,
-		NestedTypes:           t.NestedTypes,
-	}
-}
-
 func (*CompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	// TODO:
 	return false
