@@ -1444,7 +1444,7 @@ func (v *StringValue) Split(invocation Invocation) Value {
 			value := strValue.Transfer(
 				inter,
 				invocation.LocationRange,
-				atree.Address(common.ZeroAddress),
+				atree.Address{},
 				true,
 				nil,
 				nil,
