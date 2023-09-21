@@ -1350,7 +1350,12 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			sema.StringTypeSplitFunctionType,
 			func(invocation Invocation) Value {
-				return v.Split(invocation)
+				separator, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Split(invocation.Interpreter, invocation.LocationRange, separator.Str)
 			},
 		)
 	}
@@ -1407,15 +1412,8 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 	)
 }
 
-func (v *StringValue) Split(invocation Invocation) Value {
-	inter := invocation.Interpreter
-
-	separator, ok := invocation.Arguments[0].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	split := strings.Split(v.Str, separator.Str)
+func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, separator string) Value {
+	split := strings.Split(v.Str, separator)
 
 	var index int
 	count := len(split)
@@ -1443,7 +1441,7 @@ func (v *StringValue) Split(invocation Invocation) Value {
 
 			value := strValue.Transfer(
 				inter,
-				invocation.LocationRange,
+				locationRange,
 				atree.Address{},
 				true,
 				nil,
