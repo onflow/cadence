@@ -4795,6 +4795,22 @@ func (t *CompositeType) InitializerFunctionType() *FunctionType {
 	}
 }
 
+func (t *CompositeType) InitializerEffectiveArgumentLabels() []string {
+	parameters := t.ConstructorParameters
+	if len(parameters) == 0 {
+		return nil
+	}
+
+	argumentLabels := make([]string, 0, len(parameters))
+	for _, parameter := range parameters {
+		argumentLabels = append(
+			argumentLabels,
+			parameter.EffectiveArgumentLabel(),
+		)
+	}
+	return argumentLabels
+}
+
 // Member
 
 type Member struct {
