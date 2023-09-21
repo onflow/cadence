@@ -55,7 +55,8 @@ func (s TestLedger) AllocateStorageIndex(owner []byte) (atree.StorageIndex, erro
 }
 
 func (s TestLedger) Dump() {
-	for key, data := range s.StoredValues {
+	// Only used for testing/debugging purposes
+	for key, data := range s.StoredValues { //nolint:maprange
 		fmt.Printf("%s:\n", strconv.Quote(key))
 		fmt.Printf("%s\n", hex.Dump(data))
 		println()

@@ -589,7 +589,8 @@ func (i *TestRuntimeInterface) onScriptExecutionStart() {
 
 func (i *TestRuntimeInterface) invalidateUpdatedPrograms() {
 	if i.updatedContractCode {
-		for location := range i.Programs {
+		// iteration order does not matter
+		for location := range i.Programs { //nolint:maprange
 			delete(i.Programs, location)
 		}
 		i.updatedContractCode = false
