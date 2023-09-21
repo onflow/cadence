@@ -267,6 +267,13 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 		)
 	}
 
+	if !compositeType.IsResourceType() && compositeType.DefaultDestroyEvent != nil {
+		checker.report(&DefaultDestroyEventInNonResourceError{
+			Kind:  declaration.DeclarationKind().Name(),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
+		})
+	}
+
 	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
@@ -492,13 +499,6 @@ func (checker *Checker) declareNestedDeclarations(
 			nestedDeclarationKind common.DeclarationKind,
 			identifier ast.Identifier,
 		) {
-			if nestedCompositeKind == common.CompositeKindEvent && identifier.Identifier == ast.ResourceDestructionDefaultEventName {
-				checker.report(&DefaultDestroyEventInNonResourceError{
-					Kind:  containerDeclarationKind.Name(),
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
-				})
-			}
-
 			if containerDeclarationKind.IsInterfaceDeclaration() && !nestedDeclarationKind.IsInterfaceDeclaration() {
 				switch nestedCompositeKind {
 				case common.CompositeKindEvent:
@@ -831,7 +831,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 			nestedCompositeDeclarationVariable :=
 				checker.valueActivations.Find(identifier.Identifier)
 
-			if identifier.Identifier == ast.ResourceDestructionDefaultEventName && compositeKind == common.CompositeKindResource {
+			if identifier.Identifier == ast.ResourceDestructionDefaultEventName {
 				// Find the default event's type declaration
 				defaultEventType :=
 					checker.typeActivations.Find(identifier.Identifier)

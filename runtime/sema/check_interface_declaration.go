@@ -134,6 +134,13 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		fieldPositionGetter,
 	)
 
+	if !interfaceType.IsResourceType() && interfaceType.DefaultDestroyEvent != nil {
+		checker.report(&DefaultDestroyEventInNonResourceError{
+			Kind:  declaration.DeclarationKind().Name(),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
+		})
+	}
+
 	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
@@ -432,7 +439,15 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 
 		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
-				checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
+				if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+					// Find the value declaration
+					nestedEvent :=
+						checker.typeActivations.Find(nestedCompositeDeclaration.Identifier.Identifier)
+					interfaceType.DefaultDestroyEvent = nestedEvent.Type.(*CompositeType)
+					// interfaceType.DefaultDestroyEvent =
+				} else {
+					checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
+				}
 			}
 		}
 	})()

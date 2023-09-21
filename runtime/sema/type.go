@@ -4620,6 +4620,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		InitializerPurity:     t.ConstructorPurity,
 		containerType:         t.containerType,
 		NestedTypes:           t.NestedTypes,
+		DefaultDestroyEvent:   t.DefaultDestroyEvent,
 	}
 }
 
@@ -5050,6 +5051,8 @@ type InterfaceType struct {
 	effectiveInterfaceConformances   []Conformance
 	effectiveInterfaceConformanceSet *InterfaceSet
 	supportedEntitlements            *EntitlementOrderedSet
+
+	DefaultDestroyEvent *CompositeType
 }
 
 var _ Type = &InterfaceType{}

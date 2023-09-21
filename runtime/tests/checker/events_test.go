@@ -490,27 +490,36 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheck(t, `
 			resource R {
 				event ResourceDestroyed()
 			}
         `)
 		require.NoError(t, err)
 
+		variable, exists := checker.Elaboration.GetGlobalType("R")
+		require.True(t, exists)
+
+		require.IsType(t, variable.Type, &sema.CompositeType{})
+		require.Equal(t, variable.Type.(*sema.CompositeType).DefaultDestroyEvent.Identifier, "ResourceDestroyed")
 	})
 
 	t.Run("allowed in resource interface", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
+		checker, err := ParseAndCheck(t, `
 			resource interface R {
 				event ResourceDestroyed()
 			}
         `)
-		errs := RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
 
-		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+		variable, exists := checker.Elaboration.GetGlobalType("R")
+		require.True(t, exists)
+
+		require.IsType(t, variable.Type, &sema.InterfaceType{})
+		require.Equal(t, variable.Type.(*sema.InterfaceType).DefaultDestroyEvent.Identifier, "ResourceDestroyed")
 	})
 
 	t.Run("fail in struct", func(t *testing.T) {
@@ -532,7 +541,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			struct R {
+			struct interface R {
 				event ResourceDestroyed()
 			}
         `)
