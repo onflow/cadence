@@ -78,18 +78,25 @@ func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor)
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
-func (v *SimpleCompositeValue) ForEachField(_ *Interpreter, f func(fieldName string, fieldValue Value)) {
+func (v *SimpleCompositeValue) ForEachField(
+	f func(fieldName string, fieldValue Value) (resume bool),
+) {
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
-		f(fieldName, fieldValue)
+		if !f(fieldName, fieldValue) {
+			break
+		}
 	}
 }
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
-func (v *SimpleCompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	v.ForEachField(interpreter, func(_ string, fieldValue Value) {
+func (v *SimpleCompositeValue) Walk(_ *Interpreter, walkChild func(Value)) {
+	v.ForEachField(func(_ string, fieldValue Value) (resume bool) {
 		walkChild(fieldValue)
+
+		// continue iteration
+		return true
 	})
 }
 
@@ -98,9 +105,27 @@ func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
 }
 
 func (v *SimpleCompositeValue) IsImportable(inter *Interpreter) bool {
+	// Check type is importable
 	staticType := v.StaticType(inter)
 	semaType := inter.MustConvertStaticToSemaType(staticType)
-	return semaType.IsImportable(map[*sema.Member]bool{})
+	if !semaType.IsImportable(map[*sema.Member]bool{}) {
+		return false
+	}
+
+	// Check all field values are importable
+	importable := true
+	v.ForEachField(func(_ string, value Value) (resume bool) {
+		if !value.IsImportable(inter) {
+			importable = false
+			// stop iteration
+			return false
+		}
+
+		// continue iteration
+		return true
+	})
+
+	return importable
 }
 
 func (v *SimpleCompositeValue) GetMember(

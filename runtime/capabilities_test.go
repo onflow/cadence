@@ -124,13 +124,16 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   let rAsSCap = self.account.capabilities.storage.issue<&S>(/storage/r)
                   self.account.capabilities.publish(rAsSCap, at: /public/rAsS)
 
-                  let noCap = self.account.capabilities.storage.issue<&R>(/storage/nonExistent)
-                  self.account.capabilities.publish(noCap, at: /public/nonExistent)
+                  let noCap = self.account.capabilities.storage.issue<&R>(/storage/nonExistentTarget)
+                  self.account.capabilities.publish(noCap, at: /public/nonExistentTarget)
               }
 
               access(all)
               fun testR() {
-                  let cap = self.account.capabilities.get<&R>(/public/r)!
+                  let path = /public/r
+                  let cap = self.account.capabilities.get<&R>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       cap.check(),
@@ -156,7 +159,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testRAsR2() {
-                  let cap = self.account.capabilities.get<&R2>(/public/rAsR2)!
+                  let path = /public/rAsR2
+                  let cap = self.account.capabilities.get<&R2>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       !cap.check(),
@@ -176,7 +182,33 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testRAsS() {
-                  let cap = self.account.capabilities.get<&S>(/public/rAsS)!
+                  let path = /public/rAsS
+                  let cap = self.account.capabilities.get<&S>(path)!
+
+                  assert(self.account.capabilities.exists(path))
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
+              }
+
+              access(all)
+              fun testNonExistentTarget() {
+                  let path = /public/nonExistentTarget
+                  let cap = self.account.capabilities.get<&R>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       !cap.check(),
@@ -196,22 +228,9 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testNonExistent() {
-                  let cap = self.account.capabilities.get<&R>(/public/nonExistent)!
-
-                  assert(
-                      !cap.check(),
-                      message: "invalid check"
-                  )
-
-                  assert(
-                      cap.address == 0x1,
-                      message: "invalid address"
-                  )
-
-                  assert(
-                      cap.borrow() == nil,
-                      message: "invalid borrow"
-                  )
+                  let path = /public/nonExistent
+                  assert(self.account.capabilities.get<&AnyResource>(path) == nil)
+                  assert(!self.account.capabilities.exists(path))
               }
 
               access(all)
@@ -271,6 +290,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 		t.Run("testRAsS", func(t *testing.T) {
 			_, err := invoke("testRAsS")
+			require.NoError(t, err)
+		})
+
+		t.Run("testNonExistentTarget", func(t *testing.T) {
+			_, err := invoke("testNonExistentTarget")
 			require.NoError(t, err)
 		})
 
@@ -352,13 +376,16 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   let sAsRCap = self.account.capabilities.storage.issue<&R>(/storage/s)
                   self.account.capabilities.publish(sAsRCap, at: /public/sAsR)
 
-                  let noCap = self.account.capabilities.storage.issue<&S>(/storage/nonExistent)
-                  self.account.capabilities.publish(noCap, at: /public/nonExistent)
+                  let noCap = self.account.capabilities.storage.issue<&S>(/storage/nonExistentTarget)
+                  self.account.capabilities.publish(noCap, at: /public/nonExistentTarget)
               }
 
               access(all)
               fun testS() {
-                  let cap = self.account.capabilities.get<&S>(/public/s)!
+                  let path = /public/s
+                  let cap = self.account.capabilities.get<&S>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                        cap.check(),
@@ -384,7 +411,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testSAsS2() {
-                  let cap = self.account.capabilities.get<&S2>(/public/sAsS2)!
+                  let path = /public/sAsS2
+                  let cap = self.account.capabilities.get<&S2>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       !cap.check(),
@@ -404,7 +434,33 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testSAsR() {
-                  let cap = self.account.capabilities.get<&R>(/public/sAsR)!
+                  let path = /public/sAsR
+                  let cap = self.account.capabilities.get<&R>(path)!
+
+                  assert(self.account.capabilities.exists(path))
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
+              }
+
+              access(all)
+              fun testNonExistentTarget() {
+                  let path = /public/nonExistentTarget
+                  let cap = self.account.capabilities.get<&S>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       !cap.check(),
@@ -424,22 +480,9 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testNonExistent() {
-                  let cap = self.account.capabilities.get<&S>(/public/nonExistent)!
-
-                  assert(
-                      !cap.check(),
-                      message: "invalid check"
-                  )
-
-                  assert(
-                      cap.address == 0x1,
-                      message: "invalid address"
-                  )
-
-                  assert(
-                      cap.borrow() == nil,
-                      message: "invalid borrow"
-                  )
+                  let path = /public/nonExistent
+                  assert(self.account.capabilities.get<&AnyStruct>(path) == nil)
+                  assert(!self.account.capabilities.exists(path))
               }
 
               access(all)
@@ -498,6 +541,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 		t.Run("testSAsR", func(t *testing.T) {
 			_, err := invoke("testSAsR")
+			require.NoError(t, err)
+		})
+
+		t.Run("testNonExistentTarget", func(t *testing.T) {
+			_, err := invoke("testNonExistentTarget")
 			require.NoError(t, err)
 		})
 

@@ -40,7 +40,7 @@ const testTransactionResultTypeName = "TransactionResult"
 const testResultStatusTypeName = "ResultStatus"
 const testResultStatusTypeSucceededCaseName = "succeeded"
 const testResultStatusTypeFailedCaseName = "failed"
-const testAccountTypeName = "Account"
+const testAccountTypeName = "TestAccount"
 const testErrorTypeName = "Error"
 const testMatcherTypeName = "Matcher"
 

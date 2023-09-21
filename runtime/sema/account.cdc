@@ -335,6 +335,10 @@ struct Account {
         access(all)
         view fun borrow<T: &Any>(_ path: PublicPath): T?
 
+        /// Returns true if a capability exists at the given public path.
+        access(all)
+        view fun exists(_ path: PublicPath): Bool
+
         /// Publish the capability at the given public path.
         ///
         /// If there is already a capability published under the given path, the program aborts.
