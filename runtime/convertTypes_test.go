@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"

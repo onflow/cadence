@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"fmt"
@@ -27,9 +27,11 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -81,18 +83,15 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
 
@@ -605,22 +604,19 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage:         storage,
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage:           storage,
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return contracts[location], nil
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
 
