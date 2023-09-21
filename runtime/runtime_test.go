@@ -8861,3 +8861,134 @@ func TestRuntimeEventEmission(t *testing.T) {
 
 	})
 }
+
+func TestRuntimeInvalidWrappedPrivateCapability(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		AtreeValidationEnabled: false,
+	})
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	helperContract := []byte(`
+      access(all)
+      contract Foo {
+
+          access(all)
+          struct Thing {
+
+              access(all)
+              let cap: Capability
+
+              init(cap: Capability) {
+                  self.cap = cap
+              }
+          }
+      }
+    `)
+
+	getCapScript := []byte(`
+      import Foo from 0x1
+
+      access(all)
+      fun main(addr: Address): AnyStruct {
+          let acct = getAuthAccount<auth(Capabilities) &Account>(addr)
+          let cap = acct.capabilities.account.issue<auth(Storage) &Account>()
+          return Foo.Thing(cap: cap)
+      }
+	`)
+
+	attackTx := []byte(`
+      import Foo from 0x1
+
+      transaction(thing: Foo.Thing) {
+          prepare(_: &Account) {
+ 		      thing.cap.borrow<auth(Storage) &Account>()!
+                  .storage.save("Hello, World", to: /storage/attack)
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Foo", helperContract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	// Deploy helper contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Get Capability
+
+	capability, err := runtime.ExecuteScript(
+		Script{
+			Source: getCapScript,
+			Arguments: encodeArgs([]cadence.Value{
+				cadence.BytesToAddress([]byte{0x1}),
+			}),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Attack
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: attackTx,
+			Arguments: encodeArgs([]cadence.Value{
+				capability,
+			}),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var argumentNotImportableErr *ArgumentNotImportableError
+	require.ErrorAs(t, err, &argumentNotImportableErr)
+}

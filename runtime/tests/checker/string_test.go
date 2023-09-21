@@ -354,3 +354,57 @@ func TestCheckStringToLower(t *testing.T) {
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
+
+func TestCheckStringJoin(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+		let s = String.join(["👪", "❤️", "Abc"], separator: "/")
+	`)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.StringType,
+		RequireGlobalValue(t, checker.Elaboration, "s"),
+	)
+}
+
+func TestCheckStringJoinTypeMismatchStrs(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		let s = String.join([1], separator: "/")
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckStringJoinTypeMismatchSeparator(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		let s = String.join(["Abc", "1"], separator: 1234)
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckStringJoinTypeMissingArgumentLabelSeparator(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	let s = String.join(["👪", "❤️", "Abc"], "/")
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
+}

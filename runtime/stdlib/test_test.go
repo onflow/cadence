@@ -2532,6 +2532,51 @@ func TestBlockchain(t *testing.T) {
 	// TODO: Add more tests for the remaining functions.
 }
 
+func TestBlockchainAccount(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("create account", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all) fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+                assert(account.address == 0x0100000000000000)
+            }
+		`
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					createAccount: func() (*Account, error) {
+						return &Account{
+							PublicKey: &PublicKey{
+								PublicKey: []byte{1, 2, 3},
+								SignAlgo:  sema.SignatureAlgorithmECDSA_P256,
+							},
+							Address: common.Address{1},
+						}, nil
+					},
+
+					stdlibHandler: func() StandardLibraryHandler {
+						return nil
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}
+
 type mockedTestFramework struct {
 	newEmulatorBackend func() Blockchain
 	readFile           func(s string) (string, error)
@@ -2555,6 +2600,7 @@ func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
 	return m.readFile(fileName)
 }
 
+// mockedBlockchain is the implementation of `Blockchain` for testing purposes.
 type mockedBlockchain struct {
 	runScript          func(inter *interpreter.Interpreter, code string, arguments []interpreter.Value)
 	createAccount      func() (*Account, error)

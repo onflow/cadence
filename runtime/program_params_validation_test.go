@@ -1130,4 +1130,140 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		var entryPointErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &entryPointErr)
 	})
+
+	t.Run("Invalid private cap in struct", func(t *testing.T) {
+		t.Parallel()
+
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+               access(all)
+               contract C {
+
+                    access(all)
+                    struct S {
+
+                        access(all)
+                        let cap: Capability
+
+                        init(cap: Capability) {
+                            self.cap = cap
+                        }
+                    }
+               }
+            `),
+		}
+
+		script := `
+          import C from 0x1
+
+          transaction(arg: C.S) {}
+        `
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		capability := cadence.NewCapability(
+			1,
+			cadence.Address(address),
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.AccountType),
+		)
+
+		arg := cadence.Struct{
+			StructType: &cadence.StructType{
+				Location: common.AddressLocation{
+					Address: address,
+					Name:    "C",
+				},
+				QualifiedIdentifier: "C.S",
+				Fields: []cadence.Field{
+					{
+						Identifier: "cap",
+						Type:       &cadence.CapabilityType{},
+					},
+				},
+			},
+			Fields: []cadence.Value{
+				capability,
+			},
+		}
+
+		err := executeTransaction(t, script, contracts, arg)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
+	t.Run("Invalid private cap in array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+          transaction(arg: [AnyStruct]) {}
+        `
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		capability := cadence.NewCapability(
+			1,
+			cadence.Address(address),
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.AccountType),
+		)
+
+		arg := cadence.Array{
+			ArrayType: cadence.NewVariableSizedArrayType(cadence.AnyStructType),
+			Values: []cadence.Value{
+				capability,
+			},
+		}
+
+		err := executeTransaction(t, script, nil, arg)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
+	t.Run("Invalid private cap in optional", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+          transaction(arg: AnyStruct?) {}
+        `
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		capability := cadence.NewCapability(
+			1,
+			cadence.Address(address),
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.AccountType),
+		)
+
+		arg := cadence.NewOptional(capability)
+
+		err := executeTransaction(t, script, nil, arg)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
+	t.Run("Invalid private cap in dictionary value", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+          transaction(arg: {String: AnyStruct}) {}
+        `
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		capability := cadence.NewCapability(
+			1,
+			cadence.Address(address),
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.AccountType),
+		)
+
+		arg := cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("cap"),
+				Value: capability,
+			},
+		})
+
+		err := executeTransaction(t, script, nil, arg)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
 }
