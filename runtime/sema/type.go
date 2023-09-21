@@ -4777,6 +4777,24 @@ func (t *CompositeType) SetNestedType(name string, nestedType ContainedType) {
 	nestedType.SetContainerType(t)
 }
 
+func (t *CompositeType) ConstructorFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Purity:               t.ConstructorPurity,
+		Parameters:           t.ConstructorParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(t),
+	}
+}
+
+func (t *CompositeType) InitializerFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Purity:               t.ConstructorPurity,
+		Parameters:           t.ConstructorParameters,
+		ReturnTypeAnnotation: VoidTypeAnnotation,
+	}
+}
+
 // Member
 
 type Member struct {

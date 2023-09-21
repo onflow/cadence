@@ -1092,20 +1092,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 
-	constructorType := &sema.FunctionType{
-		IsConstructor: true,
-		Purity:        compositeType.ConstructorPurity,
-		Parameters:    compositeType.ConstructorParameters,
-		ReturnTypeAnnotation: sema.TypeAnnotation{
-			Type: compositeType,
-		},
-	}
+	initializerType := compositeType.InitializerFunctionType()
 
 	var initializerFunction FunctionValue
 	if declaration.Kind() == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
 			interpreter,
-			constructorType,
+			initializerType,
 			func(invocation Invocation) Value {
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -1201,6 +1194,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
 	config := interpreter.SharedState.Config
+
+	constructorType := compositeType.ConstructorFunctionType()
 
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
 		return NewHostFunctionValue(
