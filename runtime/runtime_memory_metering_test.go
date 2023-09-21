@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"fmt"
@@ -28,9 +28,10 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -69,20 +70,18 @@ func TestRuntimeInterpreterAddressLocationMetering(t *testing.T) {
         `
 		meter := newTestMemoryGauge()
 		var accountCode []byte
-		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			storage: newTestLedger(nil, nil),
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			Storage:       NewTestLedger(nil, nil),
+			OnMeterMemory: meter.MeterMemory,
+			OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -130,38 +129,38 @@ func TestRuntimeInterpreterElaborationImportMetering(t *testing.T) {
 				script = importExpressions[j] + script
 			}
 
-			runtime := newTestInterpreterRuntime()
+			runtime := NewTestInterpreterRuntime()
 
 			meter := newTestMemoryGauge()
 
 			accountCodes := map[common.Location][]byte{}
 
-			runtimeInterface := &testRuntimeInterface{
-				getCode: func(location Location) (bytes []byte, err error) {
+			runtimeInterface := &TestRuntimeInterface{
+				OnGetCode: func(location Location) (bytes []byte, err error) {
 					return accountCodes[location], nil
 				},
-				storage: newTestLedger(nil, nil),
-				getSigningAccounts: func() ([]Address, error) {
+				Storage: NewTestLedger(nil, nil),
+				OnGetSigningAccounts: func() ([]Address, error) {
 					return []Address{Address(addressValue)}, nil
 				},
-				resolveLocation: singleIdentifierLocationResolver(t),
-				updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+				OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 					accountCodes[location] = code
 					return nil
 				},
-				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					code = accountCodes[location]
 					return code, nil
 				},
-				meterMemory: func(usage common.MemoryUsage) error {
+				OnMeterMemory: func(usage common.MemoryUsage) error {
 					return meter.MeterMemory(usage)
 				},
-				emitEvent: func(_ cadence.Event) error {
+				OnEmitEvent: func(_ cadence.Event) error {
 					return nil
 				},
 			}
 
-			nextTransactionLocation := newTransactionLocationGenerator()
+			nextTransactionLocation := NewTransactionLocationGenerator()
 
 			for j := 0; j <= imports; j++ {
 				err := runtime.ExecuteTransaction(
@@ -214,16 +213,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -250,16 +247,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		largeBigInt := &big.Int{}
 		largeBigInt.Exp(big.NewInt(2<<33), big.NewInt(6), nil)
@@ -293,16 +288,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -329,16 +322,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -365,16 +356,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -401,16 +390,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -437,16 +424,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -473,16 +458,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -511,16 +494,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -547,16 +528,14 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -581,13 +560,11 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -612,13 +589,11 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -643,13 +618,11 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -674,13 +647,11 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -705,13 +676,11 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -736,13 +705,11 @@ func TestRuntimeCadenceValueAndTypeMetering(t *testing.T) {
             }
         `
 		meter := newTestMemoryGauge()
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -779,23 +746,21 @@ func TestRuntimeLogFunctionStringConversionMetering(t *testing.T) {
 
 		meter := newTestMemoryGauge()
 
-		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			storage: newTestLedger(nil, nil),
-			meterMemory: func(usage common.MemoryUsage) error {
-				return meter.MeterMemory(usage)
-			},
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			Storage:       NewTestLedger(nil, nil),
+			OnMeterMemory: meter.MeterMemory,
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
-			log: func(s string) {
+			OnProgramLog: func(s string) {
 				loggedString = s
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -840,13 +805,13 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 
 		storageUsedInvoked := false
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			meterMemory: meter.MeterMemory,
-			getStorageUsed: func(_ Address) (uint64, error) {
+			OnMeterMemory: meter.MeterMemory,
+			OnGetStorageUsed: func(_ Address) (uint64, error) {
 				// Before the storageUsed function is invoked, the deltas must have been committed.
 				// So the encoded slabs must have been metered at this point.
 				assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
@@ -855,7 +820,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -885,15 +850,15 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 
 		meter := newTestMemoryGauge()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			meterMemory: meter.MeterMemory,
+			OnMeterMemory: meter.MeterMemory,
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -924,13 +889,13 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 		meter := newTestMemoryGauge()
 		storageUsedInvoked := false
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			meterMemory: meter.MeterMemory,
-			getStorageUsed: func(_ Address) (uint64, error) {
+			OnMeterMemory: meter.MeterMemory,
+			OnGetStorageUsed: func(_ Address) (uint64, error) {
 				// Before the storageUsed function is invoked, the deltas must have been committed.
 				// So the encoded slabs must have been metered at this point.
 				assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindAtreeEncodedSlab))
@@ -939,7 +904,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -961,13 +926,13 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	type memoryMeter map[common.MemoryKind]uint64
 
-	runtimeInterface := func(meter memoryMeter) *testRuntimeInterface {
-		intf := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
+	runtimeInterface := func(meter memoryMeter) *TestRuntimeInterface {
+		return &TestRuntimeInterface{
+			OnMeterMemory: func(usage common.MemoryUsage) error {
 				if usage.Kind == common.MemoryKindStringValue ||
 					usage.Kind == common.MemoryKindArrayValueBase ||
 					usage.Kind == common.MemoryKindErrorToken {
@@ -976,14 +941,13 @@ func TestRuntimeMemoryMeteringErrors(t *testing.T) {
 				}
 				return nil
 			},
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
 		}
-		intf.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return jsoncdc.Decode(intf, b)
-		}
-		return intf
 	}
 
-	nextScriptLocation := newScriptLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	executeScript := func(script []byte, meter memoryMeter, args ...cadence.Value) error {
 		_, err := runtime.ExecuteScript(
@@ -1072,19 +1036,20 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		t.Parallel()
 
-		rt := newTestInterpreterRuntime()
-		rt.defaultConfig.AtreeValidationEnabled = false
+		config := DefaultTestInterpreterConfig
+		config.AtreeValidationEnabled = false
+		rt := NewTestInterpreterRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 		meter := newTestMemoryGauge()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			meterMemory: meter.MeterMemory,
+			OnMeterMemory: meter.MeterMemory,
 		}
 
 		text := "A quick brown fox jumps over the lazy dog"
@@ -1115,19 +1080,20 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		t.Parallel()
 
-		rt := newTestInterpreterRuntime()
-		rt.defaultConfig.AtreeValidationEnabled = false
+		config := DefaultTestInterpreterConfig
+		config.AtreeValidationEnabled = false
+		rt := NewTestInterpreterRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 		meter := newTestMemoryGauge()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			meterMemory: meter.MeterMemory,
+			OnMeterMemory: meter.MeterMemory,
 		}
 
 		text := "A quick brown fox jumps over the lazy dog"
@@ -1163,19 +1129,20 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		t.Parallel()
 
-		rt := newTestInterpreterRuntime()
-		rt.defaultConfig.AtreeValidationEnabled = false
+		config := DefaultTestInterpreterConfig
+		config.AtreeValidationEnabled = false
+		rt := NewTestInterpreterRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 		meter := newTestMemoryGauge()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			meterMemory: meter.MeterMemory,
+			OnMeterMemory: meter.MeterMemory,
 		}
 
 		_, err := rt.ExecuteScript(
