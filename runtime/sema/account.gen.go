@@ -644,6 +644,46 @@ or if the given name does not match the name of the contract/contract interface 
 Returns the deployed contract for the updated contract.
 `
 
+const Account_ContractsTypeTryUpdateFunctionName = "tryUpdate"
+
+var Account_ContractsTypeTryUpdateFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Identifier:     "name",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+		{
+			Identifier: "code",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+				Type: UInt8Type,
+			}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		DeploymentResultType,
+	),
+}
+
+const Account_ContractsTypeTryUpdateFunctionDocString = `
+Updates the code for the contract/contract interface in the account,
+and handle any deployment errors gracefully.
+
+The ` + "`code`" + ` parameter is the UTF-8 encoded representation of the source code.
+The code must contain exactly one contract or contract interface,
+which must have the same name as the ` + "`name`" + ` parameter.
+
+Does **not** run the initializer of the contract/contract interface again.
+The contract instance in the world state stays as is.
+
+Fails if no contract/contract interface with the given name exists in the account,
+if the given code does not declare exactly one contract or contract interface,
+or if the given name does not match the name of the contract/contract interface declaration in the code.
+
+Returns the deployment result.
+Result would contain the deployed contract for the updated contract, if the update was successfull.
+Otherwise, the deployed contract would be nil.
+`
+
 const Account_ContractsTypeGetFunctionName = "get"
 
 var Account_ContractsTypeGetFunctionType = &FunctionType{
@@ -770,6 +810,16 @@ func init() {
 			Account_ContractsTypeUpdateFunctionName,
 			Account_ContractsTypeUpdateFunctionType,
 			Account_ContractsTypeUpdateFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_ContractsType,
+			newEntitlementAccess(
+				[]Type{ContractsType, UpdateContractType},
+				Disjunction,
+			),
+			Account_ContractsTypeTryUpdateFunctionName,
+			Account_ContractsTypeTryUpdateFunctionType,
+			Account_ContractsTypeTryUpdateFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			Account_ContractsType,
@@ -1237,6 +1287,26 @@ Returns nil if the capability does not exist, or cannot be borrowed using the gi
 The function is equivalent to ` + "`get(path)?.borrow()`" + `.
 `
 
+const Account_CapabilitiesTypeExistsFunctionName = "exists"
+
+var Account_CapabilitiesTypeExistsFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
+
+const Account_CapabilitiesTypeExistsFunctionDocString = `
+Returns true if a capability exists at the given public path.
+`
+
 const Account_CapabilitiesTypePublishFunctionName = "publish"
 
 var Account_CapabilitiesTypePublishFunctionType = &FunctionType{
@@ -1338,6 +1408,13 @@ func init() {
 			Account_CapabilitiesTypeBorrowFunctionName,
 			Account_CapabilitiesTypeBorrowFunctionType,
 			Account_CapabilitiesTypeBorrowFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_CapabilitiesType,
+			PrimitiveAccess(ast.AccessAll),
+			Account_CapabilitiesTypeExistsFunctionName,
+			Account_CapabilitiesTypeExistsFunctionType,
+			Account_CapabilitiesTypeExistsFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			Account_CapabilitiesType,

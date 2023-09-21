@@ -16,6 +16,9 @@ changelog:
     - title: 🐞 Bug Fixes
       labels:
         - Bugfix
+    - title: 🧪 Testing
+      labels:
+        - Testing
     - title: 📖 Documentation
       labels:
         - Documentation

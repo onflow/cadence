@@ -3725,6 +3725,7 @@ func init() {
 			HashAlgorithmType,
 			StorageCapabilityControllerType,
 			AccountCapabilityControllerType,
+			DeploymentResultType,
 		},
 	)
 
@@ -8016,6 +8017,7 @@ func init() {
 		HashAlgorithmType,
 		SignatureAlgorithmType,
 		AccountType,
+		DeploymentResultType,
 	}
 
 	for len(compositeTypes) > 0 {

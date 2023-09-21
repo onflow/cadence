@@ -26,8 +26,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence"
@@ -1013,4 +1016,297 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 	require.Equal(t, intfEvent.Fields[0], cadence.NewInt(3))
 	require.Equal(t, concreteEvent.Fields[0], cadence.String(""))
 	require.Equal(t, concreteEvent.Fields[1], cadence.NewInt(2))
+}
+
+func TestRuntimeContractTryUpdate(t *testing.T) {
+	t.Parallel()
+
+	newTestRuntimeInterface := func(onUpdate func()) *testRuntimeInterface {
+		var actualEvents []cadence.Event
+		storage := newTestLedger(nil, nil)
+		accountCodes := map[Location][]byte{}
+
+		return &testRuntimeInterface{
+			storage: storage,
+			log:     func(message string) {},
+			emitEvent: func(event cadence.Event) error {
+				actualEvents = append(actualEvents, event)
+				return nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+			},
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				onUpdate()
+				accountCodes[location] = code
+				return nil
+			},
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+		}
+	}
+
+	t.Run("tryUpdate simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
+
+		updateTx := []byte(`
+			transaction {
+				prepare(signer: auth(UpdateContract) &Account) {
+					let code = "access(all) contract Foo { access(all) fun sayHello(): String {return \"hello\"} }".utf8
+
+					let deploymentResult = signer.contracts.tryUpdate(
+						name: "Foo",
+						code: code,
+					)
+
+					let deployedContract = deploymentResult.deployedContract!
+					assert(deployedContract.name == "Foo")
+					assert(deployedContract.address == 0x1)
+					assert(deployedContract.code == code)
+				}
+			}
+		`)
+
+		invokeTx := []byte(`
+			import Foo from 0x1
+
+			transaction {
+				prepare(signer: &Account) {
+					assert(Foo.sayHello() == "hello")
+				}
+			}
+		`)
+
+		runtimeInterface := newTestRuntimeInterface(func() {})
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy 'Foo'
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: deployTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Update 'Foo'
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: updateTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Test the updated 'Foo'
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: invokeTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("tryUpdate non existing", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		updateTx := []byte(`
+			transaction {
+				prepare(signer: auth(UpdateContract) &Account) {
+					let deploymentResult = signer.contracts.tryUpdate(
+						name: "Foo",
+						code: "access(all) contract Foo { access(all) fun sayHello(): String {return \"hello\"} }".utf8,
+					)
+
+					assert(deploymentResult.deployedContract == nil)
+				}
+			}
+		`)
+
+		invokeTx := []byte(`
+			import Foo from 0x1
+
+			transaction {
+				prepare(signer: &Account) {
+					assert(Foo.sayHello() == "hello")
+				}
+			}
+		`)
+
+		runtimeInterface := newTestRuntimeInterface(func() {})
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Update non-existing 'Foo'. Should not panic.
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: updateTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Test the updated 'Foo'.
+		// Foo must not be available.
+
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: invokeTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		RequireError(t, err)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		var notExportedError *sema.NotExportedError
+		require.ErrorAs(t, errs[0], &notExportedError)
+	})
+
+	t.Run("tryUpdate with checking error", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
+
+		updateTx := []byte(`
+			transaction {
+				prepare(signer: auth(UpdateContract) &Account) {
+					let deploymentResult = signer.contracts.tryUpdate(
+						name: "Foo",
+
+						// Has a semantic error!
+						code: "access(all) contract Foo { access(all) fun sayHello(): Int { return \"hello\" } }".utf8,
+					)
+
+					assert(deploymentResult.deployedContract == nil)
+				}
+			}
+		`)
+
+		runtimeInterface := newTestRuntimeInterface(func() {})
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy 'Foo'
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: deployTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Update 'Foo'.
+		// User errors (parsing, checking and interpreting) should be handled gracefully.
+
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: updateTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("tryUpdate panic with internal error", func(t *testing.T) {
+
+		t.Parallel()
+
+		rt := newTestInterpreterRuntime()
+
+		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
+
+		updateTx := []byte(`
+			transaction {
+				prepare(signer: auth(UpdateContract) &Account) {
+					let deploymentResult = signer.contracts.tryUpdate(
+						name: "Foo",
+						code: "access(all) contract Foo { access(all) fun sayHello(): String {return \"hello\"} }".utf8,
+					)
+
+					assert(deploymentResult.deployedContract == nil)
+				}
+			}
+		`)
+
+		shouldPanic := false
+		didPanic := false
+
+		runtimeInterface := newTestRuntimeInterface(func() {
+			if shouldPanic {
+				didPanic = true
+				panic("panic during update")
+			}
+		})
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		// Deploy 'Foo'
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: deployTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+		assert.False(t, didPanic)
+
+		// Update 'Foo'.
+		// Internal errors should NOT be handled gracefully.
+
+		shouldPanic = true
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: updateTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		var unexpectedError errors.UnexpectedError
+		require.ErrorAs(t, err, &unexpectedError)
+
+		assert.True(t, didPanic)
+	})
 }
