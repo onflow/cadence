@@ -481,3 +481,132 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
 	})
 
 }
+
+func TestCheckDefaultEventDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+			}
+        `)
+		require.NoError(t, err)
+
+	})
+
+	t.Run("allowed in resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource interface R {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("fail in struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			struct R {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("fail in struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			struct R {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("fail in contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract R {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("fail in contract interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface R {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("allowed in resource attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for AnyResource {
+				event ResourceDestroyed()
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("not allowed in struct attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for AnyStruct {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("nested declarations after first disallowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+				event OtherEvent()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+}

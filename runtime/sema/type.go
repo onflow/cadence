@@ -4264,6 +4264,8 @@ type CompositeType struct {
 	RequiredEntitlements        *EntitlementOrderedSet
 	AttachmentEntitlementAccess *EntitlementMapAccess
 
+	DefaultDestroyEvent *CompositeType
+
 	cachedIdentifiers *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string

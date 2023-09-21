@@ -4636,3 +4636,24 @@ func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
 func (e *InvalidAttachmentEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
+
+// DefaultDestroyEventInNonResourceError
+
+type DefaultDestroyEventInNonResourceError struct {
+	Kind string
+	ast.Range
+}
+
+var _ SemanticError = &DefaultDestroyEventInNonResourceError{}
+var _ errors.UserError = &DefaultDestroyEventInNonResourceError{}
+
+func (*DefaultDestroyEventInNonResourceError) isSemanticError() {}
+
+func (*DefaultDestroyEventInNonResourceError) IsUserError() {}
+
+func (e *DefaultDestroyEventInNonResourceError) Error() string {
+	return fmt.Sprintf(
+		"cannot declare default destruction event in %s",
+		e.Kind,
+	)
+}

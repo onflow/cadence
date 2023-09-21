@@ -428,10 +428,23 @@ func (checker *Checker) declareNestedDeclarations(
 
 			firstNestedCompositeDeclaration := nestedCompositeDeclarations[0]
 
-			reportInvalidNesting(
-				firstNestedCompositeDeclaration.DeclarationKind(),
-				firstNestedCompositeDeclaration.Identifier,
-			)
+			// we want to permit this nesting under 2 conditions: the container is a resource declaration,
+			// and this nested declaration is a default destroy event
+
+			if firstNestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+				if len(nestedCompositeDeclarations) > 1 {
+					firstNestedCompositeDeclaration = nestedCompositeDeclarations[1]
+					reportInvalidNesting(
+						firstNestedCompositeDeclaration.DeclarationKind(),
+						firstNestedCompositeDeclaration.Identifier,
+					)
+				}
+			} else {
+				reportInvalidNesting(
+					firstNestedCompositeDeclaration.DeclarationKind(),
+					firstNestedCompositeDeclaration.Identifier,
+				)
+			}
 
 		} else if len(nestedInterfaceDeclarations) > 0 {
 
@@ -479,6 +492,13 @@ func (checker *Checker) declareNestedDeclarations(
 			nestedDeclarationKind common.DeclarationKind,
 			identifier ast.Identifier,
 		) {
+			if nestedCompositeKind == common.CompositeKindEvent && identifier.Identifier == ast.ResourceDestructionDefaultEventName {
+				checker.report(&DefaultDestroyEventInNonResourceError{
+					Kind:  containerDeclarationKind.Name(),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, identifier),
+				})
+			}
+
 			if containerDeclarationKind.IsInterfaceDeclaration() && !nestedDeclarationKind.IsInterfaceDeclaration() {
 				switch nestedCompositeKind {
 				case common.CompositeKindEvent:
@@ -810,6 +830,14 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 			// Find the value declaration
 			nestedCompositeDeclarationVariable :=
 				checker.valueActivations.Find(identifier.Identifier)
+
+			if identifier.Identifier == ast.ResourceDestructionDefaultEventName && compositeKind == common.CompositeKindResource {
+				// Find the default event's type declaration
+				defaultEventType :=
+					checker.typeActivations.Find(identifier.Identifier)
+				compositeType.DefaultDestroyEvent = defaultEventType.Type.(*CompositeType)
+				return
+			}
 
 			declarationMembers.Set(
 				nestedCompositeDeclarationVariable.Identifier,
