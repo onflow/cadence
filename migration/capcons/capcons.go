@@ -16,12 +16,16 @@
  * limitations under the License.
  */
 
-package runtime
+package capcons
 
 import (
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
@@ -51,19 +55,19 @@ func (a *AddressSliceIterator) Reset() {
 	a.index = 0
 }
 
-type CapConsMigrationReporter interface {
-	CapConsLinkMigrationReporter
-	CapConsPathCapabilityMigrationReporter
+type MigrationReporter interface {
+	LinkMigrationReporter
+	PathCapabilityMigrationReporter
 }
 
-type CapConsLinkMigrationReporter interface {
+type LinkMigrationReporter interface {
 	MigratedLink(
 		addressPath interpreter.AddressPath,
 		capabilityID interpreter.UInt64Value,
 	)
 }
 
-type CapConsPathCapabilityMigrationReporter interface {
+type PathCapabilityMigrationReporter interface {
 	MigratedPathCapability(
 		address common.Address,
 		addressPath interpreter.AddressPath,
@@ -74,47 +78,47 @@ type CapConsPathCapabilityMigrationReporter interface {
 	)
 }
 
-type CapConsMigration struct {
-	storage       *Storage
-	interpreter   *interpreter.Interpreter
-	capabilityIDs map[interpreter.AddressPath]interpreter.UInt64Value
+type Migration struct {
+	storage            *runtime.Storage
+	interpreter        *interpreter.Interpreter
+	capabilityIDs      map[interpreter.AddressPath]interpreter.UInt64Value
+	addressIterator    AddressIterator
+	accountIDGenerator stdlib.AccountIDGenerator
 }
 
-func NewCapConsMigration(runtime Runtime, context Context) (*CapConsMigration, error) {
+func NewMigration(
+	runtime runtime.Runtime,
+	context runtime.Context,
+	addressIterator AddressIterator,
+	accountIDGenerator stdlib.AccountIDGenerator,
+) (*Migration, error) {
 	storage, inter, err := runtime.Storage(context)
 	if err != nil {
 		return nil, err
 	}
 
-	return &CapConsMigration{
-		storage:     storage,
-		interpreter: inter,
+	return &Migration{
+		storage:            storage,
+		interpreter:        inter,
+		addressIterator:    addressIterator,
+		accountIDGenerator: accountIDGenerator,
 	}, nil
 }
 
 // Migrate migrates the links to capability controllers,
 // and all path capabilities and account capabilities to ID capabilities,
 // in all accounts of the given iterator.
-func (m *CapConsMigration) Migrate(
-	addressIterator AddressIterator,
-	accountIDGenerator stdlib.AccountIDGenerator,
-	reporter CapConsMigrationReporter,
+func (m *Migration) Migrate(
+	reporter MigrationReporter,
 ) error {
 	m.capabilityIDs = make(map[interpreter.AddressPath]interpreter.UInt64Value)
 	defer func() {
 		m.capabilityIDs = nil
 	}()
-	m.migrateLinks(
-		addressIterator,
-		accountIDGenerator,
-		reporter,
-	)
+	m.migrateLinks(reporter)
 
-	addressIterator.Reset()
-	m.migratePathCapabilities(
-		addressIterator,
-		reporter,
-	)
+	m.addressIterator.Reset()
+	m.migratePathCapabilities(reporter)
 
 	return m.storage.Commit(m.interpreter, false)
 }
@@ -123,20 +127,17 @@ func (m *CapConsMigration) Migrate(
 // in all accounts of the given iterator.
 // It constructs a source path to capability ID mapping,
 // which is later needed to path capabilities to ID capabilities.
-func (m *CapConsMigration) migrateLinks(
-	addressIterator AddressIterator,
-	accountIDGenerator stdlib.AccountIDGenerator,
-	reporter CapConsLinkMigrationReporter,
+func (m *Migration) migrateLinks(
+	reporter LinkMigrationReporter,
 ) {
 	for {
-		address := addressIterator.NextAddress()
+		address := m.addressIterator.NextAddress()
 		if address == common.ZeroAddress {
 			break
 		}
 
 		m.migrateLinksInAccount(
 			address,
-			accountIDGenerator,
 			reporter,
 		)
 	}
@@ -145,16 +146,14 @@ func (m *CapConsMigration) migrateLinks(
 // migrateLinksInAccount migrates the links in the given account to capability controllers
 // It records an entry in the source path to capability ID mapping,
 // which is later needed to migrate path capabilities to ID capabilities.
-func (m *CapConsMigration) migrateLinksInAccount(
+func (m *Migration) migrateLinksInAccount(
 	address common.Address,
-	accountIDGenerator stdlib.AccountIDGenerator,
-	reporter CapConsLinkMigrationReporter,
+	reporter LinkMigrationReporter,
 ) {
 
 	migrateDomain := func(domain common.PathDomain) {
 		m.migrateAccountLinksInAccountDomain(
 			address,
-			accountIDGenerator,
 			domain,
 			reporter,
 		)
@@ -168,11 +167,10 @@ func (m *CapConsMigration) migrateLinksInAccount(
 // to capability controllers.
 // It records an entry in the source path to capability ID mapping,
 // which is later needed to migrate path capabilities to ID capabilities.
-func (m *CapConsMigration) migrateAccountLinksInAccountDomain(
+func (m *Migration) migrateAccountLinksInAccountDomain(
 	address common.Address,
-	accountIDGenerator stdlib.AccountIDGenerator,
 	domain common.PathDomain,
-	reporter CapConsLinkMigrationReporter,
+	reporter LinkMigrationReporter,
 ) {
 	addressValue := interpreter.AddressValue(address)
 
@@ -194,7 +192,6 @@ func (m *CapConsMigration) migrateAccountLinksInAccountDomain(
 			m.migrateLink(
 				addressValue,
 				pathValue,
-				accountIDGenerator,
 				reporter,
 			)
 		}
@@ -205,19 +202,12 @@ func (m *CapConsMigration) migrateAccountLinksInAccountDomain(
 // to capability controllers.
 // It constructs a source path to ID mapping,
 // which is later needed to migrate path capabilities to ID capabilities.
-func (m *CapConsMigration) migrateLink(
+func (m *Migration) migrateLink(
 	address interpreter.AddressValue,
 	path interpreter.PathValue,
-	accountIDGenerator stdlib.AccountIDGenerator,
-	reporter CapConsLinkMigrationReporter,
+	reporter LinkMigrationReporter,
 ) {
-	capabilityID := stdlib.MigrateLinkToCapabilityController(
-		m.interpreter,
-		interpreter.EmptyLocationRange,
-		address,
-		path,
-		accountIDGenerator,
-	)
+	capabilityID := m.migrateLinkToCapabilityController(address, path)
 	if capabilityID == 0 {
 		return
 	}
@@ -239,12 +229,11 @@ func (m *CapConsMigration) migrateLink(
 // migratePathCapabilities migrates the path capabilities to ID capabilities
 // in all accounts of the given iterator.
 // It uses the source path to capability ID mapping which was constructed in migrateLinks.
-func (m *CapConsMigration) migratePathCapabilities(
-	addressIterator AddressIterator,
-	reporter CapConsPathCapabilityMigrationReporter,
+func (m *Migration) migratePathCapabilities(
+	reporter PathCapabilityMigrationReporter,
 ) {
 	for {
-		address := addressIterator.NextAddress()
+		address := m.addressIterator.NextAddress()
 		if address == common.ZeroAddress {
 			break
 		}
@@ -255,7 +244,7 @@ func (m *CapConsMigration) migratePathCapabilities(
 
 var pathDomainStorage = common.PathDomainStorage.Identifier()
 
-func (m *CapConsMigration) migratePathCapabilitiesInAccount(address common.Address, reporter CapConsPathCapabilityMigrationReporter) {
+func (m *Migration) migratePathCapabilitiesInAccount(address common.Address, reporter PathCapabilityMigrationReporter) {
 
 	storageMap := m.storage.GetStorageMap(address, pathDomainStorage, false)
 	if storageMap == nil {
@@ -290,10 +279,10 @@ func (m *CapConsMigration) migratePathCapabilitiesInAccount(address common.Addre
 // migratePathCapability migrates a path capability to an ID capability in the given value.
 // If a value is returned, the value must be updated with the replacement in the parent.
 // If nil is returned, the value was not updated and no operation has to be performed.
-func (m *CapConsMigration) migratePathCapability(
+func (m *Migration) migratePathCapability(
 	address common.Address,
 	value interpreter.Value,
-	reporter CapConsPathCapabilityMigrationReporter,
+	reporter PathCapabilityMigrationReporter,
 ) interpreter.Value {
 	locationRange := interpreter.EmptyLocationRange
 
@@ -313,7 +302,7 @@ func (m *CapConsMigration) migratePathCapability(
 			break
 		}
 
-		newCapability := interpreter.NewUnmeteredIDCapabilityValue(
+		newCapability := interpreter.NewUnmeteredCapabilityValue(
 			capabilityID,
 			oldCapability.Address,
 			oldCapability.BorrowType,
@@ -391,7 +380,10 @@ func (m *CapConsMigration) migratePathCapability(
 			// Keys cannot be capabilities at the moment,
 			// so this should never occur in stored data
 
-			if _, ok := key.(interpreter.CapabilityValue); ok {
+			switch key.(type) {
+			case *interpreter.CapabilityValue,
+				*interpreter.PathCapabilityValue:
+
 				panic(errors.NewUnreachableError())
 			}
 
@@ -427,7 +419,272 @@ func (m *CapConsMigration) migratePathCapability(
 		// as they do not contain path capabilities.
 
 		return nil
+
+	case *interpreter.CapabilityValue:
+		// Already migrated
+		return nil
 	}
 
 	panic(errors.NewUnexpectedError("unsupported value type: %T", value))
+}
+
+func (m *Migration) migrateLinkToCapabilityController(
+	addressValue interpreter.AddressValue,
+	pathValue interpreter.PathValue,
+) interpreter.UInt64Value {
+
+	locationRange := interpreter.EmptyLocationRange
+
+	address := addressValue.ToAddress()
+
+	domain := pathValue.Domain.Identifier()
+	identifier := pathValue.Identifier
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	readValue := m.interpreter.ReadStored(address, domain, storageMapKey)
+	if readValue == nil {
+		return 0
+	}
+
+	var borrowStaticType *interpreter.ReferenceStaticType
+
+	switch readValue := readValue.(type) {
+	case *interpreter.CapabilityValue:
+		// Already migrated
+		return 0
+
+	case interpreter.PathLinkValue:
+		var ok bool
+		borrowStaticType, ok = readValue.Type.(*interpreter.ReferenceStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+	case interpreter.AccountLinkValue:
+		borrowStaticType = interpreter.NewReferenceStaticType(
+			nil,
+			interpreter.FullyEntitledAccountAccess,
+			interpreter.PrimitiveStaticTypeAccount,
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	borrowType, ok := m.interpreter.MustConvertStaticToSemaType(borrowStaticType).(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Get target
+
+	target, _, err := m.getPathCapabilityFinalTarget(
+		address,
+		pathValue,
+		// TODO:
+		// Use top-most type to follow link all the way to final target
+		&sema.ReferenceType{
+			Type: sema.AnyType,
+		},
+	)
+	// TODO: skip cyclic links
+	if err != nil {
+		panic(err)
+	}
+
+	// Issue appropriate capability controller
+
+	var capabilityID interpreter.UInt64Value
+
+	switch target := target.(type) {
+	case nil:
+		// TODO: report/warn
+		return 0
+
+	case pathCapabilityTarget:
+
+		targetPath := interpreter.PathValue(target)
+
+		capabilityID, _ = stdlib.IssueStorageCapabilityController(
+			m.interpreter,
+			locationRange,
+			m.accountIDGenerator,
+			address,
+			borrowType,
+			targetPath,
+		)
+
+	case accountCapabilityTarget:
+
+		capabilityID, _ = stdlib.IssueAccountCapabilityController(
+			m.interpreter,
+			locationRange,
+			m.accountIDGenerator,
+			address,
+			borrowType,
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	// Publish: overwrite link value with capability
+
+	capabilityValue := interpreter.NewCapabilityValue(
+		m.interpreter,
+		capabilityID,
+		addressValue,
+		borrowStaticType,
+	)
+
+	capabilityValue, ok = capabilityValue.Transfer(
+		m.interpreter,
+		locationRange,
+		atree.Address(address),
+		true,
+		nil,
+		nil,
+	).(*interpreter.CapabilityValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	m.interpreter.WriteStored(
+		address,
+		domain,
+		storageMapKey,
+		capabilityValue,
+	)
+
+	return capabilityID
+}
+
+var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(
+	nil,
+	interpreter.UnauthorizedAccess,
+	interpreter.PrimitiveStaticTypeAuthAccount,
+)
+
+func (m *Migration) getPathCapabilityFinalTarget(
+	address common.Address,
+	path interpreter.PathValue,
+	wantedBorrowType *sema.ReferenceType,
+) (
+	target capabilityTarget,
+	authorization interpreter.Authorization,
+	err error,
+) {
+
+	seenPaths := map[interpreter.PathValue]struct{}{}
+	paths := []interpreter.PathValue{path}
+
+	for {
+		// Detect cyclic links
+
+		if _, ok := seenPaths[path]; ok {
+			return nil,
+				interpreter.UnauthorizedAccess,
+				CyclicLinkError{
+					Address: address,
+					Paths:   paths,
+				}
+		} else {
+			seenPaths[path] = struct{}{}
+		}
+
+		domain := path.Domain.Identifier()
+		identifier := path.Identifier
+
+		storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+		switch path.Domain {
+		case common.PathDomainStorage:
+
+			return pathCapabilityTarget(path),
+				interpreter.ConvertSemaAccessToStaticAuthorization(
+					m.interpreter,
+					wantedBorrowType.Authorization,
+				),
+				nil
+
+		case common.PathDomainPublic,
+			common.PathDomainPrivate:
+
+			value := m.interpreter.ReadStored(address, domain, storageMapKey)
+			if value == nil {
+				return nil, interpreter.UnauthorizedAccess, nil
+			}
+
+			switch value := value.(type) {
+			case interpreter.PathLinkValue:
+				allowedType := m.interpreter.MustConvertStaticToSemaType(value.Type)
+
+				if !sema.IsSubType(allowedType, wantedBorrowType) {
+					return nil, interpreter.UnauthorizedAccess, nil
+				}
+
+				targetPath := value.TargetPath
+				paths = append(paths, targetPath)
+				path = targetPath
+
+			case interpreter.AccountLinkValue:
+				if !m.interpreter.IsSubTypeOfSemaType(
+					authAccountReferenceStaticType,
+					wantedBorrowType,
+				) {
+					return nil, interpreter.UnauthorizedAccess, nil
+				}
+
+				return accountCapabilityTarget(address),
+					interpreter.UnauthorizedAccess,
+					nil
+
+			case *interpreter.CapabilityValue:
+
+				// For backwards-compatibility, follow ID capability values
+				// which are published in the public or private domain
+
+				capabilityBorrowType, ok :=
+					m.interpreter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				reference := m.interpreter.SharedState.Config.CapabilityBorrowHandler(
+					m.interpreter,
+					interpreter.EmptyLocationRange,
+					value.Address,
+					value.ID,
+					wantedBorrowType,
+					capabilityBorrowType,
+				)
+				if reference == nil {
+					return nil, interpreter.UnauthorizedAccess, nil
+				}
+
+				switch reference := reference.(type) {
+				case *interpreter.StorageReferenceValue:
+					address = reference.TargetStorageAddress
+					targetPath := reference.TargetPath
+					paths = append(paths, targetPath)
+					path = targetPath
+
+				case *interpreter.EphemeralReferenceValue:
+					accountValue := reference.Value.(*interpreter.SimpleCompositeValue)
+					address := accountValue.Fields[sema.AccountTypeAddressFieldName].(interpreter.AddressValue)
+
+					return accountCapabilityTarget(address),
+						interpreter.UnauthorizedAccess,
+						nil
+
+				default:
+					return nil, interpreter.UnauthorizedAccess, nil
+				}
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		}
+	}
 }

@@ -2420,7 +2420,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			capabilityIDValue, borrowStaticType := issueStorageCapabilityController(
+			capabilityIDValue, borrowStaticType := IssueStorageCapabilityController(
 				inter,
 				locationRange,
 				idGenerator,
@@ -2439,7 +2439,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 	)
 }
 
-func issueStorageCapabilityController(
+func IssueStorageCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	idGenerator AccountIDGenerator,
