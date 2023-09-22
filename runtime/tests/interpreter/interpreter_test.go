@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/onflow/atree"
@@ -8603,42 +8604,58 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
       pub let address2 = Test.test()
     `
 
-	addressValue := interpreter.AddressValue{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
+	t.Run("with custom handler", func(t *testing.T) {
+		addressValue := interpreter.AddressValue{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		}
 
-	inter, err := parseCheckAndInterpretWithOptions(t, code,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				InjectedCompositeFieldsHandler: func(
-					inter *interpreter.Interpreter,
-					_ common.Location,
-					_ string,
-					_ common.CompositeKind,
-				) map[string]interpreter.Value {
-					return map[string]interpreter.Value{
-						"account": newTestAuthAccountValue(inter, addressValue),
-					}
+		inter, err := parseCheckAndInterpretWithOptions(t, code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+					InjectedCompositeFieldsHandler: func(
+						inter *interpreter.Interpreter,
+						_ common.Location,
+						_ string,
+						_ common.CompositeKind,
+					) map[string]interpreter.Value {
+						return map[string]interpreter.Value{
+							"account": newTestAuthAccountValue(inter, addressValue),
+						}
+					},
 				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		addressValue,
-		inter.Globals.Get("address1").GetValue(),
-	)
+		AssertValuesEqual(
+			t,
+			inter,
+			addressValue,
+			inter.Globals.Get("address1").GetValue(),
+		)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		addressValue,
-		inter.Globals.Get("address2").GetValue(),
-	)
+		AssertValuesEqual(
+			t,
+			inter,
+			addressValue,
+			inter.Globals.Get("address2").GetValue(),
+		)
+	})
+
+	t.Run("with default handler", func(t *testing.T) {
+		env := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
+		_, err := parseCheckAndInterpretWithOptions(t, code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler:           makeContractValueHandler(nil, nil, nil),
+					InjectedCompositeFieldsHandler: env.InterpreterConfig.InjectedCompositeFieldsHandler,
+				},
+			},
+		)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "error: member `account` is used before it has been initialized")
+	})
 }
 
 func TestInterpretConformToImportedInterface(t *testing.T) {
