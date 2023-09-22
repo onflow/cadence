@@ -827,7 +827,7 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 				case common.AddressLocation:
 					address = location.Address
 				default:
-					panic(errors.NewUnreachableError())
+					return nil
 				}
 
 				addressValue := interpreter.NewAddressValue(
