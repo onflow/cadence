@@ -7821,6 +7821,18 @@ type EntitlementRelation struct {
 	Output *EntitlementType
 }
 
+func NewEntitlementRelation(
+	memoryGauge common.MemoryGauge,
+	input *EntitlementType,
+	output *EntitlementType,
+) EntitlementRelation {
+	common.UseMemory(memoryGauge, common.EntitlementRelationSemaTypeMemoryUsage)
+	return EntitlementRelation{
+		Input:  input,
+		Output: output,
+	}
+}
+
 type EntitlementMapType struct {
 	Location          common.Location
 	containerType     Type
@@ -8000,7 +8012,13 @@ func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
 				checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType),
 				visitedMaps,
 			)
-			t.Relations = append(t.Relations, includedMapType.Relations...)
+
+			for _, relation := range includedMapType.Relations {
+				if !slices.Contains(t.Relations, relation) {
+					common.UseMemory(checker.memoryGauge, common.EntitlementRelationSemaTypeMemoryUsage)
+					t.Relations = append(t.Relations, relation)
+				}
+			}
 			t.IncludesIdentity = t.IncludesIdentity || includedMapType.IncludesIdentity
 
 			includedMaps[includedMapType] = struct{}{}
