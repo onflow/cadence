@@ -862,7 +862,8 @@ func parseEventDeclaration(
 	p.next()
 
 	// if this is a `ResourceDestroyed` event (i.e., a default event declaration), parse default arguments
-	parameterList, err := parseParameterList(p, identifier.Identifier == ast.ResourceDestructionDefaultEventName)
+	parseDefaultArguments := identifier.Identifier == ast.ResourceDestructionDefaultEventName
+	parameterList, err := parseParameterList(p, parseDefaultArguments)
 	if err != nil {
 		return nil, err
 	}

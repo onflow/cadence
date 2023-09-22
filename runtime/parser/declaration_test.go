@@ -2696,7 +2696,7 @@ func TestParseEvent(t *testing.T) {
 		utils.AssertEqualWithDiff(t, []error{
 			&SyntaxError{
 				Pos:     ast.Position{Line: 1, Column: 33, Offset: 33},
-				Message: "expected comma or end of parameter list, got '='",
+				Message: "cannot use a default argument for this function",
 			},
 		}, errs)
 	})

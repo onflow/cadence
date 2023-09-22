@@ -187,6 +187,8 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 			return nil, err
 		}
 
+	} else if p.current.Is(lexer.TokenEqual) {
+		return nil, p.syntaxError("cannot use a default argument for this function")
 	}
 
 	return ast.NewParameter(
