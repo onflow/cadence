@@ -39,7 +39,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name:  "foo",
 		Type:  sema.IntType,
-		Kind:  common.DeclarationKindFunction,
+		Kind:  common.DeclarationKindConstant,
 		Value: interpreter.NewUnmeteredIntValueFromInt64(2),
 	}
 
@@ -91,7 +91,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	// Run transaction
 
 	transactionEnvironment := NewBaseInterpreterEnvironment(Config{})
-	transactionEnvironment.Declare(valueDeclaration)
+	transactionEnvironment.DeclareValue(valueDeclaration)
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -108,7 +108,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	// Run script
 
 	scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
-	scriptEnvironment.Declare(valueDeclaration)
+	scriptEnvironment.DeclareValue(valueDeclaration)
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -124,6 +124,65 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 	require.Equal(t,
 		cadence.Int{Value: big.NewInt(4)},
+		result,
+	)
+}
+
+func TestRuntimePredeclaredTypes(t *testing.T) {
+
+	t.Parallel()
+
+	xType := sema.IntType
+
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name:  "x",
+		Type:  xType,
+		Kind:  common.DeclarationKindConstant,
+		Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+	}
+
+	typeDeclaration := stdlib.StandardLibraryType{
+		Name: "X",
+		Type: xType,
+		Kind: common.DeclarationKindType,
+	}
+
+	script := []byte(`
+	  pub fun main(): X {
+		  return x
+	  }
+	`)
+
+	runtime := newTestInterpreterRuntime()
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+	}
+
+	// Run script
+
+	scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+	scriptEnvironment.DeclareValue(valueDeclaration)
+	scriptEnvironment.DeclareType(typeDeclaration)
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    common.ScriptLocation{},
+			Environment: scriptEnvironment,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.Int{Value: big.NewInt(2)},
 		result,
 	)
 }
