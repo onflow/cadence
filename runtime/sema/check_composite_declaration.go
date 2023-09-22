@@ -2032,9 +2032,20 @@ func (checker *Checker) checkDefaultDestroyEvent(
 			*ast.NilExpression,
 			*ast.IntegerExpression,
 			*ast.FixedPointExpression,
-			*ast.IdentifierExpression,
 			*ast.PathExpression:
 			break
+		case *ast.IdentifierExpression:
+			// these are guaranteed to exist at time of destruction, so we allow them
+			if arg.Identifier.Identifier == SelfIdentifier || arg.Identifier.Identifier == BaseIdentifier {
+				break
+			}
+			// if it's an attachment, then it's also okay
+			if checker.typeActivations.Find(arg.Identifier.Identifier) != nil {
+				break
+			}
+			checker.report(&DefaultDestroyInvalidArgumentError{
+				ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+			})
 		case *ast.MemberExpression:
 			checkParamExpressionKind(arg.Expression)
 		case *ast.IndexExpression:
@@ -2079,6 +2090,7 @@ func (checker *Checker) checkDefaultDestroyEvent(
 		if !IsSubType(unwrappedParamType, StringType) &&
 			!IsSubType(unwrappedParamType, NumberType) &&
 			!IsSubType(unwrappedParamType, TheAddressType) &&
+			!IsSubType(unwrappedParamType, PathType) &&
 			!IsSubType(unwrappedParamType, BoolType) {
 			checker.report(&DefaultDestroyInvalidParameterError{
 				ParamType: paramType,

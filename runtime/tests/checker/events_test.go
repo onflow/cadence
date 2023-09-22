@@ -738,6 +738,18 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("path expr", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: PublicPath = /public/foo)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
 	t.Run("float", func(t *testing.T) {
 
 		t.Parallel()
@@ -812,20 +824,22 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			let s: S = S()
-
+			let r2 <- create R2()
+			let ref = &r2 as &R2
+			
 			resource R {
-				event ResourceDestroyed(name: UFix64 = s.field)
+				event ResourceDestroyed(name: UFix64 = ref.field)
 			}
 
-			struct S {
+			resource R2 {
 				let field : UFix64 
 				init() {
 					self.field = 0.0034
 				}
 			}
         `)
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
 	})
 
 	t.Run("double nested field", func(t *testing.T) {
@@ -905,10 +919,13 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			var arr : [String] = []
-
 			resource R {
-				event ResourceDestroyed(name: String? = arr[0])
+				var arr : [String] 
+				event ResourceDestroyed(name: String? = self.arr[0])
+
+				init() {
+					self.arr = []
+				}
 			}
         `)
 		errs := RequireCheckerErrors(t, err, 1)
@@ -921,10 +938,13 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			var arr : {Int: String} = {}
-
 			resource R {
-				event ResourceDestroyed(name: String? = arr[0])
+				let dict : {Int: String} 
+				event ResourceDestroyed(name: String? = self.dict[0])
+
+				init() {
+					self.dict = {}
+				}
 			}
         `)
 		require.NoError(t, err)
@@ -935,12 +955,11 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			fun get(): {Int: String} {
-				return {}
-			}
-
 			resource R {
-				event ResourceDestroyed(name: String? = get()[0])
+				event ResourceDestroyed(name: String? = self.get()[0])
+				fun get(): {Int: String} {
+					return {}
+				}
 			}
         `)
 		errs := RequireCheckerErrors(t, err, 1)
@@ -952,10 +971,32 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-			var dict : {Int: String} = {}
-
 			resource R {
-				event ResourceDestroyed(name: String? = dict[0+1])
+				let dict : {Int: String} 
+				event ResourceDestroyed(name: String? = self.dict[0+1])
+
+				init() {
+					self.dict = {}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+	})
+
+	t.Run("external var expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			var index: Int = 3
+			resource R {
+				let dict : {Int: String} 
+				event ResourceDestroyed(name: String? = self.dict[index])
+
+				init() {
+					self.dict = {}
+				}
 			}
         `)
 		errs := RequireCheckerErrors(t, err, 1)
