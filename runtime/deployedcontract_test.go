@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -24,7 +24,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -63,38 +65,38 @@ func TestRuntimeDeployedContracts(t *testing.T) {
 		}
 		`
 
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 			return accountCodes[location], nil
 		},
-		getAccountContractNames: func(_ Address) ([]string, error) {
+		OnGetAccountContractNames: func(_ Address) ([]string, error) {
 			names := make([]string, 0, len(accountCodes))
 			for location := range accountCodes {
 				names = append(names, location.String())
 			}
 			return names, nil
 		},
-		emitEvent: func(_ cadence.Event) error {
+		OnEmitEvent: func(_ cadence.Event) error {
 			return nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		log:     func(msg string) {},
-		storage: newTestLedger(nil, nil),
+		OnProgramLog: func(msg string) {},
+		Storage:      NewTestLedger(nil, nil),
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 	newContext := func() Context {
 		return Context{Interface: runtimeInterface, Location: nextTransactionLocation()}
 	}

@@ -100,7 +100,7 @@ struct Account {
         /// The given type must not necessarily be exactly the same as the type of the copied structure.
         ///
         /// The path must be a storage path, i.e., only the domain `storage` is allowed.
-        access(all)
+        access(Storage | CopyValue)
         view fun copy<T: AnyStruct>(from: StoragePath): T?
 
         /// Returns true if the object in account storage under the given path satisfies the given type,
@@ -204,6 +204,26 @@ struct Account {
         /// Returns the deployed contract for the updated contract.
         access(Contracts | UpdateContract)
         fun update(name: String, code: [UInt8]): DeployedContract
+
+        /// Updates the code for the contract/contract interface in the account,
+        /// and handle any deployment errors gracefully.
+        ///
+        /// The `code` parameter is the UTF-8 encoded representation of the source code.
+        /// The code must contain exactly one contract or contract interface,
+        /// which must have the same name as the `name` parameter.
+        ///
+        /// Does **not** run the initializer of the contract/contract interface again.
+        /// The contract instance in the world state stays as is.
+        ///
+        /// Fails if no contract/contract interface with the given name exists in the account,
+        /// if the given code does not declare exactly one contract or contract interface,
+        /// or if the given name does not match the name of the contract/contract interface declaration in the code.
+        ///
+        /// Returns the deployment result.
+        /// Result would contain the deployed contract for the updated contract, if the update was successfull.
+        /// Otherwise, the deployed contract would be nil.
+        access(Contracts | UpdateContract)
+        fun tryUpdate(name: String, code: [UInt8]): DeploymentResult
 
         /// Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
         ///
@@ -315,6 +335,10 @@ struct Account {
         access(all)
         view fun borrow<T: &Any>(_ path: PublicPath): T?
 
+        /// Returns true if a capability exists at the given public path.
+        access(all)
+        view fun exists(_ path: PublicPath): Bool
+
         /// Publish the capability at the given public path.
         ///
         /// If there is already a capability published under the given path, the program aborts.
@@ -333,6 +357,10 @@ struct Account {
 
     access(all)
     struct StorageCapabilities {
+
+        /// Issue/create a new storage capability.
+        access(Capabilities | StorageCapabilities | IssueStorageCapabilityController)
+        fun issue<T: &Any>(_ path: StoragePath): Capability<T>
 
         /// Get the storage capability controller for the capability with the specified ID.
         ///
@@ -359,14 +387,14 @@ struct Account {
             forPath: StoragePath,
             _ function: fun(&StorageCapabilityController): Bool
         )
-
-        /// Issue/create a new storage capability.
-        access(Capabilities | StorageCapabilities | IssueStorageCapabilityController)
-        fun issue<T: &Any>(_ path: StoragePath): Capability<T>
     }
 
     access(all)
     struct AccountCapabilities {
+        /// Issue/create a new account capability.
+        access(Capabilities | AccountCapabilities | IssueAccountCapabilityController)
+        fun issue<T: &Account>(): Capability<T>
+
         /// Get capability controller for capability with the specified ID.
         ///
         /// Returns nil if the ID does not reference an existing account capability.
@@ -388,10 +416,6 @@ struct Account {
         /// Otherwise, iteration aborts.
         access(Capabilities | AccountCapabilities | GetAccountCapabilityController)
         fun forEachController(_ function: fun(&AccountCapabilityController): Bool)
-
-        /// Issue/create a new account capability.
-        access(Capabilities | AccountCapabilities | IssueAccountCapabilityController)
-        fun issue<T: &Account>(): Capability<T>
     }
 }
 
@@ -401,6 +425,7 @@ entitlement Storage
 
 entitlement SaveValue
 entitlement LoadValue
+entitlement CopyValue
 entitlement BorrowValue
 
 /* Contract entitlements */
@@ -449,6 +474,7 @@ entitlement mapping AccountMapping {
 
     Storage -> SaveValue
     Storage -> LoadValue
+    Storage -> CopyValue
     Storage -> BorrowValue
 
     Contracts -> AddContract

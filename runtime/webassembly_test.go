@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"fmt"
@@ -28,11 +28,13 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 )
 
 type WasmtimeModule struct {
@@ -196,7 +198,7 @@ func TestRuntimeWebAssembly(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	// A simple program which exports a function `add` with type `(i32, i32) -> i32`,
 	// which sums the arguments and returns the result
@@ -217,9 +219,9 @@ func TestRuntimeWebAssembly(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		compileWebAssembly: func(bytes []byte) (stdlib.WebAssemblyModule, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnCompileWebAssembly: func(bytes []byte) (stdlib.WebAssemblyModule, error) {
 			store := wasmtime.NewStore(wasmtime.NewEngine())
 			module, err := wasmtime.NewModule(store.Engine, bytes)
 			if err != nil {
@@ -231,7 +233,7 @@ func TestRuntimeWebAssembly(t *testing.T) {
 				Module: module,
 			}, nil
 		},
-		decodeArgument: func(b []byte, _ cadence.Type) (cadence.Value, error) {
+		OnDecodeArgument: func(b []byte, _ cadence.Type) (cadence.Value, error) {
 			return json.Decode(nil, b)
 		},
 	}

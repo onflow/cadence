@@ -86,33 +86,34 @@ func _() {
 	_ = x[PrimitiveStaticTypeStorage-125]
 	_ = x[PrimitiveStaticTypeSaveValue-126]
 	_ = x[PrimitiveStaticTypeLoadValue-127]
-	_ = x[PrimitiveStaticTypeBorrowValue-128]
-	_ = x[PrimitiveStaticTypeContracts-129]
-	_ = x[PrimitiveStaticTypeAddContract-130]
-	_ = x[PrimitiveStaticTypeUpdateContract-131]
-	_ = x[PrimitiveStaticTypeRemoveContract-132]
-	_ = x[PrimitiveStaticTypeKeys-133]
-	_ = x[PrimitiveStaticTypeAddKey-134]
-	_ = x[PrimitiveStaticTypeRevokeKey-135]
-	_ = x[PrimitiveStaticTypeInbox-136]
-	_ = x[PrimitiveStaticTypePublishInboxCapability-137]
-	_ = x[PrimitiveStaticTypeUnpublishInboxCapability-138]
-	_ = x[PrimitiveStaticTypeClaimInboxCapability-139]
-	_ = x[PrimitiveStaticTypeCapabilities-140]
-	_ = x[PrimitiveStaticTypeStorageCapabilities-141]
-	_ = x[PrimitiveStaticTypeAccountCapabilities-142]
-	_ = x[PrimitiveStaticTypePublishCapability-143]
-	_ = x[PrimitiveStaticTypeUnpublishCapability-144]
-	_ = x[PrimitiveStaticTypeGetStorageCapabilityController-145]
-	_ = x[PrimitiveStaticTypeIssueStorageCapabilityController-146]
-	_ = x[PrimitiveStaticTypeGetAccountCapabilityController-147]
-	_ = x[PrimitiveStaticTypeIssueAccountCapabilityController-148]
-	_ = x[PrimitiveStaticTypeCapabilitiesMapping-149]
-	_ = x[PrimitiveStaticTypeAccountMapping-150]
-	_ = x[PrimitiveStaticType_Count-151]
+	_ = x[PrimitiveStaticTypeCopyValue-128]
+	_ = x[PrimitiveStaticTypeBorrowValue-129]
+	_ = x[PrimitiveStaticTypeContracts-130]
+	_ = x[PrimitiveStaticTypeAddContract-131]
+	_ = x[PrimitiveStaticTypeUpdateContract-132]
+	_ = x[PrimitiveStaticTypeRemoveContract-133]
+	_ = x[PrimitiveStaticTypeKeys-134]
+	_ = x[PrimitiveStaticTypeAddKey-135]
+	_ = x[PrimitiveStaticTypeRevokeKey-136]
+	_ = x[PrimitiveStaticTypeInbox-137]
+	_ = x[PrimitiveStaticTypePublishInboxCapability-138]
+	_ = x[PrimitiveStaticTypeUnpublishInboxCapability-139]
+	_ = x[PrimitiveStaticTypeClaimInboxCapability-140]
+	_ = x[PrimitiveStaticTypeCapabilities-141]
+	_ = x[PrimitiveStaticTypeStorageCapabilities-142]
+	_ = x[PrimitiveStaticTypeAccountCapabilities-143]
+	_ = x[PrimitiveStaticTypePublishCapability-144]
+	_ = x[PrimitiveStaticTypeUnpublishCapability-145]
+	_ = x[PrimitiveStaticTypeGetStorageCapabilityController-146]
+	_ = x[PrimitiveStaticTypeIssueStorageCapabilityController-147]
+	_ = x[PrimitiveStaticTypeGetAccountCapabilityController-148]
+	_ = x[PrimitiveStaticTypeIssueAccountCapabilityController-149]
+	_ = x[PrimitiveStaticTypeCapabilitiesMapping-150]
+	_ = x[PrimitiveStaticTypeAccountMapping-151]
+	_ = x[PrimitiveStaticType_Count-152]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockAnyResourceAttachmentAnyStructAttachmentNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Word128Word256Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilitiesAccountAccount_ContractsAccount_KeysAccount_InboxAccount_StorageCapabilitiesAccount_AccountCapabilitiesAccount_CapabilitiesAccount_StorageMutateInsertRemoveIdentityStorageSaveValueLoadValueBorrowValueContractsAddContractUpdateContractRemoveContractKeysAddKeyRevokeKeyInboxPublishInboxCapabilityUnpublishInboxCapabilityClaimInboxCapabilityCapabilitiesStorageCapabilitiesAccountCapabilitiesPublishCapabilityUnpublishCapabilityGetStorageCapabilityControllerIssueStorageCapabilityControllerGetAccountCapabilityControllerIssueAccountCapabilityControllerCapabilitiesMappingAccountMapping_Count"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockAnyResourceAttachmentAnyStructAttachmentNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Word128Word256Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilitiesAccountAccount_ContractsAccount_KeysAccount_InboxAccount_StorageCapabilitiesAccount_AccountCapabilitiesAccount_CapabilitiesAccount_StorageMutateInsertRemoveIdentityStorageSaveValueLoadValueCopyValueBorrowValueContractsAddContractUpdateContractRemoveContractKeysAddKeyRevokeKeyInboxPublishInboxCapabilityUnpublishInboxCapabilityClaimInboxCapabilityCapabilitiesStorageCapabilitiesAccountCapabilitiesPublishCapabilityUnpublishCapabilityGetStorageCapabilityControllerIssueStorageCapabilityControllerGetAccountCapabilityControllerIssueAccountCapabilityControllerCapabilitiesMappingAccountMapping_Count"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:   _PrimitiveStaticType_name[0:7],
@@ -193,30 +194,31 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	125: _PrimitiveStaticType_name[831:838],
 	126: _PrimitiveStaticType_name[838:847],
 	127: _PrimitiveStaticType_name[847:856],
-	128: _PrimitiveStaticType_name[856:867],
-	129: _PrimitiveStaticType_name[867:876],
-	130: _PrimitiveStaticType_name[876:887],
-	131: _PrimitiveStaticType_name[887:901],
-	132: _PrimitiveStaticType_name[901:915],
-	133: _PrimitiveStaticType_name[915:919],
-	134: _PrimitiveStaticType_name[919:925],
-	135: _PrimitiveStaticType_name[925:934],
-	136: _PrimitiveStaticType_name[934:939],
-	137: _PrimitiveStaticType_name[939:961],
-	138: _PrimitiveStaticType_name[961:985],
-	139: _PrimitiveStaticType_name[985:1005],
-	140: _PrimitiveStaticType_name[1005:1017],
-	141: _PrimitiveStaticType_name[1017:1036],
-	142: _PrimitiveStaticType_name[1036:1055],
-	143: _PrimitiveStaticType_name[1055:1072],
-	144: _PrimitiveStaticType_name[1072:1091],
-	145: _PrimitiveStaticType_name[1091:1121],
-	146: _PrimitiveStaticType_name[1121:1153],
-	147: _PrimitiveStaticType_name[1153:1183],
-	148: _PrimitiveStaticType_name[1183:1215],
-	149: _PrimitiveStaticType_name[1215:1234],
-	150: _PrimitiveStaticType_name[1234:1248],
-	151: _PrimitiveStaticType_name[1248:1254],
+	128: _PrimitiveStaticType_name[856:865],
+	129: _PrimitiveStaticType_name[865:876],
+	130: _PrimitiveStaticType_name[876:885],
+	131: _PrimitiveStaticType_name[885:896],
+	132: _PrimitiveStaticType_name[896:910],
+	133: _PrimitiveStaticType_name[910:924],
+	134: _PrimitiveStaticType_name[924:928],
+	135: _PrimitiveStaticType_name[928:934],
+	136: _PrimitiveStaticType_name[934:943],
+	137: _PrimitiveStaticType_name[943:948],
+	138: _PrimitiveStaticType_name[948:970],
+	139: _PrimitiveStaticType_name[970:994],
+	140: _PrimitiveStaticType_name[994:1014],
+	141: _PrimitiveStaticType_name[1014:1026],
+	142: _PrimitiveStaticType_name[1026:1045],
+	143: _PrimitiveStaticType_name[1045:1064],
+	144: _PrimitiveStaticType_name[1064:1081],
+	145: _PrimitiveStaticType_name[1081:1100],
+	146: _PrimitiveStaticType_name[1100:1130],
+	147: _PrimitiveStaticType_name[1130:1162],
+	148: _PrimitiveStaticType_name[1162:1192],
+	149: _PrimitiveStaticType_name[1192:1224],
+	150: _PrimitiveStaticType_name[1224:1243],
+	151: _PrimitiveStaticType_name[1243:1257],
+	152: _PrimitiveStaticType_name[1257:1263],
 }
 
 func (i PrimitiveStaticType) String() string {

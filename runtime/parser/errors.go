@@ -91,6 +91,48 @@ func (e *SyntaxError) Error() string {
 	return e.Message
 }
 
+// SyntaxErrorWithSuggestedFix
+
+type SyntaxErrorWithSuggestedReplacement struct {
+	Message      string
+	SuggestedFix string
+	ast.Range
+}
+
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &SyntaxErrorWithSuggestedReplacement{}
+
+func NewSyntaxErrorWithSuggestedReplacement(r ast.Range, message string, suggestedFix string) *SyntaxErrorWithSuggestedReplacement {
+	return &SyntaxErrorWithSuggestedReplacement{
+		Range:        r,
+		Message:      message,
+		SuggestedFix: suggestedFix,
+	}
+}
+
+var _ ParseError = &SyntaxErrorWithSuggestedReplacement{}
+var _ errors.UserError = &SyntaxErrorWithSuggestedReplacement{}
+
+func (*SyntaxErrorWithSuggestedReplacement) isParseError() {}
+
+func (*SyntaxErrorWithSuggestedReplacement) IsUserError() {}
+func (e *SyntaxErrorWithSuggestedReplacement) Error() string {
+	return e.Message
+}
+
+func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: fmt.Sprintf("replace with %s", e.SuggestedFix),
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: e.SuggestedFix,
+					Range:       e.Range,
+				},
+			},
+		},
+	}
+}
+
 // JuxtaposedUnaryOperatorsError
 
 type JuxtaposedUnaryOperatorsError struct {

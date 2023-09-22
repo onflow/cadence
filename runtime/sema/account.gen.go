@@ -515,7 +515,10 @@ func init() {
 		),
 		NewUnmeteredFunctionMember(
 			Account_StorageType,
-			PrimitiveAccess(ast.AccessAll),
+			newEntitlementAccess(
+				[]Type{StorageType, CopyValueType},
+				Disjunction,
+			),
 			Account_StorageTypeCopyFunctionName,
 			Account_StorageTypeCopyFunctionType,
 			Account_StorageTypeCopyFunctionDocString,
@@ -639,6 +642,46 @@ if the given code does not declare exactly one contract or contract interface,
 or if the given name does not match the name of the contract/contract interface declaration in the code.
 
 Returns the deployed contract for the updated contract.
+`
+
+const Account_ContractsTypeTryUpdateFunctionName = "tryUpdate"
+
+var Account_ContractsTypeTryUpdateFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Identifier:     "name",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+		{
+			Identifier: "code",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+				Type: UInt8Type,
+			}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		DeploymentResultType,
+	),
+}
+
+const Account_ContractsTypeTryUpdateFunctionDocString = `
+Updates the code for the contract/contract interface in the account,
+and handle any deployment errors gracefully.
+
+The ` + "`code`" + ` parameter is the UTF-8 encoded representation of the source code.
+The code must contain exactly one contract or contract interface,
+which must have the same name as the ` + "`name`" + ` parameter.
+
+Does **not** run the initializer of the contract/contract interface again.
+The contract instance in the world state stays as is.
+
+Fails if no contract/contract interface with the given name exists in the account,
+if the given code does not declare exactly one contract or contract interface,
+or if the given name does not match the name of the contract/contract interface declaration in the code.
+
+Returns the deployment result.
+Result would contain the deployed contract for the updated contract, if the update was successfull.
+Otherwise, the deployed contract would be nil.
 `
 
 const Account_ContractsTypeGetFunctionName = "get"
@@ -767,6 +810,16 @@ func init() {
 			Account_ContractsTypeUpdateFunctionName,
 			Account_ContractsTypeUpdateFunctionType,
 			Account_ContractsTypeUpdateFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_ContractsType,
+			newEntitlementAccess(
+				[]Type{ContractsType, UpdateContractType},
+				Disjunction,
+			),
+			Account_ContractsTypeTryUpdateFunctionName,
+			Account_ContractsTypeTryUpdateFunctionType,
+			Account_ContractsTypeTryUpdateFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			Account_ContractsType,
@@ -1234,6 +1287,26 @@ Returns nil if the capability does not exist, or cannot be borrowed using the gi
 The function is equivalent to ` + "`get(path)?.borrow()`" + `.
 `
 
+const Account_CapabilitiesTypeExistsFunctionName = "exists"
+
+var Account_CapabilitiesTypeExistsFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
+
+const Account_CapabilitiesTypeExistsFunctionDocString = `
+Returns true if a capability exists at the given public path.
+`
+
 const Account_CapabilitiesTypePublishFunctionName = "publish"
 
 var Account_CapabilitiesTypePublishFunctionType = &FunctionType{
@@ -1338,6 +1411,13 @@ func init() {
 		),
 		NewUnmeteredFunctionMember(
 			Account_CapabilitiesType,
+			PrimitiveAccess(ast.AccessAll),
+			Account_CapabilitiesTypeExistsFunctionName,
+			Account_CapabilitiesTypeExistsFunctionType,
+			Account_CapabilitiesTypeExistsFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_CapabilitiesType,
 			newEntitlementAccess(
 				[]Type{CapabilitiesType, PublishCapabilityType},
 				Disjunction,
@@ -1361,6 +1441,41 @@ func init() {
 	Account_CapabilitiesType.Members = MembersAsMap(members)
 	Account_CapabilitiesType.Fields = MembersFieldNames(members)
 }
+
+const Account_StorageCapabilitiesTypeIssueFunctionName = "issue"
+
+var Account_StorageCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParameter{
+	Name: "T",
+	TypeBound: &ReferenceType{
+		Type:          AnyType,
+		Authorization: UnauthorizedAccess,
+	},
+}
+
+var Account_StorageCapabilitiesTypeIssueFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		Account_StorageCapabilitiesTypeIssueFunctionTypeParameterT,
+	},
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(StoragePathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		MustInstantiate(
+			&CapabilityType{},
+			&GenericType{
+				TypeParameter: Account_StorageCapabilitiesTypeIssueFunctionTypeParameterT,
+			},
+		),
+	),
+}
+
+const Account_StorageCapabilitiesTypeIssueFunctionDocString = `
+Issue/create a new storage capability.
+`
 
 const Account_StorageCapabilitiesTypeGetControllerFunctionName = "getController"
 
@@ -1456,41 +1571,6 @@ then the callback must stop iteration by returning false.
 Otherwise, iteration aborts.
 `
 
-const Account_StorageCapabilitiesTypeIssueFunctionName = "issue"
-
-var Account_StorageCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParameter{
-	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
-	},
-}
-
-var Account_StorageCapabilitiesTypeIssueFunctionType = &FunctionType{
-	TypeParameters: []*TypeParameter{
-		Account_StorageCapabilitiesTypeIssueFunctionTypeParameterT,
-	},
-	Parameters: []Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "path",
-			TypeAnnotation: NewTypeAnnotation(StoragePathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		MustInstantiate(
-			&CapabilityType{},
-			&GenericType{
-				TypeParameter: Account_StorageCapabilitiesTypeIssueFunctionTypeParameterT,
-			},
-		),
-	),
-}
-
-const Account_StorageCapabilitiesTypeIssueFunctionDocString = `
-Issue/create a new storage capability.
-`
-
 const Account_StorageCapabilitiesTypeName = "StorageCapabilities"
 
 var Account_StorageCapabilitiesType = func() *CompositeType {
@@ -1506,6 +1586,16 @@ var Account_StorageCapabilitiesType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
+		NewUnmeteredFunctionMember(
+			Account_StorageCapabilitiesType,
+			newEntitlementAccess(
+				[]Type{CapabilitiesType, StorageCapabilitiesType, IssueStorageCapabilityControllerType},
+				Disjunction,
+			),
+			Account_StorageCapabilitiesTypeIssueFunctionName,
+			Account_StorageCapabilitiesTypeIssueFunctionType,
+			Account_StorageCapabilitiesTypeIssueFunctionDocString,
+		),
 		NewUnmeteredFunctionMember(
 			Account_StorageCapabilitiesType,
 			newEntitlementAccess(
@@ -1536,21 +1626,39 @@ func init() {
 			Account_StorageCapabilitiesTypeForEachControllerFunctionType,
 			Account_StorageCapabilitiesTypeForEachControllerFunctionDocString,
 		),
-		NewUnmeteredFunctionMember(
-			Account_StorageCapabilitiesType,
-			newEntitlementAccess(
-				[]Type{CapabilitiesType, StorageCapabilitiesType, IssueStorageCapabilityControllerType},
-				Disjunction,
-			),
-			Account_StorageCapabilitiesTypeIssueFunctionName,
-			Account_StorageCapabilitiesTypeIssueFunctionType,
-			Account_StorageCapabilitiesTypeIssueFunctionDocString,
-		),
 	}
 
 	Account_StorageCapabilitiesType.Members = MembersAsMap(members)
 	Account_StorageCapabilitiesType.Fields = MembersFieldNames(members)
 }
+
+const Account_AccountCapabilitiesTypeIssueFunctionName = "issue"
+
+var Account_AccountCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParameter{
+	Name: "T",
+	TypeBound: &ReferenceType{
+		Type:          AccountType,
+		Authorization: UnauthorizedAccess,
+	},
+}
+
+var Account_AccountCapabilitiesTypeIssueFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{
+		Account_AccountCapabilitiesTypeIssueFunctionTypeParameterT,
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		MustInstantiate(
+			&CapabilityType{},
+			&GenericType{
+				TypeParameter: Account_AccountCapabilitiesTypeIssueFunctionTypeParameterT,
+			},
+		),
+	),
+}
+
+const Account_AccountCapabilitiesTypeIssueFunctionDocString = `
+Issue/create a new account capability.
+`
 
 const Account_AccountCapabilitiesTypeGetControllerFunctionName = "getController"
 
@@ -1635,34 +1743,6 @@ then the callback must stop iteration by returning false.
 Otherwise, iteration aborts.
 `
 
-const Account_AccountCapabilitiesTypeIssueFunctionName = "issue"
-
-var Account_AccountCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParameter{
-	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AccountType,
-		Authorization: UnauthorizedAccess,
-	},
-}
-
-var Account_AccountCapabilitiesTypeIssueFunctionType = &FunctionType{
-	TypeParameters: []*TypeParameter{
-		Account_AccountCapabilitiesTypeIssueFunctionTypeParameterT,
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		MustInstantiate(
-			&CapabilityType{},
-			&GenericType{
-				TypeParameter: Account_AccountCapabilitiesTypeIssueFunctionTypeParameterT,
-			},
-		),
-	),
-}
-
-const Account_AccountCapabilitiesTypeIssueFunctionDocString = `
-Issue/create a new account capability.
-`
-
 const Account_AccountCapabilitiesTypeName = "AccountCapabilities"
 
 var Account_AccountCapabilitiesType = func() *CompositeType {
@@ -1678,6 +1758,16 @@ var Account_AccountCapabilitiesType = func() *CompositeType {
 
 func init() {
 	var members = []*Member{
+		NewUnmeteredFunctionMember(
+			Account_AccountCapabilitiesType,
+			newEntitlementAccess(
+				[]Type{CapabilitiesType, AccountCapabilitiesType, IssueAccountCapabilityControllerType},
+				Disjunction,
+			),
+			Account_AccountCapabilitiesTypeIssueFunctionName,
+			Account_AccountCapabilitiesTypeIssueFunctionType,
+			Account_AccountCapabilitiesTypeIssueFunctionDocString,
+		),
 		NewUnmeteredFunctionMember(
 			Account_AccountCapabilitiesType,
 			newEntitlementAccess(
@@ -1707,16 +1797,6 @@ func init() {
 			Account_AccountCapabilitiesTypeForEachControllerFunctionName,
 			Account_AccountCapabilitiesTypeForEachControllerFunctionType,
 			Account_AccountCapabilitiesTypeForEachControllerFunctionDocString,
-		),
-		NewUnmeteredFunctionMember(
-			Account_AccountCapabilitiesType,
-			newEntitlementAccess(
-				[]Type{CapabilitiesType, AccountCapabilitiesType, IssueAccountCapabilityControllerType},
-				Disjunction,
-			),
-			Account_AccountCapabilitiesTypeIssueFunctionName,
-			Account_AccountCapabilitiesTypeIssueFunctionType,
-			Account_AccountCapabilitiesTypeIssueFunctionDocString,
 		),
 	}
 
@@ -1843,6 +1923,10 @@ var LoadValueType = &EntitlementType{
 	Identifier: "LoadValue",
 }
 
+var CopyValueType = &EntitlementType{
+	Identifier: "CopyValue",
+}
+
 var BorrowValueType = &EntitlementType{
 	Identifier: "BorrowValue",
 }
@@ -1941,6 +2025,10 @@ var AccountMappingType = &EntitlementMapType{
 		},
 		EntitlementRelation{
 			Input:  StorageType,
+			Output: CopyValueType,
+		},
+		EntitlementRelation{
+			Input:  StorageType,
 			Output: BorrowValueType,
 		},
 		EntitlementRelation{
@@ -2020,6 +2108,8 @@ func init() {
 	addToBaseActivation(SaveValueType)
 	BuiltinEntitlements[LoadValueType.Identifier] = LoadValueType
 	addToBaseActivation(LoadValueType)
+	BuiltinEntitlements[CopyValueType.Identifier] = CopyValueType
+	addToBaseActivation(CopyValueType)
 	BuiltinEntitlements[BorrowValueType.Identifier] = BorrowValueType
 	addToBaseActivation(BorrowValueType)
 	BuiltinEntitlements[ContractsType.Identifier] = ContractsType

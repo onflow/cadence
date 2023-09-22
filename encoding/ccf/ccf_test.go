@@ -7862,6 +7862,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		ccf.SimpleTypeStorage:                          cadence.StorageType,
 		ccf.SimpleTypeSaveValue:                        cadence.SaveValueType,
 		ccf.SimpleTypeLoadValue:                        cadence.LoadValueType,
+		ccf.SimpleTypeCopyValue:                        cadence.CopyValueType,
 		ccf.SimpleTypeBorrowValue:                      cadence.BorrowValueType,
 		ccf.SimpleTypeContracts:                        cadence.ContractsType,
 		ccf.SimpleTypeAddContract:                      cadence.AddContractType,

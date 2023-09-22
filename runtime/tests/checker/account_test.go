@@ -517,6 +517,20 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 
 	t.Parallel()
 
+	t.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(storage: &Account.Storage) {
+              storage.copy<Int>(from: /storage/foo)
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
 	testMissingTypeArgument := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
@@ -533,7 +547,7 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 					`
                       struct S {}
 
-                      fun test(storage: &Account.Storage) {
+                      fun test(storage: auth(Storage) &Account.Storage) {
                           let s = storage.copy(from: /%s/s)
                       }
                     `,
@@ -575,7 +589,7 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 						`
                           struct S {}
 
-                          fun test(storage: &Account.Storage) {
+                          fun test(storage: auth(Storage) &Account.Storage) {
                               let s = storage.copy<S>(from: /%s/s)
                           }
                         `,
@@ -601,7 +615,7 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 						`
                           resource R {}
 
-                          fun test(storage: &Account.Storage) {
+                          fun test(storage: auth(Storage) &Account.Storage) {
                               let r <- storage.copy<@R>(from: /%s/r)
                               destroy r
                           }
@@ -1079,6 +1093,48 @@ func TestCheckAccountContractsUpdate(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             fun test(contracts: auth(Contracts) &Account.Contracts): DeployedContract {
                 return contracts.update(name: "foo", code: "012".decodeHex())
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("try update, unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: &Account.Contracts): DeploymentResult {
+                return contracts.tryUpdate(name: "foo", code: "012".decodeHex())
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errors[0], &invalidAccessErr)
+		assert.Equal(t, "tryUpdate", invalidAccessErr.Name)
+	})
+
+	t.Run("try update, authorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: auth(Contracts) &Account.Contracts): DeploymentResult {
+                return contracts.tryUpdate(name: "foo", code: "012".decodeHex())
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("deployment result fields", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: auth(Contracts) &Account.Contracts) {
+                let deploymentResult: DeploymentResult = contracts.tryUpdate(name: "foo", code: "012".decodeHex())
+                let deployedContract: DeployedContract = deploymentResult.deployedContract!
+                let name: String = deployedContract.name
+                let address: Address = deployedContract.address
+                let code: [UInt8] = deployedContract.code
             }
         `)
 		require.NoError(t, err)

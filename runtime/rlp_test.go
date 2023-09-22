@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -26,7 +26,9 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -34,7 +36,7 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
 
@@ -123,14 +125,11 @@ func TestRuntimeRLPDecodeString(t *testing.T) {
 
 			t.Parallel()
 
-			runtimeInterface := &testRuntimeInterface{
-				storage: newTestLedger(nil, nil),
-				meterMemory: func(_ common.MemoryUsage) error {
-					return nil
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: NewTestLedger(nil, nil),
+				OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+					return json.Decode(nil, b)
 				},
-			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(runtimeInterface, b)
 			}
 
 			result, err := runtime.ExecuteScript(
@@ -177,7 +176,7 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
 
@@ -282,14 +281,11 @@ func TestRuntimeRLPDecodeList(t *testing.T) {
 
 			t.Parallel()
 
-			runtimeInterface := &testRuntimeInterface{
-				storage: newTestLedger(nil, nil),
-				meterMemory: func(_ common.MemoryUsage) error {
-					return nil
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: NewTestLedger(nil, nil),
+				OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+					return json.Decode(nil, b)
 				},
-			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(runtimeInterface, b)
 			}
 
 			result, err := runtime.ExecuteScript(

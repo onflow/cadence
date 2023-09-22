@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2372,7 +2373,208 @@ func TestBlockchain(t *testing.T) {
 		assert.True(t, newEmulatorBackendInvoked)
 	})
 
+	t.Run("createSnapshot", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all) fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.createSnapshot(name: "adminCreated")
+            }
+		`
+
+		createSnapshotInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					createSnapshot: func(name string) error {
+						createSnapshotInvoked = true
+						assert.Equal(t, "adminCreated", name)
+
+						return nil
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, createSnapshotInvoked)
+	})
+
+	t.Run("createSnapshot failure", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all) fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.createSnapshot(name: "adminCreated")
+            }
+		`
+
+		createSnapshotInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					createSnapshot: func(name string) error {
+						createSnapshotInvoked = true
+						assert.Equal(t, "adminCreated", name)
+
+						return fmt.Errorf("failed to create snapshot: %s", name)
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.ErrorContains(t, err, "panic: failed to create snapshot: adminCreated")
+
+		assert.True(t, createSnapshotInvoked)
+	})
+
+	t.Run("loadSnapshot", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all) fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.createSnapshot(name: "adminCreated")
+                blockchain.loadSnapshot(name: "adminCreated")
+            }
+		`
+
+		loadSnapshotInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					createSnapshot: func(name string) error {
+						assert.Equal(t, "adminCreated", name)
+
+						return nil
+					},
+					loadSnapshot: func(name string) error {
+						loadSnapshotInvoked = true
+						assert.Equal(t, "adminCreated", name)
+
+						return nil
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, loadSnapshotInvoked)
+	})
+
+	t.Run("loadSnapshot failure", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all) fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                blockchain.createSnapshot(name: "adminCreated")
+                blockchain.loadSnapshot(name: "contractDeployed")
+            }
+		`
+
+		loadSnapshotInvoked := false
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					createSnapshot: func(name string) error {
+						assert.Equal(t, "adminCreated", name)
+
+						return nil
+					},
+					loadSnapshot: func(name string) error {
+						loadSnapshotInvoked = true
+						assert.Equal(t, "contractDeployed", name)
+
+						return fmt.Errorf("failed to create snapshot: %s", name)
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.ErrorContains(t, err, "panic: failed to create snapshot: contractDeployed")
+
+		assert.True(t, loadSnapshotInvoked)
+	})
+
 	// TODO: Add more tests for the remaining functions.
+}
+
+func TestBlockchainAccount(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("create account", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all) fun test() {
+                let blockchain = Test.newEmulatorBlockchain()
+                let account = blockchain.createAccount()
+                assert(account.address == 0x0100000000000000)
+            }
+		`
+
+		testFramework := &mockedTestFramework{
+			newEmulatorBackend: func() Blockchain {
+				return &mockedBlockchain{
+					createAccount: func() (*Account, error) {
+						return &Account{
+							PublicKey: &PublicKey{
+								PublicKey: []byte{1, 2, 3},
+								SignAlgo:  sema.SignatureAlgorithmECDSA_P256,
+							},
+							Address: common.Address{1},
+						}, nil
+					},
+
+					stdlibHandler: func() StandardLibraryHandler {
+						return nil
+					},
+				}
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }
 
 type mockedTestFramework struct {
@@ -2398,6 +2600,7 @@ func (m mockedTestFramework) ReadFile(fileName string) (string, error) {
 	return m.readFile(fileName)
 }
 
+// mockedBlockchain is the implementation of `Blockchain` for testing purposes.
 type mockedBlockchain struct {
 	runScript          func(inter *interpreter.Interpreter, code string, arguments []interpreter.Value)
 	createAccount      func() (*Account, error)
@@ -2412,6 +2615,8 @@ type mockedBlockchain struct {
 	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
 	reset              func(uint64)
 	moveTime           func(int64)
+	createSnapshot     func(string) error
+	loadSnapshot       func(string) error
 }
 
 var _ Blockchain = &mockedBlockchain{}
@@ -2537,4 +2742,20 @@ func (m mockedBlockchain) MoveTime(timeDelta int64) {
 	}
 
 	m.moveTime(timeDelta)
+}
+
+func (m mockedBlockchain) CreateSnapshot(name string) error {
+	if m.createSnapshot == nil {
+		panic("'CreateSnapshot' is not implemented")
+	}
+
+	return m.createSnapshot(name)
+}
+
+func (m mockedBlockchain) LoadSnapshot(name string) error {
+	if m.loadSnapshot == nil {
+		panic("'LoadSnapshot' is not implemented")
+	}
+
+	return m.loadSnapshot(name)
 }

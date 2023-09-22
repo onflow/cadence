@@ -178,6 +178,8 @@ func ExportMeteredType(
 			return cadence.SaveValueType
 		case sema.LoadValueType:
 			return cadence.LoadValueType
+		case sema.CopyValueType:
+			return cadence.CopyValueType
 		case sema.BorrowValueType:
 			return cadence.BorrowValueType
 		case sema.ContractsType:

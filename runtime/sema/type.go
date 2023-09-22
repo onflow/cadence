@@ -2478,6 +2478,7 @@ func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
 	return &FunctionType{
 		Parameters:           []Parameter{},
 		ReturnTypeAnnotation: NewTypeAnnotation(arrayType),
+		Purity:               FunctionPurityView,
 	}
 }
 
@@ -2492,6 +2493,7 @@ func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+		Purity:               FunctionPurityView,
 	}
 
 	return &FunctionType{
@@ -2503,6 +2505,7 @@ func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(NewVariableSizedType(memoryGauge, elementType)),
+		Purity:               FunctionPurityView,
 	}
 }
 
@@ -3722,6 +3725,7 @@ func init() {
 			HashAlgorithmType,
 			StorageCapabilityControllerType,
 			AccountCapabilityControllerType,
+			DeploymentResultType,
 		},
 	)
 
@@ -4603,20 +4607,6 @@ func (t *CompositeType) RewriteWithIntersectionTypes() (result Type, rewritten b
 	return t, false
 }
 
-func (t *CompositeType) InterfaceType() *InterfaceType {
-	return &InterfaceType{
-		Location:              t.Location,
-		Identifier:            t.Identifier,
-		CompositeKind:         t.Kind,
-		Members:               t.Members,
-		Fields:                t.Fields,
-		InitializerParameters: t.ConstructorParameters,
-		InitializerPurity:     t.ConstructorPurity,
-		containerType:         t.containerType,
-		NestedTypes:           t.NestedTypes,
-	}
-}
-
 func (*CompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	// TODO:
 	return false
@@ -4771,6 +4761,40 @@ func (t *CompositeType) SetNestedType(name string, nestedType ContainedType) {
 	}
 	t.NestedTypes.Set(name, nestedType)
 	nestedType.SetContainerType(t)
+}
+
+func (t *CompositeType) ConstructorFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Purity:               t.ConstructorPurity,
+		Parameters:           t.ConstructorParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(t),
+	}
+}
+
+func (t *CompositeType) InitializerFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Purity:               t.ConstructorPurity,
+		Parameters:           t.ConstructorParameters,
+		ReturnTypeAnnotation: VoidTypeAnnotation,
+	}
+}
+
+func (t *CompositeType) InitializerEffectiveArgumentLabels() []string {
+	parameters := t.ConstructorParameters
+	if len(parameters) == 0 {
+		return nil
+	}
+
+	argumentLabels := make([]string, 0, len(parameters))
+	for _, parameter := range parameters {
+		argumentLabels = append(
+			argumentLabels,
+			parameter.EffectiveArgumentLabel(),
+		)
+	}
+	return argumentLabels
 }
 
 // Member
@@ -7368,18 +7392,23 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 const CapabilityTypeBorrowFunctionName = "borrow"
 
 const capabilityTypeBorrowFunctionDocString = `
-Returns a reference to the object targeted by the capability.
+Returns a reference to the targeted object.
 
-If no object is stored at the target path, the function returns nil.
+If the capability is revoked, the function returns nil.
 
-If there is an object stored, a reference is returned as an optional, provided it can be borrowed using the given type.
-If the stored object cannot be borrowed using the given type, the function panics.
+If the capability targets an object in account storage,
+and and no object is stored at the target storage path,
+the function returns nil.
+
+If the targeted object cannot be borrowed using the given type,
+the function panics.
 `
 
 const CapabilityTypeCheckFunctionName = "check"
 
 const capabilityTypeCheckFunctionDocString = `
-Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
+Returns true if the capability currently targets an object that satisfies the given type,
+i.e. could be borrowed using the given type
 `
 
 var CapabilityTypeAddressFieldType = TheAddressType
@@ -7387,7 +7416,7 @@ var CapabilityTypeAddressFieldType = TheAddressType
 const CapabilityTypeAddressFieldName = "address"
 
 const capabilityTypeAddressFieldDocString = `
-The address of the capability
+The address of the account which the capability targets.
 `
 
 func (t *CapabilityType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
@@ -7812,6 +7841,18 @@ type EntitlementRelation struct {
 	Output *EntitlementType
 }
 
+func NewEntitlementRelation(
+	memoryGauge common.MemoryGauge,
+	input *EntitlementType,
+	output *EntitlementType,
+) EntitlementRelation {
+	common.UseMemory(memoryGauge, common.EntitlementRelationSemaTypeMemoryUsage)
+	return EntitlementRelation{
+		Input:  input,
+		Output: output,
+	}
+}
+
 type EntitlementMapType struct {
 	Location          common.Location
 	containerType     Type
@@ -7991,7 +8032,13 @@ func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
 				checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType),
 				visitedMaps,
 			)
-			t.Relations = append(t.Relations, includedMapType.Relations...)
+
+			for _, relation := range includedMapType.Relations {
+				if !slices.Contains(t.Relations, relation) {
+					common.UseMemory(checker.memoryGauge, common.EntitlementRelationSemaTypeMemoryUsage)
+					t.Relations = append(t.Relations, relation)
+				}
+			}
 			t.IncludesIdentity = t.IncludesIdentity || includedMapType.IncludesIdentity
 
 			includedMaps[includedMapType] = struct{}{}
@@ -8008,6 +8055,7 @@ func init() {
 		HashAlgorithmType,
 		SignatureAlgorithmType,
 		AccountType,
+		DeploymentResultType,
 	}
 
 	for len(compositeTypes) > 0 {

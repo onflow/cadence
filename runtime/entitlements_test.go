@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -24,18 +24,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -66,27 +68,27 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -126,8 +128,8 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -158,27 +160,27 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -218,8 +220,8 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -267,27 +269,27 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -327,8 +329,8 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 func TestRuntimeAccountExportEntitledRef(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -354,28 +356,28 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -404,8 +406,8 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
 func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -440,28 +442,28 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -507,8 +509,8 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -547,27 +549,27 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -607,8 +609,8 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -662,27 +664,27 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -722,8 +724,8 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -777,27 +779,27 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -841,25 +843,25 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	test := func(t *testing.T, script string) {
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		accountCodes := map[common.Location][]byte{}
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				code = accountCodes[location]
 				return code, nil
 			},
-			emitEvent: func(event cadence.Event) error {
+			OnEmitEvent: func(event cadence.Event) error {
 				return nil
 			},
 		}
@@ -1119,8 +1121,8 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	furtherUpstreamDeployTx := DeploymentTransaction("FurtherUpstream", []byte(`
@@ -1213,28 +1215,28 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -1280,4 +1282,234 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+}
+
+func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
+	t.Parallel()
+
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	script := []byte(`
+	access(all) entitlement E
+	access(all) entitlement F
+	
+	access(all) entitlement X
+	access(all) entitlement Y
+	access(all) entitlement mapping N1 {
+	  E -> F 
+	  E -> E 
+	  E -> X
+	  E -> Y
+	  F -> F 
+	  F -> E 
+	  F -> X
+	  F -> Y
+	  X -> F 
+	  X -> E 
+	  X -> X
+	  X -> Y
+	}
+	access(all) entitlement mapping N2{ include N1 }
+	access(all) entitlement mapping N3{ include N2 }
+	access(all) entitlement mapping N4{ include N3 }
+	access(all) entitlement mapping A {
+	  include N1
+	  include N2
+	  include N3
+	  include N4
+	}
+	access(all) entitlement mapping B {
+	  include A
+	  include N1
+	  include N2
+	}
+	access(all) entitlement mapping C {
+	  include A
+	  include B
+	  include N1
+	  include N2
+	}
+	access(all) entitlement mapping D {
+	  include A
+	  include B
+	  include C
+	  include N1
+	  include N2
+	}
+	access(all) entitlement mapping AA {
+	  include A
+	  include B
+	  include C
+	  include D
+	}
+	access(all) entitlement mapping BB {include AA}
+	access(all) entitlement mapping CC {include AA}
+	access(all) entitlement mapping DD {include AA}
+	access(all) entitlement mapping AAA {
+	  include AA
+	  include BB
+	  include CC
+	  include DD
+	}
+	access(all) entitlement mapping BBB {
+	  include AAA
+	  include AA
+	  include BB
+	  include CC
+	  include DD
+	}
+	access(all) entitlement mapping CCC {
+	  include AAA
+	  include BBB
+	  include AA
+	  include BB
+	  include CC
+	  include DD
+	}
+	access(all) entitlement mapping DDD {
+	  include AAA
+	  include BBB
+	  include CCC
+	  include AA
+	  include BB
+	  include CC
+	  include DD
+	}
+	access(all) entitlement mapping AAAA {
+	  include AAA
+	  include BBB
+	  include CCC
+	  include DDD
+	}
+	access(all) entitlement mapping BBBB {
+	  include AAAA
+	  include AAA
+	  include BBB
+	  include CCC
+	  include DDD
+	}
+	access(all) entitlement mapping CCCC {
+	  include AAAA
+	  include BBBB
+	  include AAA
+	  include BBB
+	  include CCC
+	  include DDD
+	}
+	access(all) entitlement mapping DDDD {
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include AAA
+	  include BBB
+	  include CCC
+	  include DDD
+	}
+	access(all) entitlement mapping AAAAA {
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include DDDD
+	}
+	access(all) entitlement mapping BBBBB {
+	  include AAAAA
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include DDDD
+	}
+	access(all) entitlement mapping CCCCC {
+	  include AAAAA
+	  include BBBBB
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include DDDD
+	}
+	access(all) entitlement mapping DDDDD {
+	  include AAAAA
+	  include BBBBB
+	  include CCCCC
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include DDDD
+	}
+	access(all) entitlement mapping AAAAAA {
+	  include AAAAA
+	  include BBBBB
+	  include CCCCC
+	  include DDDDD
+	}
+	access(all) entitlement mapping BBBBBB { include AAAAAA}
+	access(all) entitlement mapping CCCCCC { include AAAAAA}
+	access(all) entitlement mapping DDDDDD { include AAAAAA}
+	access(all) entitlement mapping P1 {
+	  include AAAAAA
+	  include BBBBBB
+	  include CCCCCC
+	  include DDDDDD
+	}
+	access(all) entitlement mapping P2 { include P1 }
+	access(all) entitlement mapping P3 {
+	  include P1
+	  include P2
+	}
+	access(all) entitlement mapping P4 {
+	  include P1
+	  include P2
+	  include P3
+	}       
+	
+	access(all) fun main() {}
+    `)
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	var totalRelations uint
+	var failed bool
+
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnMeterMemory: func(usage common.MemoryUsage) error {
+			if usage.Kind == common.MemoryKindEntitlementRelationSemaType {
+				totalRelations++
+			}
+			if totalRelations > 1000 {
+				failed = true
+			}
+			return nil
+		},
+	}
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+	require.False(t, failed)
 }

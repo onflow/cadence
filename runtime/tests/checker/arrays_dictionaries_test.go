@@ -1136,7 +1136,7 @@ func TestCheckArrayFilter(t *testing.T) {
 		fun test() {
 			let x = [1, 2, 3]
 			let onlyEven =
-				fun (_ x: Int): Bool {
+				view fun (_ x: Int): Bool {
 					return x % 2 == 0
 				}
 
@@ -1146,7 +1146,7 @@ func TestCheckArrayFilter(t *testing.T) {
 		fun testFixedSize() {
 			let x : [Int; 5] = [1, 2, 3, 21, 30]
 			let onlyEvenInt =
-				fun (_ x: Int): Bool {
+				view fun (_ x: Int): Bool {
 					return x % 2 == 0
 				}
 
@@ -1186,7 +1186,7 @@ func TestCheckArrayFilterInvalidArgs(t *testing.T) {
 		fun test() {
 			let x = [1, 2, 3]
 			let onlyEvenInt16 =
-				fun (_ x: Int16): Bool {
+				view fun (_ x: Int16): Bool {
 					return x % 2 == 0
 				}
 
@@ -1220,9 +1220,10 @@ func TestCheckResourceArrayFilterInvalid(t *testing.T) {
 		}
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckArrayMap(t *testing.T) {

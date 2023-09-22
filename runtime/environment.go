@@ -41,7 +41,7 @@ type Environment interface {
 	Declare(valueDeclaration stdlib.StandardLibraryValue)
 	Configure(
 		runtimeInterface Interface,
-		codesAndPrograms codesAndPrograms,
+		codesAndPrograms CodesAndPrograms,
 		storage *Storage,
 		coverageReport *CoverageReport,
 	)
@@ -72,7 +72,7 @@ type interpreterEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	storage          *Storage
 	coverageReport   *CoverageReport
-	codesAndPrograms codesAndPrograms
+	codesAndPrograms CodesAndPrograms
 }
 
 type interpreterEnvironment struct {
@@ -180,7 +180,7 @@ func NewScriptInterpreterEnvironment(config Config) Environment {
 
 func (e *interpreterEnvironment) Configure(
 	runtimeInterface Interface,
-	codesAndPrograms codesAndPrograms,
+	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
 	coverageReport *CoverageReport,
 ) {
@@ -540,7 +540,7 @@ func (e *interpreterEnvironment) getProgram(
 			// Loading is done by Cadence.
 			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
 			// then do not treat it as an external error (the load callback is called by the embedder)
-			panicErr := userPanicToError(func() {
+			panicErr := UserPanicToError(func() {
 				program, err = load()
 			})
 			if panicErr != nil {

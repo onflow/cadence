@@ -80,6 +80,17 @@ func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDen
 	typeLeftDenotations[tokenType] = leftDenotation
 }
 
+func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typeMetaLeftDenotationFunc) {
+	current := typeMetaLeftDenotations[tokenType]
+	if current != nil {
+		panic(errors.NewUnexpectedError(
+			"type meta left denotation for token %s already exists",
+			tokenType,
+		))
+	}
+	typeMetaLeftDenotations[tokenType] = metaLeftDenotation
+}
+
 type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) ast.Type
 type postfixTypeFunc func(parser *parser, left ast.Type, tokenRange ast.Range) ast.Type
 
@@ -465,6 +476,34 @@ func defineIntersectionOrDictionaryType() {
 				}
 				return intersectionType, nil
 			}
+		},
+	)
+
+	// While restricted types have been removed from Cadence, during the first few months of the
+	// migration period, leave a special error in place to help developers
+	// TODO: remove this after Stable Cadence migration period is finished
+	setTypeMetaLeftDenotation(
+		lexer.TokenBraceOpen,
+		func(p *parser, rightBindingPower int, left ast.Type) (result ast.Type, err error, done bool) {
+
+			// Perform a lookahead
+
+			current := p.current
+			cursor := p.tokens.Cursor()
+
+			// Skip the `{` token.
+			p.next()
+
+			// In case there is a space, the type is *not* considered a restricted type.
+			// The buffered tokens are replayed to allow them to be re-parsed.
+			if p.current.Is(lexer.TokenSpace) {
+				p.current = current
+				p.tokens.Revert(cursor)
+
+				return left, nil, true
+			}
+
+			return nil, p.syntaxError("restricted types have been removed; replace with the concrete type or an equivalent intersection type"), true
 		},
 	)
 }
