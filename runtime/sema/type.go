@@ -4607,20 +4607,6 @@ func (t *CompositeType) RewriteWithIntersectionTypes() (result Type, rewritten b
 	return t, false
 }
 
-func (t *CompositeType) InterfaceType() *InterfaceType {
-	return &InterfaceType{
-		Location:              t.Location,
-		Identifier:            t.Identifier,
-		CompositeKind:         t.Kind,
-		Members:               t.Members,
-		Fields:                t.Fields,
-		InitializerParameters: t.ConstructorParameters,
-		InitializerPurity:     t.ConstructorPurity,
-		containerType:         t.containerType,
-		NestedTypes:           t.NestedTypes,
-	}
-}
-
 func (*CompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	// TODO:
 	return false
@@ -4775,6 +4761,40 @@ func (t *CompositeType) SetNestedType(name string, nestedType ContainedType) {
 	}
 	t.NestedTypes.Set(name, nestedType)
 	nestedType.SetContainerType(t)
+}
+
+func (t *CompositeType) ConstructorFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Purity:               t.ConstructorPurity,
+		Parameters:           t.ConstructorParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(t),
+	}
+}
+
+func (t *CompositeType) InitializerFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Purity:               t.ConstructorPurity,
+		Parameters:           t.ConstructorParameters,
+		ReturnTypeAnnotation: VoidTypeAnnotation,
+	}
+}
+
+func (t *CompositeType) InitializerEffectiveArgumentLabels() []string {
+	parameters := t.ConstructorParameters
+	if len(parameters) == 0 {
+		return nil
+	}
+
+	argumentLabels := make([]string, 0, len(parameters))
+	for _, parameter := range parameters {
+		argumentLabels = append(
+			argumentLabels,
+			parameter.EffectiveArgumentLabel(),
+		)
+	}
+	return argumentLabels
 }
 
 // Member

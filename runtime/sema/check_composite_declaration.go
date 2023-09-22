@@ -715,23 +715,31 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 	checker.Elaboration.SetCompositeNestedDeclarations(declaration, nestedDeclarations)
 
 	for _, nestedEntitlementType := range nestedEntitlementTypes {
-		compositeType.NestedTypes.Set(nestedEntitlementType.Identifier, nestedEntitlementType)
-		nestedEntitlementType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedEntitlementType.Identifier,
+			nestedEntitlementType,
+		)
 	}
 
 	for _, nestedEntitlementMapType := range nestedEntitlementMapTypes {
-		compositeType.NestedTypes.Set(nestedEntitlementMapType.Identifier, nestedEntitlementMapType)
-		nestedEntitlementMapType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedEntitlementMapType.Identifier,
+			nestedEntitlementMapType,
+		)
 	}
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
-		compositeType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
-		nestedInterfaceType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedInterfaceType.Identifier,
+			nestedInterfaceType,
+		)
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
-		compositeType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
-		nestedCompositeType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedCompositeType.Identifier,
+			nestedCompositeType,
+		)
 	}
 
 	return compositeType
@@ -823,7 +831,8 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 					ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
 					IgnoreInSerialization: true,
 					DocString:             nestedCompositeDeclaration.DeclarationDocString(),
-				})
+				},
+			)
 		}
 		for _, nestedInterfaceDeclaration := range members.Interfaces() {
 			// resolve conformances
