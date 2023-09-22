@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -25,22 +25,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
-
-func newTestInterpreterRuntimeWithAttachments() testInterpreterRuntime {
-	rt := newTestInterpreterRuntime()
-	rt.interpreterRuntime.defaultConfig.AttachmentsEnabled = true
-	return rt
-}
 
 func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	var logs []string
 	var events []string
@@ -86,30 +82,30 @@ func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -150,8 +146,8 @@ func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	logs := make([]string, 0)
 	events := make([]string, 0)
@@ -187,31 +183,31 @@ func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -241,8 +237,8 @@ func TestRuntimeAccountAttachmentExport(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	var logs []string
 	var events []string
@@ -270,31 +266,31 @@ func TestRuntimeAccountAttachmentExport(t *testing.T) {
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -326,8 +322,8 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	var logs []string
 	var events []string
@@ -350,31 +346,31 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -407,8 +403,8 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	var logs []string
 	var events []string
@@ -457,30 +453,30 @@ func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -521,8 +517,8 @@ func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 func TestRuntimeAccountAttachmentCapability(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	var logs []string
 	var events []string
@@ -573,53 +569,53 @@ func TestRuntimeAccountAttachmentCapability(t *testing.T) {
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -662,27 +658,26 @@ func TestRuntimeAttachmentStorage(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (testInterpreterRuntime, *testRuntimeInterface) {
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.AttachmentsEnabled = true
+	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
+		runtime := NewTestInterpreterRuntimeWithAttachments()
 
 		accountCodes := map[common.Location][]byte{}
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				code = accountCodes[location]
 				return code, nil
 			},
-			emitEvent: func(event cadence.Event) error {
+			OnEmitEvent: func(event cadence.Event) error {
 				return nil
 			},
 		}

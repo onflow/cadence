@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -25,14 +25,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 )
 
 func TestRuntimeTypeStorage(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	tx1 := []byte(`
       transaction {
@@ -53,19 +55,19 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	var loggedMessage string
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				common.MustBytesToAddress([]byte{42}),
 			}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessage = message
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -100,7 +102,7 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
             transaction {
@@ -122,19 +124,19 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 
 		var loggedMessages []string
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
-			log: func(message string) {
+			OnProgramLog: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: script,
@@ -160,7 +162,7 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
             access(all) fun main(): [UFix64] {
@@ -181,13 +183,13 @@ func TestRuntimeBlockFieldTypes(t *testing.T) {
             }
         `)
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
 		var loggedMessages []string
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			log: func(message string) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnProgramLog: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
 		}
