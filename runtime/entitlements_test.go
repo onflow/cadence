@@ -1287,8 +1287,8 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
 func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	script := []byte(`
@@ -1466,30 +1466,30 @@ func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
 	access(all) fun main() {}
     `)
 
-	nextScriptLocation := newScriptLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	var totalRelations uint
 	var failed bool
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
-		meterMemory: func(usage common.MemoryUsage) error {
+		OnMeterMemory: func(usage common.MemoryUsage) error {
 			if usage.Kind == common.MemoryKindEntitlementRelationSemaType {
 				totalRelations++
 			}
