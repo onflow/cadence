@@ -3566,7 +3566,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 				ty := typeValue.Type
 				// InclusiveRanges must hold integers
 				elemSemaTy := inter.MustConvertStaticToSemaType(ty)
-				if !elemSemaTy.Tag().BelongsTo(sema.IntegerTypeTag) {
+				if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
 					return Nil
 				}
 
