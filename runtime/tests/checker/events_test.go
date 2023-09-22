@@ -660,7 +660,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
 			resource R {
-				event ResourceDestroyed(name: String = "foo", id: UInt16 = 4, condition: Bool = true)
+				event ResourceDestroyed(name: String = "foo", id: UInt16? = 4, condition: Bool = true)
 			}
         `)
 		require.NoError(t, err)
@@ -697,14 +697,68 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("address", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let field : Address
+				event ResourceDestroyed(name: Address? = self.field)
+
+				init() {
+					self.field = 0x1
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Address? = nil)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("address expr", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Address = 0x1)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("float", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: UFix64 = 0.0034)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
 	t.Run("field type mismatch", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
 			resource R {
-				let field : Int
 				event ResourceDestroyed(name: String = self.field)
+
+				let field : Int
 
 				init() {
 					self.field = 3
@@ -733,6 +787,218 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+	})
+
+	t.Run("function call", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Int  = self.fn())
+
+				fun fn(): Int {
+					return 3
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+	})
+
+	t.Run("external field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let s: S = S()
+
+			resource R {
+				event ResourceDestroyed(name: UFix64 = s.field)
+			}
+
+			struct S {
+				let field : UFix64 
+				init() {
+					self.field = 0.0034
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("double nested field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let s: S 
+				event ResourceDestroyed(name: UFix64 = self.s.field)
+				init() {
+					self.s = S()
+				}
+			}
+
+			struct S {
+				let field : UFix64 
+				init() {
+					self.field = 0.0034
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("function call member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			fun getS(): S {
+				return S()
+			}
+
+			resource R {
+				event ResourceDestroyed(name: UFix64 = getS().field)
+			}
+
+			struct S {
+				let field : UFix64 
+				init() {
+					self.field = 0.0034
+				}
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+	})
+
+	t.Run("method call member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				fun getS(): S {
+					return S()
+				}	
+				event ResourceDestroyed(name: UFix64 = self.getS().field)
+			}
+
+			struct S {
+				let field : UFix64 
+				init() {
+					self.field = 0.0034
+				}
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+	})
+
+	t.Run("array index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			var arr : [String] = []
+
+			resource R {
+				event ResourceDestroyed(name: String? = arr[0])
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+	})
+
+	t.Run("dict index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			var arr : {Int: String} = {}
+
+			resource R {
+				event ResourceDestroyed(name: String? = arr[0])
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("function call dict index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			fun get(): {Int: String} {
+				return {}
+			}
+
+			resource R {
+				event ResourceDestroyed(name: String? = get()[0])
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+	})
+
+	t.Run("function call dict indexed expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			var dict : {Int: String} = {}
+
+			resource R {
+				event ResourceDestroyed(name: String? = dict[0+1])
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+	})
+
+	t.Run("attachment index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for R {
+				let name: String
+				init() {
+					self.name = "foo"
+				}
+			}
+
+			resource R {
+				event ResourceDestroyed(name: String? = self[A]?.name)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment with base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for R {
+				event ResourceDestroyed(name: Int  = base.field)
+			}
+
+			resource R {
+				let field : Int
+
+				init() {
+					self.field = 3
+				}
+			}
+        `)
+		require.NoError(t, err)
 	})
 
 }

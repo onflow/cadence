@@ -2024,9 +2024,44 @@ func (checker *Checker) checkDefaultDestroyEvent(
 	functions := members.SpecialFunctions()
 	constructorFunctionParameters := functions[0].FunctionDeclaration.ParameterList.Parameters
 
+	var checkParamExpressionKind func(ast.Expression)
+	checkParamExpressionKind = func(arg ast.Expression) {
+		switch arg := arg.(type) {
+		case *ast.StringExpression,
+			*ast.BoolExpression,
+			*ast.NilExpression,
+			*ast.IntegerExpression,
+			*ast.FixedPointExpression,
+			*ast.IdentifierExpression,
+			*ast.PathExpression:
+			break
+		case *ast.MemberExpression:
+			checkParamExpressionKind(arg.Expression)
+		case *ast.IndexExpression:
+			checkParamExpressionKind(arg.TargetExpression)
+			checkParamExpressionKind(arg.IndexingExpression)
+
+			// indexing expressions on arrays can fail, and must be disallowed, but
+			// indexing expressions on dicts, or composites (for attachments) will return `nil` and thus never fail
+			targetExprType := checker.Elaboration.IndexExpressionTypes(arg).IndexedType
+			switch targetExprType.(type) {
+			case *VariableSizedType, *ConstantSizedType:
+				checker.report(&DefaultDestroyInvalidArgumentError{
+					ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+				})
+			}
+
+		default:
+			checker.report(&DefaultDestroyInvalidArgumentError{
+				ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+			})
+		}
+	}
+
 	for index, param := range eventType.ConstructorParameters {
 		paramType := param.TypeAnnotation.Type
-		paramDefaultArgument := constructorFunctionParameters[index]
+		paramExpr := constructorFunctionParameters[index]
+		paramDefaultArgument := paramExpr.DefaultArgument
 
 		// make `self` and `base` available when checking default arguments so the fields of the composite are available
 		checker.declareSelfValue(containerType, containerDeclaration.DeclarationDocString())
@@ -2036,19 +2071,22 @@ func (checker *Checker) checkDefaultDestroyEvent(
 				compositeContainer,
 				compositeContainer.baseTypeDocString)
 		}
-		checker.VisitExpression(paramDefaultArgument.DefaultArgument, paramType)
+		checker.VisitExpression(paramDefaultArgument, paramType)
 
+		unwrappedParamType := UnwrapOptionalType(paramType)
 		// default events must have default arguments for all their parameters; this is enforced in the parser
 		// we want to check that these arguments are all either literals or field accesses, and have primitive types
-		if !IsSubType(paramType, StringType) &&
-			!IsSubType(paramType, NumberType) &&
-			!IsSubType(paramType, TheAddressType) &&
-			!IsSubType(paramType, BoolType) {
+		if !IsSubType(unwrappedParamType, StringType) &&
+			!IsSubType(unwrappedParamType, NumberType) &&
+			!IsSubType(unwrappedParamType, TheAddressType) &&
+			!IsSubType(unwrappedParamType, BoolType) {
 			checker.report(&DefaultDestroyInvalidParameterError{
 				ParamType: paramType,
-				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, eventDeclaration),
+				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, paramExpr),
 			})
 		}
+
+		checkParamExpressionKind(paramDefaultArgument)
 
 	}
 }
