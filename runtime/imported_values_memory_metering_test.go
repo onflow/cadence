@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"fmt"
@@ -26,8 +26,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -44,13 +46,13 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 
 	executeScript := func(t *testing.T, script []byte, meter map[common.MemoryKind]uint64, args ...cadence.Value) {
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: testUseMemory(meter),
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: testUseMemory(meter),
 		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return jsoncdc.Decode(runtimeInterface, b)
+		runtimeInterface.OnDecodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := runtime.ExecuteScript(
@@ -487,14 +489,14 @@ func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			runtime := newTestInterpreterRuntime()
+			runtime := NewTestInterpreterRuntime()
 
 			meter := make(map[common.MemoryKind]uint64)
-			runtimeInterface := &testRuntimeInterface{
-				meterMemory: testUseMemory(meter),
+			runtimeInterface := &TestRuntimeInterface{
+				OnMeterMemory: testUseMemory(meter),
 			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-				return jsoncdc.Decode(runtimeInterface, b)
+			runtimeInterface.OnDecodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			script := []byte(fmt.Sprintf(
@@ -559,14 +561,14 @@ func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			runtime := newTestInterpreterRuntime()
+			runtime := NewTestInterpreterRuntime()
 
 			meter := make(map[common.MemoryKind]uint64)
-			runtimeInterface := &testRuntimeInterface{
-				meterMemory: testUseMemory(meter),
+			runtimeInterface := &TestRuntimeInterface{
+				OnMeterMemory: testUseMemory(meter),
 			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-				return jsoncdc.Decode(runtimeInterface, b)
+			runtimeInterface.OnDecodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			value := cadence.NewStruct([]cadence.Value{}).WithType(

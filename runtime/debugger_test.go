@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"sync"
@@ -24,9 +24,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 )
 
 func TestRuntimeDebugger(t *testing.T) {
@@ -52,23 +54,24 @@ func TestRuntimeDebugger(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.Debugger = debugger
+		config := DefaultTestInterpreterConfig
+		config.Debugger = debugger
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			log: func(message string) {
+			OnProgramLog: func(message string) {
 				logged = true
 				require.Equal(t, `"Hello, World!"`, message)
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -122,7 +125,7 @@ func TestRuntimeDebuggerBreakpoints(t *testing.T) {
 
 	t.Parallel()
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 	location := nextTransactionLocation()
 
 	// Prepare the debugger
@@ -144,17 +147,18 @@ func TestRuntimeDebuggerBreakpoints(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.Debugger = debugger
+		config := DefaultTestInterpreterConfig
+		config.Debugger = debugger
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 		address := common.MustBytesToAddress([]byte{0x1})
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			log: func(message string) {
+			OnProgramLog: func(message string) {
 				logged = true
 				require.Equal(t, `"Hello, World!"`, message)
 			},

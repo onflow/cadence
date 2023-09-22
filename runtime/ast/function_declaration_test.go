@@ -369,7 +369,8 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			prettier.Text(" {}"),
+			prettier.Text(" "),
+			prettier.Text("{}"),
 		},
 		decl.Doc(),
 	)
@@ -837,7 +838,8 @@ func TestSpecialFunctionDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			prettier.Text(" {}"),
+			prettier.Text(" "),
+			prettier.Text("{}"),
 		},
 		decl.Doc(),
 	)

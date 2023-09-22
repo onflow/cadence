@@ -739,23 +739,31 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 	checker.Elaboration.SetCompositeNestedDeclarations(declaration, nestedDeclarations)
 
 	for _, nestedEntitlementType := range nestedEntitlementTypes {
-		compositeType.NestedTypes.Set(nestedEntitlementType.Identifier, nestedEntitlementType)
-		nestedEntitlementType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedEntitlementType.Identifier,
+			nestedEntitlementType,
+		)
 	}
 
 	for _, nestedEntitlementMapType := range nestedEntitlementMapTypes {
-		compositeType.NestedTypes.Set(nestedEntitlementMapType.Identifier, nestedEntitlementMapType)
-		nestedEntitlementMapType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedEntitlementMapType.Identifier,
+			nestedEntitlementMapType,
+		)
 	}
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
-		compositeType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
-		nestedInterfaceType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedInterfaceType.Identifier,
+			nestedInterfaceType,
+		)
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
-		compositeType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
-		nestedCompositeType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedCompositeType.Identifier,
+			nestedCompositeType,
+		)
 	}
 
 	return compositeType
@@ -856,7 +864,8 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 					ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
 					IgnoreInSerialization: true,
 					DocString:             nestedCompositeDeclaration.DeclarationDocString(),
-				})
+				},
+			)
 		}
 		for _, nestedInterfaceDeclaration := range members.Interfaces() {
 			// resolve conformances
@@ -2082,7 +2091,7 @@ func (checker *Checker) checkDefaultDestroyEvent(
 				compositeContainer,
 				compositeContainer.baseTypeDocString)
 		}
-		checker.VisitExpression(paramDefaultArgument, paramType)
+		param.DefaultArgument = checker.VisitExpression(paramDefaultArgument, paramType)
 
 		unwrappedParamType := UnwrapOptionalType(paramType)
 		// default events must have default arguments for all their parameters; this is enforced in the parser
@@ -2099,7 +2108,6 @@ func (checker *Checker) checkDefaultDestroyEvent(
 		}
 
 		checkParamExpressionKind(paramDefaultArgument)
-
 	}
 }
 

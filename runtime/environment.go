@@ -540,7 +540,7 @@ func (e *interpreterEnvironment) getProgram(
 			// Loading is done by Cadence.
 			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
 			// then do not treat it as an external error (the load callback is called by the embedder)
-			panicErr := userPanicToError(func() {
+			panicErr := UserPanicToError(func() {
 				program, err = load()
 			})
 			if panicErr != nil {

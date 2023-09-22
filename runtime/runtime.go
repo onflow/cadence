@@ -322,9 +322,9 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	return err
 }
 
-// userPanicToError Executes `f` and gracefully handle `UserError` panics.
+// UserPanicToError Executes `f` and gracefully handle `UserError` panics.
 // All on-user panics (including `InternalError` and `ExternalError`) are propagated up.
-func userPanicToError(f func()) (returnedError error) {
+func UserPanicToError(f func()) (returnedError error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err, ok := r.(error)
@@ -408,7 +408,7 @@ func validateArgumentParams(
 		}
 
 		var arg interpreter.Value
-		panicError := userPanicToError(func() {
+		panicError := UserPanicToError(func() {
 			// if importing an invalid public key, this call panics
 			arg, err = ImportValue(
 				inter,

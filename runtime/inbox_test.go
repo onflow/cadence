@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -25,13 +25,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 )
 
 func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -55,21 +57,21 @@ func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -119,8 +121,8 @@ func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -144,21 +146,21 @@ func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -198,8 +200,8 @@ func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -223,21 +225,21 @@ func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -287,8 +289,8 @@ func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -314,21 +316,21 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
 		Script{
@@ -381,8 +383,8 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -415,35 +417,35 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -508,8 +510,8 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -533,35 +535,35 @@ func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -612,8 +614,8 @@ func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -637,35 +639,35 @@ func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -713,8 +715,8 @@ func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -738,35 +740,35 @@ func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -815,8 +817,8 @@ func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -849,35 +851,35 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -942,8 +944,8 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
@@ -976,49 +978,49 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	runtimeInterface3 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface3 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 3}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(

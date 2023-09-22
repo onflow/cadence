@@ -2171,6 +2171,7 @@ func newAccountCapabilitiesValue(
 		addressValue,
 		newAccountCapabilitiesGetFunction(gauge, addressValue, false),
 		newAccountCapabilitiesGetFunction(gauge, addressValue, true),
+		newAccountCapabilitiesExistsFunction(gauge, addressValue),
 		newAccountCapabilitiesPublishFunction(gauge, addressValue),
 		newAccountCapabilitiesUnpublishFunction(gauge, addressValue),
 		func() interpreter.Value {
@@ -3475,6 +3476,40 @@ func newAccountCapabilitiesGetFunction(
 			return interpreter.NewSomeValueNonCopying(
 				inter,
 				resultValue,
+			)
+		},
+	)
+}
+
+func newAccountCapabilitiesExistsFunction(
+	gauge common.MemoryGauge,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.Account_CapabilitiesTypeExistsFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+
+			// Get path argument
+
+			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || pathValue.Domain != common.PathDomainPublic {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := pathValue.Domain.Identifier()
+			identifier := pathValue.Identifier
+
+			// Read stored capability, if any
+
+			storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+			return interpreter.AsBoolValue(
+				inter.StoredValueExists(address, domain, storageMapKey),
 			)
 		},
 	)
