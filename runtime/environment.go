@@ -120,6 +120,11 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	}
 	env.InterpreterConfig = env.newInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
+
+	for _, standardLibraryType := range stdlib.StandardLibraryTypes {
+		env.DeclareType(standardLibraryType)
+	}
+
 	return env
 }
 

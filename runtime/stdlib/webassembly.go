@@ -217,3 +217,9 @@ func NewWebAssemblyContract(
 		Kind:  common.DeclarationKindContract,
 	}
 }
+
+var WebAssemblyContractType = StandardLibraryType{
+	Name: WebAssemblyTypeName,
+	Type: WebAssemblyType,
+	Kind: common.DeclarationKindContract,
+}

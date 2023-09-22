@@ -62,3 +62,7 @@ func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []Standa
 		NewGetAuthAccountFunction(handler),
 	)
 }
+
+var StandardLibraryTypes = []StandardLibraryType{
+	WebAssemblyContractType,
+}
