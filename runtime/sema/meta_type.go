@@ -37,7 +37,7 @@ var MetaType = &SimpleType{
 	Name:          MetaTypeName,
 	QualifiedName: MetaTypeName,
 	TypeID:        MetaTypeName,
-	tag:           MetaTypeTag,
+	TypeTag:       MetaTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,

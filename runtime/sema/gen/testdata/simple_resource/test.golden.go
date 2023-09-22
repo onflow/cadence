@@ -1,3 +1,4 @@
+// Code generated from testdata/simple_resource/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -16,20 +17,22 @@
  * limitations under the License.
  */
 
-package sema
+package simple_resource
 
-// NeverType represents the bottom type
-var NeverType = &SimpleType{
-	Name:          "Never",
-	QualifiedName: "Never",
-	TypeID:        "Never",
-	TypeTag:       NeverTypeTag,
-	IsResource:    false,
+import "github.com/onflow/cadence/runtime/sema"
+
+const TestTypeName = "Test"
+
+var TestType = &sema.SimpleType{
+	Name:          TestTypeName,
+	QualifiedName: TestTypeName,
+	TypeID:        TestTypeName,
+	TypeTag:       TestTypeTag,
+	IsResource:    true,
 	Storable:      false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
+	ContainFields: false,
 }
-
-var NeverTypeAnnotation = NewTypeAnnotation(NeverType)

@@ -35,7 +35,7 @@ var BLSTypeAggregateSignaturesFunctionType = &sema.FunctionType{
 			Identifier: "signatures",
 			TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{
 				Type: &sema.VariableSizedType{
-					Type: UInt8Type,
+					Type: sema.UInt8Type,
 				},
 			}),
 		},
@@ -43,7 +43,7 @@ var BLSTypeAggregateSignaturesFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		&sema.OptionalType{
 			Type: &sema.VariableSizedType{
-				Type: UInt8Type,
+				Type: sema.UInt8Type,
 			},
 		},
 	),
@@ -69,13 +69,13 @@ var BLSTypeAggregatePublicKeysFunctionType = &sema.FunctionType{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "keys",
 			TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{
-				Type: PublicKeyType,
+				Type: sema.PublicKeyType,
 			}),
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		&sema.OptionalType{
-			Type: PublicKeyType,
+			Type: sema.PublicKeyType,
 		},
 	),
 }

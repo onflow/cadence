@@ -38,6 +38,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 const semaPath = "github.com/onflow/cadence/runtime/sema"
@@ -161,6 +162,7 @@ type typeDecl struct {
 	memberAccessible   bool
 	memberDeclarations []ast.Declaration
 	nestedTypes        []*typeDecl
+	hasConstructor     bool
 }
 
 type generator struct {
@@ -289,6 +291,7 @@ func (g *generator) addFunctionTypeDeclaration(
 				decl.ParameterList,
 				decl.TypeParameterList,
 				typeParams,
+				false,
 			),
 		),
 	)
@@ -323,8 +326,106 @@ func (g *generator) declarationDocString(decl ast.Declaration) dst.Expr {
 	return renderDocString(docString)
 }
 
-func (*generator) VisitSpecialFunctionDeclaration(_ *ast.SpecialFunctionDeclaration) struct{} {
-	panic("special function declarations are not supported")
+func (g *generator) VisitSpecialFunctionDeclaration(decl *ast.SpecialFunctionDeclaration) (_ struct{}) {
+	if decl.Kind != common.DeclarationKindInitializer {
+		panic(fmt.Errorf(
+			"%s special function declarations are not supported",
+			decl.Kind.Name(),
+		))
+	}
+
+	typeDecl := g.currentTypeDecl()
+
+	fullTypeName := typeDecl.fullTypeName
+
+	if typeDecl.hasConstructor {
+		panic(fmt.Errorf("invalid second initializer for type %s", fullTypeName))
+	}
+	typeDecl.hasConstructor = true
+
+	isResource := typeDecl.compositeKind == common.CompositeKindResource
+
+	typeNames := make([]string, 0, len(g.typeStack))
+	for i := 0; i < len(g.typeStack); i++ {
+		typeNames = append(typeNames, g.typeStack[i].typeName)
+	}
+
+	g.addConstructorTypeDeclaration(decl, fullTypeName, typeNames, isResource)
+
+	g.addConstructorDocStringDeclaration(decl, fullTypeName)
+
+	return
+}
+
+func (g *generator) addConstructorTypeDeclaration(
+	initDecl *ast.SpecialFunctionDeclaration,
+	fullTypeName string,
+	typeNames []string,
+	isResource bool,
+) {
+	decl := initDecl.FunctionDeclaration
+
+	parameters := decl.ParameterList.Parameters
+
+	parameterTypeAnnotations := make([]*ast.TypeAnnotation, 0, len(parameters))
+	for _, parameter := range parameters {
+		parameterTypeAnnotations = append(
+			parameterTypeAnnotations,
+			parameter.TypeAnnotation,
+		)
+	}
+
+	nestedIdentifiers := make([]ast.Identifier, 0, len(typeNames)-1)
+	for i := 1; i < len(typeNames); i++ {
+		typeName := typeNames[i]
+		nestedIdentifiers = append(
+			nestedIdentifiers,
+			ast.Identifier{
+				Identifier: typeName,
+			},
+		)
+	}
+
+	returnType := &ast.NominalType{
+		NestedIdentifiers: nestedIdentifiers,
+		Identifier: ast.Identifier{
+			Identifier: typeNames[0],
+		},
+	}
+
+	g.addDecls(
+		goVarDecl(
+			constructorTypeVarName(fullTypeName),
+			functionTypeExpr(
+				&ast.FunctionType{
+					PurityAnnotation: decl.Purity,
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type:       returnType,
+						IsResource: isResource,
+					},
+					ParameterTypeAnnotations: parameterTypeAnnotations,
+				},
+				decl.ParameterList,
+				nil,
+				nil,
+				true,
+			),
+		),
+	)
+}
+
+func (g *generator) addConstructorDocStringDeclaration(
+	decl *ast.SpecialFunctionDeclaration,
+	fullTypeName string,
+) {
+	docString := g.declarationDocString(decl)
+
+	g.addDecls(
+		goConstDecl(
+			constructorDocStringVarName(fullTypeName),
+			docString,
+		),
+	)
 }
 
 func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_ struct{}) {
@@ -471,11 +572,13 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 		typeVarDecl = compositeTypeExpr(typeDecl)
 	}
 
-	tyVarName := typeVarName(typeDecl.fullTypeName)
+	fullTypeName := typeDecl.fullTypeName
+
+	tyVarName := typeVarName(fullTypeName)
 
 	g.addDecls(
 		goConstDecl(
-			typeNameVarName(typeDecl.fullTypeName),
+			typeNameVarName(fullTypeName),
 			goStringLit(typeName),
 		),
 		goVarDecl(
@@ -496,7 +599,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 			//   }
 			// }
 
-			memberResolversFunc := simpleTypeMemberResolversFunc(typeDecl.fullTypeName, memberDeclarations)
+			memberResolversFunc := simpleTypeMemberResolversFunc(fullTypeName, memberDeclarations)
 
 			g.addDecls(
 				&dst.FuncDecl{
@@ -527,65 +630,93 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 			//   members := []*Member{...}
 			//   t.Members = MembersAsMap(members)
 			//   t.Fields = MembersFieldNames(members)
+			//   t.ConstructorParameters = ...
 			// }
 
-			members := membersExpr(typeDecl.fullTypeName, tyVarName, memberDeclarations)
+			members := membersExpr(
+				fullTypeName,
+				tyVarName,
+				memberDeclarations,
+			)
 
 			const membersVariableIdentifier = "members"
+
+			stmts := []dst.Stmt{
+				&dst.DeclStmt{
+					Decl: goVarDecl(
+						membersVariableIdentifier,
+						members,
+					),
+				},
+				&dst.AssignStmt{
+					Lhs: []dst.Expr{
+						&dst.SelectorExpr{
+							X:   dst.NewIdent(tyVarName),
+							Sel: dst.NewIdent("Members"),
+						},
+					},
+					Tok: token.ASSIGN,
+					Rhs: []dst.Expr{
+						&dst.CallExpr{
+							Fun: &dst.Ident{
+								Name: "MembersAsMap",
+								Path: semaPath,
+							},
+							Args: []dst.Expr{
+								dst.NewIdent(membersVariableIdentifier),
+							},
+						},
+					},
+				},
+				&dst.AssignStmt{
+					Lhs: []dst.Expr{
+						&dst.SelectorExpr{
+							X:   dst.NewIdent(tyVarName),
+							Sel: dst.NewIdent("Fields"),
+						},
+					},
+					Tok: token.ASSIGN,
+					Rhs: []dst.Expr{
+						&dst.CallExpr{
+							Fun: &dst.Ident{
+								Name: "MembersFieldNames",
+								Path: semaPath,
+							},
+							Args: []dst.Expr{
+								dst.NewIdent(membersVariableIdentifier),
+							},
+						},
+					},
+				},
+			}
+
+			if typeDecl.hasConstructor {
+				stmts = append(
+					stmts,
+					&dst.AssignStmt{
+						Lhs: []dst.Expr{
+							&dst.SelectorExpr{
+								X:   dst.NewIdent(tyVarName),
+								Sel: dst.NewIdent("ConstructorParameters"),
+							},
+						},
+						Tok: token.ASSIGN,
+						Rhs: []dst.Expr{
+							&dst.SelectorExpr{
+								X:   dst.NewIdent(constructorTypeVarName(fullTypeName)),
+								Sel: dst.NewIdent("Parameters"),
+							},
+						},
+					},
+				)
+			}
 
 			g.addDecls(
 				&dst.FuncDecl{
 					Name: dst.NewIdent("init"),
 					Type: &dst.FuncType{},
 					Body: &dst.BlockStmt{
-						List: []dst.Stmt{
-							&dst.DeclStmt{
-								Decl: goVarDecl(
-									membersVariableIdentifier,
-									members,
-								),
-							},
-							&dst.AssignStmt{
-								Lhs: []dst.Expr{
-									&dst.SelectorExpr{
-										X:   dst.NewIdent(tyVarName),
-										Sel: dst.NewIdent("Members"),
-									},
-								},
-								Tok: token.ASSIGN,
-								Rhs: []dst.Expr{
-									&dst.CallExpr{
-										Fun: &dst.Ident{
-											Name: "MembersAsMap",
-											Path: semaPath,
-										},
-										Args: []dst.Expr{
-											dst.NewIdent(membersVariableIdentifier),
-										},
-									},
-								},
-							},
-							&dst.AssignStmt{
-								Lhs: []dst.Expr{
-									&dst.SelectorExpr{
-										X:   dst.NewIdent(tyVarName),
-										Sel: dst.NewIdent("Fields"),
-									},
-								},
-								Tok: token.ASSIGN,
-								Rhs: []dst.Expr{
-									&dst.CallExpr{
-										Fun: &dst.Ident{
-											Name: "MembersFieldNames",
-											Path: semaPath,
-										},
-										Args: []dst.Expr{
-											dst.NewIdent(membersVariableIdentifier),
-										},
-									},
-								},
-							},
-						},
+						List: stmts,
 					},
 				},
 			)
@@ -662,7 +793,11 @@ func (g *generator) VisitFieldDeclaration(decl *ast.FieldDeclaration) (_ struct{
 }
 
 func (g *generator) currentFullTypeName() string {
-	return g.typeStack[len(g.typeStack)-1].fullTypeName
+	return g.currentTypeDecl().fullTypeName
+}
+
+func (g *generator) currentTypeDecl() *typeDecl {
+	return g.typeStack[len(g.typeStack)-1]
 }
 
 func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
@@ -686,9 +821,14 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 			}
 		}
 
+		inSema := sema.BaseTypeActivation.Find(identifier) != nil
+
 		switch identifier {
 		case "":
 			identifier = "Void"
+			inSema = true
+		case "Any":
+			inSema = true
 		case "Address":
 			identifier = "TheAddress"
 		case "Type":
@@ -715,7 +855,11 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 			identifier = fullIdentifier.String()
 		}
 
-		return typeVarIdent(identifier)
+		ident := typeVarIdent(identifier)
+		if inSema {
+			ident.Path = semaPath
+		}
+		return ident
 
 	case *ast.OptionalType:
 		innerType := typeExpr(t.Type, typeParams)
@@ -810,7 +954,13 @@ func typeExpr(t ast.Type, typeParams map[string]string) dst.Expr {
 		}
 
 	case *ast.FunctionType:
-		return functionTypeExpr(t, nil, nil, typeParams)
+		return functionTypeExpr(
+			t,
+			nil,
+			nil,
+			typeParams,
+			false,
+		)
 
 	case *ast.InstantiationType:
 		typeArguments := t.TypeArguments
@@ -888,6 +1038,7 @@ func functionTypeExpr(
 	parameters *ast.ParameterList,
 	typeParameterList *ast.TypeParameterList,
 	typeParams map[string]string,
+	isConstructor bool,
 ) dst.Expr {
 
 	// Function purity
@@ -1020,7 +1171,14 @@ func functionTypeExpr(
 	if t.ReturnTypeAnnotation != nil {
 		returnTypeExpr = typeExpr(t.ReturnTypeAnnotation.Type, typeParams)
 	} else {
-		returnTypeExpr = typeVarIdent("Void")
+		returnTypeExpr = typeExpr(
+			&ast.NominalType{
+				Identifier: ast.Identifier{
+					Identifier: "Void",
+				},
+			},
+			nil,
+		)
 	}
 
 	returnTypeExpr.Decorations().Before = dst.NewLine
@@ -1036,6 +1194,16 @@ func functionTypeExpr(
 			goKeyValue(
 				"Purity",
 				purityExpr,
+			),
+		)
+	}
+
+	if isConstructor {
+		compositeElements = append(
+			compositeElements,
+			goKeyValue(
+				"IsConstructor",
+				goBoolLit(true),
 			),
 		)
 	}
@@ -1106,17 +1274,21 @@ func (*generator) VisitImportDeclaration(_ *ast.ImportDeclaration) struct{} {
 
 const typeNameSeparator = '_'
 
-func (g *generator) newFullTypeName(typeName string) string {
-	if len(g.typeStack) == 0 {
-		return typeName
-	}
-	parentFullTypeName := g.typeStack[len(g.typeStack)-1].fullTypeName
+func joinTypeName(parentFullTypeName string, typeName string) string {
 	return fmt.Sprintf(
 		"%s%c%s",
 		escapeTypeName(parentFullTypeName),
 		typeNameSeparator,
 		escapeTypeName(typeName),
 	)
+}
+
+func (g *generator) newFullTypeName(typeName string) string {
+	if len(g.typeStack) == 0 {
+		return typeName
+	}
+	parentFullTypeName := g.typeStack[len(g.typeStack)-1].fullTypeName
+	return joinTypeName(parentFullTypeName, typeName)
 }
 
 func escapeTypeName(typeName string) string {
@@ -1157,12 +1329,10 @@ func (g *generator) generateTypeInit(program *ast.Program) {
 	//
 	//   func init() {
 	//       BuiltinEntitlements[FooEntitlement.Identifier] = FooEntitlement
-	//       addToBaseActivation(FooEntitlement)
 	//
 	//       ...
 	//
 	//       BuiltinEntitlements[BarEntitlementMapping.Identifier] = BarEntitlementMapping
-	//       addToBaseActivation(BarEntitlementMapping)
 	//
 	//       ...
 	//   }
@@ -1205,7 +1375,10 @@ func entitlementMapInitStatements(declaration *ast.EntitlementMappingDeclaration
 	mapUpdateStmt := &dst.AssignStmt{
 		Lhs: []dst.Expr{
 			&dst.IndexExpr{
-				X: dst.NewIdent(mapName),
+				X: &dst.Ident{
+					Name: mapName,
+					Path: semaPath,
+				},
 				Index: &dst.SelectorExpr{
 					X:   dst.NewIdent(varName),
 					Sel: dst.NewIdent("Identifier"),
@@ -1218,18 +1391,8 @@ func entitlementMapInitStatements(declaration *ast.EntitlementMappingDeclaration
 		},
 	}
 
-	typeRegisterStmt := &dst.ExprStmt{
-		X: &dst.CallExpr{
-			Fun: dst.NewIdent("addToBaseActivation"),
-			Args: []dst.Expr{
-				dst.NewIdent(varName),
-			},
-		},
-	}
-
 	return []dst.Stmt{
 		mapUpdateStmt,
-		typeRegisterStmt,
 	}
 }
 
@@ -1240,7 +1403,10 @@ func entitlementInitStatements(declaration *ast.EntitlementDeclaration) []dst.St
 	mapUpdateStmt := &dst.AssignStmt{
 		Lhs: []dst.Expr{
 			&dst.IndexExpr{
-				X: dst.NewIdent(mapName),
+				X: &dst.Ident{
+					Name: mapName,
+					Path: semaPath,
+				},
 				Index: &dst.SelectorExpr{
 					X:   dst.NewIdent(varName),
 					Sel: dst.NewIdent("Identifier"),
@@ -1253,18 +1419,8 @@ func entitlementInitStatements(declaration *ast.EntitlementDeclaration) []dst.St
 		},
 	}
 
-	typeRegisterStmt := &dst.ExprStmt{
-		X: &dst.CallExpr{
-			Fun: dst.NewIdent("addToBaseActivation"),
-			Args: []dst.Expr{
-				dst.NewIdent(varName),
-			},
-		},
-	}
-
 	return []dst.Stmt{
 		mapUpdateStmt,
-		typeRegisterStmt,
 	}
 }
 
@@ -1345,24 +1501,24 @@ func compositeKindExpr(compositeKind common.CompositeKind) *dst.Ident {
 	}
 }
 
-func typeVarName(typeName string) string {
-	return fmt.Sprintf("%sType", typeName)
+func typeVarName(fullTypeName string) string {
+	return fmt.Sprintf("%sType", fullTypeName)
 }
 
-func typeVarIdent(typeName string) *dst.Ident {
-	return dst.NewIdent(typeVarName(typeName))
+func typeVarIdent(fullTypeName string) *dst.Ident {
+	return dst.NewIdent(typeVarName(fullTypeName))
 }
 
-func typeNameVarName(typeName string) string {
-	return fmt.Sprintf("%sTypeName", typeName)
+func typeNameVarName(fullTypeName string) string {
+	return fmt.Sprintf("%sTypeName", fullTypeName)
 }
 
-func typeNameVarIdent(typeName string) *dst.Ident {
-	return dst.NewIdent(typeNameVarName(typeName))
+func typeNameVarIdent(fullTypeName string) *dst.Ident {
+	return dst.NewIdent(typeNameVarName(fullTypeName))
 }
 
-func typeTagVarIdent(typeName string) *dst.Ident {
-	return dst.NewIdent(fmt.Sprintf("%sTypeTag", typeName))
+func typeTagVarIdent(fullTypeName string) *dst.Ident {
+	return dst.NewIdent(fmt.Sprintf("%sTypeTag", fullTypeName))
 }
 
 func memberVarName(fullTypeName, fieldName, kind, part string) string {
@@ -1391,6 +1547,10 @@ func functionTypeVarName(fullTypeName, functionName string) string {
 	return memberVarName(fullTypeName, functionName, "Function", "Type")
 }
 
+func constructorTypeVarName(fullTypeName string) string {
+	return memberVarName(fullTypeName, "", "Constructor", "Type")
+}
+
 func functionTypeParameterVarName(fullTypeName, functionName, typeParameterName string) string {
 	return memberVarName(fullTypeName, functionName, "Function", "TypeParameter"+typeParameterName)
 }
@@ -1401,6 +1561,10 @@ func fieldDocStringVarName(fullTypeName, fieldName string) string {
 
 func functionDocStringVarName(fullTypeName, functionName string) string {
 	return memberVarName(fullTypeName, functionName, "Function", "DocString")
+}
+
+func constructorDocStringVarName(fullTypeName string) string {
+	return memberVarName(fullTypeName, "", "Constructor", "DocString")
 }
 
 func simpleTypeLiteral(ty *typeDecl) dst.Expr {
@@ -1423,7 +1587,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("Name", typeNameVarIdent(ty.fullTypeName)),
 		goKeyValue("QualifiedName", typeNameVarIdent(ty.fullTypeName)),
 		goKeyValue("TypeID", typeNameVarIdent(ty.fullTypeName)),
-		goKeyValue("tag", typeTagVarIdent(ty.fullTypeName)),
+		goKeyValue("TypeTag", typeTagVarIdent(ty.fullTypeName)),
 		goKeyValue("IsResource", goBoolLit(isResource)),
 		goKeyValue("Storable", goBoolLit(ty.storable)),
 		goKeyValue("Equatable", goBoolLit(ty.equatable)),
@@ -1460,7 +1624,11 @@ func simpleTypeMemberResolversFunc(fullTypeName string, declarations []ast.Decla
 					Path: semaPath,
 				},
 				Args: []dst.Expr{
-					membersExpr(fullTypeName, typeVarName, declarations),
+					membersExpr(
+						fullTypeName,
+						typeVarName,
+						declarations,
+					),
 				},
 			},
 		},
@@ -1522,10 +1690,33 @@ func membersExpr(
 				memberName,
 			)
 
+		case common.DeclarationKindInitializer:
+			// Generated as a member of the container
+			continue
+
 		case common.DeclarationKindStructureInterface,
 			common.DeclarationKindStructure,
 			common.DeclarationKindResource,
 			common.DeclarationKindResourceInterface:
+
+			initializers := declaration.DeclarationMembers().Initializers()
+			if len(initializers) > 0 {
+				initializer := initializers[0]
+
+				typeName := declaration.DeclarationIdentifier().Identifier
+
+				element := newDeclarationMember(
+					joinTypeName(fullTypeName, typeName),
+					typeVarName,
+					// type name is used instead
+					"",
+					initializer,
+				)
+				element.Decorations().Before = dst.NewLine
+				element.Decorations().After = dst.NewLine
+
+				elements = append(elements, element)
+			}
 
 			continue
 
@@ -1536,7 +1727,12 @@ func membersExpr(
 			))
 		}
 
-		element := newDeclarationMember(fullTypeName, typeVarName, memberVarName, declaration)
+		element := newDeclarationMember(
+			fullTypeName,
+			typeVarName,
+			memberVarName,
+			declaration,
+		)
 		element.Decorations().Before = dst.NewLine
 		element.Decorations().After = dst.NewLine
 
@@ -1658,11 +1854,17 @@ func newDeclarationMember(
 
 	access := declaration.DeclarationAccess()
 	if access == ast.AccessNotSpecified {
-		panic(fmt.Errorf(
-			"member with unspecified access: %s.%s",
-			fullTypeName,
-			declarationName,
-		))
+		switch declaration.DeclarationKind() {
+		case common.DeclarationKindInitializer:
+			break
+
+		default:
+			panic(fmt.Errorf(
+				"member with unspecified access: %s.%s",
+				fullTypeName,
+				declarationName,
+			))
+		}
 	}
 
 	if fieldDeclaration, ok := declaration.(*ast.FieldDeclaration); ok {
@@ -1691,9 +1893,10 @@ func newDeclarationMember(
 
 	declarationKind := declaration.DeclarationKind()
 
-	// Function
+	// Function or initializer
 
-	if declarationKind == common.DeclarationKindFunction {
+	switch declarationKind {
+	case common.DeclarationKindFunction:
 		args := []dst.Expr{
 			dst.NewIdent(containerTypeVariableIdentifier),
 			accessExpr(access),
@@ -1714,7 +1917,31 @@ func newDeclarationMember(
 			},
 			Args: args,
 		}
+
+	case common.DeclarationKindInitializer:
+		args := []dst.Expr{
+			dst.NewIdent(containerTypeVariableIdentifier),
+			accessExpr(access),
+			typeNameVarIdent(fullTypeName),
+			dst.NewIdent(constructorTypeVarName(fullTypeName)),
+			dst.NewIdent(constructorDocStringVarName(fullTypeName)),
+		}
+
+		for _, arg := range args {
+			arg.Decorations().Before = dst.NewLine
+			arg.Decorations().After = dst.NewLine
+		}
+
+		return &dst.CallExpr{
+			Fun: &dst.Ident{
+				Name: "NewUnmeteredConstructorMember",
+				Path: semaPath,
+			},
+			Args: args,
+		}
 	}
+
+	// Unsupported
 
 	panic(fmt.Errorf(
 		"%s members are not supported",
