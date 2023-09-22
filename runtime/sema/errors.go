@@ -4672,7 +4672,7 @@ func (*DefaultDestroyInvalidArgumentError) isSemanticError() {}
 func (*DefaultDestroyInvalidArgumentError) IsUserError() {}
 
 func (e *DefaultDestroyInvalidArgumentError) Error() string {
-	return "default destroy event arguments must be literals or member access expressions on `self`"
+	return "default destroy event arguments must be literals, member access expressions, indexed access expressions on dictionaries, or attachment accesses"
 }
 
 // DefaultDestroyInvalidArgumentError
