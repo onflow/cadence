@@ -443,6 +443,8 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 					// Find the value declaration
 					nestedEvent :=
 						checker.typeActivations.Find(nestedCompositeDeclaration.Identifier.Identifier)
+					defaultEventComposite := nestedEvent.Type.(*CompositeType)
+					checker.checkDefaultDestroyEvent(defaultEventComposite, nestedCompositeDeclaration, interfaceType)
 					interfaceType.DefaultDestroyEvent = nestedEvent.Type.(*CompositeType)
 					// interfaceType.DefaultDestroyEvent =
 				} else {

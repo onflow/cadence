@@ -1288,12 +1288,19 @@ func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter
 		for i, parameter := range parameterList.Parameters {
 			convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
 
+			var convertedParameterDefaultArgument Type = nil
+			if parameter.DefaultArgument != nil {
+				// default arg expressions must be subtypes of the type annotation
+				convertedParameterDefaultArgument = checker.VisitExpression(parameter.DefaultArgument, convertedParameterType)
+			}
+
 			// NOTE: copying resource annotation from source type annotation as-is,
 			// so a potential error is properly reported
 
 			parameters[i] = Parameter{
-				Label:      parameter.Label,
-				Identifier: parameter.Identifier.Identifier,
+				Label:           parameter.Label,
+				Identifier:      parameter.Identifier.Identifier,
+				DefaultArgument: convertedParameterDefaultArgument,
 				TypeAnnotation: TypeAnnotation{
 					IsResource: parameter.TypeAnnotation.IsResource,
 					Type:       convertedParameterType,

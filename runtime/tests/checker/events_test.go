@@ -618,4 +618,121 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	})
+
+	t.Run("cannot declare two default events", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 4)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[3])
+	})
+}
+
+func TestCheckDefaultEventParamChecking(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: String = "foo")
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("3 param", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: String = "foo", id: UInt16 = 4, condition: Bool = true)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("type error", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Int = "foo")
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let field : String
+				event ResourceDestroyed(name: String = self.field)
+
+				init() {
+					self.field = ""
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("field type mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let field : Int
+				event ResourceDestroyed(name: String = self.field)
+
+				init() {
+					self.field = 3
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("array field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let field : [Int]
+				event ResourceDestroyed(name: [Int] = self.field)
+
+				init() {
+					self.field = [3]
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+	})
+
 }

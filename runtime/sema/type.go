@@ -2922,9 +2922,10 @@ func formatParameter(spaces bool, label, identifier, typeAnnotation string) stri
 }
 
 type Parameter struct {
-	TypeAnnotation TypeAnnotation
-	Label          string
-	Identifier     string
+	TypeAnnotation  TypeAnnotation
+	DefaultArgument Type
+	Label           string
+	Identifier      string
 }
 
 func (p Parameter) String() string {

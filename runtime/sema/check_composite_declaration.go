@@ -835,7 +835,9 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 				// Find the default event's type declaration
 				defaultEventType :=
 					checker.typeActivations.Find(identifier.Identifier)
-				compositeType.DefaultDestroyEvent = defaultEventType.Type.(*CompositeType)
+				defaultEventComposite := defaultEventType.Type.(*CompositeType)
+				checker.checkDefaultDestroyEvent(defaultEventComposite, nestedCompositeDeclaration, compositeType)
+				compositeType.DefaultDestroyEvent = defaultEventComposite
 				return
 			}
 
@@ -2005,6 +2007,30 @@ func (checker *Checker) enumMembersAndOrigins(
 	})
 
 	return
+}
+
+func (checker *Checker) checkDefaultDestroyEvent(
+	eventType *CompositeType,
+	eventDeclaration ast.CompositeLikeDeclaration,
+	containterType ContainerType,
+) {
+	// default events must have default arguments for all their parameters; this is enforced in the parser
+	// we want to check that these arguments are all either literals or field accesses
+
+	checkParamTypeValid := func(paramType Type) {
+		if !IsSubType(paramType, StringType) &&
+			!IsSubType(paramType, NumberType) &&
+			!IsSubType(paramType, BoolType) {
+			checker.report(&DefaultDestroyInvalidParameterError{
+				ParamType: paramType,
+				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, eventDeclaration),
+			})
+		}
+	}
+
+	for _, param := range eventType.ConstructorParameters {
+		checkParamTypeValid(param.TypeAnnotation.Type)
+	}
 }
 
 func (checker *Checker) checkInitializers(
