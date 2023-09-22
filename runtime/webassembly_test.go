@@ -158,7 +158,7 @@ func newWasmtimeFunctionWebAssemblyExport(
 					convertedArgument = int32(argument.(interpreter.Int32Value))
 
 				case sema.Int64Type:
-					convertedArgument = argument.(interpreter.Int64Value)
+					convertedArgument = int64(argument.(interpreter.Int64Value))
 
 				default:
 					panic(errors.NewUnreachableError())
