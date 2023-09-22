@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"math/big"
@@ -25,10 +25,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -59,30 +61,30 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	  }
 	`)
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	deploy := utils.DeploymentTransaction("C", contract)
 
 	var accountCode []byte
 	var events []cadence.Event
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},

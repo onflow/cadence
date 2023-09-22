@@ -35,6 +35,7 @@ func NewAccountCapabilitiesValue(
 	address AddressValue,
 	getFunction FunctionValue,
 	borrowFunction FunctionValue,
+	existsFunction FunctionValue,
 	publishFunction FunctionValue,
 	unpublishFunction FunctionValue,
 	storageCapabilitiesConstructor func() Value,
@@ -44,6 +45,7 @@ func NewAccountCapabilitiesValue(
 	fields := map[string]Value{
 		sema.Account_CapabilitiesTypeGetFunctionName:       getFunction,
 		sema.Account_CapabilitiesTypeBorrowFunctionName:    borrowFunction,
+		sema.Account_CapabilitiesTypeExistsFunctionName:    existsFunction,
 		sema.Account_CapabilitiesTypePublishFunctionName:   publishFunction,
 		sema.Account_CapabilitiesTypeUnpublishFunctionName: unpublishFunction,
 	}

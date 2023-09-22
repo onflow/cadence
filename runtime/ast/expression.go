@@ -1390,8 +1390,6 @@ func (e *FunctionExpression) String() string {
 
 var functionFunKeywordSpaceDoc prettier.Doc = prettier.Text("fun ")
 
-var functionExpressionEmptyBlockDoc prettier.Doc = prettier.Text(" {}")
-
 func FunctionDocument(
 	access Access,
 	purity FunctionPurity,
@@ -1494,17 +1492,17 @@ func FunctionDocument(
 		)
 	}
 
-	if block.IsEmpty() {
-		return append(doc, functionExpressionEmptyBlockDoc)
-	} else {
+	if block != nil {
 		blockDoc := block.Doc()
 
-		return append(
+		doc = append(
 			doc,
 			prettier.Space,
 			blockDoc,
 		)
 	}
+
+	return doc
 }
 
 func (e *FunctionExpression) Doc() prettier.Doc {

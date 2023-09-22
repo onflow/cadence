@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/hex"
@@ -27,8 +27,10 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -497,7 +499,7 @@ access(all) fun main(account: Address): UFix64 {
 
 func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
@@ -509,34 +511,34 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	signerAccount := contractsAddress
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(b),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		return json.Decode(runtimeInterface, b)
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
 	}
 
 	environment := NewBaseInterpreterEnvironment(Config{})
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy Fungible Token contract
 
@@ -661,7 +663,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0, interpreter.EmptyLocationRange)
 
-	inter := newTestInterpreter(b)
+	inter := NewTestInterpreter(b)
 
 	for _, address := range []common.Address{
 		senderAddress,
