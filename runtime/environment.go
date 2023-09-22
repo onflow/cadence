@@ -897,8 +897,21 @@ func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLo
 
 func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.CompositeTypeHandlerFunc {
 	return func(location common.Location, typeID common.TypeID) *sema.CompositeType {
-		if _, ok := location.(stdlib.FlowLocation); ok {
+
+		switch location.(type) {
+		case stdlib.FlowLocation:
 			return stdlib.FlowEventTypes[typeID]
+
+		case nil:
+			qualifiedIdentifier := string(typeID)
+			ty := sema.TypeActivationNestedType(e.baseTypeActivation, qualifiedIdentifier)
+			if ty == nil {
+				return nil
+			}
+
+			if compositeType, ok := ty.(*sema.CompositeType); ok {
+				return compositeType
+			}
 		}
 
 		return nil
