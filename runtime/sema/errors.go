@@ -3700,6 +3700,24 @@ func (e *InvalidTypeArgumentCountError) SecondaryError() string {
 	)
 }
 
+// MissingTypeArgumentError
+
+type MissingTypeArgumentError struct {
+	TypeArgumentName string
+	ast.Range
+}
+
+var _ SemanticError = &MissingTypeArgumentError{}
+var _ errors.UserError = &MissingTypeArgumentError{}
+
+func (e *MissingTypeArgumentError) isSemanticError() {}
+
+func (*MissingTypeArgumentError) IsUserError() {}
+
+func (e *MissingTypeArgumentError) Error() string {
+	return fmt.Sprintf("non-optional type argument %s missing", e.TypeArgumentName)
+}
+
 // TypeParameterTypeInferenceError
 
 type TypeParameterTypeInferenceError struct {

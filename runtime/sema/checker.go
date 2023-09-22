@@ -2048,6 +2048,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	}
 
 	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
+	checker.checkParameterizedTypeIsInstantiated(typeAnnotation.Type, pos)
 }
 
 func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
@@ -2064,6 +2065,49 @@ func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition
 				),
 			},
 		)
+	}
+}
+
+func (checker *Checker) checkParameterizedTypeIsInstantiated(ty Type, pos ast.HasPosition) {
+	parameterizedType, ok := ty.(ParameterizedType)
+	if !ok {
+		return
+	}
+
+	typeArgs := parameterizedType.TypeArguments()
+	typeParameters := parameterizedType.TypeParameters()
+
+	typeArgumentCount := len(typeArgs)
+	typeParameterCount := len(typeParameters)
+
+	if typeArgumentCount != typeParameterCount {
+		checker.report(
+			&InvalidTypeArgumentCountError{
+				TypeParameterCount: typeParameterCount,
+				TypeArgumentCount:  typeArgumentCount,
+				Range: ast.NewRange(
+					checker.memoryGauge,
+					pos.StartPosition(),
+					pos.EndPosition(checker.memoryGauge),
+				),
+			},
+		)
+	}
+
+	// Ensure that each non-optional typeparameter is non-nil.
+	for index, typeParam := range typeParameters {
+		if !typeParam.Optional && typeArgs[index] == nil {
+			checker.report(
+				&MissingTypeArgumentError{
+					TypeArgumentName: typeParam.Name,
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						pos.StartPosition(),
+						pos.EndPosition(checker.memoryGauge),
+					),
+				},
+			)
+		}
 	}
 }
 

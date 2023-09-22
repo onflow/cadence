@@ -5357,9 +5357,6 @@ func (t *InclusiveRangeType) Instantiate(typeArguments []Type, report func(err e
 
 func (t *InclusiveRangeType) TypeArguments() []Type {
 	memberType := t.MemberType
-	if memberType == nil {
-		memberType = IntegerType
-	}
 	return []Type{
 		memberType,
 	}
