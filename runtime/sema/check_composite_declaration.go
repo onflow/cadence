@@ -290,6 +290,10 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	}
 
 	for _, nestedComposite := range members.Composites() {
+		if compositeType.DefaultDestroyEvent != nil {
+			// we enforce elsewhere that each composite can have only one default destroy event
+			checker.checkDefaultDestroyEvent(compositeType.DefaultDestroyEvent, nestedComposite, compositeType, declaration)
+		}
 		ast.AcceptDeclaration[struct{}](nestedComposite, checker)
 	}
 
@@ -836,7 +840,6 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 				defaultEventType :=
 					checker.typeActivations.Find(identifier.Identifier)
 				defaultEventComposite := defaultEventType.Type.(*CompositeType)
-				checker.checkDefaultDestroyEvent(defaultEventComposite, nestedCompositeDeclaration, compositeType)
 				compositeType.DefaultDestroyEvent = defaultEventComposite
 				return
 			}
@@ -2012,24 +2015,41 @@ func (checker *Checker) enumMembersAndOrigins(
 func (checker *Checker) checkDefaultDestroyEvent(
 	eventType *CompositeType,
 	eventDeclaration ast.CompositeLikeDeclaration,
-	containterType ContainerType,
+	containerType ContainerType,
+	containerDeclaration ast.Declaration,
 ) {
-	// default events must have default arguments for all their parameters; this is enforced in the parser
-	// we want to check that these arguments are all either literals or field accesses
 
-	checkParamTypeValid := func(paramType Type) {
+	// an event definition always has one "constructor" function in its declaration list
+	members := eventDeclaration.DeclarationMembers()
+	functions := members.SpecialFunctions()
+	constructorFunctionParameters := functions[0].FunctionDeclaration.ParameterList.Parameters
+
+	for index, param := range eventType.ConstructorParameters {
+		paramType := param.TypeAnnotation.Type
+		paramDefaultArgument := constructorFunctionParameters[index]
+
+		// make `self` and `base` available when checking default arguments so the fields of the composite are available
+		checker.declareSelfValue(containerType, containerDeclaration.DeclarationDocString())
+		if compositeContainer, isComposite := containerType.(*CompositeType); isComposite && compositeContainer.Kind == common.CompositeKindAttachment {
+			checker.declareBaseValue(
+				compositeContainer.baseType,
+				compositeContainer,
+				compositeContainer.baseTypeDocString)
+		}
+		checker.VisitExpression(paramDefaultArgument.DefaultArgument, paramType)
+
+		// default events must have default arguments for all their parameters; this is enforced in the parser
+		// we want to check that these arguments are all either literals or field accesses, and have primitive types
 		if !IsSubType(paramType, StringType) &&
 			!IsSubType(paramType, NumberType) &&
+			!IsSubType(paramType, TheAddressType) &&
 			!IsSubType(paramType, BoolType) {
 			checker.report(&DefaultDestroyInvalidParameterError{
 				ParamType: paramType,
 				Range:     ast.NewRangeFromPositioned(checker.memoryGauge, eventDeclaration),
 			})
 		}
-	}
 
-	for _, param := range eventType.ConstructorParameters {
-		checkParamTypeValid(param.TypeAnnotation.Type)
 	}
 }
 

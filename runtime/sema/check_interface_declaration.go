@@ -158,6 +158,9 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		if nestedComposite.Kind() == common.CompositeKindEvent {
 			checker.visitCompositeLikeDeclaration(nestedComposite)
 		}
+		if interfaceType.DefaultDestroyEvent != nil {
+			checker.checkDefaultDestroyEvent(interfaceType.DefaultDestroyEvent, nestedComposite, interfaceType, declaration)
+		}
 	}
 
 	return
@@ -444,8 +447,7 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 					nestedEvent :=
 						checker.typeActivations.Find(nestedCompositeDeclaration.Identifier.Identifier)
 					defaultEventComposite := nestedEvent.Type.(*CompositeType)
-					checker.checkDefaultDestroyEvent(defaultEventComposite, nestedCompositeDeclaration, interfaceType)
-					interfaceType.DefaultDestroyEvent = nestedEvent.Type.(*CompositeType)
+					interfaceType.DefaultDestroyEvent = defaultEventComposite
 					// interfaceType.DefaultDestroyEvent =
 				} else {
 					checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
