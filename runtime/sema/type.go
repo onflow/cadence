@@ -4777,6 +4777,40 @@ func (t *CompositeType) SetNestedType(name string, nestedType ContainedType) {
 	nestedType.SetContainerType(t)
 }
 
+func (t *CompositeType) ConstructorFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Purity:               t.ConstructorPurity,
+		Parameters:           t.ConstructorParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(t),
+	}
+}
+
+func (t *CompositeType) InitializerFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Purity:               t.ConstructorPurity,
+		Parameters:           t.ConstructorParameters,
+		ReturnTypeAnnotation: VoidTypeAnnotation,
+	}
+}
+
+func (t *CompositeType) InitializerEffectiveArgumentLabels() []string {
+	parameters := t.ConstructorParameters
+	if len(parameters) == 0 {
+		return nil
+	}
+
+	argumentLabels := make([]string, 0, len(parameters))
+	for _, parameter := range parameters {
+		argumentLabels = append(
+			argumentLabels,
+			parameter.EffectiveArgumentLabel(),
+		)
+	}
+	return argumentLabels
+}
+
 // Member
 
 type Member struct {
