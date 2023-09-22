@@ -4537,3 +4537,44 @@ func TestCheckAttachmentForEachAttachment(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckAttachmentRemoveLossTracking(t *testing.T) {
+
+	t.Run("remove immediately added attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {}
+			attachment A for R {}
+			fun loseResource(r: @R) {
+				remove A from <- attach A() to <- r
+			}
+			fun test() {
+				loseResource(r: <- create R())
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("remove from function call result", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {}
+			attachment A for R {}
+			fun createRwithA(): @R {
+				return <- attach A() to <- create R()
+			}
+			fun loseResource() {
+				remove A from <- createRwithA()
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+}
