@@ -1856,7 +1856,7 @@ func newDeclarationMember(
 	if access == ast.AccessNotSpecified {
 		switch declaration.DeclarationKind() {
 		case common.DeclarationKindInitializer:
-			break
+			access = ast.AccessAll
 
 		default:
 			panic(fmt.Errorf(

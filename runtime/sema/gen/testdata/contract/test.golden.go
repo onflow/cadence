@@ -81,7 +81,7 @@ func init() {
 	var members = []*sema.Member{
 		sema.NewUnmeteredConstructorMember(
 			TestType,
-			sema.PrimitiveAccess(ast.AccessNotSpecified),
+			sema.PrimitiveAccess(ast.AccessAll),
 			Test_FooTypeName,
 			Test_FooTypeConstructorType,
 			Test_FooTypeConstructorDocString,
