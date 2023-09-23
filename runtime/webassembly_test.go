@@ -34,7 +34,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestRuntimeWebAssembly(t *testing.T) {
+func TestRuntimeWebAssemblyAdd(t *testing.T) {
 
 	t.Parallel()
 
@@ -43,7 +43,16 @@ func TestRuntimeWebAssembly(t *testing.T) {
 	})
 
 	// A simple program which exports a function `add` with type `(i32, i32) -> i32`,
-	// which sums the arguments and returns the result
+	// which sums the arguments and returns the result:
+	//
+	//  (module
+	//    (type (;0;) (func (param i32 i32) (result i32)))
+	//    (func (;0;) (type 0) (param i32 i32) (result i32)
+	//      local.get 0
+	//      local.get 1
+	//      i32.add)
+	//    (export "add" (func 0)))
+	//
 	addProgram := []byte{
 		0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x07, 0x01, 0x60,
 		0x02, 0x7f, 0x7f, 0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x07, 0x01,
@@ -57,9 +66,11 @@ func TestRuntimeWebAssembly(t *testing.T) {
       fun main(program: [UInt8], a: Int32, b: Int32): Int32 {
           let instance = WebAssembly.compileAndInstantiate(bytes: program).instance
           let add = instance.getExport<fun(Int32, Int32): Int32>(name: "add")
-          return add(a, b)
+          return add(a, b) + add(a, b)
       }
     `)
+
+	var webAssemblyFuelComputationMeterings []uint
 
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
@@ -68,6 +79,18 @@ func TestRuntimeWebAssembly(t *testing.T) {
 		},
 		OnDecodeArgument: func(b []byte, _ cadence.Type) (cadence.Value, error) {
 			return json.Decode(nil, b)
+		},
+		OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
+			if compKind != common.ComputationKindWebAssemblyFuel {
+				return nil
+			}
+
+			webAssemblyFuelComputationMeterings = append(
+				webAssemblyFuelComputationMeterings,
+				intensity,
+			)
+
+			return nil
 		},
 	}
 
@@ -88,8 +111,12 @@ func TestRuntimeWebAssembly(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t,
-		cadence.Int32(3),
+		cadence.Int32(6),
 		result,
+	)
+	assert.Equal(t,
+		[]uint{4, 4},
+		webAssemblyFuelComputationMeterings,
 	)
 }
 

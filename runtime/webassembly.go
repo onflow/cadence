@@ -36,12 +36,15 @@ type WasmtimeWebAssemblyModule struct {
 }
 
 func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error) {
-	engine := wasmtime.NewEngine()
+	config := wasmtime.NewConfig()
+	config.SetConsumeFuel(true)
+
+	engine := wasmtime.NewEngineWithConfig(config)
 	store := wasmtime.NewStore(engine)
 
-	// TODO: wrap error
 	module, err := wasmtime.NewModule(engine, bytes)
 	if err != nil {
+		// TODO: wrap error
 		return nil, err
 	}
 
@@ -56,20 +59,21 @@ var _ stdlib.WebAssemblyModule = WasmtimeWebAssemblyModule{}
 func (m WasmtimeWebAssemblyModule) InstantiateWebAssemblyModule(_ common.MemoryGauge) (stdlib.WebAssemblyInstance, error) {
 	instance, err := wasmtime.NewInstance(m.Store, m.Module, nil)
 	if err != nil {
+		// TODO: wrap error
 		return nil, err
 	}
-	return WasmtimeInstance{
+	return WasmtimeWebAssemblyInstance{
 		Instance: instance,
 		Store:    m.Store,
 	}, nil
 }
 
-type WasmtimeInstance struct {
+type WasmtimeWebAssemblyInstance struct {
 	Instance *wasmtime.Instance
 	Store    *wasmtime.Store
 }
 
-var _ stdlib.WebAssemblyInstance = WasmtimeInstance{}
+var _ stdlib.WebAssemblyInstance = WasmtimeWebAssemblyInstance{}
 
 func wasmtimeValKindToSemaType(valKind wasmtime.ValKind) sema.Type {
 	switch valKind {
@@ -84,7 +88,7 @@ func wasmtimeValKindToSemaType(valKind wasmtime.ValKind) sema.Type {
 	}
 }
 
-func (i WasmtimeInstance) GetExport(gauge common.MemoryGauge, name string) (*stdlib.WebAssemblyExport, error) {
+func (i WasmtimeWebAssemblyInstance) GetExport(gauge common.MemoryGauge, name string) (*stdlib.WebAssemblyExport, error) {
 	extern := i.Instance.GetExport(i.Store, name)
 	if extern == nil {
 		return nil, nil
@@ -156,6 +160,9 @@ func newWasmtimeFunctionWebAssemblyExport(
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			arguments := invocation.Arguments
+			inter := invocation.Interpreter
+
+			// Convert the arguments
 
 			convertedArguments := make([]any, 0, len(arguments))
 
@@ -178,10 +185,47 @@ func newWasmtimeFunctionWebAssemblyExport(
 				convertedArguments = append(convertedArguments, convertedArgument)
 			}
 
-			result, err := function.Call(store, convertedArguments...)
+			// Call the function, with metering
+
+			fuelConsumedBefore, _ := store.FuelConsumed()
+
+			// TODO: get remaining computation and convert to fuel.
+			//   needs e.g. invocation.Interpreter.RemainingComputation()
+			const todoAvailableFuel = 1000
+			err := store.AddFuel(todoAvailableFuel)
 			if err != nil {
+				// TODO: wrap error
 				panic(err)
 			}
+
+			result, err := function.Call(store, convertedArguments...)
+			if err != nil {
+				// TODO: wrap error
+				panic(err)
+			}
+
+			fuelConsumedAfter, _ := store.FuelConsumed()
+			fuelDelta := fuelConsumedAfter - fuelConsumedBefore
+
+			inter.ReportComputation(common.ComputationKindWebAssemblyFuel, uint(fuelDelta))
+
+			remainingFuel, err := store.ConsumeFuel(0)
+			if err != nil {
+				// TODO: wrap error
+				panic(err)
+			}
+
+			remainingFuel, err = store.ConsumeFuel(remainingFuel)
+			if err != nil {
+				// TODO: wrap error
+				panic(err)
+			}
+
+			if remainingFuel != 0 {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Return the result
 
 			switch result := result.(type) {
 			case int32:
