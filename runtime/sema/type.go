@@ -4892,6 +4892,48 @@ func NewFunctionMember(
 	}
 }
 
+func NewUnmeteredConstructorMember(
+	containerType Type,
+	access Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+	return NewConstructorMember(
+		nil,
+		containerType,
+		access,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewConstructorMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+
+	return &Member{
+		ContainerType: containerType,
+		Access:        access,
+		Identifier: ast.NewIdentifier(
+			memoryGauge,
+			identifier,
+			ast.EmptyPosition,
+		),
+		DeclarationKind: common.DeclarationKindInitializer,
+		VariableKind:    ast.VariableKindConstant,
+		TypeAnnotation:  NewTypeAnnotation(functionType),
+		ArgumentLabels:  functionType.ArgumentLabels(),
+		DocString:       docString,
+	}
+}
+
 func NewUnmeteredPublicConstantFieldMember(
 	containerType Type,
 	identifier string,

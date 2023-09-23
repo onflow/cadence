@@ -1,4 +1,4 @@
-// Code generated from testdata/simple-struct.cdc. DO NOT EDIT.
+// Code generated from testdata/composite_type_pragma/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -17,20 +17,22 @@
  * limitations under the License.
  */
 
-package sema
+package composite_type_pragma
+
+import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
+)
 
 const TestTypeName = "Test"
 
-var TestType = &SimpleType{
-	Name:          TestTypeName,
-	QualifiedName: TestTypeName,
-	TypeID:        TestTypeName,
-	tag:           TestTypeTag,
-	IsResource:    false,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    false,
-	ContainFields: false,
-}
+var TestType = func() *sema.CompositeType {
+	var t = &sema.CompositeType{
+		Identifier:         TestTypeName,
+		Kind:               common.CompositeKindStructure,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
+	}
+
+	return t
+}()

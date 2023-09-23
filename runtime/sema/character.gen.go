@@ -50,7 +50,7 @@ var CharacterType = &SimpleType{
 	Name:          CharacterTypeName,
 	QualifiedName: CharacterTypeName,
 	TypeID:        CharacterTypeName,
-	tag:           CharacterTypeTag,
+	TypeTag:       CharacterTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,

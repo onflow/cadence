@@ -16,20 +16,8 @@
  * limitations under the License.
  */
 
-package sema
+package docstrings
 
-// NeverType represents the bottom type
-var NeverType = &SimpleType{
-	Name:          "Never",
-	QualifiedName: "Never",
-	TypeID:        "Never",
-	TypeTag:       NeverTypeTag,
-	IsResource:    false,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    false,
-}
+import "github.com/onflow/cadence/runtime/sema"
 
-var NeverTypeAnnotation = NewTypeAnnotation(NeverType)
+var DocstringsTypeTag sema.TypeTag

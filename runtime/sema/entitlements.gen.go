@@ -33,9 +33,6 @@ var RemoveType = &EntitlementType{
 
 func init() {
 	BuiltinEntitlements[MutateType.Identifier] = MutateType
-	addToBaseActivation(MutateType)
 	BuiltinEntitlements[InsertType.Identifier] = InsertType
-	addToBaseActivation(InsertType)
 	BuiltinEntitlements[RemoveType.Identifier] = RemoveType
-	addToBaseActivation(RemoveType)
 }
