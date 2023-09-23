@@ -121,8 +121,9 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env.InterpreterConfig = env.newInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
 
-	for _, standardLibraryType := range stdlib.StandardLibraryTypes {
-		env.DeclareType(standardLibraryType)
+	if config.WebAssemblyEnabled {
+		env.DeclareValue(stdlib.NewWebAssemblyContract(nil, env))
+		env.DeclareType(stdlib.WebAssemblyContractType)
 	}
 
 	return env

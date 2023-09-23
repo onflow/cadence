@@ -35,6 +35,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type WasmtimeModule struct {
@@ -198,7 +199,9 @@ func TestRuntimeWebAssembly(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		WebAssemblyEnabled: true,
+	})
 
 	// A simple program which exports a function `add` with type `(i32, i32) -> i32`,
 	// which sums the arguments and returns the result
@@ -222,8 +225,10 @@ func TestRuntimeWebAssembly(t *testing.T) {
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
 		OnCompileWebAssembly: func(bytes []byte) (stdlib.WebAssemblyModule, error) {
-			store := wasmtime.NewStore(wasmtime.NewEngine())
-			module, err := wasmtime.NewModule(store.Engine, bytes)
+			engine := wasmtime.NewEngine()
+			store := wasmtime.NewStore(engine)
+
+			module, err := wasmtime.NewModule(engine, bytes)
 			if err != nil {
 				return nil, err
 			}
@@ -258,4 +263,34 @@ func TestRuntimeWebAssembly(t *testing.T) {
 		cadence.Int32(3),
 		result,
 	)
+}
+
+func TestRuntimeWebAssemblyDisabled(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		WebAssemblyEnabled: false,
+	})
+
+	// language=cadence
+	script := []byte(`
+      access(all)
+      fun main() {
+          WebAssembly
+      }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{}
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+	RequireError(t, err)
 }
