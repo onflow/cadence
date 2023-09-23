@@ -21,7 +21,6 @@ package runtime_test
 import (
 	"testing"
 
-	"github.com/bytecodealliance/wasmtime-go/v12"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -65,18 +64,7 @@ func TestRuntimeWebAssembly(t *testing.T) {
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
 		OnCompileWebAssembly: func(bytes []byte) (stdlib.WebAssemblyModule, error) {
-			engine := wasmtime.NewEngine()
-			store := wasmtime.NewStore(engine)
-
-			module, err := wasmtime.NewModule(engine, bytes)
-			if err != nil {
-				return nil, err
-			}
-
-			return WasmtimeWebAssemblyModule{
-				Store:  store,
-				Module: module,
-			}, nil
+			return NewWasmtimeWebAssemblyModule(bytes)
 		},
 		OnDecodeArgument: func(b []byte, _ cadence.Type) (cadence.Value, error) {
 			return json.Decode(nil, b)

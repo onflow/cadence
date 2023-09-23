@@ -35,6 +35,22 @@ type WasmtimeWebAssemblyModule struct {
 	Store  *wasmtime.Store
 }
 
+func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error) {
+	engine := wasmtime.NewEngine()
+	store := wasmtime.NewStore(engine)
+
+	// TODO: wrap error
+	module, err := wasmtime.NewModule(engine, bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return WasmtimeWebAssemblyModule{
+		Store:  store,
+		Module: module,
+	}, nil
+}
+
 var _ stdlib.WebAssemblyModule = WasmtimeWebAssemblyModule{}
 
 func (m WasmtimeWebAssemblyModule) InstantiateWebAssemblyModule(_ common.MemoryGauge) (stdlib.WebAssemblyInstance, error) {
