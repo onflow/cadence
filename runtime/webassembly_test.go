@@ -35,7 +35,6 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-
 func TestRuntimeWebAssembly(t *testing.T) {
 
 	t.Parallel()
@@ -74,7 +73,7 @@ func TestRuntimeWebAssembly(t *testing.T) {
 				return nil, err
 			}
 
-			return WasmtimeModule{
+			return WasmtimeWebAssemblyModule{
 				Store:  store,
 				Module: module,
 			}, nil

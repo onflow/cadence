@@ -30,14 +30,14 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-type WasmtimeModule struct {
+type WasmtimeWebAssemblyModule struct {
 	Module *wasmtime.Module
 	Store  *wasmtime.Store
 }
 
-var _ stdlib.WebAssemblyModule = WasmtimeModule{}
+var _ stdlib.WebAssemblyModule = WasmtimeWebAssemblyModule{}
 
-func (m WasmtimeModule) InstantiateWebAssemblyModule(_ common.MemoryGauge) (stdlib.WebAssemblyInstance, error) {
+func (m WasmtimeWebAssemblyModule) InstantiateWebAssemblyModule(_ common.MemoryGauge) (stdlib.WebAssemblyInstance, error) {
 	instance, err := wasmtime.NewInstance(m.Store, m.Module, nil)
 	if err != nil {
 		return nil, err
