@@ -137,7 +137,7 @@ func newWasmtimeFunctionWebAssemblyExport(
 	results := funcType.Results()
 	switch len(results) {
 	case 0:
-		break
+		functionType.ReturnTypeAnnotation = sema.VoidTypeAnnotation
 
 	case 1:
 		result := results[0]
