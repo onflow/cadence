@@ -19,7 +19,6 @@
 package runtime_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/bytecodealliance/wasmtime-go/v12"
@@ -30,170 +29,12 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+
 	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-type WasmtimeModule struct {
-	Module *wasmtime.Module
-	Store  *wasmtime.Store
-}
-
-var _ stdlib.WebAssemblyModule = WasmtimeModule{}
-
-func (m WasmtimeModule) InstantiateWebAssemblyModule(_ common.MemoryGauge) (stdlib.WebAssemblyInstance, error) {
-	instance, err := wasmtime.NewInstance(m.Store, m.Module, nil)
-	if err != nil {
-		return nil, err
-	}
-	return WasmtimeInstance{
-		Instance: instance,
-		Store:    m.Store,
-	}, nil
-}
-
-type WasmtimeInstance struct {
-	Instance *wasmtime.Instance
-	Store    *wasmtime.Store
-}
-
-var _ stdlib.WebAssemblyInstance = WasmtimeInstance{}
-
-func wasmtimeValKindToSemaType(valKind wasmtime.ValKind) sema.Type {
-	switch valKind {
-	case wasmtime.KindI32:
-		return sema.Int32Type
-
-	case wasmtime.KindI64:
-		return sema.Int64Type
-
-	default:
-		return nil
-	}
-}
-
-func (i WasmtimeInstance) GetExport(gauge common.MemoryGauge, name string) (*stdlib.WebAssemblyExport, error) {
-	extern := i.Instance.GetExport(i.Store, name)
-	if extern == nil {
-		return nil, nil
-	}
-
-	if function := extern.Func(); function != nil {
-		return newWasmtimeFunctionWebAssemblyExport(gauge, function, i.Store)
-	}
-
-	return nil, fmt.Errorf("unsupported export")
-}
-
-func newWasmtimeFunctionWebAssemblyExport(
-	gauge common.MemoryGauge,
-	function *wasmtime.Func,
-	store *wasmtime.Store,
-) (
-	*stdlib.WebAssemblyExport,
-	error,
-) {
-	funcType := function.Type(store)
-
-	functionType := &sema.FunctionType{}
-
-	// Parameters
-
-	for _, paramType := range funcType.Params() {
-		paramKind := paramType.Kind()
-		parameterType := wasmtimeValKindToSemaType(paramKind)
-		if parameterType == nil {
-			return nil, fmt.Errorf(
-				"unsupported export: function with unsupported parameter type '%s'",
-				paramKind,
-			)
-		}
-		functionType.Parameters = append(
-			functionType.Parameters,
-			sema.Parameter{
-				TypeAnnotation: sema.NewTypeAnnotation(parameterType),
-			},
-		)
-	}
-
-	// Result
-
-	results := funcType.Results()
-	switch len(results) {
-	case 0:
-		break
-
-	case 1:
-		result := results[0]
-		resultKind := result.Kind()
-		returnType := wasmtimeValKindToSemaType(resultKind)
-		if returnType == nil {
-			return nil, fmt.Errorf(
-				"unsupported export: function with unsupported result type '%s'",
-				resultKind,
-			)
-		}
-		functionType.ReturnTypeAnnotation = sema.NewTypeAnnotation(returnType)
-
-	default:
-		return nil, fmt.Errorf("unsupported export: function has more than one result")
-	}
-
-	hostFunctionValue := interpreter.NewHostFunctionValue(
-		gauge,
-		functionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			arguments := invocation.Arguments
-
-			convertedArguments := make([]any, 0, len(arguments))
-
-			for i, argument := range arguments {
-				ty := functionType.Parameters[i].TypeAnnotation.Type
-
-				var convertedArgument any
-
-				switch ty {
-				case sema.Int32Type:
-					convertedArgument = int32(argument.(interpreter.Int32Value))
-
-				case sema.Int64Type:
-					convertedArgument = int64(argument.(interpreter.Int64Value))
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				convertedArguments = append(convertedArguments, convertedArgument)
-			}
-
-			result, err := function.Call(store, convertedArguments...)
-			if err != nil {
-				panic(err)
-			}
-
-			switch result := result.(type) {
-			case int32:
-				return interpreter.Int32Value(result)
-
-			case int64:
-				return interpreter.Int64Value(result)
-
-			default:
-				panic(errors.NewUnreachableError())
-
-			}
-		},
-	)
-
-	return &stdlib.WebAssemblyExport{
-		Type:  functionType,
-		Value: hostFunctionValue,
-	}, nil
-}
 
 func TestRuntimeWebAssembly(t *testing.T) {
 
