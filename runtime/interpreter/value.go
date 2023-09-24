@@ -1429,26 +1429,14 @@ func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, sep
 			}
 
 			str := split[index]
-			strValue := NewStringValue(
+			index++
+			return NewStringValue(
 				inter,
 				common.NewStringMemoryUsage(len(str)),
 				func() string {
 					return str
 				},
 			)
-
-			index++
-
-			value := strValue.Transfer(
-				inter,
-				locationRange,
-				atree.Address{},
-				true,
-				nil,
-				nil,
-			)
-
-			return value
 		},
 	)
 }
