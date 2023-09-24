@@ -1358,6 +1358,25 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 				return v.Split(invocation.Interpreter, invocation.LocationRange, separator.Str)
 			},
 		)
+
+	case sema.StringTypeReplaceAllFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.StringTypeReplaceAllFunctionType,
+			func(invocation Invocation) Value {
+				of, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				with, ok := invocation.Arguments[1].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.ReplaceAll(invocation.Interpreter, invocation.LocationRange, of.Str, with.Str)
+			},
+		)
 	}
 
 	return nil
@@ -1437,6 +1456,23 @@ func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, sep
 					return str
 				},
 			)
+		},
+	)
+}
+
+func (v *StringValue) ReplaceAll(inter *Interpreter, locationRange LocationRange, of string, with string) *StringValue {
+	// Over-estimate the resulting string length.
+	// In the worst case, `of` can be empty in which case, `with` will be added at every index.
+	// e.g. `of` = "", `v` = "ABC", `with` = "1": result = "1A1B1C1".
+	lengthOverEstimate := (2*len(v.Str) + 1) * len(with)
+
+	memoryUsage := common.NewStringMemoryUsage(lengthOverEstimate)
+
+	return NewStringValue(
+		inter,
+		memoryUsage,
+		func() string {
+			return strings.ReplaceAll(v.Str, of, with)
 		},
 	)
 }
