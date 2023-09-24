@@ -21,7 +21,7 @@
     ],
     "declaration": true,
     "noImplicitAny": false,
-    "outDir": "./dist"
+    "outDir": "./dist/esm"
   },
   "exclude": [
     "node_modules",
