@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckTypeArguments(t *testing.T) {
@@ -51,6 +52,29 @@ func TestCheckTypeArguments(t *testing.T) {
 			capType,
 		)
 		require.Nil(t, capType.(*sema.CapabilityType).BorrowType)
+	})
+
+	t.Run("inclusive range, no instantiation", func(t *testing.T) {
+
+		t.Parallel()
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              let inclusiveRange: InclusiveRange = InclusiveRange(1, 10)
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
 	})
 
 	t.Run("capability, instantiation with no arguments", func(t *testing.T) {
