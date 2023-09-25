@@ -42,7 +42,7 @@ import (
 
 func newTestContractInterpreter(t *testing.T, code string) (*interpreter.Interpreter, error) {
 	testFramework := &mockedTestFramework{
-		newEmulatorBackend: func() stdlib.Blockchain {
+		emulatorBackend: func() stdlib.Blockchain {
 			return &mockedBlockchain{}
 		},
 	}
@@ -2070,7 +2070,7 @@ func TestBlockchain(t *testing.T) {
 		eventsInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
 						eventsInvoked = true
@@ -2117,7 +2117,7 @@ func TestBlockchain(t *testing.T) {
 		eventsInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					events: func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value {
 						eventsInvoked = true
@@ -2161,7 +2161,7 @@ func TestBlockchain(t *testing.T) {
 		resetInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					reset: func(height uint64) {
 						resetInvoked = true
@@ -2194,7 +2194,7 @@ func TestBlockchain(t *testing.T) {
 		resetInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					reset: func(height uint64) {
 						resetInvoked = true
@@ -2226,7 +2226,7 @@ func TestBlockchain(t *testing.T) {
 		moveTimeInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					moveTime: func(timeDelta int64) {
 						moveTimeInvoked = true
@@ -2262,7 +2262,7 @@ func TestBlockchain(t *testing.T) {
 		moveTimeInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					moveTime: func(timeDelta int64) {
 						moveTimeInvoked = true
@@ -2295,7 +2295,7 @@ func TestBlockchain(t *testing.T) {
 		moveTimeInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					moveTime: func(timeDelta int64) {
 						moveTimeInvoked = true
@@ -2324,7 +2324,7 @@ func TestBlockchain(t *testing.T) {
 		createSnapshotInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					createSnapshot: func(name string) error {
 						createSnapshotInvoked = true
@@ -2359,7 +2359,7 @@ func TestBlockchain(t *testing.T) {
 		createSnapshotInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					createSnapshot: func(name string) error {
 						createSnapshotInvoked = true
@@ -2395,7 +2395,7 @@ func TestBlockchain(t *testing.T) {
 		loadSnapshotInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					createSnapshot: func(name string) error {
 						assert.Equal(t, "adminCreated", name)
@@ -2436,7 +2436,7 @@ func TestBlockchain(t *testing.T) {
 		loadSnapshotInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					createSnapshot: func(name string) error {
 						assert.Equal(t, "adminCreated", name)
@@ -2482,7 +2482,7 @@ func TestBlockchain(t *testing.T) {
 		deployContractInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					deployContract: func(
 						inter *interpreter.Interpreter,
@@ -2535,7 +2535,7 @@ func TestBlockchain(t *testing.T) {
 		deployContractInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					deployContract: func(
 						inter *interpreter.Interpreter,
@@ -2575,7 +2575,7 @@ func TestBlockchain(t *testing.T) {
 		getAccountInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					getAccount: func(address interpreter.AddressValue) (*stdlib.Account, error) {
 						getAccountInvoked = true
@@ -2620,7 +2620,7 @@ func TestBlockchain(t *testing.T) {
 		getAccountInvoked := false
 
 		testFramework := &mockedTestFramework{
-			newEmulatorBackend: func() stdlib.Blockchain {
+			emulatorBackend: func() stdlib.Blockchain {
 				return &mockedBlockchain{
 					getAccount: func(address interpreter.AddressValue) (*stdlib.Account, error) {
 						getAccountInvoked = true
@@ -2649,18 +2649,18 @@ func TestBlockchain(t *testing.T) {
 }
 
 type mockedTestFramework struct {
-	newEmulatorBackend func() stdlib.Blockchain
-	readFile           func(s string) (string, error)
+	emulatorBackend func() stdlib.Blockchain
+	readFile        func(s string) (string, error)
 }
 
 var _ stdlib.TestFramework = &mockedTestFramework{}
 
-func (m mockedTestFramework) NewEmulatorBackend() stdlib.Blockchain {
-	if m.newEmulatorBackend == nil {
+func (m mockedTestFramework) EmulatorBackend() stdlib.Blockchain {
+	if m.emulatorBackend == nil {
 		panic("'NewEmulatorBackend' is not implemented")
 	}
 
-	return m.newEmulatorBackend()
+	return m.emulatorBackend()
 }
 
 func (m mockedTestFramework) ReadFile(fileName string) (string, error) {

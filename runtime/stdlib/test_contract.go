@@ -1246,7 +1246,7 @@ func (t *TestContractType) NewTestContract(
 	initializerTypes := t.InitializerTypes
 	emulatorBackend := t.emulatorBackendType.newEmulatorBackend(
 		inter,
-		testFramework.NewEmulatorBackend(),
+		testFramework.EmulatorBackend(),
 		interpreter.EmptyLocationRange,
 	)
 	value, err := inter.InvokeFunctionValue(

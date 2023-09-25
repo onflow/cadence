@@ -30,7 +30,7 @@ import (
 // This is used as a way to inject test provider dependencies dynamically.
 
 type TestFramework interface {
-	NewEmulatorBackend() Blockchain
+	EmulatorBackend() Blockchain
 
 	ReadFile(string) (string, error)
 }
