@@ -1043,6 +1043,8 @@ var _ ValueIndexableValue = &StringValue{}
 var _ MemberAccessibleValue = &StringValue{}
 var _ IterableValue = &StringValue{}
 
+var VarSizedArrayOfStringType = NewVariableSizedStaticType(nil, PrimitiveStaticTypeString)
+
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
 		v.graphemes = uniseg.NewGraphemes(v.Str)
@@ -1342,6 +1344,20 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 				return v.ToLower(invocation.Interpreter)
 			},
 		)
+
+	case sema.StringTypeSplitFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.StringTypeSplitFunctionType,
+			func(invocation Invocation) Value {
+				separator, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Split(invocation.Interpreter, invocation.LocationRange, separator.Str)
+			},
+		)
 	}
 
 	return nil
@@ -1392,6 +1408,35 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 		memoryUsage,
 		func() string {
 			return strings.ToLower(v.Str)
+		},
+	)
+}
+
+func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, separator string) Value {
+	split := strings.Split(v.Str, separator)
+
+	var index int
+	count := len(split)
+
+	return NewArrayValueWithIterator(
+		inter,
+		VarSizedArrayOfStringType,
+		common.ZeroAddress,
+		uint64(count),
+		func() Value {
+			if index >= count {
+				return nil
+			}
+
+			str := split[index]
+			index++
+			return NewStringValue(
+				inter,
+				common.NewStringMemoryUsage(len(str)),
+				func() string {
+					return str
+				},
+			)
 		},
 	)
 }
