@@ -1014,6 +1014,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	nestedVariables := map[string]*Variable{}
 
+	var destroyEventConstructor FunctionValue
+
 	(func() {
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
@@ -1060,6 +1062,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 			nestedVariables[memberIdentifier] = nestedVariable
+
+			// statically we know there is at most one of these
+			if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+				destroyEventConstructor = nestedVariable.GetValue().(FunctionValue)
+			}
 		}
 
 		for _, nestedAttachmentDeclaration := range members.Attachments() {
@@ -1249,6 +1256,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				value.InjectedFields = injectedFields
 				value.Functions = functions
+				value.defaultDestroyEventConstructor = destroyEventConstructor
 
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {

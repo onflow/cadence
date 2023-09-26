@@ -16222,6 +16222,8 @@ type CompositeValue struct {
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
 	isDestroyed         bool
+
+	defaultDestroyEventConstructor FunctionValue
 }
 
 type ComputedField func(*Interpreter, LocationRange) Value
@@ -16455,6 +16457,31 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 				time.Since(startTime),
 			)
 		}()
+	}
+
+	// before actually performing the destruction (i.e. so that any fields are still available),
+	// emit the default destruction event, if one exists
+
+	if v.defaultDestroyEventConstructor != nil {
+		var base *EphemeralReferenceValue
+		var self MemberAccessibleValue = v
+		if v.Kind == common.CompositeKindAttachment {
+			base, self = attachmentBaseAndSelfValues(interpreter, v)
+		}
+		mockInvocation := NewInvocation(
+			interpreter,
+			&self,
+			base,
+			nil,
+			[]Value{},
+			[]sema.Type{},
+			nil,
+			locationRange,
+		)
+
+		event := v.defaultDestroyEventConstructor.invoke(mockInvocation).(*CompositeValue)
+		eventType := interpreter.MustSemaTypeOfValue(event).(*sema.CompositeType)
+		interpreter.emitEvent(event, eventType, locationRange)
 	}
 
 	storageID := v.StorageID()
@@ -17273,6 +17300,7 @@ func (v *CompositeValue) Transfer(
 		res.typeID = v.typeID
 		res.staticType = v.staticType
 		res.base = v.base
+		res.defaultDestroyEventConstructor = v.defaultDestroyEventConstructor
 	}
 
 	onResourceOwnerChange := config.OnResourceOwnerChange
@@ -17345,19 +17373,20 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	return &CompositeValue{
-		dictionary:          dictionary,
-		Location:            v.Location,
-		QualifiedIdentifier: v.QualifiedIdentifier,
-		Kind:                v.Kind,
-		InjectedFields:      v.InjectedFields,
-		ComputedFields:      v.ComputedFields,
-		NestedVariables:     v.NestedVariables,
-		Functions:           v.Functions,
-		Stringer:            v.Stringer,
-		isDestroyed:         v.isDestroyed,
-		typeID:              v.typeID,
-		staticType:          v.staticType,
-		base:                v.base,
+		dictionary:                     dictionary,
+		Location:                       v.Location,
+		QualifiedIdentifier:            v.QualifiedIdentifier,
+		Kind:                           v.Kind,
+		InjectedFields:                 v.InjectedFields,
+		ComputedFields:                 v.ComputedFields,
+		NestedVariables:                v.NestedVariables,
+		Functions:                      v.Functions,
+		Stringer:                       v.Stringer,
+		isDestroyed:                    v.isDestroyed,
+		typeID:                         v.typeID,
+		staticType:                     v.staticType,
+		base:                           v.base,
+		defaultDestroyEventConstructor: v.defaultDestroyEventConstructor,
 	}
 }
 

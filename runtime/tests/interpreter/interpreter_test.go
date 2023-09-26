@@ -6794,28 +6794,33 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-       var ranDestructor = false
+	var events []*interpreter.CompositeValue
 
-       resource R { }
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+        resource R {
+			event ResourceDestroyed()
+	    }
 
        fun test() {
            let r <- create R()
            destroy r
        }
-    `)
+    `, ParseCheckAndInterpretOptions{
+		Config: &interpreter.Config{
+			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				events = append(events, event)
+				return nil
+			},
+		},
+	})
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.FalseValue,
-		inter.Globals.Get("ranDestructor").GetValue(),
-	)
-
-	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	// DestructorTODO: replace with test for destruction event
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Len(t, events, 1)
+	require.Equal(t, events[0].QualifiedIdentifier, "R.ResourceDestroyed")
 }
 
 func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
