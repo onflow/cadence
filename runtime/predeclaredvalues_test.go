@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimePredeclaredValues(t *testing.T) {
@@ -39,7 +39,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name:  "foo",
 		Type:  sema.IntType,
-		Kind:  common.DeclarationKindFunction,
+		Kind:  common.DeclarationKindConstant,
 		Value: interpreter.NewUnmeteredIntValueFromInt64(2),
 	}
 
@@ -61,7 +61,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
 
-	deploy := utils.DeploymentTransaction("C", contract)
+	deploy := DeploymentTransaction("C", contract)
 
 	var accountCode []byte
 	var events []cadence.Event
@@ -91,7 +91,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	// Run transaction
 
 	transactionEnvironment := NewBaseInterpreterEnvironment(Config{})
-	transactionEnvironment.Declare(valueDeclaration)
+	transactionEnvironment.DeclareValue(valueDeclaration)
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -108,7 +108,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	// Run script
 
 	scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
-	scriptEnvironment.Declare(valueDeclaration)
+	scriptEnvironment.DeclareValue(valueDeclaration)
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -126,4 +126,356 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		cadence.Int{Value: big.NewInt(4)},
 		result,
 	)
+}
+
+func TestRuntimePredeclaredTypes(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("type alias", func(t *testing.T) {
+		t.Parallel()
+
+		xType := sema.IntType
+
+		valueDeclaration := stdlib.StandardLibraryValue{
+			Name:  "x",
+			Type:  xType,
+			Kind:  common.DeclarationKindConstant,
+			Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+		}
+
+		typeDeclaration := stdlib.StandardLibraryType{
+			Name: "X",
+			Type: xType,
+			Kind: common.DeclarationKindType,
+		}
+
+		script := []byte(`
+          pub fun main(): X {
+              return x
+          }
+	    `)
+
+		runtime := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+		}
+
+		// Run script
+
+		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment.DeclareValue(valueDeclaration)
+		scriptEnvironment.DeclareType(typeDeclaration)
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				Environment: scriptEnvironment,
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			cadence.Int{Value: big.NewInt(2)},
+			result,
+		)
+	})
+
+	t.Run("composite type, top-level, existing", func(t *testing.T) {
+		t.Parallel()
+
+		xType := &sema.CompositeType{
+			Identifier: "X",
+			Kind:       common.CompositeKindStructure,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		valueDeclaration := stdlib.StandardLibraryValue{
+			Name: "x",
+			Type: xType,
+			Kind: common.DeclarationKindConstant,
+			Value: interpreter.NewSimpleCompositeValue(nil,
+				xType.ID(),
+				interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, xType),
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+			),
+		}
+
+		typeDeclaration := stdlib.StandardLibraryType{
+			Name: "X",
+			Type: xType,
+			Kind: common.DeclarationKindType,
+		}
+
+		script := []byte(`
+          pub fun main(): X {
+              return x
+          }
+	    `)
+
+		runtime := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+		}
+
+		// Run script
+
+		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment.DeclareValue(valueDeclaration)
+		scriptEnvironment.DeclareType(typeDeclaration)
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				Environment: scriptEnvironment,
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			cadence.ValueWithCachedTypeID(
+				cadence.Struct{
+					StructType: cadence.NewStructType(nil, xType.QualifiedIdentifier(), []cadence.Field{}, nil),
+					Fields:     []cadence.Value{},
+				},
+			),
+			result,
+		)
+	})
+
+	t.Run("composite type, top-level, non-existing", func(t *testing.T) {
+		t.Parallel()
+
+		xType := &sema.CompositeType{
+			Identifier: "X",
+			Kind:       common.CompositeKindStructure,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		valueDeclaration := stdlib.StandardLibraryValue{
+			Name: "x",
+			Type: xType,
+			Kind: common.DeclarationKindConstant,
+			Value: interpreter.NewSimpleCompositeValue(nil,
+				xType.ID(),
+				interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, xType),
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+			),
+		}
+
+		script := []byte(`
+          pub fun main(): AnyStruct {
+              return x
+          }
+	    `)
+
+		runtime := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+		}
+
+		// Run script
+
+		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment.DeclareValue(valueDeclaration)
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				Environment: scriptEnvironment,
+			},
+		)
+		RequireError(t, err)
+
+		var typeLoadingErr interpreter.TypeLoadingError
+		require.ErrorAs(t, err, &typeLoadingErr)
+	})
+
+	t.Run("composite type, nested, existing", func(t *testing.T) {
+		t.Parallel()
+
+		yType := &sema.CompositeType{
+			Identifier: "Y",
+			Kind:       common.CompositeKindStructure,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		xType := &sema.CompositeType{
+			Identifier: "X",
+			Kind:       common.CompositeKindContract,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		xType.SetNestedType(yType.Identifier, yType)
+
+		valueDeclaration := stdlib.StandardLibraryValue{
+			Name: "y",
+			Type: yType,
+			Kind: common.DeclarationKindConstant,
+			Value: interpreter.NewSimpleCompositeValue(nil,
+				yType.ID(),
+				interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, yType),
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+			),
+		}
+
+		typeDeclaration := stdlib.StandardLibraryType{
+			Name: "X",
+			Type: xType,
+			Kind: common.DeclarationKindType,
+		}
+
+		script := []byte(`
+          pub fun main(): X.Y {
+              return y
+          }
+	    `)
+
+		runtime := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+		}
+
+		// Run script
+
+		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment.DeclareValue(valueDeclaration)
+		scriptEnvironment.DeclareType(typeDeclaration)
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				Environment: scriptEnvironment,
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			cadence.ValueWithCachedTypeID(
+				cadence.Struct{
+					StructType: cadence.NewStructType(nil, yType.QualifiedIdentifier(), []cadence.Field{}, nil),
+					Fields:     []cadence.Value{},
+				},
+			),
+			result,
+		)
+	})
+
+	t.Run("composite type, nested, non-existing", func(t *testing.T) {
+		t.Parallel()
+
+		yType := &sema.CompositeType{
+			Identifier: "Y",
+			Kind:       common.CompositeKindStructure,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		xType := &sema.CompositeType{
+			Identifier: "X",
+			Kind:       common.CompositeKindContract,
+			Members:    &sema.StringMemberOrderedMap{},
+		}
+
+		xType.SetNestedType(yType.Identifier, yType)
+
+		valueDeclaration := stdlib.StandardLibraryValue{
+			Name: "y",
+			Type: yType,
+			Kind: common.DeclarationKindConstant,
+			Value: interpreter.NewSimpleCompositeValue(nil,
+				yType.ID(),
+				interpreter.ConvertSemaCompositeTypeToStaticCompositeType(nil, yType),
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+			),
+		}
+
+		script := []byte(`
+          pub fun main(): AnyStruct {
+              return y
+          }
+	    `)
+
+		runtime := newTestInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+		}
+
+		// Run script
+
+		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+		scriptEnvironment.DeclareValue(valueDeclaration)
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    common.ScriptLocation{},
+				Environment: scriptEnvironment,
+			},
+		)
+		RequireError(t, err)
+
+		var typeLoadingErr interpreter.TypeLoadingError
+		require.ErrorAs(t, err, &typeLoadingErr)
+	})
+
 }
