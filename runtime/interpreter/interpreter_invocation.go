@@ -186,29 +186,11 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 }
 
 // bindParameterArguments binds the argument values to the given parameters.
-// the handling of default arguments makes a number of assumptions to simplify the implementation;
-// namely that a) all default arguments are lazily evaluated at the site of the invocation,
-// b) that either all the parameters or none of the parameters of a function have default arguments,
-// and c) functions cannot currently be explicitly invoked if they have default arguments
-// if we plan to generalize this further, we will need to relax those assumptions
 func (interpreter *Interpreter) bindParameterArguments(
 	parameterList *ast.ParameterList,
 	arguments []Value,
 ) {
 	parameters := parameterList.Parameters
-
-	if len(parameters) < 1 {
-		return
-	}
-
-	// if the first parameter has a default arg, all of them do, and the arguments list is empty
-	if parameters[0].DefaultArgument != nil {
-		// lazily evaluate the default argument expression in this context
-		for _, parameter := range parameters {
-			defaultArg := interpreter.evalExpression(parameter.DefaultArgument)
-			arguments = append(arguments, defaultArg)
-		}
-	}
 
 	for parameterIndex, parameter := range parameters {
 		argument := arguments[parameterIndex]

@@ -1101,6 +1101,29 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				locationRange := invocation.LocationRange
 				self := *invocation.Self
 
+				// the handling of default arguments makes a number of assumptions to simplify the implementation;
+				// namely that a) all default arguments are lazily evaluated at the site of the invocation,
+				// b) that either all the parameters or none of the parameters of a function have default arguments,
+				// and c) functions cannot currently be explicitly invoked if they have default arguments
+				// if we plan to generalize this further, we will need to relax those assumptions
+				if len(compositeType.ConstructorParameters) < 1 {
+					return nil
+				}
+
+				// event intefaces do not exist
+				compositeDecl := declaration.(*ast.CompositeDeclaration)
+				if compositeDecl.IsResourceDestructionDefaultEvent() {
+					parameters := compositeDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
+					// if the first parameter has a default arg, all of them do, and the arguments list is empty
+					if parameters[0].DefaultArgument != nil {
+						// lazily evaluate the default argument expression in this context
+						for _, parameter := range parameters {
+							defaultArg := interpreter.evalExpression(parameter.DefaultArgument)
+							invocation.Arguments = append(invocation.Arguments, defaultArg)
+						}
+					}
+				}
+
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
 					self.SetMember(
@@ -1121,6 +1144,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	}
 
 	functions := interpreter.compositeFunctions(declaration, lexicalScope)
+
+	if destroyEventConstructor != nil {
+		functions[resourceDefaultDestroyEventName] = destroyEventConstructor
+	}
 
 	wrapFunctions := func(code WrapperCode) {
 
@@ -1256,7 +1283,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				value.InjectedFields = injectedFields
 				value.Functions = functions
-				value.defaultDestroyEventConstructor = destroyEventConstructor
 
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {

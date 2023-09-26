@@ -16222,8 +16222,6 @@ type CompositeValue struct {
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
 	isDestroyed         bool
-
-	defaultDestroyEventConstructor FunctionValue
 }
 
 type ComputedField func(*Interpreter, LocationRange) Value
@@ -16233,7 +16231,8 @@ type CompositeField struct {
 	Name  string
 }
 
-const attachmentNamePrefix = "$"
+const unrepresentableNamePrefix = "$"
+const resourceDefaultDestroyEventName = unrepresentableNamePrefix + "ResourceDestroyed"
 
 var _ TypeIndexableValue = &CompositeValue{}
 
@@ -16429,6 +16428,10 @@ func (v *CompositeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
+func (v *CompositeValue) defaultDestroyEventConstructor() FunctionValue {
+	return v.Functions[resourceDefaultDestroyEventName]
+}
+
 func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
@@ -16460,18 +16463,26 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	}
 
 	// before actually performing the destruction (i.e. so that any fields are still available),
-	// emit the default destruction event, if one exists
+	// compute the default arguments of the default destruction event (if it exists). However,
+	// wait until after the destruction completes to actually emit the event, so that the correct order
+	// is preserved and nested resource destroy events happen first
 
-	if v.defaultDestroyEventConstructor != nil {
-		var base *EphemeralReferenceValue
+	// the default destroy event constructor is encoded as a function on the resource (with an unrepresentable name)
+	// so that we can leverage existing atree encoding and decoding. However, we need to make sure functions are initialized
+	// if the composite was recently loaded from storage
+	v.InitializeFunctions(interpreter)
+	if constructor := v.defaultDestroyEventConstructor(); constructor != nil {
 		var self MemberAccessibleValue = v
 		if v.Kind == common.CompositeKindAttachment {
+			var base *EphemeralReferenceValue
 			base, self = attachmentBaseAndSelfValues(interpreter, v)
+			interpreter.declareVariable(sema.BaseIdentifier, base)
 		}
+		interpreter.declareVariable(sema.SelfIdentifier, self)
 		mockInvocation := NewInvocation(
 			interpreter,
-			&self,
-			base,
+			nil,
+			nil,
 			nil,
 			[]Value{},
 			[]sema.Type{},
@@ -16479,9 +16490,9 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			locationRange,
 		)
 
-		event := v.defaultDestroyEventConstructor.invoke(mockInvocation).(*CompositeValue)
+		event := constructor.invoke(mockInvocation).(*CompositeValue)
 		eventType := interpreter.MustSemaTypeOfValue(event).(*sema.CompositeType)
-		interpreter.emitEvent(event, eventType, locationRange)
+		defer interpreter.emitEvent(event, eventType, locationRange)
 	}
 
 	storageID := v.StorageID()
@@ -17300,7 +17311,6 @@ func (v *CompositeValue) Transfer(
 		res.typeID = v.typeID
 		res.staticType = v.staticType
 		res.base = v.base
-		res.defaultDestroyEventConstructor = v.defaultDestroyEventConstructor
 	}
 
 	onResourceOwnerChange := config.OnResourceOwnerChange
@@ -17373,20 +17383,19 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	return &CompositeValue{
-		dictionary:                     dictionary,
-		Location:                       v.Location,
-		QualifiedIdentifier:            v.QualifiedIdentifier,
-		Kind:                           v.Kind,
-		InjectedFields:                 v.InjectedFields,
-		ComputedFields:                 v.ComputedFields,
-		NestedVariables:                v.NestedVariables,
-		Functions:                      v.Functions,
-		Stringer:                       v.Stringer,
-		isDestroyed:                    v.isDestroyed,
-		typeID:                         v.typeID,
-		staticType:                     v.staticType,
-		base:                           v.base,
-		defaultDestroyEventConstructor: v.defaultDestroyEventConstructor,
+		dictionary:          dictionary,
+		Location:            v.Location,
+		QualifiedIdentifier: v.QualifiedIdentifier,
+		Kind:                v.Kind,
+		InjectedFields:      v.InjectedFields,
+		ComputedFields:      v.ComputedFields,
+		NestedVariables:     v.NestedVariables,
+		Functions:           v.Functions,
+		Stringer:            v.Stringer,
+		isDestroyed:         v.isDestroyed,
+		typeID:              v.typeID,
+		staticType:          v.staticType,
+		base:                v.base,
 	}
 }
 
@@ -17565,7 +17574,7 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 }
 
 func attachmentMemberName(ty sema.Type) string {
-	return attachmentNamePrefix + string(ty.ID())
+	return unrepresentableNamePrefix + string(ty.ID())
 }
 
 func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
@@ -17705,7 +17714,7 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 		if key == nil {
 			break
 		}
-		if strings.HasPrefix(string(key.(StringAtreeValue)), attachmentNamePrefix) {
+		if strings.HasPrefix(string(key.(StringAtreeValue)), unrepresentableNamePrefix) {
 			attachment, ok := MustConvertStoredValue(interpreter, value).(*CompositeValue)
 			if !ok {
 				panic(errors.NewExternalError(err))
