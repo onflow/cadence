@@ -185,14 +185,12 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	)
 }
 
-// bindParameterArguments binds the argument values to the given parameters.
+// bindParameterArguments binds the argument values to the given parameters
 func (interpreter *Interpreter) bindParameterArguments(
 	parameterList *ast.ParameterList,
 	arguments []Value,
 ) {
-	parameters := parameterList.Parameters
-
-	for parameterIndex, parameter := range parameters {
+	for parameterIndex, parameter := range parameterList.Parameters {
 		argument := arguments[parameterIndex]
 		interpreter.declareVariable(parameter.Identifier.Identifier, argument)
 	}
