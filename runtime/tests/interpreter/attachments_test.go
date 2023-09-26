@@ -1452,6 +1452,63 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		require.Equal(t, events[1].QualifiedIdentifier, "R2.ResourceDestroyed")
 		require.Equal(t, events[2].QualifiedIdentifier, "A.ResourceDestroyed")
 	})
+
+	t.Run("attachment default args properly scoped", func(t *testing.T) {
+
+		t.Parallel()
+
+		var events []*interpreter.CompositeValue
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            resource R {
+                var foo: String
+                event ResourceDestroyed()
+                init() {
+                    self.foo = "baz"
+                }
+                fun setFoo(arg: String) {
+                    self.foo = arg
+                }
+            }
+            attachment A for R {
+                var bar: Int
+                event ResourceDestroyed(foo: String = base.foo, bar: Int = self.bar)
+                init() {
+                    self.bar = 1
+                }
+                fun setBar(arg: Int) {
+                    self.bar = arg
+                }
+            }
+            fun test() {
+                let r <- create R()
+                let r2 <- attach A() to <-r
+                r2.setFoo(arg: "foo")
+                r2[A]!.setBar(arg: 2)
+                destroy r2
+            }
+        `, ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+					events = append(events, event)
+					return nil
+				},
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Len(t, events, 2)
+		require.Equal(t, events[0].QualifiedIdentifier, "A.ResourceDestroyed")
+		require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "foo"), interpreter.NewUnmeteredStringValue("foo"))
+		require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"), interpreter.NewIntValueFromInt64(nil, 2))
+		require.Equal(t, events[1].QualifiedIdentifier, "R.ResourceDestroyed")
+	})
 }
 
 func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {

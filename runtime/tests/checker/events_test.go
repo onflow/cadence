@@ -1042,4 +1042,74 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("attachment with entitled base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+			attachment A for R {
+				event ResourceDestroyed(name: Int  = base.field)
+			}
+
+			resource R {
+				access(E) let field : Int
+
+				init() {
+					self.field = 3
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("attachment with entitled base allowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+			attachment A for R {
+				require entitlement E
+				event ResourceDestroyed(name: Int  = base.field)
+			}
+
+			resource R {
+				access(E) let field : Int
+
+				init() {
+					self.field = 3
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment with entitled self", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+			entitlement  mapping M {
+				E -> E
+			}
+
+			access(M) attachment A for R {
+				access(E) let field : Int
+				event ResourceDestroyed(name: Int  = self.field)
+				init() {
+					self.field = 3
+				}
+			}
+
+			resource R {}
+        `)
+		require.NoError(t, err)
+	})
+
 }

@@ -16505,6 +16505,9 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 			// destroy every nested resource in this composite; note that this iteration includes attachments
 			v.ForEachField(interpreter, func(_ string, fieldValue Value) bool {
+				if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok && compositeFieldValue.Kind == common.CompositeKindAttachment {
+					compositeFieldValue.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, compositeFieldValue))
+				}
 				maybeDestroy(interpreter, locationRange, fieldValue)
 				return true
 			})
