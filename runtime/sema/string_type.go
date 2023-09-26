@@ -173,7 +173,7 @@ const StringTypeReplaceAllFunctionName = "replaceAll"
 const StringTypeReplaceAllFunctionDocString = `
 Returns a new string after replacing all the occurrences of parameter ` + "`of` with the parameter `with`" + `.
 
-If with is empty, it matches at the beginning of the string and after each UTF-8 sequence, yielding up to k+1 replacements for a k-rune string.
+If with is empty, it matches at the beginning of the string and after each UTF-8 sequence, yielding k+1 replacements for a string of length k.
 `
 
 // ByteArrayType represents the type [UInt8]
