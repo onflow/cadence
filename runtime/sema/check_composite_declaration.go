@@ -2053,7 +2053,7 @@ func (checker *Checker) checkDefaultDestroyEvent(
 				break
 			}
 			checker.report(&DefaultDestroyInvalidArgumentError{
-				ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
 			})
 		case *ast.MemberExpression:
 			checkParamExpressionKind(arg.Expression)
@@ -2067,13 +2067,13 @@ func (checker *Checker) checkDefaultDestroyEvent(
 			switch targetExprType.(type) {
 			case *VariableSizedType, *ConstantSizedType:
 				checker.report(&DefaultDestroyInvalidArgumentError{
-					ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
 				})
 			}
 
 		default:
 			checker.report(&DefaultDestroyInvalidArgumentError{
-				ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
 			})
 		}
 	}
