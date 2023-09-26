@@ -38,6 +38,8 @@ const resourceDictionaryContract = `
 
      access(all) resource R {
 
+		 access(all) event ResourceDestroyed(value: Int = self.value)
+
          access(all) var value: Int
 
          init(_ value: Int) {
@@ -255,6 +257,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
    `)
 
 	loggedMessages = nil
+	events = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -274,8 +277,8 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		},
 		loggedMessages,
 	)
-
-	// DestructorTODO: add test for destruction event of R
+	require.Len(t, events, 1)
+	require.Equal(t, events[0].String(), "A.000000000000cade.Test.R.ResourceDestroyed(value: 3)")
 
 	// Remove the key
 
@@ -294,6 +297,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
    `)
 
 	loggedMessages = nil
+	events = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -313,8 +317,8 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		},
 		loggedMessages,
 	)
-
-	// DestructorTODO: add test for destruction event of R
+	require.Len(t, events, 1)
+	require.Equal(t, events[0].String(), "A.000000000000cade.Test.R.ResourceDestroyed(value: 4)")
 
 	// Read the deleted key
 
@@ -354,6 +358,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
    `)
 
 	loggedMessages = nil
+	events = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -372,8 +377,9 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		},
 		loggedMessages,
 	)
+	require.Len(t, events, 1)
+	require.Equal(t, events[0].String(), "A.000000000000cade.Test.R.ResourceDestroyed(value: 1)")
 
-	// DestructorTODO: add test for destruction event of R
 }
 
 func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
@@ -972,7 +978,15 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// DestructorTODO: replace with test for destruction event of R twice
+	require.Len(t, events, 3)
+	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
+	require.Equal(t, events[1].EventType.ID(), "A.0000000000000001.Test.R.ResourceDestroyed")
+	require.Equal(t, events[2].EventType.ID(), "A.0000000000000001.Test.R.ResourceDestroyed")
+	// one of the two needs to be 1, the other needs to be 2
+	require.True(t,
+		(events[1].Fields[0].String() == "1" && events[2].Fields[0].String() == "2") ||
+			(events[2].Fields[0].String() == "1" && events[1].Fields[0].String() == "2"),
+	)
 }
 
 func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {

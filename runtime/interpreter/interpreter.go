@@ -965,6 +965,47 @@ func (interpreter *Interpreter) declareAttachmentValue(
 	return interpreter.declareCompositeValue(declaration, lexicalScope)
 }
 
+// evaluates all the implicit default arguments to the default destroy event
+//
+// the handling of default arguments makes a number of assumptions to simplify the implementation;
+// namely that a) all default arguments are lazily evaluated at the site of the invocation,
+// b) that either all the parameters or none of the parameters of a function have default arguments,
+// and c) functions cannot currently be explicitly invoked if they have default arguments
+//
+// if we plan to generalize this further, we will need to relax those assumptions
+func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
+	containerComposite *CompositeValue,
+	compositeDecl *ast.CompositeDeclaration,
+	compositeType *sema.CompositeType,
+	locationRange LocationRange,
+) (arguments []Value) {
+	parameters := compositeDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
+
+	interpreter.activations.PushNewWithParent(interpreter.activations.CurrentOrNew())
+	defer interpreter.activations.Pop()
+
+	var self MemberAccessibleValue = containerComposite
+	if containerComposite.Kind == common.CompositeKindAttachment {
+		var base *EphemeralReferenceValue
+		base, self = attachmentBaseAndSelfValues(interpreter, containerComposite)
+		interpreter.declareVariable(sema.BaseIdentifier, base)
+	}
+	interpreter.declareVariable(sema.SelfIdentifier, self)
+
+	for _, parameter := range parameters {
+		// lazily evaluate the default argument expressions
+		// note that we must evaluate them in the interpreter context that existed when the event
+		// was defined (i.e. the contract defining the resource) rather than the interpreter context
+		// that exists when the resource is destroyed. We accomplish this by using the original interpreter of the
+		// composite declaration, rather than the interpreter of the destroy expression
+
+		defaultArg := interpreter.evalExpression(parameter.DefaultArgument)
+		arguments = append(arguments, defaultArg)
+	}
+
+	return
+}
+
 // declareCompositeValue creates and declares the value for
 // the composite declaration.
 //
@@ -1101,27 +1142,21 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				locationRange := invocation.LocationRange
 				self := *invocation.Self
 
-				// the handling of default arguments makes a number of assumptions to simplify the implementation;
-				// namely that a) all default arguments are lazily evaluated at the site of the invocation,
-				// b) that either all the parameters or none of the parameters of a function have default arguments,
-				// and c) functions cannot currently be explicitly invoked if they have default arguments
-				// if we plan to generalize this further, we will need to relax those assumptions
 				if len(compositeType.ConstructorParameters) < 1 {
 					return nil
 				}
 
-				// event intefaces do not exist
+				// event interfaces do not exist
 				compositeDecl := declaration.(*ast.CompositeDeclaration)
 				if compositeDecl.IsResourceDestructionDefaultEvent() {
-					parameters := compositeDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
-					// if the first parameter has a default arg, all of them do, and the arguments list is empty
-					if parameters[0].DefaultArgument != nil {
-						// lazily evaluate the default argument expression in this context
-						for _, parameter := range parameters {
-							defaultArg := interpreter.evalExpression(parameter.DefaultArgument)
-							invocation.Arguments = append(invocation.Arguments, defaultArg)
-						}
-					}
+					// we implicitly pass the containing composite value as an argument to this invocation
+					containerComposite := invocation.Arguments[0].(*CompositeValue)
+					invocation.Arguments = interpreter.evaluateDefaultDestroyEvent(
+						containerComposite,
+						compositeDecl,
+						compositeType,
+						locationRange,
+					)
 				}
 
 				for i, argument := range invocation.Arguments {

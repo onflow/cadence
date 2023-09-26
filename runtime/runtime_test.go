@@ -3129,11 +3129,22 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 	contract := []byte(`
         access(all) contract Test {
 
-            access(all) resource R {}
+            access(all) resource R {
+				access(self) var foo: Int
+				access(all) event ResourceDestroyed(foo: Int = self.foo)
+				init() {
+					self.foo = 0
+				}
+				access(all) fun setFoo(_ arg: Int) {
+					self.foo = arg
+				}
+			}
 
             init() {
                 // store nested resource in account on deployment
-                self.account.storage.save(<-create R(), to: /storage/r)
+				let r <-create R()
+				r.setFoo(3)
+                self.account.storage.save(<-r, to: /storage/r)
             }
         }
     `)
@@ -3145,6 +3156,7 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 
             prepare(acct: auth(Storage) &Account) {
                 let r <- acct.storage.load<@Test.R>(from: /storage/r)
+				r?.setFoo(6)
                 destroy r
             }
         }
@@ -3153,6 +3165,7 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 	deploy := DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
+	var events []cadence.Event
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(_ Location) (bytes []byte, err error) {
@@ -3170,7 +3183,10 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		OnEmitEvent: func(event cadence.Event) error { return nil },
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
@@ -3198,8 +3214,139 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 		})
 	require.NoError(t, err)
 
-	// DestructorTODO: Assert default event is emitted here
+	require.Len(t, events, 2)
+	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
+	require.Equal(t, events[1].String(), "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)")
+}
 
+func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachment(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntimeWithAttachments()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	attachmentContract := []byte(`
+		import Test from 0x01
+
+		access(all) contract TestAttach {
+			access(all) attachment A for Test.R {
+				access(all) event ResourceDestroyed(foo: Int = base.foo)
+			}
+		}
+	`)
+
+	contract := []byte(`
+        access(all) contract Test {
+
+            access(all) resource R {
+				access(all) var foo: Int
+				access(all) event ResourceDestroyed(foo: Int = self.foo)
+				init() {
+					self.foo = 0
+				}
+				access(all) fun setFoo(_ arg: Int) {
+					self.foo = arg
+				}
+			}
+
+            init() {
+                // store nested resource in account on deployment
+				let r <-create R()
+				r.setFoo(3)
+                self.account.storage.save(<-r, to: /storage/r)
+            }
+        }
+    `)
+
+	tx := []byte(`
+        import Test from 0x01
+		import TestAttach from 0x01
+
+        transaction {
+
+            prepare(acct: auth(Storage) &Account) {
+                let r <- acct.storage.load<@Test.R>(from: /storage/r)!
+				let withAttachment <- attach TestAttach.A() to <-r
+				withAttachment.setFoo(6)
+                destroy withAttachment
+            }
+        }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+	deployAttachment := DeploymentTransaction("TestAttach", attachmentContract)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnCreateAccount: func(payer Address) (address Address, err error) {
+			return addressValue, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployAttachment,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		})
+	require.NoError(t, err)
+
+	require.Len(t, events, 4)
+	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
+	require.Equal(t, events[1].EventType.ID(), "flow.AccountContractAdded")
+	require.Equal(t, events[2].String(), "A.0000000000000001.TestAttach.A.ResourceDestroyed(foo: 6)")
+	require.Equal(t, events[3].String(), "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)")
 }
 
 func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
@@ -3214,7 +3361,9 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 
 	contract := []byte(`
         access(all) contract Test {
-            access(all) resource R {}
+            access(all) resource R {
+				access(all) event ResourceDestroyed()
+			}
 
             init() {
                 // store nested resource in account on deployment
@@ -3239,6 +3388,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 	deploy := DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
+	var events []cadence.Event
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(_ Location) (bytes []byte, err error) {
@@ -3256,7 +3406,10 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		OnEmitEvent: func(event cadence.Event) error { return nil },
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
@@ -3285,7 +3438,9 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// DestructorTODO: Assert default event is emitted here
+	require.Len(t, events, 2)
+	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
+	require.Equal(t, events[1].String(), "A.0000000000000001.Test.R.ResourceDestroyed()")
 }
 
 func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {

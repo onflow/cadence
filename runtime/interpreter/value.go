@@ -16472,19 +16472,15 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	// if the composite was recently loaded from storage
 	v.InitializeFunctions(interpreter)
 	if constructor := v.defaultDestroyEventConstructor(); constructor != nil {
-		var self MemberAccessibleValue = v
-		if v.Kind == common.CompositeKindAttachment {
-			var base *EphemeralReferenceValue
-			base, self = attachmentBaseAndSelfValues(interpreter, v)
-			interpreter.declareVariable(sema.BaseIdentifier, base)
-		}
-		interpreter.declareVariable(sema.SelfIdentifier, self)
+
+		// pass the container value to the creation of the default event as an implicit argument, so that
+		// its fields are accessible in the body of the event constructor
 		mockInvocation := NewInvocation(
 			interpreter,
 			nil,
 			nil,
 			nil,
-			[]Value{},
+			[]Value{v},
 			[]sema.Type{},
 			nil,
 			locationRange,
@@ -16492,6 +16488,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 		event := constructor.invoke(mockInvocation).(*CompositeValue)
 		eventType := interpreter.MustSemaTypeOfValue(event).(*sema.CompositeType)
+
+		// emit the event once destruction is complete
 		defer interpreter.emitEvent(event, eventType, locationRange)
 	}
 
