@@ -493,6 +493,22 @@ func TestCheckStringReplaceAllTypeMismatchWith(t *testing.T) {
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
+func TestCheckStringReplaceAllTypeMismatchCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		let a: Character = "x"
+		let b: Character = "y"
+		let s = "Abc:1".replaceAll(of: a, with: b)
+	`)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+}
+
 func TestCheckStringReplaceAllTypeMissingArgumentLabelOf(t *testing.T) {
 
 	t.Parallel()
