@@ -4294,7 +4294,11 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
+	t.memberResolversOnce.Do(t.initializerMemberResolversFunc())
+}
+
+func (t *CompositeType) initializerMemberResolversFunc() func() {
+	return func() {
 		memberResolvers := MembersMapAsResolvers(t.Members)
 
 		// Check conformances.
@@ -4313,7 +4317,13 @@ func (t *CompositeType) initializeMemberResolvers() {
 			})
 
 		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
-	})
+	}
+}
+
+func (t *CompositeType) ResolveMembers() {
+	if t.Members.Len() != len(t.GetMembers()) {
+		t.initializerMemberResolversFunc()()
+	}
 }
 
 func (t *CompositeType) FieldPosition(name string, declaration ast.CompositeLikeDeclaration) ast.Position {
