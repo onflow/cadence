@@ -2577,18 +2577,18 @@ func TestParseEvent(t *testing.T) {
 												TypeAnnotation: &ast.TypeAnnotation{
 													Type: &ast.NominalType{
 														Identifier: ast.Identifier{
-															Identifier: "Int",
+															Identifier: "String",
 															Pos: ast.Position{
-																Offset: 29,
+																Offset: 43,
 																Line:   1,
-																Column: 29,
+																Column: 43,
 															},
 														},
 													},
 													StartPos: ast.Position{
-														Offset: 29,
+														Offset: 43,
 														Line:   1,
-														Column: 29,
+														Column: 43,
 													},
 												},
 												DefaultArgument: &ast.StringExpression{
