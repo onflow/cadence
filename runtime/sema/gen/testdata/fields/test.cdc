@@ -1,3 +1,4 @@
+
 access(all) struct Test {
     /// This is a test integer.
     access(all) let testInt: UInt64

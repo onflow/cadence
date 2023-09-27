@@ -172,15 +172,16 @@ var (
 	EntitlementMapStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapStaticAccess)
 	// Sema types
 
-	VariableSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
-	ConstantSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
-	DictionarySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
-	OptionalSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
-	IntersectionSemaTypeMemoryUsage   = NewConstantMemoryUsage(MemoryKindIntersectionSemaType)
-	ReferenceSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
-	EntitlementSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindEntitlementSemaType)
-	EntitlementMapSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapSemaType)
-	CapabilitySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+	VariableSizedSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage          = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
+	IntersectionSemaTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindIntersectionSemaType)
+	ReferenceSemaTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	EntitlementSemaTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindEntitlementSemaType)
+	EntitlementMapSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindEntitlementMapSemaType)
+	EntitlementRelationSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementRelationSemaType)
+	CapabilitySemaTypeMemoryUsage          = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
 
 	// Storage related memory usages
 

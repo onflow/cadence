@@ -532,10 +532,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 
 		entitlementRelations = append(
 			entitlementRelations,
-			EntitlementRelation{
-				Input:  inputEntitlement,
-				Output: outputEntitlement,
-			},
+			NewEntitlementRelation(checker.memoryGauge, inputEntitlement, outputEntitlement),
 		)
 	}
 

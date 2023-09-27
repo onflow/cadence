@@ -242,6 +242,7 @@ const (
 	MemoryKindReferenceSemaType
 	MemoryKindEntitlementSemaType
 	MemoryKindEntitlementMapSemaType
+	MemoryKindEntitlementRelationSemaType
 	MemoryKindCapabilitySemaType
 
 	// ordered-map

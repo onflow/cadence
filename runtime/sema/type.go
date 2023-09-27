@@ -34,6 +34,8 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+const TypeIDSeparator = '.'
+
 func qualifiedIdentifier(identifier string, containerType Type) string {
 	if containerType == nil {
 		return identifier
@@ -59,7 +61,7 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 	for i := len(identifiers) - 1; i >= 0; i-- {
 		sb.WriteString(identifiers[i])
 		if i != 0 {
-			sb.WriteByte('.')
+			sb.WriteByte(TypeIDSeparator)
 		}
 	}
 
@@ -267,6 +269,36 @@ func VisitThisAndNested(t Type, visit func(ty Type)) {
 	containerType.GetNestedTypes().Foreach(func(_ string, nestedType Type) {
 		VisitThisAndNested(nestedType, visit)
 	})
+}
+
+func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdentifier string) Type {
+
+	typeIDComponents := strings.Split(qualifiedIdentifier, string(TypeIDSeparator))
+
+	rootTypeName := typeIDComponents[0]
+	variable := typeActivation.Find(rootTypeName)
+	if variable == nil {
+		return nil
+	}
+	ty := variable.Type
+
+	// Traverse nested types until the leaf type
+
+	for i := 1; i < len(typeIDComponents); i++ {
+		containerType, ok := ty.(ContainerType)
+		if !ok || !containerType.IsContainerType() {
+			return nil
+		}
+
+		typeIDComponent := typeIDComponents[i]
+
+		ty, ok = containerType.GetNestedTypes().Get(typeIDComponent)
+		if !ok {
+			return nil
+		}
+	}
+
+	return ty
 }
 
 // CompositeKindedType is a type which has a composite kind
@@ -4892,6 +4924,48 @@ func NewFunctionMember(
 	}
 }
 
+func NewUnmeteredConstructorMember(
+	containerType Type,
+	access Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+	return NewConstructorMember(
+		nil,
+		containerType,
+		access,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewConstructorMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+
+	return &Member{
+		ContainerType: containerType,
+		Access:        access,
+		Identifier: ast.NewIdentifier(
+			memoryGauge,
+			identifier,
+			ast.EmptyPosition,
+		),
+		DeclarationKind: common.DeclarationKindInitializer,
+		VariableKind:    ast.VariableKindConstant,
+		TypeAnnotation:  NewTypeAnnotation(functionType),
+		ArgumentLabels:  functionType.ArgumentLabels(),
+		DocString:       docString,
+	}
+}
+
 func NewUnmeteredPublicConstantFieldMember(
 	containerType Type,
 	identifier string,
@@ -7841,6 +7915,18 @@ type EntitlementRelation struct {
 	Output *EntitlementType
 }
 
+func NewEntitlementRelation(
+	memoryGauge common.MemoryGauge,
+	input *EntitlementType,
+	output *EntitlementType,
+) EntitlementRelation {
+	common.UseMemory(memoryGauge, common.EntitlementRelationSemaTypeMemoryUsage)
+	return EntitlementRelation{
+		Input:  input,
+		Output: output,
+	}
+}
+
 type EntitlementMapType struct {
 	Location          common.Location
 	containerType     Type
@@ -8020,7 +8106,13 @@ func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
 				checker.Elaboration.EntitlementMapTypeDeclaration(includedMapType),
 				visitedMaps,
 			)
-			t.Relations = append(t.Relations, includedMapType.Relations...)
+
+			for _, relation := range includedMapType.Relations {
+				if !slices.Contains(t.Relations, relation) {
+					common.UseMemory(checker.memoryGauge, common.EntitlementRelationSemaTypeMemoryUsage)
+					t.Relations = append(t.Relations, relation)
+				}
+			}
 			t.IncludesIdentity = t.IncludesIdentity || includedMapType.IncludesIdentity
 
 			includedMaps[includedMapType] = struct{}{}
