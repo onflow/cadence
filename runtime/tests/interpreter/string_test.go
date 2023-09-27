@@ -499,3 +499,100 @@ func TestInterpretStringJoin(t *testing.T) {
 	testCase(t, "testEmptyArray", interpreter.NewUnmeteredStringValue(""))
 	testCase(t, "testSingletonArray", interpreter.NewUnmeteredStringValue("pqrS"))
 }
+
+func TestInterpretStringSplit(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		fun split(): [String] {
+			return "👪////❤️".split(separator: "////")
+		}
+		fun splitBySpace(): [String] {
+			return "👪 ❤️ Abc6 ;123".split(separator: " ")
+		}
+		fun splitWithUnicodeEquivalence(): [String] {
+			return "Caf\u{65}\u{301}ABc".split(separator: "\u{e9}")
+		}
+		fun testEmptyString(): [String] {
+			return "".split(separator: "//")
+		}
+		fun testNoMatch(): [String] {
+			return "pqrS;asdf".split(separator: ";;")
+		}
+	`)
+
+	testCase := func(t *testing.T, funcName string, expected *interpreter.ArrayValue) {
+		t.Run(funcName, func(t *testing.T) {
+			result, err := inter.Invoke(funcName)
+			require.NoError(t, err)
+
+			RequireValuesEqual(
+				t,
+				inter,
+				expected,
+				result,
+			)
+		})
+	}
+
+	varSizedStringType := &interpreter.VariableSizedStaticType{
+		Type: interpreter.PrimitiveStaticTypeString,
+	}
+
+	testCase(t,
+		"split",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("👪"),
+			interpreter.NewUnmeteredStringValue("❤️"),
+		),
+	)
+	testCase(t,
+		"splitBySpace",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("👪"),
+			interpreter.NewUnmeteredStringValue("❤️"),
+			interpreter.NewUnmeteredStringValue("Abc6"),
+			interpreter.NewUnmeteredStringValue(";123"),
+		),
+	)
+	testCase(t,
+		"splitWithUnicodeEquivalence",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("Caf"),
+			interpreter.NewUnmeteredStringValue("ABc"),
+		),
+	)
+	testCase(t,
+		"testEmptyString",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue(""),
+		),
+	)
+	testCase(t,
+		"testNoMatch",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("pqrS;asdf"),
+		),
+	)
+}

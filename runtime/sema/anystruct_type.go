@@ -23,7 +23,7 @@ var AnyStructType = &SimpleType{
 	Name:          "AnyStruct",
 	QualifiedName: "AnyStruct",
 	TypeID:        "AnyStruct",
-	tag:           AnyStructTypeTag,
+	TypeTag:       AnyStructTypeTag,
 	IsResource:    false,
 	// The actual storability of a value is checked at run-time
 	Storable:   true,

@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"
@@ -8334,48 +8335,65 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
       access(all) let address2 = Test.test()
     `
 
-	addressValue := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
+	t.Run("with custom handler", func(t *testing.T) {
+		addressValue := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
 
-	inter, err := parseCheckAndInterpretWithOptions(t, code,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				InjectedCompositeFieldsHandler: func(
-					inter *interpreter.Interpreter,
-					_ common.Location,
-					_ string,
-					_ common.CompositeKind,
-				) map[string]interpreter.Value {
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+					InjectedCompositeFieldsHandler: func(
+						inter *interpreter.Interpreter,
+						_ common.Location,
+						_ string,
+						_ common.CompositeKind,
+					) map[string]interpreter.Value {
 
-					accountRef := stdlib.NewAccountReferenceValue(
-						nil,
-						nil,
-						addressValue,
-						interpreter.FullyEntitledAccountAccess,
-					)
+						accountRef := stdlib.NewAccountReferenceValue(
+							nil,
+							nil,
+							addressValue,
+							interpreter.FullyEntitledAccountAccess,
+						)
 
-					return map[string]interpreter.Value{
-						sema.ContractAccountFieldName: accountRef,
-					}
+						return map[string]interpreter.Value{
+							sema.ContractAccountFieldName: accountRef,
+						}
+					},
 				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		addressValue,
-		inter.Globals.Get("address1").GetValue(),
-	)
+		AssertValuesEqual(
+			t,
+			inter,
+			addressValue,
+			inter.Globals.Get("address1").GetValue(),
+		)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		addressValue,
-		inter.Globals.Get("address2").GetValue(),
-	)
+		AssertValuesEqual(
+			t,
+			inter,
+			addressValue,
+			inter.Globals.Get("address2").GetValue(),
+		)
+	})
+
+	t.Run("with default handler", func(t *testing.T) {
+		env := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
+		_, err := parseCheckAndInterpretWithOptions(t, code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler:           makeContractValueHandler(nil, nil, nil),
+					InjectedCompositeFieldsHandler: env.InterpreterConfig.InjectedCompositeFieldsHandler,
+				},
+			},
+		)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "error: member `account` is used before it has been initialized")
+	})
 }
 
 func TestInterpretConformToImportedInterface(t *testing.T) {
