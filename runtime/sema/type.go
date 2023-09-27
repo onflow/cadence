@@ -34,6 +34,8 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+const TypeIDSeparator = '.'
+
 func qualifiedIdentifier(identifier string, containerType Type) string {
 	if containerType == nil {
 		return identifier
@@ -59,7 +61,7 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 	for i := len(identifiers) - 1; i >= 0; i-- {
 		sb.WriteString(identifiers[i])
 		if i != 0 {
-			sb.WriteByte('.')
+			sb.WriteByte(TypeIDSeparator)
 		}
 	}
 
@@ -267,6 +269,36 @@ func VisitThisAndNested(t Type, visit func(ty Type)) {
 	containerType.GetNestedTypes().Foreach(func(_ string, nestedType Type) {
 		VisitThisAndNested(nestedType, visit)
 	})
+}
+
+func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdentifier string) Type {
+
+	typeIDComponents := strings.Split(qualifiedIdentifier, string(TypeIDSeparator))
+
+	rootTypeName := typeIDComponents[0]
+	variable := typeActivation.Find(rootTypeName)
+	if variable == nil {
+		return nil
+	}
+	ty := variable.Type
+
+	// Traverse nested types until the leaf type
+
+	for i := 1; i < len(typeIDComponents); i++ {
+		containerType, ok := ty.(ContainerType)
+		if !ok || !containerType.IsContainerType() {
+			return nil
+		}
+
+		typeIDComponent := typeIDComponents[i]
+
+		ty, ok = containerType.GetNestedTypes().Get(typeIDComponent)
+		if !ok {
+			return nil
+		}
+	}
+
+	return ty
 }
 
 // CompositeKindedType is a type which has a composite kind
