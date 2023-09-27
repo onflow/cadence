@@ -76,6 +76,21 @@ func (checker *Checker) visitFunctionDeclaration(
 		declaration.Identifier,
 	)
 
+	functionBlock := declaration.FunctionBlock
+
+	if declaration.IsNative() {
+		if !functionBlock.IsEmpty() {
+			checker.report(&NativeFunctionWithImplementationError{
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					functionBlock,
+				),
+			})
+		}
+
+		functionBlock = nil
+	}
+
 	// global functions were previously declared, see `declareFunctionDeclaration`
 
 	functionType := checker.Elaboration.FunctionDeclarationFunctionType(declaration)
@@ -93,7 +108,7 @@ func (checker *Checker) visitFunctionDeclaration(
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
 		functionType,
-		declaration.FunctionBlock,
+		functionBlock,
 		options.mustExit,
 		nil,
 		options.checkResourceLoss,
