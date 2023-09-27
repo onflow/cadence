@@ -892,7 +892,7 @@ func (*NativeFunctionWithImplementationError) isSemanticError() {}
 func (*NativeFunctionWithImplementationError) IsUserError() {}
 
 func (e *NativeFunctionWithImplementationError) Error() string {
-	return "native function may not have an implementation"
+	return "native function must not have an implementation"
 }
 
 // InvalidNameError
