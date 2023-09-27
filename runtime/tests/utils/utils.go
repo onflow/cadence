@@ -24,8 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
 	"github.com/k0kubun/pp"
+	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -50,38 +50,36 @@ const ImportedLocation = common.StringLocation("imported")
 //
 // If the objects are not equal, this function prints a human-readable diff.
 func AssertEqualWithDiff(t *testing.T, expected, actual any) {
-	if !assert.Equal(t, expected, actual) {
-		// the maximum levels of a struct to recurse into
-		// this prevents infinite recursion from circular references
-		deep.MaxDepth = 100
 
-		diff := deep.Equal(expected, actual)
+	// the maximum levels of a struct to recurse into
+	// this prevents infinite recursion from circular references
+	diff := pretty.Diff(expected, actual)
 
-		if len(diff) != 0 {
-			s := strings.Builder{}
+	if len(diff) != 0 {
+		s := strings.Builder{}
 
-			for i, d := range diff {
-				if i == 0 {
-					s.WriteString("diff    : ")
-				} else {
-					s.WriteString("          ")
-				}
-
-				s.WriteString(d)
-				s.WriteString("\n")
+		for i, d := range diff {
+			if i == 0 {
+				s.WriteString("diff    : ")
+			} else {
+				s.WriteString("          ")
 			}
 
-			t.Errorf(
-				"Not equal: \n"+
-					"expected: %s\n"+
-					"actual  : %s\n\n"+
-					"%s",
-				pp.Sprint(expected),
-				pp.Sprint(actual),
-				s.String(),
-			)
+			s.WriteString(d)
+			s.WriteString("\n")
 		}
+
+		t.Errorf(
+			"Not equal: \n"+
+				"expected: %s\n"+
+				"actual  : %s\n\n"+
+				"%s",
+			pp.Sprint(expected),
+			pp.Sprint(actual),
+			s.String(),
+		)
 	}
+
 }
 
 func AsInterfaceType(name string, kind common.CompositeKind) string {
@@ -151,11 +149,11 @@ func ValuesAreEqual(inter *interpreter.Interpreter, expected, actual interpreter
 
 func AssertValuesEqual(t testing.TB, interpreter *interpreter.Interpreter, expected, actual interpreter.Value) bool {
 	if !ValuesAreEqual(interpreter, expected, actual) {
-		diff := deep.Equal(expected, actual)
+		diff := pretty.Diff(expected, actual)
 
 		var message string
 
-		if len(diff) != 0 {
+		if len(diff) > 0 {
 			s := strings.Builder{}
 			_, _ = fmt.Fprintf(&s,
 				"Not equal: \n"+
