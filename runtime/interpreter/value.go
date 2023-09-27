@@ -16232,7 +16232,7 @@ type CompositeField struct {
 }
 
 const unrepresentableNamePrefix = "$"
-const resourceDefaultDestroyEventName = unrepresentableNamePrefix + "ResourceDestroyed"
+const resourceDefaultDestroyEventPrefix = "ResourceDestroyed" + unrepresentableNamePrefix
 
 var _ TypeIndexableValue = &CompositeValue{}
 
@@ -16428,8 +16428,17 @@ func (v *CompositeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *CompositeValue) defaultDestroyEventConstructor() FunctionValue {
-	return v.Functions[resourceDefaultDestroyEventName]
+func resourceDefaultDestroyEventName(t sema.ContainerType) string {
+	return resourceDefaultDestroyEventPrefix + string(t.ID())
+}
+
+func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []FunctionValue) {
+	for name, f := range v.Functions {
+		if strings.HasPrefix(name, resourceDefaultDestroyEventPrefix) {
+			constructors = append(constructors, f)
+		}
+	}
+	return
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
@@ -16463,15 +16472,15 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	}
 
 	// before actually performing the destruction (i.e. so that any fields are still available),
-	// compute the default arguments of the default destruction event (if it exists). However,
-	// wait until after the destruction completes to actually emit the event, so that the correct order
+	// compute the default arguments of the default destruction events (if any exist). However,
+	// wait until after the destruction completes to actually emit the events, so that the correct order
 	// is preserved and nested resource destroy events happen first
 
-	// the default destroy event constructor is encoded as a function on the resource (with an unrepresentable name)
+	// default destroy event constructors are encoded as functions on the resource (with an unrepresentable name)
 	// so that we can leverage existing atree encoding and decoding. However, we need to make sure functions are initialized
 	// if the composite was recently loaded from storage
 	v.InitializeFunctions(interpreter)
-	if constructor := v.defaultDestroyEventConstructor(); constructor != nil {
+	for _, constructor := range v.defaultDestroyEventConstructors() {
 
 		// pass the container value to the creation of the default event as an implicit argument, so that
 		// its fields are accessible in the body of the event constructor

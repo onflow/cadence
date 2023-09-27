@@ -2245,3 +2245,217 @@ func TestInterpretImplicitDestruction(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
+
+	t.Parallel()
+
+	var events []*interpreter.CompositeValue
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+		resource interface I {
+			access(all) let id: Int
+			event ResourceDestroyed(id: Int = self.id)
+		}
+
+		resource A: I {
+			access(all) let id: Int
+
+			init(id: Int) {
+				self.id = id
+			}
+
+			event ResourceDestroyed(id: Int = self.id)
+		} 
+
+		resource B: I {
+			access(all) let id: Int
+
+			init(id: Int) {
+				self.id = id
+			}
+
+			event ResourceDestroyed(id: Int = self.id)
+		} 
+
+		fun test() {
+			let a <- create A(id: 1)	
+			let b <- create B(id: 2)	
+			let is: @[AnyResource] <- [<-a, <-b]
+			destroy is
+		}
+        `, ParseCheckAndInterpretOptions{
+		Config: &interpreter.Config{
+			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				events = append(events, event)
+				return nil
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Len(t, events, 4)
+	require.Equal(t, events[0].QualifiedIdentifier, "I.ResourceDestroyed")
+	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
+	require.Equal(t, events[1].QualifiedIdentifier, "A.ResourceDestroyed")
+	require.Equal(t, events[1].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
+	require.Equal(t, events[2].QualifiedIdentifier, "I.ResourceDestroyed")
+	require.Equal(t, events[2].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 2))
+	require.Equal(t, events[3].QualifiedIdentifier, "B.ResourceDestroyed")
+	require.Equal(t, events[3].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 2))
+}
+
+func TestInterpretResourceInterfaceDefaultDestroyEventMultipleInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	var events []*interpreter.CompositeValue
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+		resource interface I {
+			access(all) let id: Int
+			event ResourceDestroyed(id: Int = self.id)
+		}
+
+		resource interface J {
+			access(all) let id: Int
+			event ResourceDestroyed(id: Int = self.id)
+		}
+
+		resource A: I, J {
+			access(all) let id: Int
+
+			init(id: Int) {
+				self.id = id
+			}
+
+			event ResourceDestroyed(id: Int = self.id)
+		} 
+
+		fun test() {
+			let a <- create A(id: 1)	
+			destroy a
+		}
+        `, ParseCheckAndInterpretOptions{
+		Config: &interpreter.Config{
+			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				events = append(events, event)
+				return nil
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Len(t, events, 3)
+	require.Equal(t, events[0].QualifiedIdentifier, "I.ResourceDestroyed")
+	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
+	require.Equal(t, events[1].QualifiedIdentifier, "J.ResourceDestroyed")
+	require.Equal(t, events[1].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
+	require.Equal(t, events[2].QualifiedIdentifier, "A.ResourceDestroyed")
+	require.Equal(t, events[2].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
+}
+
+func TestInterpretResourceInterfaceDefaultDestroyEventIndirectInheritance(t *testing.T) {
+
+	t.Parallel()
+
+	var events []*interpreter.CompositeValue
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+		resource interface I {
+			access(all) let id: Int
+			event ResourceDestroyed(id: Int = self.id)
+		}
+
+		resource interface J: I {
+			access(all) let id: Int
+			event ResourceDestroyed(id: Int = self.id)
+		}
+
+		resource A: J {
+			access(all) let id: Int
+
+			init(id: Int) {
+				self.id = id
+			}
+
+			event ResourceDestroyed(id: Int = self.id)
+		} 
+
+		fun test() {
+			let a <- create A(id: 1)	
+			destroy a
+		}
+        `, ParseCheckAndInterpretOptions{
+		Config: &interpreter.Config{
+			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				events = append(events, event)
+				return nil
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Len(t, events, 3)
+	require.Equal(t, events[0].QualifiedIdentifier, "J.ResourceDestroyed")
+	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
+	require.Equal(t, events[1].QualifiedIdentifier, "I.ResourceDestroyed")
+	require.Equal(t, events[1].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
+	require.Equal(t, events[2].QualifiedIdentifier, "A.ResourceDestroyed")
+	require.Equal(t, events[2].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
+}
+
+func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testing.T) {
+
+	t.Parallel()
+
+	var events []*interpreter.CompositeValue
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+		resource interface I {
+			access(all) let id: Int
+			event ResourceDestroyed(id: Int = self.id)
+		}
+
+		resource interface J: I {
+			access(all) let id: Int
+		}
+
+		resource A: J {
+			access(all) let id: Int
+
+			init(id: Int) {
+				self.id = id
+			}
+		} 
+
+		fun test() {
+			let a <- create A(id: 1)	
+			destroy a
+		}
+        `, ParseCheckAndInterpretOptions{
+		Config: &interpreter.Config{
+			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				events = append(events, event)
+				return nil
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Len(t, events, 1)
+	require.Equal(t, events[0].QualifiedIdentifier, "I.ResourceDestroyed")
+	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
+}

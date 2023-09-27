@@ -178,9 +178,10 @@ type FunctionWrapper = func(inner FunctionValue) FunctionValue
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
 type WrapperCode struct {
-	InitializerFunctionWrapper FunctionWrapper
-	FunctionWrappers           map[string]FunctionWrapper
-	Functions                  map[string]FunctionValue
+	InitializerFunctionWrapper     FunctionWrapper
+	FunctionWrappers               map[string]FunctionWrapper
+	Functions                      map[string]FunctionValue
+	DefaultDestroyEventConstructor FunctionValue
 }
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
@@ -1181,10 +1182,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	functions := interpreter.compositeFunctions(declaration, lexicalScope)
 
 	if destroyEventConstructor != nil {
-		functions[resourceDefaultDestroyEventName] = destroyEventConstructor
+		functions[resourceDefaultDestroyEventName(compositeType)] = destroyEventConstructor
 	}
 
-	wrapFunctions := func(code WrapperCode) {
+	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
 
 		// Wrap initializer
 
@@ -1220,12 +1221,16 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
 			functions[name] = functionWrapper(functions[name])
 		}
+
+		if code.DefaultDestroyEventConstructor != nil {
+			functions[resourceDefaultDestroyEventName(ty)] = code.DefaultDestroyEventConstructor
+		}
 	}
 
 	conformances := compositeType.EffectiveInterfaceConformances()
 	for i := len(conformances) - 1; i >= 0; i-- {
 		conformance := conformances[i].InterfaceType
-		wrapFunctions(interpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
+		wrapFunctions(conformance, interpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
 	interpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
@@ -2228,13 +2233,29 @@ func (interpreter *Interpreter) declareInterface(
 		interfaceType.InitializerParameters,
 		lexicalScope,
 	)
+
+	var defaultDestroyEventConstructor FunctionValue
+	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		// statically we know there is at most one of these
+		if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+			var nestedVariable *Variable
+			lexicalScope, nestedVariable = interpreter.declareCompositeValue(
+				nestedCompositeDeclaration,
+				lexicalScope,
+			)
+			defaultDestroyEventConstructor = nestedVariable.GetValue().(FunctionValue)
+			break
+		}
+	}
+
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.SharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
-		InitializerFunctionWrapper: initializerFunctionWrapper,
-		FunctionWrappers:           functionWrappers,
-		Functions:                  defaultFunctions,
+		InitializerFunctionWrapper:     initializerFunctionWrapper,
+		FunctionWrappers:               functionWrappers,
+		Functions:                      defaultFunctions,
+		DefaultDestroyEventConstructor: defaultDestroyEventConstructor,
 	}
 }
 
