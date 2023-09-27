@@ -3765,7 +3765,7 @@ func newCapabilityControllerGetCapabilityFunction(
 	capabilityID := controller.ControllerCapabilityID()
 	borrowType := controller.CapabilityControllerBorrowType()
 
-	return func(inter *interpreter.Interpreter)  *interpreter.CapabilityValue {
+	return func(inter *interpreter.Interpreter) *interpreter.CapabilityValue {
 		return interpreter.NewCapabilityValue(
 			inter,
 			capabilityID,
