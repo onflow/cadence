@@ -283,7 +283,8 @@ func (d *CompositeDeclaration) ConformanceList() []*NominalType {
 }
 
 func (d *CompositeDeclaration) IsResourceDestructionDefaultEvent() bool {
-	return d.CompositeKind == common.CompositeKindEvent && d.Identifier.Identifier == ResourceDestructionDefaultEventName
+	return d.CompositeKind == common.CompositeKindEvent &&
+		d.Identifier.Identifier == ResourceDestructionDefaultEventName
 }
 
 // FieldDeclarationFlags
