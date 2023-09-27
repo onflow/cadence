@@ -440,20 +440,74 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t,
-		`
-          native fun test() {}
-        `,
-		ParseAndCheckOptions{
-			ParseOptions: parser.Config{
-				NativeModifierEnabled: true,
+	t.Run("disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              native fun test(): Int {}
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: false,
+				},
 			},
-		},
-	)
+		)
 
-	errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
+	})
+
+	t.Run("enabled, valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              native fun test(): Int {}
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("enabled, invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              native fun test(): Int {
+                  return 1
+              }
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NativeFunctionWithImplementationError{}, errs[0])
+	})
 }
 
 func TestCheckResultVariable(t *testing.T) {
