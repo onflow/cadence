@@ -950,7 +950,10 @@ func newTestContractType() *TestContractType {
 	program, err := parser.ParseProgram(
 		nil,
 		contracts.TestContract,
-		parser.Config{},
+		parser.Config{
+			NativeModifierEnabled: true,
+			TypeParametersEnabled: true,
+		},
 	)
 	if err != nil {
 		panic(err)
@@ -965,8 +968,9 @@ func newTestContractType() *TestContractType {
 		TestContractLocation,
 		nil,
 		&sema.Config{
-			BaseValueActivation: activation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivation:     activation,
+			AccessCheckMode:         sema.AccessCheckModeStrict,
+			AllowNativeDeclarations: true,
 		},
 	)
 	if err != nil {

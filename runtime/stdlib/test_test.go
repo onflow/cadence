@@ -57,7 +57,10 @@ func newTestContractInterpreterWithTestFramework(
 	program, err := parser.ParseProgram(
 		nil,
 		[]byte(code),
-		parser.Config{},
+		parser.Config{
+			NativeModifierEnabled: true,
+			TypeParametersEnabled: true,
+		},
 	)
 	require.NoError(t, err)
 
@@ -70,8 +73,9 @@ func newTestContractInterpreterWithTestFramework(
 		utils.TestLocation,
 		nil,
 		&sema.Config{
-			BaseValueActivation: activation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivation:     activation,
+			AccessCheckMode:         sema.AccessCheckModeStrict,
+			AllowNativeDeclarations: true,
 			ImportHandler: func(
 				checker *sema.Checker,
 				importedLocation common.Location,
@@ -660,6 +664,74 @@ func TestTestEqualMatcher(t *testing.T) {
 	})
 }
 
+func TestAssertFunction(t *testing.T) {
+	t.Parallel()
+
+	const script = `
+        import Test
+
+        pub fun testAssertWithNoArgs() {
+            Test.assert(true)
+        }
+
+        pub fun testAssertWithNoArgsFail() {
+            Test.assert(false)
+        }
+
+        pub fun testAssertWithMessage() {
+            Test.assert(true, message: "some reason")
+        }
+
+        pub fun testAssertWithMessageFail() {
+            Test.assert(false, message: "some reason")
+        }
+	`
+
+	inter, err := newTestContractInterpreter(t, script)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testAssertWithNoArgs")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testAssertWithNoArgsFail")
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "assertion failed")
+
+	_, err = inter.Invoke("testAssertWithMessage")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testAssertWithMessageFail")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "assertion failed: some reason")
+}
+
+func TestFailFunction(t *testing.T) {
+	t.Parallel()
+
+	const script = `
+        import Test
+
+        pub fun testFailWithoutMessage() {
+            Test.fail()
+        }
+
+        pub fun testFailWithMessage() {
+            Test.fail(message: "some error")
+        }
+	`
+
+	inter, err := newTestContractInterpreter(t, script)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testFailWithoutMessage")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "assertion failed")
+
+	_, err = inter.Invoke("testFailWithMessage")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "assertion failed: some error")
+}
+
 func TestAssertEqual(t *testing.T) {
 
 	t.Parallel()
@@ -931,7 +1003,7 @@ func TestAssertEqual(t *testing.T) {
 		    pub fun test() {
 		        let foo = Foo()
 		        let bar <- create Bar()
-		        Test.expect(foo, Test.equal(<-bar))
+		        Test.assertEqual(foo, <-bar)
 		    }
 
 		    pub struct Foo {}
@@ -2643,6 +2715,77 @@ func TestBlockchain(t *testing.T) {
 		assert.ErrorContains(t, err, "account with address: 0x0000000000000009 was not found")
 
 		assert.True(t, getAccountInvoked)
+	})
+
+	t.Run("readFile", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun test() {
+                let content = Test.readFile("some_file.cdc")
+                Test.assertEqual("Hey there!", content)
+            }
+		`
+
+		readFileInvoked := false
+
+		testFramework := &mockedTestFramework{
+			emulatorBackend: func() stdlib.Blockchain {
+				return &mockedBlockchain{}
+			},
+			readFile: func(path string) (string, error) {
+				readFileInvoked = true
+				assert.Equal(t, "some_file.cdc", path)
+
+				return "Hey there!", nil
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, readFileInvoked)
+	})
+
+	t.Run("readFile with failure", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            pub fun test() {
+                let content = Test.readFile("some_file.cdc")
+                Test.assertEqual("Hey there!", content)
+            }
+		`
+
+		readFileInvoked := false
+
+		testFramework := &mockedTestFramework{
+			emulatorBackend: func() stdlib.Blockchain {
+				return &mockedBlockchain{}
+			},
+			readFile: func(path string) (string, error) {
+				readFileInvoked = true
+				assert.Equal(t, "some_file.cdc", path)
+
+				return "", fmt.Errorf("could not read file: %s", path)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "could not read file: some_file.cdc")
+
+		assert.True(t, readFileInvoked)
 	})
 
 	// TODO: Add more tests for the remaining functions.
