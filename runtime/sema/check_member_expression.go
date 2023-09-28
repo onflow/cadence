@@ -419,6 +419,8 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, resu
 		}
 	case EntitlementSetAccess:
 		switch ty := accessedType.(type) {
+		case *OptionalType:
+			return checker.isReadableMember(ty.Type, member, resultingType, accessRange)
 		case *ReferenceType:
 			// when accessing a member on a reference, the read is allowed if
 			// the member's access permits the reference's authorization
