@@ -1193,7 +1193,6 @@ func newTestContractType() *TestContractType {
 	ty.expectFailureFunction = newTestTypeExpectFailureFunction(
 		expectFailureFunctionType,
 	)
-	compositeType.ResolveMembers()
 
 	return ty
 }
