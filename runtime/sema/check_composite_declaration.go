@@ -2065,7 +2065,7 @@ func (checker *Checker) checkDefaultDestroyEvent(
 			// indexing expressions on dicts, or composites (for attachments) will return `nil` and thus never fail
 			targetExprType := checker.Elaboration.IndexExpressionTypes(arg).IndexedType
 			switch targetExprType.(type) {
-			case *VariableSizedType, *ConstantSizedType:
+			case ArrayType:
 				checker.report(&DefaultDestroyInvalidArgumentError{
 					Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
 				})
@@ -2077,6 +2077,9 @@ func (checker *Checker) checkDefaultDestroyEvent(
 			})
 		}
 	}
+
+	checker.enterValueScope()
+	defer checker.leaveValueScope(eventDeclaration.EndPosition, true)
 
 	for index, param := range eventType.ConstructorParameters {
 		paramType := param.TypeAnnotation.Type
