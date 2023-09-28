@@ -7210,6 +7210,39 @@ func TestParseInvalidImportWithPurity(t *testing.T) {
 	)
 }
 
+func TestParseInvalidDefaultArgument(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function declaration ", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) fun foo ( a : Int = 3) { } ")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 31, Offset: 31},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
+	})
+
+	t.Run("function expression ", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" let foo = fun ( a : Int = 3) { } ")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 25, Offset: 25},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
+	})
+}
+
 func TestParseInvalidEventWithPurity(t *testing.T) {
 
 	t.Parallel()

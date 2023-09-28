@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/turbolent/prettier"
 )
 
 type Parameter struct {
@@ -87,4 +88,36 @@ func (p *Parameter) MarshalJSON() ([]byte, error) {
 		Range: NewUnmeteredRangeFromPositioned(p),
 		Alias: (*Alias)(p),
 	})
+}
+
+const parameterDefaultArgumentSeparator = "="
+
+func (p *Parameter) Doc() prettier.Doc {
+	var parameterDoc prettier.Concat
+
+	if p.Label != "" {
+		parameterDoc = append(
+			parameterDoc,
+			prettier.Text(p.Label),
+			prettier.Space,
+		)
+	}
+
+	parameterDoc = append(
+		parameterDoc,
+		prettier.Text(p.Identifier.Identifier),
+		typeSeparatorSpaceDoc,
+		p.TypeAnnotation.Doc(),
+	)
+
+	if p.DefaultArgument != nil {
+		parameterDoc = append(parameterDoc,
+			prettier.Space,
+			prettier.Text(parameterDefaultArgumentSeparator),
+			prettier.Space,
+			p.DefaultArgument.Doc(),
+		)
+	}
+
+	return parameterDoc
 }
