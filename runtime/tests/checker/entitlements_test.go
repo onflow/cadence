@@ -7222,3 +7222,72 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		)
 	})
 }
+
+func TestCheckEntitlementOptionalChaining(t *testing.T) {
+	t.Run("optional chain function call", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            struct S {
+                access(X) fun foo() {}
+            }
+
+            fun bar(r: &S?) {
+                r?.foo()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+	})
+
+	t.Run("optional chain field access", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X, Y) let foo: Int
+                init() {
+                    self.foo = 0
+                }
+            }
+
+            fun bar(r: auth(X) &S?) {
+                r?.foo
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+	})
+
+	t.Run("optional chain mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+            entitlement Y
+
+            entitlement mapping E {
+                X -> Y
+            }
+
+            struct S {
+                access(E) let foo: auth(E) &Int
+                init() {
+                    self.foo = &0 as auth(Y) &Int
+                }
+            }
+
+            fun bar(r: (auth(X) &S)?): (auth(Y) &Int)? {
+                return r?.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
