@@ -134,7 +134,7 @@ var StorageCapabilityControllerType = &SimpleType{
 	Name:          StorageCapabilityControllerTypeName,
 	QualifiedName: StorageCapabilityControllerTypeName,
 	TypeID:        StorageCapabilityControllerTypeName,
-	tag:           StorageCapabilityControllerTypeTag,
+	TypeTag:       StorageCapabilityControllerTypeTag,
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,

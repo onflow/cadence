@@ -1,4 +1,4 @@
-// Code generated from testdata/functions.cdc. DO NOT EDIT.
+// Code generated from testdata/functions/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -17,15 +17,18 @@
  * limitations under the License.
  */
 
-package sema
+package functions
 
-import "github.com/onflow/cadence/runtime/ast"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/sema"
+)
 
 const TestTypeNothingFunctionName = "nothing"
 
-var TestTypeNothingFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
+var TestTypeNothingFunctionType = &sema.FunctionType{
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
 	),
 }
 
@@ -35,20 +38,20 @@ This is a test function.
 
 const TestTypeParamsFunctionName = "params"
 
-var TestTypeParamsFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var TestTypeParamsFunctionType = &sema.FunctionType{
+	Parameters: []sema.Parameter{
 		{
 			Identifier:     "a",
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 		},
 		{
-			Label:          ArgumentLabelNotRequired,
+			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "b",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
 	),
 }
 
@@ -58,9 +61,9 @@ This is a test function with parameters.
 
 const TestTypeReturnBoolFunctionName = "returnBool"
 
-var TestTypeReturnBoolFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		BoolType,
+var TestTypeReturnBoolFunctionType = &sema.FunctionType{
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.BoolType,
 	),
 }
 
@@ -70,20 +73,20 @@ This is a test function with a return type.
 
 const TestTypeParamsAndReturnFunctionName = "paramsAndReturn"
 
-var TestTypeParamsAndReturnFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var TestTypeParamsAndReturnFunctionType = &sema.FunctionType{
+	Parameters: []sema.Parameter{
 		{
 			Identifier:     "a",
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 		},
 		{
-			Label:          ArgumentLabelNotRequired,
+			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "b",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		BoolType,
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.BoolType,
 	),
 }
 
@@ -93,16 +96,16 @@ This is a test function with parameters and a return type.
 
 const TestTypeTypeParamFunctionName = "typeParam"
 
-var TestTypeTypeParamFunctionTypeParameterT = &TypeParameter{
+var TestTypeTypeParamFunctionTypeParameterT = &sema.TypeParameter{
 	Name: "T",
 }
 
-var TestTypeTypeParamFunctionType = &FunctionType{
-	TypeParameters: []*TypeParameter{
+var TestTypeTypeParamFunctionType = &sema.FunctionType{
+	TypeParameters: []*sema.TypeParameter{
 		TestTypeTypeParamFunctionTypeParameterT,
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
 	),
 }
 
@@ -112,20 +115,20 @@ This is a test function with a type parameter.
 
 const TestTypeTypeParamWithBoundFunctionName = "typeParamWithBound"
 
-var TestTypeTypeParamWithBoundFunctionTypeParameterT = &TypeParameter{
+var TestTypeTypeParamWithBoundFunctionTypeParameterT = &sema.TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: &sema.ReferenceType{
+		Type:          sema.AnyType,
+		Authorization: sema.UnauthorizedAccess,
 	},
 }
 
-var TestTypeTypeParamWithBoundFunctionType = &FunctionType{
-	TypeParameters: []*TypeParameter{
+var TestTypeTypeParamWithBoundFunctionType = &sema.FunctionType{
+	TypeParameters: []*sema.TypeParameter{
 		TestTypeTypeParamWithBoundFunctionTypeParameterT,
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
 	),
 }
 
@@ -135,24 +138,24 @@ This is a test function with a type parameter and a type bound.
 
 const TestTypeTypeParamWithBoundAndParamFunctionName = "typeParamWithBoundAndParam"
 
-var TestTypeTypeParamWithBoundAndParamFunctionTypeParameterT = &TypeParameter{
+var TestTypeTypeParamWithBoundAndParamFunctionTypeParameterT = &sema.TypeParameter{
 	Name: "T",
 }
 
-var TestTypeTypeParamWithBoundAndParamFunctionType = &FunctionType{
-	TypeParameters: []*TypeParameter{
+var TestTypeTypeParamWithBoundAndParamFunctionType = &sema.FunctionType{
+	TypeParameters: []*sema.TypeParameter{
 		TestTypeTypeParamWithBoundAndParamFunctionTypeParameterT,
 	},
-	Parameters: []Parameter{
+	Parameters: []sema.Parameter{
 		{
 			Identifier: "t",
-			TypeAnnotation: NewTypeAnnotation(&GenericType{
+			TypeAnnotation: sema.NewTypeAnnotation(&sema.GenericType{
 				TypeParameter: TestTypeTypeParamWithBoundAndParamFunctionTypeParameterT,
 			}),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
 	),
 }
 
@@ -162,10 +165,10 @@ This is a test function with a type parameter and a parameter using it.
 
 const TestTypeViewFunctionFunctionName = "viewFunction"
 
-var TestTypeViewFunctionFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
+var TestTypeViewFunctionFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
 	),
 }
 
@@ -175,11 +178,11 @@ This is a function with 'view' modifier
 
 const TestTypeName = "Test"
 
-var TestType = &SimpleType{
+var TestType = &sema.SimpleType{
 	Name:          TestTypeName,
 	QualifiedName: TestTypeName,
 	TypeID:        TestTypeName,
-	tag:           TestTypeTag,
+	TypeTag:       TestTypeTag,
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
@@ -190,60 +193,60 @@ var TestType = &SimpleType{
 }
 
 func init() {
-	TestType.Members = func(t *SimpleType) map[string]MemberResolver {
-		return MembersAsResolvers([]*Member{
-			NewUnmeteredFunctionMember(
+	TestType.Members = func(t *sema.SimpleType) map[string]sema.MemberResolver {
+		return sema.MembersAsResolvers([]*sema.Member{
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				TestTypeNothingFunctionName,
 				TestTypeNothingFunctionType,
 				TestTypeNothingFunctionDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				TestTypeParamsFunctionName,
 				TestTypeParamsFunctionType,
 				TestTypeParamsFunctionDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				TestTypeReturnBoolFunctionName,
 				TestTypeReturnBoolFunctionType,
 				TestTypeReturnBoolFunctionDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				TestTypeParamsAndReturnFunctionName,
 				TestTypeParamsAndReturnFunctionType,
 				TestTypeParamsAndReturnFunctionDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				TestTypeTypeParamFunctionName,
 				TestTypeTypeParamFunctionType,
 				TestTypeTypeParamFunctionDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				TestTypeTypeParamWithBoundFunctionName,
 				TestTypeTypeParamWithBoundFunctionType,
 				TestTypeTypeParamWithBoundFunctionDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				TestTypeTypeParamWithBoundAndParamFunctionName,
 				TestTypeTypeParamWithBoundAndParamFunctionType,
 				TestTypeTypeParamWithBoundAndParamFunctionDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				TestTypeViewFunctionFunctionName,
 				TestTypeViewFunctionFunctionType,
 				TestTypeViewFunctionFunctionDocString,

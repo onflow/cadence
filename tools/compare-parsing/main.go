@@ -35,7 +35,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/go-test/deep"
+	"github.com/kr/pretty"
 )
 
 func main() {
@@ -115,13 +115,9 @@ func compareParsing(directory string, location string, code string, parseOld str
 		return
 	}
 
-	// the maximum levels of a struct to recurse into
-	// this prevents infinite recursion from circular references
-	deep.MaxDepth = 100
+	diff := pretty.Diff(res1, res2)
 
-	diff := deep.Equal(res1, res2)
-
-	if len(diff) != 0 {
+	if len(diff) > 0 {
 		var s strings.Builder
 
 		for _, d := range diff {

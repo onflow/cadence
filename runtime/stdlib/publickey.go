@@ -25,8 +25,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var PublicKeyType = sema.PublicKeyType
-
 const publicKeyConstructorFunctionDocString = `
 Constructs a new public key
 `
@@ -260,7 +258,7 @@ func newPublicKeyVerifySignatureFunction(
 
 			inter.ExpectType(
 				publicKeyValue,
-				PublicKeyType,
+				sema.PublicKeyType,
 				locationRange,
 			)
 
@@ -330,7 +328,7 @@ func newPublicKeyVerifyPoPFunction(
 
 			inter.ExpectType(
 				publicKeyValue,
-				PublicKeyType,
+				sema.PublicKeyType,
 				locationRange,
 			)
 

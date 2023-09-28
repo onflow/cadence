@@ -24,7 +24,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-test/deep"
+	gopretty "github.com/kr/pretty"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -34,10 +35,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
-
-func init() {
-	deep.MaxDepth = 20
-}
 
 func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
 	return ParseAndCheckWithOptions(t, code, ParseAndCheckOptions{
@@ -159,9 +156,9 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		err = firstResult.err
 
 		for otherResult := range results {
-			diff := deep.Equal(err, otherResult.err)
-			if diff != nil {
-				t.Error(diff)
+			diff := gopretty.Diff(err, otherResult.err)
+			if len(diff) > 0 {
+				t.Error(strings.Join(diff, "\n"))
 			}
 		}
 
