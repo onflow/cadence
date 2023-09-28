@@ -7266,6 +7266,27 @@ func TestCheckEntitlementOptionalChaining(t *testing.T) {
 		require.ErrorAs(t, errs[0], &invalidAccessErr)
 	})
 
+	t.Run("optional chain non reference", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X, Y) let foo: Int
+                init() {
+                    self.foo = 0
+                }
+            }
+
+            fun bar(r: S?) {
+                r?.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("optional chain mapping", func(t *testing.T) {
 		t.Parallel()
 		_, err := ParseAndCheck(t, `
