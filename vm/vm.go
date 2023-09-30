@@ -27,9 +27,14 @@ import (
 
 	"C"
 
-	"github.com/bytecodealliance/wasmtime-go/v7"
+	wasmtime "github.com/bytecodealliance/wasmtime-go/v7"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+)
+import (
+	"errors"
+
+	"github.com/bytecodealliance/wasmtime-go/v12"
 )
 
 type VM interface {
@@ -50,8 +55,11 @@ func (m *vm) Invoke(name string, arguments ...interpreter.Value) (interpreter.Va
 	}
 
 	res, err := f.Call(m.store, rawArguments...)
-	if err != nil {
-		return nil, err
+
+	var trap *wasmtime.Trap
+
+	if errors.As(err, trap) {
+		return nil, trap
 	}
 
 	if res == nil {
