@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/bytecodealliance/wasmtime-go/v12"
 
@@ -194,14 +195,12 @@ func newWasmtimeFunctionWebAssemblyExport(
 			const todoAvailableFuel = 1000
 			err := store.AddFuel(todoAvailableFuel)
 			if err != nil {
-				// TODO: wrap error
-				panic(err)
+				log.Fatalf("HostFunction error : Addfuel error with todoAvailableFuel '%v'", todoAvailableFuel)
 			}
 
 			result, err := function.Call(store, convertedArguments...)
 			if err != nil {
-				// TODO: wrap error
-				panic(err)
+				log.Fatalf("HostFunction error : call error with convertedArguments '%v'", convertedArguments)
 			}
 
 			fuelConsumedAfter, _ := store.FuelConsumed()
@@ -211,14 +210,12 @@ func newWasmtimeFunctionWebAssemblyExport(
 
 			remainingFuel, err := store.ConsumeFuel(0)
 			if err != nil {
-				// TODO: wrap error
-				panic(err)
+				log.Fatalf("HostFunction error : ConsumeFuel error with remainingFuel '%v'", remainingFuel)
 			}
 
 			remainingFuel, err = store.ConsumeFuel(remainingFuel)
 			if err != nil {
-				// TODO: wrap error
-				panic(err)
+				log.Fatalf("HostFunction error : ConsumeFuel error with remainingFuel '%v'", remainingFuel)
 			}
 
 			if remainingFuel != 0 {
