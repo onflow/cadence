@@ -59,8 +59,7 @@ var _ stdlib.WebAssemblyModule = WasmtimeWebAssemblyModule{}
 func (m WasmtimeWebAssemblyModule) InstantiateWebAssemblyModule(_ common.MemoryGauge) (stdlib.WebAssemblyInstance, error) {
 	instance, err := wasmtime.NewInstance(m.Store, m.Module, nil)
 	if err != nil {
-		// TODO: wrap error
-		return nil, err
+		return nil, fmt.Errorf("Instantiate WebAssembly Module error : '%s'", err)
 	}
 	return WasmtimeWebAssemblyInstance{
 		Instance: instance,
