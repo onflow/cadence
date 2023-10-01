@@ -44,8 +44,8 @@ func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error
 
 	module, err := wasmtime.NewModule(engine, bytes)
 	if err != nil {
-		// TODO: wrap error
-		return nil, err
+
+		return nil, fmt.Errorf("wasmtime error : '%s'", err)
 	}
 
 	return WasmtimeWebAssemblyModule{
