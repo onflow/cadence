@@ -87,6 +87,7 @@ func (f placeholderValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
