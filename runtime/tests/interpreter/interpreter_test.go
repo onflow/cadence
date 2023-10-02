@@ -11171,6 +11171,7 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
               log(xs)
           }
         `)
+		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
