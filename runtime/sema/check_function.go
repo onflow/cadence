@@ -344,7 +344,10 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 
 		checker.Elaboration.SetPostConditionsRewrite(postConditions, rewriteResult)
 
-		checker.visitStatements(rewriteResult.BeforeStatements)
+		// all condition blocks are `view`
+		checker.InNewPurityScope(true, func() {
+			checker.visitStatements(rewriteResult.BeforeStatements)
+		})
 	}
 
 	body()

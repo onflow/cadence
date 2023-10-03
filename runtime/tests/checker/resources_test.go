@@ -5673,9 +5673,10 @@ func TestCheckInvalidationInPostConditionBefore(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.PurityError{}, errs[0])
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 }
 
 func TestCheckInvalidationInPostCondition(t *testing.T) {
