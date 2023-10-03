@@ -482,12 +482,8 @@ func TestGetValueForIntegerType(t *testing.T) {
 
 		integerStaticType := interpreter.ConvertSemaToStaticType(nil, integerType)
 
-		var primitiveIntegerType interpreter.PrimitiveStaticType
-		require.IsType(t, interpreter.PrimitiveStaticTypeUnknown, integerStaticType)
-		primitiveIntegerType = integerStaticType.(interpreter.PrimitiveStaticType)
-
 		// Panics if not handled.
-		_ = interpreter.GetSmallIntegerValue(int8(1), primitiveIntegerType)
+		_ = interpreter.GetSmallIntegerValue(int8(1), integerStaticType)
 	}
 }
 
