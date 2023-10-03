@@ -318,7 +318,7 @@ func (InclusiveRangeStaticType) elementSize() uint {
 }
 
 func (t InclusiveRangeStaticType) String() string {
-	return fmt.Sprintf("InclusiveRange<%s>", t.ElementType)
+	return t.MeteredString(nil)
 }
 
 func (t InclusiveRangeStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
@@ -336,6 +336,10 @@ func (t InclusiveRangeStaticType) Equal(other StaticType) bool {
 	}
 
 	return t.ElementType.Equal(otherRangeType.ElementType)
+}
+
+func (t InclusiveRangeStaticType) ID() TypeID {
+	return sema.InclusiveRangeTypeID(string(t.ElementType.ID()))
 }
 
 // ConstantSizedStaticType

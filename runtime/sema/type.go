@@ -5291,10 +5291,10 @@ func (*InclusiveRangeType) Tag() TypeTag {
 	return InclusiveRangeTypeTag
 }
 
-func (r *InclusiveRangeType) String() string {
+func (t *InclusiveRangeType) String() string {
 	memberString := ""
-	if r.MemberType != nil {
-		memberString = fmt.Sprintf("<%s>", r.MemberType.String())
+	if t.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", t.MemberType.String())
 	}
 	return fmt.Sprintf(
 		"InclusiveRange%s",
@@ -5302,87 +5302,94 @@ func (r *InclusiveRangeType) String() string {
 	)
 }
 
-func (r *InclusiveRangeType) QualifiedString() string {
+func (t *InclusiveRangeType) QualifiedString() string {
 	memberString := ""
-	if r.MemberType != nil {
-		memberString = fmt.Sprintf("<%s>", r.MemberType.String())
+	if t.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", t.MemberType.QualifiedString())
 	}
 	return fmt.Sprintf(
-		"InclusiveRange<%s>",
+		"InclusiveRange%s",
 		memberString,
 	)
 }
 
-func (r *InclusiveRangeType) ID() TypeID {
-	memberID := ""
-	if r.MemberType != nil {
-		memberID = fmt.Sprintf("<%s>", r.MemberType.ID())
+func InclusiveRangeTypeID(memberTypeID string) TypeID {
+	if memberTypeID != "" {
+		memberTypeID = fmt.Sprintf("<%s>", memberTypeID)
 	}
 	return TypeID(fmt.Sprintf(
-		"InclusiveRange<%s>",
-		memberID,
+		"InclusiveRange%s",
+		memberTypeID,
 	))
 }
 
-func (r *InclusiveRangeType) Equal(other Type) bool {
+func (t *InclusiveRangeType) ID() TypeID {
+	var memberTypeID string
+	if t.MemberType != nil {
+		memberTypeID = string(t.MemberType.ID())
+	}
+	return InclusiveRangeTypeID(memberTypeID)
+}
+
+func (t *InclusiveRangeType) Equal(other Type) bool {
 	otherRange, ok := other.(*InclusiveRangeType)
 	if !ok {
 		return false
 	}
 	if otherRange.MemberType == nil {
-		return r.MemberType == nil
+		return t.MemberType == nil
 	}
 
-	return otherRange.MemberType.Equal(r.MemberType)
+	return otherRange.MemberType.Equal(t.MemberType)
 }
 
-func (r *InclusiveRangeType) IsResourceType() bool {
+func (t *InclusiveRangeType) IsResourceType() bool {
 	return false
 }
 
-func (r *InclusiveRangeType) IsInvalidType() bool {
-	return r.MemberType != nil && r.MemberType.IsInvalidType()
+func (t *InclusiveRangeType) IsInvalidType() bool {
+	return t.MemberType != nil && t.MemberType.IsInvalidType()
 }
 
-func (r *InclusiveRangeType) IsStorable(results map[*Member]bool) bool {
-	return r.MemberType.IsStorable(results)
+func (t *InclusiveRangeType) IsStorable(results map[*Member]bool) bool {
+	return t.MemberType.IsStorable(results)
 }
 
-func (r *InclusiveRangeType) IsExportable(results map[*Member]bool) bool {
-	return r.MemberType.IsExportable(results)
+func (t *InclusiveRangeType) IsExportable(results map[*Member]bool) bool {
+	return t.MemberType.IsExportable(results)
 }
 
-func (r *InclusiveRangeType) IsImportable(results map[*Member]bool) bool {
-	return r.MemberType.IsImportable(results)
+func (t *InclusiveRangeType) IsImportable(results map[*Member]bool) bool {
+	return t.MemberType.IsImportable(results)
 }
 
-func (r *InclusiveRangeType) IsEquatable() bool {
-	return r.MemberType.IsEquatable()
+func (t *InclusiveRangeType) IsEquatable() bool {
+	return t.MemberType.IsEquatable()
 }
 
 func (*InclusiveRangeType) IsComparable() bool {
 	return false
 }
 
-func (r *InclusiveRangeType) TypeAnnotationState() TypeAnnotationState {
-	if r.MemberType == nil {
+func (t *InclusiveRangeType) TypeAnnotationState() TypeAnnotationState {
+	if t.MemberType == nil {
 		return TypeAnnotationStateValid
 	}
 
-	return r.MemberType.TypeAnnotationState()
+	return t.MemberType.TypeAnnotationState()
 }
 
-func (r *InclusiveRangeType) RewriteWithRestrictedTypes() (Type, bool) {
-	if r.MemberType == nil {
-		return r, false
+func (t *InclusiveRangeType) RewriteWithRestrictedTypes() (Type, bool) {
+	if t.MemberType == nil {
+		return t, false
 	}
-	rewrittenMemberType, rewritten := r.MemberType.RewriteWithRestrictedTypes()
+	rewrittenMemberType, rewritten := t.MemberType.RewriteWithRestrictedTypes()
 	if rewritten {
 		return &InclusiveRangeType{
 			MemberType: rewrittenMemberType,
 		}, true
 	}
-	return r, false
+	return t, false
 }
 
 func (t *InclusiveRangeType) BaseType() Type {
@@ -5443,9 +5450,9 @@ const inclusiveRangeTypeContainsFunctionDocString = `
 Returns true if the given integer is in the InclusiveRange sequence
 `
 
-func (r *InclusiveRangeType) GetMembers() map[string]MemberResolver {
-	r.initializeMemberResolvers()
-	return r.memberResolvers
+func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
 }
 
 func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
@@ -5463,17 +5470,17 @@ func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
 	}
 }
 
-func (r *InclusiveRangeType) initializeMemberResolvers() {
-	r.memberResolversOnce.Do(func() {
-		r.memberResolvers = withBuiltinMembers(r, map[string]MemberResolver{
+func (t *InclusiveRangeType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
 			InclusiveRangeTypeStartFieldName: {
 				Kind: common.DeclarationKindField,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
 						memoryGauge,
-						r,
+						t,
 						identifier,
-						r.MemberType,
+						t.MemberType,
 						inclusiveRangeTypeStartFieldDocString,
 					)
 				},
@@ -5483,9 +5490,9 @@ func (r *InclusiveRangeType) initializeMemberResolvers() {
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
 						memoryGauge,
-						r,
+						t,
 						identifier,
-						r.MemberType,
+						t.MemberType,
 						inclusiveRangeTypeEndFieldDocString,
 					)
 				},
@@ -5495,9 +5502,9 @@ func (r *InclusiveRangeType) initializeMemberResolvers() {
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicConstantFieldMember(
 						memoryGauge,
-						r,
+						t,
 						identifier,
-						r.MemberType,
+						t.MemberType,
 						inclusiveRangeTypeStepFieldDocString,
 					)
 				},
@@ -5505,11 +5512,11 @@ func (r *InclusiveRangeType) initializeMemberResolvers() {
 			InclusiveRangeTypeContainsFunctionName: {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
-					elementType := r.MemberType
+					elementType := t.MemberType
 
 					return NewPublicFunctionMember(
 						memoryGauge,
-						r,
+						t,
 						identifier,
 						InclusiveRangeContainsFunctionType(elementType),
 						inclusiveRangeTypeContainsFunctionDocString,
@@ -5520,15 +5527,15 @@ func (r *InclusiveRangeType) initializeMemberResolvers() {
 	})
 }
 
-func (r *InclusiveRangeType) ElementType(_ bool) Type {
-	return r.MemberType
+func (t *InclusiveRangeType) ElementType(_ bool) Type {
+	return t.MemberType
 }
 
 func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
 	return false
 }
 
-func (r *InclusiveRangeType) Unify(
+func (t *InclusiveRangeType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
@@ -5539,11 +5546,11 @@ func (r *InclusiveRangeType) Unify(
 		return false
 	}
 
-	return r.MemberType.Unify(otherRange.MemberType, typeParameters, report, outerRange)
+	return t.MemberType.Unify(otherRange.MemberType, typeParameters, report, outerRange)
 }
 
-func (r *InclusiveRangeType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
-	memberType := r.MemberType.Resolve(typeArguments)
+func (t *InclusiveRangeType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	memberType := t.MemberType.Resolve(typeArguments)
 	if memberType == nil {
 		return nil
 	}
