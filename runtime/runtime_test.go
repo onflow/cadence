@@ -9311,3 +9311,150 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 	// It can NOT be an internal error.
 	assertRuntimeErrorIsUserError(t, err)
 }
+
+func TestRuntimeInvalidWrappedPrivateCapability(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.AtreeValidationEnabled = false
+	runtime.defaultConfig.AccountLinkingEnabled = true
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	linkTx := []byte(`
+      #allowAccountLinking
+
+      transaction {
+          prepare(acct: AuthAccount) {
+              acct.linkAccount(/private/foo)
+          }
+      }
+    `)
+
+	helperContract := []byte(`
+      pub contract Foo {
+          pub struct Thing {
+              pub let cap: Capability
+
+              init(cap: Capability) {
+                  self.cap = cap
+              }
+          }
+      }
+    `)
+
+	getCapScript := []byte(`
+      import Foo from 0x1
+
+      pub fun main(addr: Address): AnyStruct {
+          let acct = getAuthAccount(addr)
+          let authCap = acct.getCapability<&AuthAccount>(/private/foo)
+          return Foo.Thing(cap: authCap)
+      }
+	`)
+
+	attackTx := []byte(`
+      import Foo from 0x1
+
+      transaction(thing: Foo.Thing) {
+          prepare(_: AuthAccount) {
+		      thing.cap.borrow<&AuthAccount>()!.save("Hello, World", to: /storage/attack)
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Foo", helperContract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return jsoncdc.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+	nextScriptLocation := newScriptLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: linkTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy helper contract
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Get Cap
+
+	cap, err := runtime.ExecuteScript(
+		Script{
+			Source: getCapScript,
+			Arguments: encodeArgs([]cadence.Value{
+				cadence.BytesToAddress([]byte{0x1}),
+			}),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Attack
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: attackTx,
+			Arguments: encodeArgs([]cadence.Value{
+				cap,
+			}),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var argumentNotImportableErr *ArgumentNotImportableError
+	require.ErrorAs(t, err, &argumentNotImportableErr)
+}

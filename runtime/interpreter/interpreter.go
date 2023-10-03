@@ -180,7 +180,7 @@ type PublicAccountHandlerFunc func(
 type UUIDHandlerFunc func() (uint64, error)
 
 // CompositeTypeHandlerFunc is a function that loads composite types.
-type CompositeTypeHandlerFunc func(location common.Location, typeID common.TypeID) *sema.CompositeType
+type CompositeTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.CompositeType
 
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
@@ -3061,7 +3061,7 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 		return nil, err
 	}
 
-	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
+	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -3108,7 +3108,7 @@ func init() {
 	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
 	defineBaseValue(
 		BaseActivation,
-		"DictionaryType",
+		sema.DictionaryTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.DictionaryTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3147,7 +3147,7 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"CompositeType",
+		sema.CompositeTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.CompositeTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3175,7 +3175,7 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"InterfaceType",
+		sema.InterfaceTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.InterfaceTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3203,7 +3203,7 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"FunctionType",
+		sema.FunctionTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.FunctionTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3250,7 +3250,7 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		"RestrictedType",
+		sema.RestrictedTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.RestrictedTypeFunctionType,
 			RestrictedTypeFunction,
@@ -3428,7 +3428,7 @@ type runtimeTypeConstructor struct {
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
-		name: "OptionalType",
+		name: sema.OptionalTypeFunctionName,
 		converter: NewUnmeteredHostFunctionValue(
 			sema.OptionalTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3448,7 +3448,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		),
 	},
 	{
-		name: "VariableSizedArrayType",
+		name: sema.VariableSizedArrayTypeFunctionName,
 		converter: NewUnmeteredHostFunctionValue(
 			sema.VariableSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3469,7 +3469,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		),
 	},
 	{
-		name: "ConstantSizedArrayType",
+		name: sema.ConstantSizedArrayTypeFunctionName,
 		converter: NewUnmeteredHostFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3495,7 +3495,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		),
 	},
 	{
-		name: "ReferenceType",
+		name: sema.ReferenceTypeFunctionName,
 		converter: NewUnmeteredHostFunctionValue(
 			sema.ReferenceTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -3522,7 +3522,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		),
 	},
 	{
-		name: "CapabilityType",
+		name: sema.CapabilityTypeFunctionName,
 		converter: NewUnmeteredHostFunctionValue(
 			sema.CapabilityTypeFunctionType,
 			func(invocation Invocation) Value {
@@ -4730,7 +4730,7 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
 		},
-		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
 			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
 		},
 	)
@@ -4788,7 +4788,7 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 func (interpreter *Interpreter) GetCompositeType(
 	location common.Location,
 	qualifiedIdentifier string,
-	typeID common.TypeID,
+	typeID TypeID,
 ) (*sema.CompositeType, error) {
 	var compositeType *sema.CompositeType
 	if location == nil {
@@ -4796,16 +4796,18 @@ func (interpreter *Interpreter) GetCompositeType(
 		if compositeType != nil {
 			return compositeType, nil
 		}
-	} else {
-		config := interpreter.SharedState.Config
-		compositeTypeHandler := config.CompositeTypeHandler
-		if compositeTypeHandler != nil {
-			compositeType = compositeTypeHandler(location, typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-		}
+	}
 
+	config := interpreter.SharedState.Config
+	compositeTypeHandler := config.CompositeTypeHandler
+	if compositeTypeHandler != nil {
+		compositeType = compositeTypeHandler(location, typeID)
+		if compositeType != nil {
+			return compositeType, nil
+		}
+	}
+
+	if location != nil {
 		compositeType = interpreter.getUserCompositeType(location, typeID)
 		if compositeType != nil {
 			return compositeType, nil
@@ -4817,7 +4819,7 @@ func (interpreter *Interpreter) GetCompositeType(
 	}
 }
 
-func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID common.TypeID) *sema.CompositeType {
+func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID TypeID) *sema.CompositeType {
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return nil

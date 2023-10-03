@@ -84,16 +84,14 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 
 	inter := invocation.Interpreter
 
-	common.UseMemory(inter,
-		common.MemoryUsage{
-			Kind:   common.MemoryKindStringValue,
-			Amount: 1,
-		},
-	)
+	// NewStringMemoryUsage already accounts for empty string.
+	common.UseMemory(inter, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 
 	argument.Iterate(inter, func(element Value) (resume bool) {
 		character := element.(CharacterValue)
+		// Construct directly instead of using NewStringMemoryUsage to avoid
+		// having to decrement by 1 due to double counting of empty string.
 		common.UseMemory(inter,
 			common.MemoryUsage{
 				Kind:   common.MemoryKindStringValue,
@@ -101,6 +99,67 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 			},
 		)
 		builder.WriteString(string(character))
+
+		return true
+	})
+
+	return NewUnmeteredStringValue(builder.String())
+}
+
+func stringFunctionJoin(invocation Invocation) Value {
+	stringArray, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	inter := invocation.Interpreter
+
+	switch stringArray.Count() {
+	case 0:
+		return EmptyString
+	case 1:
+		return stringArray.Get(inter, invocation.LocationRange, 0)
+	}
+
+	separator, ok := invocation.Arguments[1].(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// NewStringMemoryUsage already accounts for empty string.
+	common.UseMemory(inter, common.NewStringMemoryUsage(0))
+	var builder strings.Builder
+	first := true
+
+	stringArray.Iterate(inter, func(element Value) (resume bool) {
+		// Add separator
+		if !first {
+			// Construct directly instead of using NewStringMemoryUsage to avoid
+			// having to decrement by 1 due to double counting of empty string.
+			common.UseMemory(inter,
+				common.MemoryUsage{
+					Kind:   common.MemoryKindStringValue,
+					Amount: uint64(len(separator.Str)),
+				},
+			)
+			builder.WriteString(separator.Str)
+		}
+		first = false
+
+		str, ok := element.(*StringValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		// Construct directly instead of using NewStringMemoryUsage to avoid
+		// having to decrement by 1 due to double counting of empty string.
+		common.UseMemory(inter,
+			common.MemoryUsage{
+				Kind:   common.MemoryKindStringValue,
+				Amount: uint64(len(str.Str)),
+			},
+		)
+		builder.WriteString(str.Str)
 
 		return true
 	})
@@ -147,6 +206,14 @@ var stringFunction = func() Value {
 		NewUnmeteredHostFunctionValue(
 			sema.StringTypeFromCharactersFunctionType,
 			stringFunctionFromCharacters,
+		),
+	)
+
+	addMember(
+		sema.StringTypeJoinFunctionName,
+		NewUnmeteredHostFunctionValue(
+			sema.StringTypeJoinFunctionType,
+			stringFunctionJoin,
 		),
 	)
 

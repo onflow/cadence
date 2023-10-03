@@ -33,6 +33,7 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 
 	nominalType := checker.convertNominalType(statement.Attachment)
 	base := checker.VisitExpression(statement.Value, nil)
+	checker.checkUnusedExpressionResourceLoss(base, statement.Value)
 
 	if nominalType == InvalidType {
 		return
