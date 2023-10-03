@@ -64,11 +64,7 @@ func TestInterpretOptionalType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.OptionalStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					TypeID:              "S.test.R",
-				},
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
 		inter.Globals.Get("c").GetValue(),
@@ -127,11 +123,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.VariableSizedStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					TypeID:              "S.test.R",
-				},
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
 		inter.Globals.Get("c").GetValue(),
@@ -191,11 +183,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ConstantSizedStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					TypeID:              "S.test.R",
-				},
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				Size: int64(400),
 			},
 		},
@@ -261,12 +249,8 @@ func TestInterpretDictionaryType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.DictionaryStaticType{
-				ValueType: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					TypeID:              "S.test.R",
-				},
-				KeyType: interpreter.PrimitiveStaticTypeInt,
+				ValueType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
+				KeyType:   interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		inter.Globals.Get("c").GetValue(),
@@ -320,22 +304,14 @@ func TestInterpretCompositeType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "R",
-				Location:            utils.TestLocation,
-				TypeID:              "S.test.R",
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 		},
 		inter.Globals.Get("a").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "S",
-				Location:            utils.TestLocation,
-				TypeID:              "S.test.S",
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 		},
 		inter.Globals.Get("b").GetValue(),
 	)
@@ -357,33 +333,21 @@ func TestInterpretCompositeType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "F",
-				Location:            utils.TestLocation,
-				TypeID:              "S.test.F",
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "F"),
 		},
 		inter.Globals.Get("f").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "PublicKey",
-				Location:            nil,
-				TypeID:              "PublicKey",
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "PublicKey"),
 		},
 		inter.Globals.Get("g").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "HashAlgorithm",
-				Location:            nil,
-				TypeID:              "HashAlgorithm",
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "HashAlgorithm"),
 		},
 		inter.Globals.Get("h").GetValue(),
 	)
@@ -406,20 +370,14 @@ func TestInterpretInterfaceType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.InterfaceStaticType{
-				QualifiedIdentifier: "R",
-				Location:            utils.TestLocation,
-			},
+			Type: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 		},
 		inter.Globals.Get("a").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.InterfaceStaticType{
-				QualifiedIdentifier: "S",
-				Location:            utils.TestLocation,
-			},
+			Type: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 		},
 		inter.Globals.Get("b").GetValue(),
 	)
@@ -512,12 +470,8 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "R",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.R",
-				},
-				Authorized: true,
+				BorrowedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
+				Authorized:   true,
 			},
 		},
 		inter.Globals.Get("a").GetValue(),
@@ -536,12 +490,8 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "S",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.S",
-				},
-				Authorized: true,
+				BorrowedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
+				Authorized:   true,
 			},
 		},
 		inter.Globals.Get("c").GetValue(),
@@ -587,16 +537,9 @@ func TestInterpretRestrictedType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "A",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.A",
-				},
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "A"),
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				},
 			},
 		},
@@ -606,16 +549,9 @@ func TestInterpretRestrictedType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "B",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.B",
-				},
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "B"),
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "S",
-						Location:            utils.TestLocation,
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 				},
 			},
 		},
@@ -627,10 +563,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 			Type: &interpreter.RestrictedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyResource,
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				},
 			},
 		},
@@ -642,10 +575,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 			Type: &interpreter.RestrictedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "S",
-						Location:            utils.TestLocation,
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 				},
 			},
 		},
@@ -731,12 +661,8 @@ func TestInterpretCapabilityType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.CapabilityStaticType{
 				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.CompositeStaticType{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-						TypeID:              "S.test.R",
-					},
-					Authorized: false,
+					BorrowedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
+					Authorized:   false,
 				},
 			},
 		},

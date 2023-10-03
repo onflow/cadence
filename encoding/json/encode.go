@@ -875,7 +875,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "Struct",
 			Type:         "",
-			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -883,7 +883,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "Resource",
 			Type:         "",
-			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -891,7 +891,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "Event",
 			Type:         "",
-			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: [][]jsonParameterType{prepareParameters(typ.Initializer, results)},
 		}
@@ -899,7 +899,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "Contract",
 			Type:         "",
-			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -907,7 +907,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "StructInterface",
 			Type:         "",
-			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -915,7 +915,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "ResourceInterface",
 			Type:         "",
-			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -923,7 +923,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "ContractInterface",
 			Type:         "",
-			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
@@ -960,7 +960,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 	case *cadence.EnumType:
 		return jsonNominalType{
 			Kind:         "Enum",
-			TypeID:       typeId(typ.Location, typ.QualifiedIdentifier),
+			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
 			Fields:       prepareFields(typ.Fields, results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 			Type:         prepareType(typ.RawType, results),
@@ -1063,12 +1063,4 @@ func encodeUFix64(v uint64) string {
 		integer,
 		fraction,
 	)
-}
-
-func typeId(location common.Location, identifier string) string {
-	if location == nil {
-		return identifier
-	}
-
-	return string(location.TypeID(nil, identifier))
 }

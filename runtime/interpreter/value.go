@@ -400,12 +400,9 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		var typeID string
 		staticType := v.Type
 		if staticType != nil {
-			typeID = string(interpreter.MustConvertStaticToSemaType(staticType).ID())
+			typeID = string(staticType.ID())
 		}
-		memoryUsage := common.MemoryUsage{
-			Kind:   common.MemoryKindStringValue,
-			Amount: uint64(len(typeID)),
-		}
+		memoryUsage := common.NewStringMemoryUsage(len(typeID))
 		return NewStringValue(interpreter, memoryUsage, func() string {
 			return typeID
 		})
@@ -518,7 +515,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
 func (v TypeValue) HashInput(interpreter *Interpreter, _ LocationRange, scratch []byte) []byte {
-	typeID := interpreter.MustConvertStaticToSemaType(v.Type).ID()
+	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)
 	var buf []byte
@@ -16247,7 +16244,7 @@ type CompositeValue struct {
 	NestedVariables map[string]*Variable
 	Functions       map[string]FunctionValue
 	dictionary      *atree.OrderedMap
-	typeID          common.TypeID
+	typeID          TypeID
 
 	// attachments also have a reference to their base value. This field is set in three cases:
 	// 1) when an attachment `A` is accessed off `v` using `v[A]`, this is set to `&v`
@@ -16429,16 +16426,22 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	v.ForEachField(interpreter, func(_ string, value Value) {
+	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
 		value.Accept(interpreter, visitor)
+
+		// continue iteration
+		return true
 	})
 }
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed field or functions!
 func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	v.ForEachField(interpreter, func(_ string, value Value) {
+	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
 		walkChild(value)
+
+		// continue iteration
+		return true
 	})
 }
 
@@ -16457,9 +16460,27 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 }
 
 func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
+	// Check type is importable
 	staticType := v.StaticType(inter)
 	semaType := inter.MustConvertStaticToSemaType(staticType)
-	return semaType.IsImportable(map[*sema.Member]bool{})
+	if !semaType.IsImportable(map[*sema.Member]bool{}) {
+		return false
+	}
+
+	// Check all field values are importable
+	importable := true
+	v.ForEachField(inter, func(_ string, value Value) (resume bool) {
+		if !value.IsImportable(inter) {
+			importable = false
+			// stop iteration
+			return false
+		}
+
+		// continue iteration
+		return true
+	})
+
+	return importable
 }
 
 func (v *CompositeValue) IsDestroyed() bool {
@@ -17024,14 +17045,9 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, locationRange Locat
 	panic(errors.NewUnreachableError())
 }
 
-func (v *CompositeValue) TypeID() common.TypeID {
+func (v *CompositeValue) TypeID() TypeID {
 	if v.typeID == "" {
-		location := v.Location
-		qualifiedIdentifier := v.QualifiedIdentifier
-		if location == nil {
-			return common.TypeID(qualifiedIdentifier)
-		}
-		v.typeID = location.TypeID(nil, qualifiedIdentifier)
+		v.typeID = common.NewTypeIDFromQualifiedName(nil, v.Location, v.QualifiedIdentifier)
 	}
 	return v.typeID
 }
@@ -17526,14 +17542,17 @@ func (v *CompositeValue) GetOwner() common.Address {
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
-func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName string, fieldValue Value)) {
+func (v *CompositeValue) ForEachField(
+	gauge common.MemoryGauge,
+	f func(fieldName string, fieldValue Value) (resume bool),
+) {
 
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
-		f(
+		resume = f(
 			string(key.(StringAtreeValue)),
 			MustConvertStoredValue(gauge, value),
 		)
-		return true, nil
+		return
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))

@@ -878,6 +878,23 @@ func (e *InvalidNativeModifierError) Error() string {
 	return "invalid native modifier for declaration"
 }
 
+// NativeFunctionWithImplementationError
+
+type NativeFunctionWithImplementationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &NativeFunctionWithImplementationError{}
+var _ errors.UserError = &NativeFunctionWithImplementationError{}
+
+func (*NativeFunctionWithImplementationError) isSemanticError() {}
+
+func (*NativeFunctionWithImplementationError) IsUserError() {}
+
+func (e *NativeFunctionWithImplementationError) Error() string {
+	return "native function must not have an implementation"
+}
+
 // InvalidNameError
 
 type InvalidNameError struct {

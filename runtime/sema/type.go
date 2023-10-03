@@ -31,6 +31,8 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+const TypeIDSeparator = '.'
+
 func qualifiedIdentifier(identifier string, containerType Type) string {
 	if containerType == nil {
 		return identifier
@@ -56,7 +58,7 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 	for i := len(identifiers) - 1; i >= 0; i-- {
 		sb.WriteString(identifiers[i])
 		if i != 0 {
-			sb.WriteByte('.')
+			sb.WriteByte(TypeIDSeparator)
 		}
 	}
 
@@ -227,6 +229,36 @@ func VisitThisAndNested(t Type, visit func(ty Type)) {
 	containerType.GetNestedTypes().Foreach(func(_ string, nestedType Type) {
 		VisitThisAndNested(nestedType, visit)
 	})
+}
+
+func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdentifier string) Type {
+
+	typeIDComponents := strings.Split(qualifiedIdentifier, string(TypeIDSeparator))
+
+	rootTypeName := typeIDComponents[0]
+	variable := typeActivation.Find(rootTypeName)
+	if variable == nil {
+		return nil
+	}
+	ty := variable.Type
+
+	// Traverse nested types until the leaf type
+
+	for i := 1; i < len(typeIDComponents); i++ {
+		containerType, ok := ty.(ContainerType)
+		if !ok || !containerType.IsContainerType() {
+			return nil
+		}
+
+		typeIDComponent := typeIDComponents[i]
+
+		ty, ok = containerType.GetNestedTypes().Get(typeIDComponent)
+		if !ok {
+			return nil
+		}
+	}
+
+	return ty
 }
 
 // CompositeKindedType is a type which has a composite kind
@@ -574,12 +606,12 @@ func (t *OptionalType) QualifiedString() string {
 	return fmt.Sprintf("%s?", t.Type.QualifiedString())
 }
 
+func OptionalTypeID(elementTypeID TypeID) TypeID {
+	return TypeID(fmt.Sprintf("%s?", elementTypeID))
+}
+
 func (t *OptionalType) ID() TypeID {
-	var id string
-	if t.Type != nil {
-		id = string(t.Type.ID())
-	}
-	return TypeID(fmt.Sprintf("%s?", id))
+	return OptionalTypeID(t.Type.ID())
 }
 
 func (t *OptionalType) Equal(other Type) bool {
@@ -2404,8 +2436,12 @@ func (t *VariableSizedType) QualifiedString() string {
 	return fmt.Sprintf("[%s]", t.Type.QualifiedString())
 }
 
+func VariableSizedTypeID(elementTypeID TypeID) TypeID {
+	return TypeID(fmt.Sprintf("[%s]", elementTypeID))
+}
+
 func (t *VariableSizedType) ID() TypeID {
-	return TypeID(fmt.Sprintf("[%s]", t.Type.ID()))
+	return VariableSizedTypeID(t.Type.ID())
 }
 
 func (t *VariableSizedType) Equal(other Type) bool {
@@ -2549,8 +2585,12 @@ func (t *ConstantSizedType) QualifiedString() string {
 	return fmt.Sprintf("[%s; %d]", t.Type.QualifiedString(), t.Size)
 }
 
+func ConstantSizedTypeID(elementTypeID TypeID, size int64) TypeID {
+	return TypeID(fmt.Sprintf("[%s;%d]", elementTypeID, size))
+}
+
 func (t *ConstantSizedType) ID() TypeID {
-	return TypeID(fmt.Sprintf("[%s;%d]", t.Type.ID(), t.Size))
+	return ConstantSizedTypeID(t.Type.ID(), t.Size)
 }
 
 func (t *ConstantSizedType) Equal(other Type) bool {
@@ -4031,12 +4071,7 @@ func (t *CompositeType) initializeIdentifiers() {
 
 	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
 
-	var typeID TypeID
-	if t.Location == nil {
-		typeID = TypeID(identifier)
-	} else {
-		typeID = t.Location.TypeID(nil, identifier)
-	}
+	typeID := common.NewTypeIDFromQualifiedName(nil, t.Location, identifier)
 
 	t.cachedIdentifiers = &struct {
 		TypeID              TypeID
@@ -4260,7 +4295,11 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
+	t.memberResolversOnce.Do(t.initializerMemberResolversFunc())
+}
+
+func (t *CompositeType) initializerMemberResolversFunc() func() {
+	return func() {
 		memberResolvers := MembersMapAsResolvers(t.Members)
 
 		// Check conformances.
@@ -4279,7 +4318,13 @@ func (t *CompositeType) initializeMemberResolvers() {
 			})
 
 		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
-	})
+	}
+}
+
+func (t *CompositeType) ResolveMembers() {
+	if t.Members.Len() != len(t.GetMembers()) {
+		t.initializerMemberResolversFunc()()
+	}
 }
 
 func (t *CompositeType) FieldPosition(name string, declaration ast.CompositeLikeDeclaration) ast.Position {
@@ -4646,12 +4691,7 @@ func (t *InterfaceType) initializeIdentifiers() {
 
 	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
 
-	var typeID TypeID
-	if t.Location == nil {
-		typeID = TypeID(identifier)
-	} else {
-		typeID = t.Location.TypeID(nil, identifier)
-	}
+	typeID := common.NewTypeIDFromQualifiedName(nil, t.Location, identifier)
 
 	t.cachedIdentifiers = &struct {
 		TypeID              TypeID
@@ -4840,12 +4880,16 @@ func (t *DictionaryType) QualifiedString() string {
 	)
 }
 
-func (t *DictionaryType) ID() TypeID {
+func DictionaryTypeID(keyTypeID TypeID, valueTypeID TypeID) TypeID {
 	return TypeID(fmt.Sprintf(
 		"{%s:%s}",
-		t.KeyType.ID(),
-		t.ValueType.ID(),
+		keyTypeID,
+		valueTypeID,
 	))
+}
+
+func (t *DictionaryType) ID() TypeID {
+	return DictionaryTypeID(t.KeyType.ID(), t.ValueType.ID())
 }
 
 func (t *DictionaryType) Equal(other Type) bool {

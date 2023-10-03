@@ -24,6 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -440,20 +442,123 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t,
-		`
-          native fun test() {}
-        `,
-		ParseAndCheckOptions{
-			ParseOptions: parser.Config{
-				NativeModifierEnabled: true,
+	t.Run("disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              native fun test(): Int {}
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: false,
+				},
 			},
-		},
-	)
+		)
 
-	errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
+	})
+
+	t.Run("enabled, valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              native fun test(): Int {}
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("enabled, invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              native fun test(): Int {
+                  return 1
+              }
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NativeFunctionWithImplementationError{}, errs[0])
+	})
+
+	t.Run("enabled, composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              struct S {
+                  native fun test(foo: String): Int {}
+              }
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		sType := RequireGlobalType(t, checker.Elaboration, "S")
+		require.NotNil(t, sType)
+
+		const testFunctionIdentifier = "test"
+		testMemberResolver, ok := sType.GetMembers()[testFunctionIdentifier]
+		require.True(t, ok)
+
+		assert.Equal(t,
+			common.DeclarationKindFunction,
+			testMemberResolver.Kind,
+		)
+
+		member := testMemberResolver.Resolve(nil, testFunctionIdentifier, ast.EmptyRange, nil)
+
+		assert.Equal(t,
+			sema.NewTypeAnnotation(&sema.FunctionType{
+				Parameters: []sema.Parameter{
+					{
+						Identifier:     "foo",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+			}),
+			member.TypeAnnotation,
+		)
+	})
 }
 
 func TestCheckResultVariable(t *testing.T) {

@@ -28,7 +28,7 @@ import (
 )
 
 type interpreterTransactionExecutorPreparation struct {
-	codesAndPrograms codesAndPrograms
+	codesAndPrograms CodesAndPrograms
 	environment      Environment
 	preprocessErr    error
 	transactionType  *sema.TransactionType
@@ -92,7 +92,7 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 	location := context.Location
 	script := executor.script
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
 	interpreterRuntime := executor.runtime
