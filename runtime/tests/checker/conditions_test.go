@@ -1025,6 +1025,8 @@ func TestCheckBeforeConditions(t *testing.T) {
 
 	t.Run("function call", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
       fun impure(): Int { 
         return 0
@@ -1044,6 +1046,8 @@ func TestCheckBeforeConditions(t *testing.T) {
 
 	t.Run("view function call", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             view fun pure(): Int { 
                 return 0
@@ -1060,6 +1064,8 @@ func TestCheckBeforeConditions(t *testing.T) {
 	})
 
 	t.Run("nested function call", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             view fun pure(): Int { 
@@ -1083,6 +1089,8 @@ func TestCheckBeforeConditions(t *testing.T) {
 	})
 
 	t.Run("nested pure function call", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             view fun pure(): Int { 
