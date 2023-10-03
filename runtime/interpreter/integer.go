@@ -18,38 +18,52 @@
 
 package interpreter
 
-import "github.com/onflow/cadence/runtime/errors"
+import (
+	"sync"
 
-var cachedIntegerValues map[StaticType]map[int8]IntegerValue
+	"github.com/onflow/cadence/runtime/errors"
+)
 
-func init() {
-	cachedIntegerValues = make(map[StaticType]map[int8]IntegerValue)
+func GetSmallIntegerValue(value int8, staticType StaticType) IntegerValue {
+	return cachedSmallIntegerValues.Get(value, staticType)
 }
 
-// Get the provided int8 value in the required staticType.
-// Note: Assumes that the provided value fits within the constraints of the staticType.
-func GetValueForIntegerType(value int8, staticType StaticType) IntegerValue {
-	typeCache, ok := cachedIntegerValues[staticType]
-	if !ok {
-		typeCache = make(map[int8]IntegerValue)
-		cachedIntegerValues[staticType] = typeCache
-	}
-
-	val, ok := typeCache[value]
-	if !ok {
-		val = getValueForIntegerType(value, staticType)
-		typeCache[value] = val
-	}
-
-	return val
+type integerValueCacheKey struct {
+	value      int8
+	staticType StaticType
 }
 
-// It is important to not meter the memory usage in this function, as it would lead to
-// non-determinism as the values produced by this function are cached.
+type smallIntegerValueCache struct {
+	m sync.Map
+}
+
+var cachedSmallIntegerValues = smallIntegerValueCache{}
+
+func (c *smallIntegerValueCache) Get(value int8, staticType StaticType) IntegerValue {
+	key := integerValueCacheKey{
+		value:      value,
+		staticType: staticType,
+	}
+
+	existingValue, ok := c.m.Load(key)
+	if ok {
+		return existingValue.(IntegerValue)
+	}
+
+	newValue := c.new(value, staticType)
+	c.m.Store(key, newValue)
+	return newValue
+}
+
+// getValueForIntegerType returns a Cadence integer value
+// of the given Cadence static type for the given Go integer value.
+//
+// It is important NOT to meter the memory usage in this function,
+// as it would lead to non-determinism as the values produced by this function are cached.
 // It could happen that on some execution nodes the value might be cached due to executing a
 // transaction or script that needed the value previously, while on other execution nodes it might
 // not be cached yet.
-func getValueForIntegerType(value int8, staticType StaticType) IntegerValue {
+func (c *smallIntegerValueCache) new(value int8, staticType StaticType) IntegerValue {
 	switch staticType {
 	case PrimitiveStaticTypeInt:
 		return NewUnmeteredIntValueFromInt64(int64(value))

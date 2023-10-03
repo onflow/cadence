@@ -21,7 +21,6 @@ package interpreter_test
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,14 +32,6 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
-
-var getValueForIntegerTypeMutex sync.Mutex
-
-func synchronizedGetValueForIntegerType(value int8, staticType interpreter.StaticType) interpreter.IntegerValue {
-	getValueForIntegerTypeMutex.Lock()
-	defer getValueForIntegerTypeMutex.Unlock()
-	return interpreter.GetValueForIntegerType(value, staticType)
-}
 
 type containsTestCase struct {
 	param               int64
@@ -413,11 +404,12 @@ func TestInclusiveRange(t *testing.T) {
 
 			require.NoError(t, err)
 
-			elementType := interpreter.ConvertSemaToStaticType(
+			integerType := interpreter.ConvertSemaToStaticType(
 				nil,
 				testCase.ty,
 			)
-			rangeType := interpreter.NewInclusiveRangeStaticType(nil, elementType)
+
+			rangeType := interpreter.NewInclusiveRangeStaticType(nil, integerType)
 			rangeSemaType := sema.NewInclusiveRangeType(nil, testCase.ty)
 
 			var expectedRangeValue *interpreter.CompositeValue
@@ -426,9 +418,9 @@ func TestInclusiveRange(t *testing.T) {
 				expectedRangeValue = interpreter.NewInclusiveRangeValueWithStep(
 					inter,
 					interpreter.EmptyLocationRange,
-					synchronizedGetValueForIntegerType(testCase.s, elementType),
-					synchronizedGetValueForIntegerType(testCase.e, elementType),
-					synchronizedGetValueForIntegerType(testCase.step, elementType),
+					interpreter.GetSmallIntegerValue(testCase.s, integerType),
+					interpreter.GetSmallIntegerValue(testCase.e, integerType),
+					interpreter.GetSmallIntegerValue(testCase.step, integerType),
 					rangeType,
 					rangeSemaType,
 				)
@@ -436,8 +428,8 @@ func TestInclusiveRange(t *testing.T) {
 				expectedRangeValue = interpreter.NewInclusiveRangeValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					synchronizedGetValueForIntegerType(testCase.s, elementType),
-					synchronizedGetValueForIntegerType(testCase.e, elementType),
+					interpreter.GetSmallIntegerValue(testCase.s, integerType),
+					interpreter.GetSmallIntegerValue(testCase.e, integerType),
 					rangeType,
 					rangeSemaType,
 				)
@@ -488,10 +480,14 @@ func TestGetValueForIntegerType(t *testing.T) {
 			continue
 		}
 
-		staticType := interpreter.ConvertSemaToStaticType(nil, integerType)
+		integerStaticType := interpreter.ConvertSemaToStaticType(nil, integerType)
+
+		var primitiveIntegerType interpreter.PrimitiveStaticType
+		require.IsType(t, interpreter.PrimitiveStaticTypeUnknown, integerStaticType)
+		primitiveIntegerType = integerStaticType.(interpreter.PrimitiveStaticType)
 
 		// Panics if not handled.
-		_ = synchronizedGetValueForIntegerType(int8(1), staticType)
+		_ = interpreter.GetSmallIntegerValue(int8(1), primitiveIntegerType)
 	}
 }
 

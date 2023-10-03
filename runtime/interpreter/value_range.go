@@ -42,7 +42,7 @@ func NewInclusiveRangeValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	step := GetValueForIntegerType(1, rangeStaticType.ElementType)
+	step := GetSmallIntegerValue(1, rangeStaticType.ElementType)
 	if startComparable.Greater(interpreter, endComparable, locationRange) {
 		elemSemaTy := interpreter.MustConvertStaticToSemaType(rangeStaticType.ElementType)
 		if elemSemaTy.Tag().BelongsTo(sema.UnsignedIntegerTypeTag) {
@@ -86,7 +86,7 @@ func NewInclusiveRangeValueWithStep(
 	rangeSemaType *sema.InclusiveRangeType,
 ) *CompositeValue {
 
-	zeroValue := GetValueForIntegerType(0, start.StaticType(interpreter))
+	zeroValue := GetSmallIntegerValue(0, start.StaticType(interpreter))
 
 	// Validate that the step is non-zero.
 	if step.Equal(interpreter, locationRange, zeroValue) {
@@ -211,7 +211,7 @@ func rangeContains(
 			panic(errors.NewUnreachableError())
 		}
 
-		zeroValue := GetValueForIntegerType(0, rangeType.ElementType)
+		zeroValue := GetSmallIntegerValue(0, rangeType.ElementType)
 		mod := diff.Mod(interpreter, step, locationRange)
 		result = mod.Equal(interpreter, locationRange, zeroValue)
 	}
