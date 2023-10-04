@@ -3280,3 +3280,74 @@ func TestInterpretMappingInclude(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretMappingEscalation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("escalate", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Insert
+				Y -> Remove
+			}
+			struct S {
+				access(M) var member: auth(M) &[Int]?
+				init() {
+					self.member = nil;
+				}
+				access(all) fun grantRemovePrivileges(param: auth(Insert) &[Int]): Void{
+					var selfRef = &self as auth(X) &S;
+					selfRef.member = param;
+				}
+			}
+			fun main(): Void {
+				var arr: [Int] = [123];
+				var arrRef = &arr as auth(Insert) &[Int];
+				let s = S()
+				s.grantRemovePrivileges(param: arrRef);
+				s.member?.removeLast() // Caught by checkMemberAccess type check
+			} 
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+	t.Run("field assign", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Insert
+				Y -> Remove
+			}
+			struct S {
+				access(M) var member: auth(M) &[Int]?
+				init() {
+					self.member = nil;
+				}
+				access(all) fun grantRemovePrivileges(sRef: auth(X) &S, param: auth(Insert) &[Int]): Void{
+					sRef.member = param;
+				}
+			}
+			fun main(): Void {
+				var arr: [Int] = [123];
+				var arrRef = &arr as auth(Insert) &[Int];
+				let s = S()
+				s.grantRemovePrivileges(sRef: &s as auth(X) &S, param: arrRef);
+				s.member?.removeLast() // Caught by checkMemberAccess type check
+			} 
+        `)
+
+		_, err := inter.Invoke("main")
+		assert.NoError(t, err)
+	})
+
+}
