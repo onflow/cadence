@@ -2365,6 +2365,93 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction tests a function call
+// of a stored inclusive range declared in an imported program
+func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	inclusiveRangeCreation := []byte(`
+      pub fun createInclusiveRange(): InclusiveRange<Int> {
+        return InclusiveRange(10, 20)
+      }
+    `)
+
+	script1 := []byte(`
+      import "inclusive-range-creation"
+
+      transaction {
+
+        prepare(signer: AuthAccount) {
+          let ir = createInclusiveRange()
+          signer.save(ir, to: /storage/inclusiveRange)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      import "inclusive-range-creation"
+
+      transaction {
+        prepare(signer: AuthAccount) {
+          let ir = signer.load<InclusiveRange<Int>>(from: /storage/inclusiveRange)
+		  let containsFifteen = ir!.contains(15)
+		  log(containsFifteen)
+        }
+      }
+    `)
+
+	var loggedMessages []string
+
+	ledger := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("inclusive-range-creation"):
+				return inclusiveRangeCreation, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+		storage: ledger,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Contains(t, loggedMessages, "True")
+}
+
 func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 
 	t.Parallel()
