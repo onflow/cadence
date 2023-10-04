@@ -10948,3 +10948,171 @@ func TestInterpretConditionsWrapperFunctionType(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretSwapInSameArray(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resources, different indices", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {
+              let value: Int
+
+              init(value: Int) {
+                  self.value = value
+              }
+          }
+
+          fun test(): [Int] {
+             let rs <- [
+                 <- create R(value: 0),
+                 <- create R(value: 1),
+                 <- create R(value: 2)
+             ]
+
+             // We swap only '0' and '1'
+             rs[0] <-> rs[1]
+
+             let values = [
+                 rs[0].value,
+                 rs[1].value,
+                 rs[2].value
+             ]
+
+             destroy rs
+
+             return values
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			value,
+		)
+	})
+
+	t.Run("resources, same indices", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {
+              let value: Int
+
+              init(value: Int) {
+                  self.value = value
+              }
+          }
+
+          fun test(): [Int] {
+             let rs <- [
+                 <- create R(value: 0),
+                 <- create R(value: 1),
+                 <- create R(value: 2)
+             ]
+
+             // We swap only '1'
+             rs[1] <-> rs[1]
+
+             let values = [
+                 rs[0].value,
+                 rs[1].value,
+                 rs[2].value
+             ]
+
+             destroy rs
+
+             return values
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			value,
+		)
+	})
+
+	t.Run("structs", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {
+              let value: Int
+
+              init(value: Int) {
+                  self.value = value
+              }
+          }
+
+          fun test(): [Int] {
+             let structs = [
+                 S(value: 0),
+                 S(value: 1),
+                 S(value: 2)
+             ]
+
+             // We swap only '0' and '1'
+             structs[0] <-> structs[1]
+
+             return [
+                 structs[0].value,
+                 structs[1].value,
+                 structs[2].value
+             ]
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			value,
+		)
+	})
+}

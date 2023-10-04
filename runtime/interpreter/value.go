@@ -17117,6 +17117,9 @@ func (v *DictionaryValue) SetKey(
 	case NilValue:
 		_ = v.Remove(interpreter, locationRange, keyValue)
 
+	case placeholderValue:
+		// NO-OP
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
