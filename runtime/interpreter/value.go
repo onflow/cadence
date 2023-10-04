@@ -17081,97 +17081,117 @@ func (v *CompositeValue) ConformsToStaticType(
 
 	switch staticType.(type) {
 	case CompositeStaticType:
-		compositeType, ok := semaType.(*sema.CompositeType)
-		if !ok ||
-			v.Kind != compositeType.Kind ||
-			v.TypeID() != compositeType.ID() {
-
-			return false
-		}
-
-		if compositeType.Kind == common.CompositeKindAttachment {
-			base := v.getBaseValue().Value
-			if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
-				return false
-			}
-		}
-
-		fieldsLen := int(v.dictionary.Count())
-		if v.ComputedFields != nil {
-			fieldsLen += len(v.ComputedFields)
-		}
-
-		if fieldsLen != len(compositeType.Fields) {
-			return false
-		}
-
-		for _, fieldName := range compositeType.Fields {
-			value := v.GetField(interpreter, locationRange, fieldName)
-			if value == nil {
-				if v.ComputedFields == nil {
-					return false
-				}
-
-				fieldGetter, ok := v.ComputedFields[fieldName]
-				if !ok {
-					return false
-				}
-
-				value = fieldGetter(interpreter, locationRange)
-			}
-
-			member, ok := compositeType.Members.Get(fieldName)
-			if !ok {
-				return false
-			}
-
-			fieldStaticType := value.StaticType(interpreter)
-
-			if !interpreter.IsSubTypeOfSemaType(fieldStaticType, member.TypeAnnotation.Type) {
-				return false
-			}
-
-			if !value.ConformsToStaticType(
-				interpreter,
-				locationRange,
-				results,
-			) {
-				return false
-			}
-		}
+		return v.CompositeStaticTypeConformsToStaticType(interpreter, locationRange, results, semaType)
 
 	// CompositeValue is also used for storing types which aren't CompositeStaticType.
 	// E.g. InclusiveRange.
 	case InclusiveRangeStaticType:
-		inclusiveRangeType, ok := semaType.(*sema.InclusiveRangeType)
+		return v.InclusiveRangeStaticTypeConformsToStaticType(interpreter, locationRange, results, semaType)
+
+	default:
+		return false
+	}
+}
+
+func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	results TypeConformanceResults,
+	semaType sema.Type,
+) bool {
+	compositeType, ok := semaType.(*sema.CompositeType)
+	if !ok ||
+		v.Kind != compositeType.Kind ||
+		v.TypeID() != compositeType.ID() {
+
+		return false
+	}
+
+	if compositeType.Kind == common.CompositeKindAttachment {
+		base := v.getBaseValue().Value
+		if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
+			return false
+		}
+	}
+
+	fieldsLen := int(v.dictionary.Count())
+	if v.ComputedFields != nil {
+		fieldsLen += len(v.ComputedFields)
+	}
+
+	if fieldsLen != len(compositeType.Fields) {
+		return false
+	}
+
+	for _, fieldName := range compositeType.Fields {
+		value := v.GetField(interpreter, locationRange, fieldName)
+		if value == nil {
+			if v.ComputedFields == nil {
+				return false
+			}
+
+			fieldGetter, ok := v.ComputedFields[fieldName]
+			if !ok {
+				return false
+			}
+
+			value = fieldGetter(interpreter, locationRange)
+		}
+
+		member, ok := compositeType.Members.Get(fieldName)
 		if !ok {
 			return false
 		}
 
-		expectedMemberStaticType := ConvertSemaToStaticType(interpreter, inclusiveRangeType.MemberType)
-		for _, fieldName := range sema.InclusiveRangeTypeFieldNames {
-			value := v.GetField(interpreter, locationRange, fieldName)
+		fieldStaticType := value.StaticType(interpreter)
 
-			fieldStaticType := value.StaticType(interpreter)
-
-			// InclusiveRange is non-covariant.
-			// For e.g. we disallow assigning InclusiveRange<Int> to an InclusiveRange<Integer>.
-			// Hence we do an exact equality check instead of a sub-type check.
-			if !fieldStaticType.Equal(expectedMemberStaticType) {
-				return false
-			}
-
-			if !value.ConformsToStaticType(
-				interpreter,
-				locationRange,
-				results,
-			) {
-				return false
-			}
+		if !interpreter.IsSubTypeOfSemaType(fieldStaticType, member.TypeAnnotation.Type) {
+			return false
 		}
 
-	default:
+		if !value.ConformsToStaticType(
+			interpreter,
+			locationRange,
+			results,
+		) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (v *CompositeValue) InclusiveRangeStaticTypeConformsToStaticType(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	results TypeConformanceResults,
+	semaType sema.Type,
+) bool {
+	inclusiveRangeType, ok := semaType.(*sema.InclusiveRangeType)
+	if !ok {
 		return false
+	}
+
+	expectedMemberStaticType := ConvertSemaToStaticType(interpreter, inclusiveRangeType.MemberType)
+	for _, fieldName := range sema.InclusiveRangeTypeFieldNames {
+		value := v.GetField(interpreter, locationRange, fieldName)
+
+		fieldStaticType := value.StaticType(interpreter)
+
+		// InclusiveRange is non-covariant.
+		// For e.g. we disallow assigning InclusiveRange<Int> to an InclusiveRange<Integer>.
+		// Hence we do an exact equality check instead of a sub-type check.
+		if !fieldStaticType.Equal(expectedMemberStaticType) {
+			return false
+		}
+
+		if !value.ConformsToStaticType(
+			interpreter,
+			locationRange,
+			results,
+		) {
+			return false
+		}
 	}
 
 	return true
