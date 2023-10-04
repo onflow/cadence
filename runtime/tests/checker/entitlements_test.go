@@ -7334,15 +7334,15 @@ func TestCheckEntitlementMissingInMap(t *testing.T) {
             access(M) var foo: auth(M) &Int
             init() {
                 self.foo = &3 as auth(X) &Int
-                var selfRef = &self as auth(X) &S;
-                selfRef.foo;
+                var selfRef = &self as auth(X) &S
+                selfRef.foo
             }
         }
     `)
 
 		errors := RequireCheckerErrors(t, err, 2)
-		require.IsType(t, errors[0], &sema.NotDeclaredError{})
-		require.IsType(t, errors[1], &sema.InvalidNonEntitlementTypeInMapError{})
+		require.IsType(t, &sema.NotDeclaredError{}, errors[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errors[1])
 	})
 
 	t.Run("non entitlement type", func(t *testing.T) {
@@ -7359,13 +7359,13 @@ func TestCheckEntitlementMissingInMap(t *testing.T) {
             access(M) var foo: auth(M) &Int
             init() {
                 self.foo = &3 as auth(X) &Int
-                var selfRef = &self as auth(X) &S;
-                selfRef.foo;
+                var selfRef = &self as auth(X) &S
+                selfRef.foo
             }
         }
     `)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, errors[0], &sema.InvalidNonEntitlementTypeInMapError{})
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errors[0])
 	})
 }
