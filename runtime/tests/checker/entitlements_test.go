@@ -7320,7 +7320,11 @@ func TestCheckEntitlementMissingInMap(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
+	t.Run("missing type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
         access(all) entitlement X
         access(all) entitlement mapping M {
             X -> X
@@ -7336,7 +7340,32 @@ func TestCheckEntitlementMissingInMap(t *testing.T) {
         }
     `)
 
-	errors := RequireCheckerErrors(t, err, 2)
-	require.IsType(t, errors[0], &sema.NotDeclaredError{})
-	require.IsType(t, errors[1], &sema.InvalidNonEntitlementTypeInMapError{})
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, errors[0], &sema.NotDeclaredError{})
+		require.IsType(t, errors[1], &sema.InvalidNonEntitlementTypeInMapError{})
+	})
+
+	t.Run("non entitlement type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        access(all) entitlement X
+        access(all) entitlement mapping M {
+            X -> X
+            Int -> X
+        }
+        access(all) struct S {
+            access(M) var foo: auth(M) &Int
+            init() {
+                self.foo = &3 as auth(X) &Int
+                var selfRef = &self as auth(X) &S;
+                selfRef.foo;
+            }
+        }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errors[0], &sema.InvalidNonEntitlementTypeInMapError{})
+	})
 }
