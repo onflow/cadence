@@ -167,12 +167,10 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) (ast.State
 
 		var typeParameterList *ast.TypeParameterList
 
-		if p.config.TypeParametersEnabled {
-			var err error
-			typeParameterList, err = parseTypeParameterList(p)
-			if err != nil {
-				return nil, err
-			}
+		var err error
+		typeParameterList, err = parseTypeParameterList(p)
+		if err != nil {
+			return nil, err
 		}
 
 		parameterList, returnTypeAnnotation, functionBlock, err :=

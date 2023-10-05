@@ -424,7 +424,11 @@ func (checker *Checker) checkTopLevelDeclarationValidity(
 }
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
-	functionType := checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
+	functionType := checker.functionType(
+		declaration.TypeParameterList,
+		declaration.ParameterList,
+		declaration.ReturnTypeAnnotation,
+	)
 	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 	checker.declareFunctionDeclaration(declaration, functionType)
 }
@@ -1240,9 +1244,45 @@ func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation
 }
 
 func (checker *Checker) functionType(
+	typeParameterList *ast.TypeParameterList,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
+
+	var convertedTypeParameters []*TypeParameter
+	if typeParameterList != nil {
+
+		checker.typeActivations.Enter()
+		defer checker.typeActivations.Leave(func(gauge common.MemoryGauge) ast.Position {
+			if returnTypeAnnotation != nil {
+				return returnTypeAnnotation.EndPosition(gauge)
+			} else {
+				return parameterList.EndPos
+			}
+		})
+
+		// All type parameters are converted at once,
+		// so type bounds may currently not refer to previous type parameters
+
+		convertedTypeParameters = checker.typeParameters(typeParameterList)
+
+		for typeParameterIndex, typeParameter := range typeParameterList.TypeParameters {
+			convertedTypeParameter := convertedTypeParameters[typeParameterIndex]
+
+			genericType := &GenericType{
+				TypeParameter: convertedTypeParameter,
+			}
+
+			_, err := checker.typeActivations.declareType(typeDeclaration{
+				identifier:               typeParameter.Identifier,
+				ty:                       genericType,
+				declarationKind:          common.DeclarationKindTypeParameter,
+				allowOuterScopeShadowing: false,
+			})
+			checker.report(err)
+
+		}
+	}
 	convertedParameters := checker.parameters(parameterList)
 
 	convertedReturnTypeAnnotation := VoidTypeAnnotation
@@ -1252,9 +1292,38 @@ func (checker *Checker) functionType(
 	}
 
 	return &FunctionType{
+		TypeParameters:       convertedTypeParameters,
 		Parameters:           convertedParameters,
 		ReturnTypeAnnotation: convertedReturnTypeAnnotation,
 	}
+}
+
+func (checker *Checker) typeParameters(typeParameterList *ast.TypeParameterList) []*TypeParameter {
+
+	var typeParameters []*TypeParameter
+
+	typeParameterCount := len(typeParameterList.TypeParameters)
+	if typeParameterCount > 0 {
+		typeParameters = make([]*TypeParameter, typeParameterCount)
+
+		for i, typeParameter := range typeParameterList.TypeParameters {
+
+			typeBoundAnnotation := typeParameter.TypeBound
+			var convertedTypeBound Type
+			if typeBoundAnnotation != nil {
+				convertedTypeBoundAnnotation := checker.ConvertTypeAnnotation(typeBoundAnnotation)
+				checker.checkTypeAnnotation(convertedTypeBoundAnnotation, typeBoundAnnotation)
+				convertedTypeBound = convertedTypeBoundAnnotation.Type
+			}
+
+			typeParameters[i] = &TypeParameter{
+				Name:      typeParameter.Identifier.Identifier,
+				TypeBound: convertedTypeBound,
+			}
+		}
+	}
+
+	return typeParameters
 }
 
 func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter {

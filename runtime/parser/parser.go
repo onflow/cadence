@@ -46,8 +46,6 @@ type Config struct {
 	StaticModifierEnabled bool
 	// NativeModifierEnabled determines if the native modifier is enabled
 	NativeModifierEnabled bool
-	// TypeParametersEnabled determines if type parameters are enabled
-	TypeParametersEnabled bool
 }
 
 type parser struct {

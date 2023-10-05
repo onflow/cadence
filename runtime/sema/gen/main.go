@@ -64,7 +64,6 @@ var parsedHeaderTemplate = template.Must(template.New("header").Parse(headerTemp
 var parserConfig = parser.Config{
 	StaticModifierEnabled: true,
 	NativeModifierEnabled: true,
-	TypeParametersEnabled: true,
 }
 
 func initialUpper(s string) string {

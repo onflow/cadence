@@ -205,6 +205,14 @@ func (checker *Checker) checkInterfaceFunctions(
 				}
 			}
 
+			if function.TypeParameterList != nil {
+				checker.report(
+					&InvalidTypeParameterizedInterfaceFunctionError{
+						Range: ast.NewUnmeteredRangeFromPositioned(function.TypeParameterList),
+					},
+				)
+			}
+
 			checker.visitFunctionDeclaration(
 				function,
 				functionDeclarationOptions{
