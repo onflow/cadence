@@ -77,6 +77,30 @@ func TestCheckTypeArguments(t *testing.T) {
 		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
 	})
 
+	t.Run("inclusive range, instantiation with more than arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              let inclusiveRange: InclusiveRange<Int, String> = InclusiveRange(1, 10)
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidTypeArgumentCountError{}, errs[0])
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[1])
+	})
+
 	t.Run("capability, instantiation with no arguments", func(t *testing.T) {
 
 		t.Parallel()
