@@ -74,6 +74,7 @@ func NewSyntaxError(pos ast.Position, message string, params ...any) *SyntaxErro
 
 func NewUnpositionedSyntaxError(message string, params ...any) *SyntaxError {
 	return &SyntaxError{
+		Pos:     ast.Position{Line: 1},
 		Message: fmt.Sprintf(message, params...),
 	}
 }

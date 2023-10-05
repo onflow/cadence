@@ -50,7 +50,8 @@ var assertFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.VoidType,
 	),
-	RequiredArgumentCount: sema.RequiredArgumentCount(1),
+	// `message` parameter is optional
+	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
 var AssertFunction = NewStandardLibraryFunction(

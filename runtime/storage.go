@@ -102,7 +102,7 @@ func (s *Storage) GetStorageMap(
 			data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
 		})
 		if err != nil {
-			panic(err)
+			panic(interpreter.WrappedExternalError(err))
 		}
 
 		dataLength := len(data)
@@ -255,7 +255,7 @@ func (s *Storage) commitNewStorageMaps() error {
 			)
 		})
 		if err != nil {
-			return err
+			return interpreter.WrappedExternalError(err)
 		}
 	}
 

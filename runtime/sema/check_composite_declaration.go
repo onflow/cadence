@@ -738,11 +738,14 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 					}
 
 					if _, ok := inheritedMembers.Get(memberName); ok {
+						errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, declaration.DeclarationIdentifier())
+
 						if member.HasImplementation {
 							checker.report(
 								&MultipleInterfaceDefaultImplementationsError{
 									CompositeType: nestedCompositeType,
 									Member:        member,
+									Range:         errorRange,
 								},
 							)
 						} else {
@@ -750,6 +753,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 								&DefaultFunctionConflictError{
 									CompositeType: nestedCompositeType,
 									Member:        member,
+									Range:         errorRange,
 								},
 							)
 						}
@@ -1026,18 +1030,27 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 
 	initializerCount := len(initializers)
 	if initializerCount > 0 {
+
 		firstInitializer := initializers[0]
+
 		parameters = checker.parameters(firstInitializer.FunctionDeclaration.ParameterList)
 
 		if initializerCount > 1 {
+
 			secondInitializer := initializers[1]
 
+			previousPos := firstInitializer.StartPosition()
+			pos := secondInitializer.StartPosition()
+
 			checker.report(
-				&UnsupportedOverloadingError{
-					DeclarationKind: common.DeclarationKindInitializer,
-					Range:           ast.NewRangeFromPositioned(checker.memoryGauge, secondInitializer),
+				&RedeclarationError{
+					Kind:        common.DeclarationKindInitializer,
+					Name:        common.DeclarationKindInitializer.Keywords(),
+					PreviousPos: &previousPos,
+					Pos:         pos,
 				},
 			)
+
 		}
 	}
 	return parameters
@@ -1243,11 +1256,13 @@ func (checker *Checker) checkCompositeLikeConformance(
 			if interfaceMember.DeclarationKind == common.DeclarationKindFunction {
 
 				if _, ok := inheritedMembers[name]; ok {
+					errorRange := ast.NewRangeFromPositioned(checker.memoryGauge, compositeDeclaration.DeclarationIdentifier())
 					if interfaceMember.HasImplementation {
 						checker.report(
 							&MultipleInterfaceDefaultImplementationsError{
 								CompositeType: compositeType,
 								Member:        interfaceMember,
+								Range:         errorRange,
 							},
 						)
 					} else {
@@ -1255,6 +1270,7 @@ func (checker *Checker) checkCompositeLikeConformance(
 							&DefaultFunctionConflictError{
 								CompositeType: compositeType,
 								Member:        interfaceMember,
+								Range:         errorRange,
 							},
 						)
 					}
@@ -1490,6 +1506,7 @@ func (checker *Checker) checkTypeRequirement(
 					PreviousPos: &compositeDeclaration.DeclarationIdentifier().Pos,
 				})
 			}
+
 			compositeDeclaration = nestedCompositeDeclaration
 			// NOTE: Do not break / stop iteration, but keep looking for
 			// another (invalid) nested composite declaration with the same identifier,

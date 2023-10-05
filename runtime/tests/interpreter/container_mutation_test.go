@@ -954,3 +954,144 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("nested array, directly mutating inner", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [String] {
+                let nestedArrays: [[String]] = [["foo", "bar"], ["apple", "orange"]]
+                for array in nestedArrays {
+                    array[0] = "hello"
+                }
+
+                return nestedArrays[0]
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// array `["foo", "bar"]` should stay unchanged, because what's mutated is a copy.
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("foo"),
+				interpreter.NewUnmeteredStringValue("bar"),
+			),
+			result,
+		)
+	})
+
+	t.Run("nested array, mutating inner via outer", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [String] {
+                let nestedArrays: [[String]] = [["foo", "bar"], ["apple", "orange"]]
+                for array in nestedArrays {
+                    nestedArrays[0][0] = "hello"
+                }
+
+                return nestedArrays[0]
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("hello"),
+				interpreter.NewUnmeteredStringValue("bar"),
+			),
+			result,
+		)
+	})
+
+	t.Run("dictionary inside array, mutating inner via outer", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): {String: String} {
+                let dictionaryArray: [{String: String}] = [{"name": "foo"}, {"name": "bar"}]
+                for dictionary in dictionaryArray {
+                    dictionaryArray[0]["name"] = "hello"
+                }
+
+                return dictionaryArray[0]
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, result)
+		dictionary := result.(*interpreter.DictionaryValue)
+
+		require.Equal(t, 1, dictionary.Count())
+
+		val, present := dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("name"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("hello"), val)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): {String: String} {
+                let nestedDictionary: {String: {String: String}} = {"a": {"name": "foo"}, "b": {"name": "bar"}}
+                nestedDictionary.forEachKey(fun (key: String): Bool {
+                    var dictionary = nestedDictionary[key]!
+                    dictionary["name"] = "hello"
+                    return true
+                })
+
+                return nestedDictionary["a"]!
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// dictionary `{"name": "foo"}` should stay unchanged, because what's mutated is a copy.
+
+		require.IsType(t, &interpreter.DictionaryValue{}, result)
+		dictionary := result.(*interpreter.DictionaryValue)
+
+		require.Equal(t, 1, dictionary.Count())
+
+		val, present := dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("name"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("foo"), val)
+	})
+}

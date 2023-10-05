@@ -4591,7 +4591,8 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					prettier.Text("()"),
 				},
 			},
-			prettier.Text(" {}"),
+			prettier.Text(" "),
+			prettier.Text("{}"),
 		}
 
 		assert.Equal(t, expected, expr.Doc())

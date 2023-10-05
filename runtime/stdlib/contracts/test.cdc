@@ -1,146 +1,186 @@
 /// Test contract is the standard library that provides testing functionality in Cadence.
 ///
-pub contract Test {
+access(all) contract Test {
 
-    /// Blockchain emulates a real network.
+    /// backend emulates a real network.
     ///
-    pub struct Blockchain {
+    access(self) let backend: AnyStruct{BlockchainBackend}
 
-        pub let backend: AnyStruct{BlockchainBackend}
+    init(backend: AnyStruct{BlockchainBackend}) {
+        self.backend = backend
+    }
 
-        init(backend: AnyStruct{BlockchainBackend}) {
-            self.backend = backend
-        }
+    /// Executes a script and returns the script return value and the status.
+    /// `returnValue` field of the result will be `nil` if the script failed.
+    ///
+    access(all)
+    fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult {
+        return self.backend.executeScript(script, arguments)
+    }
 
-        /// Executes a script and returns the script return value and the status.
-        /// `returnValue` field of the result will be `nil` if the script failed.
-        ///
-        pub fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult {
-            return self.backend.executeScript(script, arguments)
-        }
+    /// Creates a signer account by submitting an account creation transaction.
+    /// The transaction is paid by the service account.
+    /// The returned account can be used to sign and authorize transactions.
+    ///
+    access(all)
+    fun createAccount(): Account {
+        return self.backend.createAccount()
+    }
 
-        /// Creates a signer account by submitting an account creation transaction.
-        /// The transaction is paid by the service account.
-        /// The returned account can be used to sign and authorize transactions.
-        ///
-        pub fun createAccount(): Account {
-            return self.backend.createAccount()
-        }
+    /// Returns the account for the given address.
+    ///
+    access(all)
+    fun getAccount(_ address: Address): Account {
+        return self.backend.getAccount(address)
+    }
 
-        /// Add a transaction to the current block.
-        ///
-        pub fun addTransaction(_ tx: Transaction) {
-            self.backend.addTransaction(tx)
-        }
+    /// Add a transaction to the current block.
+    ///
+    access(all)
+    fun addTransaction(_ tx: Transaction) {
+        self.backend.addTransaction(tx)
+    }
 
-        /// Executes the next transaction in the block, if any.
-        /// Returns the result of the transaction, or nil if no transaction was scheduled.
-        ///
-        pub fun executeNextTransaction(): TransactionResult? {
-            return self.backend.executeNextTransaction()
-        }
+    /// Executes the next transaction in the block, if any.
+    /// Returns the result of the transaction, or nil if no transaction was scheduled.
+    ///
+    access(all)
+    fun executeNextTransaction(): TransactionResult? {
+        return self.backend.executeNextTransaction()
+    }
 
-        /// Commit the current block.
-        /// Committing will fail if there are un-executed transactions in the block.
-        ///
-        pub fun commitBlock() {
-            self.backend.commitBlock()
-        }
+    /// Commit the current block.
+    /// Committing will fail if there are un-executed transactions in the block.
+    ///
+    access(all)
+    fun commitBlock() {
+        self.backend.commitBlock()
+    }
 
-        /// Executes a given transaction and commit the current block.
-        ///
-        pub fun executeTransaction(_ tx: Transaction): TransactionResult {
+    /// Executes a given transaction and commit the current block.
+    ///
+    access(all)
+    fun executeTransaction(_ tx: Transaction): TransactionResult {
+        self.addTransaction(tx)
+        let txResult = self.executeNextTransaction()!
+        self.commitBlock()
+        return txResult
+    }
+
+    /// Executes a given set of transactions and commit the current block.
+    ///
+    access(all)
+    fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
+        for tx in transactions {
             self.addTransaction(tx)
+        }
+
+        var results: [TransactionResult] = []
+        for tx in transactions {
             let txResult = self.executeNextTransaction()!
-            self.commitBlock()
-            return txResult
+            results.append(txResult)
         }
 
-        /// Executes a given set of transactions and commit the current block.
-        ///
-        pub fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
-            for tx in transactions {
-                self.addTransaction(tx)
-            }
+        self.commitBlock()
+        return results
+    }
 
-            var results: [TransactionResult] = []
-            for tx in transactions {
-                let txResult = self.executeNextTransaction()!
-                results.append(txResult)
-            }
+    /// Deploys a given contract, and initilizes it with the arguments.
+    ///
+    access(all)
+    fun deployContract(
+        name: String,
+        path: String,
+        arguments: [AnyStruct]
+    ): Error? {
+        return self.backend.deployContract(
+            name: name,
+            path: path,
+            arguments: arguments
+        )
+    }
 
-            self.commitBlock()
-            return results
-        }
+    /// Returns all the logs from the blockchain, up to the calling point.
+    ///
+    access(all)
+    fun logs(): [String] {
+        return self.backend.logs()
+    }
 
-        /// Deploys a given contract, and initilizes it with the arguments.
-        ///
-        pub fun deployContract(
-            name: String,
-            code: String,
-            account: Account,
-            arguments: [AnyStruct]
-        ): Error? {
-            return self.backend.deployContract(
-                name: name,
-                code: code,
-                account: account,
-                arguments: arguments
-            )
-        }
+    /// Returns the service account of the blockchain. Can be used to sign
+    /// transactions with this account.
+    ///
+    access(all)
+    fun serviceAccount(): Account {
+        return self.backend.serviceAccount()
+    }
 
-        /// Set the configuration to be used by the blockchain.
-        /// Overrides any existing configuration.
-        ///
-        pub fun useConfiguration(_ configuration: Configuration) {
-            self.backend.useConfiguration(configuration)
-        }
+    /// Returns all events emitted from the blockchain.
+    ///
+    access(all)
+    fun events(): [AnyStruct] {
+        return self.backend.events(nil)
+    }
 
-        /// Returns all the logs from the blockchain, up to the calling point.
-        ///
-        pub fun logs(): [String] {
-            return self.backend.logs()
-        }
+    /// Returns all events emitted from the blockchain,
+    /// filtered by type.
+    ///
+    access(all)
+    fun eventsOfType(_ type: Type): [AnyStruct] {
+        return self.backend.events(type)
+    }
 
-        /// Returns the service account of the blockchain. Can be used to sign
-        /// transactions with this account.
-        ///
-        pub fun serviceAccount(): Account {
-            return self.backend.serviceAccount()
-        }
+    /// Resets the state of the blockchain to the given height.
+    ///
+    access(all)
+    fun reset(to height: UInt64) {
+        self.backend.reset(to: height)
+    }
 
-        /// Returns all events emitted from the blockchain.
-        ///
-        pub fun events(): [AnyStruct] {
-            return self.backend.events(nil)
-        }
+    /// Moves the time of the blockchain by the given delta,
+    /// which should be passed in the form of seconds.
+    ///
+    access(all)
+    fun moveTime(by delta: Fix64) {
+        self.backend.moveTime(by: delta)
+    }
 
-        /// Returns all events emitted from the blockchain,
-        /// filtered by type.
-        ///
-        pub fun eventsOfType(_ type: Type): [AnyStruct] {
-            return self.backend.events(type)
-        }
-
-        /// Resets the state of the blockchain.
-        ///
-        pub fun reset() {
-            self.backend.reset()
+    /// Creates a snapshot of the blockchain, at the
+    /// current ledger state, with the given name.
+    ///
+    access(all)
+    fun createSnapshot(name: String) {
+        let err = self.backend.createSnapshot(name: name)
+        if err != nil {
+            panic(err!.message)
         }
     }
 
-    pub struct Matcher {
+    /// Loads a snapshot of the blockchain, with the
+    /// given name, and updates the current ledger
+    /// state.
+    ///
+    access(all)
+    fun loadSnapshot(name: String) {
+        let err = self.backend.loadSnapshot(name: name)
+        if err != nil {
+            panic(err!.message)
+        }
+    }
 
-        pub let test: ((AnyStruct): Bool)
+    access(all) struct Matcher {
 
-        pub init(test: ((AnyStruct): Bool)) {
+        access(all) let test: ((AnyStruct): Bool)
+
+        init(test: ((AnyStruct): Bool)) {
             self.test = test
         }
 
         /// Combine this matcher with the given matcher.
         /// Returns a new matcher that succeeds if this and the given matcher succeed.
         ///
-        pub fun and(_ other: Matcher): Matcher {
+        access(all)
+        fun and(_ other: Matcher): Matcher {
             return Matcher(test: fun (value: AnyStruct): Bool {
                 return self.test(value) && other.test(value)
             })
@@ -150,7 +190,8 @@ pub contract Test {
         /// Returns a new matcher that succeeds if this or the given matcher succeed.
         /// If this matcher succeeds, then the other matcher would not be tested.
         ///
-        pub fun or(_ other: Matcher): Matcher {
+        access(all)
+        fun or(_ other: Matcher): Matcher {
             return Matcher(test: fun (value: AnyStruct): Bool {
                 return self.test(value) || other.test(value)
             })
@@ -159,25 +200,29 @@ pub contract Test {
 
     /// ResultStatus indicates status of a transaction or script execution.
     ///
-    pub enum ResultStatus: UInt8 {
-        pub case succeeded
-        pub case failed
+    access(all) enum ResultStatus: UInt8 {
+        access(all) case succeeded
+        access(all) case failed
     }
 
     /// Result is the interface to be implemented by the various execution
     /// operations, such as transactions and scripts.
     ///
-    pub struct interface Result {
-        /// The resulted status of an executed operation.
+    access(all) struct interface Result {
+        /// The result status of an executed operation.
         ///
-        pub let status: ResultStatus
+        access(all) let status: ResultStatus
+
+        /// The optional error of an executed operation.
+        ///
+        access(all) let error: Error?
     }
 
     /// The result of a transaction execution.
     ///
-    pub struct TransactionResult: Result {
-        pub let status: ResultStatus
-        pub let error: Error?
+    access(all) struct TransactionResult: Result {
+        access(all) let status: ResultStatus
+        access(all) let error: Error?
 
         init(status: ResultStatus, error: Error?) {
             self.status = status
@@ -187,10 +232,10 @@ pub contract Test {
 
     /// The result of a script execution.
     ///
-    pub struct ScriptResult: Result {
-        pub let status: ResultStatus
-        pub let returnValue: AnyStruct?
-        pub let error: Error?
+    access(all) struct ScriptResult: Result {
+        access(all) let status: ResultStatus
+        access(all) let returnValue: AnyStruct?
+        access(all) let error: Error?
 
         init(status: ResultStatus, returnValue: AnyStruct?, error: Error?) {
             self.status = status
@@ -201,8 +246,8 @@ pub contract Test {
 
     // Error is returned if something has gone wrong.
     //
-    pub struct Error {
-        pub let message: String
+    access(all) struct Error {
+        access(all) let message: String
 
         init(_ message: String) {
             self.message = message
@@ -211,9 +256,9 @@ pub contract Test {
 
     /// Account represents info about the account created on the blockchain.
     ///
-    pub struct Account {
-        pub let address: Address
-        pub let publicKey: PublicKey
+    access(all) struct Account {
+        access(all) let address: Address
+        access(all) let publicKey: PublicKey
 
         init(address: Address, publicKey: PublicKey) {
             self.address = address
@@ -221,24 +266,13 @@ pub contract Test {
         }
     }
 
-    /// Configuration to be used by the blockchain.
-    /// Can be used to set the address mappings.
-    ///
-    pub struct Configuration {
-        pub let addresses: {String: Address}
-
-        init(addresses: {String: Address}) {
-            self.addresses = addresses
-        }
-    }
-
     /// Transaction that can be submitted and executed on the blockchain.
     ///
-    pub struct Transaction {
-        pub let code: String
-        pub let authorizers: [Address]
-        pub let signers: [Account]
-        pub let arguments: [AnyStruct]
+    access(all) struct Transaction {
+        access(all) let code: String
+        access(all) let authorizers: [Address]
+        access(all) let signers: [Account]
+        access(all) let arguments: [AnyStruct]
 
         init(code: String, authorizers: [Address], signers: [Account], arguments: [AnyStruct]) {
             self.code = code
@@ -250,69 +284,98 @@ pub contract Test {
 
     /// BlockchainBackend is the interface to be implemented by the backend providers.
     ///
-    pub struct interface BlockchainBackend {
+    access(all) struct interface BlockchainBackend {
 
         /// Executes a script and returns the script return value and the status.
         /// `returnValue` field of the result will be `nil` if the script failed.
         ///
-        pub fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult
+        access(all)
+        fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult
 
         /// Creates a signer account by submitting an account creation transaction.
         /// The transaction is paid by the service account.
         /// The returned account can be used to sign and authorize transactions.
         ///
-        pub fun createAccount(): Account
+        access(all)
+        fun createAccount(): Account
+
+        /// Returns the account for the given address.
+        ///
+        access(all)
+        fun getAccount(_ address: Address): Account
 
         /// Add a transaction to the current block.
         ///
-        pub fun addTransaction(_ tx: Transaction)
+        access(all)
+        fun addTransaction(_ tx: Transaction)
 
         /// Executes the next transaction in the block, if any.
         /// Returns the result of the transaction, or nil if no transaction was scheduled.
         ///
-        pub fun executeNextTransaction(): TransactionResult?
+        access(all)
+        fun executeNextTransaction(): TransactionResult?
 
         /// Commit the current block.
         /// Committing will fail if there are un-executed transactions in the block.
         ///
-        pub fun commitBlock()
+        access(all)
+        fun commitBlock()
 
         /// Deploys a given contract, and initilizes it with the arguments.
         ///
-        pub fun deployContract(
+        access(all)
+        fun deployContract(
             name: String,
-            code: String,
-            account: Account,
+            path: String,
             arguments: [AnyStruct]
         ): Error?
 
-        /// Set the configuration to be used by the blockchain.
-        /// Overrides any existing configuration.
-        ///
-        pub fun useConfiguration(_ configuration: Configuration)
-
         /// Returns all the logs from the blockchain, up to the calling point.
         ///
-        pub fun logs(): [String]
+        access(all)
+        fun logs(): [String]
 
         /// Returns the service account of the blockchain. Can be used to sign
         /// transactions with this account.
         ///
-        pub fun serviceAccount(): Account
+        access(all)
+        fun serviceAccount(): Account
 
         /// Returns all events emitted from the blockchain, optionally filtered
         /// by type.
         ///
-        pub fun events(_ type: Type?): [AnyStruct]
+        access(all)
+        fun events(_ type: Type?): [AnyStruct]
 
-        /// Resets the state of the blockchain.
+        /// Resets the state of the blockchain to the given height.
         ///
-        pub fun reset()
+        access(all)
+        fun reset(to height: UInt64)
+
+        /// Moves the time of the blockchain by the given delta,
+        /// which should be passed in the form of seconds.
+        ///
+        access(all)
+        fun moveTime(by delta: Fix64)
+
+        /// Creates a snapshot of the blockchain, at the
+        /// current ledger state, with the given name.
+        ///
+        access(all)
+        fun createSnapshot(name: String): Error?
+
+        /// Loads a snapshot of the blockchain, with the
+        /// given name, and updates the current ledger
+        /// state.
+        ///
+        access(all)
+        fun loadSnapshot(name: String): Error?
     }
 
     /// Returns a new matcher that negates the test of the given matcher.
     ///
-    pub fun not(_ matcher: Matcher): Matcher {
+    access(all)
+    fun not(_ matcher: Matcher): Matcher {
         return Matcher(test: fun (value: AnyStruct): Bool {
             return !matcher.test(value)
         })
@@ -322,7 +385,8 @@ pub contract Test {
     /// a ScriptResult or TransactionResult and the ResultStatus is succeeded.
     /// Returns false in any other case.
     ///
-    pub fun beSucceeded(): Matcher {
+    access(all)
+    fun beSucceeded(): Matcher {
         return Matcher(test: fun (value: AnyStruct): Bool {
             return (value as! {Result}).status == ResultStatus.succeeded
         })
@@ -332,7 +396,8 @@ pub contract Test {
     /// a ScriptResult or TransactionResult and the ResultStatus is failed.
     /// Returns false in any other case.
     ///
-    pub fun beFailed(): Matcher {
+    access(all)
+    fun beFailed(): Matcher {
         return Matcher(test: fun (value: AnyStruct): Bool {
             return (value as! {Result}).status == ResultStatus.failed
         })
@@ -340,10 +405,36 @@ pub contract Test {
 
     /// Returns a new matcher that checks if the given test value is nil.
     ///
-    pub fun beNil(): Matcher {
+    access(all)
+    fun beNil(): Matcher {
         return Matcher(test: fun (value: AnyStruct): Bool {
             return value == nil
         })
+    }
+
+    /// Asserts that the result status of an executed operation, such as
+    /// a script or transaction, has failed and contains the given error
+    /// message.
+    ///
+    access(all)
+    fun assertError(_ result: {Result}, errorMessage: String) {
+        pre {
+            result.status == ResultStatus.failed: "no error was found"
+        }
+
+        var found = false
+        let msg = result.error!.message
+        let msgLength = msg.length - errorMessage.length + 1
+        var i = 0
+        while i < msgLength {
+            if msg.slice(from: i, upTo: i + errorMessage.length) == errorMessage {
+                found = true
+                break
+            }
+            i = i + 1
+        }
+
+        assert(found, message: "the error message did not contain the given sub-string")
     }
 
 }

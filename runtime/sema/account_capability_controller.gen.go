@@ -21,6 +21,14 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
+const AccountCapabilityControllerTypeCapabilityFieldName = "capability"
+
+var AccountCapabilityControllerTypeCapabilityFieldType = &CapabilityType{}
+
+const AccountCapabilityControllerTypeCapabilityFieldDocString = `
+The capability that is controlled by this controller.
+`
+
 const AccountCapabilityControllerTypeTagFieldName = "tag"
 
 var AccountCapabilityControllerTypeTagFieldType = StringType
@@ -87,6 +95,14 @@ var AccountCapabilityControllerType = &SimpleType{
 func init() {
 	AccountCapabilityControllerType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
+				AccountCapabilityControllerTypeCapabilityFieldName,
+				AccountCapabilityControllerTypeCapabilityFieldType,
+				AccountCapabilityControllerTypeCapabilityFieldDocString,
+			),
 			NewUnmeteredFieldMember(
 				t,
 				ast.AccessPublicSettable,

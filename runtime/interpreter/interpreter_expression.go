@@ -136,23 +136,50 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 		},
 	)
 
+	// Normally, moves of nested resources (e.g `let r <- rs[0]`) are statically rejected.
+	//
+	// However, there are cases in which we do allow moves of nested resources:
+	//
+	// - In a swap statement (e.g. `rs[0] <-> rs[1]`)
+	// - In a variable declaration with two values/assignments (e.g. `let r <- rs["foo"] <- nil`)
+	//
+	// In both cases we know that a move of the nested resource is immediately followed by a replacement.
+	// This notion of an expression that moves a nested resource is tracked in the elaboration.
+	//
+	// When indexing is a move of a nested resource, we need to remove the key/value from the container.
+	// However, for some containers, like arrays, the removal influences other values in the container.
+	// In case of an array, the removal of an element shifts all following elements.
+	//
+	// A removal alone would thus result in subsequent code being executed incorrectly.
+	// For example, in the case where a swap operation through indexing is performed on the same array,
+	// e.g. `rs[0] <-> rs[1]`, once the first removal was performed, the second operates on a modified container.
+	//
+	// Prevent this problem by temporarily writing a placeholder value after the removal.
+	// Only perform the replacement with a placeholder in the case of a nested resource move.
+	// We know that in that case the get operation will be followed by a set operation,
+	// which will replace the temporary placeholder.
+
 	isNestedResourceMove := elaboration.IsNestedResourceMoveExpression(indexExpression)
+
+	var get func(allowMissing bool) Value
+
+	if isNestedResourceMove {
+		get = func(_ bool) Value {
+			value := target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
+			target.InsertKey(interpreter, locationRange, transferredIndexingValue, placeholder)
+			return value
+		}
+	} else {
+		get = func(_ bool) Value {
+			return target.GetKey(interpreter, locationRange, transferredIndexingValue)
+		}
+	}
 
 	return getterSetter{
 		target: target,
-		get: func(_ bool) Value {
-			if isNestedResourceMove {
-				return target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
-			} else {
-				return target.GetKey(interpreter, locationRange, transferredIndexingValue)
-			}
-		},
+		get:    get,
 		set: func(value Value) {
-			if isNestedResourceMove {
-				target.InsertKey(interpreter, locationRange, transferredIndexingValue, value)
-			} else {
-				target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
-			}
+			target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
 		},
 	}
 }
@@ -1155,6 +1182,12 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	interpreter.maybeTrackReferencedResourceKindedValue(result)
 
+	// There are four potential cases:
+	// 1) Target type is optional, actual value is also optional (nil/SomeValue)
+	// 2) Target type is optional, actual value is non-optional
+	// 3) Target type is non-optional, actual value is optional (SomeValue)
+	// 4) Target type is non-optional, actual value is non-optional
+
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
 		innerBorrowType, ok := typ.Type.(*sema.ReferenceType)
@@ -1165,6 +1198,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 		switch result := result.(type) {
 		case *SomeValue:
+			// Case (1):
 			// References to optionals are transformed into optional references,
 			// so move the *SomeValue out to the reference itself
 
@@ -1190,6 +1224,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			return Nil
 
 		default:
+			// Case (2):
 			// If the referenced value is non-optional,
 			// but the target type is optional,
 			// then box the reference properly
@@ -1212,8 +1247,21 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		}
 
 	case *sema.ReferenceType:
+		// Case (3): target type is non-optional, actual value is optional.
+		// Unwrap the optional and add it to reference tracking.
+		if someValue, ok := result.(*SomeValue); ok {
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: referenceExpression.Expression,
+			}
+			innerValue := someValue.InnerValue(interpreter, locationRange)
+			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
+		}
+
+		// Case (4): target type is non-optional, actual value is also non-optional
 		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
 	}
+
 	panic(errors.NewUnreachableError())
 }
 
@@ -1309,6 +1357,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		locationRange,
 		atree.Address{},
 		false,
+		nil,
 		nil,
 	).(*CompositeValue)
 

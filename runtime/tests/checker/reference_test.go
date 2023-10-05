@@ -1069,26 +1069,30 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("upcast to optional", func(t *testing.T) {
+	t.Run("optional reference to non-optional value", func(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := ParseAndCheck(t, `
+		_, err := ParseAndCheck(t, `
           let i: Int = 1
           let ref = &i as &Int?
         `)
 
-		require.NoError(t, err)
-		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 
-		assert.Equal(t,
-			&sema.OptionalType{
-				Type: &sema.ReferenceType{
-					Type: sema.IntType,
-				},
-			},
-			refValueType,
-		)
+	t.Run("non-optional reference to optional value", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let opt: Int? = 1
+          let ref = &opt as &AnyStruct
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
 
@@ -1298,5 +1302,42 @@ func TestCheckReferenceTypeImplicitConformance(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+}
+
+func TestCheckReferenceCreationWithInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("invalid reference type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            let foo: AnyStruct? = nil
+            let x = &foo as &Foo
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var notDeclaredError *sema.NotDeclaredError
+		require.ErrorAs(t, errs[0], &notDeclaredError)
+	})
+
+	t.Run("valid non-reference type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Foo {}
+
+            let foo: AnyStruct? = nil
+            let x = &foo as Foo
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var nonReferenceTypeReferenceError *sema.NonReferenceTypeReferenceError
+		require.ErrorAs(t, errs[0], &nonReferenceTypeReferenceError)
 	})
 }
