@@ -5527,10 +5527,6 @@ func (t *InclusiveRangeType) initializeMemberResolvers() {
 	})
 }
 
-func (t *InclusiveRangeType) ElementType(_ bool) Type {
-	return t.MemberType
-}
-
 func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
 	return false
 }
