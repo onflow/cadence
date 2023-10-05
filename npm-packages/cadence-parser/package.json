@@ -20,8 +20,8 @@
   "scripts": {
     "build": "npm run build:types && npm run build:esm && npm run build:cjs && GOARCH=wasm GOOS=js go build -o ./dist/cadence-parser.wasm ../../runtime/cmd/parse",
     "build:types": "tsc --emitDeclarationOnly --module system --outDir dist/types",
-    "build:esm": "tsc --module es6 --target es6 --outDir dist/esm --declaration false",
-    "build:cjs": "tsc --module commonjs --target es6 --outDir dist/cjs --declaration false",
+    "build:esm": "tsc -p tsconfig.json --declaration false",
+    "build:cjs": "tsc -p tsconfig-cjs.json --declaration false && tsconfig-to-dual-package",
     "test": "jest"
   },
   "license": "Apache-2.0",
@@ -31,6 +31,7 @@
     "jest": "^28.1.2",
     "node-fetch": "^2.6.1",
     "ts-jest": "^28.0.5",
+    "tsconfig-to-dual-package": "^1.2.0",
     "typescript": "^4.7.4"
   },
   "files": [

@@ -8,114 +8,79 @@ test("parse simple", async () => {
   expect(res).toEqual({
     "program": {
       "Type": "Program",
-      "Declarations": [
-        {
-          "Access": "AccessPublic",
-          "DocString": "",
-          "EndPos": {
-            "Column": 16,
-            "Line": 1,
-            "Offset": 16,
-          },
-          "FunctionBlock": {
-            "Block": {
-              "EndPos": {
-                "Column": 16,
-                "Line": 1,
-                "Offset": 16,
-              },
-              "StartPos": {
-                "Column": 15,
-                "Line": 1,
-                "Offset": 15,
-              },
-              "Statements": null,
-              "Type": "Block",
-            },
-            "EndPos": {
-              "Column": 16,
-              "Line": 1,
-              "Offset": 16,
-            },
-            "StartPos": {
-              "Column": 15,
-              "Line": 1,
-              "Offset": 15,
-            },
-            "Type": "FunctionBlock",
-          },
-          "Identifier": {
-            "EndPos": {
-              "Column": 11,
-              "Line": 1,
-              "Offset": 11,
-            },
-            "Identifier": "main",
-            "StartPos": {
-              "Column": 8,
-              "Line": 1,
-              "Offset": 8,
-            },
-          },
+        "Declarations": [
+          {
+          "TypeParameterList": null,
           "ParameterList": {
-            "EndPos": {
-              "Column": 13,
-              "Line": 1,
-              "Offset": 13,
-            },
             "Parameters": null,
             "StartPos": {
-              "Column": 12,
-              "Line": 1,
               "Offset": 12,
-            },
-          },
-          "ReturnTypeAnnotation": {
-            "AnnotatedType": {
-              "EndPos": {
-                "Column": 12,
-                "Line": 1,
-                "Offset": 12,
-              },
-              "Identifier": {
-                "EndPos": {
-                  "Column": 12,
-                  "Line": 1,
-                  "Offset": 12,
-                },
-                "Identifier": "",
-                "StartPos": {
-                  "Column": 13,
-                  "Line": 1,
-                  "Offset": 13,
-                },
-              },
-              "StartPos": {
-                "Column": 13,
-                "Line": 1,
-                "Offset": 13,
-              },
-              "Type": "NominalType",
+              "Line": 1,
+              "Column": 12
             },
             "EndPos": {
-              "Column": 12,
-              "Line": 1,
-              "Offset": 12,
-            },
-            "IsResource": false,
-            "StartPos": {
-              "Column": 13,
-              "Line": 1,
               "Offset": 13,
+              "Line": 1,
+              "Column": 13
+            }
+          },
+          "ReturnTypeAnnotation": null,
+          "FunctionBlock": {
+            "Block": {
+              "Statements": null,
+              "StartPos": {
+                "Offset": 15,
+                "Line": 1,
+                "Column": 15
+              },
+              "EndPos": {
+                "Offset": 16,
+                "Line": 1,
+                "Column": 16
+              },
+              "Type": "Block"
             },
+            "Type": "FunctionBlock",
+            "StartPos": {
+              "Offset": 15,
+              "Line": 1,
+              "Column": 15
+            },
+            "EndPos": {
+              "Offset": 16,
+              "Line": 1,
+              "Column": 16
+            }
           },
-          "StartPos": {
-            "Column": 0,
-            "Line": 1,
-            "Offset": 0,
+          "DocString": "",
+          "Identifier": {
+            "Identifier": "main",
+            "StartPos": {
+              "Offset": 8,
+              "Line": 1,
+              "Column": 8
+            },
+            "EndPos": {
+              "Offset": 11,
+              "Line": 1,
+              "Column": 11
+            }
           },
+          "Access": "AccessPublic",
           "Type": "FunctionDeclaration",
-        },
+          "StartPos": {
+            "Offset": 0,
+            "Line": 1,
+            "Column": 0
+          },
+          "EndPos": {
+            "Offset": 16,
+            "Line": 1,
+            "Column": 16
+          },
+          "IsStatic": false,
+          "IsNative": false
+        }
       ],
     },
   })

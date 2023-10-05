@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { go } from './go'
+import { go } from './go.js'
 import WebAssemblyInstantiatedSource = WebAssembly.WebAssemblyInstantiatedSource
 
 declare global {
