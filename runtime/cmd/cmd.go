@@ -366,6 +366,11 @@ func (*StandardLibraryHandler) RecordContractUpdate(_ common.AddressLocation, _ 
 	// NO-OP
 }
 
+func (h *StandardLibraryHandler) ContractUpdateRecorded(_ common.AddressLocation) bool {
+	// NO-OP
+	return false
+}
+
 func (*StandardLibraryHandler) InterpretContract(
 	_ common.AddressLocation,
 	_ *interpreter.Program,
