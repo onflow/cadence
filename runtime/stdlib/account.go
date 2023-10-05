@@ -1431,7 +1431,11 @@ type AccountContractAdditionHandler interface {
 	) (*interpreter.Program, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(location common.AddressLocation, code []byte) error
-	RecordContractUpdate(location common.AddressLocation, value *interpreter.CompositeValue)
+	RecordContractUpdate(
+		location common.AddressLocation,
+		value *interpreter.CompositeValue,
+	)
+	ContractUpdateRecorded(location common.AddressLocation) bool
 	InterpretContract(
 		location common.AddressLocation,
 		program *interpreter.Program,
@@ -1514,9 +1518,10 @@ func newAuthAccountContractsChangeFunction(
 
 			} else {
 				// We are adding a new contract.
-				// Ensure that no contract/contract interface with the given name exists already
+				// Ensure that no contract/contract interface with the given name exists already,
+				// and no contract deploy or update was recorded before
 
-				if len(existingCode) > 0 {
+				if len(existingCode) > 0 || handler.ContractUpdateRecorded(location) {
 					panic(errors.NewDefaultUserError(
 						"cannot overwrite existing contract with name %q in account %s",
 						contractName,

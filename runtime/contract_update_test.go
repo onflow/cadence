@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestContractUpdateWithDependencies(t *testing.T) {
@@ -142,7 +142,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"Foo",
 				[]byte(fooContractV1),
 			),
@@ -163,7 +163,7 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: utils.DeploymentTransaction(
+			Source: DeploymentTransaction(
 				"Bar",
 				[]byte(barContractV1),
 			),
@@ -234,4 +234,106 @@ func TestContractUpdateWithDependencies(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+}
+
+func TestRuntimeInvalidContractRedeploy(t *testing.T) {
+
+	t.Parallel()
+
+	foo1 := []byte(`
+        access(all)
+        contract Foo {
+
+            access(all)
+            resource R {
+
+                access(all)
+                var x: Int
+
+                init() {
+                    self.x = 0
+                }
+            }
+
+            access(all)
+            fun createR(): @R {
+                return <-create R()
+            }
+        }
+    `)
+
+	foo2 := []byte(`
+        access(all)
+        contract Foo {
+
+            access(all)
+            struct R {
+                access(all)
+                var x: Int
+
+                init() {
+                    self.x = 0
+                }
+            }
+        }
+    `)
+
+	tx := []byte(`
+      transaction(foo1: String, foo2: String) {
+          prepare(signer: AuthAccount) {
+              signer.contracts.add(name: "Foo", code: foo1.utf8)
+              signer.contracts.add(name: "Foo", code: foo2.utf8)
+          }
+      }
+    `)
+
+	runtime := newTestInterpreterRuntime()
+	runtime.defaultConfig.AtreeValidationEnabled = false
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+			return nil, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			// "delay"
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+			Arguments: encodeArgs([]cadence.Value{
+				cadence.String(foo1),
+				cadence.String(foo2),
+			}),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorContains(t, err, "cannot overwrite existing contract")
 }
