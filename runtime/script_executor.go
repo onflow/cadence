@@ -29,7 +29,7 @@ import (
 type interpreterScriptExecutorPreparation struct {
 	environment            Environment
 	preprocessErr          error
-	codesAndPrograms       codesAndPrograms
+	codesAndPrograms       CodesAndPrograms
 	functionEntryPointType *sema.FunctionType
 	program                *interpreter.Program
 	storage                *Storage
@@ -92,7 +92,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 	location := context.Location
 	script := executor.script
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
 	interpreterRuntime := executor.runtime
@@ -195,6 +195,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	}
 
 	// Export before committing storage
+
 	exportableValue := newExportableValue(value, inter)
 	result, err := exportValue(
 		exportableValue,
@@ -241,6 +242,6 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 			return nil, err
 		}
 
-		return inter.Invoke("main", values...)
+		return inter.Invoke(sema.FunctionEntryPointName, values...)
 	}
 }

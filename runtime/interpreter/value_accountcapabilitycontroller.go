@@ -33,17 +33,21 @@ type AccountCapabilityControllerValue struct {
 	BorrowType   ReferenceStaticType
 	CapabilityID UInt64Value
 
-	// tag is locally cached result of GetTag, and not stored.
-	// It is populated when the field `tag` is read.
-	tag *StringValue
+	// deleted indicates if the controller got deleted. Not stored
+	deleted bool
 
-	// Injected functions
+	// Lazily initialized function values.
+	// Host functions based on injected functions (see below).
+	deleteFunction FunctionValue
+
+	// Injected functions.
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetTag         func() *StringValue
-	SetTag         func(*StringValue)
-	DeleteFunction FunctionValue
+	GetCapability func(inter *Interpreter) *IDCapabilityValue
+	GetTag        func(inter *Interpreter) *StringValue
+	SetTag        func(inter *Interpreter, tag *StringValue)
+	Delete        func(inter *Interpreter, locationRange LocationRange)
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
@@ -110,7 +114,10 @@ func (v *AccountCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 	)
 }
 
-func (v *AccountCapabilityControllerValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *AccountCapabilityControllerValue) MeteredString(
+	memoryGauge common.MemoryGauge,
+	seenReferences SeenReferences,
+) string {
 	common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueStringMemoryUsage)
 
 	return format.AccountCapabilityController(
@@ -127,7 +134,11 @@ func (v *AccountCapabilityControllerValue) ConformsToStaticType(
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+func (v *AccountCapabilityControllerValue) Equal(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	other Value,
+) bool {
 	otherController, ok := other.(*AccountCapabilityControllerValue)
 	if !ok {
 		return false
@@ -141,7 +152,14 @@ func (*AccountCapabilityControllerValue) IsStorable() bool {
 	return true
 }
 
-func (v *AccountCapabilityControllerValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+func (v *AccountCapabilityControllerValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (
+	atree.Storable,
+	error,
+) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
@@ -159,6 +177,7 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.ValueID]struct{},
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -191,17 +210,26 @@ func (v *AccountCapabilityControllerValue) ChildStorables() []atree.Storable {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+type deletionCheckedFunctionValue struct {
+	FunctionValue
+}
+
+func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ LocationRange, name string) (result Value) {
+	defer func() {
+		switch typedResult := result.(type) {
+		case deletionCheckedFunctionValue:
+			result = typedResult.FunctionValue
+		case FunctionValue:
+			panic(errors.NewUnexpectedError("functions need to check deletion. Use newHostFunctionValue"))
+		}
+	}()
+
+	// NOTE: check if controller is already deleted
+	v.checkDeleted()
 
 	switch name {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
-		if v.tag == nil {
-			v.tag = v.GetTag()
-			if v.tag == nil {
-				v.tag = EmptyString
-			}
-		}
-		return v.tag
+		return v.GetTag(inter)
 
 	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
@@ -209,8 +237,17 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 	case sema.AccountCapabilityControllerTypeBorrowTypeFieldName:
 		return NewTypeValue(inter, v.BorrowType)
 
+	case sema.AccountCapabilityControllerTypeCapabilityFieldName:
+		return v.GetCapability(inter)
+
 	case sema.AccountCapabilityControllerTypeDeleteFunctionName:
-		return v.DeleteFunction
+		if v.deleteFunction == nil {
+			v.deleteFunction = v.newDeleteFunction(inter)
+		}
+		return v.deleteFunction
+
+		// NOTE: when adding new functions, ensure checkDeleted is called,
+		// by e.g. using AccountCapabilityControllerValue.newHostFunction
 	}
 
 	return nil
@@ -221,19 +258,30 @@ func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ Location
 	panic(errors.NewUnreachableError())
 }
 
-func (v *AccountCapabilityControllerValue) SetMember(_ *Interpreter, _ LocationRange, identifier string, value Value) bool {
+func (v *AccountCapabilityControllerValue) SetMember(
+	inter *Interpreter,
+	_ LocationRange,
+	identifier string,
+	value Value,
+) bool {
+	// NOTE: check if controller is already deleted
+	v.checkDeleted()
+
 	switch identifier {
 	case sema.AccountCapabilityControllerTypeTagFieldName:
 		stringValue, ok := value.(*StringValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		v.tag = stringValue
-		v.SetTag(stringValue)
+		v.SetTag(inter, stringValue)
 		return true
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (v *AccountCapabilityControllerValue) ControllerCapabilityID() UInt64Value {
+	return v.CapabilityID
 }
 
 func (v *AccountCapabilityControllerValue) ReferenceValue(
@@ -250,29 +298,48 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	)
 }
 
-// SetDeleted sets the controller as deleted, i.e. functions panic from now on
-func (v *AccountCapabilityControllerValue) SetDeleted(gauge common.MemoryGauge) {
-
-	raiseError := func() {
+// checkDeleted checks if the controller is deleted,
+// and panics if it is.
+func (v *AccountCapabilityControllerValue) checkDeleted() {
+	if v.deleted {
 		panic(errors.NewDefaultUserError("controller is deleted"))
 	}
+}
 
-	v.SetTag = func(s *StringValue) {
-		raiseError()
-	}
-	v.GetTag = func() *StringValue {
-		raiseError()
-		return nil
-	}
+func (v *AccountCapabilityControllerValue) newHostFunctionValue(
+	gauge common.MemoryGauge,
+	funcType *sema.FunctionType,
+	f func(invocation Invocation) Value,
+) FunctionValue {
+	return deletionCheckedFunctionValue{
+		FunctionValue: NewHostFunctionValue(
+			gauge,
+			funcType,
+			func(invocation Invocation) Value {
+				// NOTE: check if controller is already deleted
+				v.checkDeleted()
 
-	panicHostFunction := func(Invocation) Value {
-		raiseError()
-		return nil
+				return f(invocation)
+			},
+		),
 	}
+}
 
-	v.DeleteFunction = NewHostFunctionValue(
-		gauge,
+func (v *AccountCapabilityControllerValue) newDeleteFunction(
+	inter *Interpreter,
+) FunctionValue {
+	return v.newHostFunctionValue(
+		inter,
 		sema.AccountCapabilityControllerTypeDeleteFunctionType,
-		panicHostFunction,
+		func(invocation Invocation) Value {
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			v.Delete(inter, locationRange)
+
+			v.deleted = true
+
+			return Void
+		},
 	)
 }

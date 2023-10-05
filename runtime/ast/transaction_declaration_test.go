@@ -137,6 +137,11 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 						},
 					},
 				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{},
+					},
+				},
 			},
 		},
 		PreConditions: &Conditions{
@@ -251,7 +256,8 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 									},
 								},
 							},
-							prettier.Text(" {}"),
+							prettier.Text(" "),
+							prettier.Text("{}"),
 						},
 					},
 					prettier.HardLine{},
@@ -397,6 +403,11 @@ func TestTransactionDeclaration_String(t *testing.T) {
 								},
 							},
 						},
+					},
+				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{},
 					},
 				},
 			},

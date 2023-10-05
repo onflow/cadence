@@ -24,12 +24,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-test/deep"
+	"github.com/k0kubun/pp/v3"
+	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -44,38 +47,36 @@ const ImportedLocation = common.StringLocation("imported")
 //
 // If the objects are not equal, this function prints a human-readable diff.
 func AssertEqualWithDiff(t *testing.T, expected, actual any) {
-	if !assert.Equal(t, expected, actual) {
-		// the maximum levels of a struct to recurse into
-		// this prevents infinite recursion from circular references
-		deep.MaxDepth = 100
 
-		diff := deep.Equal(expected, actual)
+	// the maximum levels of a struct to recurse into
+	// this prevents infinite recursion from circular references
+	diff := pretty.Diff(expected, actual)
 
-		if len(diff) != 0 {
-			s := strings.Builder{}
+	if len(diff) != 0 {
+		s := strings.Builder{}
 
-			for i, d := range diff {
-				if i == 0 {
-					s.WriteString("diff    : ")
-				} else {
-					s.WriteString("          ")
-				}
-
-				s.WriteString(d)
-				s.WriteString("\n")
+		for i, d := range diff {
+			if i == 0 {
+				s.WriteString("diff    : ")
+			} else {
+				s.WriteString("          ")
 			}
 
-			t.Errorf(
-				"Not equal: \n"+
-					"expected: %s\n"+
-					"actual  : %s\n\n"+
-					"%s",
-				expected,
-				actual,
-				s.String(),
-			)
+			s.WriteString(d)
+			s.WriteString("\n")
 		}
+
+		t.Errorf(
+			"Not equal: \n"+
+				"expected: %s\n"+
+				"actual  : %s\n\n"+
+				"%s",
+			pp.Sprint(expected),
+			pp.Sprint(actual),
+			s.String(),
+		)
 	}
+
 }
 
 func AsInterfaceType(name string, kind common.CompositeKind) string {
@@ -145,11 +146,11 @@ func ValuesAreEqual(inter *interpreter.Interpreter, expected, actual interpreter
 
 func AssertValuesEqual(t testing.TB, interpreter *interpreter.Interpreter, expected, actual interpreter.Value) bool {
 	if !ValuesAreEqual(interpreter, expected, actual) {
-		diff := deep.Equal(expected, actual)
+		diff := pretty.Diff(expected, actual)
 
 		var message string
 
-		if len(diff) != 0 {
+		if len(diff) > 0 {
 			s := strings.Builder{}
 			_, _ = fmt.Fprintf(&s,
 				"Not equal: \n"+
@@ -207,6 +208,16 @@ func RequireError(t *testing.T, err error) {
 
 	_ = err.Error()
 
+	if hasImportLocation, ok := err.(common.HasLocation); ok {
+		location := hasImportLocation.ImportLocation()
+		assert.NotNil(t, location)
+	}
+
+	if hasPosition, ok := err.(ast.HasPosition); ok {
+		_ = hasPosition.StartPosition()
+		_ = hasPosition.EndPosition(nil)
+	}
+
 	if hasErrorNotes, ok := err.(errors.ErrorNotes); ok {
 		for _, note := range hasErrorNotes.ErrorNotes() {
 			_ = note.Message()
@@ -215,5 +226,9 @@ func RequireError(t *testing.T, err error) {
 
 	if hasSecondaryError, ok := err.(errors.SecondaryError); ok {
 		_ = hasSecondaryError.SecondaryError()
+	}
+
+	if hasSuggestedFixes, ok := err.(sema.HasSuggestedFixes); ok {
+		_ = hasSuggestedFixes.SuggestFixes("")
 	}
 }

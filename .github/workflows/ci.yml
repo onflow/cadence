@@ -13,7 +13,7 @@ on:
       - 'v**'
 
 env:
-  GO_VERSION: '1.19.2'
+  GO_VERSION: '1.20'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -72,9 +72,6 @@ jobs:
 
       - name: Check license headers
         run: make check-headers
-
-      - name: Check capabilities of dependencies
-        run: make check-capabilities
 
   lint-json:
     name: Lint JSON

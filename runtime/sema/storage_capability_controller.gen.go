@@ -21,6 +21,14 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
+const StorageCapabilityControllerTypeCapabilityFieldName = "capability"
+
+var StorageCapabilityControllerTypeCapabilityFieldType = &CapabilityType{}
+
+const StorageCapabilityControllerTypeCapabilityFieldDocString = `
+The capability that is controlled by this controller.
+`
+
 const StorageCapabilityControllerTypeTagFieldName = "tag"
 
 var StorageCapabilityControllerTypeTagFieldType = StringType
@@ -119,6 +127,14 @@ var StorageCapabilityControllerType = &SimpleType{
 func init() {
 	StorageCapabilityControllerType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
+			NewUnmeteredFieldMember(
+				t,
+				ast.AccessPublic,
+				ast.VariableKindConstant,
+				StorageCapabilityControllerTypeCapabilityFieldName,
+				StorageCapabilityControllerTypeCapabilityFieldType,
+				StorageCapabilityControllerTypeCapabilityFieldDocString,
+			),
 			NewUnmeteredFieldMember(
 				t,
 				ast.AccessPublicSettable,

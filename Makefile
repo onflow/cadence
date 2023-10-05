@@ -121,9 +121,3 @@ release:
 	@(VERSIONED_FILES="version.go \
 	npm-packages/cadence-parser/package.json" \
 	bash ./bump-version.sh $(bump))
-
-.PHONY: check-capabilities
-check-capabilities:
-	go install github.com/cugu/gocap@v0.1.0
-	go mod download
-	gocap check .

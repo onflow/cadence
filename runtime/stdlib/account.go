@@ -128,7 +128,7 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 						address, err = creator.CreateAccount(payerAddress)
 					})
 					if err != nil {
-						panic(err)
+						panic(interpreter.WrappedExternalError(err))
 					}
 
 					return
@@ -345,7 +345,7 @@ func newAccountBalanceGetFunction(
 				balance, err = provider.GetAccountBalance(address)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return
@@ -374,7 +374,7 @@ func newAccountAvailableBalanceGetFunction(
 				balance, err = provider.GetAccountAvailableBalance(address)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return
@@ -413,7 +413,7 @@ func newStorageUsedGetFunction(
 					capacity, err = provider.GetStorageUsed(address)
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 				return capacity
 			},
@@ -452,7 +452,7 @@ func newStorageCapacityGetFunction(
 					capacity, err = provider.GetStorageCapacity(address)
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 				return capacity
 			},
@@ -498,7 +498,7 @@ func newAddPublicKeyFunction(
 				err = handler.AddEncodedAccountKey(address, publicKey)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			handler.EmitEvent(
@@ -546,7 +546,7 @@ func newRemovePublicKeyFunction(
 				publicKey, err = handler.RevokeEncodedAccountKey(address, index.ToInt(invocation.LocationRange))
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			inter := invocation.Interpreter
@@ -620,7 +620,7 @@ func newAccountKeysAddFunction(
 				accountKey, err = handler.AddAccountKey(address, publicKey, hashAlgo, weight)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			handler.EmitEvent(
@@ -691,7 +691,7 @@ func newAccountKeysGetFunction(
 			})
 
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -774,7 +774,7 @@ func newAccountKeysForEachFunction(
 			})
 
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			var accountKey *AccountKey
@@ -784,7 +784,7 @@ func newAccountKeysForEachFunction(
 					accountKey, err = provider.GetAccountKey(address, int(index))
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 
 				// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -838,7 +838,7 @@ func newAccountKeysCountGetter(
 			if err != nil {
 				// The provider might not be able to fetch the number of account keys
 				// e.g. when the account does not exist
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return count
@@ -882,7 +882,7 @@ func newAccountKeysRevokeFunction(
 				accountKey, err = handler.RevokeAccountKey(address, index)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
@@ -1031,6 +1031,7 @@ func newAuthAccountInboxPublishFunction(
 				atree.Address(provider),
 				true,
 				nil,
+				nil,
 			)
 
 			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
@@ -1096,6 +1097,7 @@ func newAuthAccountInboxUnpublishFunction(
 				locationRange,
 				atree.Address{},
 				true,
+				nil,
 				nil,
 			)
 
@@ -1182,6 +1184,7 @@ func newAuthAccountInboxClaimFunction(
 				atree.Address{},
 				true,
 				nil,
+				nil,
 			)
 
 			inter.WriteStored(
@@ -1247,7 +1250,7 @@ func newAccountContractsGetNamesFunction(
 			names, err = provider.GetAccountContractNames(address)
 		})
 		if err != nil {
-			panic(err)
+			panic(interpreter.WrappedExternalError(err))
 		}
 
 		values := make([]interpreter.Value, len(names))
@@ -1312,7 +1315,7 @@ func newAccountContractsGetFunction(
 				code, err = provider.GetAccountContractCode(location)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			if len(code) > 0 {
@@ -1378,7 +1381,7 @@ func newAccountContractsBorrowFunction(
 				code, err = handler.GetAccountContractCode(location)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 			if len(code) == 0 {
 				return interpreter.Nil
@@ -1818,7 +1821,7 @@ func updateAccountContractCode(
 		err = handler.UpdateAccountContractCode(location, code)
 	})
 	if err != nil {
-		return err
+		return interpreter.WrappedExternalError(err)
 	}
 
 	if createContract {
@@ -1975,7 +1978,7 @@ func newAuthAccountContractsRemoveFunction(
 				code, err = handler.GetAccountContractCode(location)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			// Only remove the contract code, remove the contract value, and emit an event,
@@ -2003,7 +2006,7 @@ func newAuthAccountContractsRemoveFunction(
 					err = handler.RemoveAccountContractCode(location)
 				})
 				if err != nil {
-					panic(err)
+					panic(interpreter.WrappedExternalError(err))
 				}
 
 				// NOTE: the contract recording function delays the write
@@ -2531,7 +2534,7 @@ func issueStorageCapabilityController(
 		capabilityID, err = idGenerator.GenerateAccountID(address)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 	if capabilityID == 0 {
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
@@ -2613,7 +2616,7 @@ func issueAccountCapabilityController(
 		capabilityID, err = idGenerator.GenerateAccountID(address)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 	if capabilityID == 0 {
 		panic(errors.NewUnexpectedError("invalid zero account ID"))
@@ -2714,26 +2717,35 @@ func getCapabilityController(
 	// Inject functions
 	switch controller := controller.(type) {
 	case *interpreter.StorageCapabilityControllerValue:
-		controller.GetTag =
-			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
-		controller.SetTag =
-			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+		capabilityID := controller.CapabilityID
 
-		controller.TargetFunction =
-			newStorageCapabilityControllerTargetFunction(inter, controller)
-		controller.RetargetFunction =
-			newStorageCapabilityControllerRetargetFunction(inter, address, controller)
-		controller.DeleteFunction =
-			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
+		controller.GetCapability =
+			newCapabilityControllerGetCapabilityFunction(address, controller)
+
+		controller.GetTag =
+			newCapabilityControllerGetTagFunction(address, capabilityID)
+		controller.SetTag =
+			newCapabilityControllerSetTagFunction(address, capabilityID)
+
+		controller.Delete =
+			newStorageCapabilityControllerDeleteFunction(address, controller)
+
+		controller.SetTarget =
+			newStorageCapabilityControllerSetTargetFunction(address, controller)
 
 	case *interpreter.AccountCapabilityControllerValue:
-		controller.GetTag =
-			newCapabilityControllerGetTagFunction(inter, address, controller.CapabilityID)
-		controller.SetTag =
-			newCapabilityControllerSetTagFunction(inter, address, controller.CapabilityID)
+		capabilityID := controller.CapabilityID
 
-		controller.DeleteFunction =
-			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
+		controller.GetCapability =
+			newCapabilityControllerGetCapabilityFunction(address, controller)
+
+		controller.GetTag =
+			newCapabilityControllerGetTagFunction(address, capabilityID)
+		controller.SetTag =
+			newCapabilityControllerSetTagFunction(address, capabilityID)
+
+		controller.Delete =
+			newAccountCapabilityControllerDeleteFunction(address, controller)
 	}
 
 	return controller
@@ -2763,94 +2775,59 @@ func getStorageCapabilityControllerReference(
 	)
 }
 
-func newStorageCapabilityControllerTargetFunction(
-	inter *interpreter.Interpreter,
-	controller *interpreter.StorageCapabilityControllerValue,
-) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		inter,
-		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			return controller.TargetPath
-		},
-	)
-}
-
-func newStorageCapabilityControllerRetargetFunction(
-	inter *interpreter.Interpreter,
+func newStorageCapabilityControllerSetTargetFunction(
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
-) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		inter,
-		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			locationRange := invocation.LocationRange
+) func(*interpreter.Interpreter, interpreter.LocationRange, interpreter.PathValue) {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		newTargetPathValue interpreter.PathValue,
+	) {
+		oldTargetPathValue := controller.TargetPath
+		capabilityID := controller.CapabilityID
 
-			// Get path argument
-
-			newTargetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-			if !ok || newTargetPathValue.Domain != common.PathDomainStorage {
-				panic(errors.NewUnreachableError())
-			}
-
-			oldTargetPathValue := controller.TargetPath
-
-			capabilityID := controller.CapabilityID
-			unrecordStorageCapabilityController(
-				inter,
-				locationRange,
-				address,
-				oldTargetPathValue,
-				capabilityID,
-			)
-			recordStorageCapabilityController(
-				inter,
-				locationRange,
-				address,
-				newTargetPathValue,
-				capabilityID,
-			)
-
-			controller.TargetPath = newTargetPathValue
-
-			return interpreter.Void
-		},
-	)
+		unrecordStorageCapabilityController(
+			inter,
+			locationRange,
+			address,
+			oldTargetPathValue,
+			capabilityID,
+		)
+		recordStorageCapabilityController(
+			inter,
+			locationRange,
+			address,
+			newTargetPathValue,
+			capabilityID,
+		)
+	}
 }
 
 func newStorageCapabilityControllerDeleteFunction(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
-) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		inter,
-		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
+) func(*interpreter.Interpreter, interpreter.LocationRange) {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+	) {
+		targetPathValue := controller.TargetPath
+		capabilityID := controller.CapabilityID
 
-			capabilityID := controller.CapabilityID
-
-			unrecordStorageCapabilityController(
-				inter,
-				locationRange,
-				address,
-				controller.TargetPath,
-				capabilityID,
-			)
-			removeCapabilityController(
-				inter,
-				address,
-				capabilityID,
-			)
-
-			controller.SetDeleted(inter)
-
-			return interpreter.Void
-		},
-	)
+		unrecordStorageCapabilityController(
+			inter,
+			locationRange,
+			address,
+			targetPathValue,
+			capabilityID,
+		)
+		removeCapabilityController(
+			inter,
+			address,
+			capabilityID,
+		)
+	}
 }
 
 var capabilityIDSetStaticType = interpreter.DictionaryStaticType{
@@ -3188,6 +3165,7 @@ func newAuthAccountCapabilitiesPublishFunction(
 				atree.Address(address),
 				true,
 				nil,
+				nil,
 			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3256,6 +3234,7 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 				locationRange,
 				atree.Address{},
 				true,
+				nil,
 				nil,
 			).(*interpreter.IDCapabilityValue)
 			if !ok {
@@ -3402,6 +3381,7 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 				locationRange,
 				atree.Address(address),
 				true,
+				nil,
 				nil,
 			).(*interpreter.IDCapabilityValue)
 			if !ok {
@@ -3939,37 +3919,24 @@ func newAuthAccountAccountCapabilitiesForEachControllerFunction(
 }
 
 func newAccountCapabilityControllerDeleteFunction(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	controller *interpreter.AccountCapabilityControllerValue,
-) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		inter,
-		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
+) func(*interpreter.Interpreter, interpreter.LocationRange) {
+	return func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange) {
+		capabilityID := controller.CapabilityID
 
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			capabilityID := controller.CapabilityID
-
-			unrecordAccountCapabilityController(
-				inter,
-				locationRange,
-				address,
-				capabilityID,
-			)
-			removeCapabilityController(
-				inter,
-				address,
-				capabilityID,
-			)
-
-			controller.SetDeleted(inter)
-
-			return interpreter.Void
-		},
-	)
+		unrecordAccountCapabilityController(
+			inter,
+			locationRange,
+			address,
+			capabilityID,
+		)
+		removeCapabilityController(
+			inter,
+			address,
+			capabilityID,
+		)
+	}
 }
 
 // CapabilityControllerTagStorageDomain is the storage domain which stores
@@ -3999,13 +3966,31 @@ func getCapabilityControllerTag(
 	return stringValue
 }
 
+func newCapabilityControllerGetCapabilityFunction(
+	address common.Address,
+	controller interpreter.CapabilityControllerValue,
+) func(inter *interpreter.Interpreter) *interpreter.IDCapabilityValue {
+
+	addressValue := interpreter.AddressValue(address)
+	capabilityID := controller.ControllerCapabilityID()
+	borrowType := controller.CapabilityControllerBorrowType()
+
+	return func(inter *interpreter.Interpreter) *interpreter.IDCapabilityValue {
+		return interpreter.NewIDCapabilityValue(
+			inter,
+			capabilityID,
+			addressValue,
+			borrowType,
+		)
+	}
+}
+
 func newCapabilityControllerGetTagFunction(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
-) func() *interpreter.StringValue {
+) func(*interpreter.Interpreter) *interpreter.StringValue {
 
-	return func() *interpreter.StringValue {
+	return func(inter *interpreter.Interpreter) *interpreter.StringValue {
 		return getCapabilityControllerTag(
 			inter,
 			address,
@@ -4035,11 +4020,10 @@ func setCapabilityControllerTag(
 }
 
 func newCapabilityControllerSetTagFunction(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
-) func(tagValue *interpreter.StringValue) {
-	return func(tagValue *interpreter.StringValue) {
+) func(*interpreter.Interpreter, *interpreter.StringValue) {
+	return func(inter *interpreter.Interpreter, tagValue *interpreter.StringValue) {
 		setCapabilityControllerTag(
 			inter,
 			address,

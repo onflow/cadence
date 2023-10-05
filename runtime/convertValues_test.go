@@ -1241,10 +1241,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Resource",
@@ -1252,10 +1249,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Contract",
@@ -1263,10 +1257,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Event",
@@ -1274,10 +1265,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Enum",
@@ -1285,10 +1273,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "StructInterface",
@@ -1296,10 +1281,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.InterfaceStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "ResourceInterface",
@@ -1307,10 +1289,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.InterfaceStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "ContractInterface",
@@ -1318,10 +1297,7 @@ func TestImportRuntimeType(t *testing.T) {
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.InterfaceStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "RestrictedType",
@@ -1337,15 +1313,9 @@ func TestImportRuntimeType(t *testing.T) {
 					}},
 			},
 			expected: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            TestLocation,
-					QualifiedIdentifier: "S",
-				},
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						Location:            TestLocation,
-						QualifiedIdentifier: "T",
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "T"),
 				},
 			},
 		},
@@ -2080,10 +2050,7 @@ func TestExportTypeValue(t *testing.T) {
 			Type: &interpreter.RestrictedStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
 				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						Location:            TestLocation,
-						QualifiedIdentifier: "SI",
-					},
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "SI"),
 				},
 			},
 		}

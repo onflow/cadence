@@ -29,24 +29,24 @@ type Context struct {
 	CoverageReport *CoverageReport
 }
 
-// codesAndPrograms collects the source code and AST for each location.
+// CodesAndPrograms collects the source code and AST for each location.
 // It is purely used for debugging: Both the codes and the programs
 // are provided in runtime errors.
-type codesAndPrograms struct {
+type CodesAndPrograms struct {
 	codes    map[Location][]byte
 	programs map[Location]*ast.Program
 }
 
-func (c codesAndPrograms) setCode(location Location, code []byte) {
+func (c CodesAndPrograms) setCode(location Location, code []byte) {
 	c.codes[location] = code
 }
 
-func (c codesAndPrograms) setProgram(location Location, program *ast.Program) {
+func (c CodesAndPrograms) setProgram(location Location, program *ast.Program) {
 	c.programs[location] = program
 }
 
-func newCodesAndPrograms() codesAndPrograms {
-	return codesAndPrograms{
+func NewCodesAndPrograms() CodesAndPrograms {
+	return CodesAndPrograms{
 		codes:    map[Location][]byte{},
 		programs: map[Location]*ast.Program{},
 	}

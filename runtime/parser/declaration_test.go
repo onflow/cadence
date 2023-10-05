@@ -5513,7 +5513,7 @@ func TestParseEventEmitStatement(t *testing.T) {
 										{
 											Label:         "to",
 											LabelStartPos: &ast.Position{Offset: 42, Line: 3, Column: 22},
-											LabelEndPos:   &ast.Position{Offset: 43, Line: 3, Column: 23},
+											LabelEndPos:   &ast.Position{Offset: 44, Line: 3, Column: 24},
 											Expression: &ast.IntegerExpression{
 												PositiveLiteral: []byte("1"),
 												Value:           big.NewInt(1),
@@ -5528,7 +5528,7 @@ func TestParseEventEmitStatement(t *testing.T) {
 										{
 											Label:         "from",
 											LabelStartPos: &ast.Position{Offset: 49, Line: 3, Column: 29},
-											LabelEndPos:   &ast.Position{Offset: 52, Line: 3, Column: 32},
+											LabelEndPos:   &ast.Position{Offset: 53, Line: 3, Column: 33},
 											Expression: &ast.IntegerExpression{
 												PositiveLiteral: []byte("2"),
 												Value:           big.NewInt(2),

@@ -34,7 +34,7 @@ type interpreterContractFunctionExecutor struct {
 	result           cadence.Value
 	executeErr       error
 	preprocessErr    error
-	codesAndPrograms codesAndPrograms
+	codesAndPrograms CodesAndPrograms
 	runtime          *interpreterRuntime
 	storage          *Storage
 	contractLocation common.AddressLocation
@@ -90,7 +90,7 @@ func (executor *interpreterContractFunctionExecutor) preprocess() (err error) {
 	context := executor.context
 	location := context.Location
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
 	interpreterRuntime := executor.runtime
