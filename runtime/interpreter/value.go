@@ -16513,7 +16513,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 				// is a necessary pre-requisite for calling any members of the attachment. However, in
 				// the case of a destructor, this is called implicitly, and thus must have its `base`
 				// set manually
-				attachment.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, attachment))
+				attachment.setBaseValue(interpreter, v)
 				attachment.Destroy(interpreter, locationRange)
 			})
 
@@ -17276,7 +17276,7 @@ func (v *CompositeValue) Transfer(
 				if compositeValue, ok := value.(*CompositeValue); ok &&
 					compositeValue.Kind == common.CompositeKindAttachment {
 
-					compositeValue.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, compositeValue))
+					compositeValue.setBaseValue(interpreter, v)
 				}
 
 				value = value.Transfer(
@@ -17594,7 +17594,7 @@ func (v *CompositeValue) getBaseValue() *EphemeralReferenceValue {
 	return v.base
 }
 
-func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue, authorization Authorization) {
+func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
 	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -17608,6 +17608,7 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 		baseType = ty
 	}
 
+	authorization := attachmentBaseAuthorization(interpreter, v)
 	v.base = NewEphemeralReferenceValue(interpreter, authorization, base, baseType)
 	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
@@ -17762,6 +17763,7 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
 			// should convert the provided attachment value into a reference before passing it to the user
 			// callback
+			attachment.setBaseValue(interpreter, v)
 			f(attachment)
 		}
 	}
@@ -17779,7 +17781,7 @@ func (v *CompositeValue) getTypeKey(
 	}
 	attachmentType := keyType.(*sema.CompositeType)
 	// dynamically set the attachment's base to this composite, but with authorization based on the requested access on that attachment
-	attachment.setBaseValue(interpreter, v, attachmentBaseAuthorization(interpreter, attachment))
+	attachment.setBaseValue(interpreter, v)
 
 	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
 	attachmentReferenceAuth, err := attachmentReferenceAuthorization(interpreter, attachmentType, baseAccess)
