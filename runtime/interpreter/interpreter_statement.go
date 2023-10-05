@@ -163,8 +163,10 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	// If the resource was not moved ou of the container,
 	// its contents get deleted.
 
+	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
+
 	const allowMissing = false
-	value := interpreter.assignmentGetterSetter(declaration.Value).get(allowMissing)
+	value := getterSetter.get(allowMissing)
 	if value == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -527,8 +529,10 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	// If the resource was not moved ou of the container,
 	// its contents get deleted.
 
+	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
+
 	const allowMissing = false
-	result := interpreter.assignmentGetterSetter(declaration.Value).get(allowMissing)
+	result := getterSetter.get(allowMissing)
 	if result == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -581,23 +585,32 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 }
 
 func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) StatementResult {
+
+	// Get type information
+
 	swapStatementTypes := interpreter.Program.Elaboration.SwapStatementTypes(swap)
 	leftType := swapStatementTypes.LeftType
 	rightType := swapStatementTypes.RightType
 
+	// Evaluate the left side (target and key)
+
+	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
+
+	// Evaluate the right side (target and key)
+
+	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
+
+	// Get left and right values
+
 	const allowMissing = false
 
-	// Evaluate the left expression
-	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
 	leftValue := leftGetterSetter.get(allowMissing)
 	interpreter.checkSwapValue(leftValue, swap.Left)
 
-	// Evaluate the right expression
-	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
 	rightValue := rightGetterSetter.get(allowMissing)
 	interpreter.checkSwapValue(rightValue, swap.Right)
 
-	// Set right value to left target
+	// Set right value to left target,
 	// and left value to right target
 
 	locationRange := LocationRange{
