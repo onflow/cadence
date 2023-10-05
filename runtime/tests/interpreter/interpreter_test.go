@@ -72,6 +72,65 @@ func parseCheckAndInterpretWithOptions(
 	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
 }
 
+func parseCheckAndInterpretWithLogs(
+	tb testing.TB,
+	code string,
+) (
+	inter *interpreter.Interpreter,
+	getLogs func() []string,
+	err error,
+) {
+	var logs []string
+
+	logFunction := stdlib.NewStandardLibraryFunction(
+		"log",
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.VoidType,
+			),
+		},
+		``,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			message := invocation.Arguments[0].String()
+			logs = append(logs, message)
+			return interpreter.Void
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+
+	result, err := parseCheckAndInterpretWithOptions(
+		tb,
+		code,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				BaseActivation: baseActivation,
+			},
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
+			},
+			HandleCheckerError: nil,
+		},
+	)
+
+	getLogs = func() []string {
+		return logs
+	}
+
+	return result, getLogs, err
+}
+
 func parseCheckAndInterpretWithMemoryMetering(
 	t testing.TB,
 	code string,
@@ -9952,90 +10011,49 @@ func TestInterpretNestedDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	var logs []string
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+      resource B {
+          let id: Int
 
-	logFunction := stdlib.NewStandardLibraryFunction(
-		"log",
-		&sema.FunctionType{
-			Parameters: []sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
-				},
-			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.VoidType,
-			),
-		},
-		``,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].String()
-			logs = append(logs, message)
-			return interpreter.Void
-		},
-	)
-
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(logFunction)
-
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, logFunction)
-
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-          resource B {
-              let id: Int
-
-              init(_ id: Int){
-                  self.id = id
-              }
-
-              destroy(){
-                  log("destroying B with id:")
-                  log(self.id)
-              }
+          init(_ id: Int){
+              self.id = id
           }
 
-          resource A {
-              let id: Int
-              let bs: @[B]
+          destroy(){
+              log("destroying B with id:")
+              log(self.id)
+          }
+      }
 
-              init(_ id: Int){
-                  self.id = id
-                  self.bs <- []
-              }
+      resource A {
+          let id: Int
+          let bs: @[B]
 
-              fun add(_ b: @B){
-                  self.bs.append(<-b)
-              }
-
-              destroy() {
-                  log("destroying A with id:")
-                  log(self.id)
-                  destroy self.bs
-              }
+          init(_ id: Int){
+              self.id = id
+              self.bs <- []
           }
 
-          fun test() {
-              let a <- create A(1)
-              a.add(<- create B(2))
-              a.add(<- create B(3))
-              a.add(<- create B(4))
-
-              destroy a
+          fun add(_ b: @B){
+              self.bs.append(<-b)
           }
-        `,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
-			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-			},
-			HandleCheckerError: nil,
-		},
-	)
+
+          destroy() {
+              log("destroying A with id:")
+              log(self.id)
+              destroy self.bs
+          }
+      }
+
+      fun test() {
+          let a <- create A(1)
+          a.add(<- create B(2))
+          a.add(<- create B(3))
+          a.add(<- create B(4))
+
+          destroy a
+      }
+    `)
 	require.NoError(t, err)
 
 	value, err := inter.Invoke("test")
@@ -10059,7 +10077,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 			`"destroying B with id:"`,
 			"4",
 		},
-		logs,
+		getLogs(),
 	)
 }
 
@@ -11113,6 +11131,149 @@ func TestInterpretSwapInSameArray(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 			),
 			value,
+		)
+	})
+}
+
+func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+          let xs: [{Int: String}] = [{2: "x"}, {3: "y"}]
+
+          fun a(): Int {
+              log("a")
+              return 0
+          }
+
+          fun b(): Int {
+              log("b")
+              return 2
+          }
+
+          fun c(): Int {
+              log("c")
+              return 1
+          }
+
+          fun d(): Int {
+              log("d")
+              return 3
+          }
+
+          fun test() {
+              log(xs)
+              xs[a()][b()] <-> xs[c()][d()]
+              log(xs)
+          }
+        `)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				`[{2: "x"}, {3: "y"}]`,
+				`"a"`,
+				`"b"`,
+				`"c"`,
+				`"d"`,
+				`[{2: "y"}, {3: "x"}]`,
+			},
+			getLogs(),
+		)
+
+	})
+
+	t.Run("resources", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+          resource Resource {
+              var value: Int
+
+              init(_ value: Int) {
+                  log(
+                      "Creating resource with UUID "
+                          .concat(self.uuid.toString())
+                          .concat(" and value ")
+                          .concat(value.toString())
+                  )
+                  self.value = value
+              }
+
+              destroy() {
+                  log(
+                      "Destroying resource with UUID "
+                          .concat(self.uuid.toString())
+                          .concat(" and value ")
+                          .concat(self.value.toString())
+                  )
+              }
+          }
+
+          resource ResourceLoser {
+              var dict: @{Int: Resource}
+              var toBeLost: @Resource
+
+              init(_ victim: @Resource) {
+                  self.dict <- {1: <- create Resource(2)}
+
+                  self.toBeLost <- victim
+
+                  // Magic happens during the swap below.
+                  self.dict[1] <-> self.dict[self.shenanigans()]
+              }
+
+              fun shenanigans(): Int {
+                  var d <- create Resource(3)
+
+                  self.toBeLost <-> d
+
+                  // This takes advantage of the fact that self.dict[1] has been
+                  // temporarily removed at the point of the swap when this gets called
+                  // We take advantage of this window of opportunity to
+                  // insert the "to-be-lost" resource in its place. The swap implementation
+                  // will blindly overwrite it.
+                  var old <- self.dict.insert(key: 1, <- d)
+
+                  // "old" will be nil here thanks to the removal done by the swap
+                  // implementation. We have to destroy it to please sema checker.
+                  destroy old
+
+                  return 1
+              }
+
+              destroy() {
+                  destroy self.dict
+                  destroy self.toBeLost
+              }
+          }
+
+          fun test() {
+              destroy <- create ResourceLoser(<- create Resource(1))
+          }
+        `)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				`"Creating resource with UUID 1 and value 1"`,
+				`"Creating resource with UUID 3 and value 2"`,
+				`"Creating resource with UUID 4 and value 3"`,
+				`"Destroying resource with UUID 3 and value 2"`,
+				`"Destroying resource with UUID 1 and value 1"`,
+				`"Destroying resource with UUID 4 and value 3"`,
+			},
+			getLogs(),
 		)
 	})
 }
