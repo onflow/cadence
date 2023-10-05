@@ -79,6 +79,21 @@ func (checker *Checker) visitFunctionDeclaration(
 		declaration.Identifier,
 	)
 
+	functionBlock := declaration.FunctionBlock
+
+	if declaration.IsNative() {
+		if !functionBlock.IsEmpty() {
+			checker.report(&NativeFunctionWithImplementationError{
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					functionBlock,
+				),
+			})
+		}
+
+		functionBlock = nil
+	}
+
 	// global functions were previously declared, see `declareFunctionDeclaration`
 
 	functionType := checker.Elaboration.FunctionDeclarationFunctionType(declaration)
@@ -108,7 +123,7 @@ func (checker *Checker) visitFunctionDeclaration(
 		declaration.ReturnTypeAnnotation,
 		access,
 		functionType,
-		declaration.FunctionBlock,
+		functionBlock,
 		options.mustExit,
 		nil,
 		options.checkResourceLoss,
@@ -344,7 +359,10 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 
 		checker.Elaboration.SetPostConditionsRewrite(postConditions, rewriteResult)
 
-		checker.visitStatements(rewriteResult.BeforeStatements)
+		// all condition blocks are `view`
+		checker.InNewPurityScope(true, func() {
+			checker.visitStatements(rewriteResult.BeforeStatements)
+		})
 	}
 
 	body()

@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"
@@ -68,6 +69,65 @@ func parseCheckAndInterpretWithOptions(
 	err error,
 ) {
 	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
+}
+
+func parseCheckAndInterpretWithLogs(
+	tb testing.TB,
+	code string,
+) (
+	inter *interpreter.Interpreter,
+	getLogs func() []string,
+	err error,
+) {
+	var logs []string
+
+	logFunction := stdlib.NewStandardLibraryFunction(
+		"log",
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.VoidType,
+			),
+		},
+		``,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			message := invocation.Arguments[0].String()
+			logs = append(logs, message)
+			return interpreter.Void
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+
+	result, err := parseCheckAndInterpretWithOptions(
+		tb,
+		code,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				BaseActivation: baseActivation,
+			},
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
+			},
+			HandleCheckerError: nil,
+		},
+	)
+
+	getLogs = func() []string {
+		return logs
+	}
+
+	return result, getLogs, err
 }
 
 func parseCheckAndInterpretWithMemoryMetering(
@@ -8506,48 +8566,65 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
       access(all) let address2 = Test.test()
     `
 
-	addressValue := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
+	t.Run("with custom handler", func(t *testing.T) {
+		addressValue := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
 
-	inter, err := parseCheckAndInterpretWithOptions(t, code,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				InjectedCompositeFieldsHandler: func(
-					inter *interpreter.Interpreter,
-					_ common.Location,
-					_ string,
-					_ common.CompositeKind,
-				) map[string]interpreter.Value {
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+					InjectedCompositeFieldsHandler: func(
+						inter *interpreter.Interpreter,
+						_ common.Location,
+						_ string,
+						_ common.CompositeKind,
+					) map[string]interpreter.Value {
 
-					accountRef := stdlib.NewAccountReferenceValue(
-						nil,
-						nil,
-						addressValue,
-						interpreter.FullyEntitledAccountAccess,
-					)
+						accountRef := stdlib.NewAccountReferenceValue(
+							nil,
+							nil,
+							addressValue,
+							interpreter.FullyEntitledAccountAccess,
+						)
 
-					return map[string]interpreter.Value{
-						sema.ContractAccountFieldName: accountRef,
-					}
+						return map[string]interpreter.Value{
+							sema.ContractAccountFieldName: accountRef,
+						}
+					},
 				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		addressValue,
-		inter.Globals.Get("address1").GetValue(),
-	)
+		AssertValuesEqual(
+			t,
+			inter,
+			addressValue,
+			inter.Globals.Get("address1").GetValue(),
+		)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		addressValue,
-		inter.Globals.Get("address2").GetValue(),
-	)
+		AssertValuesEqual(
+			t,
+			inter,
+			addressValue,
+			inter.Globals.Get("address2").GetValue(),
+		)
+	})
+
+	t.Run("with default handler", func(t *testing.T) {
+		env := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
+		_, err := parseCheckAndInterpretWithOptions(t, code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler:           makeContractValueHandler(nil, nil, nil),
+					InjectedCompositeFieldsHandler: env.InterpreterConfig.InjectedCompositeFieldsHandler,
+				},
+			},
+		)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "error: member `account` is used before it has been initialized")
+	})
 }
 
 func TestInterpretConformToImportedInterface(t *testing.T) {
@@ -9502,88 +9579,49 @@ func TestInterpretNestedDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	var logs []string
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+      resource B {
+          let id: Int
 
-	logFunction := stdlib.NewStandardLibraryFunction(
-		"log",
-		&sema.FunctionType{
-			Parameters: []sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.AnyStructTypeAnnotation,
-				},
-			},
-			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-		},
-		``,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].String()
-			logs = append(logs, message)
-			return interpreter.Void
-		},
-	)
-
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(logFunction)
-
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, logFunction)
-
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-          resource B {
-              let id: Int
-
-              init(_ id: Int){
-                  self.id = id
-              }
-
-              destroy(){
-                  log("destroying B with id:")
-                  log(self.id)
-              }
+          init(_ id: Int){
+              self.id = id
           }
 
-          resource A {
-              let id: Int
-              let bs: @[B]
+          destroy(){
+              log("destroying B with id:")
+              log(self.id)
+          }
+      }
 
-              init(_ id: Int){
-                  self.id = id
-                  self.bs <- []
-              }
+      resource A {
+          let id: Int
+          let bs: @[B]
 
-              fun add(_ b: @B){
-                  self.bs.append(<-b)
-              }
-
-              destroy() {
-                  log("destroying A with id:")
-                  log(self.id)
-                  destroy self.bs
-              }
+          init(_ id: Int){
+              self.id = id
+              self.bs <- []
           }
 
-          fun test() {
-              let a <- create A(1)
-              a.add(<- create B(2))
-              a.add(<- create B(3))
-              a.add(<- create B(4))
-
-              destroy a
+          fun add(_ b: @B){
+              self.bs.append(<-b)
           }
-        `,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
-			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-			},
-			HandleCheckerError: nil,
-		},
-	)
+
+          destroy() {
+              log("destroying A with id:")
+              log(self.id)
+              destroy self.bs
+          }
+      }
+
+      fun test() {
+          let a <- create A(1)
+          a.add(<- create B(2))
+          a.add(<- create B(3))
+          a.add(<- create B(4))
+
+          destroy a
+      }
+    `)
 	require.NoError(t, err)
 
 	value, err := inter.Invoke("test")
@@ -9607,7 +9645,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 			`"destroying B with id:"`,
 			"4",
 		},
-		logs,
+		getLogs(),
 	)
 }
 
@@ -11501,5 +11539,316 @@ func TestInterpretConditionsWrapperFunctionType(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+}
+
+func TestInterpretSwapInSameArray(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resources, different indices", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {
+              let value: Int
+
+              init(value: Int) {
+                  self.value = value
+              }
+          }
+
+          fun test(): [Int] {
+             let rs <- [
+                 <- create R(value: 0),
+                 <- create R(value: 1),
+                 <- create R(value: 2)
+             ]
+
+             // We swap only '0' and '1'
+             rs[0] <-> rs[1]
+
+             let values = [
+                 rs[0].value,
+                 rs[1].value,
+                 rs[2].value
+             ]
+
+             destroy rs
+
+             return values
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			value,
+		)
+	})
+
+	t.Run("resources, same indices", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {
+              let value: Int
+
+              init(value: Int) {
+                  self.value = value
+              }
+          }
+
+          fun test(): [Int] {
+             let rs <- [
+                 <- create R(value: 0),
+                 <- create R(value: 1),
+                 <- create R(value: 2)
+             ]
+
+             // We swap only '1'
+             rs[1] <-> rs[1]
+
+             let values = [
+                 rs[0].value,
+                 rs[1].value,
+                 rs[2].value
+             ]
+
+             destroy rs
+
+             return values
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			value,
+		)
+	})
+
+	t.Run("structs", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {
+              let value: Int
+
+              init(value: Int) {
+                  self.value = value
+              }
+          }
+
+          fun test(): [Int] {
+             let structs = [
+                 S(value: 0),
+                 S(value: 1),
+                 S(value: 2)
+             ]
+
+             // We swap only '0' and '1'
+             structs[0] <-> structs[1]
+
+             return [
+                 structs[0].value,
+                 structs[1].value,
+                 structs[2].value
+             ]
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			value,
+		)
+	})
+}
+
+func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+          let xs: [{Int: String}] = [{2: "x"}, {3: "y"}]
+
+          fun a(): Int {
+              log("a")
+              return 0
+          }
+
+          fun b(): Int {
+              log("b")
+              return 2
+          }
+
+          fun c(): Int {
+              log("c")
+              return 1
+          }
+
+          fun d(): Int {
+              log("d")
+              return 3
+          }
+
+          fun test() {
+              log(xs)
+              xs[a()][b()] <-> xs[c()][d()]
+              log(xs)
+          }
+        `)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				`[{2: "x"}, {3: "y"}]`,
+				`"a"`,
+				`"b"`,
+				`"c"`,
+				`"d"`,
+				`[{2: "y"}, {3: "x"}]`,
+			},
+			getLogs(),
+		)
+
+	})
+
+	t.Run("resources", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+          resource Resource {
+              var value: Int
+
+              init(_ value: Int) {
+                  log(
+                      "Creating resource with UUID "
+                          .concat(self.uuid.toString())
+                          .concat(" and value ")
+                          .concat(value.toString())
+                  )
+                  self.value = value
+              }
+
+              destroy() {
+                  log(
+                      "Destroying resource with UUID "
+                          .concat(self.uuid.toString())
+                          .concat(" and value ")
+                          .concat(self.value.toString())
+                  )
+              }
+          }
+
+          resource ResourceLoser {
+              var dict: @{Int: Resource}
+              var toBeLost: @Resource
+
+              init(_ victim: @Resource) {
+                  self.dict <- {1: <- create Resource(2)}
+
+                  self.toBeLost <- victim
+
+                  // Magic happens during the swap below.
+                  self.dict[1] <-> self.dict[self.shenanigans()]
+              }
+
+              fun shenanigans(): Int {
+                  var d <- create Resource(3)
+
+                  self.toBeLost <-> d
+
+                  // This takes advantage of the fact that self.dict[1] has been
+                  // temporarily removed at the point of the swap when this gets called
+                  // We take advantage of this window of opportunity to
+                  // insert the "to-be-lost" resource in its place. The swap implementation
+                  // will blindly overwrite it.
+                  var old <- self.dict.insert(key: 1, <- d)
+
+                  // "old" will be nil here thanks to the removal done by the swap
+                  // implementation. We have to destroy it to please sema checker.
+                  destroy old
+
+                  return 1
+              }
+
+              destroy() {
+                  destroy self.dict
+                  destroy self.toBeLost
+              }
+          }
+
+          fun test() {
+              destroy <- create ResourceLoser(<- create Resource(1))
+          }
+        `)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				`"Creating resource with UUID 1 and value 1"`,
+				`"Creating resource with UUID 3 and value 2"`,
+				`"Creating resource with UUID 4 and value 3"`,
+				`"Destroying resource with UUID 3 and value 2"`,
+				`"Destroying resource with UUID 1 and value 1"`,
+				`"Destroying resource with UUID 4 and value 3"`,
+			},
+			getLogs(),
+		)
 	})
 }

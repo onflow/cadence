@@ -33,7 +33,7 @@ var WebAssemblyTypeCompileAndInstantiateFunctionType = &sema.FunctionType{
 		{
 			Identifier: "bytes",
 			TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{
-				Type: UInt8Type,
+				Type: sema.UInt8Type,
 			}),
 		},
 	},

@@ -42,7 +42,7 @@ type SimpleType struct {
 	QualifiedName       string
 	TypeID              TypeID
 	Name                string
-	tag                 TypeTag
+	TypeTag             TypeTag
 	memberResolversOnce sync.Once
 	Importable          bool
 	Exportable          bool
@@ -60,7 +60,7 @@ var _ ContainerType = &SimpleType{}
 func (*SimpleType) IsType() {}
 
 func (t *SimpleType) Tag() TypeTag {
-	return t.tag
+	return t.TypeTag
 }
 
 func (t *SimpleType) String() string {

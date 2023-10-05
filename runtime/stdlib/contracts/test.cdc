@@ -3,177 +3,170 @@
 access(all)
 contract Test {
 
-    /// Blockchain emulates a real network.
+    /// backend emulates a real network.
+    ///
+    access(self)
+    let backend: {BlockchainBackend}
+
+    init(backend: {BlockchainBackend}) {
+        self.backend = backend
+    }
+
+    /// Executes a script and returns the script return value and the status.
+    /// `returnValue` field of the result will be `nil` if the script failed.
     ///
     access(all)
-    struct Blockchain {
+    fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult {
+        return self.backend.executeScript(script, arguments)
+    }
 
-        access(all)
-        let backend: {BlockchainBackend}
+    /// Creates a signer account by submitting an account creation transaction.
+    /// The transaction is paid by the service account.
+    /// The returned account can be used to sign and authorize transactions.
+    ///
+    access(all)
+    fun createAccount(): TestAccount {
+        return self.backend.createAccount()
+    }
 
-        init(backend: {BlockchainBackend}) {
-            self.backend = backend
-        }
+    /// Returns the account for the given address.
+    ///
+    access(all)
+    fun getAccount(_ address: Address): TestAccount {
+        return self.backend.getAccount(address)
+    }
 
-        /// Executes a script and returns the script return value and the status.
-        /// `returnValue` field of the result will be `nil` if the script failed.
-        ///
-        access(all)
-        fun executeScript(_ script: String, _ arguments: [AnyStruct]): ScriptResult {
-            return self.backend.executeScript(script, arguments)
-        }
+    /// Add a transaction to the current block.
+    ///
+    access(all)
+    fun addTransaction(_ tx: Transaction) {
+        self.backend.addTransaction(tx)
+    }
 
-        /// Creates a signer account by submitting an account creation transaction.
-        /// The transaction is paid by the service account.
-        /// The returned account can be used to sign and authorize transactions.
-        ///
-        access(all)
-        fun createAccount(): TestAccount {
-            return self.backend.createAccount()
-        }
+    /// Executes the next transaction in the block, if any.
+    /// Returns the result of the transaction, or nil if no transaction was scheduled.
+    ///
+    access(all)
+    fun executeNextTransaction(): TransactionResult? {
+        return self.backend.executeNextTransaction()
+    }
 
-        /// Add a transaction to the current block.
-        ///
-        access(all)
-        fun addTransaction(_ tx: Transaction) {
-            self.backend.addTransaction(tx)
-        }
+    /// Commit the current block.
+    /// Committing will fail if there are un-executed transactions in the block.
+    ///
+    access(all)
+    fun commitBlock() {
+        self.backend.commitBlock()
+    }
 
-        /// Executes the next transaction in the block, if any.
-        /// Returns the result of the transaction, or nil if no transaction was scheduled.
-        ///
-        access(all)
-        fun executeNextTransaction(): TransactionResult? {
-            return self.backend.executeNextTransaction()
-        }
+    /// Executes a given transaction and commit the current block.
+    ///
+    access(all)
+    fun executeTransaction(_ tx: Transaction): TransactionResult {
+        self.addTransaction(tx)
+        let txResult = self.executeNextTransaction()!
+        self.commitBlock()
+        return txResult
+    }
 
-        /// Commit the current block.
-        /// Committing will fail if there are un-executed transactions in the block.
-        ///
-        access(all)
-        fun commitBlock() {
-            self.backend.commitBlock()
-        }
-
-        /// Executes a given transaction and commit the current block.
-        ///
-        access(all)
-        fun executeTransaction(_ tx: Transaction): TransactionResult {
+    /// Executes a given set of transactions and commit the current block.
+    ///
+    access(all)
+    fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
+        for tx in transactions {
             self.addTransaction(tx)
+        }
+
+        var results: [TransactionResult] = []
+        for tx in transactions {
             let txResult = self.executeNextTransaction()!
-            self.commitBlock()
-            return txResult
+            results.append(txResult)
         }
 
-        /// Executes a given set of transactions and commit the current block.
-        ///
-        access(all)
-        fun executeTransactions(_ transactions: [Transaction]): [TransactionResult] {
-            for tx in transactions {
-                self.addTransaction(tx)
-            }
+        self.commitBlock()
+        return results
+    }
 
-            var results: [TransactionResult] = []
-            for tx in transactions {
-                let txResult = self.executeNextTransaction()!
-                results.append(txResult)
-            }
+    /// Deploys a given contract, and initilizes it with the arguments.
+    ///
+    access(all)
+    fun deployContract(
+        name: String,
+        path: String,
+        arguments: [AnyStruct]
+    ): Error? {
+        return self.backend.deployContract(
+            name: name,
+            path: path,
+            arguments: arguments
+        )
+    }
 
-            self.commitBlock()
-            return results
+    /// Returns all the logs from the blockchain, up to the calling point.
+    ///
+    access(all)
+    fun logs(): [String] {
+        return self.backend.logs()
+    }
+
+    /// Returns the service account of the blockchain. Can be used to sign
+    /// transactions with this account.
+    ///
+    access(all)
+    fun serviceAccount(): TestAccount {
+        return self.backend.serviceAccount()
+    }
+
+    /// Returns all events emitted from the blockchain.
+    ///
+    access(all)
+    fun events(): [AnyStruct] {
+        return self.backend.events(nil)
+    }
+
+    /// Returns all events emitted from the blockchain,
+    /// filtered by type.
+    ///
+    access(all)
+    fun eventsOfType(_ type: Type): [AnyStruct] {
+        return self.backend.events(type)
+    }
+
+    /// Resets the state of the blockchain to the given height.
+    ///
+    access(all)
+    fun reset(to height: UInt64) {
+        self.backend.reset(to: height)
+    }
+
+    /// Moves the time of the blockchain by the given delta,
+    /// which should be passed in the form of seconds.
+    ///
+    access(all)
+    fun moveTime(by delta: Fix64) {
+        self.backend.moveTime(by: delta)
+    }
+
+    /// Creates a snapshot of the blockchain, at the
+    /// current ledger state, with the given name.
+    ///
+    access(all)
+    fun createSnapshot(name: String) {
+        let err = self.backend.createSnapshot(name: name)
+        if err != nil {
+            panic(err!.message)
         }
+    }
 
-        /// Deploys a given contract, and initilizes it with the arguments.
-        ///
-        access(all)
-        fun deployContract(
-            name: String,
-            code: String,
-            account: TestAccount,
-            arguments: [AnyStruct]
-        ): Error? {
-            return self.backend.deployContract(
-                name: name,
-                code: code,
-                account: account,
-                arguments: arguments
-            )
-        }
-
-        /// Set the configuration to be used by the blockchain.
-        /// Overrides any existing configuration.
-        ///
-        access(all)
-        fun useConfiguration(_ configuration: Configuration) {
-            self.backend.useConfiguration(configuration)
-        }
-
-        /// Returns all the logs from the blockchain, up to the calling point.
-        ///
-        access(all)
-        fun logs(): [String] {
-            return self.backend.logs()
-        }
-
-        /// Returns the service account of the blockchain. Can be used to sign
-        /// transactions with this account.
-        ///
-        access(all)
-        fun serviceAccount(): TestAccount {
-            return self.backend.serviceAccount()
-        }
-
-        /// Returns all events emitted from the blockchain.
-        ///
-        access(all)
-        fun events(): [AnyStruct] {
-            return self.backend.events(nil)
-        }
-
-        /// Returns all events emitted from the blockchain,
-        /// filtered by type.
-        ///
-        access(all)
-        fun eventsOfType(_ type: Type): [AnyStruct] {
-            return self.backend.events(type)
-        }
-
-        /// Resets the state of the blockchain to the given height.
-        ///
-        access(all)
-        fun reset(to height: UInt64) {
-            self.backend.reset(to: height)
-        }
-
-        /// Moves the time of the blockchain by the given delta,
-        /// which should be passed in the form of seconds.
-        ///
-        access(all)
-        fun moveTime(by delta: Fix64) {
-            self.backend.moveTime(by: delta)
-        }
-
-        /// Creates a snapshot of the blockchain, at the
-        /// current ledger state, with the given name.
-        ///
-        access(all)
-        fun createSnapshot(name: String) {
-            let err = self.backend.createSnapshot(name: name)
-            if err != nil {
-                panic(err!.message)
-            }
-        }
-
-        /// Loads a snapshot of the blockchain, with the
-        /// given name, and updates the current ledger
-        /// state.
-        ///
-        access(all)
-        fun loadSnapshot(name: String) {
-            let err = self.backend.loadSnapshot(name: name)
-            if err != nil {
-                panic(err!.message)
-            }
+    /// Loads a snapshot of the blockchain, with the
+    /// given name, and updates the current ledger
+    /// state.
+    ///
+    access(all)
+    fun loadSnapshot(name: String) {
+        let err = self.backend.loadSnapshot(name: name)
+        if err != nil {
+            panic(err!.message)
         }
     }
 
@@ -183,7 +176,6 @@ contract Test {
         access(all)
         let test: fun(AnyStruct): Bool
 
-        access(all)
         init(test: fun(AnyStruct): Bool) {
             self.test = test
         }
@@ -275,6 +267,7 @@ contract Test {
     //
     access(all)
     struct Error {
+
         access(all)
         let message: String
 
@@ -297,20 +290,6 @@ contract Test {
         init(address: Address, publicKey: PublicKey) {
             self.address = address
             self.publicKey = publicKey
-        }
-    }
-
-    /// Configuration to be used by the blockchain.
-    /// Can be used to set the address mappings.
-    ///
-    access(all)
-    struct Configuration {
-
-        access(all)
-        let addresses: {String: Address}
-
-        init(addresses: {String: Address}) {
-            self.addresses = addresses
         }
     }
 
@@ -357,6 +336,11 @@ contract Test {
         access(all)
         fun createAccount(): TestAccount
 
+        /// Returns the account for the given address.
+        ///
+        access(all)
+        fun getAccount(_ address: Address): TestAccount
+
         /// Add a transaction to the current block.
         ///
         access(all)
@@ -379,16 +363,9 @@ contract Test {
         access(all)
         fun deployContract(
             name: String,
-            code: String,
-            account: TestAccount,
+            path: String,
             arguments: [AnyStruct]
         ): Error?
-
-        /// Set the configuration to be used by the blockchain.
-        /// Overrides any existing configuration.
-        ///
-        access(all)
-        fun useConfiguration(_ configuration: Configuration)
 
         /// Returns all the logs from the blockchain, up to the calling point.
         ///

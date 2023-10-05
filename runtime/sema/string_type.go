@@ -42,12 +42,17 @@ const StringTypeJoinFunctionDocString = `
 Returns a string after joining the array of strings with the provided separator.
 `
 
+const StringTypeSplitFunctionName = "split"
+const StringTypeSplitFunctionDocString = `
+Returns a variable-sized array of strings after splitting the string on the delimiter.
+`
+
 // StringType represents the string type
 var StringType = &SimpleType{
 	Name:          "String",
 	QualifiedName: "String",
 	TypeID:        "String",
-	tag:           StringTypeTag,
+	TypeTag:       StringTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
@@ -104,6 +109,12 @@ func init() {
 				StringTypeToLowerFunctionName,
 				StringTypeToLowerFunctionType,
 				stringTypeToLowerFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeSplitFunctionName,
+				StringTypeSplitFunctionType,
+				StringTypeSplitFunctionDocString,
 			),
 		})
 	}
@@ -334,4 +345,19 @@ var StringTypeJoinFunctionType = NewSimpleFunctionType(
 		},
 	},
 	StringTypeAnnotation,
+)
+
+var StringTypeSplitFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Identifier:     "separator",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	NewTypeAnnotation(
+		&VariableSizedType{
+			Type: StringType,
+		},
+	),
 )

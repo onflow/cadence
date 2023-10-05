@@ -4735,7 +4735,11 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
+	t.memberResolversOnce.Do(t.initializerMemberResolversFunc())
+}
+
+func (t *CompositeType) initializerMemberResolversFunc() func() {
+	return func() {
 		memberResolvers := MembersMapAsResolvers(t.Members)
 
 		// Check conformances.
@@ -4770,7 +4774,13 @@ func (t *CompositeType) initializeMemberResolvers() {
 		}
 
 		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
-	})
+	}
+}
+
+func (t *CompositeType) ResolveMembers() {
+	if t.Members.Len() != len(t.GetMembers()) {
+		t.initializerMemberResolversFunc()()
+	}
 }
 
 func (t *CompositeType) FieldPosition(name string, declaration ast.CompositeLikeDeclaration) ast.Position {
@@ -4917,6 +4927,48 @@ func NewFunctionMember(
 			ast.EmptyPosition,
 		),
 		DeclarationKind: common.DeclarationKindFunction,
+		VariableKind:    ast.VariableKindConstant,
+		TypeAnnotation:  NewTypeAnnotation(functionType),
+		ArgumentLabels:  functionType.ArgumentLabels(),
+		DocString:       docString,
+	}
+}
+
+func NewUnmeteredConstructorMember(
+	containerType Type,
+	access Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+	return NewConstructorMember(
+		nil,
+		containerType,
+		access,
+		identifier,
+		functionType,
+		docString,
+	)
+}
+
+func NewConstructorMember(
+	memoryGauge common.MemoryGauge,
+	containerType Type,
+	access Access,
+	identifier string,
+	functionType *FunctionType,
+	docString string,
+) *Member {
+
+	return &Member{
+		ContainerType: containerType,
+		Access:        access,
+		Identifier: ast.NewIdentifier(
+			memoryGauge,
+			identifier,
+			ast.EmptyPosition,
+		),
+		DeclarationKind: common.DeclarationKindInitializer,
 		VariableKind:    ast.VariableKindConstant,
 		TypeAnnotation:  NewTypeAnnotation(functionType),
 		ArgumentLabels:  functionType.ArgumentLabels(),

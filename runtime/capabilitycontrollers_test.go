@@ -2695,3 +2695,186 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
+
+	t.Parallel()
+
+	type operation struct {
+		name string
+		code string
+	}
+
+	type testCase struct {
+		name       string
+		setup      string
+		operations []operation
+	}
+
+	test := func(testCase testCase, operation operation) {
+
+		testName := fmt.Sprintf("%s: %s", testCase.name, operation.name)
+
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
+
+			rt := NewTestInterpreterRuntime()
+
+			tx := []byte(fmt.Sprintf(
+				`
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          %s
+                          %s
+                      }
+                  }
+                `,
+				testCase.setup,
+				operation.code,
+			))
+
+			address := common.MustBytesToAddress([]byte{0x1})
+			accountIDs := map[common.Address]uint64{}
+
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: NewTestLedger(nil, nil),
+				OnGetSigningAccounts: func() ([]Address, error) {
+					return []Address{address}, nil
+				},
+				OnEmitEvent: func(event cadence.Event) error {
+					return nil
+				},
+				OnGenerateAccountID: func(address common.Address) (uint64, error) {
+					accountID := accountIDs[address] + 1
+					accountIDs[address] = accountID
+					return accountID, nil
+				},
+			}
+
+			nextTransactionLocation := NewTransactionLocationGenerator()
+
+			// Test
+
+			err := rt.ExecuteTransaction(
+				Script{
+					Source: tx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+
+			require.ErrorContains(t, err, "controller is deleted")
+		})
+	}
+
+	testCases := []testCase{
+		{
+			name: "Storage capability controller",
+			setup: `
+              // Issue capability and get controller
+              let storageCapabilities = signer.capabilities.storage
+              let capability = storageCapabilities.issue<&AnyStruct>(/storage/test1)
+              let controller = storageCapabilities.getController(byCapabilityID: capability.id)!
+
+              // Prepare bound functions
+              let delete = controller.delete
+              let tag = controller.tag
+              let setTag = controller.setTag
+              let target = controller.target
+              let retarget = controller.retarget
+
+              // Delete
+              controller.delete()
+            `,
+			operations: []operation{
+				// Read
+				{
+					name: "get capability",
+					code: `controller.capability`,
+				},
+				{
+					name: "get tag",
+					code: `controller.tag`,
+				},
+				{
+					name: "get borrow type",
+					code: `controller.borrowType`,
+				},
+				{
+					name: "get ID",
+					code: `controller.capabilityID`,
+				},
+				// Mutate
+				{
+					name: "delete",
+					code: `delete()`,
+				},
+				{
+					name: "set tag",
+					code: `setTag("test")`,
+				},
+				{
+					name: "target",
+					code: `target()`,
+				},
+				{
+					name: "retarget",
+					code: `retarget(/storage/test2)`,
+				},
+			},
+		},
+		{
+			name: "Account capability controller",
+			setup: `
+              // Issue capability and get controller
+              let accountCapabilities = signer.capabilities.account
+              let capability = accountCapabilities.issue<auth(Storage) &Account>()
+              let controller = accountCapabilities.getController(byCapabilityID: capability.id)!
+
+              // Prepare bound functions
+              let delete = controller.delete
+              let tag = controller.tag
+              let setTag = controller.setTag
+
+              // Delete
+              controller.delete()
+            `,
+			operations: []operation{
+				// Read
+				{
+					name: "get capability",
+					code: `controller.capability`,
+				},
+				{
+					name: "get tag",
+					code: `controller.tag`,
+				},
+				{
+					name: "get borrow type",
+					code: `controller.borrowType`,
+				},
+				{
+					name: "get ID",
+					code: `controller.capabilityID`,
+				},
+				// Mutate
+				{
+					name: "delete",
+					code: `delete()`,
+				},
+				{
+					name: "set tag",
+					code: `setTag("test")`,
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		for _, operation := range testCase.operations {
+			test(testCase, operation)
+		}
+	}
+}

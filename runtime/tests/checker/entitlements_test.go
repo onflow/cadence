@@ -7222,3 +7222,221 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 		)
 	})
 }
+
+func TestCheckEntitlementOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("optional chain function call", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            struct S {
+                access(X) fun foo() {}
+            }
+
+            fun bar(r: &S?) {
+                r?.foo()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+	})
+
+	t.Run("optional chain field access", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X, Y) let foo: Int
+                init() {
+                    self.foo = 0
+                }
+            }
+
+            fun bar(r: auth(X) &S?) {
+                r?.foo
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+	})
+
+	t.Run("optional chain non reference", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X, Y) let foo: Int
+                init() {
+                    self.foo = 0
+                }
+            }
+
+            fun bar(r: S?) {
+                r?.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("optional chain mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+            entitlement Y
+
+            entitlement mapping E {
+                X -> Y
+            }
+
+            struct S {
+                access(E) let foo: auth(E) &Int
+                init() {
+                    self.foo = &0 as auth(Y) &Int
+                }
+            }
+
+            fun bar(r: (auth(X) &S)?): (auth(Y) &Int)? {
+                return r?.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckEntitlementMissingInMap(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("missing type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        access(all) entitlement X
+        access(all) entitlement mapping M {
+            X -> X
+            NonExistingEntitlement -> X
+        }
+        access(all) struct S {
+            access(M) var foo: auth(M) &Int
+            init() {
+                self.foo = &3 as auth(X) &Int
+                var selfRef = &self as auth(X) &S
+                selfRef.foo
+            }
+        }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.NotDeclaredError{}, errors[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errors[1])
+	})
+
+	t.Run("non entitlement type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        access(all) entitlement X
+        access(all) entitlement mapping M {
+            X -> X
+            Int -> X
+        }
+        access(all) struct S {
+            access(M) var foo: auth(M) &Int
+            init() {
+                self.foo = &3 as auth(X) &Int
+                var selfRef = &self as auth(X) &S
+                selfRef.foo
+            }
+        }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errors[0])
+	})
+}
+
+func TestInterpretMappingEscalation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("escalate", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Insert
+				Y -> Remove
+			}
+			struct S {
+				access(M) var member: auth(M) &[Int]?
+				init() {
+					self.member = nil;
+				}
+				access(all) fun grantRemovePrivileges(param: auth(Insert) &[Int]): Void{
+					var selfRef = &self as auth(X) &S;
+					selfRef.member = param;
+				}
+			}
+			fun main(): Void {
+				var arr: [Int] = [123];
+				var arrRef = &arr as auth(Insert) &[Int];
+				let s = S()
+				s.grantRemovePrivileges(param: arrRef);
+				s.member?.removeLast()
+			} 
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("field assign", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Insert
+				Y -> Remove
+			}
+			struct S {
+				access(M) var member: auth(M) &[Int]?
+				init() {
+					self.member = nil;
+				}
+				access(all) fun grantRemovePrivileges(sRef: auth(X) &S, param: auth(Insert) &[Int]): Void{
+					sRef.member = param;
+				}
+			}
+			fun main(): Void {
+				var arr: [Int] = [123];
+				var arrRef = &arr as auth(Insert) &[Int];
+				let s = S()
+				s.grantRemovePrivileges(sRef: &s as auth(X) &S, param: arrRef);
+				s.member?.removeLast()
+			} 
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+}

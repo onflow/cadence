@@ -2099,57 +2099,30 @@ var CapabilitiesMappingType = &EntitlementMapType{
 
 func init() {
 	BuiltinEntitlementMappings[AccountMappingType.Identifier] = AccountMappingType
-	addToBaseActivation(AccountMappingType)
 	BuiltinEntitlementMappings[CapabilitiesMappingType.Identifier] = CapabilitiesMappingType
-	addToBaseActivation(CapabilitiesMappingType)
 	BuiltinEntitlements[StorageType.Identifier] = StorageType
-	addToBaseActivation(StorageType)
 	BuiltinEntitlements[SaveValueType.Identifier] = SaveValueType
-	addToBaseActivation(SaveValueType)
 	BuiltinEntitlements[LoadValueType.Identifier] = LoadValueType
-	addToBaseActivation(LoadValueType)
 	BuiltinEntitlements[CopyValueType.Identifier] = CopyValueType
-	addToBaseActivation(CopyValueType)
 	BuiltinEntitlements[BorrowValueType.Identifier] = BorrowValueType
-	addToBaseActivation(BorrowValueType)
 	BuiltinEntitlements[ContractsType.Identifier] = ContractsType
-	addToBaseActivation(ContractsType)
 	BuiltinEntitlements[AddContractType.Identifier] = AddContractType
-	addToBaseActivation(AddContractType)
 	BuiltinEntitlements[UpdateContractType.Identifier] = UpdateContractType
-	addToBaseActivation(UpdateContractType)
 	BuiltinEntitlements[RemoveContractType.Identifier] = RemoveContractType
-	addToBaseActivation(RemoveContractType)
 	BuiltinEntitlements[KeysType.Identifier] = KeysType
-	addToBaseActivation(KeysType)
 	BuiltinEntitlements[AddKeyType.Identifier] = AddKeyType
-	addToBaseActivation(AddKeyType)
 	BuiltinEntitlements[RevokeKeyType.Identifier] = RevokeKeyType
-	addToBaseActivation(RevokeKeyType)
 	BuiltinEntitlements[InboxType.Identifier] = InboxType
-	addToBaseActivation(InboxType)
 	BuiltinEntitlements[PublishInboxCapabilityType.Identifier] = PublishInboxCapabilityType
-	addToBaseActivation(PublishInboxCapabilityType)
 	BuiltinEntitlements[UnpublishInboxCapabilityType.Identifier] = UnpublishInboxCapabilityType
-	addToBaseActivation(UnpublishInboxCapabilityType)
 	BuiltinEntitlements[ClaimInboxCapabilityType.Identifier] = ClaimInboxCapabilityType
-	addToBaseActivation(ClaimInboxCapabilityType)
 	BuiltinEntitlements[CapabilitiesType.Identifier] = CapabilitiesType
-	addToBaseActivation(CapabilitiesType)
 	BuiltinEntitlements[StorageCapabilitiesType.Identifier] = StorageCapabilitiesType
-	addToBaseActivation(StorageCapabilitiesType)
 	BuiltinEntitlements[AccountCapabilitiesType.Identifier] = AccountCapabilitiesType
-	addToBaseActivation(AccountCapabilitiesType)
 	BuiltinEntitlements[PublishCapabilityType.Identifier] = PublishCapabilityType
-	addToBaseActivation(PublishCapabilityType)
 	BuiltinEntitlements[UnpublishCapabilityType.Identifier] = UnpublishCapabilityType
-	addToBaseActivation(UnpublishCapabilityType)
 	BuiltinEntitlements[GetStorageCapabilityControllerType.Identifier] = GetStorageCapabilityControllerType
-	addToBaseActivation(GetStorageCapabilityControllerType)
 	BuiltinEntitlements[IssueStorageCapabilityControllerType.Identifier] = IssueStorageCapabilityControllerType
-	addToBaseActivation(IssueStorageCapabilityControllerType)
 	BuiltinEntitlements[GetAccountCapabilityControllerType.Identifier] = GetAccountCapabilityControllerType
-	addToBaseActivation(GetAccountCapabilityControllerType)
 	BuiltinEntitlements[IssueAccountCapabilityControllerType.Identifier] = IssueAccountCapabilityControllerType
-	addToBaseActivation(IssueAccountCapabilityControllerType)
 }

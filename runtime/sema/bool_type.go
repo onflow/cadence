@@ -23,7 +23,7 @@ var BoolType = &SimpleType{
 	Name:          "Bool",
 	QualifiedName: "Bool",
 	TypeID:        "Bool",
-	tag:           BoolTypeTag,
+	TypeTag:       BoolTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
