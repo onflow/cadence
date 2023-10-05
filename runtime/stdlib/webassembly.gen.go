@@ -94,7 +94,7 @@ const WebAssembly_InstanceTypeGetExportFunctionName = "getExport"
 
 var WebAssembly_InstanceTypeGetExportFunctionTypeParameterT = &sema.TypeParameter{
 	Name:      "T",
-	TypeBound: AnyStructType,
+	TypeBound: sema.AnyStructType,
 }
 
 var WebAssembly_InstanceTypeGetExportFunctionType = &sema.FunctionType{
@@ -105,7 +105,7 @@ var WebAssembly_InstanceTypeGetExportFunctionType = &sema.FunctionType{
 	Parameters: []sema.Parameter{
 		{
 			Identifier:     "name",
-			TypeAnnotation: sema.NewTypeAnnotation(StringType),
+			TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(

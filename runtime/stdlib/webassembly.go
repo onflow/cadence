@@ -27,9 +27,6 @@ import (
 
 //go:generate go run ../sema/gen -p stdlib webassembly.cdc webassembly.gen.go
 
-var AnyStructType = sema.AnyStructType
-var StringType = sema.StringType
-
 func newWebAssemblyCompileAndInstantiateFunction(
 	gauge common.MemoryGauge,
 	handler WebAssemblyContractHandler,

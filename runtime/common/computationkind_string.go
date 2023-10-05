@@ -27,6 +27,7 @@ func _() {
 	_ = x[ComputationKindSTDLIBUnsafeRandom-1102]
 	_ = x[ComputationKindSTDLIBRLPDecodeString-1108]
 	_ = x[ComputationKindSTDLIBRLPDecodeList-1109]
+	_ = x[ComputationKindWebAssemblyFuel-1112]
 }
 
 const (
@@ -38,6 +39,7 @@ const (
 	_ComputationKind_name_5 = "EncodeValue"
 	_ComputationKind_name_6 = "STDLIBPanicSTDLIBAssertSTDLIBUnsafeRandom"
 	_ComputationKind_name_7 = "STDLIBRLPDecodeStringSTDLIBRLPDecodeList"
+	_ComputationKind_name_8 = "WebAssemblyFuel"
 )
 
 var (
@@ -73,6 +75,8 @@ func (i ComputationKind) String() string {
 	case 1108 <= i && i <= 1109:
 		i -= 1108
 		return _ComputationKind_name_7[_ComputationKind_index_7[i]:_ComputationKind_index_7[i+1]]
+	case i == 1112:
+		return _ComputationKind_name_8
 	default:
 		return "ComputationKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
