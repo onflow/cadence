@@ -1,6 +1,6 @@
 {
   "name": "@onflow/cadence-parser",
-  "version": "0.42.0",
+  "version": "0.42.1",
   "description": "The Cadence parser",
   "homepage": "https://github.com/onflow/cadence",
   "repository": {
@@ -8,19 +8,19 @@
     "url": "https://github.com/onflow/cadence.git"
   },
   "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
+  "module": "./dist/esm/index.mjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js",
+      "import": "./dist/esm/index.mjs",
       "types": "./dist/types/index.d.ts"
     }
   },
   "scripts": {
     "build": "npm run build:types && npm run build:esm && npm run build:cjs && GOARCH=wasm GOOS=js go build -o ./dist/cadence-parser.wasm ../../runtime/cmd/parse",
     "build:types": "tsc --emitDeclarationOnly --module system --outDir dist/types",
-    "build:esm": "tsc --module es6 --target es6 --outDir dist/esm --declaration false",
+    "build:esm": "esbuild src/index.ts --bundle --sourcemap --format=esm --outfile=dist/esm/index.mjs",
     "build:cjs": "tsc --module commonjs --target es6 --outDir dist/cjs --declaration false",
     "test": "jest"
   },
@@ -28,6 +28,7 @@
   "devDependencies": {
     "@types/jest": "^28.1.4",
     "@types/node": "^18.0.3",
+    "esbuild": "0.19.4",
     "jest": "^28.1.2",
     "node-fetch": "^2.6.1",
     "ts-jest": "^28.0.5",
