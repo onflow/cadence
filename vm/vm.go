@@ -27,15 +27,11 @@ import (
 
 	"C"
 
-	wasmtime "github.com/bytecodealliance/wasmtime-go/v7"
+	"github.com/bytecodealliance/wasmtime-go/v12"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 )
-import (
-	"errors"
-
-	"github.com/bytecodealliance/wasmtime-go/v12"
-)
+import "errors"
 
 type VM interface {
 	Invoke(name string, arguments ...interpreter.Value) (interpreter.Value, error)
