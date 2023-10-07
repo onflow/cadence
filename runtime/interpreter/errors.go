@@ -961,15 +961,60 @@ func (RecursiveTransferError) Error() string {
 	return "recursive transfer of value"
 }
 
-// WasmtimeNewModule
-type WasmtimeNewModule struct {
+// WebAssemblyNewModule
+type WebAssemblyNewModule struct {
 }
 
-var _ errors.UserError = WasmtimeNewModule{}
+var _ errors.UserError = WebAssemblyNewModule{}
 
-func (WasmtimeNewModule) IsUserError() {}
+func (WebAssemblyNewModule) IsUserError() {}
 
-func (WasmtimeNewModule) Error() string {
+func (WebAssemblyNewModule) Error() string {
+	return ""
+}
+
+// WebAssemblyNewInstance
+type WebAssemblyNewInstance struct {
+}
+
+var _ errors.UserError = WebAssemblyNewInstance{}
+
+func (WebAssemblyNewInstance) IsUserError() {}
+
+func (WebAssemblyNewInstance) Error() string {
+	return ""
+}
+
+type WebAssemblyStoreFuel struct {
+}
+
+var _ errors.UserError = WebAssemblyNewInstance{}
+
+func (WebAssemblyStoreFuel) IsUserError() {}
+
+func (WebAssemblyStoreFuel) Error() string {
+	return ""
+}
+
+type WebAssemblyfunctionCall struct {
+}
+
+var _ errors.UserError = WebAssemblyfunctionCall{}
+
+func (WebAssemblyfunctionCall) IsUserError() {}
+
+func (WebAssemblyfunctionCall) Error() string {
+	return ""
+}
+
+type WebAssemblystoreConsumeFuel struct {
+}
+
+var _ errors.UserError = WebAssemblystoreConsumeFuel{}
+
+func (WebAssemblystoreConsumeFuel) IsUserError() {}
+
+func (WebAssemblystoreConsumeFuel) Error() string {
 	return ""
 }
 
