@@ -961,6 +961,7 @@ func (RecursiveTransferError) Error() string {
 	return "recursive transfer of value"
 }
 
+// WasmtimeNewModule
 type WasmtimeNewModule struct {
 }
 
