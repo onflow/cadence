@@ -961,6 +961,14 @@ func (RecursiveTransferError) Error() string {
 	return "recursive transfer of value"
 }
 
+var _ error.UserError = WasmtimeNewModule{}
+
+func (WasmtimeNewModule) IsUserError() {}
+
+func (WasmtimeNewModule) Error() string {
+
+}
+
 func WrappedExternalError(err error) error {
 	switch err := err.(type) {
 	case
