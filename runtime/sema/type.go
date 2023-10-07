@@ -5352,7 +5352,7 @@ func (t *InclusiveRangeType) IsInvalidType() bool {
 }
 
 func (t *InclusiveRangeType) IsStorable(results map[*Member]bool) bool {
-	return t.MemberType.IsStorable(results)
+	return false
 }
 
 func (t *InclusiveRangeType) IsExportable(results map[*Member]bool) bool {

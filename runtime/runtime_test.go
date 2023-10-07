@@ -2417,8 +2417,15 @@ func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) 
 	)
 	RequireError(t, err)
 
-	var subErr *atree.ExternalError
-	require.ErrorAs(t, err, &subErr)
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Contains(t, typeMismatchError.SecondaryError(), "expected `Storable`, got `InclusiveRange<Int>`")
 }
 
 func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
