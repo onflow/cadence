@@ -27,7 +27,7 @@ import (
 
 	"C"
 
-	"github.com/bytecodealliance/wasmtime-go/v12"
+	wasmtime "github.com/bytecodealliance/wasmtime-go/v12"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 )
