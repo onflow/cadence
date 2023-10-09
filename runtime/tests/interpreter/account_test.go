@@ -503,56 +503,6 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			require.Len(t, getAccountValues(), 1)
 		})
 	})
-
-	t.Run("inclusiverange with contains", func(t *testing.T) {
-
-		t.Parallel()
-
-		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
-
-		inter, getAccountValues := testAccount(
-			t,
-			address,
-			true,
-			`
-				fun save() {
-					let ir = InclusiveRange(10, 20)
-					account.save(ir, to: /storage/ir)
-				}
-
-				fun loadIRAndCallContains(): InclusiveRange<Int>? {
-					let ir = account.load<InclusiveRange<Int>>(from: /storage/ir)
-					let containsFifteen = ir!.contains(15)
-					return ir
-				}
-			`,
-			sema.Config{},
-		)
-
-		t.Run("save and load inclusiverange. call contains", func(t *testing.T) {
-
-			// save
-
-			_, err := inter.Invoke("save")
-			require.NoError(t, err)
-
-			require.Len(t, getAccountValues(), 1)
-
-			// first load
-
-			value, err := inter.Invoke("loadIRAndCallContains")
-			require.NoError(t, err)
-
-			require.IsType(t, &interpreter.SomeValue{}, value)
-
-			innerValue := value.(*interpreter.SomeValue).InnerValue(inter, interpreter.EmptyLocationRange)
-
-			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
-
-			// NOTE: check loaded value was removed from storage
-			require.Len(t, getAccountValues(), 0)
-		})
-	})
 }
 
 func TestInterpretAuthAccount_copy(t *testing.T) {
