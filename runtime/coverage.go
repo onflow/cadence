@@ -120,6 +120,9 @@ type CoverageReport struct {
 	// This filter can be used to inject custom logic on
 	// each location/program inspection.
 	LocationFilter LocationFilter `json:"-"`
+	// Contains a mapping with human-friendly names for
+	// locations. This could be the filepath of a location.
+	LocationMappings map[string]string `json:"-"`
 }
 
 // WithLocationFilter sets the LocationFilter for the current
@@ -128,6 +131,14 @@ func (r *CoverageReport) WithLocationFilter(
 	locationFilter LocationFilter,
 ) {
 	r.LocationFilter = locationFilter
+}
+
+// WithLocationMappings sets the LocationMappings for the current
+// CoverageReport.
+func (r *CoverageReport) WithLocationMappings(
+	locationMappings map[string]string,
+) {
+	r.LocationMappings = locationMappings
 }
 
 // ExcludeLocation adds the given location to the map of excluded
@@ -423,7 +434,8 @@ type lcAlias struct {
 func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 	coverage := make(map[string]lcAlias, len(r.Coverage))
 	for location, locationCoverage := range r.Coverage { // nolint:maprange
-		coverage[location.ID()] = lcAlias{
+		locationSource := r.locationSource(location)
+		coverage[locationSource] = lcAlias{
 			LineHits:    locationCoverage.LineHits,
 			MissedLines: locationCoverage.MissedLines(),
 			Statements:  locationCoverage.Statements,
@@ -505,7 +517,8 @@ func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	for _, location := range locations {
 		coverage := r.Coverage[location]
-		_, err := fmt.Fprintf(buf, "TN:\nSF:%s\n", location.ID())
+		locationSource := r.locationSource(location)
+		_, err := fmt.Fprintf(buf, "TN:\nSF:%s\n", locationSource)
 		if err != nil {
 			return nil, err
 		}
@@ -538,4 +551,26 @@ func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// Given a common.Location, returns its mapped source, if any.
+// Defaults to the location's ID().
+func (r *CoverageReport) locationSource(location common.Location) string {
+	var locationIdentifier string
+
+	switch loc := location.(type) {
+	case common.AddressLocation:
+		locationIdentifier = loc.Name
+	case common.StringLocation:
+		locationIdentifier = loc.String()
+	default:
+		locationIdentifier = loc.ID()
+	}
+
+	locationSource, ok := r.LocationMappings[locationIdentifier]
+	if !ok {
+		locationSource = location.ID()
+	}
+
+	return locationSource
 }
