@@ -1783,7 +1783,12 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		identifier := function.Identifier.Identifier
 
-		functionType := checker.functionType(function.ParameterList, function.ReturnTypeAnnotation)
+		functionType := checker.functionType(
+			function.IsNative(),
+			function.TypeParameterList,
+			function.ParameterList,
+			function.ReturnTypeAnnotation,
+		)
 
 		argumentLabels := function.ParameterList.EffectiveArgumentLabels()
 
