@@ -957,7 +957,7 @@ func TestInterpretMemberAccess(t *testing.T) {
             fun test() {
                 let dict: {String: {String: Int}?} = {"one": {"two": 2}}
                 let dictRef = &dict as &{String: {String: Int}?}
-                var x: (&{String: Int})?? = dictRef["one"]
+                var x: &{String: Int}?? = dictRef["one"]
             }
         `)
 

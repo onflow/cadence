@@ -1859,7 +1859,7 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             entitlement mapping M {}
             resource interface R {
-                access(M) let foo: (auth(M) &Int)?
+                access(M) let foo: auth(M) &Int?
             }
         `)
 
@@ -1888,7 +1888,7 @@ func TestCheckInvalidEntitlementMappingAuth(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             entitlement mapping M {}
             resource interface R {
-                access(M) let foo: fun((auth(M) &Int?))
+                access(M) let foo: fun(auth(M) &Int?)
             }
         `)
 
@@ -7307,7 +7307,7 @@ func TestCheckEntitlementOptionalChaining(t *testing.T) {
                 }
             }
 
-            fun bar(r: (auth(X) &S)?): (auth(Y) &Int)? {
+            fun bar(r: auth(X) &S?): auth(Y) &Int? {
                 return r?.foo
             }
         `)

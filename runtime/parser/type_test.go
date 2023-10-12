@@ -472,6 +472,54 @@ func TestParseReferenceType(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("double nested reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("&(&S)")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected non-function parenthesized type",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("double nested authorized reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth (X) &(&S)")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected non-function parenthesized type",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("inner nested authorized reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("&(auth (X) &S)")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected non-function parenthesized type",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseOptionalReferenceType(t *testing.T) {
@@ -1034,6 +1082,36 @@ func TestParseFunctionType(t *testing.T) {
 		)
 	})
 
+	t.Run("parenthesized no parameters, Void return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("(fun():Void)")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionType{
+				PurityAnnotation:         ast.FunctionPurityUnspecified,
+				ParameterTypeAnnotations: nil,
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Void",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("view function type", func(t *testing.T) {
 
 		t.Parallel()
@@ -1058,6 +1136,36 @@ func TestParseFunctionType(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("parenthesized view function type", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("(view fun ():Void)")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionType{
+				PurityAnnotation:         ast.FunctionPurityView,
+				ParameterTypeAnnotations: nil,
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Void",
+							Pos:        ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+					EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
 				},
 			},
 			result,
@@ -2231,7 +2339,6 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 		let test: fun(Int8): (fun(Int16): Int32) = nothing
 	`
 	_, errs := testParseProgram(code)
-
 	require.Empty(t, errs)
 }
 
@@ -2965,78 +3072,30 @@ func TestParseParenthesizedTypes(t *testing.T) {
 	t.Parallel()
 
 	code := `let x: (Int) = 42`
-	prog, errs := testParseProgram(code)
-	require.Empty(t, errs)
-	expected := []ast.Declaration{
-		&ast.VariableDeclaration{
-			Access:     ast.AccessNotSpecified,
-			IsConstant: true,
-			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
-			TypeAnnotation: &ast.TypeAnnotation{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "Int",
-						Pos:        ast.Position{Offset: 8, Line: 1, Column: 8},
-					},
-				},
-				StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+	_, errs := testParseProgram(code)
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "unexpected non-function parenthesized type",
+				Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 			},
-			Value: &ast.IntegerExpression{
-				PositiveLiteral: []uint8("42"),
-				Value:           big.NewInt(42),
-				Base:            10,
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
-					EndPos:   ast.Position{Offset: 16, Line: 1, Column: 16},
-				},
-			},
-			Transfer: &ast.Transfer{
-				Operation: 1,
-				Pos:       ast.Position{Offset: 13, Line: 1, Column: 13},
-			},
-			StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, prog.Declarations())
+		errs.(Error).Errors,
+	)
 }
 
 func TestParseNestedParenthesizedTypes(t *testing.T) {
 	t.Parallel()
 
 	code := `let x: (((((((((Int))))))))) = 42`
-	prog, errs := testParseProgram(code)
-	require.Empty(t, errs)
-	expected := []ast.Declaration{
-		&ast.VariableDeclaration{
-			Access:     ast.AccessNotSpecified,
-			IsConstant: true,
-			Identifier: ast.Identifier{Identifier: "x", Pos: ast.Position{Offset: 4, Line: 1, Column: 4}},
-			TypeAnnotation: &ast.TypeAnnotation{
-				Type: &ast.NominalType{
-					Identifier: ast.Identifier{
-						Identifier: "Int",
-						Pos:        ast.Position{Offset: 16, Line: 1, Column: 16},
-					},
-				},
-				StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+	_, errs := testParseProgram(code)
+	utils.AssertEqualWithDiff(t,
+		[]error{
+			&SyntaxError{
+				Message: "unexpected non-function parenthesized type",
+				Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 			},
-			Value: &ast.IntegerExpression{
-				PositiveLiteral: []uint8("42"),
-				Value:           big.NewInt(42),
-				Base:            10,
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 31, Line: 1, Column: 31},
-					EndPos:   ast.Position{Offset: 32, Line: 1, Column: 32},
-				},
-			},
-			Transfer: &ast.Transfer{
-				Operation: 1,
-				Pos:       ast.Position{Offset: 29, Line: 1, Column: 29},
-			},
-			StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, prog.Declarations())
+		errs.(Error).Errors,
+	)
 }

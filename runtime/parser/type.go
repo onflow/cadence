@@ -156,13 +156,57 @@ func init() {
 func defineParenthesizedTypes() {
 	setTypeNullDenotation(lexer.TokenParenOpen, func(p *parser, token lexer.Token) (ast.Type, error) {
 		p.skipSpaceAndComments()
-		innerType, err := parseType(p, lowestBindingPower)
-		if err != nil {
-			return nil, err
+		switch string(p.currentTokenSource()) {
+		case KeywordFun:
+
+			p.nextSemanticToken()
+
+			typ, err := parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified)
+			if err != nil {
+				return nil, err
+			}
+
+			p.skipSpaceAndComments()
+
+			_, err = p.mustOne(lexer.TokenParenClose)
+			if err != nil {
+				return nil, err
+			}
+			return typ, nil
+
+		case KeywordView:
+
+			p.nextSemanticToken()
+
+			current := p.current
+			cursor := p.tokens.Cursor()
+
+			// look ahead for the `fun` keyword, if it exists
+			p.skipSpaceAndComments()
+
+			if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
+				// skip the `fun` keyword
+				p.nextSemanticToken()
+				typ, err := parseFunctionType(p, current.StartPos, ast.FunctionPurityView)
+				if err != nil {
+					return nil, err
+				}
+
+				p.skipSpaceAndComments()
+
+				_, err = p.mustOne(lexer.TokenParenClose)
+				if err != nil {
+					return nil, err
+				}
+				return typ, nil
+			}
+
+			// backtrack otherwise - view is a nominal type here
+			p.current = current
+			p.tokens.Revert(cursor)
 		}
-		p.skipSpaceAndComments()
-		_, err = p.mustOne(lexer.TokenParenClose)
-		return innerType, err
+
+		return nil, p.syntaxError("unexpected non-function parenthesized type")
 	})
 }
 

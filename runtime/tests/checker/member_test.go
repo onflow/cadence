@@ -694,29 +694,11 @@ func TestCheckMemberAccess(t *testing.T) {
             fun test() {
                 let dict: {String: {String: Int}?} = {"one": {"two": 2}}
                 let dictRef = &dict as &{String: {String: Int}?}
-                var x: (&{String: Int})?? = dictRef["one"]
+                var x: &{String: Int}?? = dictRef["one"]
             }
         `)
 
 		require.NoError(t, err)
-	})
-
-	t.Run("dictionary reference, optional typed value, mismatch types", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            fun test() {
-                let dict: {String: {String: Int}?} = {"one": {"two": 2}}
-                let dictRef = &dict as &{String: {String: Int}?}
-
-                // Must return an optional reference, not a reference to an optional
-                var x: &({String: Int}??) = dictRef["one"]
-            }
-        `)
-
-		errors := RequireCheckerErrors(t, err, 1)
-		typeMismatchError := &sema.TypeMismatchError{}
-		require.ErrorAs(t, errors[0], &typeMismatchError)
 	})
 
 	t.Run("dictionary reference, primitive typed value", func(t *testing.T) {
