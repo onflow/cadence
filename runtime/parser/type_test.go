@@ -489,6 +489,22 @@ func TestParseReferenceType(t *testing.T) {
 		)
 	})
 
+	t.Run("double nested reference no parens", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("& &S")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected nested reference type",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+	})
+
 	t.Run("double nested authorized reference", func(t *testing.T) {
 
 		t.Parallel()

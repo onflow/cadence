@@ -312,18 +312,29 @@ func defineOptionalType() {
 }
 
 func defineReferenceType() {
-	defineType(prefixType{
-		tokenType:    lexer.TokenAmpersand,
-		bindingPower: typeLeftBindingPowerReference,
-		nullDenotation: func(p *parser, right ast.Type, tokenRange ast.Range) ast.Type {
+	setTypeNullDenotation(
+		lexer.TokenAmpersand,
+		func(p *parser, token lexer.Token) (ast.Type, error) {
+			// reference types may not be directly nested
+
+			p.skipSpaceAndComments()
+
+			if p.current.Is(lexer.TokenAmpersand) {
+				return nil, p.syntaxError("unexpected nested reference type")
+			}
+
+			right, err := parseType(p, typeLeftBindingPowerReference)
+			if err != nil {
+				return nil, err
+			}
 			return ast.NewReferenceType(
 				p.memoryGauge,
 				nil,
 				right,
-				tokenRange.StartPos,
-			)
+				token.Range.StartPos,
+			), nil
 		},
-	})
+	)
 }
 
 func defineIntersectionOrDictionaryType() {
