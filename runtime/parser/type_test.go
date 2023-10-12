@@ -481,7 +481,7 @@ func TestParseReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected non-function parenthesized type",
+					Message: "expected 'fun', got '&'",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -497,7 +497,7 @@ func TestParseReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected non-function parenthesized type",
+					Message: "expected 'fun', got '&'",
 					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
 				},
 			},
@@ -513,7 +513,7 @@ func TestParseReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "unexpected non-function parenthesized type",
+					Message: "expected 'fun', got identifier",
 					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
 				},
 			},
@@ -1134,7 +1134,7 @@ func TestParseFunctionType(t *testing.T) {
 					StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
 				},
 			},
@@ -1164,7 +1164,7 @@ func TestParseFunctionType(t *testing.T) {
 					StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
 				},
 			},
@@ -2493,7 +2493,7 @@ func TestParseViewFunctionTypeWithNewSyntax(t *testing.T) {
 						StartPos: ast.Position{Offset: 33, Line: 2, Column: 32},
 					},
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 						EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
 					},
 				},
@@ -3076,7 +3076,7 @@ func TestParseParenthesizedTypes(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "unexpected non-function parenthesized type",
+				Message: "expected 'fun', got identifier",
 				Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 			},
 		},
@@ -3092,7 +3092,7 @@ func TestParseNestedParenthesizedTypes(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "unexpected non-function parenthesized type",
+				Message: "expected 'fun', got '('",
 				Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 			},
 		},
