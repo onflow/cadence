@@ -982,13 +982,13 @@ var _ errors.UserError = WebAssemblyNewInstance{}
 func (WebAssemblyNewInstance) IsUserError() {}
 
 func (WebAssemblyNewInstance) Error() string {
-	return ""
+	return fmt.Sprintf("Instantiate WebAssembly Module error:")
 }
 
 type WebAssemblyStoreFuel struct {
 }
 
-var _ errors.UserError = WebAssemblyNewInstance{}
+var _ errors.UserError = WebAssemblyStoreFuel{}
 
 func (WebAssemblyStoreFuel) IsUserError() {}
 
