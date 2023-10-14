@@ -1008,6 +1008,7 @@ func (WebAssemblyfunctionCall) Error() string {
 }
 
 type WebAssemblystoreConsumeFuel struct {
+	remainingFuel uint64
 }
 
 var _ errors.UserError = WebAssemblystoreConsumeFuel{}
@@ -1015,9 +1016,32 @@ var _ errors.UserError = WebAssemblystoreConsumeFuel{}
 func (WebAssemblystoreConsumeFuel) IsUserError() {}
 
 func (WebAssemblystoreConsumeFuel) Error() string {
+
+	/*
+		return fmt.Sprintf(
+			"incorrect number of arguments: expected %d, got %d",
+			e.ParameterCount,
+			e.ArgumentCount,
+		)
+	*/
+
 	return ""
 }
 
+type WebAssemblyStoreAddFuel struct {
+	TodoAvailableFuel uint64
+}
+
+var _ errors.UserError = WebAssemblyStoreAddFuel{}
+
+func (WebAssemblyStoreAddFuel) IsUserError() {
+
+}
+
+func (e WebAssemblyStoreAddFuel) Error() string {
+
+	return fmt.Sprintf("", e.TodoAvailableFuel)
+}
 func WrappedExternalError(err error) error {
 	switch err := err.(type) {
 	case
