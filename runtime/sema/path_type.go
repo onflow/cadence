@@ -30,10 +30,6 @@ var PathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
-	// IsSuperTypeOf: func(subType Type) bool {
-	// 	return IsSubType(subType, StoragePathType) ||
-	// 		IsSubType(subType, CapabilityPathType)
-	// },
 }
 
 // StoragePathType
@@ -62,10 +58,6 @@ var CapabilityPathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
-	// IsSuperTypeOf: func(subType Type) bool {
-	// 	return IsSubType(subType, PrivatePathType) ||
-	// 		IsSubType(subType, PublicPathType)
-	// },
 }
 
 // PublicPathType
