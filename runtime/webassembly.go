@@ -60,7 +60,7 @@ func (m WasmtimeWebAssemblyModule) InstantiateWebAssemblyModule(_ common.MemoryG
 	instance, err := wasmtime.NewInstance(m.Store, m.Module, nil)
 	if err != nil {
 		// TODO: wrap error
-		return nil, err
+		return nil, interpreter.WebAssemblyNewInstanceError{}
 	}
 	return WasmtimeWebAssemblyInstance{
 		Instance: instance,

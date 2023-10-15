@@ -974,15 +974,15 @@ func (WebAssemblyNewModule) Error() string {
 }
 
 // WebAssemblyNewInstance
-type WebAssemblyNewInstance struct {
+type WebAssemblyNewInstanceError struct {
 }
 
-var _ errors.UserError = WebAssemblyNewInstance{}
+var _ errors.UserError = WebAssemblyNewInstanceError{}
 
-func (WebAssemblyNewInstance) IsUserError() {}
+func (WebAssemblyNewInstanceError) IsUserError() {}
 
-func (WebAssemblyNewInstance) Error() string {
-	return fmt.Sprintf("Instantiate WebAssembly Module error:")
+func (WebAssemblyNewInstanceError) Error() string {
+	return fmt.Sprint("failed to Instantiate WebAssembly Module")
 }
 
 type WebAssemblyStoreFuel struct {
