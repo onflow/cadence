@@ -702,6 +702,34 @@ func TestCoverageReportWithLocationMappings(t *testing.T) {
 		`
 		require.JSONEq(t, expected, string(actual))
 	})
+
+	t.Run("with IdentifierLocation", func(t *testing.T) {
+		location := common.IdentifierLocation("Answer")
+		coverageReport.InspectProgram(location, program)
+
+		actual, err := json.Marshal(coverageReport)
+		require.NoError(t, err)
+
+		expected := `
+		  {
+		    "coverage": {
+		      "cadence/scripts/answer.cdc": {
+		        "line_hits": {
+		          "3": 0,
+		          "4": 0,
+		          "5": 0,
+		          "7": 0
+		        },
+		        "missed_lines": [3, 4, 5, 7],
+		        "statements": 4,
+		        "percentage": "0.0%"
+		      }
+		    },
+		    "excluded_locations": []
+		  }
+		`
+		require.JSONEq(t, expected, string(actual))
+	})
 }
 
 func TestCoverageReportReset(t *testing.T) {

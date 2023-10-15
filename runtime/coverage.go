@@ -119,10 +119,10 @@ type CoverageReport struct {
 	ExcludedLocations map[common.Location]struct{} `json:"-"`
 	// This filter can be used to inject custom logic on
 	// each location/program inspection.
-	LocationFilter LocationFilter `json:"-"`
-	// Contains a mapping with human-friendly names for
-	// locations. This could be the filepath of a location.
-	LocationMappings map[string]string `json:"-"`
+	locationFilter LocationFilter
+	// Contains a mapping with source paths for each
+	// location.
+	locationMappings map[string]string
 }
 
 // WithLocationFilter sets the LocationFilter for the current
@@ -130,7 +130,7 @@ type CoverageReport struct {
 func (r *CoverageReport) WithLocationFilter(
 	locationFilter LocationFilter,
 ) {
-	r.LocationFilter = locationFilter
+	r.locationFilter = locationFilter
 }
 
 // WithLocationMappings sets the LocationMappings for the current
@@ -138,7 +138,7 @@ func (r *CoverageReport) WithLocationFilter(
 func (r *CoverageReport) WithLocationMappings(
 	locationMappings map[string]string,
 ) {
-	r.LocationMappings = locationMappings
+	r.locationMappings = locationMappings
 }
 
 // ExcludeLocation adds the given location to the map of excluded
@@ -178,7 +178,7 @@ func (r *CoverageReport) AddLineHit(location Location, line int) {
 // If the CoverageReport.LocationFilter is present, and calling it with the given
 // location results to false, the method call also results in a NO-OP.
 func (r *CoverageReport) InspectProgram(location Location, program *ast.Program) {
-	if r.LocationFilter != nil && !r.LocationFilter(location) {
+	if r.locationFilter != nil && !r.locationFilter(location) {
 		return
 	}
 	if r.IsLocationExcluded(location) {
@@ -434,7 +434,7 @@ type lcAlias struct {
 func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 	coverage := make(map[string]lcAlias, len(r.Coverage))
 	for location, locationCoverage := range r.Coverage { // nolint:maprange
-		locationSource := r.locationSource(location)
+		locationSource := r.sourcePathForLocation(location)
 		coverage[locationSource] = lcAlias{
 			LineHits:    locationCoverage.LineHits,
 			MissedLines: locationCoverage.MissedLines(),
@@ -517,7 +517,7 @@ func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	for _, location := range locations {
 		coverage := r.Coverage[location]
-		locationSource := r.locationSource(location)
+		locationSource := r.sourcePathForLocation(location)
 		_, err := fmt.Fprintf(buf, "TN:\nSF:%s\n", locationSource)
 		if err != nil {
 			return nil, err
@@ -555,7 +555,7 @@ func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
 
 // Given a common.Location, returns its mapped source, if any.
 // Defaults to the location's ID().
-func (r *CoverageReport) locationSource(location common.Location) string {
+func (r *CoverageReport) sourcePathForLocation(location common.Location) string {
 	var locationIdentifier string
 
 	switch loc := location.(type) {
@@ -563,11 +563,13 @@ func (r *CoverageReport) locationSource(location common.Location) string {
 		locationIdentifier = loc.Name
 	case common.StringLocation:
 		locationIdentifier = loc.String()
+	case common.IdentifierLocation:
+		locationIdentifier = loc.String()
 	default:
 		locationIdentifier = loc.ID()
 	}
 
-	locationSource, ok := r.LocationMappings[locationIdentifier]
+	locationSource, ok := r.locationMappings[locationIdentifier]
 	if !ok {
 		locationSource = location.ID()
 	}
