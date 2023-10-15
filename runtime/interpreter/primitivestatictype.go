@@ -74,7 +74,7 @@ const (
 	PrimitiveStaticTypeCharacter
 	PrimitiveStaticTypeMetaType
 	PrimitiveStaticTypeBlock
-	_
+	PrimitiveStaticTypeHashableStruct
 	_
 	_
 	_
@@ -200,7 +200,8 @@ func (t PrimitiveStaticType) elementSize() uint {
 	case
 		PrimitiveStaticTypeAnyStruct,
 		PrimitiveStaticTypeAnyResource,
-		PrimitiveStaticTypeAny:
+		PrimitiveStaticTypeAny,
+		PrimitiveStaticTypeHashableStruct:
 		return UnknownElementSize
 	case PrimitiveStaticTypeVoid:
 		return uint(len(cborVoidValue))
@@ -319,6 +320,9 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 
 	case PrimitiveStaticTypeAnyStruct:
 		return sema.AnyStructType
+
+	case PrimitiveStaticTypeHashableStruct:
+		return sema.HashableStructType
 
 	case PrimitiveStaticTypeAnyResource:
 		return sema.AnyResourceType
@@ -573,6 +577,8 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeAny
 	case sema.AnyStructType:
 		typ = PrimitiveStaticTypeAnyStruct
+	case sema.HashableStructType:
+		typ = PrimitiveStaticTypeHashableStruct
 	case sema.AnyResourceType:
 		typ = PrimitiveStaticTypeAnyResource
 	case sema.AuthAccountType:

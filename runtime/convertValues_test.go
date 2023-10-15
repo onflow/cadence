@@ -3891,7 +3891,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					interpreter.EmptyLocationRange,
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeInt8,
-						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
 					interpreter.NewUnmeteredInt8Value(1), interpreter.NewUnmeteredIntValueFromInt64(100),
 					interpreter.NewUnmeteredInt8Value(2), interpreter.NewUnmeteredStringValue("hello"),
@@ -3903,7 +3903,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					interpreter.EmptyLocationRange,
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
-						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
 					interpreter.NewUnmeteredInt8Value(1), interpreter.NewUnmeteredStringValue("foo"),
 					interpreter.NewUnmeteredIntValueFromInt64(2), interpreter.NewUnmeteredIntValueFromInt64(50),

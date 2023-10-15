@@ -2635,6 +2635,26 @@ func (t AccountKeyType) Equal(other Type) bool {
 	return t == other
 }
 
+// HashableStructType
+type HashableStructType struct{}
+
+var TheHashableStructType = HashableStructType{}
+var _ Type = &HashableStructType{}
+
+func NewTheHashableStruct() HashableStructType {
+	return TheHashableStructType
+}
+
+func (HashableStructType) isType() {}
+
+func (HashableStructType) ID() string {
+	return "HashableStruct"
+}
+
+func (t HashableStructType) Equal(other Type) bool {
+	return t == other
+}
+
 // TypeWithCachedTypeID recursively caches type ID of type t.
 // This is needed because each type ID is lazily cached on
 // its first use in ID() to avoid performance penalty.

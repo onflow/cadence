@@ -3127,7 +3127,10 @@ func init() {
 
 				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 				if keyType == nil ||
-					!sema.IsValidDictionaryKeyType(invocation.Interpreter.MustConvertStaticToSemaType(keyType)) {
+					!sema.IsSubType(
+						invocation.Interpreter.MustConvertStaticToSemaType(keyType),
+						sema.HashableStructType,
+					) {
 					return Nil
 				}
 

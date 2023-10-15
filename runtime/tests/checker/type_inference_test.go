@@ -1094,10 +1094,13 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				},
 			},
 			{
-				name:              "no supertype for inner keys",
-				code:              `let x = {0: {10: 1, 20: 2}, 1: {"one": 1, "two": 2}}`,
-				expectedKeyType:   sema.IntType,
-				expectedValueType: sema.AnyStructType,
+				name:            "no supertype for inner keys",
+				code:            `let x = {0: {10: 1, 20: 2}, 1: {"one": 1, "two": 2}}`,
+				expectedKeyType: sema.IntType,
+				expectedValueType: &sema.DictionaryType{
+					KeyType:   sema.HashableStructType,
+					ValueType: sema.IntType,
+				},
 			},
 			{
 				name: "no supertype for inner keys with resource values",
