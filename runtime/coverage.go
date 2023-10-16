@@ -112,11 +112,11 @@ type LocationFilter func(location Location) bool
 // locations from coverage collection.
 type CoverageReport struct {
 	// Contains a *LocationCoverage per location.
-	Coverage map[common.Location]*LocationCoverage `json:"-"`
+	Coverage map[common.Location]*LocationCoverage
 	// Contains locations whose programs are already inspected.
-	Locations map[common.Location]struct{} `json:"-"`
+	Locations map[common.Location]struct{}
 	// Contains locations excluded from coverage collection.
-	ExcludedLocations map[common.Location]struct{} `json:"-"`
+	ExcludedLocations map[common.Location]struct{}
 	// This filter can be used to inject custom logic on
 	// each location/program inspection.
 	locationFilter LocationFilter
@@ -416,8 +416,6 @@ func NewCoverageReport() *CoverageReport {
 	}
 }
 
-type crAlias CoverageReport
-
 // To avoid the overhead of having the Percentage & MissedLines
 // as fields in the LocationCoverage struct, we simply populate
 // this lcAlias struct, with the corresponding methods, upon marshalling.
@@ -445,11 +443,9 @@ func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Coverage          map[string]lcAlias `json:"coverage"`
 		ExcludedLocations []string           `json:"excluded_locations"`
-		*crAlias
 	}{
 		Coverage:          coverage,
 		ExcludedLocations: r.ExcludedLocationIDs(),
-		crAlias:           (*crAlias)(r),
 	})
 }
 
@@ -460,10 +456,7 @@ func (r *CoverageReport) UnmarshalJSON(data []byte) error {
 	cr := &struct {
 		Coverage          map[string]lcAlias `json:"coverage"`
 		ExcludedLocations []string           `json:"excluded_locations"`
-		*crAlias
-	}{
-		crAlias: (*crAlias)(r),
-	}
+	}{}
 
 	if err := json.Unmarshal(data, cr); err != nil {
 		return err
