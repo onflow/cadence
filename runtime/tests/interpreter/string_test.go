@@ -596,3 +596,50 @@ func TestInterpretStringSplit(t *testing.T) {
 		),
 	)
 }
+
+func TestInterpretStringReplaceAll(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		fun replaceAll(): String {
+			return "👪////❤️".replaceAll(of: "////", with: "||")
+		}
+		fun replaceAllSpaceWithDoubleSpace(): String {
+			return "👪 ❤️ Abc6 ;123".replaceAll(of: " ", with: "  ")
+		}
+		fun replaceAllWithUnicodeEquivalence(): String {
+			return "Caf\u{65}\u{301}ABc".replaceAll(of: "\u{e9}", with: "X")
+		}
+		fun testEmptyString(): String {
+			return "".replaceAll(of: "//", with: "abc")
+		}
+		fun testEmptyOf(): String {
+			return "abc".replaceAll(of: "", with: "1")
+		}
+		fun testNoMatch(): String {
+			return "pqrS;asdf".replaceAll(of: ";;", with: "does_not_matter")
+		}
+	`)
+
+	testCase := func(t *testing.T, funcName string, expected *interpreter.StringValue) {
+		t.Run(funcName, func(t *testing.T) {
+			result, err := inter.Invoke(funcName)
+			require.NoError(t, err)
+
+			RequireValuesEqual(
+				t,
+				inter,
+				expected,
+				result,
+			)
+		})
+	}
+
+	testCase(t, "replaceAll", interpreter.NewUnmeteredStringValue("👪||❤️"))
+	testCase(t, "replaceAllSpaceWithDoubleSpace", interpreter.NewUnmeteredStringValue("👪  ❤️  Abc6  ;123"))
+	testCase(t, "replaceAllWithUnicodeEquivalence", interpreter.NewUnmeteredStringValue("CafXABc"))
+	testCase(t, "testEmptyString", interpreter.NewUnmeteredStringValue(""))
+	testCase(t, "testEmptyOf", interpreter.NewUnmeteredStringValue("1a1b1c1"))
+	testCase(t, "testNoMatch", interpreter.NewUnmeteredStringValue("pqrS;asdf"))
+}
