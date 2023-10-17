@@ -19844,6 +19844,7 @@ var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
 var _ AuthorizedValue = &StorageReferenceValue{}
 var _ ReferenceValue = &StorageReferenceValue{}
+var _ IterableValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
 	authorization Authorization,
@@ -20196,6 +20197,37 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*StorageReferenceValue) isReference() {}
 
+func (v *StorageReferenceValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {
+	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+	return referenceValueIterator(interpreter, referencedValue, v.BorrowedType, locationRange)
+}
+
+func referenceValueIterator(
+	interpreter *Interpreter,
+	referencedValue Value,
+	borrowedType sema.Type,
+	locationRange LocationRange,
+) ValueIterator {
+	referencedIterable, ok := referencedValue.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	referencedValueIterator := referencedIterable.Iterator(interpreter, locationRange)
+
+	referencedType, ok := borrowedType.(sema.ValueIndexableType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	elementType := referencedType.ElementType(false)
+
+	return ReferenceValueIterator{
+		iterator:    referencedValueIterator,
+		elementType: elementType,
+	}
+}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -20544,20 +20576,10 @@ func (*EphemeralReferenceValue) isReference() {}
 
 func (v *EphemeralReferenceValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {
 	referencedValue := v.MustReferencedValue(interpreter, locationRange)
-	referenceValueIterator := referencedValue.(IterableValue).Iterator(interpreter, locationRange)
-
-	referencedType, ok := v.BorrowedType.(sema.ValueIndexableType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	elementType := referencedType.ElementType(false)
-
-	return ReferenceValueIterator{
-		iterator:    referenceValueIterator,
-		elementType: elementType,
-	}
+	return referenceValueIterator(interpreter, referencedValue, v.BorrowedType, locationRange)
 }
+
+// ReferenceValueIterator
 
 type ReferenceValueIterator struct {
 	iterator    ValueIterator
@@ -20573,6 +20595,7 @@ func (i ReferenceValueIterator) Next(interpreter *Interpreter) Value {
 		return nil
 	}
 
+	// For non-primitive values, return a reference.
 	if i.elementType.ContainFieldsOrElements() {
 		return NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, element, i.elementType)
 	}

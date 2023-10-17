@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -295,7 +296,7 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 	)
 }
 
-func TestInterpretReferencesInForLoop(t *testing.T) {
+func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 	t.Parallel()
 
@@ -384,5 +385,104 @@ func TestInterpretReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+}
+
+func TestInterpretStorageReferencesInForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Primitive array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            fun test() {
+                var array = ["Hello", "World", "Foo", "Bar"]
+                account.storage.save(array, to: /storage/array)
+
+                let arrayRef = account.storage.borrow<&[String]>(from: /storage/array)!
+
+                for element in arrayRef {
+                    let e: String = element    // Must be the concrete string
+                }
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("Struct array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            struct Foo{}
+
+            fun test() {
+                var array = [Foo(), Foo()]
+                account.storage.save(array, to: /storage/array)
+
+                let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
+
+                for element in arrayRef {
+                    let e: &Foo = element    // Must be a reference
+                }
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("Resource array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            resource Foo{}
+
+            fun test() {
+                var array <- [ <- create Foo(), <- create Foo()]
+                account.storage.save(<- array, to: /storage/array)
+
+                let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
+
+                for element in arrayRef {
+                    let e: &Foo = element    // Must be a reference
+                }
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("Moved resource array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            resource Foo{}
+
+            fun test() {
+                var array <- [ <- create Foo(), <- create Foo()]
+                account.storage.save(<- array, to: /storage/array)
+
+                let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
+
+                let movedArray <- account.storage.load<@[Foo]>(from: /storage/array)!
+
+                for element in arrayRef {
+                    let e: &Foo = element    // Must be a reference
+                }
+
+                destroy movedArray
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.DereferenceError{})
 	})
 }
