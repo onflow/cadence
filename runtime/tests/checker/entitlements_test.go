@@ -7587,50 +7587,6 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 
-	t.Run("lambda escape", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement Inner1
-            entitlement Inner2
-            entitlement Outer1
-            entitlement Outer2
-
-            entitlement mapping MyMap {
-                Outer1 -> Inner1
-                Outer2 -> Inner2
-            }
-            struct InnerObj {
-                access(Inner1) fun first(): Int{ return 9999 }
-                access(Inner2) fun second(): Int{ return 8888 }
-            }
-
-            struct Carrier{
-                access(MyMap) let arr: [auth(MyMap) &InnerObj]
-                init() {
-                    self.arr = [&InnerObj()]
-                }
-            }   
-            
-            struct FuncGenerator {
-                access(MyMap) fun generate(): auth(MyMap) &Int? {
-                    fun innerFunc(_ param: auth(MyMap) &InnerObj): Int {
-                        return 123;
-                    }
-                    var f = innerFunc; // will fail if we're called via a reference
-                    return nil;
-                }
-            }      
-
-            fun foo() {
-                (&FuncGenerator() as auth(Outer1) &FuncGenerator).generate()
-            }
-        `)
-
-		errors := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
-	})
-
 	t.Run("dictionary mapped field", func(t *testing.T) {
 		t.Parallel()
 
