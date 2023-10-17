@@ -330,10 +330,10 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			resultingType = NewSimpleFunctionType(
 				ty.Purity,
 				ty.Parameters,
-				NewTypeAnnotation(substituteConcreteAuthorization(ty.ReturnTypeAnnotation.Type)),
+				ty.ReturnTypeAnnotation.Map(checker.memoryGauge, make(map[*TypeParameter]*TypeParameter), substituteConcreteAuthorization),
 			)
 		default:
-			resultingType = substituteConcreteAuthorization(resultingType)
+			resultingType = resultingType.Map(checker.memoryGauge, make(map[*TypeParameter]*TypeParameter), substituteConcreteAuthorization)
 		}
 	}
 
