@@ -375,4 +375,21 @@ func TestCheckReferencesInForLoop(t *testing.T) {
 		errors := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errors[0])
 	})
+
+	t.Run("Non existing type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                var foo = Foo()
+                var fooRef = &foo as &Foo
+
+                for element in fooRef {}
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.NotDeclaredError{}, errors[0])
+		assert.IsType(t, &sema.NotDeclaredError{}, errors[1])
+	})
 }
