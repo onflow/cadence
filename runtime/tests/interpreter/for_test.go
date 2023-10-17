@@ -294,3 +294,95 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 		ArrayElements(inter, arrayValue),
 	)
 }
+
+func TestInterpretReferencesInForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Primitive array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var array = ["Hello", "World", "Foo", "Bar"]
+                var arrayRef = &array as &[String]
+
+                for element in arrayRef {
+                    let e: String = element
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Struct array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                var array = [Foo(), Foo()]
+                var arrayRef = &array as &[Foo]
+
+                for element in arrayRef {
+                    let e: &Foo = element
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Resource array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo{}
+
+            fun main() {
+                var array <- [ <- create Foo(), <- create Foo()]
+                var arrayRef = &array as &[Foo]
+
+                for element in arrayRef {
+                    let e: &Foo = element
+                }
+
+                destroy array
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Moved resource array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo{}
+
+            fun main() {
+                var array <- [ <- create Foo(), <- create Foo()]
+                var arrayRef = returnSameRef(&array as &[Foo])
+                var movedArray <- array
+
+                for element in arrayRef {
+                    let e: &Foo = element
+                }
+
+                destroy movedArray
+            }
+
+            fun returnSameRef(_ ref: &[Foo]): &[Foo] {
+                return ref
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+}

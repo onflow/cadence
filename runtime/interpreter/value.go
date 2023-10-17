@@ -234,7 +234,7 @@ type ContractValue interface {
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
-	Iterator(interpreter *Interpreter) ValueIterator
+	Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator
 }
 
 // ValueIterator is an iterator which returns values.
@@ -1580,7 +1580,7 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *StringValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
@@ -1614,7 +1614,7 @@ type ArrayValueIterator struct {
 	atreeIterator *atree.ArrayIterator
 }
 
-func (v *ArrayValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	arrayIterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -20212,6 +20212,7 @@ var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 var _ AuthorizedValue = &EphemeralReferenceValue{}
 var _ ReferenceValue = &EphemeralReferenceValue{}
+var _ IterableValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
 	authorization Authorization,
@@ -20540,6 +20541,44 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 }
 
 func (*EphemeralReferenceValue) isReference() {}
+
+func (v *EphemeralReferenceValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {
+	referencedValue := v.MustReferencedValue(interpreter, locationRange)
+	referenceValueIterator := referencedValue.(IterableValue).Iterator(interpreter, locationRange)
+
+	referencedType, ok := v.BorrowedType.(sema.ValueIndexableType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	elementType := referencedType.ElementType(false)
+
+	return ReferenceValueIterator{
+		iterator:    referenceValueIterator,
+		elementType: elementType,
+	}
+}
+
+type ReferenceValueIterator struct {
+	iterator    ValueIterator
+	elementType sema.Type
+}
+
+var _ ValueIterator = ReferenceValueIterator{}
+
+func (i ReferenceValueIterator) Next(interpreter *Interpreter) Value {
+	element := i.iterator.Next(interpreter)
+
+	if element == nil {
+		return nil
+	}
+
+	if i.elementType.ContainFieldsOrElements() {
+		return NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, element, i.elementType)
+	}
+
+	return element
+}
 
 // AddressValue
 type AddressValue common.Address

@@ -338,7 +338,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 		panic(errors.NewUnreachableError())
 	}
 
-	iterator := iterable.Iterator(interpreter)
+	iterator := iterable.Iterator(interpreter, locationRange)
 
 	var index IntValue
 	if statement.Index != nil {
