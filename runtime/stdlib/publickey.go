@@ -76,8 +76,6 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 
 func NewPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		sema.PublicKeyTypeName,
@@ -104,8 +102,6 @@ func NewPublicKeyConstructor(
 				publicKey,
 				signAlgo,
 				publicKeyValidator,
-				publicKeySignatureVerifier,
-				blsPoPVerifier,
 			)
 		},
 	)
@@ -117,8 +113,6 @@ func NewPublicKeyFromFields(
 	publicKey *interpreter.ArrayValue,
 	signAlgo *interpreter.SimpleCompositeValue,
 	publicKeyValidator PublicKeyValidator,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		inter,
@@ -126,8 +120,6 @@ func NewPublicKeyFromFields(
 		publicKey,
 		signAlgo,
 		newPublicKeyValidationHandler(publicKeyValidator),
-		newPublicKeyVerifySignatureFunction(inter, publicKeySignatureVerifier),
-		newPublicKeyVerifyPoPFunction(inter, blsPoPVerifier),
 	)
 }
 
@@ -139,8 +131,6 @@ func NewPublicKeyValue(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	publicKey *PublicKey,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		inter,
@@ -154,8 +144,6 @@ func NewPublicKeyValue(
 		),
 		// public keys converted from "native" (non-interpreter) keys are assumed to be already validated
 		assumePublicKeyIsValid,
-		newPublicKeyVerifySignatureFunction(inter, publicKeySignatureVerifier),
-		newPublicKeyVerifyPoPFunction(inter, blsPoPVerifier),
 	)
 }
 

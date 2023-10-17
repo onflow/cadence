@@ -45,7 +45,7 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		NewGetCurrentBlockFunction(handler),
 		NewGetAccountFunction(handler),
 		NewAuthAccountConstructor(handler),
-		NewPublicKeyConstructor(handler, handler, handler),
+		NewPublicKeyConstructor(handler),
 		NewBLSContract(nil, handler),
 		NewHashAlgorithmConstructor(handler),
 	}

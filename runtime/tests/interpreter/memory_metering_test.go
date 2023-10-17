@@ -1100,8 +1100,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
-				nil,
-				nil,
 			),
 			stdlib.SignatureAlgorithmConstructor,
 		} {
@@ -1154,8 +1152,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
-				nil,
-				nil,
 			),
 			stdlib.SignatureAlgorithmConstructor,
 		} {
