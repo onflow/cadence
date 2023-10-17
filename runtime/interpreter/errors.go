@@ -961,16 +961,16 @@ func (RecursiveTransferError) Error() string {
 	return "recursive transfer of value"
 }
 
-// WebAssemblyNewModule
-type WebAssemblyNewModule struct {
+// WebAssemblyNewModuleError
+type WebAssemblyNewModuleError struct {
 }
 
-var _ errors.UserError = WebAssemblyNewModule{}
+var _ errors.UserError = WebAssemblyNewModuleError{}
 
-func (WebAssemblyNewModule) IsUserError() {}
+func (WebAssemblyNewModuleError) IsUserError() {}
 
-func (WebAssemblyNewModule) Error() string {
-	return ""
+func (WebAssemblyNewModuleError) Error() string {
+	return fmt.Sprint("failed to load module with the given configuration in engine.")
 }
 
 // WebAssemblyNewInstance
@@ -982,7 +982,7 @@ var _ errors.UserError = WebAssemblyNewInstanceError{}
 func (WebAssemblyNewInstanceError) IsUserError() {}
 
 func (WebAssemblyNewInstanceError) Error() string {
-	return fmt.Sprint("failed to Instantiate WebAssembly Module")
+	return fmt.Sprintf("failed to Instantiate WebAssembly Module")
 }
 
 type WebAssemblyStoreFuel struct {
@@ -1008,39 +1008,31 @@ func (WebAssemblyfunctionCall) Error() string {
 }
 
 type WebAssemblystoreConsumeFuel struct {
-	remainingFuel uint64
+	RemainingFuel uint64
 }
 
 var _ errors.UserError = WebAssemblystoreConsumeFuel{}
 
 func (WebAssemblystoreConsumeFuel) IsUserError() {}
 
-func (WebAssemblystoreConsumeFuel) Error() string {
+func (e WebAssemblystoreConsumeFuel) Error() string {
 
-	/*
-		return fmt.Sprintf(
-			"incorrect number of arguments: expected %d, got %d",
-			e.ParameterCount,
-			e.ArgumentCount,
-		)
-	*/
-
-	return ""
+	return fmt.Sprintf("WebAssembly ConsumeFuel Failed :  RemainingFuel :%d ", e.RemainingFuel)
 }
 
-type WebAssemblyStoreAddFuel struct {
+type WebAssemblyStoreAddFuelError struct {
 	TodoAvailableFuel uint64
 }
 
-var _ errors.UserError = WebAssemblyStoreAddFuel{}
+var _ errors.UserError = WebAssemblyStoreAddFuelError{}
 
-func (WebAssemblyStoreAddFuel) IsUserError() {
+func (WebAssemblyStoreAddFuelError) IsUserError() {
 
 }
 
-func (e WebAssemblyStoreAddFuel) Error() string {
+func (e WebAssemblyStoreAddFuelError) Error() string {
 
-	return fmt.Sprintf("", e.TodoAvailableFuel)
+	return fmt.Sprintf("WebAssembly AddFuel Failed :  AvailableFuel :%d ", e.TodoAvailableFuel)
 }
 func WrappedExternalError(err error) error {
 	switch err := err.(type) {

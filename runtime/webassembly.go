@@ -44,8 +44,7 @@ func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error
 
 	module, err := wasmtime.NewModule(engine, bytes)
 	if err != nil {
-		// TODO: wrap error
-		return nil, err
+		return nil, interpreter.WebAssemblyNewModuleError{}
 	}
 
 	return WasmtimeWebAssemblyModule{
@@ -59,7 +58,6 @@ var _ stdlib.WebAssemblyModule = WasmtimeWebAssemblyModule{}
 func (m WasmtimeWebAssemblyModule) InstantiateWebAssemblyModule(_ common.MemoryGauge) (stdlib.WebAssemblyInstance, error) {
 	instance, err := wasmtime.NewInstance(m.Store, m.Module, nil)
 	if err != nil {
-		// TODO: wrap error
 		return nil, interpreter.WebAssemblyNewInstanceError{}
 	}
 	return WasmtimeWebAssemblyInstance{
@@ -191,11 +189,13 @@ func newWasmtimeFunctionWebAssemblyExport(
 
 			// TODO: get remaining computation and convert to fuel.
 			//   needs e.g. invocation.Interpreter.RemainingComputation()
-			const todoAvailableFuel = 1000
+			var todoAvailableFuel uint64 = 1000
 			err := store.AddFuel(todoAvailableFuel)
 			if err != nil {
-				// TODO: wrap error
-				panic(err)
+				return interpreter.WebAssemblyStoreAddFuelError{
+					TodoAvailableFuel: todoAvailableFuel,
+				}
+
 			}
 
 			result, err := function.Call(store, convertedArguments...)
@@ -211,14 +211,16 @@ func newWasmtimeFunctionWebAssemblyExport(
 
 			remainingFuel, err := store.ConsumeFuel(0)
 			if err != nil {
-				// TODO: wrap error
-				panic(err)
+				panic(interpreter.WebAssemblystoreConsumeFuel{
+					RemainingFuel: remainingFuel,
+				})
 			}
 
 			remainingFuel, err = store.ConsumeFuel(remainingFuel)
 			if err != nil {
-				// TODO: wrap error
-				panic(err)
+				panic(interpreter.WebAssemblystoreConsumeFuel{
+					RemainingFuel: remainingFuel,
+				})
 			}
 
 			if remainingFuel != 0 {
