@@ -1263,6 +1263,7 @@ func (checker *Checker) functionType(
 	} else {
 		checker.entitlementMappingInScope = nil
 	}
+	defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
 
 	convertedParameters := checker.parameters(parameterList)
 
@@ -1271,7 +1272,6 @@ func (checker *Checker) functionType(
 		convertedReturnTypeAnnotation =
 			checker.ConvertTypeAnnotation(returnTypeAnnotation)
 	}
-	checker.entitlementMappingInScope = oldMappedAccess
 
 	return &FunctionType{
 		Purity:               PurityFromAnnotation(purity),

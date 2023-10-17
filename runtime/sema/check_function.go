@@ -187,20 +187,23 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				oldMappedAccess := checker.entitlementMappingInScope
-				if mappedAccess, isMappedAccess := access.(*EntitlementMapAccess); isMappedAccess {
-					checker.entitlementMappingInScope = mappedAccess.Type
-				}
+				func() {
+					oldMappedAccess := checker.entitlementMappingInScope
+					if mappedAccess, isMappedAccess := access.(*EntitlementMapAccess); isMappedAccess {
+						checker.entitlementMappingInScope = mappedAccess.Type
+					} else {
+						checker.entitlementMappingInScope = nil
+					}
+					defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
 
-				checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
-					checker.visitFunctionBlock(
-						functionBlock,
-						functionType.ReturnTypeAnnotation,
-						checkResourceLoss,
-					)
-				})
-
-				checker.entitlementMappingInScope = oldMappedAccess
+					checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
+						checker.visitFunctionBlock(
+							functionBlock,
+							functionType.ReturnTypeAnnotation,
+							checkResourceLoss,
+						)
+					})
+				}()
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
