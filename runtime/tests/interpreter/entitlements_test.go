@@ -3439,13 +3439,6 @@ func TestInterpretEntitlementMappingComplexFields(t *testing.T) {
 				access(Inner2) fun second(): Int{ return 8888 }
 			}
 
-			struct Carrier{
-				access(MyMap) let arr: [auth(MyMap) &InnerObj]
-				init() {
-					self.arr = [&InnerObj()]
-				}
-			}   
-			
 			struct FuncGenerator {
 				access(MyMap) fun generate(): auth(MyMap) &Int? {
 					fun innerFunc(_ param: auth(MyMap) &InnerObj): Int {
