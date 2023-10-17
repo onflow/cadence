@@ -1461,19 +1461,78 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
+	t.Run("accessor function with mapped ref arg", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement H
+            entitlement mapping M {
+                E -> F
+                G -> H
+            }
+            struct interface S {
+                access(M) fun foo(_ arg: auth(M) &Int): auth(M) &Int
+            }
+
+            fun foo(s: auth(E) &{S}) {
+                s.foo(&1 as auth(F) &Int)
+            }
+        `)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("accessor function with invalid mapped ref arg", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            entitlement mapping M {}
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement H
+            entitlement mapping M {
+                E -> F
+                G -> H
+            }
             struct interface S {
-                access(M) fun foo(arg: auth(M) &Int): auth(M) &Int
+                access(M) fun foo(_ arg: auth(M) &Int): auth(M) &Int
+            }
+
+            fun foo(s: auth(E) &{S}) {
+                s.foo(&1 as auth(H) &Int)
             }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("accessor function with full mapped ref arg", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement H
+            entitlement mapping M {
+                E -> F
+                G -> H
+            }
+            struct interface S {
+                access(M) fun foo(_ arg: auth(M) &Int): auth(M) &Int
+            }
+
+            fun foo(s: {S}) {
+                s.foo(&1 as auth(F, H) &Int)
+            }
+        `)
+
+		assert.NoError(t, err)
 	})
 
 	t.Run("multiple mappings conjunction", func(t *testing.T) {
@@ -7736,4 +7795,42 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
 		require.IsType(t, &sema.InvalidAccessError{}, errors[1])
 	})
 
+	t.Run("lambda escape", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement Inner1
+			entitlement Inner2
+			entitlement Outer1
+			entitlement Outer2
+
+			entitlement mapping MyMap {
+				Outer1 -> Inner1
+				Outer2 -> Inner2
+			}
+			struct InnerObj {
+				access(Inner1) fun first(): Int{ return 9999 }
+				access(Inner2) fun second(): Int{ return 8888 }
+			}
+
+			struct FuncGenerator {
+				access(MyMap) fun generate(): auth(MyMap) &Int? {
+                    // cannot declare lambda with mapped entitlement
+					fun innerFunc(_ param: auth(MyMap) &InnerObj): Int {
+						return 123;
+					}
+					var f = innerFunc; // will fail if we're called via a reference
+					return nil;
+				}
+			}      
+
+			fun test() {
+				(&FuncGenerator() as auth(Outer1) &FuncGenerator).generate()
+			}
+		`)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errors[0])
+	})
 }

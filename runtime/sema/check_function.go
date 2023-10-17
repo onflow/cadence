@@ -187,6 +187,7 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
+				oldMappedAccess := checker.entitlementMappingInScope
 				if mappedAccess, isMappedAccess := access.(*EntitlementMapAccess); isMappedAccess {
 					checker.entitlementMappingInScope = mappedAccess.Type
 				}
@@ -199,7 +200,7 @@ func (checker *Checker) checkFunction(
 					)
 				})
 
-				checker.entitlementMappingInScope = nil
+				checker.entitlementMappingInScope = oldMappedAccess
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
