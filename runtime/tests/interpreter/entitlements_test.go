@@ -3280,3 +3280,195 @@ func TestInterpretMappingInclude(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretEntitlementMappingComplexFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement Inner1
+			entitlement Inner2
+			entitlement Outer1
+			entitlement Outer2
+
+			entitlement mapping MyMap {
+				Outer1 -> Inner1
+				Outer2 -> Inner2
+			}
+			struct InnerObj {
+				access(Inner1) fun first(): Int{ return 9999 }
+				access(Inner2) fun second(): Int{ return 8888 }
+			}
+
+			struct Carrier{
+				access(MyMap) let arr: [auth(MyMap) &InnerObj]
+				init() {
+					self.arr = [&InnerObj()]
+				}
+			}    
+
+			fun test(): Int {
+				let x = Carrier().arr[0]
+				return x.first() + x.second()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(9999+8888),
+			value,
+		)
+	})
+
+	t.Run("dictionary field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement Inner1
+			entitlement Inner2
+			entitlement Outer1
+			entitlement Outer2
+
+			entitlement mapping MyMap {
+				Outer1 -> Inner1
+				Outer2 -> Inner2
+			}
+			struct InnerObj {
+				access(Inner1) fun first(): Int{ return 9999 }
+				access(Inner2) fun second(): Int{ return 8888 }
+			}
+
+			struct Carrier{
+				access(MyMap) let dict: {String: auth(MyMap) &InnerObj}
+				init() {
+                    self.dict = {"": &InnerObj()}
+                }
+			}    
+
+			fun test(): Int {
+				let x = Carrier().dict[""]!
+				return x.first() + x.second()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(9999+8888),
+			value,
+		)
+	})
+
+	t.Run("lambda array field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement Inner1
+		entitlement Inner2
+		entitlement Outer1
+		entitlement Outer2
+
+		entitlement mapping MyMap {
+			Outer1 -> Inner1
+			Outer2 -> Inner2
+		}
+		struct InnerObj {
+			access(Inner1) fun first(): Int{ return 9999 }
+			access(Inner2) fun second(): Int{ return 8888 }
+		}
+
+		struct Carrier{
+			access(MyMap) let fnArr: [fun(auth(MyMap) &InnerObj): auth(MyMap) &InnerObj]
+			init() {
+				let innerObj = &InnerObj() as auth(Inner1, Inner2) &InnerObj
+				self.fnArr = [fun(_ x: &InnerObj): auth(Inner1, Inner2) &InnerObj {
+					return innerObj
+				}]
+			}
+		 
+		}    
+
+		fun test(): Int {
+			let carrier = Carrier()
+			let ref1 = &carrier as auth(Outer1) &Carrier
+			let ref2 = &carrier as auth(Outer2) &Carrier
+			return ref1.fnArr[0](&InnerObj() as auth(Inner1) &InnerObj).first() + 
+			ref2.fnArr[0](&InnerObj() as auth(Inner2) &InnerObj).second() 
+		}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(9999+8888),
+			value,
+		)
+	})
+
+	t.Run("lambda escape", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement Inner1
+			entitlement Inner2
+			entitlement Outer1
+			entitlement Outer2
+
+			entitlement mapping MyMap {
+				Outer1 -> Inner1
+				Outer2 -> Inner2
+			}
+			struct InnerObj {
+				access(Inner1) fun first(): Int{ return 9999 }
+				access(Inner2) fun second(): Int{ return 8888 }
+			}
+
+			struct Carrier{
+				access(MyMap) let arr: [auth(MyMap) &InnerObj]
+				init() {
+					self.arr = [&InnerObj()]
+				}
+			}   
+			
+			struct FuncGenerator {
+				access(MyMap) fun generate(): auth(MyMap) &Int? {
+					fun innerFunc(_ param: auth(MyMap) &InnerObj): Int {
+						return 123;
+					}
+					var f = innerFunc; // will fail if we're called via a reference
+					return nil;
+				}
+			}      
+
+			fun test() {
+				(&FuncGenerator() as auth(Outer1) &FuncGenerator).generate()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(9999+8888),
+			value,
+		)
+	})
+}
