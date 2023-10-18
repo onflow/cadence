@@ -305,8 +305,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun main() {
-                var array = ["Hello", "World", "Foo", "Bar"]
-                var arrayRef = &array as &[String]
+                let array = ["Hello", "World", "Foo", "Bar"]
+                let arrayRef = &array as &[String]
 
                 for element in arrayRef {
                     let e: String = element
@@ -325,8 +325,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
             struct Foo{}
 
             fun main() {
-                var array = [Foo(), Foo()]
-                var arrayRef = &array as &[Foo]
+                let array = [Foo(), Foo()]
+                let arrayRef = &array as &[Foo]
 
                 for element in arrayRef {
                     let e: &Foo = element
@@ -345,8 +345,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
             resource Foo{}
 
             fun main() {
-                var array <- [ <- create Foo(), <- create Foo()]
-                var arrayRef = &array as &[Foo]
+                let array <- [ <- create Foo(), <- create Foo()]
+                let arrayRef = &array as &[Foo]
 
                 for element in arrayRef {
                     let e: &Foo = element
@@ -367,9 +367,9 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
             resource Foo{}
 
             fun main() {
-                var array <- [ <- create Foo(), <- create Foo()]
-                var arrayRef = returnSameRef(&array as &[Foo])
-                var movedArray <- array
+                let array <- [ <- create Foo(), <- create Foo()]
+                let arrayRef = returnSameRef(&array as &[Foo])
+                let movedArray <- array
 
                 for element in arrayRef {
                     let e: &Foo = element
@@ -394,8 +394,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
             struct Foo{}
 
             fun main() {
-                var array = [Foo(), Foo()]
-                var arrayRef = &array as auth(Mutate) &[Foo]
+                let array = [Foo(), Foo()]
+                let arrayRef = &array as auth(Mutate) &[Foo]
 
                 for element in arrayRef {
                     let e: &Foo = element    // Should be non-auth
@@ -405,6 +405,97 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
+	})
+
+	t.Run("Optional array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                let array: [Foo?] = [Foo(), Foo()]
+                let arrayRef = &array as &[Foo?]
+
+                for element in arrayRef {
+                    let e: &Foo? = element    // Should be an optional reference
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Nil array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                let array: [Foo?] = [nil, nil]
+                let arrayRef = &array as &[Foo?]
+
+                for element in arrayRef {
+                    let e: &Foo? = element    // Should be an optional reference
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                let elementRef = &Foo() as &Foo
+                let array: [&Foo] = [elementRef, elementRef]
+                let arrayRef = &array as &[&Foo]
+
+                for element in arrayRef {
+                    let e: &Foo = element
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Moved resource element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo{
+                fun sayHello() {}
+            }
+
+            fun main() {
+                let array <- [ <- create Foo()]
+                let arrayRef = &array as auth(Mutate) &[Foo]
+
+                for element in arrayRef {
+                    // Move the actual element
+                    let oldElement <- arrayRef.remove(at: 0)
+
+                    // Use the element reference
+                    element.sayHello()
+
+                    destroy oldElement
+                }
+
+                destroy array
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
 
@@ -419,7 +510,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 
 		inter, _ := testAccount(t, address, true, nil, `
             fun test() {
-                var array = ["Hello", "World", "Foo", "Bar"]
+                var let = ["Hello", "World", "Foo", "Bar"]
                 account.storage.save(array, to: /storage/array)
 
                 let arrayRef = account.storage.borrow<&[String]>(from: /storage/array)!
@@ -442,7 +533,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
             struct Foo{}
 
             fun test() {
-                var array = [Foo(), Foo()]
+                var let = [Foo(), Foo()]
                 account.storage.save(array, to: /storage/array)
 
                 let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
@@ -465,7 +556,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
             resource Foo{}
 
             fun test() {
-                var array <- [ <- create Foo(), <- create Foo()]
+                var let <- [ <- create Foo(), <- create Foo()]
                 account.storage.save(<- array, to: /storage/array)
 
                 let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
@@ -488,7 +579,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
             resource Foo{}
 
             fun test() {
-                var array <- [ <- create Foo(), <- create Foo()]
+                var let <- [ <- create Foo(), <- create Foo()]
                 account.storage.save(<- array, to: /storage/array)
 
                 let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!

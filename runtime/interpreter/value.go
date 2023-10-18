@@ -234,7 +234,7 @@ type ContractValue interface {
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
-	Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator
+	Iterator(interpreter *Interpreter, resultType sema.Type, locationRange LocationRange) ValueIterator
 }
 
 // ValueIterator is an iterator which returns values.
@@ -1580,7 +1580,7 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
+func (v *StringValue) Iterator(_ *Interpreter, _ sema.Type, _ LocationRange) ValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
@@ -1614,7 +1614,7 @@ type ArrayValueIterator struct {
 	atreeIterator *atree.ArrayIterator
 }
 
-func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
+func (v *ArrayValue) Iterator(_ *Interpreter, _ sema.Type, _ LocationRange) ValueIterator {
 	arrayIterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -20197,15 +20197,19 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*StorageReferenceValue) isReference() {}
 
-func (v *StorageReferenceValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {
+func (v *StorageReferenceValue) Iterator(
+	interpreter *Interpreter,
+	resultType sema.Type,
+	locationRange LocationRange,
+) ValueIterator {
 	referencedValue := v.mustReferencedValue(interpreter, locationRange)
-	return referenceValueIterator(interpreter, referencedValue, v.BorrowedType, locationRange)
+	return referenceValueIterator(interpreter, referencedValue, resultType, locationRange)
 }
 
 func referenceValueIterator(
 	interpreter *Interpreter,
 	referencedValue Value,
-	borrowedType sema.Type,
+	resultType sema.Type,
 	locationRange LocationRange,
 ) ValueIterator {
 	referencedIterable, ok := referencedValue.(IterableValue)
@@ -20213,18 +20217,14 @@ func referenceValueIterator(
 		panic(errors.NewUnreachableError())
 	}
 
-	referencedValueIterator := referencedIterable.Iterator(interpreter, locationRange)
+	referencedValueIterator := referencedIterable.Iterator(interpreter, resultType, locationRange)
 
-	referencedType, ok := borrowedType.(sema.ValueIndexableType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	elementType := referencedType.ElementType(false)
+	_, isResultReference := sema.GetReferenceType(resultType)
 
 	return ReferenceValueIterator{
-		iterator:    referencedValueIterator,
-		elementType: elementType,
+		iterator:          referencedValueIterator,
+		resultType:        resultType,
+		isResultReference: isResultReference,
 	}
 }
 
@@ -20574,16 +20574,21 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*EphemeralReferenceValue) isReference() {}
 
-func (v *EphemeralReferenceValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {
+func (v *EphemeralReferenceValue) Iterator(
+	interpreter *Interpreter,
+	resultType sema.Type,
+	locationRange LocationRange,
+) ValueIterator {
 	referencedValue := v.MustReferencedValue(interpreter, locationRange)
-	return referenceValueIterator(interpreter, referencedValue, v.BorrowedType, locationRange)
+	return referenceValueIterator(interpreter, referencedValue, resultType, locationRange)
 }
 
 // ReferenceValueIterator
 
 type ReferenceValueIterator struct {
-	iterator    ValueIterator
-	elementType sema.Type
+	iterator          ValueIterator
+	resultType        sema.Type
+	isResultReference bool
 }
 
 var _ ValueIterator = ReferenceValueIterator{}
@@ -20596,8 +20601,8 @@ func (i ReferenceValueIterator) Next(interpreter *Interpreter) Value {
 	}
 
 	// For non-primitive values, return a reference.
-	if i.elementType.ContainFieldsOrElements() {
-		return NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, element, i.elementType)
+	if i.isResultReference {
+		return interpreter.getReferenceValue(element, i.resultType)
 	}
 
 	return element

@@ -264,7 +264,7 @@ func (checker *Checker) recordReference(targetVariable *Variable, expr ast.Expre
 		return
 	}
 
-	if _, isReference := referenceType(targetVariable.Type); !isReference {
+	if _, isReference := GetReferenceType(targetVariable.Type); !isReference {
 		return
 	}
 

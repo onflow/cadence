@@ -66,11 +66,14 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 	}
 
+	var indexType Type
+
 	if statement.Index != nil {
 		index := statement.Index.Identifier
+		indexType = IntType
 		indexVariable, err := checker.valueActivations.declare(variableDeclaration{
 			identifier:               index,
-			ty:                       IntType,
+			ty:                       indexType,
 			kind:                     common.DeclarationKindConstant,
 			pos:                      statement.Index.Pos,
 			isConstant:               true,
@@ -83,6 +86,11 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 			checker.recordVariableDeclarationOccurrence(index, indexVariable)
 		}
 	}
+
+	checker.Elaboration.SetForStatementType(statement, ForStatementTypes{
+		IndexVariableType: indexType,
+		ValueVariableType: loopVariableType,
+	})
 
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and
@@ -133,7 +141,7 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 		// Case (a): Element type is a container type.
 		// Then the loop-var must also be a reference type.
 		if referencedIterableElementType.ContainFieldsOrElements() {
-			return NewReferenceType(checker.memoryGauge, UnauthorizedAccess, referencedIterableElementType)
+			return checker.getReferenceType(referencedIterableElementType, false, UnauthorizedAccess)
 		}
 
 		// Case (b): Element type is a primitive type.

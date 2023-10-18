@@ -431,4 +431,23 @@ func TestCheckReferencesInForLoop(t *testing.T) {
 		errors := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
+
+	t.Run("Optional array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Foo{}
+
+            fun main() {
+                var array: [Foo?] = [Foo(), Foo()]
+                var arrayRef = &array as &[Foo?]
+
+                for element in arrayRef {
+                    let e: &Foo? = element    // Should be an optional reference
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
 }
