@@ -4173,27 +4173,28 @@ func (e *InvalidEntitlementAccessError) EndPosition(common.MemoryGauge) ast.Posi
 	return e.Pos
 }
 
-// InvalidMultipleMappedEntitlementError
-type InvalidMultipleMappedEntitlementError struct {
-	Pos ast.Position
+// InvalidEntitlementMappingTypeError
+type InvalidEntitlementMappingTypeError struct {
+	Type Type
+	Pos  ast.Position
 }
 
-var _ SemanticError = &InvalidMultipleMappedEntitlementError{}
-var _ errors.UserError = &InvalidMultipleMappedEntitlementError{}
+var _ SemanticError = &InvalidEntitlementMappingTypeError{}
+var _ errors.UserError = &InvalidEntitlementMappingTypeError{}
 
-func (*InvalidMultipleMappedEntitlementError) isSemanticError() {}
+func (*InvalidEntitlementMappingTypeError) isSemanticError() {}
 
-func (*InvalidMultipleMappedEntitlementError) IsUserError() {}
+func (*InvalidEntitlementMappingTypeError) IsUserError() {}
 
-func (e *InvalidMultipleMappedEntitlementError) Error() string {
-	return "entitlement mappings cannot be used as part of an entitlement set"
+func (e *InvalidEntitlementMappingTypeError) Error() string {
+	return fmt.Sprintf("`%s` is not an entitlement map type", e.Type.QualifiedString())
 }
 
-func (e *InvalidMultipleMappedEntitlementError) StartPosition() ast.Position {
+func (e *InvalidEntitlementMappingTypeError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidMultipleMappedEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
+func (e *InvalidEntitlementMappingTypeError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
 
@@ -4260,6 +4261,22 @@ func (*InvalidNonEntitlementAccessError) IsUserError() {}
 
 func (e *InvalidNonEntitlementAccessError) Error() string {
 	return "only entitlements may be used in access modifiers"
+}
+
+// MappingAccessMissingKeywordError
+type MappingAccessMissingKeywordError struct {
+	ast.Range
+}
+
+var _ SemanticError = &MappingAccessMissingKeywordError{}
+var _ errors.UserError = &MappingAccessMissingKeywordError{}
+
+func (*MappingAccessMissingKeywordError) isSemanticError() {}
+
+func (*MappingAccessMissingKeywordError) IsUserError() {}
+
+func (e *MappingAccessMissingKeywordError) Error() string {
+	return "entitlement mapping access modifiers require the `mapping` keyword preceding the name of the map"
 }
 
 // DirectEntitlementAnnotationError

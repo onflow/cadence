@@ -3871,8 +3871,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 					Mutate -> Insert
 				}
 
-				access(M) attachment A for R {
-					access(Identity) let x: [String]
+				access(mapping M) attachment A for R {
+					access(mapping Identity) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -3955,8 +3955,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 						xRef.append("y")
 					}
 				}
-				access(M) attachment A for R {
-					access(Identity) let x: [String]
+				access(mapping M) attachment A for R {
+					access(mapping Identity) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -4524,7 +4524,7 @@ func TestCheckAttachmentForEachAttachment(t *testing.T) {
 				}
 			}
 			resource R {}
-			access(M) attachment A for R {
+			access(mapping M) attachment A for R {
 				access(F) fun foo() {}
 			}
 			access(all) fun foo(s: @R) {
