@@ -53,8 +53,8 @@ type Config struct {
 	CompositeTypeHandler CompositeTypeHandlerFunc
 	// CompositeValueFunctionsHandler is used to load composite value functions
 	CompositeValueFunctionsHandler CompositeValueFunctionsHandlerFunc
-	BaseActivation       *VariableActivation
-	Debugger             *Debugger
+	BaseActivation                 *VariableActivation
+	Debugger                       *Debugger
 	// OnStatement is triggered when a statement is about to be executed
 	OnStatement OnStatementFunc
 	// OnLoopIteration is triggered when a loop iteration is about to be executed
