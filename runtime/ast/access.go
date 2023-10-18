@@ -54,6 +54,7 @@ func (s Separator) String() string {
 }
 
 type EntitlementSet interface {
+	Authorization
 	Entitlements() []*NominalType
 	Separator() Separator
 }
@@ -63,6 +64,8 @@ type ConjunctiveEntitlementSet struct {
 }
 
 var _ EntitlementSet = &ConjunctiveEntitlementSet{}
+
+func (ConjunctiveEntitlementSet) isAuthorization() {}
 
 func (s *ConjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
@@ -82,6 +85,8 @@ type DisjunctiveEntitlementSet struct {
 
 var _ EntitlementSet = &DisjunctiveEntitlementSet{}
 
+func (DisjunctiveEntitlementSet) isAuthorization() {}
+
 func (s *DisjunctiveEntitlementSet) Entitlements() []*NominalType {
 	return s.Elements
 }
@@ -92,6 +97,10 @@ func (s *DisjunctiveEntitlementSet) Separator() Separator {
 
 func NewDisjunctiveEntitlementSet(entitlements []*NominalType) *DisjunctiveEntitlementSet {
 	return &DisjunctiveEntitlementSet{Elements: entitlements}
+}
+
+type Authorization interface {
+	isAuthorization()
 }
 
 type EntitlementAccess struct {
@@ -121,7 +130,7 @@ func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) {
 
 func (e EntitlementAccess) String() string {
 	str := &strings.Builder{}
-	str.WriteString("ConjunctiveEntitlementAccess ")
+	str.WriteString("EntitlementAccess ")
 	e.entitlementsString(str)
 	return str.String()
 }
@@ -145,31 +154,39 @@ type MappedAccess struct {
 
 var _ Access = &MappedAccess{}
 
-func (MappedAccess) isAccess() {}
+func (*MappedAccess) isAccess()        {}
+func (*MappedAccess) isAuthorization() {}
 
-func (MappedAccess) Description() string {
+func (*MappedAccess) Description() string {
 	return "entitlement-mapped access"
 }
 
 func NewMappedAccess(
-	memoryGauge common.MemoryGauge,
 	typ *NominalType,
 	startPos Position,
-) MappedAccess {
-	return MappedAccess{
+) *MappedAccess {
+	return &MappedAccess{
 		EntitlementMap: typ,
 		StartPos:       startPos,
 	}
 }
 
-func (e MappedAccess) String() string {
+func (t *MappedAccess) StartPosition() Position {
+	return t.StartPos
+}
+
+func (t *MappedAccess) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return t.EntitlementMap.EndPosition(memoryGauge)
+}
+
+func (e *MappedAccess) String() string {
 	str := &strings.Builder{}
 	str.WriteString("mapping ")
 	str.WriteString(e.EntitlementMap.String())
 	return str.String()
 }
 
-func (e MappedAccess) Keyword() string {
+func (e *MappedAccess) Keyword() string {
 	str := &strings.Builder{}
 	str.WriteString("access(")
 	str.WriteString(e.String())
@@ -177,8 +194,15 @@ func (e MappedAccess) Keyword() string {
 	return str.String()
 }
 
-func (e MappedAccess) MarshalJSON() ([]byte, error) {
-	return json.Marshal(e.String())
+func (e *MappedAccess) MarshalJSON() ([]byte, error) {
+	type Alias MappedAccess
+	return json.Marshal(&struct {
+		*Alias
+		Range
+	}{
+		Range: NewUnmeteredRangeFromPositioned(e),
+		Alias: (*Alias)(e),
+	})
 }
 
 type PrimitiveAccess uint8

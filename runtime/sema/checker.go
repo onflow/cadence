@@ -1026,7 +1026,7 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 	var ty Type
 
 	if t.Authorization != nil {
-		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
+		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.(ast.EntitlementSet)})
 		switch mapAccess := access.(type) {
 		case *EntitlementMapAccess:
 			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
