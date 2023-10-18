@@ -18,6 +18,12 @@
 
 package stdlib
 
+import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+)
+
 type StandardLibraryHandler interface {
 	Logger
 	UnsafeRandomGenerator
@@ -56,4 +62,22 @@ func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []Standa
 		DefaultStandardLibraryValues(handler),
 		NewGetAuthAccountFunction(handler),
 	)
+}
+
+func DefaultStandardLibraryCompositeValueFunctions(
+	handler StandardLibraryHandler,
+) interpreter.CompositeValueFunctionsHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		location common.Location,
+		typeID interpreter.TypeID,
+	) map[string]interpreter.FunctionValue {
+
+		switch typeID {
+		case sema.PublicKeyType.ID():
+			return PublicKeyFunctions(inter, handler)
+		}
+
+		return nil
+	}
 }

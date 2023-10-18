@@ -1127,7 +1127,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 1 host function created for 'decodeHex' of String value
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 
 	t.Run("multiple public key creation", func(t *testing.T) {
@@ -1179,7 +1179,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 2 = 2x 1 host function created for 'decodeHex' of String value
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 }
 

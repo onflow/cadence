@@ -141,6 +141,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnRecordTrace:                        e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:                 e.newCompositeTypeHandler(),
+		CompositeValueFunctionsHandler:       e.newCompositeValueFunctionsHandler(),
 		TracingEnabled:                       e.config.TracingEnabled,
 		AtreeValueValidationEnabled:          e.config.AtreeValidationEnabled,
 		// NOTE: ignore e.config.AtreeValidationEnabled here,
@@ -916,6 +917,25 @@ func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.Composite
 			if compositeType, ok := ty.(*sema.CompositeType); ok {
 				return compositeType
 			}
+		}
+
+		return nil
+	}
+}
+
+func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter.CompositeValueFunctionsHandlerFunc {
+
+	stdlibHandler := stdlib.DefaultStandardLibraryCompositeValueFunctions(e)
+
+	return func(
+		inter *interpreter.Interpreter,
+		location common.Location,
+		typeID common.TypeID,
+	) map[string]interpreter.FunctionValue {
+
+		functions := stdlibHandler(inter, location, typeID)
+		if functions != nil {
+			return functions
 		}
 
 		return nil

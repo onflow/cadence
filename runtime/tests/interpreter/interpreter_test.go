@@ -7266,10 +7266,6 @@ func TestInterpretEmitEvent(t *testing.T) {
 		),
 	}
 
-	for _, event := range expectedEvents {
-		event.(*interpreter.CompositeValue).InitializeFunctions(inter)
-	}
-
 	AssertValueSlicesEqual(
 		t,
 		inter,
@@ -7607,14 +7603,9 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				),
 			}
 
-			for _, event := range expectedEvents {
-				event.(*interpreter.CompositeValue).InitializeFunctions(inter)
-			}
-
 			AssertValueSlicesEqual(
 				t,
 				inter,
-
 				expectedEvents,
 				actualEvents,
 			)

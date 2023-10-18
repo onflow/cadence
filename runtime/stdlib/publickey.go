@@ -211,7 +211,7 @@ type PublicKeySignatureVerifier interface {
 
 func newPublicKeyVerifySignatureFunction(
 	gauge common.MemoryGauge,
-	verififier PublicKeySignatureVerifier,
+	verifier PublicKeySignatureVerifier,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
@@ -270,7 +270,7 @@ func newPublicKeyVerifySignatureFunction(
 
 			var valid bool
 			errors.WrapPanic(func() {
-				valid, err = verififier.VerifySignature(
+				valid, err = verifier.VerifySignature(
 					signature,
 					domainSeparationTag,
 					signedData,
@@ -339,4 +339,19 @@ func newPublicKeyVerifyPoPFunction(
 			return interpreter.AsBoolValue(valid)
 		},
 	)
+}
+
+type PublicKeyFunctionsHandler interface {
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+}
+
+func PublicKeyFunctions(
+	gauge common.MemoryGauge,
+	handler PublicKeyFunctionsHandler,
+) map[string]interpreter.FunctionValue {
+	return map[string]interpreter.FunctionValue{
+		sema.PublicKeyTypeVerifyFunctionName:    newPublicKeyVerifySignatureFunction(gauge, handler),
+		sema.PublicKeyTypeVerifyPoPFunctionName: newPublicKeyVerifyPoPFunction(gauge, handler),
+	}
 }
