@@ -939,6 +939,7 @@ func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.Composite
 func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter.CompositeValueFunctionsHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
 		compositeValue *interpreter.CompositeValue,
 	) map[string]interpreter.FunctionValue {
 
@@ -947,7 +948,7 @@ func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 			return nil
 		}
 
-		return handler(inter, compositeValue)
+		return handler(inter, locationRange, compositeValue)
 	}
 }
 

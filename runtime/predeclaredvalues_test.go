@@ -567,6 +567,7 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 		xType.ID(),
 		func(
 			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
 			compositeValue *interpreter.CompositeValue,
 		) map[string]interpreter.FunctionValue {
 			require.NotNil(t, compositeValue)

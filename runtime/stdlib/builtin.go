@@ -66,6 +66,7 @@ func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []Standa
 
 type CompositeValueFunctionsHandler func(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	compositeValue *interpreter.CompositeValue,
 ) map[string]interpreter.FunctionValue
 
@@ -77,6 +78,7 @@ func DefaultStandardLibraryCompositeValueFunctionHandlers(
 	return CompositeValueFunctionsHandlers{
 		sema.PublicKeyType.ID(): func(
 			inter *interpreter.Interpreter,
+			_ interpreter.LocationRange,
 			_ *interpreter.CompositeValue,
 		) map[string]interpreter.FunctionValue {
 			return PublicKeyFunctions(inter, handler)

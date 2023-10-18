@@ -16628,7 +16628,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		return injectedField
 	}
 
-	if function := v.GetFunction(interpreter, name); function != nil {
+	if function := v.GetFunction(interpreter, locationRange, name); function != nil {
 		return function
 	}
 
@@ -16688,9 +16688,9 @@ func (v *CompositeValue) GetInjectedField(interpreter *Interpreter, name string)
 	return value
 }
 
-func (v *CompositeValue) GetFunction(interpreter *Interpreter, name string) FunctionValue {
+func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange LocationRange, name string) FunctionValue {
 	if v.Functions == nil {
-		v.Functions = interpreter.GetCompositeValueFunctions(v)
+		v.Functions = interpreter.GetCompositeValueFunctions(v, locationRange)
 	}
 
 	function, ok := v.Functions[name]

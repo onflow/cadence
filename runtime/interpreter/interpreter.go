@@ -185,6 +185,7 @@ type CompositeTypeHandlerFunc func(location common.Location, typeID TypeID) *sem
 // CompositeValueFunctionsHandlerFunc is a function that loads composite value functions.
 type CompositeValueFunctionsHandlerFunc func(
 	inter *Interpreter,
+	locationRange LocationRange,
 	compositeValue *CompositeValue,
 ) map[string]FunctionValue
 
@@ -4842,7 +4843,10 @@ func (interpreter *Interpreter) GetCompositeValueInjectedFields(v *CompositeValu
 	)
 }
 
-func (interpreter *Interpreter) GetCompositeValueFunctions(v *CompositeValue) map[string]FunctionValue {
+func (interpreter *Interpreter) GetCompositeValueFunctions(
+	v *CompositeValue,
+	locationRange LocationRange,
+) map[string]FunctionValue {
 
 	var functions map[string]FunctionValue
 
@@ -4852,7 +4856,7 @@ func (interpreter *Interpreter) GetCompositeValueFunctions(v *CompositeValue) ma
 
 	compositeValueFunctionsHandler := sharedState.Config.CompositeValueFunctionsHandler
 	if compositeValueFunctionsHandler != nil {
-		functions = compositeValueFunctionsHandler(interpreter, v)
+		functions = compositeValueFunctionsHandler(interpreter, locationRange, v)
 		if functions != nil {
 			return functions
 		}
