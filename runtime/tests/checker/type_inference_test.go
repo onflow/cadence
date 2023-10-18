@@ -787,7 +787,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 			{
 				name:                "mixed simple values",
 				code:                `let x = [0, true]`,
-				expectedElementType: sema.AnyStructType,
+				expectedElementType: sema.HashableStructType,
 			},
 			{
 				name:                "signed integer values",
@@ -893,7 +893,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				code: `let x = [[[1, 2]], [["foo", "bar"]], [[5.3, 6.4]]]`,
 				expectedElementType: &sema.VariableSizedType{
 					Type: &sema.VariableSizedType{
-						Type: sema.AnyStructType,
+						Type: sema.HashableStructType,
 					},
 				},
 			},
@@ -902,7 +902,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				code: `let x = [[[1, 2] as [Int; 2]], [["foo", "bar"] as [String; 2]], [[5.3, 6.4] as [Fix64; 2]]]`,
 				expectedElementType: &sema.VariableSizedType{
 					Type: &sema.ConstantSizedType{
-						Type: sema.AnyStructType,
+						Type: sema.HashableStructType,
 						Size: 2,
 					},
 				},
@@ -977,7 +977,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				name:              "mixed simple values",
 				code:              `let x = {0: 0, 1: true}`,
 				expectedKeyType:   sema.IntType,
-				expectedValueType: sema.AnyStructType,
+				expectedValueType: sema.HashableStructType,
 			},
 			{
 				name:              "signed integer values",
@@ -1010,6 +1010,12 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				expectedValueType: &sema.OptionalType{
 					Type: sema.StringType,
 				},
+			},
+			{
+				name:              "int and string keys",
+				code:              `let x = {0: 1, "hello": 2}`,
+				expectedKeyType:   sema.HashableStructType,
+				expectedValueType: sema.IntType,
 			},
 			{
 				name: "common interfaced values",
@@ -1109,8 +1115,15 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 
                     pub resource Foo {}
                 `,
-				expectedKeyType:   sema.IntType,
-				expectedValueType: sema.AnyResourceType,
+				expectedKeyType: sema.IntType,
+				expectedValueType: &sema.DictionaryType{
+					KeyType: sema.HashableStructType,
+					ValueType: &sema.InterfaceType{
+						Location:      common.StringLocation("test"),
+						Identifier:    "Foo",
+						CompositeKind: common.CompositeKindStructure,
+					},
+				},
 			},
 		}
 
@@ -1144,33 +1157,6 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
-	})
-
-	t.Run("no supertype for keys", func(t *testing.T) {
-		t.Parallel()
-
-		code := `
-            let x = {1: 1, "two": 2}
-        `
-		_, err := ParseAndCheck(t, code)
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
-	})
-
-	t.Run("unsupported supertype for keys", func(t *testing.T) {
-		t.Parallel()
-
-		code := `
-            let x = {0: 1, "hello": 2}
-        `
-		_, err := ParseAndCheck(t, code)
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
-		invalidKeyError := errs[0].(*sema.InvalidDictionaryKeyTypeError)
-
-		assert.Equal(t, sema.AnyStructType, invalidKeyError.Type)
 	})
 
 	t.Run("empty dictionary", func(t *testing.T) {

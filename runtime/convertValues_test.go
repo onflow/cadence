@@ -3881,7 +3881,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					KeyType: interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
-						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
 				},
 
@@ -3916,52 +3916,47 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 	t.Run("import dictionary with heterogeneous keys", func(t *testing.T) {
 		t.Parallel()
 
-		script :=
-			`pub fun main(arg: Foo) {
-            }
+		dictionaryWithHeterogenousKeys := cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("foo"),
+				Value: cadence.String("value1"),
+			},
+			{
+				Key:   cadence.NewInt(5),
+				Value: cadence.String("value2"),
+			},
+		})
 
-            pub struct Foo {
-                pub var a: AnyStruct
+		inter := newTestInterpreter(t)
 
-                init() {
-                    self.a = nil
-                }
-            }`
+		actual, err := ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			dictionaryWithHeterogenousKeys,
+			sema.AnyStructType,
+		)
+		require.NoError(t, err)
 
-		// Struct with nested malformed dictionary value
-		malformedStruct := cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.AnyStructType{},
-					},
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewDictionaryValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeHashableStruct,
+					ValueType: interpreter.PrimitiveStaticTypeString,
 				},
-			},
-			Fields: []cadence.Value{
-				cadence.NewDictionary([]cadence.KeyValuePair{
-					{
-						Key:   cadence.String("foo"),
-						Value: cadence.String("value1"),
-					},
-					{
-						Key:   cadence.NewInt(5),
-						Value: cadence.String("value2"),
-					},
-				}),
-			},
-		}
 
-		_, err := executeTestScript(t, script, malformedStruct)
-		RequireError(t, err)
-		assertUserError(t, err)
+				interpreter.NewUnmeteredStringValue("foo"),
+				interpreter.NewUnmeteredStringValue("value1"),
 
-		var argErr *InvalidEntryPointArgumentError
-		require.ErrorAs(t, err, &argErr)
-
-		assert.Contains(t, argErr.Error(), "cannot import dictionary: keys does not belong to the same type")
+				interpreter.NewIntValueFromInt64(nil, 5),
+				interpreter.NewUnmeteredStringValue("value2"),
+			),
+			actual,
+		)
 	})
 
 	t.Run("nested dictionary with mismatching element", func(t *testing.T) {
