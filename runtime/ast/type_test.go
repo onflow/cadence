@@ -1565,3 +1565,42 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
 		string(actual),
 	)
 }
+
+func TestMappingType_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &MappingType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("mapping "),
+			prettier.Text("R"),
+		},
+		ty.Doc(),
+	)
+}
+
+func TestMappingType_String(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &MappingType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "R",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		"mapping R",
+		ty.String(),
+	)
+}

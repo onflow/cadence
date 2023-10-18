@@ -801,6 +801,65 @@ func (t *InstantiationType) CheckEqual(other Type, checker TypeEqualityChecker) 
 	return checker.CheckInstantiationTypeEquality(t, other)
 }
 
+type MappingType struct {
+	Type     *NominalType `json:"EntitlementMapping"`
+	StartPos Position     `json:"-"`
+}
+
+var _ Type = &MappingType{}
+
+func NewMappingType(
+	memoryGauge common.MemoryGauge,
+	typ *NominalType,
+	startPos Position,
+) *MappingType {
+	common.UseMemory(memoryGauge, common.InstantiationTypeMemoryUsage)
+	return &MappingType{
+		Type:     typ,
+		StartPos: startPos,
+	}
+}
+
+func (*MappingType) isType() {}
+
+func (t *MappingType) String() string {
+	return Prettier(t)
+}
+
+func (t *MappingType) StartPosition() Position {
+	return t.StartPos
+}
+
+func (t *MappingType) EndPosition(gauge common.MemoryGauge) Position {
+	return t.Type.EndPosition(gauge)
+}
+
+const mappingKeywordDoc = prettier.Text("mapping ")
+
+func (t *MappingType) Doc() prettier.Doc {
+	return prettier.Concat{
+		mappingKeywordDoc,
+		t.Type.Doc(),
+	}
+}
+
+func (t *MappingType) MarshalJSON() ([]byte, error) {
+	type Alias MappingType
+	return json.Marshal(&struct {
+		*Alias
+		Type string
+		Range
+	}{
+		Type:  "MappingType",
+		Range: NewUnmeteredRangeFromPositioned(t),
+		Alias: (*Alias)(t),
+	})
+}
+
+func (t *MappingType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckMappingTypeEquality(t, other)
+}
+
 type TypeEqualityChecker interface {
 	CheckNominalTypeEquality(*NominalType, Type) error
 	CheckOptionalTypeEquality(*OptionalType, Type) error
@@ -811,4 +870,5 @@ type TypeEqualityChecker interface {
 	CheckReferenceTypeEquality(*ReferenceType, Type) error
 	CheckIntersectionTypeEquality(*IntersectionType, Type) error
 	CheckInstantiationTypeEquality(*InstantiationType, Type) error
+	CheckMappingTypeEquality(*MappingType, Type) error
 }
