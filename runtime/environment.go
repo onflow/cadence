@@ -40,6 +40,10 @@ type Environment interface {
 
 	DeclareValue(valueDeclaration stdlib.StandardLibraryValue)
 	DeclareType(typeDeclaration stdlib.StandardLibraryType)
+	SetCompositeValueFunctionsHandler(
+		typeID common.TypeID,
+		handler stdlib.CompositeValueFunctionsHandler,
+	)
 	Configure(
 		runtimeInterface Interface,
 		codesAndPrograms CodesAndPrograms,
@@ -87,6 +91,7 @@ type interpreterEnvironment struct {
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
 	stackDepthLimiter                     *stackDepthLimiter
 	checkedImports                        importResolutionResults
+	compositeValueFunctionsHandlers       stdlib.CompositeValueFunctionsHandlers
 	config                                Config
 }
 
@@ -122,6 +127,7 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	}
 	env.InterpreterConfig = env.newInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
+	env.compositeValueFunctionsHandlers = stdlib.DefaultStandardLibraryCompositeValueFunctionHandlers(env)
 	return env
 }
 
@@ -211,6 +217,13 @@ func (e *interpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLi
 
 func (e *interpreterEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType) {
 	e.baseTypeActivation.DeclareType(typeDeclaration)
+}
+
+func (e *interpreterEnvironment) SetCompositeValueFunctionsHandler(
+	typeID common.TypeID,
+	handler stdlib.CompositeValueFunctionsHandler,
+) {
+	e.compositeValueFunctionsHandlers[typeID] = handler
 }
 
 func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
@@ -924,21 +937,18 @@ func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.Composite
 }
 
 func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter.CompositeValueFunctionsHandlerFunc {
-
-	stdlibHandler := stdlib.DefaultStandardLibraryCompositeValueFunctions(e)
-
 	return func(
 		inter *interpreter.Interpreter,
 		location common.Location,
 		typeID common.TypeID,
 	) map[string]interpreter.FunctionValue {
 
-		functions := stdlibHandler(inter, location, typeID)
-		if functions != nil {
-			return functions
+		handler := e.compositeValueFunctionsHandlers[typeID]
+		if handler == nil {
+			return nil
 		}
 
-		return nil
+		return handler(inter)
 	}
 }
 
