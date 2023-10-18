@@ -1203,6 +1203,8 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		return cadence.TheAnyType
 	case "AnyStruct":
 		return cadence.TheAnyStructType
+	case "HashableStruct":
+		return cadence.TheHashableStructType
 	case "AnyStructAttachment":
 		return cadence.TheAnyStructAttachmentType
 	case "AnyResource":

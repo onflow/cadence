@@ -2641,7 +2641,7 @@ type HashableStructType struct{}
 var TheHashableStructType = HashableStructType{}
 var _ Type = &HashableStructType{}
 
-func NewTheHashableStruct() HashableStructType {
+func NewHashableStruct() HashableStructType {
 	return TheHashableStructType
 }
 
