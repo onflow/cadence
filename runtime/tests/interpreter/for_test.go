@@ -386,6 +386,26 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
+
+	t.Run("Auth ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                var array = [Foo(), Foo()]
+                var arrayRef = &array as auth(Mutate) &[Foo]
+
+                for element in arrayRef {
+                    let e: &Foo = element    // Should be non-auth
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
 }
 
 func TestInterpretStorageReferencesInForLoop(t *testing.T) {

@@ -392,4 +392,43 @@ func TestCheckReferencesInForLoop(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredError{}, errors[0])
 		assert.IsType(t, &sema.NotDeclaredError{}, errors[1])
 	})
+
+	t.Run("Auth ref", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Foo{}
+
+            fun main() {
+                var array = [Foo(), Foo()]
+                var arrayRef = &array as auth(Mutate) &[Foo]
+
+                for element in arrayRef {
+                    let e: &Foo = element    // should be non-auth
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Auth ref invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Foo{}
+
+            fun main() {
+                var array = [Foo(), Foo()]
+                var arrayRef = &array as auth(Mutate) &[Foo]
+
+                for element in arrayRef {
+                    let e: auth(Mutate) &Foo = element    // should be non-auth
+                }
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
 }
