@@ -18,6 +18,7 @@ func _() {
 	_ = x[ComputationKindCreateArrayValue-1025]
 	_ = x[ComputationKindTransferArrayValue-1026]
 	_ = x[ComputationKindDestroyArrayValue-1027]
+	_ = x[ComputationKindIterateArrayValue-1028]
 	_ = x[ComputationKindCreateDictionaryValue-1040]
 	_ = x[ComputationKindTransferDictionaryValue-1041]
 	_ = x[ComputationKindDestroyDictionaryValue-1042]
@@ -33,7 +34,7 @@ const (
 	_ComputationKind_name_0 = "Unknown"
 	_ComputationKind_name_1 = "StatementLoopFunctionInvocation"
 	_ComputationKind_name_2 = "CreateCompositeValueTransferCompositeValueDestroyCompositeValue"
-	_ComputationKind_name_3 = "CreateArrayValueTransferArrayValueDestroyArrayValue"
+	_ComputationKind_name_3 = "CreateArrayValueTransferArrayValueDestroyArrayValueIterateArrayValue"
 	_ComputationKind_name_4 = "CreateDictionaryValueTransferDictionaryValueDestroyDictionaryValue"
 	_ComputationKind_name_5 = "EncodeValue"
 	_ComputationKind_name_6 = "STDLIBPanicSTDLIBAssertSTDLIBUnsafeRandom"
@@ -43,7 +44,7 @@ const (
 var (
 	_ComputationKind_index_1 = [...]uint8{0, 9, 13, 31}
 	_ComputationKind_index_2 = [...]uint8{0, 20, 42, 63}
-	_ComputationKind_index_3 = [...]uint8{0, 16, 34, 51}
+	_ComputationKind_index_3 = [...]uint8{0, 16, 34, 51, 68}
 	_ComputationKind_index_4 = [...]uint8{0, 21, 44, 66}
 	_ComputationKind_index_6 = [...]uint8{0, 11, 23, 41}
 	_ComputationKind_index_7 = [...]uint8{0, 21, 40}
@@ -59,7 +60,7 @@ func (i ComputationKind) String() string {
 	case 1010 <= i && i <= 1012:
 		i -= 1010
 		return _ComputationKind_name_2[_ComputationKind_index_2[i]:_ComputationKind_index_2[i+1]]
-	case 1025 <= i && i <= 1027:
+	case 1025 <= i && i <= 1028:
 		i -= 1025
 		return _ComputationKind_name_3[_ComputationKind_index_3[i]:_ComputationKind_index_3[i+1]]
 	case 1040 <= i && i <= 1042:
