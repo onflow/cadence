@@ -134,20 +134,6 @@ func (c *TypeComparator) CheckInstantiationTypeEquality(expected *ast.Instantiat
 	return nil
 }
 
-func (c *TypeComparator) CheckMappingTypeEquality(expected *ast.MappingType, found ast.Type) error {
-	foundInstType, ok := found.(*ast.MappingType)
-	if !ok {
-		return newTypeMismatchError(expected, found)
-	}
-
-	err := expected.Type.CheckEqual(foundInstType.Type, c)
-	if err != nil {
-		return newTypeMismatchError(expected, found)
-	}
-
-	return nil
-}
-
 func (c *TypeComparator) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
 	foundFuncType, ok := found.(*ast.FunctionType)
 	if !ok || len(expected.ParameterTypeAnnotations) != len(foundFuncType.ParameterTypeAnnotations) {

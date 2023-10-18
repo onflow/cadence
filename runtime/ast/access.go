@@ -138,31 +138,47 @@ func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.String())
 }
 
-func (e EntitlementAccess) subset(other EntitlementAccess) bool {
-	otherEntitlements := other.EntitlementSet.Entitlements()
-	otherSet := make(map[*NominalType]struct{}, len(otherEntitlements))
-	for _, entitlement := range otherEntitlements {
-		otherSet[entitlement] = struct{}{}
-	}
-
-	for _, entitlement := range e.EntitlementSet.Entitlements() {
-		if _, found := otherSet[entitlement]; !found {
-			return false
-		}
-	}
-
-	return true
+type MappedAccess struct {
+	EntitlementMap *NominalType
+	StartPos       Position
 }
 
-func (e EntitlementAccess) IsLessPermissiveThan(other Access) bool {
-	switch other := other.(type) {
-	case PrimitiveAccess:
-		return other == AccessAll
-	case EntitlementAccess:
-		return e.subset(other)
-	default:
-		return false
+var _ Access = &MappedAccess{}
+
+func (MappedAccess) isAccess() {}
+
+func (MappedAccess) Description() string {
+	return "entitlement-mapped access"
+}
+
+func NewMappedAccess(
+	memoryGauge common.MemoryGauge,
+	typ *NominalType,
+	startPos Position,
+) MappedAccess {
+	return MappedAccess{
+		EntitlementMap: typ,
+		StartPos:       startPos,
 	}
+}
+
+func (e MappedAccess) String() string {
+	str := &strings.Builder{}
+	str.WriteString("mapping ")
+	str.WriteString(e.EntitlementMap.String())
+	return str.String()
+}
+
+func (e MappedAccess) Keyword() string {
+	str := &strings.Builder{}
+	str.WriteString("access(")
+	str.WriteString(e.String())
+	str.WriteString(")")
+	return str.String()
+}
+
+func (e MappedAccess) MarshalJSON() ([]byte, error) {
+	return json.Marshal(e.String())
 }
 
 type PrimitiveAccess uint8
