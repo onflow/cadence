@@ -266,10 +266,10 @@ const PublicAccountContractsTypeName = "Contracts"
 
 var PublicAccountContractsType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         PublicAccountContractsTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        PublicAccountContractsTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	return t
@@ -371,10 +371,10 @@ const PublicAccountKeysTypeName = "Keys"
 
 var PublicAccountKeysType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         PublicAccountKeysTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        PublicAccountKeysTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	return t
@@ -486,10 +486,10 @@ const PublicAccountCapabilitiesTypeName = "Capabilities"
 
 var PublicAccountCapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         PublicAccountCapabilitiesTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        PublicAccountCapabilitiesTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	return t
@@ -521,10 +521,10 @@ const PublicAccountTypeName = "PublicAccount"
 
 var PublicAccountType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         PublicAccountTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        PublicAccountTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	t.SetNestedType(PublicAccountContractsTypeName, PublicAccountContractsType)

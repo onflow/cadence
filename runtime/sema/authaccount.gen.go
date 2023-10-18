@@ -858,10 +858,10 @@ const AuthAccountContractsTypeName = "Contracts"
 
 var AuthAccountContractsType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         AuthAccountContractsTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        AuthAccountContractsTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	return t
@@ -1035,10 +1035,10 @@ const AuthAccountKeysTypeName = "Keys"
 
 var AuthAccountKeysType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         AuthAccountKeysTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        AuthAccountKeysTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	return t
@@ -1205,10 +1205,10 @@ const AuthAccountInboxTypeName = "Inbox"
 
 var AuthAccountInboxType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         AuthAccountInboxTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        AuthAccountInboxTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	return t
@@ -1419,10 +1419,10 @@ const AuthAccountCapabilitiesTypeName = "Capabilities"
 
 var AuthAccountCapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         AuthAccountCapabilitiesTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        AuthAccountCapabilitiesTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	return t
@@ -1614,10 +1614,10 @@ const AuthAccountStorageCapabilitiesTypeName = "StorageCapabilities"
 
 var AuthAccountStorageCapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         AuthAccountStorageCapabilitiesTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        AuthAccountStorageCapabilitiesTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	return t
@@ -1770,10 +1770,10 @@ const AuthAccountAccountCapabilitiesTypeName = "AccountCapabilities"
 
 var AuthAccountAccountCapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         AuthAccountAccountCapabilitiesTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        AuthAccountAccountCapabilitiesTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	return t
@@ -1819,10 +1819,10 @@ const AuthAccountTypeName = "AuthAccount"
 
 var AuthAccountType = func() *CompositeType {
 	var t = &CompositeType{
-		Identifier:         AuthAccountTypeName,
-		Kind:               common.CompositeKindStructure,
-		importable:         false,
-		hasComputedMembers: true,
+		Identifier:        AuthAccountTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	t.SetNestedType(AuthAccountContractsTypeName, AuthAccountContractsType)

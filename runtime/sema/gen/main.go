@@ -1343,8 +1343,8 @@ func compositeTypeExpr(ty *typeDecl) dst.Expr {
 	// 	var t = &CompositeType{
 	// 		Identifier:         FooTypeName,
 	// 		Kind:               common.CompositeKindStructure,
-	// 		importable:         false,
-	// 		hasComputedMembers: true,
+	// 		ImportableBuiltin:  false,
+	//      StorableBuiltin:    false,
 	// 	}
 	//
 	// 	t.SetNestedType(FooBarTypeName, FooBarType)
@@ -1416,8 +1416,8 @@ func compositeTypeLiteral(ty *typeDecl) dst.Expr {
 	elements := []dst.Expr{
 		goKeyValue("Identifier", typeNameVarIdent(ty.fullTypeName)),
 		goKeyValue("Kind", kind),
-		goKeyValue("importable", goBoolLit(ty.importable)),
-		goKeyValue("hasComputedMembers", goBoolLit(true)),
+		goKeyValue("ImportableBuiltin", goBoolLit(ty.importable)),
+		goKeyValue("StorableBuiltin", goBoolLit(ty.storable)),
 	}
 
 	return &dst.UnaryExpr{

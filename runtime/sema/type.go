@@ -3928,9 +3928,12 @@ type CompositeType struct {
 	cachedIdentifiersLock               sync.RWMutex
 	explicitInterfaceConformanceSetOnce sync.Once
 	memberResolversOnce                 sync.Once
-	hasComputedMembers                  bool
-	// Only applicable for native composite types
-	importable bool
+	// ImportableBuiltin determines if this composite type is importable.
+	// Only applies if this type is built-in, i.e., Location == nil
+	ImportableBuiltin bool
+	// StorableBuiltin determines if this composite type is storable.
+	// Only applies if this type is built-in, i.e., Location == nil
+	StorableBuiltin bool
 }
 
 var _ Type = &CompositeType{}
@@ -4106,8 +4109,9 @@ func (*CompositeType) IsInvalidType() bool {
 }
 
 func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
-	if t.hasComputedMembers {
-		return false
+	// Use the pre-determined flag for native types
+	if t.Location == nil {
+		return t.StorableBuiltin
 	}
 
 	// Only structures, resources, attachments, and enums can be stored
@@ -4119,11 +4123,6 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 		common.CompositeKindAttachment:
 		break
 	default:
-		return false
-	}
-
-	// Native/built-in types are not storable for now
-	if t.Location == nil {
 		return false
 	}
 
@@ -4142,7 +4141,7 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
 	// Use the pre-determined flag for native types
 	if t.Location == nil {
-		return t.importable
+		return t.ImportableBuiltin
 	}
 
 	// Only structures and enums can be imported
@@ -4204,8 +4203,8 @@ func (*CompositeType) IsComparable() bool {
 	return false
 }
 
-func (c *CompositeType) TypeAnnotationState() TypeAnnotationState {
-	if c.Kind == common.CompositeKindAttachment {
+func (t *CompositeType) TypeAnnotationState() TypeAnnotationState {
+	if t.Kind == common.CompositeKindAttachment {
 		return TypeAnnotationStateDirectAttachmentTypeAnnotation
 	}
 	return TypeAnnotationStateValid
@@ -7117,9 +7116,10 @@ const AccountKeyIsRevokedFieldName = "isRevoked"
 var AccountKeyType = func() *CompositeType {
 
 	accountKeyType := &CompositeType{
-		Identifier: AccountKeyTypeName,
-		Kind:       common.CompositeKindStructure,
-		importable: false,
+		Identifier:        AccountKeyTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: false,
+		StorableBuiltin:   false,
 	}
 
 	const accountKeyKeyIndexFieldDocString = `The index of the account key`
@@ -7196,10 +7196,10 @@ If called with any other signature algorithm, the program aborts
 var PublicKeyType = func() *CompositeType {
 
 	publicKeyType := &CompositeType{
-		Identifier:         PublicKeyTypeName,
-		Kind:               common.CompositeKindStructure,
-		hasComputedMembers: true,
-		importable:         true,
+		Identifier:        PublicKeyTypeName,
+		Kind:              common.CompositeKindStructure,
+		ImportableBuiltin: true,
+		StorableBuiltin:   false,
 	}
 
 	var members = []*Member{
