@@ -565,7 +565,12 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 	scriptEnvironment.DeclareType(xTypeDeclaration)
 	scriptEnvironment.SetCompositeValueFunctionsHandler(
 		xType.ID(),
-		func(inter *interpreter.Interpreter) map[string]interpreter.FunctionValue {
+		func(
+			inter *interpreter.Interpreter,
+			compositeValue *interpreter.CompositeValue,
+		) map[string]interpreter.FunctionValue {
+			require.NotNil(t, compositeValue)
+
 			return map[string]interpreter.FunctionValue{
 				fooFunctionName: interpreter.NewHostFunctionValue(
 					inter,

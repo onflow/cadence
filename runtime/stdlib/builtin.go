@@ -64,7 +64,10 @@ func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []Standa
 	)
 }
 
-type CompositeValueFunctionsHandler func(inter *interpreter.Interpreter) map[string]interpreter.FunctionValue
+type CompositeValueFunctionsHandler func(
+	inter *interpreter.Interpreter,
+	compositeValue *interpreter.CompositeValue,
+) map[string]interpreter.FunctionValue
 
 type CompositeValueFunctionsHandlers map[common.TypeID]CompositeValueFunctionsHandler
 
@@ -72,7 +75,10 @@ func DefaultStandardLibraryCompositeValueFunctionHandlers(
 	handler StandardLibraryHandler,
 ) CompositeValueFunctionsHandlers {
 	return CompositeValueFunctionsHandlers{
-		sema.PublicKeyType.ID(): func(inter *interpreter.Interpreter) map[string]interpreter.FunctionValue {
+		sema.PublicKeyType.ID(): func(
+			inter *interpreter.Interpreter,
+			_ *interpreter.CompositeValue,
+		) map[string]interpreter.FunctionValue {
 			return PublicKeyFunctions(inter, handler)
 		},
 	}

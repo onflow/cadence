@@ -939,16 +939,15 @@ func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.Composite
 func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter.CompositeValueFunctionsHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
-		location common.Location,
-		typeID common.TypeID,
+		compositeValue *interpreter.CompositeValue,
 	) map[string]interpreter.FunctionValue {
 
-		handler := e.compositeValueFunctionsHandlers[typeID]
+		handler := e.compositeValueFunctionsHandlers[compositeValue.TypeID()]
 		if handler == nil {
 			return nil
 		}
 
-		return handler(inter)
+		return handler(inter, compositeValue)
 	}
 }
 
