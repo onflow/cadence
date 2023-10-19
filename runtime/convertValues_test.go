@@ -218,6 +218,27 @@ func TestExportValue(t *testing.T) {
 			}),
 		},
 		{
+			label: "Array (non-empty) with HashableStruct",
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeHashableStruct,
+					},
+					common.ZeroAddress,
+					interpreter.NewUnmeteredIntValueFromInt64(42),
+					interpreter.NewUnmeteredStringValue("foo"),
+				)
+			},
+			expected: cadence.NewArray([]cadence.Value{
+				cadence.NewInt(42),
+				cadence.String("foo"),
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: cadence.HashableStructType{},
+			}),
+		},
+		{
 			label: "Dictionary",
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
@@ -929,6 +950,11 @@ func TestImportRuntimeType(t *testing.T) {
 			label:    "AnyStruct",
 			actual:   cadence.AnyStructType{},
 			expected: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		{
+			label:    "HashableStruct",
+			actual:   cadence.HashableStructType{},
+			expected: interpreter.PrimitiveStaticTypeHashableStruct,
 		},
 		{
 			label:    "AnyResource",
@@ -2954,6 +2980,10 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 					Identifier: "j",
 					Type:       cadence.AnyStructType{},
 				},
+				{
+					Identifier: "k",
+					Type:       cadence.HashableStructType{},
+				},
 			},
 		},
 
@@ -2998,6 +3028,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 				Identifier: "foo",
 			},
 			cadence.String("foo"),
+			cadence.String("foo"),
 		},
 	}
 
@@ -3023,6 +3054,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
               pub var h: PublicPath
               pub var i: PrivatePath
               pub var j: AnyStruct
+			  pub var k: HashableStruct
 
               init() {
                   self.a = "Hello"
@@ -3035,6 +3067,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
                   self.h = /public/foo
                   self.i = /private/foo
                   self.j = nil
+				  self.k = "hashable_struct_value"
               }
           }
         `,
@@ -3140,6 +3173,117 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
               pub var c: [AnyStruct]
               pub var d: [AnyStruct; 2]
               pub var e: AnyStruct
+
+              init() {
+                  self.a = "Hello"
+                  self.b = {}
+                  self.c = []
+                  self.d = ["foo", "bar"]
+                  self.e = /storage/foo
+              }
+        }
+        `,
+		"Foo",
+	)
+
+	actual, err := executeTestScript(t, script, complexStructValue)
+	require.NoError(t, err)
+
+	expected := cadence.ValueWithCachedTypeID(complexStructValue)
+	assert.Equal(t, expected, actual)
+}
+
+func TestRuntimeComplexStructWithHashableStructFields(t *testing.T) {
+
+	t.Parallel()
+
+	// Complex struct value
+	complexStructValue := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: &cadence.OptionalType{
+						Type: cadence.HashableStructType{},
+					},
+				},
+				{
+					Identifier: "b",
+					Type: &cadence.DictionaryType{
+						KeyType:     cadence.StringType{},
+						ElementType: cadence.HashableStructType{},
+					},
+				},
+				{
+					Identifier: "c",
+					Type: &cadence.VariableSizedArrayType{
+						ElementType: cadence.HashableStructType{},
+					},
+				},
+				{
+					Identifier: "d",
+					Type: &cadence.ConstantSizedArrayType{
+						ElementType: cadence.HashableStructType{},
+						Size:        2,
+					},
+				},
+				{
+					Identifier: "e",
+					Type:       cadence.HashableStructType{},
+				},
+			},
+		},
+
+		Fields: []cadence.Value{
+			cadence.NewOptional(cadence.String("John")),
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("name"),
+					Value: cadence.String("Doe"),
+				},
+			}).WithType(&cadence.DictionaryType{
+				KeyType:     cadence.StringType{},
+				ElementType: cadence.HashableStructType{},
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.String("foo"),
+				cadence.String("bar"),
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: cadence.HashableStructType{},
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.String("foo"),
+				cadence.String("bar"),
+			}).WithType(&cadence.ConstantSizedArrayType{
+				ElementType: cadence.HashableStructType{},
+				Size:        2,
+			}),
+			cadence.Path{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+		},
+	}
+
+	script := fmt.Sprintf(
+		`
+          pub fun main(arg: %[1]s): %[1]s {
+
+              if !arg.isInstance(Type<%[1]s>()) {
+                  panic("Not a %[1]s value")
+              }
+
+              return arg
+          }
+
+          pub struct Foo {
+              pub var a: HashableStruct?
+              pub var b: {String: HashableStruct}
+              pub var c: [HashableStruct]
+              pub var d: [HashableStruct; 2]
+              pub var e: HashableStruct
 
               init() {
                   self.a = "Hello"
