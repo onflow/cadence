@@ -834,15 +834,17 @@ func ConvertSemaArrayTypeToStaticArrayType(
 ) ArrayStaticType {
 	switch t := t.(type) {
 	case *sema.VariableSizedType:
-		return VariableSizedStaticType{
-			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
-		}
+		return NewVariableSizedStaticType(
+			memoryGauge,
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+		)
 
 	case *sema.ConstantSizedType:
-		return ConstantSizedStaticType{
-			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
-			Size: t.Size,
-		}
+		return NewConstantSizedStaticType(
+			memoryGauge,
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+			t.Size,
+		)
 
 	default:
 		panic(errors.NewUnreachableError())
