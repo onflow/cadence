@@ -1956,13 +1956,13 @@ func TestInterpretForEachAttachment(t *testing.T) {
                 E -> Y
             }
             struct S {}
-            access(M) attachment A for S {
+            access(mapping M) attachment A for S {
                 access(F) fun foo(_ x: Int): Int { return 7 + x }
             }
-            access(N) attachment B for S {
+            access(mapping N) attachment B for S {
                 access(Y) fun foo(): Int { return 10 }
             }
-            access(O) attachment C for S {
+            access(mapping O) attachment C for S {
                 access(Y) fun foo(_ x: Int): Int { return 8 + x }
             }
             fun test(): Int {
