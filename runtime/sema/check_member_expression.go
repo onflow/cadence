@@ -321,12 +321,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 		switch ty := resultingType.(type) {
 		case *ReferenceType:
 			return NewReferenceType(checker.memoryGauge, resultingAuthorization, ty.Type)
-		case *OptionalType:
-			switch innerTy := ty.Type.(type) {
-			case *ReferenceType:
-				return NewOptionalType(checker.memoryGauge,
-					NewReferenceType(checker.memoryGauge, resultingAuthorization, innerTy.Type))
-			}
 		}
 		return resultingType
 	}
@@ -334,16 +328,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	shouldSubstituteAuthorization := !member.Access.Equal(resultingAuthorization)
 
 	if shouldSubstituteAuthorization {
-		switch ty := resultingType.(type) {
-		case *FunctionType:
-			resultingType = NewSimpleFunctionType(
-				ty.Purity,
-				ty.Parameters,
-				NewTypeAnnotation(substituteConcreteAuthorization(ty.ReturnTypeAnnotation.Type)),
-			)
-		default:
-			resultingType = substituteConcreteAuthorization(resultingType)
-		}
+		resultingType = resultingType.Map(checker.memoryGauge, make(map[*TypeParameter]*TypeParameter), substituteConcreteAuthorization)
 	}
 
 	// Check that the member access is not to a function of resource type
