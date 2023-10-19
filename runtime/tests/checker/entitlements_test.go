@@ -1471,7 +1471,9 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
             }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
 	})
 
 	t.Run("invalid mapping", func(t *testing.T) {
