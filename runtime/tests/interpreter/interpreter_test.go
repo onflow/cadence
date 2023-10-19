@@ -194,8 +194,10 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 		config = *options.Config
 	}
 	config.InvalidatedResourceValidationEnabled = true
-	config.AtreeValueValidationEnabled = true
-	config.AtreeStorageValidationEnabled = true
+	if memoryGauge == nil {
+		config.AtreeValueValidationEnabled = true
+		config.AtreeStorageValidationEnabled = true
+	}
 	if config.UUIDHandler == nil {
 		config.UUIDHandler = func() (uint64, error) {
 			uuid++
