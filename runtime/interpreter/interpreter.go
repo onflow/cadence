@@ -2115,6 +2115,14 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			// transferring a reference at runtime does not change its entitlements; this is so that an upcast reference
 			// can later be downcast back to its original entitlement set
 
+			// check defensively that we never create a runtime mapped entitlement value
+			if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
+				panic(UnexpectedMappedEntitlementError{
+					Type:          unwrappedTargetType,
+					LocationRange: locationRange,
+				})
+			}
+
 			switch ref := value.(type) {
 			case *EphemeralReferenceValue:
 				return NewEphemeralReferenceValue(

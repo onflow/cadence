@@ -980,10 +980,11 @@ func TestCheckAccountContractsNames(t *testing.T) {
           }
         `)
 
-		errors := RequireCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
+		assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errors[2])
 	})
 }
 
