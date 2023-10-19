@@ -114,13 +114,14 @@ func (k StorageKey) IsLess(o StorageKey) bool {
 // InMemoryStorage
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	StorageMaps map[StorageKey]*StorageMap
-	memoryGauge common.MemoryGauge
+	StorageMaps     map[StorageKey]*StorageMap
+	memoryGauge     common.MemoryGauge
+	rootInterpreter *Interpreter
 }
 
-var _ Storage = InMemoryStorage{}
+var _ Storage = &InMemoryStorage{}
 
-func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
+func NewInMemoryStorage(memoryGauge common.MemoryGauge) *InMemoryStorage {
 	decodeStorable := func(decoder *cbor.StreamDecoder, storableSlabStorageID atree.StorageID) (atree.Storable, error) {
 		return DecodeStorable(decoder, storableSlabStorageID, memoryGauge)
 	}
@@ -136,14 +137,22 @@ func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
 		decodeTypeInfo,
 	)
 
-	return InMemoryStorage{
+	return &InMemoryStorage{
 		BasicSlabStorage: slabStorage,
 		StorageMaps:      make(map[StorageKey]*StorageMap),
 		memoryGauge:      memoryGauge,
 	}
 }
 
-func (i InMemoryStorage) GetStorageMap(
+func (i *InMemoryStorage) RootInterpreter() *Interpreter {
+	return i.rootInterpreter
+}
+
+func (i *InMemoryStorage) SetRootInterpreter(inter *Interpreter) {
+	i.rootInterpreter = inter
+}
+
+func (i *InMemoryStorage) GetStorageMap(
 	address common.Address,
 	domain string,
 	createIfNotExists bool,
@@ -159,7 +168,7 @@ func (i InMemoryStorage) GetStorageMap(
 	return storageMap
 }
 
-func (i InMemoryStorage) CheckHealth() error {
+func (i *InMemoryStorage) CheckHealth() error {
 	_, err := atree.CheckStorageHealth(i, -1)
 	return err
 }

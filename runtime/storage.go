@@ -40,6 +40,15 @@ type Storage struct {
 	contractUpdates *orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]
 	Ledger          atree.Ledger
 	memoryGauge     common.MemoryGauge
+	rootInterpreter *interpreter.Interpreter
+}
+
+func (s *Storage) RootInterpreter() *interpreter.Interpreter {
+	return s.rootInterpreter
+}
+
+func (s *Storage) SetRootInterpreter(inter *interpreter.Interpreter) {
+	s.rootInterpreter = inter
 }
 
 var _ atree.SlabStorage = &Storage{}

@@ -100,6 +100,6 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	require.Equal(t, 1, count)
 }
 
-func newUnmeteredInMemoryStorage() InMemoryStorage {
+func newUnmeteredInMemoryStorage() *InMemoryStorage {
 	return NewInMemoryStorage(nil)
 }

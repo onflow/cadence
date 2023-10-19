@@ -121,7 +121,7 @@ func testAccount(
 	getAccountValues := func() map[storageKey]interpreter.Value {
 		accountValues := make(map[storageKey]interpreter.Value)
 
-		for storageMapKey, accountStorage := range inter.Storage().(interpreter.InMemoryStorage).StorageMaps {
+		for storageMapKey, accountStorage := range inter.Storage().(*interpreter.InMemoryStorage).StorageMaps {
 			iterator := accountStorage.Iterator(inter)
 			for {
 				key, value := iterator.Next()

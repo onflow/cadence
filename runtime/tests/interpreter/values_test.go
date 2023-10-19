@@ -1113,7 +1113,7 @@ func (r randomValueGenerator) randomCompositeValue(
 	return testComposite, orgFields
 }
 
-func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (totalSize int, slabCounts int) {
+func getSlabStorageSize(t *testing.T, storage *interpreter.InMemoryStorage) (totalSize int, slabCounts int) {
 	slabs, err := storage.Encode()
 	require.NoError(t, err)
 

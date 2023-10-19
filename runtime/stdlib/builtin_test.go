@@ -33,7 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
+func newUnmeteredInMemoryStorage() *interpreter.InMemoryStorage {
 	return interpreter.NewInMemoryStorage(nil)
 }
 

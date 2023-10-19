@@ -228,6 +228,16 @@ func (i interpreterStorage) CheckHealth() error {
 	panic("unexpected CheckHealth call")
 }
 
+func (i interpreterStorage) RootInterpreter() *interpreter.Interpreter {
+	panic("unexpected RootInterpreter call")
+
+}
+
+func (i interpreterStorage) SetRootInterpreter(_ *interpreter.Interpreter) {
+	panic("unexpected SetRootInterpreter call")
+
+}
+
 // load
 
 func load() {

@@ -624,7 +624,10 @@ func (e *interpreterEnvironment) getCode(location common.Location) (code []byte,
 func (e *interpreterEnvironment) newInterpreter(
 	location common.Location,
 	program *interpreter.Program,
-) (*interpreter.Interpreter, error) {
+) (
+	inter *interpreter.Interpreter,
+	err error,
+) {
 
 	sharedState := e.runtimeInterface.GetInterpreterSharedState()
 	if sharedState != nil {
@@ -633,25 +636,30 @@ func (e *interpreterEnvironment) newInterpreter(
 		// Even though suboptimal, this ensures that no writes "leak" from one top-level entry call to another
 		// (when interpreter shared state is reused).
 
-		return interpreter.NewInterpreterWithSharedState(
+		inter, err = interpreter.NewInterpreterWithSharedState(
 			program,
 			location,
 			sharedState,
 		)
+	} else {
+
+		inter, err = interpreter.NewInterpreter(
+			program,
+			location,
+			e.InterpreterConfig,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		e.runtimeInterface.SetInterpreterSharedState(inter.SharedState)
 	}
 
-	inter, err := interpreter.NewInterpreter(
-		program,
-		location,
-		e.InterpreterConfig,
-	)
-	if err != nil {
-		return nil, err
+	if inter != nil {
+		inter.Storage().SetRootInterpreter(inter)
 	}
 
-	e.runtimeInterface.SetInterpreterSharedState(inter.SharedState)
-
-	return inter, nil
+	return
 }
 
 func (e *interpreterEnvironment) newOnStatementHandler() interpreter.OnStatementFunc {

@@ -246,7 +246,7 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	return inter, err
 }
 
-func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
+func newUnmeteredInMemoryStorage() *interpreter.InMemoryStorage {
 	return interpreter.NewInMemoryStorage(nil)
 }
 
@@ -8120,7 +8120,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 
 		var permanentSlabs []atree.Slab
 
-		for _, slab := range storage.(interpreter.InMemoryStorage).Slabs {
+		for _, slab := range storage.(*interpreter.InMemoryStorage).Slabs {
 			if slab.ID().Address == (atree.Address{}) {
 				continue
 			}

@@ -244,6 +244,8 @@ type Storage interface {
 	atree.SlabStorage
 	GetStorageMap(address common.Address, domain string, createIfNotExists bool) *StorageMap
 	CheckHealth() error
+	RootInterpreter() *Interpreter
+	SetRootInterpreter(inter *Interpreter)
 }
 
 type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
@@ -311,6 +313,11 @@ func NewInterpreterWithSharedState(
 	}
 
 	interpreter.activations.PushNewWithParent(baseActivation)
+
+	storage := interpreter.Storage()
+	if storage != nil && storage.RootInterpreter() == nil {
+		storage.SetRootInterpreter(interpreter)
+	}
 
 	return interpreter, nil
 }
