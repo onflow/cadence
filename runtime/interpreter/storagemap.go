@@ -174,7 +174,10 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (ex
 // Iterator returns an iterator (StorageMapIterator),
 // which allows iterating over the keys and values of the storage map
 func (s StorageMap) Iterator(gauge common.MemoryGauge) StorageMapIterator {
-	mapIterator, err := s.orderedMap.Iterator()
+	mapIterator, err := s.orderedMap.Iterator(
+		StorageMapKeyAtreeValueComparator,
+		StorageMapKeyAtreeValueHashInput,
+	)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}

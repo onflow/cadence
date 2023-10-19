@@ -5114,14 +5114,16 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 	}
 
+	atreeInliningEnabled := true
+
 	switch value := value.(type) {
 	case *atree.Array:
-		err := atree.ValidArray(value, value.Type(), tic, hip)
+		err := atree.VerifyArray(value, value.Address(), value.Type(), tic, hip, atreeInliningEnabled)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
 
-		err = atree.ValidArraySerialization(
+		err = atree.VerifyArraySerialization(
 			value,
 			CBORDecMode,
 			CBOREncMode,
@@ -5142,12 +5144,12 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 
 	case *atree.OrderedMap:
-		err := atree.ValidMap(value, value.Type(), tic, hip)
+		err := atree.VerifyMap(value, value.Address(), value.Type(), tic, hip, atreeInliningEnabled)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
 
-		err = atree.ValidMapSerialization(
+		err = atree.VerifyMapSerialization(
 			value,
 			CBORDecMode,
 			CBOREncMode,
@@ -5356,11 +5358,12 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 func (interpreter *Interpreter) DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	slabID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
 ) (
 	atree.Storable,
 	error,
 ) {
-	return DecodeStorable(decoder, slabID, interpreter)
+	return DecodeStorable(decoder, slabID, inlinedExtraData, interpreter)
 }
 
 func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {

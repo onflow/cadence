@@ -91,8 +91,8 @@ func storageKeyToSlabID(address atree.Address, key string) atree.SlabID {
 	return atree.NewSlabID(address, index)
 }
 
-func decodeStorable(decoder *cbor.StreamDecoder, storableSlabStorageID atree.SlabID) (atree.Storable, error) {
-	return interpreter.DecodeStorable(decoder, storableSlabStorageID, nil)
+func decodeStorable(decoder *cbor.StreamDecoder, storableSlabStorageID atree.SlabID, inlnedExtraData []atree.ExtraData) (atree.Storable, error) {
+	return interpreter.DecodeStorable(decoder, storableSlabStorageID, inlnedExtraData, nil)
 }
 
 func decodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
@@ -135,6 +135,11 @@ func slabIDToStorageKey(id atree.SlabID) storageKey {
 type slabStorage struct{}
 
 var _ atree.SlabStorage = &slabStorage{}
+
+func (s *slabStorage) RetrieveIfLoaded(atree.SlabID) atree.Slab {
+	// RetrieveIfLoaded() is used for loaded resource tracking.  So it isn't needed here.
+	panic("not reachable")
+}
 
 func (s *slabStorage) Retrieve(id atree.SlabID) (atree.Slab, bool, error) {
 	data, ok := storage[slabIDToStorageKey(id)]
@@ -354,7 +359,7 @@ func loadStorageKey(
 
 			reader := bytes.NewReader(data)
 			decoder := interpreter.CBORDecMode.NewStreamDecoder(reader)
-			storable, err := interpreter.DecodeStorable(decoder, atree.SlabIDUndefined, nil)
+			storable, err := interpreter.DecodeStorable(decoder, atree.SlabIDUndefined, nil, nil)
 			if err != nil {
 				log.Printf(
 					"Failed to decode storable @ 0x%x %s: %s (data: %x)\n",

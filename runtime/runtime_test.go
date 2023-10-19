@@ -5780,10 +5780,11 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// contract value
+			// Storage map is modified because contract value is inlined in contract storage map.
+			// NOTE: contract value slab doesn't exist.
 			{
 				addressValue[:],
-				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 			},
 		},
 		writes,
@@ -5883,6 +5884,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				[]byte("contract"),
 			},
 			// contract value
+			// NOTE: contract value slab is empty because it is inlined in contract domain storage map
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
@@ -5926,11 +5928,13 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 				[]byte("storage"),
 			},
 			// resource value
+			// NOTE: resource value slab is empty because it is inlined in storage domain storage map
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
 			},
 			// storage domain storage map
+			// NOTE: resource value slab is inlined.
 			{
 				addressValue[:],
 				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
@@ -5992,10 +5996,11 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	assert.Equal(t,
 		[]ownerKeyPair{
-			// resource value
+			// Storage map is modified because resource value is inlined in storage map
+			// NOTE: resource value slab is empty.
 			{
 				addressValue[:],
-				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3},
+				[]byte{'$', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4},
 			},
 		},
 		writes,

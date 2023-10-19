@@ -49,6 +49,7 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 	decodeStorable := func(
 		decoder *cbor.StreamDecoder,
 		slabID atree.SlabID,
+		inlinedExtraData []atree.ExtraData,
 	) (
 		atree.Storable,
 		error,
@@ -56,6 +57,7 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 		return interpreter.DecodeStorable(
 			decoder,
 			slabID,
+			inlinedExtraData,
 			memoryGauge,
 		)
 	}
