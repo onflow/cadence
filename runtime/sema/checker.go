@@ -1261,21 +1261,19 @@ func (checker *Checker) functionType(
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
-
-	oldMappedAccess := checker.entitlementMappingInScope
-	if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
-		checker.entitlementMappingInScope = mapAccess.Type
-	} else {
-		checker.entitlementMappingInScope = nil
-	}
-	defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
-
 	convertedParameters := checker.parameters(parameterList)
 
 	convertedReturnTypeAnnotation := VoidTypeAnnotation
 	if returnTypeAnnotation != nil {
+		// to allow entitlement mapping types to be used in the return annotation only of
+		// a mapped accessor function, we introduce a "variable" into the typing scope while
+		// checking the return
+		if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
+			checker.entitlementMappingInScope = mapAccess.Type
+		}
 		convertedReturnTypeAnnotation =
 			checker.ConvertTypeAnnotation(returnTypeAnnotation)
+		checker.entitlementMappingInScope = nil
 	}
 
 	return &FunctionType{

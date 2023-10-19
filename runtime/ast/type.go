@@ -25,6 +25,7 @@ import (
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const typeSeparatorSpaceDoc = prettier.Text(": ")
@@ -597,6 +598,8 @@ func (t *ReferenceType) Doc() prettier.Doc {
 				referenceTypeMappingKeywordDoc,
 				authorization.EntitlementMap.Doc(),
 			)
+		default:
+			panic(errors.NewUnreachableError())
 		}
 		doc = append(doc, prettier.Text(")"))
 		doc = append(doc, prettier.Space)
