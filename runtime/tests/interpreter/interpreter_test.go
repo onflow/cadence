@@ -25,13 +25,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/activations"
-
 	"github.com/onflow/atree"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -8137,7 +8137,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 			permanentSlabs = append(permanentSlabs, slab)
 		}
 
-		// permanet slab is R1 (R2 is inlined in R1 slab)
+		// permanent slab is R1 (R2 is inlined in R1 slab)
 		require.Equal(t, 1, len(permanentSlabs))
 
 		sort.Slice(permanentSlabs, func(i, j int) bool {
