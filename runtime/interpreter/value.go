@@ -16502,7 +16502,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 				attachment.Destroy(interpreter, locationRange)
 			})
 
-			interpreter = v.getInterpreter(interpreter)
+			interpreter = interpreter.GetInterpreter(v.Location)
 
 			// if composite was deserialized, dynamically link in the destructor
 			if v.Destructor == nil {
@@ -16616,7 +16616,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		}
 	}
 
-	interpreter = v.getInterpreter(interpreter)
+	interpreter = interpreter.GetInterpreter(v.Location)
 
 	// Dynamically link in the computed fields, injected fields, and functions
 
@@ -16641,20 +16641,6 @@ func (v *CompositeValue) checkInvalidatedResourceUse(locationRange LocationRange
 			LocationRange: locationRange,
 		})
 	}
-}
-
-func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
-
-	// Get the correct interpreter. The program code might need to be loaded.
-	// NOTE: standard library values have no location
-
-	location := v.Location
-
-	if location == nil || interpreter.Location == location {
-		return interpreter
-	}
-
-	return interpreter.EnsureLoaded(v.Location)
 }
 
 func (v *CompositeValue) GetComputedFields(interpreter *Interpreter) map[string]ComputedField {
@@ -17128,7 +17114,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	return true
 }
 
-func (v *CompositeValue) IsStorable() bool {
+func (v *CompositeValue) IsStorable(interpreter *Interpreter) bool {
 
 	// Only structures, resources, enums, and contracts can be stored.
 	// Contracts are not directly storable by programs,
@@ -17138,15 +17124,18 @@ func (v *CompositeValue) IsStorable() bool {
 	case common.CompositeKindStructure,
 		common.CompositeKindResource,
 		common.CompositeKindEnum,
-		common.CompositeKindAttachment,
-		common.CompositeKindContract:
-		break
+		common.CompositeKindAttachment:
+		if v.Location == nil {
+			return interpreter.MustSemaTypeOfValue(v).IsStorable(map[*sema.Member]bool{})
+		} else {
+			return true
+		}
+	case common.CompositeKindContract:
+		return v.Location != nil
 	default:
 		return false
 	}
 
-	// Composite value's of native/built-in types are not storable for now
-	return v.Location != nil
 }
 
 func (v *CompositeValue) Storable(
@@ -17154,7 +17143,16 @@ func (v *CompositeValue) Storable(
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
-	if !v.IsStorable() {
+
+	interpreterStorage, ok := storage.(Storage)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	interpreter := interpreterStorage.RootInterpreter().
+		GetInterpreter(v.Location)
+
+	if !v.IsStorable(interpreter) {
 		return NonStorable{Value: v}, nil
 	}
 

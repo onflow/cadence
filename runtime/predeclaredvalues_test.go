@@ -551,10 +551,7 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
-		},
+		storage:         newTestLedger(nil, nil),
 		resolveLocation: singleIdentifierLocationResolver(t),
 	}
 
@@ -604,4 +601,135 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 		result,
 	)
 
+}
+
+func TestRuntimePredeclaredStorableType(t *testing.T) {
+
+	t.Parallel()
+
+	xType := &sema.CompositeType{
+		Identifier:      "X",
+		Kind:            common.CompositeKindStructure,
+		Members:         &sema.StringMemberOrderedMap{},
+		StorableBuiltin: true,
+	}
+
+	const fooFieldName = "foo"
+
+	fooFieldMember := sema.NewPublicConstantFieldMember(
+		nil,
+		xType,
+		fooFieldName,
+		sema.IntType,
+		"",
+	)
+	xType.Members.Set(fooFieldName, fooFieldMember)
+
+	xConstructorType := &sema.FunctionType{
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(xType),
+	}
+
+	xConstructorDeclaration := stdlib.StandardLibraryValue{
+		Name: "X",
+		Type: xConstructorType,
+		Kind: common.DeclarationKindConstant,
+		Value: interpreter.NewHostFunctionValue(
+			nil,
+			xConstructorType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				return interpreter.NewCompositeValue(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					xType.Location,
+					xType.QualifiedIdentifier(),
+					xType.Kind,
+					[]interpreter.CompositeField{
+						{
+							Name:  fooFieldName,
+							Value: interpreter.NewUnmeteredIntValueFromInt64(42),
+						},
+					},
+					common.ZeroAddress,
+				)
+			},
+		),
+	}
+
+	xTypeDeclaration := stdlib.StandardLibraryType{
+		Name: "X",
+		Type: xType,
+		Kind: common.DeclarationKindType,
+	}
+
+	createAndSaveTx := []byte(`
+      transaction {
+          prepare(signer: AuthAccount) {
+             signer.save(X(), to: /storage/x)
+          }
+      }
+	`)
+
+	loadAndUseTx := []byte(`
+	 transaction {
+	     prepare(signer: AuthAccount) {
+	        let x = signer.load<X>(from: /storage/x)!
+	        log(x.foo)
+	     }
+	 }
+	`)
+
+	runtime := newTestInterpreterRuntime()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	var logs []string
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		log: func(message string) {
+			logs = append(logs, message)
+		},
+	}
+
+	// Create environment
+
+	txEnvironment := NewBaseInterpreterEnvironment(Config{})
+	txEnvironment.DeclareValue(xConstructorDeclaration)
+	txEnvironment.DeclareType(xTypeDeclaration)
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Create and save
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: createAndSaveTx,
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: txEnvironment,
+		},
+	)
+	require.NoError(t, err)
+
+	// Load and use
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: loadAndUseTx,
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: txEnvironment,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t, []string{"42"}, logs)
 }

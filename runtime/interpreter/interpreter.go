@@ -5581,3 +5581,16 @@ func (interpreter *Interpreter) withResourceDestruction(
 
 	f()
 }
+
+// GetInterpreter returns the interpreter for the given location.
+// The program code might need to be loaded.
+func (interpreter *Interpreter) GetInterpreter(location common.Location) *Interpreter {
+
+	// NOTE: standard library values have no location
+
+	if location == nil || interpreter.Location == location {
+		return interpreter
+	}
+
+	return interpreter.EnsureLoaded(location)
+}
