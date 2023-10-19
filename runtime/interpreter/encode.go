@@ -1613,9 +1613,8 @@ func (c compositeTypeInfo) Identifier() string {
 }
 
 func (c compositeTypeInfo) Copy() atree.TypeInfo {
-	// TODO: is creating a new compositeTypeInfo necessary?
-	// atree needs immutable TypeInfo or a copy of mutable TypeInfo because TypeInfo can be shared.
-	return NewCompositeTypeInfo(nil, c.location, c.qualifiedIdentifier, c.kind)
+	// Return c as is because c is a value type.
+	return c
 }
 
 func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
@@ -1667,7 +1666,7 @@ func (e EmptyTypeInfo) IsComposite() bool {
 }
 
 func (e EmptyTypeInfo) Identifier() string {
-	return "null"
+	return ""
 }
 
 func (e EmptyTypeInfo) Copy() atree.TypeInfo {
