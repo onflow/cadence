@@ -136,6 +136,10 @@ const (
 	returnKey         = "return"
 	typeBoundKey      = "typeBound"
 	functionTypeKey   = "functionType"
+	elementKey        = "element"
+	startKey          = "start"
+	endKey            = "end"
+	stepKey           = "step"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -222,6 +226,8 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeEvent(valueJSON)
 	case contractTypeStr:
 		return d.decodeContract(valueJSON)
+	case inclusiveRangeTypeStr:
+		return d.decodeInclusiveRange(valueJSON)
 	case pathTypeStr:
 		return d.decodePath(valueJSON)
 	case typeTypeStr:
@@ -866,6 +872,26 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	))
 }
 
+func (d *Decoder) decodeInclusiveRange(valueJSON any) *cadence.InclusiveRange {
+	obj := toObject(valueJSON)
+
+	start := obj.GetValue(d, startKey)
+	end := obj.GetValue(d, endKey)
+	step := obj.GetValue(d, stepKey)
+
+	value := cadence.NewMeteredInclusiveRange(
+		d.gauge,
+		start,
+		end,
+		step,
+	)
+
+	return value.WithType(cadence.NewMeteredInclusiveRangeType(
+		d.gauge,
+		start.Type(),
+	))
+}
+
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	obj := toObject(valueJSON)
 
@@ -1184,6 +1210,11 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.gauge,
 			d.decodeType(obj.Get(keyKey), results),
 			d.decodeType(obj.Get(valueKey), results),
+		)
+	case "InclusiveRange":
+		return cadence.NewMeteredInclusiveRangeType(
+			d.gauge,
+			d.decodeType(obj.Get(elementKey), results),
 		)
 	case "ConstantSizedArray":
 		size := toUInt(obj.Get(sizeKey))

@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckInvalidUnaryBooleanNegationOfInteger(t *testing.T) {
@@ -337,6 +338,9 @@ type operationWithTypeTests struct {
 func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
 	allOperationTests := []operationWithTypeTests{
 		{
 			operations: []ast.Operation{
@@ -363,6 +367,16 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 				{sema.BoolType, "1.2", "\"bcd\"", "Fix64", "String", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
+				{
+					sema.BoolType,
+					"InclusiveRange(1, 2)",
+					"InclusiveRange(3, 4)",
+					"InclusiveRange<Int>",
+					"InclusiveRange<Int>",
+					[]error{
+						&sema.InvalidBinaryOperandsError{},
+					},
+				},
 			},
 		},
 	}
@@ -378,7 +392,7 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 
 				t.Run(testName, func(t *testing.T) {
 
-					_, err := ParseAndCheck(t,
+					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`fun test(): %s { 
 								let a: %s = %s
@@ -387,6 +401,11 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 							}`,
 							test.ty, test.leftType, test.left, test.rightType, test.right, operation.Symbol(),
 						),
+						ParseAndCheckOptions{
+							Config: &sema.Config{
+								BaseValueActivation: baseValueActivation,
+							},
+						},
 					)
 
 					errs := RequireCheckerErrors(t, err, len(test.expectedErrors))

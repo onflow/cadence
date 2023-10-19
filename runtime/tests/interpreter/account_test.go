@@ -89,6 +89,8 @@ func testAccount(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
+	valueDeclarations = append(valueDeclarations, stdlib.InclusiveRangeConstructorFunction)
+
 	if checkerConfig.BaseValueActivation == nil {
 		checkerConfig.BaseValueActivation = sema.BaseValueActivation
 	}

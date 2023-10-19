@@ -224,6 +224,8 @@ const (
 	interfaceTypeMask
 	functionTypeMask
 
+	inclusiveRangeTypeMask
+
 	invalidTypeMask
 )
 
@@ -338,6 +340,7 @@ var (
 
 	RestrictedTypeTag                  = newTypeTagFromUpperMask(restrictedTypeMask)
 	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
+	InclusiveRangeTypeTag              = newTypeTagFromUpperMask(inclusiveRangeTypeMask)
 	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
 	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
 	AnyResourceAttachmentTypeTag       = newTypeTagFromUpperMask(anyResourceAttachmentMask)
@@ -368,7 +371,8 @@ var (
 				Or(CapabilityTypeTag).
 				Or(FunctionTypeTag).
 				Or(StorageCapabilityControllerTypeTag).
-				Or(AccountCapabilityControllerTypeTag)
+				Or(AccountCapabilityControllerTypeTag).
+				Or(InclusiveRangeTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
@@ -670,7 +674,8 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		restrictedTypeMask,
 		transactionTypeMask,
 		interfaceTypeMask,
-		functionTypeMask:
+		functionTypeMask,
+		inclusiveRangeTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 
 	case anyResourceAttachmentMask:

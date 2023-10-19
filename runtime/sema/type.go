@@ -3411,6 +3411,7 @@ func init() {
 			HashAlgorithmType,
 			StorageCapabilityControllerType,
 			AccountCapabilityControllerType,
+			&InclusiveRangeType{},
 		},
 	)
 
@@ -5263,6 +5264,295 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 	return &DictionaryType{
 		KeyType:   newKeyType,
 		ValueType: newValueType,
+	}
+}
+
+// InclusiveRangeType
+
+type InclusiveRangeType struct {
+	MemberType          Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
+}
+
+var _ Type = &InclusiveRangeType{}
+var _ ParameterizedType = &InclusiveRangeType{}
+
+func NewInclusiveRangeType(memoryGauge common.MemoryGauge, elementType Type) *InclusiveRangeType {
+	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
+	return &InclusiveRangeType{
+		MemberType: elementType,
+	}
+}
+
+func (*InclusiveRangeType) IsType() {}
+
+func (*InclusiveRangeType) Tag() TypeTag {
+	return InclusiveRangeTypeTag
+}
+
+func (t *InclusiveRangeType) String() string {
+	memberString := ""
+	if t.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", t.MemberType.String())
+	}
+	return fmt.Sprintf(
+		"InclusiveRange%s",
+		memberString,
+	)
+}
+
+func (t *InclusiveRangeType) QualifiedString() string {
+	memberString := ""
+	if t.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", t.MemberType.QualifiedString())
+	}
+	return fmt.Sprintf(
+		"InclusiveRange%s",
+		memberString,
+	)
+}
+
+func InclusiveRangeTypeID(memberTypeID string) TypeID {
+	if memberTypeID != "" {
+		memberTypeID = fmt.Sprintf("<%s>", memberTypeID)
+	}
+	return TypeID(fmt.Sprintf(
+		"InclusiveRange%s",
+		memberTypeID,
+	))
+}
+
+func (t *InclusiveRangeType) ID() TypeID {
+	var memberTypeID string
+	if t.MemberType != nil {
+		memberTypeID = string(t.MemberType.ID())
+	}
+	return InclusiveRangeTypeID(memberTypeID)
+}
+
+func (t *InclusiveRangeType) Equal(other Type) bool {
+	otherRange, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+	if otherRange.MemberType == nil {
+		return t.MemberType == nil
+	}
+
+	return otherRange.MemberType.Equal(t.MemberType)
+}
+
+func (t *InclusiveRangeType) IsResourceType() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) IsInvalidType() bool {
+	return t.MemberType != nil && t.MemberType.IsInvalidType()
+}
+
+func (t *InclusiveRangeType) IsStorable(results map[*Member]bool) bool {
+	return false
+}
+
+func (t *InclusiveRangeType) IsExportable(results map[*Member]bool) bool {
+	return t.MemberType.IsExportable(results)
+}
+
+func (t *InclusiveRangeType) IsImportable(results map[*Member]bool) bool {
+	return t.MemberType.IsImportable(results)
+}
+
+func (t *InclusiveRangeType) IsEquatable() bool {
+	return t.MemberType.IsEquatable()
+}
+
+func (*InclusiveRangeType) IsComparable() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) TypeAnnotationState() TypeAnnotationState {
+	if t.MemberType == nil {
+		return TypeAnnotationStateValid
+	}
+
+	return t.MemberType.TypeAnnotationState()
+}
+
+func (t *InclusiveRangeType) RewriteWithRestrictedTypes() (Type, bool) {
+	if t.MemberType == nil {
+		return t, false
+	}
+	rewrittenMemberType, rewritten := t.MemberType.RewriteWithRestrictedTypes()
+	if rewritten {
+		return &InclusiveRangeType{
+			MemberType: rewrittenMemberType,
+		}, true
+	}
+	return t, false
+}
+
+func (t *InclusiveRangeType) BaseType() Type {
+	if t.MemberType == nil {
+		return nil
+	}
+	return &InclusiveRangeType{}
+}
+
+func (t *InclusiveRangeType) Instantiate(typeArguments []Type, report func(err error)) Type {
+	memberType := typeArguments[0]
+	return &InclusiveRangeType{
+		MemberType: memberType,
+	}
+}
+
+func (t *InclusiveRangeType) TypeArguments() []Type {
+	memberType := t.MemberType
+	return []Type{
+		memberType,
+	}
+}
+
+var inclusiveRangeTypeParameter = &TypeParameter{
+	Name:      "T",
+	TypeBound: IntegerType,
+}
+
+func (*InclusiveRangeType) TypeParameters() []*TypeParameter {
+	return []*TypeParameter{
+		inclusiveRangeTypeParameter,
+	}
+}
+
+const InclusiveRangeTypeStartFieldName = "start"
+const inclusiveRangeTypeStartFieldDocString = `
+The start of the InclusiveRange sequence
+`
+const InclusiveRangeTypeEndFieldName = "end"
+const inclusiveRangeTypeEndFieldDocString = `
+The end of the InclusiveRange sequence
+`
+
+const InclusiveRangeTypeStepFieldName = "step"
+const inclusiveRangeTypeStepFieldDocString = `
+The step size of the InclusiveRange sequence
+`
+
+var InclusiveRangeTypeFieldNames = []string{
+	InclusiveRangeTypeStartFieldName,
+	InclusiveRangeTypeEndFieldName,
+	InclusiveRangeTypeStepFieldName,
+}
+
+const InclusiveRangeTypeContainsFunctionName = "contains"
+
+const inclusiveRangeTypeContainsFunctionDocString = `
+Returns true if the given integer is in the InclusiveRange sequence
+`
+
+func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			BoolType,
+		),
+	}
+}
+
+func (t *InclusiveRangeType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			InclusiveRangeTypeStartFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						t.MemberType,
+						inclusiveRangeTypeStartFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeEndFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						t.MemberType,
+						inclusiveRangeTypeEndFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeStepFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						t.MemberType,
+						inclusiveRangeTypeStepFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeContainsFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+					elementType := t.MemberType
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						InclusiveRangeContainsFunctionType(elementType),
+						inclusiveRangeTypeContainsFunctionDocString,
+					)
+				},
+			},
+		})
+	})
+}
+
+func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) Unify(
+	other Type,
+	typeParameters *TypeParameterTypeOrderedMap,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+	otherRange, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+
+	return t.MemberType.Unify(otherRange.MemberType, typeParameters, report, outerRange)
+}
+
+func (t *InclusiveRangeType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	memberType := t.MemberType.Resolve(typeArguments)
+	if memberType == nil {
+		return nil
+	}
+
+	return &InclusiveRangeType{
+		MemberType: memberType,
 	}
 }
 

@@ -291,6 +291,57 @@ func (t VariableSizedStaticType) ID() TypeID {
 	return sema.VariableSizedTypeID(t.Type.ID())
 }
 
+// InclusiveRangeStaticType
+
+type InclusiveRangeStaticType struct {
+	ElementType StaticType
+}
+
+var _ StaticType = InclusiveRangeStaticType{}
+var _ atree.TypeInfo = InclusiveRangeStaticType{}
+
+func NewInclusiveRangeStaticType(
+	memoryGauge common.MemoryGauge,
+	elementType StaticType,
+) InclusiveRangeStaticType {
+	common.UseMemory(memoryGauge, common.InclusiveRangeStaticTypeMemoryUsage)
+
+	return InclusiveRangeStaticType{
+		ElementType: elementType,
+	}
+}
+
+func (InclusiveRangeStaticType) isStaticType() {}
+
+func (InclusiveRangeStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
+func (t InclusiveRangeStaticType) String() string {
+	return t.MeteredString(nil)
+}
+
+func (t InclusiveRangeStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.InclusiveRangeStaticTypeStringMemoryUsage)
+
+	elementStr := t.ElementType.MeteredString(memoryGauge)
+
+	return fmt.Sprintf("InclusiveRange<%s>", elementStr)
+}
+
+func (t InclusiveRangeStaticType) Equal(other StaticType) bool {
+	otherRangeType, ok := other.(InclusiveRangeStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.ElementType.Equal(otherRangeType.ElementType)
+}
+
+func (t InclusiveRangeStaticType) ID() TypeID {
+	return sema.InclusiveRangeTypeID(string(t.ElementType.ID()))
+}
+
 // ConstantSizedStaticType
 
 type ConstantSizedStaticType struct {
@@ -775,6 +826,10 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		borrowType := ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		return NewCapabilityStaticType(memoryGauge, borrowType)
 
+	case *sema.InclusiveRangeType:
+		memberType := ConvertSemaToStaticType(memoryGauge, t.MemberType)
+		return NewInclusiveRangeStaticType(memoryGauge, memberType)
+
 	case *sema.FunctionType:
 		return NewFunctionStaticType(memoryGauge, t)
 	}
@@ -897,6 +952,17 @@ func ConvertStaticToSemaType(
 			memoryGauge,
 			keyType,
 			valueType,
+		), nil
+
+	case InclusiveRangeStaticType:
+		elementType, err := ConvertStaticToSemaType(memoryGauge, t.ElementType, getInterface, getComposite)
+		if err != nil {
+			return nil, err
+		}
+
+		return sema.NewInclusiveRangeType(
+			memoryGauge,
+			elementType,
 		), nil
 
 	case OptionalStaticType:

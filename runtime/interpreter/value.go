@@ -16231,8 +16231,12 @@ func (UFix64Value) Scale() int {
 // CompositeValue
 
 type CompositeValue struct {
-	Destructor      FunctionValue
-	Location        common.Location
+	Destructor FunctionValue
+	Location   common.Location
+
+	// note that the staticType is not guaranteed to be a CompositeStaticType as there can be types
+	// which are non-composite but their values are treated as CompositeValue.
+	// For e.g. InclusiveRangeValue
 	staticType      StaticType
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	InjectedFields  map[string]Value
@@ -16274,6 +16278,33 @@ func NewUnmeteredCompositeField(name string, value Value) CompositeField {
 		Name:  name,
 		Value: value,
 	}
+}
+
+// Create a CompositeValue with the provided StaticType.
+// Useful when we wish to utilize CompositeValue as the value
+// for a type which isn't CompositeType.
+// For e.g. InclusiveRangeType
+func NewCompositeValueWithStaticType(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
+	fields []CompositeField,
+	address common.Address,
+	staticType StaticType,
+) *CompositeValue {
+	value := NewCompositeValue(
+		interpreter,
+		locationRange,
+		location,
+		qualifiedIdentifier,
+		kind,
+		fields,
+		address,
+	)
+	value.staticType = staticType
+	return value
 }
 
 func NewCompositeValue(
@@ -17045,10 +17076,29 @@ func (v *CompositeValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType := v.StaticType(interpreter).(CompositeStaticType)
-
+	staticType := v.StaticType(interpreter)
 	semaType := interpreter.MustConvertStaticToSemaType(staticType)
 
+	switch staticType.(type) {
+	case CompositeStaticType:
+		return v.CompositeStaticTypeConformsToStaticType(interpreter, locationRange, results, semaType)
+
+	// CompositeValue is also used for storing types which aren't CompositeStaticType.
+	// E.g. InclusiveRange.
+	case InclusiveRangeStaticType:
+		return v.InclusiveRangeStaticTypeConformsToStaticType(interpreter, locationRange, results, semaType)
+
+	default:
+		return false
+	}
+}
+
+func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	results TypeConformanceResults,
+	semaType sema.Type,
+) bool {
 	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok ||
 		v.Kind != compositeType.Kind ||
@@ -17096,6 +17146,42 @@ func (v *CompositeValue) ConformsToStaticType(
 		fieldStaticType := value.StaticType(interpreter)
 
 		if !interpreter.IsSubTypeOfSemaType(fieldStaticType, member.TypeAnnotation.Type) {
+			return false
+		}
+
+		if !value.ConformsToStaticType(
+			interpreter,
+			locationRange,
+			results,
+		) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (v *CompositeValue) InclusiveRangeStaticTypeConformsToStaticType(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	results TypeConformanceResults,
+	semaType sema.Type,
+) bool {
+	inclusiveRangeType, ok := semaType.(*sema.InclusiveRangeType)
+	if !ok {
+		return false
+	}
+
+	expectedMemberStaticType := ConvertSemaToStaticType(interpreter, inclusiveRangeType.MemberType)
+	for _, fieldName := range sema.InclusiveRangeTypeFieldNames {
+		value := v.GetField(interpreter, locationRange, fieldName)
+
+		fieldStaticType := value.StaticType(interpreter)
+
+		// InclusiveRange is non-covariant.
+		// For e.g. we disallow assigning InclusiveRange<Int> to an InclusiveRange<Integer>.
+		// Hence we do an exact equality check instead of a sub-type check.
+		if !fieldStaticType.Equal(expectedMemberStaticType) {
 			return false
 		}
 

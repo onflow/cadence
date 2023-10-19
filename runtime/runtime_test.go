@@ -2365,6 +2365,69 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	inclusiveRangeCreation := []byte(`
+      pub fun createInclusiveRange(): InclusiveRange<Int> {
+        return InclusiveRange(10, 20)
+      }
+    `)
+
+	script1 := []byte(`
+      import "inclusive-range-creation"
+      transaction {
+        prepare(signer: AuthAccount) {
+          let ir = createInclusiveRange()
+          signer.save(ir, to: /storage/inclusiveRange)
+        }
+      }
+    `)
+
+	ledger := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("inclusive-range-creation"):
+				return inclusiveRangeCreation, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+		storage: ledger,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Contains(t, typeMismatchError.SecondaryError(), "expected `Storable`, got `InclusiveRange<Int>`")
+}
+
 func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 
 	t.Parallel()

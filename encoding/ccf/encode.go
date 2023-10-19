@@ -378,6 +378,7 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 //	/ path-value
 //	/ path-capability-value
 //	/ id-capability-value
+//	/ inclusiverange-value
 //	/ function-value
 //	/ type-value
 //
@@ -562,6 +563,9 @@ func (e *Encoder) encodeValue(
 
 	case cadence.Dictionary:
 		return e.encodeDictionary(v, tids)
+
+	case *cadence.InclusiveRange:
+		return e.encodeInclusiveRange(v, tids)
 
 	case cadence.Struct:
 		return e.encodeStruct(v, tids)
@@ -977,6 +981,34 @@ func encodeAndSortKeyValuePairs(
 	return encodedPairs, nil
 }
 
+// encodeInclusiveRange encodes cadence.InclusiveRange as
+// language=CDDL
+// inclusiverange-value = [3*3 (key: value, value: value)]
+func (e *Encoder) encodeInclusiveRange(v *cadence.InclusiveRange, tids ccfTypeIDByCadenceType) error {
+	staticElementType := v.InclusiveRangeType.ElementType
+
+	// Encode array head with array size of 3.
+	err := e.enc.EncodeArrayHead(3)
+	if err != nil {
+		return err
+	}
+
+	// Encode start key as value.
+	err = e.encodeValue(v.Start, staticElementType, tids)
+	if err != nil {
+		return err
+	}
+
+	// Encode end as value.
+	err = e.encodeValue(v.End, staticElementType, tids)
+	if err != nil {
+		return err
+	}
+
+	// Encode step key as value.
+	return e.encodeValue(v.Step, staticElementType, tids)
+}
+
 // encodeStruct encodes cadence.Struct as
 // language=CDDL
 // composite-value = [* (field: value)]
@@ -1232,6 +1264,7 @@ func (e *Encoder) encodeFunction(typ *cadence.FunctionType, visited ccfTypeIDByC
 //	/ reference-type-value
 //	/ restricted-type-value
 //	/ capability-type-value
+//	/ inclusiverange-type-value
 //	/ type-value-ref
 //
 // TypeValue is used differently from inline type or type definition.
@@ -1281,6 +1314,9 @@ func (e *Encoder) encodeTypeValue(typ cadence.Type, visited ccfTypeIDByCadenceTy
 
 	case *cadence.ContractType:
 		return e.encodeContractTypeValue(typ, visited)
+
+	case *cadence.InclusiveRangeType:
+		return e.encodeInclusiveRangeTypeValue(typ, visited)
 
 	case *cadence.StructInterfaceType:
 		return e.encodeStructInterfaceTypeValue(typ, visited)
@@ -1404,6 +1440,22 @@ func (e *Encoder) encodeConstantSizedArrayTypeValue(typ *cadence.ConstantSizedAr
 func (e *Encoder) encodeDictTypeValue(typ *cadence.DictionaryType, visited ccfTypeIDByCadenceType) error {
 	rawTagNum := []byte{0xd8, CBORTagDictTypeValue}
 	return e.encodeDictTypeWithRawTag(
+		typ,
+		visited,
+		e.encodeTypeValue,
+		rawTagNum,
+	)
+}
+
+// encodeInclusiveRangeTypeValue encodes cadence.InclusiveRangeType as
+// language=CDDL
+// inclusiverange-type-value =
+//
+//	; cbor-tag-inclusiverange-type-value
+//	#6.194(type-value)
+func (e *Encoder) encodeInclusiveRangeTypeValue(typ *cadence.InclusiveRangeType, visited ccfTypeIDByCadenceType) error {
+	rawTagNum := []byte{0xd8, CBORTagInclusiveRangeTypeValue}
+	return e.encodeInclusiveRangeTypeWithRawTag(
 		typ,
 		visited,
 		e.encodeTypeValue,

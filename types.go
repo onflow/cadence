@@ -1059,6 +1059,52 @@ func (t *DictionaryType) Equal(other Type) bool {
 		t.ElementType.Equal(otherType.ElementType)
 }
 
+// InclusiveRangeType
+
+type InclusiveRangeType struct {
+	ElementType Type
+	typeID      string
+}
+
+var _ Type = &InclusiveRangeType{}
+
+func NewInclusiveRangeType(
+	elementType Type,
+) *InclusiveRangeType {
+	return &InclusiveRangeType{
+		ElementType: elementType,
+	}
+}
+
+func NewMeteredInclusiveRangeType(
+	gauge common.MemoryGauge,
+	elementType Type,
+) *InclusiveRangeType {
+	common.UseMemory(gauge, common.CadenceInclusiveRangeTypeMemoryUsage)
+	return NewInclusiveRangeType(elementType)
+}
+
+func (*InclusiveRangeType) isType() {}
+
+func (t *InclusiveRangeType) ID() string {
+	if t.typeID == "" {
+		t.typeID = fmt.Sprintf(
+			"InclusiveRange<%s>",
+			t.ElementType.ID(),
+		)
+	}
+	return t.typeID
+}
+
+func (t *InclusiveRangeType) Equal(other Type) bool {
+	otherType, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+
+	return t.ElementType.Equal(otherType.ElementType)
+}
+
 // Field
 
 type Field struct {

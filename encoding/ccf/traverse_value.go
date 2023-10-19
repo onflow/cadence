@@ -220,7 +220,8 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		cadence.IntegerType,
 		cadence.SignedIntegerType,
 		cadence.FixedPointType,
-		cadence.SignedFixedPointType:
+		cadence.SignedFixedPointType,
+		*cadence.InclusiveRangeType:
 		// TODO: Maybe there are more types that we can skip checking runtime type for composite type.
 
 		return false

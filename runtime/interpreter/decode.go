@@ -1428,6 +1428,9 @@ func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	case CBORTagDictionaryStaticType:
 		return d.decodeDictionaryStaticType()
 
+	case CBORTagInclusiveRangeStaticType:
+		return d.decodeInclusiveRangeStaticType()
+
 	case CBORTagRestrictedStaticType:
 		return d.decodeRestrictedStaticType()
 
@@ -1728,6 +1731,17 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	}
 
 	return NewDictionaryStaticType(d.memoryGauge, keyType, valueType), nil
+}
+
+func (d TypeDecoder) decodeInclusiveRangeStaticType() (StaticType, error) {
+	elementType, err := d.DecodeStaticType()
+	if err != nil {
+		return nil, errors.NewUnexpectedError(
+			"invalid inclusive range static type encoding: %w",
+			err,
+		)
+	}
+	return NewInclusiveRangeStaticType(d.memoryGauge, elementType), nil
 }
 
 func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
