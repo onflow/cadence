@@ -452,7 +452,7 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(4), computationMeteredValues[common.ComputationKindIterateArrayValue])
+		assert.Equal(t, uint(5), computationMeteredValues[common.ComputationKindIterateArrayValue])
 	})
 
 	t.Run("filter", func(t *testing.T) {
@@ -480,7 +480,7 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(5), computationMeteredValues[common.ComputationKindIterateArrayValue])
+		assert.Equal(t, uint(6), computationMeteredValues[common.ComputationKindIterateArrayValue])
 	})
 }
 

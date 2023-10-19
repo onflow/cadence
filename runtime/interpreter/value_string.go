@@ -126,15 +126,16 @@ func stringFunctionJoin(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	// Meter computation for iterating the array.
-	inter.ReportComputation(common.ComputationKindIterateArrayValue, uint(stringArray.Count()))
-
 	// NewStringMemoryUsage already accounts for empty string.
 	common.UseMemory(inter, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 	first := true
 
 	stringArray.Iterate(inter, func(element Value) (resume bool) {
+
+		// Meter computation for iterating the array.
+		inter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
+
 		// Add separator
 		if !first {
 			// Construct directly instead of using NewStringMemoryUsage to avoid

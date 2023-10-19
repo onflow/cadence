@@ -2986,9 +2986,6 @@ func (v *ArrayValue) Reverse(
 	count := v.Count()
 	index := count - 1
 
-	// Meter computation for iterating the array.
-	interpreter.ReportComputation(common.ComputationKindIterateArrayValue, uint(v.Count()))
-
 	return NewArrayValueWithIterator(
 		interpreter,
 		v.Type,
@@ -2998,6 +2995,9 @@ func (v *ArrayValue) Reverse(
 			if index < 0 {
 				return nil
 			}
+
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
 
 			value := v.Get(interpreter, locationRange, index)
 			index--
@@ -3019,9 +3019,6 @@ func (v *ArrayValue) Filter(
 	locationRange LocationRange,
 	procedure FunctionValue,
 ) Value {
-
-	// Meter computation for iterating the array.
-	interpreter.ReportComputation(common.ComputationKindIterateArrayValue, uint(v.Count()))
 
 	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
 	iterationInvocation := func(arrayElement Value) Invocation {
@@ -3052,6 +3049,9 @@ func (v *ArrayValue) Filter(
 			var value Value
 
 			for {
+				// Meter computation for iterating the array.
+				interpreter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
+
 				atreeValue, err := iterator.Next()
 				if err != nil {
 					panic(errors.NewExternalError(err))
@@ -3096,9 +3096,6 @@ func (v *ArrayValue) Map(
 	procedure FunctionValue,
 	transformFunctionType *sema.FunctionType,
 ) Value {
-
-	// Meter computation for iterating the array.
-	interpreter.ReportComputation(common.ComputationKindIterateArrayValue, uint(v.Count()))
 
 	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
 	iterationInvocation := func(arrayElement Value) Invocation {
@@ -3147,6 +3144,9 @@ func (v *ArrayValue) Map(
 		common.ZeroAddress,
 		uint64(v.Count()),
 		func() Value {
+
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
