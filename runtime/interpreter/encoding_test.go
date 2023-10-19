@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"bytes"
 	"math"
 	"math/big"
 	"strings"
@@ -78,7 +79,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		}
 
 		var err error
-		encoded, err = atree.Encode(test.storable, CBOREncMode)
+		encoded, err = encodeStorable(test.storable, CBOREncMode)
 		require.NoError(t, err)
 
 		if test.encoded != nil {
@@ -89,7 +90,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	}
 
 	decoder := CBORDecMode.NewByteStreamDecoder(encoded)
-	decodedStorable, err := DecodeStorable(decoder, test.slabStorageID, nil)
+	decodedStorable, err := DecodeStorable(decoder, test.slabStorageID, nil, nil)
 
 	if test.invalid {
 		require.Error(t, err)
@@ -124,6 +125,24 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 			assert.Equal(t, expectedValue, decodedValue)
 		}
 	}
+}
+
+// encodeStorable wraps storable.Encode()
+func encodeStorable(storable atree.Storable, encMode cbor.EncMode) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := atree.NewEncoder(&buf, encMode)
+
+	err := storable.Encode(enc)
+	if err != nil {
+		return nil, err
+	}
+
+	err = enc.CBOR.Flush()
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 func TestEncodeDecodeNilValue(t *testing.T) {
@@ -389,6 +408,8 @@ func TestEncodeDecodeUint64AtreeValue(t *testing.T) {
 
 func TestEncodeDecodeArray(t *testing.T) {
 
+	t.Skip("skipping ArrayValue encoding and decoding test because it involves implementation details in atree repo")
+
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
@@ -457,6 +478,8 @@ func TestEncodeDecodeArray(t *testing.T) {
 }
 
 func TestEncodeDecodeComposite(t *testing.T) {
+
+	t.Skip("skipping CompositeValue encoding and decoding test because it involves implementation details in atree repo")
 
 	t.Parallel()
 

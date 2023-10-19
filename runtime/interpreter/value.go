@@ -2033,7 +2033,7 @@ func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReference
 
 	i := 0
 
-	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+	_ = v.array.IterateReadOnly(func(element atree.Value) (resume bool, err error) {
 		// ok to not meter anything created as part of this iteration, since we will discard the result
 		// upon creating the string
 		values[i] = MustConvertUnmeteredStoredValue(element).MeteredString(memoryGauge, seenReferences)
@@ -2703,7 +2703,7 @@ func (v *ArrayValue) Transfer(
 
 	if needsStoreTo || !isResourceKinded {
 
-		iterator, err := v.array.Iterator()
+		iterator, err := v.array.ReadOnlyIterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -2792,7 +2792,7 @@ func (v *ArrayValue) Transfer(
 func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	config := interpreter.SharedState.Config
 
-	iterator, err := v.array.Iterator()
+	iterator, err := v.array.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -16866,7 +16866,7 @@ func (v *CompositeValue) MeteredString(memoryGauge common.MemoryGauge, seenRefer
 	strLen := emptyCompositeStringLen
 
 	var fields []CompositeField
-	_ = v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
+	_ = v.dictionary.IterateReadOnly(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		field := NewCompositeField(
 			memoryGauge,
 			string(key.(StringAtreeValue)),
@@ -16958,7 +16958,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationR
 		return false
 	}
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -17226,7 +17226,7 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if needsStoreTo || !isResourceKinded {
-		iterator, err := v.dictionary.Iterator()
+		iterator, err := v.dictionary.ReadOnlyIterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -17376,7 +17376,7 @@ func (v *CompositeValue) ResourceUUID(interpreter *Interpreter, locationRange Lo
 
 func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -17485,13 +17485,16 @@ func (v *CompositeValue) ForEachField(
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
 
-	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
-		resume = f(
-			string(key.(StringAtreeValue)),
-			MustConvertStoredValue(gauge, value),
-		)
-		return
-	})
+	err := v.dictionary.Iterate(
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
+		func(key atree.Value, value atree.Value) (resume bool, err error) {
+			resume = f(
+				string(key.(StringAtreeValue)),
+				MustConvertStoredValue(gauge, value),
+			)
+			return
+		})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -17630,7 +17633,10 @@ func attachmentBaseAndSelfValues(
 }
 
 func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationRange, f func(*CompositeValue)) {
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.Iterator(
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
+	)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -17868,18 +17874,25 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+
+	valueComparator := newValueComparator(interpreter, EmptyLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, EmptyLocationRange)
+
 	iterate := func() {
-		err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
-			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
+		err := v.dictionary.Iterate(
+			valueComparator,
+			hashInputProvider,
+			func(key, value atree.Value) (resume bool, err error) {
+				// atree.OrderedMap iteration provides low-level atree.Value,
+				// convert to high-level interpreter.Value
 
-			resume = f(
-				MustConvertStoredValue(interpreter, key),
-				MustConvertStoredValue(interpreter, value),
-			)
+				resume = f(
+					MustConvertStoredValue(interpreter, key),
+					MustConvertStoredValue(interpreter, value),
+				)
 
-			return resume, nil
-		})
+				return resume, nil
+			})
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -17907,7 +17920,10 @@ func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
 }
 
 func (v *DictionaryValue) Iterator() DictionaryIterator {
-	mapIterator, err := v.dictionary.Iterator()
+	// TODO: Is it safe to use ReadOnly Iterator here
+	// because DictionaryIterator is only used to iterate keys?
+	// Maybe rename DictionaryIterator to DictionaryKeyIterator.
+	mapIterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -18043,7 +18059,7 @@ func (v *DictionaryValue) ForEachKey(
 	}
 
 	iterate := func() {
-		err := v.dictionary.IterateKeys(
+		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
 				key := MustConvertStoredValue(interpreter, item)
 
@@ -18183,7 +18199,7 @@ func (v *DictionaryValue) MeteredString(memoryGauge common.MemoryGauge, seenRefe
 	}, v.Count())
 
 	index := 0
-	_ = v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+	_ = v.dictionary.IterateReadOnly(func(key, value atree.Value) (resume bool, err error) {
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
@@ -18246,7 +18262,7 @@ func (v *DictionaryValue) GetMember(
 
 	case "keys":
 
-		iterator, err := v.dictionary.Iterator()
+		iterator, err := v.dictionary.ReadOnlyIterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -18280,7 +18296,10 @@ func (v *DictionaryValue) GetMember(
 
 	case "values":
 
-		iterator, err := v.dictionary.Iterator()
+		valueComparator := newValueComparator(interpreter, locationRange)
+		hashInputProvider := newHashInputProvider(interpreter, locationRange)
+
+		iterator, err := v.dictionary.Iterator(valueComparator, hashInputProvider)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -18603,7 +18622,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 	keyType := staticType.KeyType
 	valueType := staticType.ValueType
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -18670,7 +18689,7 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, locationRange Location
 		return false
 	}
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -18776,7 +18795,7 @@ func (v *DictionaryValue) Transfer(
 		valueComparator := newValueComparator(interpreter, locationRange)
 		hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
-		iterator, err := v.dictionary.Iterator()
+		iterator, err := v.dictionary.ReadOnlyIterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -18880,7 +18899,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	valueComparator := newValueComparator(interpreter, EmptyLocationRange)
 	hashInputProvider := newHashInputProvider(interpreter, EmptyLocationRange)
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -19517,7 +19536,16 @@ type SomeStorable struct {
 	Storable atree.Storable
 }
 
-var _ atree.Storable = SomeStorable{}
+var _ atree.ContainerStorable = SomeStorable{}
+
+func (s SomeStorable) HasPointer() bool {
+	switch cs := s.Storable.(type) {
+	case atree.ContainerStorable:
+		return cs.HasPointer()
+	default:
+		return false
+	}
+}
 
 func (s SomeStorable) ByteSize() uint32 {
 	return cborTagSize + s.Storable.ByteSize()

@@ -118,23 +118,39 @@ func decodeInt64(d StorableDecoder) (int64, error) {
 func DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	slabID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
 	memoryGauge common.MemoryGauge,
 ) (
 	atree.Storable,
 	error,
 ) {
-	return NewStorableDecoder(decoder, slabID, memoryGauge).decodeStorable()
+	return NewStorableDecoder(decoder, slabID, inlinedExtraData, memoryGauge).decodeStorable()
+}
+
+func newStorableDecoderFunc(memoryGauge common.MemoryGauge) atree.StorableDecoder {
+	return func(
+		decoder *cbor.StreamDecoder,
+		slabID atree.SlabID,
+		inlinedExtraData []atree.ExtraData,
+	) (
+		atree.Storable,
+		error,
+	) {
+		return NewStorableDecoder(decoder, slabID, inlinedExtraData, memoryGauge).decodeStorable()
+	}
 }
 
 func NewStorableDecoder(
 	decoder *cbor.StreamDecoder,
 	slabID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
 	memoryGauge common.MemoryGauge,
 ) StorableDecoder {
 	return StorableDecoder{
-		decoder:     decoder,
-		memoryGauge: memoryGauge,
-		slabID:      slabID,
+		decoder:          decoder,
+		memoryGauge:      memoryGauge,
+		slabID:           slabID,
+		inlinedExtraData: inlinedExtraData,
 		TypeDecoder: NewTypeDecoder(
 			decoder,
 			memoryGauge,
@@ -144,9 +160,10 @@ func NewStorableDecoder(
 
 type StorableDecoder struct {
 	TypeDecoder
-	memoryGauge common.MemoryGauge
-	decoder     *cbor.StreamDecoder
-	slabID      atree.SlabID
+	memoryGauge      common.MemoryGauge
+	decoder          *cbor.StreamDecoder
+	slabID           atree.SlabID
+	inlinedExtraData []atree.ExtraData
 }
 
 func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
@@ -202,6 +219,29 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 
 		case atree.CBORTagSlabID:
 			return atree.DecodeSlabIDStorable(d.decoder)
+
+		case atree.CBORTagInlinedArray:
+			return atree.DecodeInlinedArrayStorable(
+				d.decoder,
+				newStorableDecoderFunc(d.memoryGauge),
+				d.slabID,
+				d.inlinedExtraData)
+
+		case atree.CBORTagInlinedMap:
+			return atree.DecodeInlinedMapStorable(
+				d.decoder,
+				newStorableDecoderFunc(d.memoryGauge),
+				d.slabID,
+				d.inlinedExtraData,
+			)
+
+		case atree.CBORTagInlinedCompactMap:
+			return atree.DecodeInlinedCompactMapStorable(
+				d.decoder,
+				newStorableDecoderFunc(d.memoryGauge),
+				d.slabID,
+				d.inlinedExtraData,
+			)
 
 		case CBORTagVoidValue:
 			err := d.decoder.Skip()
@@ -1560,10 +1600,10 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	return NewInterfaceStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
 }
 
-func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {
+func (d TypeDecoder) decodeVariableSizedStaticType() (VariableSizedStaticType, error) {
 	staticType, err := d.DecodeStaticType()
 	if err != nil {
-		return nil, errors.NewUnexpectedError(
+		return VariableSizedStaticType{}, errors.NewUnexpectedError(
 			"invalid variable-sized static type encoding: %w",
 			err,
 		)
@@ -1571,24 +1611,24 @@ func (d TypeDecoder) decodeVariableSizedStaticType() (StaticType, error) {
 	return NewVariableSizedStaticType(d.memoryGauge, staticType), nil
 }
 
-func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
+func (d TypeDecoder) decodeConstantSizedStaticType() (ConstantSizedStaticType, error) {
 
 	const expectedLength = encodedConstantSizedStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, errors.NewUnexpectedError(
+			return ConstantSizedStaticType{}, errors.NewUnexpectedError(
 				"invalid constant-sized static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return nil, err
+		return ConstantSizedStaticType{}, err
 	}
 
 	if arraySize != expectedLength {
-		return nil, errors.NewUnexpectedError(
+		return ConstantSizedStaticType{}, errors.NewUnexpectedError(
 			"invalid constant-sized static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
@@ -1599,17 +1639,17 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
 	size, err := decodeUint64(d.decoder, d.memoryGauge)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, errors.NewUnexpectedError(
+			return ConstantSizedStaticType{}, errors.NewUnexpectedError(
 				"invalid constant-sized static type size encoding: %s",
 				e.ActualType.String(),
 			)
 		}
-		return nil, err
+		return ConstantSizedStaticType{}, err
 	}
 
 	const max = math.MaxInt64
 	if size > max {
-		return nil, errors.NewUnexpectedError(
+		return ConstantSizedStaticType{}, errors.NewUnexpectedError(
 			"invalid constant-sized static type size: got %d, expected max %d",
 			size,
 			max,
@@ -1619,7 +1659,7 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
 	// Decode type at array index encodedConstantSizedStaticTypeTypeFieldKey
 	staticType, err := d.DecodeStaticType()
 	if err != nil {
-		return nil, errors.NewUnexpectedError(
+		return ConstantSizedStaticType{}, errors.NewUnexpectedError(
 			"invalid constant-sized static type inner type encoding: %w",
 			err,
 		)
@@ -1685,24 +1725,24 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 	), nil
 }
 
-func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
+func (d TypeDecoder) decodeDictionaryStaticType() (DictionaryStaticType, error) {
 	const expectedLength = encodedDictionaryStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, errors.NewUnexpectedError(
+			return DictionaryStaticType{}, errors.NewUnexpectedError(
 				"invalid dictionary static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return nil, err
+		return DictionaryStaticType{}, err
 	}
 
 	if arraySize != expectedLength {
-		return nil, errors.NewUnexpectedError(
+		return DictionaryStaticType{}, errors.NewUnexpectedError(
 			"invalid dictionary static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
@@ -1712,7 +1752,7 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	// Decode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKey
 	keyType, err := d.DecodeStaticType()
 	if err != nil {
-		return nil, errors.NewUnexpectedError(
+		return DictionaryStaticType{}, errors.NewUnexpectedError(
 			"invalid dictionary static type key type encoding: %w",
 			err,
 		)
@@ -1721,7 +1761,7 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	// Decode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
 	valueType, err := d.DecodeStaticType()
 	if err != nil {
-		return nil, errors.NewUnexpectedError(
+		return DictionaryStaticType{}, errors.NewUnexpectedError(
 			"invalid dictionary static type value type encoding: %w",
 			err,
 		)

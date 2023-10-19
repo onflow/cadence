@@ -8137,7 +8137,8 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 			permanentSlabs = append(permanentSlabs, slab)
 		}
 
-		require.Equal(t, 2, len(permanentSlabs))
+		// permanet slab is R1 (R2 is inlined in R1 slab)
+		require.Equal(t, 1, len(permanentSlabs))
 
 		sort.Slice(permanentSlabs, func(i, j int) bool {
 			a := permanentSlabs[i].SlabID()
@@ -8155,7 +8156,6 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		require.Equal(t,
 			[]string{
 				`S.test.R1(r2: S.test.R2(value: "test", uuid: 2), uuid: 1)`,
-				`S.test.R2(value: "test", uuid: 2)`,
 			},
 			storedValues,
 		)

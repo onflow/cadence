@@ -233,6 +233,7 @@ type ArrayStaticType interface {
 	StaticType
 	isArrayStaticType()
 	ElementType() StaticType
+	atree.TypeInfo
 }
 
 // VariableSizedStaticType
@@ -253,6 +254,21 @@ func NewVariableSizedStaticType(
 	return VariableSizedStaticType{
 		Type: elementType,
 	}
+}
+
+func (t VariableSizedStaticType) IsComposite() bool {
+	return false
+}
+
+func (t VariableSizedStaticType) Copy() atree.TypeInfo {
+	// TODO: is creating a new VariableSizedStaticType necessary?
+	// atree needs immutable TypeInfo or a copy of mutable TypeInfo because TypeInfo can be shared.
+	return t
+}
+
+func (t VariableSizedStaticType) Identifier() string {
+	// TODO: is ID guaranteed to be unique?
+	return string(t.ID())
 }
 
 func (VariableSizedStaticType) isStaticType() {}
@@ -312,6 +328,21 @@ func NewConstantSizedStaticType(
 		Type: elementType,
 		Size: size,
 	}
+}
+
+func (t ConstantSizedStaticType) IsComposite() bool {
+	return false
+}
+
+func (t ConstantSizedStaticType) Copy() atree.TypeInfo {
+	// TODO: is creating a new ConstantSizedStaticType necessary?
+	// atree needs immutable TypeInfo or a copy of mutable TypeInfo because TypeInfo can be shared.
+	return t
+}
+
+func (t ConstantSizedStaticType) Identifier() string {
+	// TODO: is ID guaranteed to be unique?
+	return string(t.ID())
 }
 
 func (ConstantSizedStaticType) isStaticType() {}
@@ -378,6 +409,21 @@ func NewDictionaryStaticType(
 		KeyType:   keyType,
 		ValueType: valueType,
 	}
+}
+
+func (t DictionaryStaticType) IsComposite() bool {
+	return false
+}
+
+func (t DictionaryStaticType) Copy() atree.TypeInfo {
+	// TODO: is creating a new DictionaryStaticType necessary?
+	// atree needs immutable TypeInfo or a copy of mutable TypeInfo because TypeInfo can be shared.
+	return t
+}
+
+func (t DictionaryStaticType) Identifier() string {
+	// TODO: is ID guaranteed to be unique?
+	return string(t.ID())
 }
 
 func (DictionaryStaticType) isStaticType() {}

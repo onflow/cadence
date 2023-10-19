@@ -681,6 +681,8 @@ func (v UFix64Value) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeUint64(uint64(v))
 }
 
+var _ atree.ContainerStorable = &SomeStorable{}
+
 // Encode encodes SomeStorable as
 //
 //	cbor.Tag{
@@ -697,6 +699,25 @@ func (s SomeStorable) Encode(e *atree.Encoder) error {
 		return err
 	}
 	return s.Storable.Encode(e)
+}
+
+// EncodeAsElement encodes SomeStorable as
+//
+//	cbor.Tag{
+//			Number: CBORTagSomeValue,
+//			Content: Value(v.Value),
+//	}
+func (s SomeStorable) EncodeAsElement(e *atree.Encoder, inlinedExtraData atree.InlinedExtraData) error {
+	// NOTE: when updating, also update SomeStorable.ByteSize
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagSomeValue,
+	})
+	if err != nil {
+		return err
+	}
+
+	return atree.EncodeStorableAsElement(e, s.Storable, inlinedExtraData)
 }
 
 // Encode encodes AddressValue as
@@ -1601,6 +1622,21 @@ var _ atree.TypeInfo = compositeTypeInfo{}
 
 const encodedCompositeTypeInfoLength = 3
 
+func (c compositeTypeInfo) IsComposite() bool {
+	return true
+}
+
+func (c compositeTypeInfo) Identifier() string {
+	// TODO: maybe improve this to be more efficient, etc.
+	return "composite(" + c.location.ID() + "/" + c.qualifiedIdentifier + ")"
+}
+
+func (c compositeTypeInfo) Copy() atree.TypeInfo {
+	// TODO: is creating a new compositeTypeInfo necessary?
+	// atree needs immutable TypeInfo or a copy of mutable TypeInfo because TypeInfo can be shared.
+	return NewCompositeTypeInfo(nil, c.location, c.qualifiedIdentifier, c.kind)
+}
+
 func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
@@ -1643,6 +1679,18 @@ type EmptyTypeInfo struct{}
 
 func (e EmptyTypeInfo) Encode(encoder *cbor.StreamEncoder) error {
 	return encoder.EncodeNil()
+}
+
+func (e EmptyTypeInfo) IsComposite() bool {
+	return false
+}
+
+func (e EmptyTypeInfo) Identifier() string {
+	return "null"
+}
+
+func (e EmptyTypeInfo) Copy() atree.TypeInfo {
+	return e
 }
 
 var emptyTypeInfo atree.TypeInfo = EmptyTypeInfo{}

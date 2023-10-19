@@ -148,8 +148,9 @@ func TestArrayStorage(t *testing.T) {
 
 		require.True(t, bool(value.Contains(inter, EmptyLocationRange, element)))
 
-		// array + original composite element + new copy of composite element
-		require.Equal(t, 3, storage.BasicSlabStorage.Count())
+		// array + new copy of composite element
+		// NOTE: original composite value is inlined in parent array.
+		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
 		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
 		require.NoError(t, err)
@@ -199,8 +200,9 @@ func TestArrayStorage(t *testing.T) {
 
 		require.NotEqual(t, atree.SlabIDUndefined, value.SlabID())
 
-		// array + original composite element + new copy of composite element
-		require.Equal(t, 3, storage.BasicSlabStorage.Count())
+		// array + new copy of composite element
+		// NOTE: original composite value is inlined in parent array.
+		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
 		_, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
 		require.NoError(t, err)
@@ -440,56 +442,64 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newUnmeteredInMemoryStorage()
+	t.Run("overwrite inlined value with inlined value", func(t *testing.T) {
 
-	inter, err := NewInterpreter(
-		nil,
-		common.AddressLocation{},
-		&Config{Storage: storage},
-	)
-	require.NoError(t, err)
+		storage := newUnmeteredInMemoryStorage()
 
-	address := common.ZeroAddress
+		inter, err := NewInterpreter(
+			nil,
+			common.AddressLocation{},
+			&Config{Storage: storage},
+		)
+		require.NoError(t, err)
 
-	array1 := NewArrayValue(
-		inter,
-		EmptyLocationRange,
-		VariableSizedStaticType{
-			Type: PrimitiveStaticTypeAnyStruct,
-		},
-		address,
-		NewUnmeteredStringValue("first"),
-	)
+		address := common.ZeroAddress
 
-	const storageMapKey = StringStorageMapKey("test")
+		array1 := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+			},
+			address,
+			NewUnmeteredStringValue("first"),
+		)
 
-	storageMap := storage.GetStorageMap(address, "storage", true)
-	storageMap.WriteValue(inter, storageMapKey, array1)
+		const storageMapKey = StringStorageMapKey("test")
 
-	// Overwriting delete any existing child slabs
+		storageMap := storage.GetStorageMap(address, "storage", true)
+		storageMap.WriteValue(inter, storageMapKey, array1)
 
-	array2 := NewArrayValue(
-		inter,
-		EmptyLocationRange,
-		VariableSizedStaticType{
-			Type: PrimitiveStaticTypeAnyStruct,
-		},
-		address,
-		NewUnmeteredStringValue("second"),
-	)
+		// Overwriting delete any existing child slabs
 
-	storageMap.WriteValue(inter, storageMapKey, array2)
+		array2 := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+			},
+			address,
+			NewUnmeteredStringValue("second"),
+		)
 
-	// 2:
-	// - storage map (atree ordered map)
-	// - array (atree array)
-	assert.Len(t, storage.Slabs, 2)
+		storageMap.WriteValue(inter, storageMapKey, array2)
 
-	// Writing nil is deletion and should delete any child slabs
+		// 1:
+		// - storage map (atree ordered map)
+		// NOTE: array (atree array) is inlined in storage map
+		assert.Len(t, storage.Slabs, 1)
 
-	storageMap.WriteValue(inter, storageMapKey, nil)
+		// Writing nil is deletion and should delete any child slabs
 
-	// 1:
-	// - storage map (atree ordered map)
-	assert.Len(t, storage.Slabs, 1)
+		storageMap.WriteValue(inter, storageMapKey, nil)
+
+		// 1:
+		// - storage map (atree ordered map)
+		assert.Len(t, storage.Slabs, 1)
+	})
+
+	// TODO: add subtests to
+	// - overwrite inlined value with not inlined value
+	// - overwrite not inlined value with not inlined value
+	// - overwrite not inlined value with inlined value
 }
