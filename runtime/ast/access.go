@@ -180,14 +180,14 @@ func (t *MappedAccess) EndPosition(memoryGauge common.MemoryGauge) Position {
 }
 
 func (e *MappedAccess) String() string {
-	str := &strings.Builder{}
+	var str strings.Builder
 	str.WriteString("mapping ")
 	str.WriteString(e.EntitlementMap.String())
 	return str.String()
 }
 
 func (e *MappedAccess) Keyword() string {
-	str := &strings.Builder{}
+	var str strings.Builder
 	str.WriteString("access(")
 	str.WriteString(e.String())
 	str.WriteString(")")
