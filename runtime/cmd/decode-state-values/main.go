@@ -92,7 +92,11 @@ func storageKeyToSlabID(address atree.Address, key string) atree.SlabID {
 	return atree.NewSlabID(address, index)
 }
 
-func decodeStorable(decoder *cbor.StreamDecoder, storableSlabStorageID atree.SlabID, inlinedExtraData []atree.ExtraData) (atree.Storable, error) {
+func decodeStorable(
+	decoder *cbor.StreamDecoder,
+	storableSlabStorageID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
+) (atree.Storable, error) {
 	return interpreter.DecodeStorable(decoder, storableSlabStorageID, inlinedExtraData, nil)
 }
 
