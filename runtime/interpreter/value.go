@@ -2996,6 +2996,9 @@ func (v *ArrayValue) Reverse(
 				return nil
 			}
 
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
+
 			value := v.Get(interpreter, locationRange, index)
 			index--
 
@@ -3046,6 +3049,9 @@ func (v *ArrayValue) Filter(
 			var value Value
 
 			for {
+				// Meter computation for iterating the array.
+				interpreter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
+
 				atreeValue, err := iterator.Next()
 				if err != nil {
 					panic(errors.NewExternalError(err))
@@ -3138,6 +3144,9 @@ func (v *ArrayValue) Map(
 		common.ZeroAddress,
 		uint64(v.Count()),
 		func() Value {
+
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
