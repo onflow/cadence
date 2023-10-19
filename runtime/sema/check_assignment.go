@@ -329,7 +329,7 @@ func (checker *Checker) visitIndexExpressionAssignment(
 	elementType = checker.visitIndexExpression(indexExpression, true)
 
 	indexExprTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
-	indexedRefType, isReference := GetReferenceType(indexExprTypes.IndexedType)
+	indexedRefType, isReference := MaybeReferenceType(indexExprTypes.IndexedType)
 
 	if isReference &&
 		!mutableEntitledAccess.PermitsAccess(indexedRefType.Authorization) &&

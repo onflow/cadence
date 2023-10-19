@@ -468,7 +468,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("Moved resource element", func(t *testing.T) {
+	t.Run("Mutating reference to resource array", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -482,6 +482,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
                 for element in arrayRef {
                     // Move the actual element
+                    // This mutation should fail.
                     let oldElement <- arrayRef.remove(at: 0)
 
                     // Use the element reference
@@ -495,7 +496,33 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("main")
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
+
+	t.Run("Mutating reference to struct array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{
+                fun sayHello() {}
+            }
+
+            fun main() {
+                let array = [Foo()]
+                let arrayRef = &array as auth(Mutate) &[Foo]
+
+                for element in arrayRef {
+                    // Move the actual element
+                    let oldElement = arrayRef.remove(at: 0)
+
+                    // Use the element reference
+                    element.sayHello()
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
 	})
 }
 
@@ -510,7 +537,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 
 		inter, _ := testAccount(t, address, true, nil, `
             fun test() {
-                var let = ["Hello", "World", "Foo", "Bar"]
+                let array = ["Hello", "World", "Foo", "Bar"]
                 account.storage.save(array, to: /storage/array)
 
                 let arrayRef = account.storage.borrow<&[String]>(from: /storage/array)!
@@ -533,7 +560,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
             struct Foo{}
 
             fun test() {
-                var let = [Foo(), Foo()]
+                let array = [Foo(), Foo()]
                 account.storage.save(array, to: /storage/array)
 
                 let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
@@ -556,7 +583,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
             resource Foo{}
 
             fun test() {
-                var let <- [ <- create Foo(), <- create Foo()]
+                let array <- [ <- create Foo(), <- create Foo()]
                 account.storage.save(<- array, to: /storage/array)
 
                 let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
@@ -579,7 +606,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
             resource Foo{}
 
             fun test() {
-                var let <- [ <- create Foo(), <- create Foo()]
+                let array <- [ <- create Foo(), <- create Foo()]
                 account.storage.save(<- array, to: /storage/array)
 
                 let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!

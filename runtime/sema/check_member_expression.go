@@ -116,14 +116,14 @@ func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool 
 		return false
 	}
 
-	if _, isReference := GetReferenceType(parentType); !isReference {
+	if _, isReference := MaybeReferenceType(parentType); !isReference {
 		return false
 	}
 
 	return memberType.ContainFieldsOrElements()
 }
 
-func GetReferenceType(typ Type) (*ReferenceType, bool) {
+func MaybeReferenceType(typ Type) (*ReferenceType, bool) {
 	unwrappedType := UnwrapOptionalType(typ)
 	refType, isReference := unwrappedType.(*ReferenceType)
 	return refType, isReference

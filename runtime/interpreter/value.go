@@ -234,7 +234,13 @@ type ContractValue interface {
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
-	Iterator(interpreter *Interpreter, resultType sema.Type, locationRange LocationRange) ValueIterator
+	Iterator(interpreter *Interpreter) ValueIterator
+	ForEach(
+		interpreter *Interpreter,
+		elementType sema.Type,
+		function func(value Value) (resume bool),
+		locationRange LocationRange,
+	)
 }
 
 // ValueIterator is an iterator which returns values.
@@ -1580,9 +1586,28 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ *Interpreter, _ sema.Type, _ LocationRange) ValueIterator {
+func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
+	}
+}
+
+func (v *StringValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	_ LocationRange,
+) {
+	iterator := v.Iterator(interpreter)
+	for {
+		value := iterator.Next(interpreter)
+		if value == nil {
+			return
+		}
+
+		if !function(value) {
+			return
+		}
 	}
 }
 
@@ -1614,7 +1639,7 @@ type ArrayValueIterator struct {
 	atreeIterator *atree.ArrayIterator
 }
 
-func (v *ArrayValue) Iterator(_ *Interpreter, _ sema.Type, _ LocationRange) ValueIterator {
+func (v *ArrayValue) Iterator(_ *Interpreter) ValueIterator {
 	arrayIterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -3242,6 +3267,15 @@ func (v *ArrayValue) Map(
 			)
 		},
 	)
+}
+
+func (v *ArrayValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	_ LocationRange,
+) {
+	v.Iterate(interpreter, function)
 }
 
 // NumberValue
@@ -20197,35 +20231,60 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*StorageReferenceValue) isReference() {}
 
-func (v *StorageReferenceValue) Iterator(
-	interpreter *Interpreter,
-	resultType sema.Type,
-	locationRange LocationRange,
-) ValueIterator {
-	referencedValue := v.mustReferencedValue(interpreter, locationRange)
-	return referenceValueIterator(interpreter, referencedValue, resultType, locationRange)
+func (v *StorageReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+	// Not used for now
+	panic(errors.NewUnreachableError())
 }
 
-func referenceValueIterator(
+func (v *StorageReferenceValue) ForEach(
+	interpreter *Interpreter,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+	forEachReference(
+		interpreter,
+		referencedValue,
+		elementType,
+		function,
+		locationRange,
+	)
+}
+
+func forEachReference(
 	interpreter *Interpreter,
 	referencedValue Value,
-	resultType sema.Type,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
 	locationRange LocationRange,
-) ValueIterator {
+) {
 	referencedIterable, ok := referencedValue.(IterableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	referencedValueIterator := referencedIterable.Iterator(interpreter, resultType, locationRange)
+	referenceType, isResultReference := sema.MaybeReferenceType(elementType)
 
-	_, isResultReference := sema.GetReferenceType(resultType)
+	updatedFunction := func(value Value) (resume bool) {
+		if isResultReference {
+			value = interpreter.getReferenceValue(value, elementType)
+		}
 
-	return ReferenceValueIterator{
-		iterator:          referencedValueIterator,
-		resultType:        resultType,
-		isResultReference: isResultReference,
+		return function(value)
 	}
+
+	referencedElementType := elementType
+	if isResultReference {
+		referencedElementType = referenceType.Type
+	}
+
+	referencedIterable.ForEach(
+		interpreter,
+		referencedElementType,
+		updatedFunction,
+		locationRange,
+	)
 }
 
 // EphemeralReferenceValue
@@ -20574,38 +20633,25 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*EphemeralReferenceValue) isReference() {}
 
-func (v *EphemeralReferenceValue) Iterator(
+func (v *EphemeralReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+	// Not used for now
+	panic(errors.NewUnreachableError())
+}
+
+func (v *EphemeralReferenceValue) ForEach(
 	interpreter *Interpreter,
-	resultType sema.Type,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
 	locationRange LocationRange,
-) ValueIterator {
+) {
 	referencedValue := v.MustReferencedValue(interpreter, locationRange)
-	return referenceValueIterator(interpreter, referencedValue, resultType, locationRange)
-}
-
-// ReferenceValueIterator
-
-type ReferenceValueIterator struct {
-	iterator          ValueIterator
-	resultType        sema.Type
-	isResultReference bool
-}
-
-var _ ValueIterator = ReferenceValueIterator{}
-
-func (i ReferenceValueIterator) Next(interpreter *Interpreter) Value {
-	element := i.iterator.Next(interpreter)
-
-	if element == nil {
-		return nil
-	}
-
-	// For non-primitive values, return a reference.
-	if i.isResultReference {
-		return interpreter.getReferenceValue(element, i.resultType)
-	}
-
-	return element
+	forEachReference(
+		interpreter,
+		referencedValue,
+		elementType,
+		function,
+		locationRange,
+	)
 }
 
 // AddressValue

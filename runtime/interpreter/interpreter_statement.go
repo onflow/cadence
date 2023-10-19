@@ -313,7 +313,7 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 var intOne = NewUnmeteredIntValueFromInt64(1)
 
-func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) StatementResult {
+func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (result StatementResult) {
 
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
@@ -339,28 +339,35 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 	}
 
 	forStmtTypes := interpreter.Program.Elaboration.ForStatementType(statement)
-	iterator := iterable.Iterator(interpreter, forStmtTypes.ValueVariableType, locationRange)
 
 	var index IntValue
 	if statement.Index != nil {
 		index = NewIntValueFromInt64(interpreter, 0)
 	}
 
-	for {
-		value := iterator.Next(interpreter)
-		if value == nil {
-			return nil
-		}
-
+	executeBody := func(value Value) (resume bool) {
 		statementResult, done := interpreter.visitForStatementBody(statement, index, value)
 		if done {
-			return statementResult
+			result = statementResult
 		}
+
+		resume = !done
 
 		if statement.Index != nil {
 			index = index.Plus(interpreter, intOne, locationRange).(IntValue)
 		}
+
+		return
 	}
+
+	iterable.ForEach(
+		interpreter,
+		forStmtTypes.ValueVariableType,
+		executeBody,
+		locationRange,
+	)
+
+	return
 }
 
 func (interpreter *Interpreter) visitForStatementBody(
