@@ -4578,3 +4578,94 @@ func TestCheckAttachmentRemoveLossTracking(t *testing.T) {
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 }
+
+func TestCheckAttachmentPurity(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				s[Test]
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach with constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				init() {}
+			}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("attach with pure constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				view init() {}
+			}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				remove Test from s
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+}
