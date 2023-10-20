@@ -57,7 +57,7 @@ const (
 	ComputationKindCreateArrayValue
 	ComputationKindTransferArrayValue
 	ComputationKindDestroyArrayValue
-	ComputationKindIterateArrayValue
+	_
 	_
 	_
 	_
