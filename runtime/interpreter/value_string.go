@@ -134,7 +134,7 @@ func stringFunctionJoin(invocation Invocation) Value {
 	stringArray.Iterate(inter, func(element Value) (resume bool) {
 
 		// Meter computation for iterating the array.
-		inter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
+		inter.ReportComputation(common.ComputationKindLoop, 1)
 
 		// Add separator
 		if !first {

@@ -2997,7 +2997,7 @@ func (v *ArrayValue) Reverse(
 			}
 
 			// Meter computation for iterating the array.
-			interpreter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
 
 			value := v.Get(interpreter, locationRange, index)
 			index--
@@ -3050,7 +3050,7 @@ func (v *ArrayValue) Filter(
 
 			for {
 				// Meter computation for iterating the array.
-				interpreter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
+				interpreter.ReportComputation(common.ComputationKindLoop, 1)
 
 				atreeValue, err := iterator.Next()
 				if err != nil {
@@ -3146,7 +3146,7 @@ func (v *ArrayValue) Map(
 		func() Value {
 
 			// Meter computation for iterating the array.
-			interpreter.ReportComputation(common.ComputationKindIterateArrayValue, 1)
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
