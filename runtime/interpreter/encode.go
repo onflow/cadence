@@ -1608,8 +1608,7 @@ func (c compositeTypeInfo) IsComposite() bool {
 }
 
 func (c compositeTypeInfo) Identifier() string {
-	// TODO: maybe improve this to be more efficient, etc.
-	return "composite(" + c.location.ID() + "/" + c.qualifiedIdentifier + ")"
+	return string(c.location.TypeID(nil, c.qualifiedIdentifier))
 }
 
 func (c compositeTypeInfo) Copy() atree.TypeInfo {
