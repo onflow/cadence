@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type Interface interface {
@@ -143,6 +144,7 @@ type Interface interface {
 	)
 	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
 	GenerateAccountID(address common.Address) (uint64, error)
+	CompileWebAssembly(bytes []byte) (stdlib.WebAssemblyModule, error)
 }
 
 type MeterInterface interface {

@@ -120,6 +120,12 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	}
 	env.InterpreterConfig = env.newInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
+
+	if config.WebAssemblyEnabled {
+		env.DeclareValue(stdlib.NewWebAssemblyContract(nil, env))
+		env.DeclareType(stdlib.WebAssemblyContractType)
+	}
+
 	return env
 }
 
@@ -692,6 +698,10 @@ func (e *interpreterEnvironment) BLSAggregateSignatures(signatures [][]byte) ([]
 
 func (e *interpreterEnvironment) Hash(data []byte, tag string, algorithm sema.HashAlgorithm) ([]byte, error) {
 	return e.runtimeInterface.Hash(data, tag, algorithm)
+}
+
+func (e *interpreterEnvironment) CompileWebAssembly(bytes []byte) (stdlib.WebAssemblyModule, error) {
+	return e.runtimeInterface.CompileWebAssembly(bytes)
 }
 
 func (e *interpreterEnvironment) DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error) {

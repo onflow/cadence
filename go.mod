@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/bits-and-blooms/bitset v1.5.0
-	github.com/bytecodealliance/wasmtime-go/v7 v7.0.0
+	github.com/bytecodealliance/wasmtime-go/v12 v12.0.0
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/dave/dst v0.27.2
 	github.com/fxamacker/cbor/v2 v2.4.1-0.20230228173756-c0c9f774e40c

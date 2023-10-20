@@ -58,7 +58,7 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 		_, err := runtime.ExecuteScript(
 			Script{
 				Source:    script,
-				Arguments: encodeArgs(args),
+				Arguments: encodeArgs(args...),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -510,9 +510,9 @@ func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 			_, err := runtime.ExecuteScript(
 				Script{
 					Source: script,
-					Arguments: encodeArgs([]cadence.Value{
+					Arguments: encodeArgs(
 						test.TypeInstance,
-					}),
+					),
 				},
 				Context{
 					Interface: runtimeInterface,
@@ -585,7 +585,7 @@ func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 			_, err := runtime.ExecuteScript(
 				Script{
 					Source:    script,
-					Arguments: encodeArgs([]cadence.Value{value}),
+					Arguments: encodeArgs(value),
 				},
 				Context{
 					Interface: runtimeInterface,

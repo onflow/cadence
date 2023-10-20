@@ -142,4 +142,8 @@ const (
 	// RLP
 	ComputationKindSTDLIBRLPDecodeString
 	ComputationKindSTDLIBRLPDecodeList
+	_
+	_
+	// WebAssembly
+	ComputationKindWebAssemblyFuel
 )

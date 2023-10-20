@@ -382,10 +382,10 @@ func TestRuntimeInvalidContractRedeploy(t *testing.T) {
 	err := runtime.ExecuteTransaction(
 		Script{
 			Source: tx,
-			Arguments: encodeArgs([]cadence.Value{
+			Arguments: encodeArgs(
 				cadence.String(foo1),
 				cadence.String(foo2),
-			}),
+			),
 		},
 		Context{
 			Interface: runtimeInterface,

@@ -497,7 +497,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 	err := rt.ExecuteTransaction(
 		Script{
 			Source:    []byte(code),
-			Arguments: encodeArgs([]cadence.Value{pubKey}),
+			Arguments: encodeArgs(pubKey),
 		},
 		Context{
 			Location:  nextTransactionLocation(),
@@ -1048,7 +1048,7 @@ func addPublicKeyValidation(runtimeInterface *TestRuntimeInterface, returnError 
 	}
 }
 
-func encodeArgs(argValues []cadence.Value) [][]byte {
+func encodeArgs(argValues ...cadence.Value) [][]byte {
 	args := make([][]byte, len(argValues))
 	for i, arg := range argValues {
 		var err error
@@ -1071,7 +1071,7 @@ func (test accountKeyTestCase) executeTransaction(
 	runtimeInterface *TestRuntimeInterface,
 	location Location,
 ) error {
-	args := encodeArgs(test.args)
+	args := encodeArgs(test.args...)
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -1091,7 +1091,7 @@ func (test accountKeyTestCase) executeScript(
 	runtimeInterface *TestRuntimeInterface,
 ) (cadence.Value, error) {
 
-	args := encodeArgs(test.args)
+	args := encodeArgs(test.args...)
 
 	value, err := runtime.ExecuteScript(
 		Script{

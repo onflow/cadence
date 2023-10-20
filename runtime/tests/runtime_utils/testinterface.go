@@ -115,11 +115,12 @@ type TestRuntimeInterface struct {
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	)
-	OnMeterMemory       func(usage common.MemoryUsage) error
-	OnComputationUsed   func() (uint64, error)
-	OnMemoryUsed        func() (uint64, error)
-	OnInteractionUsed   func() (uint64, error)
-	OnGenerateAccountID func(address common.Address) (uint64, error)
+	OnMeterMemory        func(usage common.MemoryUsage) error
+	OnComputationUsed    func() (uint64, error)
+	OnMemoryUsed         func() (uint64, error)
+	OnInteractionUsed    func() (uint64, error)
+	OnGenerateAccountID  func(address common.Address) (uint64, error)
+	OnCompileWebAssembly func(bytes []byte) (stdlib.WebAssemblyModule, error)
 
 	lastUUID            uint64
 	accountIDs          map[common.Address]uint64
@@ -533,6 +534,14 @@ func (i *TestRuntimeInterface) GenerateAccountID(address common.Address) (uint64
 	}
 
 	return i.OnGenerateAccountID(address)
+}
+
+func (i *TestRuntimeInterface) CompileWebAssembly(bytes []byte) (stdlib.WebAssemblyModule, error) {
+	if i.OnCompileWebAssembly == nil {
+		return nil, nil
+	}
+
+	return i.OnCompileWebAssembly(bytes)
 }
 
 func (i *TestRuntimeInterface) RecordTrace(

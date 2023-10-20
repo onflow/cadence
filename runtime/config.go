@@ -37,4 +37,6 @@ type Config struct {
 	CoverageReport *CoverageReport
 	// AttachmentsEnabled specifies if attachments are enabled
 	AttachmentsEnabled bool
+	// WebAssemblyEnabled specifies if the WebAssembly API is enabled
+	WebAssemblyEnabled bool
 }
