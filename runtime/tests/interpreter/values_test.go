@@ -131,13 +131,17 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("iterate", func(t *testing.T) {
 		require.Equal(t, testMap.Count(), entries.size())
 
-		testMap.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-			orgValue, ok := entries.get(inter, key)
-			require.True(t, ok, "cannot find key: %v", key)
+		testMap.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key, value interpreter.Value) (resume bool) {
+				orgValue, ok := entries.get(inter, key)
+				require.True(t, ok, "cannot find key: %v", key)
 
-			utils.AssertValuesEqual(t, inter, orgValue, value)
-			return true
-		})
+				utils.AssertValuesEqual(t, inter, orgValue, value)
+				return true
+			},
+		)
 	})
 
 	t.Run("deep copy", func(t *testing.T) {

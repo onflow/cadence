@@ -562,40 +562,44 @@ func exportDictionaryValue(
 			var err error
 			pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
-			v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
+			v.Iterate(
+				inter,
+				locationRange,
+				func(key, value interpreter.Value) (resume bool) {
 
-				var convertedKey cadence.Value
-				convertedKey, err = exportValueWithInterpreter(
-					key,
-					inter,
-					locationRange,
-					seenReferences,
-				)
-				if err != nil {
-					return false
-				}
+					var convertedKey cadence.Value
+					convertedKey, err = exportValueWithInterpreter(
+						key,
+						inter,
+						locationRange,
+						seenReferences,
+					)
+					if err != nil {
+						return false
+					}
 
-				var convertedValue cadence.Value
-				convertedValue, err = exportValueWithInterpreter(
-					value,
-					inter,
-					locationRange,
-					seenReferences,
-				)
-				if err != nil {
-					return false
-				}
+					var convertedValue cadence.Value
+					convertedValue, err = exportValueWithInterpreter(
+						value,
+						inter,
+						locationRange,
+						seenReferences,
+					)
+					if err != nil {
+						return false
+					}
 
-				pairs = append(
-					pairs,
-					cadence.KeyValuePair{
-						Key:   convertedKey,
-						Value: convertedValue,
-					},
-				)
+					pairs = append(
+						pairs,
+						cadence.KeyValuePair{
+							Key:   convertedKey,
+							Value: convertedValue,
+						},
+					)
 
-				return true
-			})
+					return true
+				},
+			)
 
 			if err != nil {
 				return nil, err

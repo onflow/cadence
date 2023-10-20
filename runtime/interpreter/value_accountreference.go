@@ -71,11 +71,11 @@ func (*AccountReferenceValue) isValue() {}
 
 func (*AccountReferenceValue) isReference() {}
 
-func (v *AccountReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *AccountReferenceValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitAccountReferenceValue(interpreter, v)
 }
 
-func (*AccountReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*AccountReferenceValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }

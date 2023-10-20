@@ -37,9 +37,13 @@ func WalkValue(interpreter *Interpreter, walker ValueWalker, value Value) {
 		return
 	}
 
-	value.Walk(interpreter, func(child Value) {
-		WalkValue(interpreter, walker, child)
-	})
+	value.Walk(
+		interpreter,
+		EmptyLocationRange,
+		func(child Value) {
+			WalkValue(interpreter, walker, child)
+		},
+	)
 
 	walker.WalkValue(interpreter, nil)
 }
