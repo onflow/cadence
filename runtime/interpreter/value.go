@@ -18603,11 +18603,11 @@ func (v *DictionaryValue) iterate(
 	}
 }
 
-type DictionaryIterator struct {
+type DictionaryKeyIterator struct {
 	mapIterator *atree.MapIterator
 }
 
-func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+func (i DictionaryKeyIterator) NextKey(gauge common.MemoryGauge) Value {
 	atreeValue, err := i.mapIterator.NextKey()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -18618,16 +18618,14 @@ func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
 	return MustConvertStoredValue(gauge, atreeValue)
 }
 
-func (v *DictionaryValue) Iterator() DictionaryIterator {
-	// TODO: Is it safe to use ReadOnly Iterator here
-	// because DictionaryIterator is only used to iterate keys?
-	// Maybe rename DictionaryIterator to DictionaryKeyIterator.
+func (v *DictionaryValue) Iterator() DictionaryKeyIterator {
+
 	mapIterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	return DictionaryIterator{
+	return DictionaryKeyIterator{
 		mapIterator: mapIterator,
 	}
 }
