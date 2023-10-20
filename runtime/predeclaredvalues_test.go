@@ -237,6 +237,10 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			func(result cadence.Value, err error) {
 				RequireError(t, err)
 
+				var checkerErr *sema.CheckerError
+				require.ErrorAs(t, err, &checkerErr)
+				assert.Equal(t, common.ScriptLocation{}, checkerErr.Location)
+
 				errs := checker.RequireCheckerErrors(t, err, 1)
 
 				var notDeclaredErr *sema.NotDeclaredError
