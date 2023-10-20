@@ -690,15 +690,8 @@ var _ atree.ContainerStorable = &SomeStorable{}
 //			Content: Value(v.Value),
 //	}
 func (s SomeStorable) Encode(e *atree.Encoder) error {
-	// NOTE: when updating, also update SomeStorable.ByteSize
-	err := e.CBOR.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, CBORTagSomeValue,
-	})
-	if err != nil {
-		return err
-	}
-	return s.Storable.Encode(e)
+	// SomeStorable is a ContainerStorable, so EncodeAsElement should be called
+	panic(errors.NewUnreachableError())
 }
 
 // EncodeAsElement encodes SomeStorable as
