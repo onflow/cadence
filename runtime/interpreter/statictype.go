@@ -248,13 +248,11 @@ func (*VariableSizedStaticType) IsComposite() bool {
 }
 
 func (t *VariableSizedStaticType) Copy() atree.TypeInfo {
-	// TODO: is creating a new VariableSizedStaticType necessary?
-	// atree needs immutable TypeInfo or a copy of mutable TypeInfo because TypeInfo can be shared.
+	// VariableSizedStaticType is never mutated, return a shallow copy
 	return t
 }
 
 func (t *VariableSizedStaticType) Identifier() string {
-	// TODO: is ID guaranteed to be unique?
 	return string(t.ID())
 }
 
@@ -393,13 +391,11 @@ func (*ConstantSizedStaticType) IsComposite() bool {
 }
 
 func (t *ConstantSizedStaticType) Copy() atree.TypeInfo {
-	// TODO: is creating a new ConstantSizedStaticType necessary?
-	// atree needs immutable TypeInfo or a copy of mutable TypeInfo because TypeInfo can be shared.
+	// ConstantSizedStaticType is never mutated, return a shallow copy\
 	return t
 }
 
 func (t *ConstantSizedStaticType) Identifier() string {
-	// TODO: is ID guaranteed to be unique?
 	return string(t.ID())
 }
 
@@ -477,13 +473,11 @@ func (*DictionaryStaticType) IsComposite() bool {
 }
 
 func (t *DictionaryStaticType) Copy() atree.TypeInfo {
-	// TODO: is creating a new DictionaryStaticType necessary?
-	// atree needs immutable TypeInfo or a copy of mutable TypeInfo because TypeInfo can be shared.
+	// DictionaryStaticType is never mutated, return a shallow copy
 	return t
 }
 
 func (t *DictionaryStaticType) Identifier() string {
-	// TODO: is ID guaranteed to be unique?
 	return string(t.ID())
 }
 
