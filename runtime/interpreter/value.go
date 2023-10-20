@@ -108,8 +108,8 @@ type Value interface {
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
 	isValue()
-	Accept(interpreter *Interpreter, visitor Visitor)
-	Walk(interpreter *Interpreter, walkChild func(Value))
+	Accept(interpreter *Interpreter, locationRange LocationRange, visitor Visitor)
+	Walk(interpreter *Interpreter, locationRange LocationRange, walkChild func(Value))
 	StaticType(interpreter *Interpreter) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
@@ -331,11 +331,11 @@ func NewTypeValue(
 
 func (TypeValue) isValue() {}
 
-func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v TypeValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
 }
 
-func (TypeValue) Walk(_ *Interpreter, _ func(Value)) {
+func (TypeValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -539,11 +539,11 @@ var _ EquatableValue = VoidValue{}
 
 func (VoidValue) isValue() {}
 
-func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v VoidValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitVoidValue(interpreter, v)
 }
 
-func (VoidValue) Walk(_ *Interpreter, _ func(Value)) {
+func (VoidValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -648,11 +648,11 @@ func AsBoolValue(v bool) BoolValue {
 
 func (BoolValue) isValue() {}
 
-func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v BoolValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitBoolValue(interpreter, v)
 }
 
-func (BoolValue) Walk(_ *Interpreter, _ func(Value)) {
+func (BoolValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -838,11 +838,11 @@ var _ MemberAccessibleValue = CharacterValue{}
 
 func (CharacterValue) isValue() {}
 
-func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v CharacterValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitCharacterValue(interpreter, v)
 }
 
-func (CharacterValue) Walk(_ *Interpreter, _ func(Value)) {
+func (CharacterValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -1071,11 +1071,11 @@ func (v *StringValue) prepareGraphemes() {
 
 func (*StringValue) isValue() {}
 
-func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StringValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
 }
 
-func (*StringValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*StringValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -1824,15 +1824,19 @@ var _ IterableValue = &ArrayValue{}
 
 func (*ArrayValue) isValue() {}
 
-func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *ArrayValue) Accept(interpreter *Interpreter, locationRange LocationRange, visitor Visitor) {
 	descend := visitor.VisitArrayValue(interpreter, v)
 	if !descend {
 		return
 	}
 
-	v.Walk(interpreter, func(element Value) {
-		element.Accept(interpreter, visitor)
-	})
+	v.Walk(
+		interpreter,
+		locationRange,
+		func(element Value) {
+			element.Accept(interpreter, locationRange, visitor)
+		},
+	)
 }
 
 func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
@@ -1869,11 +1873,13 @@ func (v *ArrayValue) iterate(
 	}
 }
 
-func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	v.Iterate(interpreter, func(element Value) (resume bool) {
-		walkChild(element)
-		return true
-	})
+func (v *ArrayValue) Walk(interpreter *Interpreter, _ LocationRange, walkChild func(Value)) {
+	v.Iterate(
+		interpreter,
+		func(element Value) (resume bool) {
+			walkChild(element)
+			return true
+		})
 }
 
 func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
@@ -1932,9 +1938,13 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		valueID,
 		locationRange,
 		func() {
-			v.Walk(interpreter, func(element Value) {
-				maybeDestroy(interpreter, locationRange, element)
-			})
+			v.Walk(
+				interpreter,
+				locationRange,
+				func(element Value) {
+					maybeDestroy(interpreter, locationRange, element)
+				},
+			)
 		},
 	)
 
@@ -2172,9 +2182,13 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, locationRange LocationRange, other *ArrayValue) {
-	other.Walk(interpreter, func(value Value) {
-		v.Append(interpreter, locationRange, value)
-	})
+	other.Walk(
+		interpreter,
+		locationRange,
+		func(value Value) {
+			v.Append(interpreter, locationRange, value)
+		},
+	)
 }
 
 func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
@@ -3602,11 +3616,11 @@ var _ MemberAccessibleValue = IntValue{}
 
 func (IntValue) isValue() {}
 
-func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v IntValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitIntValue(interpreter, v)
 }
 
-func (IntValue) Walk(_ *Interpreter, _ func(Value)) {
+func (IntValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -4163,11 +4177,11 @@ var _ HashableValue = Int8Value(0)
 
 func (Int8Value) isValue() {}
 
-func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int8Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt8Value(interpreter, v)
 }
 
-func (Int8Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int8Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -4804,11 +4818,11 @@ var _ MemberAccessibleValue = Int16Value(0)
 
 func (Int16Value) isValue() {}
 
-func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int16Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt16Value(interpreter, v)
 }
 
-func (Int16Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int16Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -5446,11 +5460,11 @@ var _ MemberAccessibleValue = Int32Value(0)
 
 func (Int32Value) isValue() {}
 
-func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int32Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt32Value(interpreter, v)
 }
 
-func (Int32Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int32Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -6086,11 +6100,11 @@ var _ MemberAccessibleValue = Int64Value(0)
 
 func (Int64Value) isValue() {}
 
-func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt64Value(interpreter, v)
 }
 
-func (Int64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -6737,11 +6751,11 @@ var _ MemberAccessibleValue = Int128Value{}
 
 func (Int128Value) isValue() {}
 
-func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int128Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt128Value(interpreter, v)
 }
 
-func (Int128Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int128Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -7481,11 +7495,11 @@ var _ MemberAccessibleValue = Int256Value{}
 
 func (Int256Value) isValue() {}
 
-func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int256Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt256Value(interpreter, v)
 }
 
-func (Int256Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int256Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -8263,11 +8277,11 @@ var _ MemberAccessibleValue = UIntValue{}
 
 func (UIntValue) isValue() {}
 
-func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UIntValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUIntValue(interpreter, v)
 }
 
-func (UIntValue) Walk(_ *Interpreter, _ func(Value)) {
+func (UIntValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -8834,11 +8848,11 @@ func NewUnmeteredUInt8Value(value uint8) UInt8Value {
 
 func (UInt8Value) isValue() {}
 
-func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt8Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt8Value(interpreter, v)
 }
 
-func (UInt8Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt8Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -9420,11 +9434,11 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 
 func (UInt16Value) isValue() {}
 
-func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt16Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt16Value(interpreter, v)
 }
 
-func (UInt16Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt16Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -9961,11 +9975,11 @@ var _ MemberAccessibleValue = UInt32Value(0)
 
 func (UInt32Value) isValue() {}
 
-func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt32Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt32Value(interpreter, v)
 }
 
-func (UInt32Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt32Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -10509,11 +10523,11 @@ func NewUnmeteredUInt64Value(value uint64) UInt64Value {
 
 func (UInt64Value) isValue() {}
 
-func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt64Value(interpreter, v)
 }
 
-func (UInt64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -11091,11 +11105,11 @@ var _ MemberAccessibleValue = UInt128Value{}
 
 func (UInt128Value) isValue() {}
 
-func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt128Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt128Value(interpreter, v)
 }
 
-func (UInt128Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt128Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -11766,11 +11780,11 @@ var _ MemberAccessibleValue = UInt256Value{}
 
 func (UInt256Value) isValue() {}
 
-func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt256Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt256Value(interpreter, v)
 }
 
-func (UInt256Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt256Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -12425,11 +12439,11 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 
 func (Word8Value) isValue() {}
 
-func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word8Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord8Value(interpreter, v)
 }
 
-func (Word8Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word8Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -12862,11 +12876,11 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 
 func (Word16Value) isValue() {}
 
-func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word16Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord16Value(interpreter, v)
 }
 
-func (Word16Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word16Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -13300,11 +13314,11 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 
 func (Word32Value) isValue() {}
 
-func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word32Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord32Value(interpreter, v)
 }
 
-func (Word32Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word32Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -13745,11 +13759,11 @@ var _ BigNumberValue = Word64Value(0)
 
 func (Word64Value) isValue() {}
 
-func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord64Value(interpreter, v)
 }
 
-func (Word64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -14219,11 +14233,11 @@ var _ MemberAccessibleValue = Word128Value{}
 
 func (Word128Value) isValue() {}
 
-func (v Word128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word128Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord128Value(interpreter, v)
 }
 
-func (Word128Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word128Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -14799,11 +14813,11 @@ var _ MemberAccessibleValue = Word256Value{}
 
 func (Word256Value) isValue() {}
 
-func (v Word256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word256Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord256Value(interpreter, v)
 }
 
-func (Word256Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word256Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -15394,11 +15408,11 @@ var _ MemberAccessibleValue = Fix64Value(0)
 
 func (Fix64Value) isValue() {}
 
-func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Fix64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitFix64Value(interpreter, v)
 }
 
-func (Fix64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Fix64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -15965,11 +15979,11 @@ var _ MemberAccessibleValue = UFix64Value(0)
 
 func (UFix64Value) isValue() {}
 
-func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UFix64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUFix64Value(interpreter, v)
 }
 
-func (UFix64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UFix64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -16661,14 +16675,14 @@ var _ ContractValue = &CompositeValue{}
 
 func (*CompositeValue) isValue() {}
 
-func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *CompositeValue) Accept(interpreter *Interpreter, locationRange LocationRange, visitor Visitor) {
 	descend := visitor.VisitCompositeValue(interpreter, v)
 	if !descend {
 		return
 	}
 
 	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
-		value.Accept(interpreter, visitor)
+		value.Accept(interpreter, locationRange, visitor)
 
 		// continue iteration
 		return true
@@ -16677,7 +16691,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed field or functions!
-func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+func (v *CompositeValue) Walk(interpreter *Interpreter, _ LocationRange, walkChild func(Value)) {
 	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
 		walkChild(value)
 
@@ -18489,15 +18503,23 @@ var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 
 func (*DictionaryValue) isValue() {}
 
-func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *DictionaryValue) Accept(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	visitor Visitor,
+) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
 	if !descend {
 		return
 	}
 
-	v.Walk(interpreter, func(value Value) {
-		value.Accept(interpreter, visitor)
-	})
+	v.Walk(
+		interpreter,
+		locationRange,
+		func(value Value) {
+			value.Accept(interpreter, locationRange, visitor)
+		},
+	)
 }
 
 func (v *DictionaryValue) IterateKeys(
@@ -18534,17 +18556,28 @@ func (v *DictionaryValue) iterateKeys(
 	}
 }
 
-func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+func (v *DictionaryValue) Iterate(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	f func(key, value Value) (resume bool),
+) {
 	// TODO: pass valueComparator, hashInputProvider,
-	v.iterate(interpreter, v.dictionary.Iterate, f)
+	//  valueComparator := newValueComparator(interpreter, locationRange)
+	//  hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	v.iterate(interpreter, locationRange, v.dictionary.Iterate, f)
 }
 
-func (v *DictionaryValue) IterateLoaded(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
-	v.iterate(interpreter, v.dictionary.IterateLoadedValues, f)
+func (v *DictionaryValue) IterateLoaded(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	f func(key, value Value) (resume bool),
+) {
+	v.iterate(interpreter, locationRange, v.dictionary.IterateLoadedValues, f)
 }
 
 func (v *DictionaryValue) iterate(
 	interpreter *Interpreter,
+	locationRange LocationRange,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(key Value, value Value) (resume bool),
 ) {
@@ -18599,12 +18632,20 @@ func (v *DictionaryValue) Iterator() DictionaryIterator {
 	}
 }
 
-func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	v.Iterate(interpreter, func(key, value Value) (resume bool) {
-		walkChild(key)
-		walkChild(value)
-		return true
-	})
+func (v *DictionaryValue) Walk(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	walkChild func(Value),
+) {
+	v.Iterate(
+		interpreter,
+		locationRange,
+		func(key, value Value) (resume bool) {
+			walkChild(key)
+			walkChild(value)
+			return true
+		},
+	)
 }
 
 func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
@@ -18614,16 +18655,19 @@ func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
 
 func (v *DictionaryValue) IsImportable(inter *Interpreter) bool {
 	importable := true
-	v.Iterate(inter, func(key, value Value) (resume bool) {
-		if !key.IsImportable(inter) || !value.IsImportable(inter) {
-			importable = false
-			// stop iteration
-			return false
-		}
+	v.Iterate(
+		inter,
+		EmptyLocationRange,
+		func(key, value Value) (resume bool) {
+			if !key.IsImportable(inter) || !value.IsImportable(inter) {
+				importable = false
+				// stop iteration
+				return false
+			}
 
-		// continue iteration
-		return true
-	})
+			// continue iteration
+			return true
+		})
 
 	return importable
 }
@@ -18667,13 +18711,17 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		valueID,
 		locationRange,
 		func() {
-			v.Iterate(interpreter, func(key, value Value) (resume bool) {
-				// Resources cannot be keys at the moment, so should theoretically not be needed
-				maybeDestroy(interpreter, locationRange, key)
-				maybeDestroy(interpreter, locationRange, value)
+			v.Iterate(
+				interpreter,
+				locationRange,
+				func(key, value Value) (resume bool) {
+					// Resources cannot be keys at the moment, so should theoretically not be needed
+					maybeDestroy(interpreter, locationRange, key)
+					maybeDestroy(interpreter, locationRange, value)
 
-				return true
-			})
+					return true
+				},
+			)
 		},
 	)
 
@@ -19649,11 +19697,11 @@ var _ OptionalValue = NilValue{}
 
 func (NilValue) isValue() {}
 
-func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v NilValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitNilValue(interpreter, v)
 }
 
-func (NilValue) Walk(_ *Interpreter, _ func(Value)) {
+func (NilValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -19818,15 +19866,15 @@ var _ OptionalValue = &SomeValue{}
 
 func (*SomeValue) isValue() {}
 
-func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *SomeValue) Accept(interpreter *Interpreter, locationRange LocationRange, visitor Visitor) {
 	descend := visitor.VisitSomeValue(interpreter, v)
 	if !descend {
 		return
 	}
-	v.value.Accept(interpreter, visitor)
+	v.value.Accept(interpreter, locationRange, visitor)
 }
 
-func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *SomeValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.value)
 }
 
@@ -20201,11 +20249,11 @@ func NewStorageReferenceValue(
 
 func (*StorageReferenceValue) isValue() {}
 
-func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StorageReferenceValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitStorageReferenceValue(interpreter, v)
 }
 
-func (*StorageReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*StorageReferenceValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -20628,11 +20676,11 @@ func NewEphemeralReferenceValue(
 
 func (*EphemeralReferenceValue) isValue() {}
 
-func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
 }
 
-func (*EphemeralReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*EphemeralReferenceValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -20960,11 +21008,11 @@ var _ MemberAccessibleValue = AddressValue{}
 
 func (AddressValue) isValue() {}
 
-func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v AddressValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitAddressValue(interpreter, v)
 }
 
-func (AddressValue) Walk(_ *Interpreter, _ func(Value)) {
+func (AddressValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -21188,11 +21236,11 @@ var _ MemberAccessibleValue = PathValue{}
 
 func (PathValue) isValue() {}
 
-func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v PathValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitPathValue(interpreter, v)
 }
 
-func (PathValue) Walk(_ *Interpreter, _ func(Value)) {
+func (PathValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -21437,7 +21485,7 @@ var _ EquatableValue = &PublishedValue{}
 
 func (*PublishedValue) isValue() {}
 
-func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *PublishedValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitPublishedValue(interpreter, v)
 }
 
@@ -21473,7 +21521,7 @@ func (v *PublishedValue) MeteredString(memoryGauge common.MemoryGauge, seenRefer
 	)
 }
 
-func (v *PublishedValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *PublishedValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.Recipient)
 	walkChild(v.Value)
 }

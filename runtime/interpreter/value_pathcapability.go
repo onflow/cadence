@@ -41,11 +41,11 @@ var _ MemberAccessibleValue = &PathCapabilityValue{}
 
 func (*PathCapabilityValue) isValue() {}
 
-func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor) {
+func (v *PathCapabilityValue) Accept(_ *Interpreter, _ LocationRange, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) Walk(_ *Interpreter, _ func(Value)) {
+func (v *PathCapabilityValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 

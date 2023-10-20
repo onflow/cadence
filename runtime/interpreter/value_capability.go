@@ -65,11 +65,11 @@ var _ MemberAccessibleValue = &CapabilityValue{}
 
 func (*CapabilityValue) isValue() {}
 
-func (v *CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *CapabilityValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v *CapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *CapabilityValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.ID)
 	walkChild(v.Address)
 }

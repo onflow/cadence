@@ -5180,7 +5180,7 @@ func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Va
 }
 
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
-id atree.ValueID,
+	id atree.ValueID,
 	value *EphemeralReferenceValue,
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
@@ -5210,10 +5210,13 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 		valueID = value.ValueID()
 
 	case *DictionaryValue:
-		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
-			interpreter.invalidateReferencedResources(value)
-			return true
-		})
+		value.IterateLoaded(
+			interpreter,
+			func(_, value Value) (resume bool) {
+				interpreter.invalidateReferencedResources(value)
+				return true
+			},
+		)
 		valueID = value.ValueID()
 
 	case *ArrayValue:

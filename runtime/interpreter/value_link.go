@@ -50,11 +50,11 @@ func (PathLinkValue) isValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(_ *Interpreter, _ Visitor) {
+func (v PathLinkValue) Accept(_ *Interpreter, _ LocationRange, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value)) {
+func (v PathLinkValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -160,11 +160,11 @@ func (AccountLinkValue) isValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(_ *Interpreter, _ Visitor) {
+func (v AccountLinkValue) Accept(_ *Interpreter, _ LocationRange, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value)) {
+func (AccountLinkValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
