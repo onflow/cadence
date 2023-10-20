@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -84,10 +85,14 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 		inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
 				Storage:        newUnmeteredInMemoryStorage(),
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 				AccessCheckMode:     sema.AccessCheckModeNotSpecifiedUnrestricted,
 			},
 		})

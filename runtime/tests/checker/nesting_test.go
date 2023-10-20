@@ -320,7 +320,9 @@ func TestCheckNestedTypeInvalidChildType(t *testing.T) {
 				`let u: T.U = nil`,
 				ParseAndCheckOptions{
 					Config: &sema.Config{
-						BaseTypeActivation: baseTypeActivation,
+						BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseTypeActivation
+						},
 					},
 				},
 			)

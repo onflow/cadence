@@ -44,8 +44,10 @@ func TestCheckStorable(t *testing.T) {
 			code,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
-					AttachmentsEnabled:  true,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+					AttachmentsEnabled: true,
 				},
 			},
 		)

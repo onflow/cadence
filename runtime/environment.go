@@ -38,8 +38,14 @@ import (
 type Environment interface {
 	ArgumentDecoder
 
-	DeclareValue(valueDeclaration stdlib.StandardLibraryValue)
-	DeclareType(typeDeclaration stdlib.StandardLibraryType)
+	DeclareValue(
+		valueDeclaration stdlib.StandardLibraryValue,
+		location common.Location,
+	)
+	DeclareType(
+		typeDeclaration stdlib.StandardLibraryType,
+		location common.Location,
+	)
 	Configure(
 		runtimeInterface Interface,
 		codesAndPrograms CodesAndPrograms,
@@ -79,9 +85,10 @@ type interpreterEnvironmentReconfigured struct {
 
 type interpreterEnvironment struct {
 	interpreterEnvironmentReconfigured
-	baseTypeActivation                    *sema.VariableActivation
-	baseValueActivation                   *sema.VariableActivation
-	baseActivation                        *interpreter.VariableActivation
+	typeActivations  map[common.Location]*sema.VariableActivation
+	valueActivations map[common.Location]*sema.VariableActivation
+	activations      map[common.Location]*interpreter.VariableActivation
+
 	InterpreterConfig                     *interpreter.Config
 	CheckerConfig                         *sema.Config
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
@@ -111,14 +118,20 @@ var _ common.MemoryGauge = &interpreterEnvironment{}
 func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 
 	env := &interpreterEnvironment{
-		config:              config,
-		baseValueActivation: baseValueActivation,
-		baseTypeActivation:  baseTypeActivation,
-		baseActivation:      baseActivation,
-		stackDepthLimiter:   newStackDepthLimiter(config.StackDepthLimit),
+		config: config,
+		valueActivations: map[common.Location]*sema.VariableActivation{
+			nil: baseValueActivation,
+		},
+		typeActivations: map[common.Location]*sema.VariableActivation{
+			nil: baseTypeActivation,
+		},
+		activations: map[common.Location]*interpreter.VariableActivation{
+			nil: baseActivation,
+		},
+		stackDepthLimiter: newStackDepthLimiter(config.StackDepthLimit),
 	}
 	env.InterpreterConfig = env.newInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
@@ -129,7 +142,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 	return &interpreter.Config{
 		InvalidatedResourceValidationEnabled: true,
 		MemoryGauge:                          e,
-		BaseActivation:                       e.baseActivation,
+		BaseActivationHandler:                e.getBaseActivation,
 		OnEventEmitted:                       e.newOnEventEmittedHandler(),
 		OnAccountLinked:                      e.newOnAccountLinkedHandler(),
 		InjectedCompositeFieldsHandler:       e.newInjectedCompositeFieldsHandler(),
@@ -161,8 +174,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 	return &sema.Config{
 		AccessCheckMode:                  sema.AccessCheckModeStrict,
-		BaseValueActivation:              e.baseValueActivation,
-		BaseTypeActivation:               e.baseTypeActivation,
+		BaseValueActivationHandler:       e.getBaseValueActivation,
+		BaseTypeActivationHandler:        e.getBaseTypeActivation,
 		ValidTopLevelDeclarationsHandler: validTopLevelDeclarations,
 		LocationHandler:                  e.newLocationHandler(),
 		ImportHandler:                    e.resolveImport,
@@ -176,7 +189,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := newInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
-		env.DeclareValue(valueDeclaration)
+		env.DeclareValue(valueDeclaration, nil)
 	}
 	return env
 }
@@ -184,7 +197,7 @@ func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 func NewScriptInterpreterEnvironment(config Config) Environment {
 	env := newInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
-		env.DeclareValue(valueDeclaration)
+		env.DeclareValue(valueDeclaration, nil)
 	}
 	return env
 }
@@ -203,13 +216,43 @@ func (e *interpreterEnvironment) Configure(
 	e.stackDepthLimiter.depth = 0
 }
 
-func (e *interpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue) {
-	e.baseValueActivation.DeclareValue(valueDeclaration)
-	interpreter.Declare(e.baseActivation, valueDeclaration)
+func (e *interpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
+	e.semaVariableActivationFor(location, e.valueActivations).
+		DeclareValue(valueDeclaration)
+
+	activation := e.interpreterVariableActivationFor(location, e.activations)
+	interpreter.Declare(activation, valueDeclaration)
 }
 
-func (e *interpreterEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType) {
-	e.baseTypeActivation.DeclareType(typeDeclaration)
+func (e *interpreterEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
+	e.semaVariableActivationFor(location, e.typeActivations).
+		DeclareType(typeDeclaration)
+}
+
+func (e *interpreterEnvironment) semaVariableActivationFor(
+	location common.Location,
+	activationsByLocation map[Location]*sema.VariableActivation,
+) *sema.VariableActivation {
+	activation := activationsByLocation[location]
+	if activation == nil {
+		baseActivation := activationsByLocation[nil]
+		activation = sema.NewVariableActivation(baseActivation)
+		activationsByLocation[location] = activation
+	}
+	return activation
+}
+
+func (e *interpreterEnvironment) interpreterVariableActivationFor(
+	location common.Location,
+	activationsByLocation map[Location]*interpreter.VariableActivation,
+) *interpreter.VariableActivation {
+	activation := activationsByLocation[location]
+	if activation == nil {
+		baseActivation := activationsByLocation[nil]
+		activation = activations.NewActivation[*interpreter.Variable](nil, baseActivation)
+		activationsByLocation[location] = activation
+	}
+	return activation
 }
 
 func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
@@ -908,7 +951,8 @@ func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.Composite
 
 		case nil:
 			qualifiedIdentifier := string(typeID)
-			ty := sema.TypeActivationNestedType(e.baseTypeActivation, qualifiedIdentifier)
+			baseTypeActivation := e.typeActivations[nil]
+			ty := sema.TypeActivationNestedType(baseTypeActivation, qualifiedIdentifier)
 			if ty == nil {
 				return nil
 			}
@@ -1095,4 +1139,32 @@ func (e *interpreterEnvironment) CommitStorage(inter *interpreter.Interpreter) e
 	}
 
 	return nil
+}
+
+func (e *interpreterEnvironment) getBaseValueActivation(location common.Location) (activation *sema.VariableActivation) {
+	activations := e.valueActivations
+	activation = activations[location]
+	if activation == nil {
+		activation = activations[nil]
+	}
+	return
+
+}
+
+func (e *interpreterEnvironment) getBaseTypeActivation(location common.Location) (activation *sema.VariableActivation) {
+	activations := e.typeActivations
+	activation = activations[location]
+	if activation == nil {
+		activation = activations[nil]
+	}
+	return
+}
+
+func (e *interpreterEnvironment) getBaseActivation(location common.Location) (activation *interpreter.VariableActivation) {
+	activations := e.activations
+	activation = activations[location]
+	if activation == nil {
+		activation = activations[nil]
+	}
+	return
 }

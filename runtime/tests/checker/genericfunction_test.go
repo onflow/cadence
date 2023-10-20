@@ -45,7 +45,9 @@ func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.
 		code,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)
