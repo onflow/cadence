@@ -961,6 +961,79 @@ func (RecursiveTransferError) Error() string {
 	return "recursive transfer of value"
 }
 
+// WebAssemblyNewModuleError
+type WebAssemblyNewModuleError struct {
+}
+
+var _ errors.UserError = WebAssemblyNewModuleError{}
+
+func (WebAssemblyNewModuleError) IsUserError() {}
+
+func (WebAssemblyNewModuleError) Error() string {
+	return fmt.Sprint("failed to load module with the given configuration in engine.")
+}
+
+// WebAssemblyNewInstance
+type WebAssemblyNewInstanceError struct {
+}
+
+var _ errors.UserError = WebAssemblyNewInstanceError{}
+
+func (WebAssemblyNewInstanceError) IsUserError() {}
+
+func (WebAssemblyNewInstanceError) Error() string {
+	return fmt.Sprintf("failed to Instantiate WebAssembly Module")
+}
+
+type WebAssemblyStoreFuel struct {
+}
+
+var _ errors.UserError = WebAssemblyStoreFuel{}
+
+func (WebAssemblyStoreFuel) IsUserError() {}
+
+func (WebAssemblyStoreFuel) Error() string {
+	return ""
+}
+
+type WebAssemblyfunctionCallError struct {
+}
+
+var _ errors.UserError = WebAssemblyfunctionCallError{}
+
+func (WebAssemblyfunctionCallError) IsUserError() {}
+
+func (WebAssemblyfunctionCallError) Error() string {
+	return "WebAssembly Call invokes Function Failed"
+}
+
+type WebAssemblystoreConsumeFuel struct {
+	RemainingFuel uint64
+}
+
+var _ errors.UserError = WebAssemblystoreConsumeFuel{}
+
+func (WebAssemblystoreConsumeFuel) IsUserError() {}
+
+func (e WebAssemblystoreConsumeFuel) Error() string {
+
+	return fmt.Sprintf("WebAssembly ConsumeFuel Failed :  RemainingFuel :%d ", e.RemainingFuel)
+}
+
+type WebAssemblyStoreAddFuelError struct {
+	TodoAvailableFuel uint64
+}
+
+var _ errors.UserError = WebAssemblyStoreAddFuelError{}
+
+func (WebAssemblyStoreAddFuelError) IsUserError() {
+
+}
+
+func (e WebAssemblyStoreAddFuelError) Error() string {
+
+	return fmt.Sprintf("WebAssembly AddFuel Failed :  AvailableFuel :%d ", e.TodoAvailableFuel)
+}
 func WrappedExternalError(err error) error {
 	switch err := err.(type) {
 	case

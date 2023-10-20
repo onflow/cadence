@@ -38,7 +38,8 @@ import (
 type Environment interface {
 	ArgumentDecoder
 
-	Declare(valueDeclaration stdlib.StandardLibraryValue)
+	DeclareValue(valueDeclaration stdlib.StandardLibraryValue)
+	DeclareType(typeDeclaration stdlib.StandardLibraryType)
 	Configure(
 		runtimeInterface Interface,
 		codesAndPrograms CodesAndPrograms,
@@ -77,8 +78,9 @@ type interpreterEnvironmentReconfigured struct {
 
 type interpreterEnvironment struct {
 	interpreterEnvironmentReconfigured
-	baseActivation                        *interpreter.VariableActivation
+	baseTypeActivation                    *sema.VariableActivation
 	baseValueActivation                   *sema.VariableActivation
+	baseActivation                        *interpreter.VariableActivation
 	InterpreterConfig                     *interpreter.Config
 	CheckerConfig                         *sema.Config
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
@@ -106,16 +108,24 @@ var _ common.MemoryGauge = &interpreterEnvironment{}
 
 func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
 	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 
 	env := &interpreterEnvironment{
 		config:              config,
-		baseActivation:      baseActivation,
 		baseValueActivation: baseValueActivation,
+		baseTypeActivation:  baseTypeActivation,
+		baseActivation:      baseActivation,
 		stackDepthLimiter:   newStackDepthLimiter(config.StackDepthLimit),
 	}
 	env.InterpreterConfig = env.newInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
+
+	if config.WebAssemblyEnabled {
+		env.DeclareValue(stdlib.NewWebAssemblyContract(nil, env))
+		env.DeclareType(stdlib.WebAssemblyContractType)
+	}
+
 	return env
 }
 
@@ -154,6 +164,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 	return &sema.Config{
 		AccessCheckMode:                  sema.AccessCheckModeStrict,
 		BaseValueActivation:              e.baseValueActivation,
+		BaseTypeActivation:               e.baseTypeActivation,
 		ValidTopLevelDeclarationsHandler: validTopLevelDeclarations,
 		LocationHandler:                  e.newLocationHandler(),
 		ImportHandler:                    e.resolveImport,
@@ -165,7 +176,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := newInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
-		env.Declare(valueDeclaration)
+		env.DeclareValue(valueDeclaration)
 	}
 	return env
 }
@@ -173,7 +184,7 @@ func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 func NewScriptInterpreterEnvironment(config Config) Environment {
 	env := newInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
-		env.Declare(valueDeclaration)
+		env.DeclareValue(valueDeclaration)
 	}
 	return env
 }
@@ -192,9 +203,13 @@ func (e *interpreterEnvironment) Configure(
 	e.stackDepthLimiter.depth = 0
 }
 
-func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
+func (e *interpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseValueActivation.DeclareValue(valueDeclaration)
 	interpreter.Declare(e.baseActivation, valueDeclaration)
+}
+
+func (e *interpreterEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType) {
+	e.baseTypeActivation.DeclareType(typeDeclaration)
 }
 
 func (e *interpreterEnvironment) MeterMemory(usage common.MemoryUsage) error {
@@ -847,8 +862,21 @@ func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLo
 
 func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.CompositeTypeHandlerFunc {
 	return func(location common.Location, typeID common.TypeID) *sema.CompositeType {
-		if _, ok := location.(stdlib.FlowLocation); ok {
+
+		switch location.(type) {
+		case stdlib.FlowLocation:
 			return stdlib.FlowEventTypes[typeID]
+
+		case nil:
+			qualifiedIdentifier := string(typeID)
+			ty := sema.TypeActivationNestedType(e.baseTypeActivation, qualifiedIdentifier)
+			if ty == nil {
+				return nil
+			}
+
+			if compositeType, ok := ty.(*sema.CompositeType); ok {
+				return compositeType
+			}
 		}
 
 		return nil
