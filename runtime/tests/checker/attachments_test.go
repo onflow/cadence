@@ -4665,6 +4665,65 @@ func TestCheckAttachmentPurity(t *testing.T) {
 			}`,
 		)
 
+		require.NoError(t, err)
+	})
+
+	t.Run("remove from global", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			var s: S = S()
+			view fun foo() {
+				remove Test from s
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("remove from field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			struct Container {
+				let s: S
+				init() {
+					self.s = S()
+				}
+				view fun foo() {
+					remove Test from self.s
+				}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("remove from resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment Test for R {}
+			view fun foo(r: @R): @R {
+				remove Test from r
+				return <-r
+			}`,
+		)
+
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})

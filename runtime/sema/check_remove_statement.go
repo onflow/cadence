@@ -31,8 +31,6 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 		})
 	}
 
-	checker.ObserveImpureOperation(statement)
-
 	nominalType := checker.convertNominalType(statement.Attachment)
 	base := checker.VisitExpression(statement.Value, nil)
 	checker.checkUnusedExpressionResourceLoss(base, statement.Value)
@@ -86,6 +84,8 @@ func (checker *Checker) VisitRemoveStatement(statement *ast.RemoveStatement) (_ 
 			},
 		)
 	}
+
+	checker.enforceViewAssignment(statement, statement.Value)
 
 	checker.Elaboration.SetAttachmentRemoveTypes(statement, nominalType)
 
