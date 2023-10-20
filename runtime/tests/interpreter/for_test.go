@@ -226,35 +226,105 @@ func TestInterpretForString(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-      fun test(): [Character] {
-          let characters: [Character] = []
-          let hello = "👪❤️"
-          for c in hello {
-              characters.append(c)
-          }
-          return characters
-      }
-    `)
+	t.Run("basic", func(t *testing.T) {
 
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [Character] {
+                let characters: [Character] = []
+                let hello = "👪❤️"
+                for c in hello {
+                    characters.append(c)
+                }
+                return characters
+            }
+        `)
 
-	RequireValuesEqual(
-		t,
-		inter,
-		interpreter.NewArrayValue(
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
 			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeCharacter,
-			},
-			common.ZeroAddress,
-			interpreter.NewUnmeteredCharacterValue("👪"),
-			interpreter.NewUnmeteredCharacterValue("❤️"),
-		),
-		value,
-	)
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeCharacter,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredCharacterValue("👪"),
+				interpreter.NewUnmeteredCharacterValue("❤️"),
+			),
+			value,
+		)
+	})
+
+	t.Run("return", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [Character] {
+                let characters: [Character] = []
+                let hello = "abc"
+                for c in hello {
+                    characters.append(c)
+                    return characters
+                }
+                return characters
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeCharacter,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredCharacterValue("a"),
+			),
+			value,
+		)
+	})
+
+	t.Run("break", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [Character] {
+                let characters: [Character] = []
+                let hello = "abc"
+                for c in hello {
+                    characters.append(c)
+                    break
+                }
+                return characters
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeCharacter,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredCharacterValue("a"),
+			),
+			value,
+		)
+	})
+
 }
 
 func TestInterpretForStatementCapturing(t *testing.T) {
@@ -523,6 +593,46 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
+	})
+
+	t.Run("String ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main(): [Character] {
+                let s = "Hello"
+                let sRef = &s as &String
+                let characters: [Character] = []
+
+                for char in sRef {
+                    characters.append(char)
+                }
+
+                return characters
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeCharacter,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredCharacterValue("H"),
+				interpreter.NewUnmeteredCharacterValue("e"),
+				interpreter.NewUnmeteredCharacterValue("l"),
+				interpreter.NewUnmeteredCharacterValue("l"),
+				interpreter.NewUnmeteredCharacterValue("o"),
+			),
+			value,
+		)
 	})
 }
 
