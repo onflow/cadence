@@ -690,17 +690,6 @@ var _ atree.ContainerStorable = &SomeStorable{}
 //			Content: Value(v.Value),
 //	}
 func (s SomeStorable) Encode(e *atree.Encoder) error {
-	// SomeStorable is a ContainerStorable, so EncodeAsElement should be called
-	panic(errors.NewUnreachableError())
-}
-
-// EncodeAsElement encodes SomeStorable as
-//
-//	cbor.Tag{
-//			Number: CBORTagSomeValue,
-//			Content: Value(v.Value),
-//	}
-func (s SomeStorable) EncodeAsElement(e *atree.Encoder, inlinedExtraData atree.InlinedExtraData) error {
 	// NOTE: when updating, also update SomeStorable.ByteSize
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
@@ -709,8 +698,7 @@ func (s SomeStorable) EncodeAsElement(e *atree.Encoder, inlinedExtraData atree.I
 	if err != nil {
 		return err
 	}
-
-	return atree.EncodeStorableAsElement(e, s.Storable, inlinedExtraData)
+	return s.Storable.Encode(e)
 }
 
 // Encode encodes AddressValue as
