@@ -132,19 +132,12 @@ func encodeStorable(storable atree.Storable, encMode cbor.EncMode) ([]byte, erro
 	var buf bytes.Buffer
 	enc := atree.NewEncoder(&buf, encMode)
 
-	if containerStorable, ok := storable.(atree.ContainerStorable); ok {
-		err := containerStorable.EncodeAsElement(enc, nil)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		err := storable.Encode(enc)
-		if err != nil {
-			return nil, err
-		}
+	err := storable.Encode(enc)
+	if err != nil {
+		return nil, err
 	}
 
-	err := enc.CBOR.Flush()
+	err = enc.CBOR.Flush()
 	if err != nil {
 		return nil, err
 	}
