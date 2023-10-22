@@ -19,11 +19,13 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckForVariableSized(t *testing.T) {
@@ -74,6 +76,37 @@ func TestCheckForString(t *testing.T) {
     `)
 
 	assert.NoError(t, err)
+}
+
+func TestCheckForInclusiveRange(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+	for _, typ := range sema.AllIntegerTypes {
+		code := fmt.Sprintf(`
+            fun test() {
+                let s : %[1]s = 1
+                let e : %[1]s = 2
+                let step : %[1]s = 1
+                let r: InclusiveRange<%[1]s> = InclusiveRange(s, e, step: step)
+                
+                for c in r {}
+            }
+        `, typ.String())
+
+		_, err := ParseAndCheckWithOptions(t, code,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivation: baseValueActivation,
+				},
+			},
+		)
+
+		assert.NoError(t, err)
+	}
 }
 
 func TestCheckForEmpty(t *testing.T) {

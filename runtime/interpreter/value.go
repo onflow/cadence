@@ -16267,6 +16267,7 @@ type CompositeField struct {
 const attachmentNamePrefix = "$"
 
 var _ TypeIndexableValue = &CompositeValue{}
+var _ IterableValue = &CompositeValue{}
 
 func NewCompositeField(memoryGauge common.MemoryGauge, name string, value Value) CompositeField {
 	common.UseMemory(memoryGauge, common.CompositeFieldMemoryUsage)
@@ -17780,6 +17781,68 @@ func (v *CompositeValue) RemoveTypeKey(
 	attachmentType sema.Type,
 ) Value {
 	return v.RemoveMember(interpreter, locationRange, attachmentMemberName(attachmentType))
+}
+
+func (v *CompositeValue) Iterator(interpreter *Interpreter) ValueIterator {
+	staticType := v.StaticType(interpreter)
+
+	switch staticType.(type) {
+	case InclusiveRangeStaticType:
+		startValue := v.GetField(interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStartFieldName).(IntegerValue)
+		return &InclusiveRangeIterator{
+			rangeValue: v,
+			next:       startValue,
+		}
+
+	default:
+		// Must be caught in the checker.
+		panic(errors.NewUnreachableError())
+	}
+}
+
+type InclusiveRangeIterator struct {
+	rangeValue *CompositeValue
+	next       IntegerValue
+}
+
+var _ ValueIterator = &InclusiveRangeIterator{}
+
+func (i *InclusiveRangeIterator) Next(interpreter *Interpreter) Value {
+	valueToReturn := i.next
+
+	end := GetFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeEndFieldName)
+	step := GetFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStepFieldName)
+
+	staticType := i.rangeValue.StaticType(interpreter)
+	var elementType StaticType
+	switch typ := staticType.(type) {
+	case InclusiveRangeStaticType:
+		elementType = typ.ElementType
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	zeroValue := GetSmallIntegerValue(0, elementType)
+
+	// Ensure that valueToReturn is within the bounds.
+	if step.Less(interpreter, zeroValue, EmptyLocationRange) {
+		if valueToReturn.Less(interpreter, end, EmptyLocationRange) {
+			return nil
+		}
+	} else {
+		if valueToReturn.Greater(interpreter, end, EmptyLocationRange) {
+			return nil
+		}
+	}
+
+	// Update the next value.
+	nextValueToReturn, ok := valueToReturn.Plus(interpreter, step, EmptyLocationRange).(IntegerValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	i.next = nextValueToReturn
+	return valueToReturn
 }
 
 // DictionaryValue

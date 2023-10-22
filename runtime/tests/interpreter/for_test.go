@@ -19,11 +19,15 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -254,4 +258,109 @@ func TestInterpretForString(t *testing.T) {
 		),
 		value,
 	)
+}
+
+type inclusiveRangeForInLoopTest struct {
+	s, e, step        int8
+	expectedLoopCount int
+	onlySignedTest    bool
+}
+
+func TestInclusiveRangeForInLoop(t *testing.T) {
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+
+	testCases := []inclusiveRangeForInLoopTest{
+		{
+			s:                 0,
+			e:                 10,
+			step:              1,
+			expectedLoopCount: 11,
+		},
+		{
+			s:                 0,
+			e:                 10,
+			step:              2,
+			expectedLoopCount: 6,
+		},
+		{
+			s:                 10,
+			e:                 -10,
+			step:              -2,
+			expectedLoopCount: 11,
+			onlySignedTest:    true,
+		},
+	}
+
+	runTestCase := func(t *testing.T, typ sema.Type, testCase inclusiveRangeForInLoopTest) {
+		t.Run(typ.String(), func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(
+				`
+					fun test(): Int {
+						let s : %[1]s = %[2]d
+						let e : %[1]s = %[3]d
+						let step : %[1]s = %[4]d
+						let r: InclusiveRange<%[1]s> = InclusiveRange(s, e, step: step)
+
+						var count = 0
+						for c in r {
+							count = count + 1
+						}
+						return count
+					}
+				`,
+				typ.String(),
+				testCase.s,
+				testCase.e,
+				testCase.step,
+			)
+
+			inter, err := parseCheckAndInterpretWithOptions(t, code,
+				ParseCheckAndInterpretOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivation: baseValueActivation,
+					},
+					Config: &interpreter.Config{
+						BaseActivation: baseActivation,
+					},
+				},
+			)
+
+			require.NoError(t, err)
+			countValue, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewIntValueFromInt64(nil, int64(testCase.expectedLoopCount)),
+				countValue,
+			)
+		})
+	}
+
+	for _, typ := range sema.AllIntegerTypes {
+		for _, testCase := range testCases {
+			if testCase.onlySignedTest {
+				continue
+			}
+			runTestCase(t, typ, testCase)
+		}
+	}
+
+	for _, typ := range sema.AllSignedIntegerTypes {
+		for _, testCase := range testCases {
+			if !testCase.onlySignedTest {
+				continue
+			}
+			runTestCase(t, typ, testCase)
+		}
+	}
 }
