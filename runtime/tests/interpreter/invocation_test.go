@@ -84,7 +84,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				Storage:        newUnmeteredInMemoryStorage(),
+				Storage: newUnmeteredInMemoryStorage(),
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
@@ -93,7 +93,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 					return baseValueActivation
 				},
-				AccessCheckMode:     sema.AccessCheckModeNotSpecifiedUnrestricted,
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
 			},
 		})
 		require.NoError(t, err)
