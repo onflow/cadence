@@ -1439,13 +1439,13 @@ type AccountContractAdditionHandler interface {
 	)
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 
-	// StartContractAddition start adding a contract.
+	// StartContractAddition starts adding a contract.
 	StartContractAddition(location common.AddressLocation)
 
-	// EndContractAddition end adding the contract
+	// EndContractAddition ends adding the contract
 	EndContractAddition(location common.AddressLocation)
 
-	// IsContractBeingAdded check whether a contract is being added in the current execution.
+	// IsContractBeingAdded checks whether a contract is being added in the current execution.
 	IsContractBeingAdded(location common.AddressLocation) bool
 }
 
@@ -1525,6 +1525,7 @@ func newAuthAccountContractsChangeFunction(
 				if len(existingCode) > 0 ||
 					handler.ContractUpdateRecorded(location) ||
 					handler.IsContractBeingAdded(location) {
+
 					panic(errors.NewDefaultUserError(
 						"cannot overwrite existing contract with name %q in account %s",
 						contractName,
