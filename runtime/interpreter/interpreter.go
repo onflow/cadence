@@ -296,9 +296,15 @@ func NewInterpreterWithSharedState(
 		sharedState.allInterpreters[location] = interpreter
 	}
 
+	// Initialize activations
+
 	interpreter.activations = activations.NewActivations[*Variable](interpreter)
 
-	baseActivation := sharedState.Config.BaseActivation
+	var baseActivation *VariableActivation
+	baseActivationHandler := sharedState.Config.BaseActivationHandler
+	if baseActivationHandler != nil {
+		baseActivation = baseActivationHandler(location)
+	}
 	if baseActivation == nil {
 		baseActivation = BaseActivation
 	}

@@ -142,10 +142,14 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -198,10 +202,14 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -287,10 +295,14 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -440,10 +452,14 @@ func TestInterpretIsInstance(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			})
 			require.NoError(t, err)
@@ -580,10 +596,14 @@ func TestInterpretMetaTypeIsSubtype(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			})
 			require.NoError(t, err)
@@ -793,11 +813,15 @@ func TestInterpretGetType(t *testing.T) {
 				testCase.code,
 				ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
-						BaseValueActivation: baseValueActivation,
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 					Config: &interpreter.Config{
-						Storage:        storage,
-						BaseActivation: baseActivation,
+						Storage: storage,
+						BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
 					},
 				},
 			)
