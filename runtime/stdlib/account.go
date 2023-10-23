@@ -1427,6 +1427,7 @@ type AccountContractAdditionHandler interface {
 		location common.AddressLocation,
 		value *interpreter.CompositeValue,
 	)
+	ContractUpdateRecorded(location common.AddressLocation) bool
 	InterpretContract(
 		location common.AddressLocation,
 		program *interpreter.Program,
@@ -1438,11 +1439,14 @@ type AccountContractAdditionHandler interface {
 	)
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
 
-	// TrackContractAddition records that the contract was added in the current execution.
-	TrackContractAddition(location common.AddressLocation)
+	// StartContractAddition start adding a contract.
+	StartContractAddition(location common.AddressLocation)
 
-	// ContractAdditionTracked check whether a contract has being added during the current execution.
-	ContractAdditionTracked(location common.AddressLocation) bool
+	// EndContractAddition end adding the contract
+	EndContractAddition(location common.AddressLocation)
+
+	// IsContractBeingAdded check whether a contract is being added in the current execution.
+	IsContractBeingAdded(location common.AddressLocation) bool
 }
 
 // newAuthAccountContractsChangeFunction called when e.g.
@@ -1518,7 +1522,9 @@ func newAuthAccountContractsChangeFunction(
 				// Ensure that no contract/contract interface with the given name exists already,
 				// and no contract deploy or update was recorded before
 
-				if len(existingCode) > 0 || handler.ContractAdditionTracked(location) {
+				if len(existingCode) > 0 ||
+					handler.ContractUpdateRecorded(location) ||
+					handler.IsContractBeingAdded(location) {
 					panic(errors.NewDefaultUserError(
 						"cannot overwrite existing contract with name %q in account %s",
 						contractName,
@@ -1789,7 +1795,8 @@ func updateAccountContractCode(
 	// Start tracking the contract addition.
 	// This must be done even before the contract code gets added,
 	// to avoid the same contract being updated during the deployment of itself.
-	handler.TrackContractAddition(location)
+	handler.StartContractAddition(location)
+	defer handler.EndContractAddition(location)
 
 	// If the code declares a contract, instantiate it and store it.
 	//

@@ -439,7 +439,11 @@ func (e *interpreterEnvironment) RecordContractUpdate(
 	e.storage.recordContractUpdate(location, contractValue)
 }
 
-func (e *interpreterEnvironment) TrackContractAddition(location common.AddressLocation) {
+func (e *interpreterEnvironment) ContractUpdateRecorded(location common.AddressLocation) bool {
+	return e.storage.contractUpdateRecorded(location)
+}
+
+func (e *interpreterEnvironment) StartContractAddition(location common.AddressLocation) {
 	if e.deployedContracts == nil {
 		e.deployedContracts = map[Location]struct{}{}
 	}
@@ -447,7 +451,11 @@ func (e *interpreterEnvironment) TrackContractAddition(location common.AddressLo
 	e.deployedContracts[location] = struct{}{}
 }
 
-func (e *interpreterEnvironment) ContractAdditionTracked(location common.AddressLocation) bool {
+func (e *interpreterEnvironment) EndContractAddition(location common.AddressLocation) {
+	delete(e.deployedContracts, location)
+}
+
+func (e *interpreterEnvironment) IsContractBeingAdded(location common.AddressLocation) bool {
 	_, contains := e.deployedContracts[location]
 	return contains
 }
