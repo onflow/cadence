@@ -127,6 +127,7 @@ type interpreterEnvironment struct {
 	checkedImports                        importResolutionResults
 	compositeValueFunctionsHandlers       stdlib.CompositeValueFunctionsHandlers
 	config                                Config
+	deployedContracts                     map[Location]struct{}
 }
 
 var _ Environment = &interpreterEnvironment{}
@@ -438,8 +439,17 @@ func (e *interpreterEnvironment) RecordContractUpdate(
 	e.storage.recordContractUpdate(location, contractValue)
 }
 
-func (e *interpreterEnvironment) ContractUpdateRecorded(location common.AddressLocation) bool {
-	return e.storage.contractUpdateRecorded(location)
+func (e *interpreterEnvironment) TrackContractAddition(location common.AddressLocation) {
+	if e.deployedContracts == nil {
+		e.deployedContracts = map[Location]struct{}{}
+	}
+
+	e.deployedContracts[location] = struct{}{}
+}
+
+func (e *interpreterEnvironment) ContractAdditionTracked(location common.AddressLocation) bool {
+	_, contains := e.deployedContracts[location]
+	return contains
 }
 
 func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
