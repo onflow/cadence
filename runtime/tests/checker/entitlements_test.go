@@ -1524,6 +1524,21 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidEntitlementMappingTypeError{}, errs[0])
 	})
 
+	t.Run("mapping without keyword", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping N {}
+            resource interface R {
+                access(N) let foo: String
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.MappingAccessMissingKeywordError{}, errs[0])
+	})
+
 	t.Run("multiple mappings disjunction with regular", func(t *testing.T) {
 		t.Parallel()
 
