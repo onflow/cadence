@@ -42,7 +42,6 @@ import (
 // TODO: make these program args?
 const containerMaxDepth = 3
 const containerMaxSize = 100
-const innerContainerMaxSize = 300
 const compositeMaxFields = 10
 
 var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
@@ -1374,7 +1373,7 @@ func (r randomValueGenerator) randomDictionaryValue(
 	currentDepth int,
 ) interpreter.Value {
 
-	entryCount := r.randomInt(innerContainerMaxSize)
+	entryCount := r.randomInt(containerMaxSize)
 	keyValues := make([]interpreter.Value, entryCount*2)
 
 	for i := 0; i < entryCount; i++ {
@@ -1401,7 +1400,7 @@ func (r randomValueGenerator) randomInt(upperBound int) int {
 }
 
 func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpreter.Value {
-	elementsCount := r.randomInt(innerContainerMaxSize)
+	elementsCount := r.randomInt(containerMaxSize)
 	elements := make([]interpreter.Value, elementsCount)
 
 	for i := 0; i < elementsCount; i++ {
