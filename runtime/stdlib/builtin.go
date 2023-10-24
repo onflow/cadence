@@ -20,7 +20,7 @@ package stdlib
 
 type StandardLibraryHandler interface {
 	Logger
-	UnsafeRandomGenerator
+	RandomGenerator
 	BlockAtHeightProvider
 	CurrentBlockProvider
 	PublicAccountHandler

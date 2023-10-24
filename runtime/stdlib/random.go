@@ -40,12 +40,12 @@ var unsafeRandomFunctionType = &sema.FunctionType{
 	),
 }
 
-type UnsafeRandomGenerator interface {
+type RandomGenerator interface {
 	// ReadRandom reads pseudo-random bytes into the input slice, using distributed randomness.
 	ReadRandom([]byte) error
 }
 
-func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryValue {
+func NewUnsafeRandomFunction(generator RandomGenerator) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		"unsafeRandom",
 		unsafeRandomFunctionType,
