@@ -235,6 +235,12 @@ type ContractValue interface {
 type IterableValue interface {
 	Value
 	Iterator(interpreter *Interpreter) ValueIterator
+	ForEach(
+		interpreter *Interpreter,
+		elementType sema.Type,
+		function func(value Value) (resume bool),
+		locationRange LocationRange,
+	)
 }
 
 // ValueIterator is an iterator which returns values.
@@ -1583,6 +1589,25 @@ func (v *StringValue) ConformsToStaticType(
 func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
+	}
+}
+
+func (v *StringValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	_ LocationRange,
+) {
+	iterator := v.Iterator(interpreter)
+	for {
+		value := iterator.Next(interpreter)
+		if value == nil {
+			return
+		}
+
+		if !function(value) {
+			return
+		}
 	}
 }
 
@@ -3242,6 +3267,15 @@ func (v *ArrayValue) Map(
 			)
 		},
 	)
+}
+
+func (v *ArrayValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	_ LocationRange,
+) {
+	v.Iterate(interpreter, function)
 }
 
 // NumberValue
@@ -19844,6 +19878,7 @@ var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
 var _ AuthorizedValue = &StorageReferenceValue{}
 var _ ReferenceValue = &StorageReferenceValue{}
+var _ IterableValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
 	authorization Authorization,
@@ -20196,6 +20231,62 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*StorageReferenceValue) isReference() {}
 
+func (v *StorageReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+	// Not used for now
+	panic(errors.NewUnreachableError())
+}
+
+func (v *StorageReferenceValue) ForEach(
+	interpreter *Interpreter,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+	forEachReference(
+		interpreter,
+		referencedValue,
+		elementType,
+		function,
+		locationRange,
+	)
+}
+
+func forEachReference(
+	interpreter *Interpreter,
+	referencedValue Value,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	referencedIterable, ok := referencedValue.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	referenceType, isResultReference := sema.MaybeReferenceType(elementType)
+
+	updatedFunction := func(value Value) (resume bool) {
+		if isResultReference {
+			value = interpreter.getReferenceValue(value, elementType)
+		}
+
+		return function(value)
+	}
+
+	referencedElementType := elementType
+	if isResultReference {
+		referencedElementType = referenceType.Type
+	}
+
+	referencedIterable.ForEach(
+		interpreter,
+		referencedElementType,
+		updatedFunction,
+		locationRange,
+	)
+}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -20212,6 +20303,7 @@ var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 var _ AuthorizedValue = &EphemeralReferenceValue{}
 var _ ReferenceValue = &EphemeralReferenceValue{}
+var _ IterableValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
 	authorization Authorization,
@@ -20540,6 +20632,27 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 }
 
 func (*EphemeralReferenceValue) isReference() {}
+
+func (v *EphemeralReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+	// Not used for now
+	panic(errors.NewUnreachableError())
+}
+
+func (v *EphemeralReferenceValue) ForEach(
+	interpreter *Interpreter,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	referencedValue := v.MustReferencedValue(interpreter, locationRange)
+	forEachReference(
+		interpreter,
+		referencedValue,
+		elementType,
+		function,
+		locationRange,
+	)
+}
 
 // AddressValue
 type AddressValue common.Address
