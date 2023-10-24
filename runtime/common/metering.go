@@ -314,25 +314,28 @@ func atreeNodes(count uint64, elementSize uint) (leafNodeCount uint64, branchNod
 	return
 }
 
-func newAtreeMemoryUsage(count uint64, elementSize uint, array bool) (MemoryUsage, MemoryUsage) {
+func newAtreeArrayMemoryUsage(count uint64, elementSize uint) (MemoryUsage, MemoryUsage) {
 	newLeafNodes, newBranchNodes := atreeNodes(count, elementSize)
-	if array {
-		return MemoryUsage{
-				Kind:   MemoryKindAtreeArrayDataSlab,
-				Amount: newLeafNodes,
-			}, MemoryUsage{
-				Kind:   MemoryKindAtreeArrayMetaDataSlab,
-				Amount: newBranchNodes,
-			}
-	} else {
-		return MemoryUsage{
-				Kind:   MemoryKindAtreeMapDataSlab,
-				Amount: newLeafNodes,
-			}, MemoryUsage{
-				Kind:   MemoryKindAtreeMapMetaDataSlab,
-				Amount: newBranchNodes,
-			}
-	}
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeArrayDataSlab,
+			Amount: newLeafNodes,
+		},
+		MemoryUsage{
+			Kind:   MemoryKindAtreeArrayMetaDataSlab,
+			Amount: newBranchNodes,
+		}
+}
+
+func newAtreeMapMemoryUsage(count uint64, elementSize uint) (MemoryUsage, MemoryUsage) {
+	newLeafNodes, newBranchNodes := atreeNodes(count, elementSize)
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeMapDataSlab,
+			Amount: newLeafNodes,
+		},
+		MemoryUsage{
+			Kind:   MemoryKindAtreeMapMetaDataSlab,
+			Amount: newBranchNodes,
+		}
 }
 
 func NewCadenceArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
@@ -364,28 +367,24 @@ func AdditionalAtreeMemoryUsage(originalCount uint64, elementSize uint, array bo
 	}
 }
 
-func NewArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
-	leaves, branches := newAtreeMemoryUsage(count, elementSize, true)
-	return ArrayValueBaseMemoryUsage, MemoryUsage{
-		Kind:   MemoryKindAtreeArrayElementOverhead,
-		Amount: count,
-	}, leaves, branches
+func NewAtreeArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeArrayMemoryUsage(count, elementSize)
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeArrayElementOverhead,
+			Amount: count,
+		},
+		leaves,
+		branches
 }
 
-func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
-	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
-	return DictionaryValueBaseMemoryUsage, MemoryUsage{
-		Kind:   MemoryKindAtreeMapElementOverhead,
-		Amount: count,
-	}, leaves, branches
-}
-
-func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
-	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
-	return CompositeValueBaseMemoryUsage, MemoryUsage{
-		Kind:   MemoryKindAtreeMapElementOverhead,
-		Amount: count,
-	}, leaves, branches
+func NewAtreeMapMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMapMemoryUsage(count, elementSize)
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeMapElementOverhead,
+			Amount: count,
+		},
+		leaves,
+		branches
 }
 
 func NewAtreeMapPreAllocatedElementsMemoryUsage(count uint64, elementSize uint) MemoryUsage {

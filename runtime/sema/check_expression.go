@@ -321,7 +321,7 @@ func (checker *Checker) visitIndexExpression(
 		//   2) is container-typed,
 		// then the element type should also be a reference.
 		returnReference := false
-		if !isAssignment && shouldReturnReference(valueIndexedType, elementType) {
+		if shouldReturnReference(valueIndexedType, elementType, isAssignment) {
 			// For index expressions, element are un-authorized.
 			elementType = checker.getReferenceType(elementType, false, UnauthorizedAccess)
 

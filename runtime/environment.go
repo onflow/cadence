@@ -318,6 +318,10 @@ func (e *interpreterEnvironment) RecordContractUpdate(
 	e.storage.recordContractUpdate(location, contractValue)
 }
 
+func (e *interpreterEnvironment) ContractUpdateRecorded(location common.AddressLocation) bool {
+	return e.storage.contractUpdateRecorded(location)
+}
+
 func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
 	e.codesAndPrograms.setCode(location, code)
 }

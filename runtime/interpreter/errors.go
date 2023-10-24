@@ -671,6 +671,23 @@ func (e ValueTransferTypeError) Error() string {
 	)
 }
 
+// UnexpectedMappedEntitlementError
+type UnexpectedMappedEntitlementError struct {
+	Type sema.Type
+	LocationRange
+}
+
+var _ errors.InternalError = UnexpectedMappedEntitlementError{}
+
+func (UnexpectedMappedEntitlementError) IsInternalError() {}
+
+func (e UnexpectedMappedEntitlementError) Error() string {
+	return fmt.Sprintf(
+		"invalid transfer of value: found an unexpected runtime mapped entitlement `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
 // ResourceConstructionError
 type ResourceConstructionError struct {
 	CompositeType *sema.CompositeType

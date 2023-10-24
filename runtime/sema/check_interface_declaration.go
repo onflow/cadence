@@ -519,6 +519,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 			checker.report(&InvalidNonEntitlementTypeInMapError{
 				Pos: association.Input.Identifier.Pos,
 			})
+			continue
 		}
 
 		output := checker.convertNominalType(association.Output)
@@ -528,6 +529,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 			checker.report(&InvalidNonEntitlementTypeInMapError{
 				Pos: association.Output.Identifier.Pos,
 			})
+			continue
 		}
 
 		entitlementRelations = append(

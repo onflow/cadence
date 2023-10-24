@@ -30,7 +30,7 @@ import (
 // This is used as a way to inject test provider dependencies dynamically.
 
 type TestFramework interface {
-	NewEmulatorBackend() Blockchain
+	EmulatorBackend() Blockchain
 
 	ReadFile(string) (string, error)
 }
@@ -42,6 +42,8 @@ type Blockchain interface {
 	) *ScriptResult
 
 	CreateAccount() (*Account, error)
+
+	GetAccount(interpreter.AddressValue) (*Account, error)
 
 	AddTransaction(
 		inter *interpreter.Interpreter,
@@ -58,12 +60,9 @@ type Blockchain interface {
 	DeployContract(
 		inter *interpreter.Interpreter,
 		name string,
-		code string,
-		account *Account,
+		path string,
 		arguments []interpreter.Value,
 	) error
-
-	UseConfiguration(configuration *Configuration)
 
 	StandardLibraryHandler() StandardLibraryHandler
 
@@ -97,8 +96,4 @@ type TransactionResult struct {
 type Account struct {
 	PublicKey *PublicKey
 	Address   common.Address
-}
-
-type Configuration struct {
-	Addresses map[string]common.Address
 }

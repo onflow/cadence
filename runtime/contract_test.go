@@ -309,6 +309,8 @@ func TestRuntimeContract(t *testing.T) {
 			)
 			RequireError(t, err)
 
+			require.ErrorContains(t, err, "cannot overwrite existing contract")
+
 			// the deployed code should not have been updated,
 			// and no events should have been emitted,
 			// as the deployment should fail
@@ -450,6 +452,8 @@ func TestRuntimeContract(t *testing.T) {
 			} else {
 				RequireError(t, err)
 
+				require.ErrorContains(t, err, "cannot overwrite existing contract")
+
 				require.Empty(t, deployedCode)
 				require.Empty(t, events)
 				require.Empty(t, loggedMessages)
@@ -475,9 +479,11 @@ func TestRuntimeContract(t *testing.T) {
 					Location:  nextTransactionLocation(),
 				},
 			)
-			require.NoError(t, err)
+			RequireError(t, err)
 
-			require.Equal(t, []byte(tc.code2), deployedCode)
+			require.ErrorContains(t, err, "cannot overwrite existing contract")
+
+			require.Empty(t, deployedCode)
 
 			require.Equal(t,
 				[]string{
@@ -486,20 +492,18 @@ func TestRuntimeContract(t *testing.T) {
 					`"Test"`,
 					codeArrayString,
 					`nil`,
-					`"Test"`,
-					code2ArrayString,
-					`"Test"`,
-					code2ArrayString,
 				},
 				loggedMessages,
 			)
 
-			require.Len(t, events, 2)
-			assert.EqualValues(t, stdlib.AccountContractRemovedEventType.ID(), events[0].Type().ID())
-			assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[1].Type().ID())
+			require.Len(t, events, 1)
+			assert.EqualValues(t,
+				stdlib.AccountContractRemovedEventType.ID(),
+				events[0].Type().ID(),
+			)
 
 			contractValueExists := getContractValueExists()
-
+			// contract still exists (from previous transaction), if not interface
 			if tc.isInterface {
 				require.False(t, contractValueExists)
 			} else {
