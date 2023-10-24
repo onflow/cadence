@@ -41,7 +41,7 @@ type Environment interface {
 	SetCompositeValueFunctionsHandler(
 		typeID common.TypeID,
 		handler stdlib.CompositeValueFunctionsHandler,
-  )
+	)
 	DeclareValue(
 		valueDeclaration stdlib.StandardLibraryValue,
 		location common.Location,
