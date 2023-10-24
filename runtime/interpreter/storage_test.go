@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -438,7 +439,7 @@ func TestDictionaryStorage(t *testing.T) {
 	})
 }
 
-func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
+func TestStorageOverwriteAndRemove(t *testing.T) {
 
 	t.Parallel()
 
@@ -502,4 +503,418 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 	// - overwrite inlined value with not inlined value
 	// - overwrite not inlined value with not inlined value
 	// - overwrite not inlined value with inlined value
+}
+
+func TestNestedContainerMutationAfterMove(t *testing.T) {
+
+	t.Parallel()
+
+	testStructType := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: "TestStruct",
+		Kind:       common.CompositeKindStructure,
+		Members:    &sema.StringMemberOrderedMap{},
+	}
+
+	testResourceType := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: "TestResource",
+		Kind:       common.CompositeKindStructure,
+		Members:    &sema.StringMemberOrderedMap{},
+	}
+
+	const fieldName = "test"
+
+	for _, testCompositeType := range []*sema.CompositeType{
+		testStructType,
+		testResourceType,
+	} {
+		fieldMember := sema.NewFieldMember(
+			nil,
+			testCompositeType,
+			ast.AccessPublic,
+			ast.VariableKindVariable,
+			fieldName,
+			sema.UInt8Type,
+			"",
+		)
+		testCompositeType.Members.Set(fieldName, fieldMember)
+	}
+
+	importLocationHandlerFunc := func(inter *Interpreter, location common.Location) Import {
+		elaboration := sema.NewElaboration(nil)
+		elaboration.SetCompositeType(
+			testStructType.ID(),
+			testStructType,
+		)
+		elaboration.SetCompositeType(
+			testResourceType.ID(),
+			testResourceType,
+		)
+		return VirtualImport{Elaboration: elaboration}
+	}
+
+	t.Run("struct, move from array to array", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := newUnmeteredInMemoryStorage()
+
+		inter, err := NewInterpreter(
+			nil,
+			common.AddressLocation{},
+			&Config{
+				Storage:               storage,
+				ImportLocationHandler: importLocationHandlerFunc,
+			},
+		)
+		require.NoError(t, err)
+
+		containerValue1 := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+			},
+			common.ZeroAddress,
+		)
+
+		containerValue2 := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+			},
+			common.ZeroAddress,
+		)
+
+		newChildValue := func(value uint8) *CompositeValue {
+			return NewCompositeValue(
+				inter,
+				EmptyLocationRange,
+				TestLocation,
+				"TestStruct",
+				common.CompositeKindStructure,
+				[]CompositeField{
+					{
+						Name:  fieldName,
+						Value: NewUnmeteredUInt8Value(value),
+					},
+				},
+				common.ZeroAddress,
+			)
+		}
+
+		childValue1 := newChildValue(0)
+
+		require.Equal(t, "[]", containerValue1.String())
+		require.Equal(t, "[]", containerValue2.String())
+
+		containerValue1.Append(inter, EmptyLocationRange, NewUnmeteredUInt8Value(1))
+		containerValue2.Append(inter, EmptyLocationRange, NewUnmeteredUInt8Value(2))
+
+		require.Equal(t, "[1]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+
+		require.Equal(t, "S.test.TestStruct(test: 0)", childValue1.String())
+
+		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(3))
+
+		require.Equal(t, "S.test.TestStruct(test: 3)", childValue1.String())
+
+		childValue2 := childValue1.Transfer(
+			inter,
+			EmptyLocationRange,
+			atree.Address{},
+			false,
+			nil,
+			map[atree.ValueID]struct{}{},
+		).(*CompositeValue)
+
+		containerValue1.Append(inter, EmptyLocationRange, childValue1)
+		// Append invalidated, get again
+		childValue1 = containerValue1.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+
+		require.Equal(t, "[1, S.test.TestStruct(test: 3)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 3)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 3)", childValue2.String())
+
+		childValue2.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(4))
+
+		require.Equal(t, "[1, S.test.TestStruct(test: 3)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 3)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+
+		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(5))
+
+		require.Equal(t, "[1, S.test.TestStruct(test: 5)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 5)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+
+		childValue3 := containerValue1.Remove(inter, EmptyLocationRange, 1).(*CompositeValue)
+
+		require.Equal(t, "[1]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		// TODO: fix
+		require.Equal(t, "S.test.TestStruct()", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
+
+		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(6))
+
+		require.Equal(t, "[1]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 6)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
+
+		childValue4 := newChildValue(7)
+
+		require.Equal(t, "[1]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 6)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
+		require.Equal(t, "S.test.TestStruct(test: 7)", childValue4.String())
+
+		containerValue1.Append(inter, EmptyLocationRange, childValue4)
+		// Append invalidated, get again
+		childValue4 = containerValue1.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+
+		require.Equal(t, "[1, S.test.TestStruct(test: 7)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 6)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
+		require.Equal(t, "S.test.TestStruct(test: 7)", childValue4.String())
+
+		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(8))
+
+		require.Equal(t, "[1, S.test.TestStruct(test: 7)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 8)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
+		require.Equal(t, "S.test.TestStruct(test: 7)", childValue4.String())
+
+		childValue4.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(9))
+
+		require.Equal(t, "[1, S.test.TestStruct(test: 9)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 8)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
+		require.Equal(t, "S.test.TestStruct(test: 9)", childValue4.String())
+
+		containerValue2.Append(inter, EmptyLocationRange, childValue3)
+		// Append invalidated, get again
+		childValue3 = containerValue2.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+
+		require.Equal(t, "[1, S.test.TestStruct(test: 9)]", containerValue1.String())
+		require.Equal(t, "[2, S.test.TestStruct(test: 5)]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 8)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 5)", childValue3.String())
+		require.Equal(t, "S.test.TestStruct(test: 9)", childValue4.String())
+
+		childValue3.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(10))
+
+		require.Equal(t, "[1, S.test.TestStruct(test: 9)]", containerValue1.String())
+		require.Equal(t, "[2, S.test.TestStruct(test: 10)]", containerValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 8)", childValue1.String())
+		require.Equal(t, "S.test.TestStruct(test: 4)", childValue2.String())
+		require.Equal(t, "S.test.TestStruct(test: 10)", childValue3.String())
+		require.Equal(t, "S.test.TestStruct(test: 9)", childValue4.String())
+	})
+
+	t.Run("resource, move from array to array", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := newUnmeteredInMemoryStorage()
+
+		inter, err := NewInterpreter(
+			nil,
+			common.AddressLocation{},
+			&Config{
+				Storage:               storage,
+				ImportLocationHandler: importLocationHandlerFunc,
+			},
+		)
+		require.NoError(t, err)
+
+		containerValue1 := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+			},
+			common.ZeroAddress,
+		)
+
+		containerValue2 := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+			},
+			common.ZeroAddress,
+		)
+
+		newChildValue := func(value uint8) *CompositeValue {
+			return NewCompositeValue(
+				inter,
+				EmptyLocationRange,
+				TestLocation,
+				"TestResource",
+				common.CompositeKindResource,
+				[]CompositeField{
+					{
+						Name:  fieldName,
+						Value: NewUnmeteredUInt8Value(value),
+					},
+				},
+				common.ZeroAddress,
+			)
+		}
+
+		childValue1 := newChildValue(0)
+
+		require.Equal(t, "[]", containerValue1.String())
+		require.Equal(t, "[]", containerValue2.String())
+
+		containerValue1.Append(inter, EmptyLocationRange, NewUnmeteredUInt8Value(1))
+		containerValue2.Append(inter, EmptyLocationRange, NewUnmeteredUInt8Value(2))
+
+		require.Equal(t, "[1]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+
+		require.Equal(t, "S.test.TestResource(test: 0)", childValue1.String())
+
+		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(3))
+
+		require.Equal(t, "S.test.TestResource(test: 3)", childValue1.String())
+
+		inter.MaybeTrackReferencedResourceKindedValue(childValue1)
+		ref1 := NewEphemeralReferenceValue(nil, false, childValue1, testResourceType)
+
+		containerValue1.Append(inter, EmptyLocationRange, childValue1)
+		// Append invalidated, get again
+		childValue1 = containerValue1.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+
+		require.Equal(t, "[1, S.test.TestResource(test: 3)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 3)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 3)", ref1.String())
+
+		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(4))
+
+		require.Equal(t, "[1, S.test.TestResource(test: 4)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 4)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 4)", ref1.String())
+
+		ref1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(5))
+
+		require.Equal(t, "[1, S.test.TestResource(test: 5)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 5)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 5)", ref1.String())
+
+		childValue2 := containerValue1.Remove(inter, EmptyLocationRange, 1).(*CompositeValue)
+
+		require.Equal(t, "[1]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 5)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 5)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 5)", childValue2.String())
+
+		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(6))
+
+		require.Equal(t, "[1]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 6)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 6)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 6)", childValue2.String())
+
+		ref1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(7))
+
+		require.Equal(t, "[1]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 7)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 7)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 7)", childValue2.String())
+
+		// TODO: rename childValue4 to childValue3
+		childValue4 := newChildValue(8)
+
+		require.Equal(t, "[1]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 7)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 7)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 7)", childValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 8)", childValue4.String())
+
+		containerValue1.Append(inter, EmptyLocationRange, childValue4)
+		// Append invalidated, get again
+		childValue4 = containerValue1.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+
+		require.Equal(t, "[1, S.test.TestResource(test: 8)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 7)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 7)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 7)", childValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 8)", childValue4.String())
+
+		childValue1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(9))
+
+		require.Equal(t, "[1, S.test.TestResource(test: 8)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 9)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 9)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 9)", childValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 8)", childValue4.String())
+
+		ref1.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(10))
+
+		require.Equal(t, "[1, S.test.TestResource(test: 8)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 10)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 10)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 10)", childValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 8)", childValue4.String())
+
+		childValue4.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(11))
+
+		require.Equal(t, "[1, S.test.TestResource(test: 11)]", containerValue1.String())
+		require.Equal(t, "[2]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 10)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 10)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 10)", childValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 11)", childValue4.String())
+
+		containerValue2.Append(inter, EmptyLocationRange, childValue2)
+		// Append invalidated, get again
+		childValue2 = containerValue2.Get(inter, EmptyLocationRange, 1).(*CompositeValue)
+
+		require.Equal(t, "[1, S.test.TestResource(test: 11)]", containerValue1.String())
+		require.Equal(t, "[2, S.test.TestResource(test: 10)]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 10)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 10)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 10)", childValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 11)", childValue4.String())
+
+		childValue2.SetMember(inter, EmptyLocationRange, fieldName, NewUnmeteredUInt8Value(12))
+
+		require.Equal(t, "[1, S.test.TestResource(test: 11)]", containerValue1.String())
+		require.Equal(t, "[2, S.test.TestResource(test: 12)]", containerValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 12)", childValue1.String())
+		require.Equal(t, "S.test.TestResource(test: 12)", ref1.String())
+		require.Equal(t, "S.test.TestResource(test: 12)", childValue2.String())
+		require.Equal(t, "S.test.TestResource(test: 11)", childValue4.String())
+	})
+
 }

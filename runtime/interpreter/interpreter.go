@@ -828,14 +828,14 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 				optionalType.Type,
 			)
 
-			interpreter.maybeTrackReferencedResourceKindedValue(returnValue.value)
+			interpreter.MaybeTrackReferencedResourceKindedValue(returnValue.value)
 			return NewSomeValueNonCopying(interpreter, innerValue)
 		case NilValue:
 			return NilValue{}
 		}
 	}
 
-	interpreter.maybeTrackReferencedResourceKindedValue(returnValue)
+	interpreter.MaybeTrackReferencedResourceKindedValue(returnValue)
 	return NewEphemeralReferenceValue(interpreter, false, returnValue, returnType)
 }
 
@@ -5177,7 +5177,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
+func (interpreter *Interpreter) MaybeTrackReferencedResourceKindedValue(value Value) {
 	if value, ok := value.(ReferenceTrackedResourceKindedValue); ok {
 		interpreter.trackReferencedResourceKindedValue(value.ValueID(), value)
 	}

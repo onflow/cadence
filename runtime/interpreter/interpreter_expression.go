@@ -1180,7 +1180,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	interpreter.maybeTrackReferencedResourceKindedValue(result)
+	interpreter.MaybeTrackReferencedResourceKindedValue(result)
 
 	// There are four potential cases:
 	// 1) Target type is optional, actual value is also optional (nil/SomeValue)
@@ -1208,7 +1208,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			}
 
 			innerValue := result.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
+			interpreter.MaybeTrackReferencedResourceKindedValue(innerValue)
 
 			return NewSomeValueNonCopying(
 				interpreter,
@@ -1255,7 +1255,7 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 				HasPosition: referenceExpression.Expression,
 			}
 			innerValue := someValue.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
+			interpreter.MaybeTrackReferencedResourceKindedValue(innerValue)
 		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional
