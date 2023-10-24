@@ -116,7 +116,7 @@ const (
 	_ // DO *NOT* REPLACE. Previously used for array values
 	CBORTagStringValue
 	CBORTagCharacterValue
-	_
+	CBORTagSomeValueWithNestedLevels
 	_
 	_
 	_
@@ -690,13 +690,21 @@ func (v UFix64Value) Encode(e *atree.Encoder) error {
 
 var _ atree.ContainerStorable = &SomeStorable{}
 
-// Encode encodes SomeStorable as
+func (s SomeStorable) Encode(e *atree.Encoder) error {
+	innermostStorable, nestedLevels := s.getInnermostStorable()
+	if nestedLevels == 1 {
+		return s.encode(e)
+	}
+	return s.encodeMultipleNestedLevels(e, nestedLevels, innermostStorable)
+}
+
+// encode encodes SomeStorable with nested levels = 1 as
 //
 //	cbor.Tag{
 //			Number: CBORTagSomeValue,
 //			Content: Value(v.Value),
 //	}
-func (s SomeStorable) Encode(e *atree.Encoder) error {
+func (s SomeStorable) encode(e *atree.Encoder) error {
 	// NOTE: when updating, also update SomeStorable.ByteSize
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
@@ -706,6 +714,41 @@ func (s SomeStorable) Encode(e *atree.Encoder) error {
 		return err
 	}
 	return s.Storable.Encode(e)
+}
+
+const (
+	someStorableWithMultipleNestedlevelsArraySize  = 1
+	someStorableWithMultipleNestedLevelsArrayCount = 2
+)
+
+// encodeMultipleNestedLevels encodes SomeStorable with nested levels > 1 as
+//
+//	cbor.Tag{
+//			Number: CBORTagSomeValueWithNestedLevels,
+//			Content: CBORArray[nested_levels, innermsot_value],
+//	}
+func (s SomeStorable) encodeMultipleNestedLevels(
+	e *atree.Encoder,
+	levels uint64,
+	innermostStorable atree.Storable,
+) error {
+	// NOTE: when updating, also update SomeStorable.ByteSize
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagSomeValueWithNestedLevels,
+		// array of 2 elements
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = e.CBOR.EncodeUint64(levels)
+	if err != nil {
+		return err
+	}
+
+	return innermostStorable.Encode(e)
 }
 
 // Encode encodes AddressValue as
