@@ -601,8 +601,10 @@ func (t *ReferenceType) Doc() prettier.Doc {
 		default:
 			panic(errors.NewUnreachableError())
 		}
-		doc = append(doc, prettier.Text(")"))
-		doc = append(doc, prettier.Space)
+		doc = append(doc,
+			prettier.Text(")"),
+			prettier.Space,
+		)
 	}
 
 	return append(

@@ -4207,6 +4207,10 @@ func (e *InvalidEntitlementMappingTypeError) Error() string {
 	return fmt.Sprintf("`%s` is not an entitlement map type", e.Type.QualifiedString())
 }
 
+func (e *InvalidEntitlementMappingTypeError) SecondaryError() string {
+	return "consider removing the `mapping` keyword"
+}
+
 func (e *InvalidEntitlementMappingTypeError) StartPosition() ast.Position {
 	return e.Pos
 }
@@ -4282,6 +4286,7 @@ func (e *InvalidNonEntitlementAccessError) Error() string {
 
 // MappingAccessMissingKeywordError
 type MappingAccessMissingKeywordError struct {
+	Type Type
 	ast.Range
 }
 
@@ -4294,6 +4299,10 @@ func (*MappingAccessMissingKeywordError) IsUserError() {}
 
 func (e *MappingAccessMissingKeywordError) Error() string {
 	return "entitlement mapping access modifiers require the `mapping` keyword preceding the name of the map"
+}
+
+func (e *MappingAccessMissingKeywordError) SecondaryError() string {
+	return fmt.Sprintf("replace `%s` with `mapping %s`", e.Type.QualifiedString(), e.Type.QualifiedString())
 }
 
 // DirectEntitlementAnnotationError

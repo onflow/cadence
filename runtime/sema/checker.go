@@ -1986,6 +1986,7 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 					if _, isMap := nominalType.(*EntitlementMapType); isMap {
 						checker.report(
 							&MappingAccessMissingKeywordError{
+								Type:  nominalType,
 								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
 							},
 						)
