@@ -4896,7 +4896,7 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 	})
 }
 
-func TestCastResourceAsEnumAsEmptyDict(t *testing.T) {
+func TestCheckCastResourceAsEnumAsEmptyDict(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, "resource foo { enum x : foo { } }")
@@ -4909,7 +4909,7 @@ func TestCastResourceAsEnumAsEmptyDict(t *testing.T) {
 
 //
 
-func TestCastNumbersManyTimesThenGetType(t *testing.T) {
+func TestCheckCastNumbersManyTimesThenGetType(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, "let a = 0x0 as UInt64!as?UInt64!as?UInt64?!?.getType()")

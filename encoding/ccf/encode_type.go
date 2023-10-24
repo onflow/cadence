@@ -79,7 +79,7 @@ func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType
 		return e.encodeCapabilityType(typ, tids)
 
 	case *cadence.FunctionType:
-		return e.encodeSimpleType(TypeFunction)
+		return e.encodeSimpleType(SimpleTypeFunction)
 
 	default:
 		panic(cadenceErrors.NewUnexpectedError("unsupported type %s (%T)", typ.ID(), typ))
@@ -99,9 +99,9 @@ func (e *Encoder) encodeNullableInlineType(typ cadence.Type, tids ccfTypeIDByCad
 //
 //	; cbor-tag-simple-type
 //	#6.137(simple-type-id)
-func (e *Encoder) encodeSimpleType(id uint64) error {
+func (e *Encoder) encodeSimpleType(id SimpleType) error {
 	rawTagNum := []byte{0xd8, CBORTagSimpleType}
-	return e.encodeSimpleTypeWithRawTag(id, rawTagNum)
+	return e.encodeSimpleTypeWithRawTag(uint64(id), rawTagNum)
 }
 
 // encodeSimpleTypeWithRawTag encodes simple type with given tag number as

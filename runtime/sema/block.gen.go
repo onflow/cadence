@@ -69,7 +69,7 @@ var BlockType = &SimpleType{
 	Name:          BlockTypeName,
 	QualifiedName: BlockTypeName,
 	TypeID:        BlockTypeName,
-	tag:           BlockTypeTag,
+	TypeTag:       BlockTypeTag,
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
@@ -84,7 +84,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				BlockTypeHeightFieldName,
 				BlockTypeHeightFieldType,
@@ -92,7 +92,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				BlockTypeViewFieldName,
 				BlockTypeViewFieldType,
@@ -100,7 +100,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				BlockTypeTimestampFieldName,
 				BlockTypeTimestampFieldType,
@@ -108,7 +108,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				BlockTypeIdFieldName,
 				BlockTypeIdFieldType,

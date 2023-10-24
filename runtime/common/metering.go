@@ -146,10 +146,9 @@ var (
 	BoundFunctionValueMemoryUsage               = NewConstantMemoryUsage(MemoryKindBoundFunctionValue)
 	HostFunctionValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindHostFunctionValue)
 	InterpretedFunctionValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindInterpretedFunctionValue)
-	IDCapabilityValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindIDCapabilityValue)
+	CapabilityValueMemoryUsage                  = NewConstantMemoryUsage(MemoryKindCapabilityValue)
 	EphemeralReferenceValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
 	StorageReferenceValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)
-	AccountReferenceValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindAccountReferenceValue)
 	PathValueMemoryUsage                        = NewConstantMemoryUsage(MemoryKindPathValue)
 	OptionalValueMemoryUsage                    = NewConstantMemoryUsage(MemoryKindOptionalValue)
 	TypeValueMemoryUsage                        = NewConstantMemoryUsage(MemoryKindTypeValue)
@@ -173,15 +172,16 @@ var (
 	EntitlementMapStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapStaticAccess)
 	// Sema types
 
-	VariableSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
-	ConstantSizedSemaTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
-	DictionarySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
-	OptionalSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
-	IntersectionSemaTypeMemoryUsage   = NewConstantMemoryUsage(MemoryKindIntersectionSemaType)
-	ReferenceSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
-	EntitlementSemaTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindEntitlementSemaType)
-	EntitlementMapSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapSemaType)
-	CapabilitySemaTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+	VariableSizedSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
+	ConstantSizedSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindConstantSizedSemaType)
+	DictionarySemaTypeMemoryUsage          = NewConstantMemoryUsage(MemoryKindDictionarySemaType)
+	OptionalSemaTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindOptionalSemaType)
+	IntersectionSemaTypeMemoryUsage        = NewConstantMemoryUsage(MemoryKindIntersectionSemaType)
+	ReferenceSemaTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindReferenceSemaType)
+	EntitlementSemaTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindEntitlementSemaType)
+	EntitlementMapSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindEntitlementMapSemaType)
+	EntitlementRelationSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementRelationSemaType)
+	CapabilitySemaTypeMemoryUsage          = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
 
 	// Storage related memory usages
 
@@ -202,7 +202,7 @@ var (
 	CadenceEnumValueBaseMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceEnumValueBase)
 	CadenceAddressValueMemoryUsage        = NewConstantMemoryUsage(MemoryKindCadenceAddressValue)
 	CadenceBoolValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceBoolValue)
-	CadenceIDCapabilityValueMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceIDCapabilityValue)
+	CadenceCapabilityValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceCapabilityValue)
 	CadenceFunctionValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceFunctionValue)
 	CadenceKeyValuePairMemoryUsage        = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
 	CadenceOptionalValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)
@@ -239,22 +239,18 @@ var (
 	TypeValueStringMemoryUsage                        = NewRawStringMemoryUsage(len("Type<>()"))
 	NilValueStringMemoryUsage                         = NewRawStringMemoryUsage(len("nil"))
 	StorageReferenceValueStringMemoryUsage            = NewRawStringMemoryUsage(len("StorageReference()"))
-	AccountReferenceValueStringMemoryUsage            = NewRawStringMemoryUsage(len("AccountReference()"))
 	SeenReferenceStringMemoryUsage                    = NewRawStringMemoryUsage(3)                   // len(ellipsis)
 	AddressValueStringMemoryUsage                     = NewRawStringMemoryUsage(AddressLength*2 + 2) // len(bytes-to-hex + prefix)
 	HostFunctionValueStringMemoryUsage                = NewRawStringMemoryUsage(len("Function(...)"))
-	AuthAccountValueStringMemoryUsage                 = NewRawStringMemoryUsage(len("AuthAccount()"))
-	PublicAccountValueStringMemoryUsage               = NewRawStringMemoryUsage(len("PublicAccount()"))
-	AuthAccountContractsStringMemoryUsage             = NewRawStringMemoryUsage(len("AuthAccount.Contracts()"))
-	PublicAccountContractsStringMemoryUsage           = NewRawStringMemoryUsage(len("PublicAccount.Contracts()"))
-	AuthAccountKeysStringMemoryUsage                  = NewRawStringMemoryUsage(len("AuthAccount.Keys()"))
-	PublicAccountKeysStringMemoryUsage                = NewRawStringMemoryUsage(len("PublicAccount.Keys()"))
-	AuthAccountStorageCapabilitiesStringMemoryUsage   = NewRawStringMemoryUsage(len("AuthAccount.StorageCapabilities()"))
-	AuthAccountAccountCapabilitiesStringMemoryUsage   = NewRawStringMemoryUsage(len("AuthAccount.AccountCapabilities()"))
-	AuthAccountCapabilitiesStringMemoryUsage          = NewRawStringMemoryUsage(len("AuthAccount.Capabilities()"))
-	PublicAccountCapabilitiesStringMemoryUsage        = NewRawStringMemoryUsage(len("PublicAccount.Capabilities()"))
-	AuthAccountInboxStringMemoryUsage                 = NewRawStringMemoryUsage(len("AuthAccount.Inbox()"))
-	IDCapabilityValueStringMemoryUsage                = NewRawStringMemoryUsage(len("Capability<>(address: , id: )"))
+	AccountValueStringMemoryUsage                     = NewRawStringMemoryUsage(len("Account()"))
+	AccountContractsStringMemoryUsage                 = NewRawStringMemoryUsage(len("Account.Contracts()"))
+	AccountKeysStringMemoryUsage                      = NewRawStringMemoryUsage(len("Account.Keys()"))
+	AccountStorageCapabilitiesStringMemoryUsage       = NewRawStringMemoryUsage(len("Account.StorageCapabilities()"))
+	AccountAccountCapabilitiesStringMemoryUsage       = NewRawStringMemoryUsage(len("Account.AccountCapabilities()"))
+	AccountCapabilitiesStringMemoryUsage              = NewRawStringMemoryUsage(len("Account.Capabilities()"))
+	AccountInboxStringMemoryUsage                     = NewRawStringMemoryUsage(len("Account.Inbox()"))
+	AccountStorageStringMemoryUsage                   = NewRawStringMemoryUsage(len("Account.Storage()"))
+	CapabilityValueStringMemoryUsage                  = NewRawStringMemoryUsage(len("Capability<>(address: , id: )"))
 	StorageCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("StorageCapabilityController(borrowType: , capabilityID: , target: )"))
 	AccountCapabilityControllerValueStringMemoryUsage = NewRawStringMemoryUsage(len("AccountCapabilityController(borrowType: , capabilityID: )"))
 	PublishedValueStringMemoryUsage                   = NewRawStringMemoryUsage(len("PublishedValue<>()"))
@@ -262,12 +258,12 @@ var (
 
 	// Static types string representations
 
-	VariableSizedStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(2)  // []
-	DictionaryStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(4)  // {: }
-	OptionalStaticTypeStringMemoryUsage      = NewRawStringMemoryUsage(1)  // ?
-	AuthReferenceStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(5)  // auth&
-	ReferenceStaticTypeStringMemoryUsage     = NewRawStringMemoryUsage(1)  // &
-	CapabilityStaticTypeStringMemoryUsage    = NewRawStringMemoryUsage(12) // Capability<>
+	VariableSizedStaticTypeStringMemoryUsage         = NewRawStringMemoryUsage(2)  // []
+	DictionaryStaticTypeStringMemoryUsage            = NewRawStringMemoryUsage(4)  // {: }
+	OptionalStaticTypeStringMemoryUsage              = NewRawStringMemoryUsage(1)  // ?
+	CapabilityStaticTypeStringMemoryUsage            = NewRawStringMemoryUsage(12) // Capability<>
+	IntersectionStaticTypeStringMemoryUsage          = NewRawStringMemoryUsage(2)  // {}
+	IntersectionStaticTypeSeparatorStringMemoryUsage = NewRawStringMemoryUsage(2)  // ,
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
@@ -318,25 +314,28 @@ func atreeNodes(count uint64, elementSize uint) (leafNodeCount uint64, branchNod
 	return
 }
 
-func newAtreeMemoryUsage(count uint64, elementSize uint, array bool) (MemoryUsage, MemoryUsage) {
+func newAtreeArrayMemoryUsage(count uint64, elementSize uint) (MemoryUsage, MemoryUsage) {
 	newLeafNodes, newBranchNodes := atreeNodes(count, elementSize)
-	if array {
-		return MemoryUsage{
-				Kind:   MemoryKindAtreeArrayDataSlab,
-				Amount: newLeafNodes,
-			}, MemoryUsage{
-				Kind:   MemoryKindAtreeArrayMetaDataSlab,
-				Amount: newBranchNodes,
-			}
-	} else {
-		return MemoryUsage{
-				Kind:   MemoryKindAtreeMapDataSlab,
-				Amount: newLeafNodes,
-			}, MemoryUsage{
-				Kind:   MemoryKindAtreeMapMetaDataSlab,
-				Amount: newBranchNodes,
-			}
-	}
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeArrayDataSlab,
+			Amount: newLeafNodes,
+		},
+		MemoryUsage{
+			Kind:   MemoryKindAtreeArrayMetaDataSlab,
+			Amount: newBranchNodes,
+		}
+}
+
+func newAtreeMapMemoryUsage(count uint64, elementSize uint) (MemoryUsage, MemoryUsage) {
+	newLeafNodes, newBranchNodes := atreeNodes(count, elementSize)
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeMapDataSlab,
+			Amount: newLeafNodes,
+		},
+		MemoryUsage{
+			Kind:   MemoryKindAtreeMapMetaDataSlab,
+			Amount: newBranchNodes,
+		}
 }
 
 func NewCadenceArrayMemoryUsages(length int) (MemoryUsage, MemoryUsage) {
@@ -368,28 +367,24 @@ func AdditionalAtreeMemoryUsage(originalCount uint64, elementSize uint, array bo
 	}
 }
 
-func NewArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
-	leaves, branches := newAtreeMemoryUsage(count, elementSize, true)
-	return ArrayValueBaseMemoryUsage, MemoryUsage{
-		Kind:   MemoryKindAtreeArrayElementOverhead,
-		Amount: count,
-	}, leaves, branches
+func NewAtreeArrayMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeArrayMemoryUsage(count, elementSize)
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeArrayElementOverhead,
+			Amount: count,
+		},
+		leaves,
+		branches
 }
 
-func NewDictionaryMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
-	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
-	return DictionaryValueBaseMemoryUsage, MemoryUsage{
-		Kind:   MemoryKindAtreeMapElementOverhead,
-		Amount: count,
-	}, leaves, branches
-}
-
-func NewCompositeMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage, MemoryUsage) {
-	leaves, branches := newAtreeMemoryUsage(count, elementSize, false)
-	return CompositeValueBaseMemoryUsage, MemoryUsage{
-		Kind:   MemoryKindAtreeMapElementOverhead,
-		Amount: count,
-	}, leaves, branches
+func NewAtreeMapMemoryUsages(count uint64, elementSize uint) (MemoryUsage, MemoryUsage, MemoryUsage) {
+	leaves, branches := newAtreeMapMemoryUsage(count, elementSize)
+	return MemoryUsage{
+			Kind:   MemoryKindAtreeMapElementOverhead,
+			Amount: count,
+		},
+		leaves,
+		branches
 }
 
 func NewAtreeMapPreAllocatedElementsMemoryUsage(count uint64, elementSize uint) MemoryUsage {

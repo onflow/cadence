@@ -163,7 +163,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 			accessChain = append(accessChain, elementType)
 		case *ast.MemberExpression:
 			target = targetExp.Expression
-			memberType, _, _, _ := checker.visitMember(targetExp)
+			memberType, _, _, _ := checker.visitMember(targetExp, true)
 			accessChain = append(accessChain, memberType)
 		default:
 			inAccessChain = false
@@ -313,12 +313,12 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 }
 
 var mutableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{MutateEntitlement},
+	[]*EntitlementType{MutateType},
 	Disjunction,
 )
 
-var insertableAndRemovableEntitledAccess = NewEntitlementSetAccess(
-	[]*EntitlementType{InsertEntitlement, RemoveEntitlement},
+var insertAndRemoveEntitledAccess = NewEntitlementSetAccess(
+	[]*EntitlementType{InsertType, RemoveType},
 	Conjunction,
 )
 
@@ -333,9 +333,9 @@ func (checker *Checker) visitIndexExpressionAssignment(
 
 	if isReference &&
 		!mutableEntitledAccess.PermitsAccess(indexedRefType.Authorization) &&
-		!insertableAndRemovableEntitledAccess.PermitsAccess(indexedRefType.Authorization) {
+		!insertAndRemoveEntitledAccess.PermitsAccess(indexedRefType.Authorization) {
 		checker.report(&UnauthorizedReferenceAssignmentError{
-			RequiredAccess: [2]Access{mutableEntitledAccess, insertableAndRemovableEntitledAccess},
+			RequiredAccess: [2]Access{mutableEntitledAccess, insertAndRemoveEntitledAccess},
 			FoundAccess:    indexedRefType.Authorization,
 			Range:          ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
 		})
@@ -352,7 +352,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 	target *ast.MemberExpression,
 ) (memberType Type) {
 
-	_, memberType, member, isOptional := checker.visitMember(target)
+	_, memberType, member, isOptional := checker.visitMember(target, true)
 
 	if member == nil {
 		return InvalidType

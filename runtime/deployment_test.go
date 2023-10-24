@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/hex"
@@ -29,10 +29,12 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -72,7 +74,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHashValue := event.Fields[codeHashParameterIndex]
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		require.Equal(t,
 			ImportType(inter, codeHashValue.Type()),
@@ -151,7 +153,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			`
               transaction {
 
-                  prepare(signer: AuthAccount) {
+                  prepare(signer: auth(AddContract) &Account) {
                       signer.contracts.add(name: "Test", code: %s%s)
                   }
               }
@@ -160,24 +162,24 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			argumentCode,
 		))
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		var accountCode []byte
 		var events []cadence.Event
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
-			updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 				accountCode = code
 				return nil
 			},
-			emitEvent: func(event cadence.Event) error {
+			OnEmitEvent: func(event cadence.Event) error {
 				events = append(events, event)
 				return nil
 			},

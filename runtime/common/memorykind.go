@@ -39,9 +39,8 @@ const (
 	MemoryKindOptionalValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
-	MemoryKindIDCapabilityValue
+	MemoryKindCapabilityValue
 	MemoryKindStorageReferenceValue
-	MemoryKindAccountReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
 	MemoryKindHostFunctionValue
@@ -104,7 +103,7 @@ const (
 	MemoryKindCadenceEnumValueSize
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
-	MemoryKindCadenceIDCapabilityValue
+	MemoryKindCadenceCapabilityValue
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
@@ -243,6 +242,7 @@ const (
 	MemoryKindReferenceSemaType
 	MemoryKindEntitlementSemaType
 	MemoryKindEntitlementMapSemaType
+	MemoryKindEntitlementRelationSemaType
 	MemoryKindCapabilitySemaType
 
 	// ordered-map

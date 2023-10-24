@@ -21,8 +21,10 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 
 	"github.com/stretchr/testify/require"
 
@@ -468,7 +470,7 @@ func TestInterpretAttachmentResource(t *testing.T) {
 	})
 }
 
-func TestAttachExecutionOrdering(t *testing.T) {
+func TestInterpretAttachExecutionOrdering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {
@@ -1439,7 +1441,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 access(all) var id: UInt8
@@ -1463,7 +1465,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r3 <- r2
                 let a2 = r3[A]!
                 a2.setID(5)
-                authAccount.save(<-r3, to: /storage/foo)
+                authAccount.storage.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
                 return a.id
@@ -1471,11 +1473,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+		    }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1487,7 +1487,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {}
             attachment A for R {
                 fun foo(): Int { return 3 }
@@ -1502,11 +1502,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+		    }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
@@ -1518,7 +1516,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {}
             resource R2 {
                 let r: @R 
@@ -1549,7 +1547,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r3 <- r2
                 let a2 = r3.r[A]!
                 a2.setID(5)
-                authAccount.save(<-r3, to: /storage/foo)
+                authAccount.storage.save(<-r3, to: /storage/foo)
 
                 // Access the attachment filed from the previous reference.
                 return a.id
@@ -1557,11 +1555,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+		    }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1573,7 +1569,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             access(all) resource R {
                 access(all) var id: UInt8
 
@@ -1602,13 +1598,11 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
                 var r2 <- r
                 r2.setID(5)
-                authAccount.save(<-r2, to: /storage/foo)
+                authAccount.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
-            }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+            }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -1620,7 +1614,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             resource R {}
             resource R2 {
                 let r: @R 
@@ -1643,11 +1637,9 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		    access(all) fun returnSameRef(_ ref: &A): &A {
 		        return ref
-		    }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+		    }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
@@ -1659,7 +1651,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-		inter, _ := testAccount(t, address, true, `
+		inter, _ := testAccount(t, address, true, nil, `
             access(all) resource R {}
 
             var ref: &A? = nil
@@ -1687,13 +1679,11 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 var r2 <- r
                 let a = r2[A]!
                 a.setID(5)
-                authAccount.save(<-r2, to: /storage/foo)
+                authAccount.storage.save(<-r2, to: /storage/foo)
                 return ref!.id
-            }`,
-			sema.Config{
-				AttachmentsEnabled: true,
-			},
-		)
+            }`, sema.Config{
+			AttachmentsEnabled: true,
+		})
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
@@ -2247,4 +2237,89 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+
+	t.Run("callback", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource R {
+                let foo: Int
+                init() {
+                    self.foo = 9
+                }
+            }
+            access(all) attachment A for R {
+                access(all) fun touchBase(): Int {
+                    var foo = base.foo
+                    return foo
+                }
+            }
+            access(all) fun main(): Int {
+                var r <- attach A() to <- create R()
+                var id: Int = 0
+                r.forEachAttachment(fun(a: &AnyResourceAttachment) {
+                    id = (a as! &A).touchBase()
+                });
+                destroy r
+                return id
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(9), value)
+	})
+}
+
+func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	for _, valueDeclaration := range []stdlib.StandardLibraryValue{
+		stdlib.NewPublicKeyConstructor(
+			assumeValidPublicKeyValidator{},
+			nil,
+			nil,
+		),
+		stdlib.SignatureAlgorithmConstructor,
+	} {
+		baseValueActivation.DeclareValue(valueDeclaration)
+		interpreter.Declare(baseActivation, valueDeclaration)
+	}
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          attachment A for AnyStruct {
+              fun foo(): Int {
+                  return 42
+              }
+          }
+
+          fun main(): Int {
+              var key = PublicKey(
+                  publicKey: "0102".decodeHex(),
+                  signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+              )
+			  key = attach A() to key
+              return key[A]!.foo()
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
+				AttachmentsEnabled:  true,
+			},
+			Config: &interpreter.Config{
+				BaseActivation: baseActivation,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
 }

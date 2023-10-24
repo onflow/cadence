@@ -28,19 +28,20 @@ var CharacterTypeUtf8FieldType = &VariableSizedType{
 }
 
 const CharacterTypeUtf8FieldDocString = `
-The byte array of the UTF-8 encoding
+The byte array of the UTF-8 encoding.
 `
 
 const CharacterTypeToStringFunctionName = "toString"
 
 var CharacterTypeToStringFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
 	),
 }
 
 const CharacterTypeToStringFunctionDocString = `
-Returns this character as a String
+Returns this character as a String.
 `
 
 const CharacterTypeName = "Character"
@@ -49,7 +50,7 @@ var CharacterType = &SimpleType{
 	Name:          CharacterTypeName,
 	QualifiedName: CharacterTypeName,
 	TypeID:        CharacterTypeName,
-	tag:           CharacterTypeTag,
+	TypeTag:       CharacterTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
@@ -64,7 +65,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				CharacterTypeUtf8FieldName,
 				CharacterTypeUtf8FieldType,
@@ -72,7 +73,7 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessAll,
+				PrimitiveAccess(ast.AccessAll),
 				CharacterTypeToStringFunctionName,
 				CharacterTypeToStringFunctionType,
 				CharacterTypeToStringFunctionDocString,

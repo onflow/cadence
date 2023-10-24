@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -24,18 +24,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -48,8 +50,8 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	transaction1 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
-                signer.save(3, to: /storage/foo)
+            prepare(signer: auth(Storage, Capabilities) &Account) {
+                signer.storage.save(3, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X, Test.Y) &Int>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
@@ -59,34 +61,34 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let ref = signer.capabilities.borrow<auth(Test.X, Test.Y) &Int>(/public/foo)!
                 let downcastRef = ref as! auth(Test.X, Test.Y) &Int
             }
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -126,8 +128,8 @@ func TestRuntimeAccountEntitlementSaveAndLoadSuccess(t *testing.T) {
 func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -140,8 +142,8 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	transaction1 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
-                signer.save(3, to: /storage/foo)
+            prepare(signer: auth(Storage, Capabilities) &Account) {
+                signer.storage.save(3, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X, Test.Y) &Int>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
@@ -151,34 +153,34 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let ref = signer.capabilities.borrow<auth(Test.X) &Int>(/public/foo)!
                 let downcastRef = ref as! auth(Test.X, Test.Y) &Int
             }
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -218,8 +220,8 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -245,10 +247,11 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 
 	transaction1 := []byte(`
         import Test from 0x1
+
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: auth(Storage, Capabilities) &Account) {
                 let r <- Test.createRWithA()
-                signer.save(<-r, to: /storage/foo)
+                signer.storage.save(<-r, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
@@ -257,35 +260,36 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 
 	transaction2 := []byte(`
         import Test from 0x1
+
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let ref = signer.capabilities.borrow<auth(Test.X) &Test.R>(/public/foo)!
                 ref[Test.A]!.foo()
             }
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -325,8 +329,8 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 func TestRuntimeAccountExportEntitledRef(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -345,35 +349,35 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
         import Test from 0x1
         access(all) fun main(): &Test.R {
             let r <- Test.createR()
-            let authAccount = getAuthAccount(0x1)
-            authAccount.save(<-r, to: /storage/foo)
-            let ref = authAccount.borrow<auth(Test.X) &Test.R>(from: /storage/foo)!
+            let authAccount = getAuthAccount<auth(Storage) &Account>(0x1)
+            authAccount.storage.save(<-r, to: /storage/foo)
+            let ref = authAccount.storage.borrow<auth(Test.X) &Test.R>(from: /storage/foo)!
             return ref
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -402,8 +406,8 @@ func TestRuntimeAccountExportEntitledRef(t *testing.T) {
 func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -438,28 +442,28 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -505,8 +509,8 @@ func TestRuntimeAccountEntitlementNamingConflict(t *testing.T) {
 func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -525,9 +529,9 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	transaction1 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: auth(Storage, Capabilities) &Account) {
                 let r <- Test.createR()
-                signer.save(<-r, to: /storage/foo)
+                signer.storage.save(<-r, to: /storage/foo)
                 let cap = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
@@ -537,7 +541,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)!
                 let upCap = capX as Capability<&Test.R>
                 let downCap = upCap as! Capability<auth(Test.X) &Test.R>
@@ -545,27 +549,27 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -605,8 +609,8 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
 func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -624,15 +628,18 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 
 	transaction1 := []byte(`
         import Test from 0x1
+
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: auth(Storage, Capabilities) &Account) {
                 let r <- Test.createR()
-                signer.save(<-r, to: /storage/foo)
+                signer.storage.save(<-r, to: /storage/foo)
+
                 let capFoo = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
                 signer.capabilities.publish(capFoo, at: /public/foo)
 
                 let r2 <- Test.createR()
-                signer.save(<-r2, to: /storage/bar)
+                signer.storage.save(<-r2, to: /storage/bar)
+
                 let capBar = signer.capabilities.storage.issue<auth(Test.Y) &Test.R>(/storage/bar)
                 signer.capabilities.publish(capBar, at: /public/bar)
             }
@@ -642,7 +649,7 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)!
                 let capY = signer.capabilities.get<auth(Test.Y) &Test.R>(/public/bar)!
 
@@ -657,27 +664,27 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -717,8 +724,8 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
 func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
@@ -736,15 +743,18 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 
 	transaction1 := []byte(`
         import Test from 0x1
+
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: auth(Storage, Capabilities) &Account) {
                 let r <- Test.createR()
-                signer.save(<-r, to: /storage/foo)
+                signer.storage.save(<-r, to: /storage/foo)
+
                 let capFoo = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
                 signer.capabilities.publish(capFoo, at: /public/foo)
 
                 let r2 <- Test.createR()
-                signer.save(<-r2, to: /storage/bar)
+                signer.storage.save(<-r2, to: /storage/bar)
+
                 let capBar = signer.capabilities.storage.issue<auth(Test.Y) &Test.R>(/storage/bar)
                 signer.capabilities.publish(capBar, at: /public/bar)
             }
@@ -754,7 +764,7 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
 	transaction2 := []byte(`
         import Test from 0x1
         transaction {
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
                 let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)!
                 let capY = signer.capabilities.get<auth(Test.Y) &Test.R>(/public/bar)!
 
@@ -769,27 +779,27 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
         }
      `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -833,25 +843,25 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 	address := common.MustBytesToAddress([]byte{0x1})
 
 	test := func(t *testing.T, script string) {
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		accountCodes := map[common.Location][]byte{}
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				code = accountCodes[location]
 				return code, nil
 			},
-			emitEvent: func(event cadence.Event) error {
+			OnEmitEvent: func(event cadence.Event) error {
 				return nil
 			},
 		}
@@ -883,10 +893,10 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
           fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
               let r <- create R()
-              account.save(<-r, to: /storage/foo)
+              account.storage.save(<-r, to: /storage/foo)
 
               let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
@@ -912,10 +922,10 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
           access(all)
           fun main() {
-              let account = getAuthAccount(0x1)
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
               let r <- create R()
-              account.save(<-r, to: /storage/foo)
+              account.storage.save(<-r, to: /storage/foo)
 
               let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
@@ -934,31 +944,31 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      entitlement Y
+          entitlement Y
 
           access(all)
-	      resource R {}
+          resource R {}
 
           access(all)
-	      fun main() {
-               let account = getAuthAccount(0x1)
+          fun main() {
+               let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
                let r <- create R()
-               account.save(<-r, to: /storage/foo)
+               account.storage.save(<-r, to: /storage/foo)
 
                let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
                account.capabilities.publish(issuedCap, at: /public/foo)
 
-	           let ref = account.capabilities.borrow<auth(X, Y) &R>(/public/foo)
+               let ref = account.capabilities.borrow<auth(X, Y) &R>(/public/foo)
                assert(ref != nil, message: "failed borrow")
 
                let ref2 = ref! as? auth(X, Y) &R
                assert(ref2 != nil, message: "failed cast")
-	      }
-	    `)
+          }
+        `)
 	})
 
 	t.Run("upcast runtime entitlements", func(t *testing.T) {
@@ -966,31 +976,31 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      struct S {}
+          struct S {}
 
           access(all)
-	      fun main() {
-              let account = getAuthAccount(0x1)
+          fun main() {
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let s = S()
-	          account.save(s, to: /storage/foo)
+              let s = S()
+              account.storage.save(s, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<auth(X) &S>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<auth(X) &S>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let cap: Capability<auth(X) &S> = account.capabilities.get<auth(X) &S>(/public/foo)!
+              let cap: Capability<auth(X) &S> = account.capabilities.get<auth(X) &S>(/public/foo)!
 
-	          let runtimeType = cap.getType()
+              let runtimeType = cap.getType()
 
-	          let upcastCap = cap as Capability<&S>
-	          let upcastRuntimeType = upcastCap.getType()
+              let upcastCap = cap as Capability<&S>
+              let upcastRuntimeType = upcastCap.getType()
 
-	          assert(runtimeType != upcastRuntimeType)
-	      }
-	    `)
+              assert(runtimeType != upcastRuntimeType)
+          }
+        `)
 	})
 
 	t.Run("upcast runtime type", func(t *testing.T) {
@@ -998,26 +1008,26 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      struct S {}
+          struct S {}
 
           access(all)
-	      fun main() {
-              let account = getAuthAccount(0x1)
+          fun main() {
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let s = S()
-	          account.save(s, to: /storage/foo)
+              let s = S()
+              account.storage.save(s, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<&S>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let cap: Capability<&S> = account.capabilities.get<&S>(/public/foo)!
+              let cap: Capability<&S> = account.capabilities.get<&S>(/public/foo)!
 
-	          let runtimeType = cap.getType()
-	          let upcastCap = cap as Capability<&AnyStruct>
-	          let upcastRuntimeType = upcastCap.getType()
-	          assert(runtimeType == upcastRuntimeType)
-	       }
-	    `)
+              let runtimeType = cap.getType()
+              let upcastCap = cap as Capability<&AnyStruct>
+              let upcastRuntimeType = upcastCap.getType()
+              assert(runtimeType == upcastRuntimeType)
+           }
+        `)
 	})
 
 	t.Run("can check with supertype", func(t *testing.T) {
@@ -1025,28 +1035,28 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      entitlement Y
+          entitlement Y
 
           access(all)
-	      resource R {}
+          resource R {}
 
           access(all)
-	      fun main() {
-              let account = getAuthAccount(0x1)
+          fun main() {
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let r <- create R()
-	          account.save(<-r, to: /storage/foo)
+              let r <- create R()
+              account.storage.save(<-r, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let cap = account.capabilities.get<auth(X | Y) &R>(/public/foo)!
-	          assert(cap.check())
-	      }
-	    `)
+              let cap = account.capabilities.get<auth(X | Y) &R>(/public/foo)!
+              assert(cap.check())
+          }
+        `)
 	})
 
 	t.Run("cannot borrow with subtype", func(t *testing.T) {
@@ -1054,28 +1064,28 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      entitlement Y
+          entitlement Y
 
           access(all)
-	      resource R {}
+          resource R {}
 
           access(all)
-	      fun main() {
-              let account = getAuthAccount(0x1)
+          fun main() {
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let r <- create R()
-	          account.save(<-r, to: /storage/foo)
+              let r <- create R()
+              account.storage.save(<-r, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let ref = account.capabilities.borrow<auth(X, Y) &R>(/public/foo)
-	          assert(ref == nil)
-	      }
-	    `)
+              let ref = account.capabilities.borrow<auth(X, Y) &R>(/public/foo)
+              assert(ref == nil)
+          }
+        `)
 	})
 
 	t.Run("cannot get with subtype", func(t *testing.T) {
@@ -1083,27 +1093,423 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
 
 		test(t, `
           access(all)
-	      entitlement X
+          entitlement X
 
           access(all)
-	      entitlement Y
+          entitlement Y
 
           access(all)
-	      resource R {}
+          resource R {}
 
           access(all)
-	      fun main() {
-              let account = getAuthAccount(0x1)
+          fun main() {
+              let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
 
-	          let r <- create R()
-	          account.save(<-r, to: /storage/foo)
+              let r <- create R()
+              account.storage.save(<-r, to: /storage/foo)
 
-	          let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
+              let issuedCap = account.capabilities.storage.issue<auth(X) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-	          let cap = account.capabilities.get<auth(X, Y) &R>(/public/foo)
-	          assert(cap == nil)
-	      }
-	    `)
+              let cap = account.capabilities.get<auth(X, Y) &R>(/public/foo)
+              assert(cap == nil)
+          }
+        `)
 	})
+}
+
+func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
+	t.Parallel()
+
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	furtherUpstreamDeployTx := DeploymentTransaction("FurtherUpstream", []byte(`
+        access(all) contract FurtherUpstream {
+            access(all) entitlement X
+            access(all) entitlement Y
+            access(all) entitlement Z
+
+            access(all) entitlement mapping M {
+                X -> Y 
+                Y -> Z
+            }
+        }
+    `))
+
+	upstreamDeployTx := DeploymentTransaction("Upstream", []byte(`
+        import FurtherUpstream from 0x1
+        access(all) contract Upstream {
+            access(all) entitlement A
+            access(all) entitlement B
+            access(all) entitlement C
+
+            access(all) entitlement mapping M {
+                include FurtherUpstream.M
+
+                A -> FurtherUpstream.Y 
+                FurtherUpstream.X -> B
+            }
+        }
+    `))
+
+	testDeployTx := DeploymentTransaction("Test", []byte(`
+        import FurtherUpstream from 0x1
+        import Upstream from 0x1
+        access(all) contract Test {
+            access(all) entitlement E
+            access(all) entitlement F
+            access(all) entitlement G
+
+            access(all) entitlement mapping M {
+                include Upstream.M
+
+                E -> FurtherUpstream.Z
+                E -> G
+                F -> Upstream.C
+                Upstream.C -> FurtherUpstream.X
+            }
+
+            access(all) struct S {
+                access(M) fun performMap(): auth(M) &Int {
+                    return &1
+                }
+            } 
+        }
+    `))
+
+	script := []byte(`
+        import Test from 0x1
+        import Upstream from 0x1
+        import FurtherUpstream from 0x1
+
+        access(all) fun main() {
+            let ref1 = &Test.S() as auth(FurtherUpstream.X, Upstream.C, Test.E) &Test.S
+
+            assert([ref1.performMap()].getType() == 
+            Type<[auth(
+                // from map of FurtherUpstream.X 
+                FurtherUpstream.Y, 
+                Upstream.B, 
+                // from map of Upstream.C
+                FurtherUpstream.X, 
+                // from map of Test.E 
+                FurtherUpstream.Z,
+                Test.G
+            ) &Int]>(), message: "test 1 failed")
+
+            let ref2 = &Test.S() as auth(FurtherUpstream.Y, Upstream.A, Test.F) &Test.S
+            assert([ref2.performMap()].getType() == 
+                Type<[auth(
+                    // from map of FurtherUpstream.Y 
+                    FurtherUpstream.Z, 
+                    // from map of Upstream.A
+                    FurtherUpstream.Y,
+                    // from map of Test.F 
+                    Upstream.C
+                ) &Int]>(), message: "test 2 failed")
+
+            let ref3 = &Test.S() as auth(FurtherUpstream.Z, Upstream.B, Test.G) &Test.S
+              assert([ref3.performMap()].getType() == Type<[&Int]>(), message: "test 3 failed")
+        }
+     `)
+
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: furtherUpstreamDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: upstreamDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: testDeployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+}
+
+func TestRuntimeEntitlementMapIncludeDeduped(t *testing.T) {
+	t.Parallel()
+
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
+	accountCodes := map[Location][]byte{}
+
+	script := []byte(`
+	access(all) entitlement E
+	access(all) entitlement F
+	
+	access(all) entitlement X
+	access(all) entitlement Y
+	access(all) entitlement mapping N1 {
+	  E -> F 
+	  E -> E 
+	  E -> X
+	  E -> Y
+	  F -> F 
+	  F -> E 
+	  F -> X
+	  F -> Y
+	  X -> F 
+	  X -> E 
+	  X -> X
+	  X -> Y
+	}
+	access(all) entitlement mapping N2{ include N1 }
+	access(all) entitlement mapping N3{ include N2 }
+	access(all) entitlement mapping N4{ include N3 }
+	access(all) entitlement mapping A {
+	  include N1
+	  include N2
+	  include N3
+	  include N4
+	}
+	access(all) entitlement mapping B {
+	  include A
+	  include N1
+	  include N2
+	}
+	access(all) entitlement mapping C {
+	  include A
+	  include B
+	  include N1
+	  include N2
+	}
+	access(all) entitlement mapping D {
+	  include A
+	  include B
+	  include C
+	  include N1
+	  include N2
+	}
+	access(all) entitlement mapping AA {
+	  include A
+	  include B
+	  include C
+	  include D
+	}
+	access(all) entitlement mapping BB {include AA}
+	access(all) entitlement mapping CC {include AA}
+	access(all) entitlement mapping DD {include AA}
+	access(all) entitlement mapping AAA {
+	  include AA
+	  include BB
+	  include CC
+	  include DD
+	}
+	access(all) entitlement mapping BBB {
+	  include AAA
+	  include AA
+	  include BB
+	  include CC
+	  include DD
+	}
+	access(all) entitlement mapping CCC {
+	  include AAA
+	  include BBB
+	  include AA
+	  include BB
+	  include CC
+	  include DD
+	}
+	access(all) entitlement mapping DDD {
+	  include AAA
+	  include BBB
+	  include CCC
+	  include AA
+	  include BB
+	  include CC
+	  include DD
+	}
+	access(all) entitlement mapping AAAA {
+	  include AAA
+	  include BBB
+	  include CCC
+	  include DDD
+	}
+	access(all) entitlement mapping BBBB {
+	  include AAAA
+	  include AAA
+	  include BBB
+	  include CCC
+	  include DDD
+	}
+	access(all) entitlement mapping CCCC {
+	  include AAAA
+	  include BBBB
+	  include AAA
+	  include BBB
+	  include CCC
+	  include DDD
+	}
+	access(all) entitlement mapping DDDD {
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include AAA
+	  include BBB
+	  include CCC
+	  include DDD
+	}
+	access(all) entitlement mapping AAAAA {
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include DDDD
+	}
+	access(all) entitlement mapping BBBBB {
+	  include AAAAA
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include DDDD
+	}
+	access(all) entitlement mapping CCCCC {
+	  include AAAAA
+	  include BBBBB
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include DDDD
+	}
+	access(all) entitlement mapping DDDDD {
+	  include AAAAA
+	  include BBBBB
+	  include CCCCC
+	  include AAAA
+	  include BBBB
+	  include CCCC
+	  include DDDD
+	}
+	access(all) entitlement mapping AAAAAA {
+	  include AAAAA
+	  include BBBBB
+	  include CCCCC
+	  include DDDDD
+	}
+	access(all) entitlement mapping BBBBBB { include AAAAAA}
+	access(all) entitlement mapping CCCCCC { include AAAAAA}
+	access(all) entitlement mapping DDDDDD { include AAAAAA}
+	access(all) entitlement mapping P1 {
+	  include AAAAAA
+	  include BBBBBB
+	  include CCCCCC
+	  include DDDDDD
+	}
+	access(all) entitlement mapping P2 { include P1 }
+	access(all) entitlement mapping P3 {
+	  include P1
+	  include P2
+	}
+	access(all) entitlement mapping P4 {
+	  include P1
+	  include P2
+	  include P3
+	}       
+	
+	access(all) fun main() {}
+    `)
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	var totalRelations uint
+	var failed bool
+
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnMeterMemory: func(usage common.MemoryUsage) error {
+			if usage.Kind == common.MemoryKindEntitlementRelationSemaType {
+				totalRelations++
+			}
+			if totalRelations > 1000 {
+				failed = true
+			}
+			return nil
+		},
+	}
+
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+	require.False(t, failed)
 }

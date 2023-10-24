@@ -48,7 +48,7 @@ const compositeMaxFields = 10
 var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
 var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
 
-func TestRandomMapOperations(t *testing.T) {
+func TestInterpretRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -101,7 +101,7 @@ func TestRandomMapOperations(t *testing.T) {
 		testMap = interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -202,7 +202,7 @@ func TestRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -251,7 +251,7 @@ func TestRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -299,7 +299,7 @@ func TestRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -382,7 +382,7 @@ func TestRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -472,7 +472,7 @@ func TestRandomMapOperations(t *testing.T) {
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -514,7 +514,7 @@ func TestRandomMapOperations(t *testing.T) {
 	})
 }
 
-func TestRandomArrayOperations(t *testing.T) {
+func TestInterpretRandomArrayOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -559,7 +559,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -645,7 +645,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -680,7 +680,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -718,7 +718,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -769,7 +769,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		testArray = interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -840,7 +840,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		array := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			orgOwner,
@@ -879,7 +879,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	})
 }
 
-func TestRandomCompositeValueOperations(t *testing.T) {
+func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 	if !*runSmokeTests {
 		t.Skip("smoke tests are disabled")
 	}
@@ -928,11 +928,14 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 	t.Run("iterate", func(t *testing.T) {
 		fieldCount := 0
-		testComposite.ForEachField(inter, func(name string, value interpreter.Value) {
+		testComposite.ForEachField(inter, func(name string, value interpreter.Value) (resume bool) {
 			orgValue, ok := orgFields[name]
 			require.True(t, ok)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 			fieldCount++
+
+			// continue iteration
+			return true
 		})
 
 		assert.Equal(t, len(orgFields), fieldCount)
@@ -1144,7 +1147,7 @@ func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter
 	if currentDepth < containerMaxDepth {
 		n = r.randomInt(randomValueKindComposite)
 	} else {
-		n = r.randomInt(randomValueKindIDCapability)
+		n = r.randomInt(randomValueKindCapability)
 	}
 
 	switch n {
@@ -1164,11 +1167,11 @@ func (r randomValueGenerator) randomStorableValue(inter *interpreter.Interpreter
 		fieldsCount := r.randomInt(compositeMaxFields)
 		v, _ := r.randomCompositeValue(common.ZeroAddress, fieldsCount, inter, currentDepth)
 		return v
-	case randomValueKindIDCapability:
-		return interpreter.NewUnmeteredIDCapabilityValue(
+	case randomValueKindCapability:
+		return interpreter.NewUnmeteredCapabilityValue(
 			interpreter.UInt64Value(r.randomInt(math.MaxInt-1)),
 			r.randomAddressValue(),
-			interpreter.ReferenceStaticType{
+			&interpreter.ReferenceStaticType{
 				Authorization:  interpreter.UnauthorizedAccess,
 				ReferencedType: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -1371,7 +1374,7 @@ func (r randomValueGenerator) randomDictionaryValue(
 	return interpreter.NewDictionaryValueWithAddress(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
@@ -1396,7 +1399,7 @@ func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, c
 	return interpreter.NewArrayValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.VariableSizedStaticType{
+		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
 		common.ZeroAddress,
@@ -1511,7 +1514,7 @@ const (
 	// Non-hashable values
 	randomValueKindVoid
 	randomValueKindNil // `Never?`
-	randomValueKindIDCapability
+	randomValueKindCapability
 
 	// Containers
 	randomValueKindSome

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"fmt"
@@ -27,9 +27,11 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -37,7 +39,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	imported1 := []byte(`
       import p2
@@ -55,8 +57,8 @@ func TestRuntimeCyclicImport(t *testing.T) {
 
 	var checkCount int
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.IdentifierLocation("p1"):
 				return imported1, nil
@@ -66,7 +68,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		programChecked: func(location Location, duration time.Duration) {
+		OnProgramChecked: func(location Location, duration time.Duration) {
 			checkCount += 1
 		},
 	}
@@ -114,9 +116,9 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
 
-func TestCheckCyclicImportsAfterUpdate(t *testing.T) {
+func TestRuntimeCheckCyclicImportsAfterUpdate(t *testing.T) {
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -124,33 +126,33 @@ func TestCheckCyclicImportsAfterUpdate(t *testing.T) {
 
 	signerAccount := contractsAddress
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) ([]byte, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) ([]byte, error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-		return json.Decode(runtimeInterface, b)
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
 	}
 
 	environment := NewBaseInterpreterEnvironment(Config{})
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	deploy := func(name string, contract string, update bool) error {
 		var txSource = DeploymentTransaction
@@ -211,9 +213,9 @@ func TestCheckCyclicImportsAfterUpdate(t *testing.T) {
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
 
-func TestCheckCyclicImportAddress(t *testing.T) {
+func TestRuntimeCheckCyclicImportAddress(t *testing.T) {
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -221,15 +223,15 @@ func TestCheckCyclicImportAddress(t *testing.T) {
 
 	signerAccount := contractsAddress
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) ([]byte, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) ([]byte, error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 			if len(identifiers) == 0 {
 				require.IsType(t, common.AddressLocation{}, location)
 				addressLocation := location.(common.AddressLocation)
@@ -248,26 +250,26 @@ func TestCheckCyclicImportAddress(t *testing.T) {
 				)
 			}
 
-			return multipleIdentifierLocationResolver(identifiers, location)
+			return MultipleIdentifierLocationResolver(identifiers, location)
 		},
-		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-		return json.Decode(runtimeInterface, b)
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
 	}
 
 	environment := NewBaseInterpreterEnvironment(Config{})
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	deploy := func(name string, contract string, update bool) error {
 		var txSource = DeploymentTransaction
@@ -322,9 +324,9 @@ func TestCheckCyclicImportAddress(t *testing.T) {
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }
 
-func TestCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
+func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -332,15 +334,15 @@ func TestCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 
 	signerAccount := contractsAddress
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) ([]byte, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) ([]byte, error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 			if len(identifiers) == 0 {
 				require.IsType(t, common.AddressLocation{}, location)
 				addressLocation := location.(common.AddressLocation)
@@ -349,26 +351,26 @@ func TestCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 			}
 
 			// There are no contracts in the account, so the identifiers are empty.
-			return multipleIdentifierLocationResolver(identifiers, location)
+			return MultipleIdentifierLocationResolver(identifiers, location)
 		},
-		getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-		return json.Decode(runtimeInterface, b)
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
 	}
 
 	environment := NewBaseInterpreterEnvironment(Config{})
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	deploy := func(name string, contract string, update bool) error {
 		var txSource = DeploymentTransaction

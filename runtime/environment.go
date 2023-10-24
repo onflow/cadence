@@ -38,10 +38,11 @@ import (
 type Environment interface {
 	ArgumentDecoder
 
-	Declare(valueDeclaration stdlib.StandardLibraryValue)
+	DeclareValue(valueDeclaration stdlib.StandardLibraryValue)
+	DeclareType(typeDeclaration stdlib.StandardLibraryType)
 	Configure(
 		runtimeInterface Interface,
-		codesAndPrograms codesAndPrograms,
+		codesAndPrograms CodesAndPrograms,
 		storage *Storage,
 		coverageReport *CoverageReport,
 	)
@@ -63,8 +64,7 @@ type Environment interface {
 		error,
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
-	NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value
-	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
+	NewAccountValue(address interpreter.AddressValue) interpreter.Value
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
@@ -73,13 +73,14 @@ type interpreterEnvironmentReconfigured struct {
 	runtimeInterface Interface
 	storage          *Storage
 	coverageReport   *CoverageReport
-	codesAndPrograms codesAndPrograms
+	codesAndPrograms CodesAndPrograms
 }
 
 type interpreterEnvironment struct {
 	interpreterEnvironmentReconfigured
-	baseActivation                        *interpreter.VariableActivation
+	baseTypeActivation                    *sema.VariableActivation
 	baseValueActivation                   *sema.VariableActivation
+	baseActivation                        *interpreter.VariableActivation
 	InterpreterConfig                     *interpreter.Config
 	CheckerConfig                         *sema.Config
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
@@ -93,10 +94,9 @@ var _ stdlib.Logger = &interpreterEnvironment{}
 var _ stdlib.UnsafeRandomGenerator = &interpreterEnvironment{}
 var _ stdlib.BlockAtHeightProvider = &interpreterEnvironment{}
 var _ stdlib.CurrentBlockProvider = &interpreterEnvironment{}
-var _ stdlib.PublicAccountHandler = &interpreterEnvironment{}
+var _ stdlib.AccountHandler = &interpreterEnvironment{}
 var _ stdlib.AccountCreator = &interpreterEnvironment{}
 var _ stdlib.EventEmitter = &interpreterEnvironment{}
-var _ stdlib.AuthAccountHandler = &interpreterEnvironment{}
 var _ stdlib.PublicKeyValidator = &interpreterEnvironment{}
 var _ stdlib.PublicKeySignatureVerifier = &interpreterEnvironment{}
 var _ stdlib.BLSPoPVerifier = &interpreterEnvironment{}
@@ -108,12 +108,14 @@ var _ common.MemoryGauge = &interpreterEnvironment{}
 
 func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
 	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
 
 	env := &interpreterEnvironment{
 		config:              config,
-		baseActivation:      baseActivation,
 		baseValueActivation: baseValueActivation,
+		baseTypeActivation:  baseTypeActivation,
+		baseActivation:      baseActivation,
 		stackDepthLimiter:   newStackDepthLimiter(config.StackDepthLimit),
 	}
 	env.InterpreterConfig = env.newInterpreterConfig()
@@ -131,8 +133,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		UUIDHandler:                          e.newUUIDHandler(),
 		ContractValueHandler:                 e.newContractValueHandler(),
 		ImportLocationHandler:                e.newImportLocationHandler(),
-		PublicAccountHandler:                 e.newPublicAccountHandler(),
-		AuthAccountHandler:                   e.newAuthAccountHandler(),
+		AccountHandler:                       e.NewAccountValue,
 		OnRecordTrace:                        e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:                 e.newCompositeTypeHandler(),
@@ -148,8 +149,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnMeterComputation:            e.newOnMeterComputation(),
 		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
-		IDCapabilityBorrowHandler:     stdlib.BorrowCapabilityController,
-		IDCapabilityCheckHandler:      stdlib.CheckCapabilityController,
+		CapabilityBorrowHandler:       stdlib.BorrowCapabilityController,
+		CapabilityCheckHandler:        stdlib.CheckCapabilityController,
 	}
 }
 
@@ -157,6 +158,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 	return &sema.Config{
 		AccessCheckMode:                  sema.AccessCheckModeStrict,
 		BaseValueActivation:              e.baseValueActivation,
+		BaseTypeActivation:               e.baseTypeActivation,
 		ValidTopLevelDeclarationsHandler: validTopLevelDeclarations,
 		LocationHandler:                  e.newLocationHandler(),
 		ImportHandler:                    e.resolveImport,
@@ -168,7 +170,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := newInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
-		env.Declare(valueDeclaration)
+		env.DeclareValue(valueDeclaration)
 	}
 	return env
 }
@@ -176,14 +178,14 @@ func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 func NewScriptInterpreterEnvironment(config Config) Environment {
 	env := newInterpreterEnvironment(config)
 	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
-		env.Declare(valueDeclaration)
+		env.DeclareValue(valueDeclaration)
 	}
 	return env
 }
 
 func (e *interpreterEnvironment) Configure(
 	runtimeInterface Interface,
-	codesAndPrograms codesAndPrograms,
+	codesAndPrograms CodesAndPrograms,
 	storage *Storage,
 	coverageReport *CoverageReport,
 ) {
@@ -195,29 +197,25 @@ func (e *interpreterEnvironment) Configure(
 	e.stackDepthLimiter.depth = 0
 }
 
-func (e *interpreterEnvironment) Declare(valueDeclaration stdlib.StandardLibraryValue) {
+func (e *interpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue) {
 	e.baseValueActivation.DeclareValue(valueDeclaration)
 	interpreter.Declare(e.baseActivation, valueDeclaration)
 }
 
-func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
-	return stdlib.NewAuthAccountValue(e, e, address)
-}
-
-func (e *interpreterEnvironment) NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value {
-	return stdlib.NewPublicAccountValue(e, e, address)
+func (e *interpreterEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType) {
+	e.baseTypeActivation.DeclareType(typeDeclaration)
 }
 
 func (e *interpreterEnvironment) MeterMemory(usage common.MemoryUsage) error {
 	return e.runtimeInterface.MeterMemory(usage)
 }
 
-func (e *interpreterEnvironment) ProgramLog(message string) error {
+func (e *interpreterEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
 	return e.runtimeInterface.ProgramLog(message)
 }
 
-func (e *interpreterEnvironment) UnsafeRandom() (uint64, error) {
-	return e.runtimeInterface.UnsafeRandom()
+func (e *interpreterEnvironment) ReadRandom(buffer []byte) error {
+	return e.runtimeInterface.ReadRandom(buffer)
 }
 
 func (e *interpreterEnvironment) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
@@ -318,6 +316,10 @@ func (e *interpreterEnvironment) RecordContractUpdate(
 	contractValue *interpreter.CompositeValue,
 ) {
 	e.storage.recordContractUpdate(location, contractValue)
+}
+
+func (e *interpreterEnvironment) ContractUpdateRecorded(location common.AddressLocation) bool {
+	return e.storage.contractUpdateRecorded(location)
 }
 
 func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLocation, code []byte) {
@@ -551,7 +553,7 @@ func (e *interpreterEnvironment) getProgram(
 			// Loading is done by Cadence.
 			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
 			// then do not treat it as an external error (the load callback is called by the embedder)
-			panicErr := userPanicToError(func() {
+			panicErr := UserPanicToError(func() {
 				program, err = load()
 			})
 			if panicErr != nil {
@@ -650,16 +652,8 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 	}
 }
 
-func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
-	return func(address interpreter.AddressValue) interpreter.Value {
-		return stdlib.NewPublicAccountValue(e, e, address)
-	}
-}
-
-func (e *interpreterEnvironment) newAuthAccountHandler() interpreter.AuthAccountHandlerFunc {
-	return func(address interpreter.AddressValue) interpreter.Value {
-		return stdlib.NewAuthAccountValue(e, e, address)
-	}
+func (e *interpreterEnvironment) NewAccountValue(address interpreter.AddressValue) interpreter.Value {
+	return stdlib.NewAccountValue(e, e, address)
 }
 
 func (e *interpreterEnvironment) ValidatePublicKey(publicKey *stdlib.PublicKey) error {
@@ -800,7 +794,7 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 				case common.AddressLocation:
 					address = location.Address
 				default:
-					panic(errors.NewUnreachableError())
+					return nil
 				}
 
 				addressValue := interpreter.NewAddressValue(
@@ -809,10 +803,11 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 				)
 
 				return map[string]interpreter.Value{
-					sema.ContractAccountFieldName: stdlib.NewAuthAccountValue(
+					sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
 						inter,
 						e,
 						addressValue,
+						interpreter.FullyEntitledAccountAccess,
 					),
 				}
 			}
@@ -861,8 +856,21 @@ func (e *interpreterEnvironment) newImportLocationHandler() interpreter.ImportLo
 
 func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.CompositeTypeHandlerFunc {
 	return func(location common.Location, typeID common.TypeID) *sema.CompositeType {
-		if _, ok := location.(stdlib.FlowLocation); ok {
+
+		switch location.(type) {
+		case stdlib.FlowLocation:
 			return stdlib.FlowEventTypes[typeID]
+
+		case nil:
+			qualifiedIdentifier := string(typeID)
+			ty := sema.TypeActivationNestedType(e.baseTypeActivation, qualifiedIdentifier)
+			if ty == nil {
+				return nil
+			}
+
+			if compositeType, ok := ty.(*sema.CompositeType); ok {
+				return compositeType
+			}
 		}
 
 		return nil

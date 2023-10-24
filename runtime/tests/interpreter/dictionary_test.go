@@ -41,10 +41,10 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
                 dictionaryRef.containsKey("foo")
                 dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
 
-                // Insertable functions
+                // Insert functions
                 dictionaryRef.insert(key: "three", "baz")
 
-                // Removable functions
+                // Remove functions
                 dictionaryRef.remove(key: "foo")
             }
         `)
@@ -72,7 +72,7 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("insertable reference", func(t *testing.T) {
+	t.Run("insert reference", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -85,7 +85,7 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
                 dictionaryRef.containsKey("foo")
                 dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
 
-                // Insertable functions
+                // Insert functions
                 dictionaryRef.insert(key: "three", "baz")
             }
 	    `)
@@ -94,7 +94,7 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("removable reference", func(t *testing.T) {
+	t.Run("remove reference", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -107,7 +107,7 @@ func TestInterpretDictionaryFunctionEntitlements(t *testing.T) {
                 dictionaryRef.containsKey("foo")
                 dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
 
-                // Removable functions
+                // Remove functions
                 dictionaryRef.remove(key: "foo")
             }
 	    `)

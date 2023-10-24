@@ -1033,7 +1033,10 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 	test := func(t *testing.T, auth sema.Access, kind common.CompositeKind) {
 
-		authKeyword := auth.AuthKeyword()
+		var authKeyword string
+		if auth != sema.UnauthorizedAccess {
+			authKeyword = fmt.Sprintf("auth(%s)", auth.QualifiedString())
+		}
 
 		testName := fmt.Sprintf("%s, auth: %v", kind.Name(), auth)
 
@@ -1648,16 +1651,16 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckAccount(t,
+		_, err := ParseAndCheck(t,
 			`
-            access(all) fun test() {
-                authAccount.save(<-[<-create R()], to: /storage/a)
+            access(all) fun test(storage: auth(Storage) &Account.Storage) {
+                storage.save(<-[<-create R()], to: /storage/a)
 
-                let collectionRef = authAccount.borrow<&[R]>(from: /storage/a)!
+                let collectionRef = storage.borrow<&[R]>(from: /storage/a)!
                 let ref = collectionRef[0]
 
-                let collection <- authAccount.load<@[R]>(from: /storage/a)!
-                authAccount.save(<- collection, to: /storage/b)
+                let collection <- storage.load<@[R]>(from: /storage/a)!
+                storage.save(<- collection, to: /storage/b)
 
                 ref.setA(2)
             }
@@ -2578,6 +2581,116 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
 				Column: 24,
 			})
 	})
+
+	t.Run("create ref by field access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            access(all) fun test() {
+                let foo <- create Foo()
+                var fooRef = &foo as &Foo
+
+                let barRef = fooRef.bar
+                destroy foo
+                barRef.id
+            }
+
+            resource Foo {
+                let bar: @Bar
+                init() {
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("create ref by index access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            access(all) fun test() {
+                let array <- [<- create Foo()]
+                var arrayRef = &array as &[Foo]
+
+                let fooRef = arrayRef[0]
+                destroy array
+                fooRef.id
+            }
+
+            resource Foo {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
+
+	t.Run("create ref by field and index access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+            access(all) fun test() {
+                let array <- [<- create Foo()]
+                var arrayRef = &array as &[Foo]
+
+                let barRef = arrayRef[0].bar
+                destroy array
+                barRef.id
+            }
+
+            resource Foo {
+                let bar: @Bar
+                init() {
+                    self.bar <-create Bar()
+                }
+                destroy() {
+                    destroy self.bar
+                }
+            }
+
+            resource Bar {
+                let id: UInt8
+                init() {
+                    self.id = 1
+                }
+            }
+            `,
+		)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		invalidatedRefError := &sema.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, errors[0], &invalidatedRefError)
+	})
 }
 
 func TestCheckReferenceUseAfterCopy(t *testing.T) {
@@ -2883,5 +2996,84 @@ func TestCheckReferenceCreationWithInvalidType(t *testing.T) {
 
 		var nonReferenceTypeReferenceError *sema.NonReferenceTypeReferenceError
 		require.ErrorAs(t, errs[0], &nonReferenceTypeReferenceError)
+	})
+}
+
+func TestCheckResourceReferenceFieldNilAssignment(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        access(all) resource Outer {
+            access(all) var inner : @Inner?
+
+            init(_ v: @Inner){
+                self.inner <- v
+                var outerRef = &self as &Outer
+                outerRef.inner = nil
+            }
+
+            destroy(){
+                destroy self.inner
+            }
+        }
+
+        access(all) resource Inner {}
+
+        fun main() {
+            let inner <- create Inner()
+            let outer <- create Outer(<- inner)
+            destroy outer
+        }
+    `)
+
+	errors := RequireCheckerErrors(t, err, 2)
+	require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
+	require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[1])
+}
+
+func TestCheckResourceReferenceIndexNilAssignment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("one level", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource Foo {}
+
+            fun main() {
+                let array: @[Foo?] <- [<- create Foo()]
+                let arrayRef = &array as auth(Mutate) &[Foo?]
+
+                arrayRef[0] = nil
+
+                destroy array
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
+		require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[1])
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource Foo {}
+
+            fun main() {
+                let array: @[[Foo?]] <- [<- [<- create Foo()]]
+                let arrayRef = &array as auth(Mutate) &[[Foo?]]
+
+                arrayRef[0][0] = nil
+
+                destroy array
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 3)
+		require.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errors[0])
+		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[1])
+		require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[2])
 	})
 }

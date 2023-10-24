@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/hex"
@@ -26,10 +26,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 )
 
 func TestRuntimeError(t *testing.T) {
@@ -40,11 +42,11 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`X`)
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
 		location := common.ScriptLocation{0x1}
 
@@ -73,11 +75,11 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`fun test() {}`)
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
 		location := common.ScriptLocation{0x1}
 
@@ -106,7 +108,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
             access(all) fun main() {
@@ -117,7 +119,7 @@ func TestRuntimeError(t *testing.T) {
             }
         `)
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
 		location := common.ScriptLocation{0x1}
 
@@ -146,7 +148,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
 			access(all) fun main() {
@@ -155,7 +157,7 @@ func TestRuntimeError(t *testing.T) {
 			}
         `)
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
 		location := common.ScriptLocation{0x1}
 
@@ -184,7 +186,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
 			access(all) resource Resource {
@@ -192,19 +194,19 @@ func TestRuntimeError(t *testing.T) {
 					panic("42")
 				}
 			}
-		
+
 			access(all) fun createResource(): @Resource{
 				return <- create Resource(
 					s: "argument"
 				)
 			}
-			
+
 			access(all) fun main() {
 				destroy createResource()
 			}
         `)
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
 		location := common.ScriptLocation{0x1}
 
@@ -244,14 +246,14 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		importedScript := []byte(`X`)
 
 		script := []byte(`import "imported"`)
 
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
 				switch location {
 				case common.StringLocation("imported"):
 					return importedScript, nil
@@ -287,14 +289,14 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		importedScript := []byte(`fun test() {}`)
 
 		script := []byte(`import "imported"`)
 
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
 				switch location {
 				case common.StringLocation("imported"):
 					return importedScript, nil
@@ -331,7 +333,7 @@ func TestRuntimeError(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		importedScript := []byte(`
             access(all) fun add() {
@@ -350,8 +352,8 @@ func TestRuntimeError(t *testing.T) {
             }
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
 				switch location {
 				case common.StringLocation("imported"):
 					return importedScript, nil
@@ -435,15 +437,15 @@ func TestRuntimeError(t *testing.T) {
             `,
 		}
 
-		runtimeInterface := &testRuntimeInterface{
-			resolveLocation: multipleIdentifierLocationResolver,
-			getAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnResolveLocation: MultipleIdentifierLocationResolver,
+			OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
 				code := codes[location]
 				return []byte(code), nil
 			},
 		}
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(codes[location]),
@@ -486,14 +488,14 @@ func TestRuntimeError(t *testing.T) {
 func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	makeDeployTransaction := func(name, code string) []byte {
 		return []byte(fmt.Sprintf(
 			`
               transaction {
-                prepare(signer: AuthAccount) {
-                  let acct = AuthAccount(payer: signer)
+                prepare(signer: auth(BorrowValue) &Account) {
+                  let acct = Account(payer: signer)
                   acct.contracts.add(name: "%s", code: "%s".decodeHex())
                 }
               }
@@ -541,34 +543,34 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 
 	var nextAccount byte = 0x2
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		createAccount: func(payer Address) (address Address, err error) {
+		Storage: NewTestLedger(nil, nil),
+		OnCreateAccount: func(payer Address) (address Address, err error) {
 			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
 			nextAccount++
 			return result.ToAddress(), nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{0x1}}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	deployTransaction := makeDeployTransaction("TestInterfaces", contractInterfaceCode)
 	err := runtime.ExecuteTransaction(

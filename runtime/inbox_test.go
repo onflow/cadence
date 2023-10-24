@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -25,21 +25,23 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 )
 
-func TestAccountInboxPublishUnpublish(t *testing.T) {
+func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
@@ -48,28 +50,28 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("foo")!
 				log(cap.borrow()![0])
 			}
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -116,19 +118,19 @@ func TestAccountInboxPublishUnpublish(t *testing.T) {
 	)
 }
 
-func TestAccountInboxUnpublishWrongType(t *testing.T) {
+func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				signer.inbox.publish(cap, name: "foo", recipient: 0x2)
 			}
@@ -137,28 +139,28 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[String]>("foo")!
 				log(cap.borrow()![0])
 			}
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -195,19 +197,19 @@ func TestAccountInboxUnpublishWrongType(t *testing.T) {
 	)
 }
 
-func TestAccountInboxUnpublishAbsent(t *testing.T) {
+func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
@@ -216,28 +218,28 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("bar")
 				log(cap)
 			}
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -284,19 +286,19 @@ func TestAccountInboxUnpublishAbsent(t *testing.T) {
 	)
 }
 
-func TestAccountInboxUnpublishRemove(t *testing.T) {
+func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
@@ -305,7 +307,7 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("foo")!
 				log(cap.borrow()![0])
 				let cap2 = signer.inbox.unpublish<&[Int]>("foo")
@@ -314,21 +316,21 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
 		Script{
@@ -378,19 +380,19 @@ func TestAccountInboxUnpublishRemove(t *testing.T) {
 	)
 }
 
-func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
+func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
@@ -399,7 +401,7 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 
 	transaction1point5 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("foo")
 				log(cap)
 			}
@@ -408,42 +410,42 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.unpublish<&[Int]>("foo")!
 				log(cap.borrow()![0])
 			}
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -505,19 +507,19 @@ func TestAccountInboxUnpublishWrongAccount(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaim(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
@@ -526,42 +528,42 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)!
 				log(cap.borrow()![0])
 			}
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -609,19 +611,19 @@ func TestAccountInboxPublishClaim(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaimWrongType(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
@@ -630,42 +632,42 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[String]>("foo", provider: 0x1)!
 				log(cap.borrow()![0])
 			}
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -710,19 +712,19 @@ func TestAccountInboxPublishClaimWrongType(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaimWrongName(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
@@ -731,42 +733,42 @@ func TestAccountInboxPublishClaimWrongName(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[String]>("bar", provider: 0x1)
 				log(cap)
 			}
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -812,19 +814,19 @@ func TestAccountInboxPublishClaimWrongName(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaimRemove(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
@@ -833,7 +835,7 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)!
 				log(cap.borrow()![0])
 			}
@@ -842,42 +844,42 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 
 	transaction3 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)
 				log(cap)
 			}
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(
@@ -939,19 +941,19 @@ func TestAccountInboxPublishClaimRemove(t *testing.T) {
 	)
 }
 
-func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
+func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 
 	var logs []string
 	var events []string
 
 	transaction1 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
-				signer.save([3], to: /storage/foo)
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
+				signer.storage.save([3], to: /storage/foo)
 				let cap = signer.capabilities.storage.issue<&[Int]>(/storage/foo)
 				log(signer.inbox.publish(cap, name: "foo", recipient: 0x2))
 			}
@@ -960,7 +962,7 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 
 	transaction2 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)
 				log(cap)
 			}
@@ -969,56 +971,56 @@ func TestAccountInboxPublishClaimWrongAccount(t *testing.T) {
 
 	transaction3 := []byte(`
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&[Int]>("foo", provider: 0x1)!
 				log(cap.borrow()![0])
 			}
 		}
 	`)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
 	}
 
-	runtimeInterface3 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface3 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 3}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// publish from 1 to 2
 	err := rt.ExecuteTransaction(

@@ -95,10 +95,10 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 	// while the definition of `qux` is not.
 	var attachmentAccess Access = UnauthorizedAccess
 	if attachmentType.AttachmentEntitlementAccess != nil {
-		attachmentAccess = *attachmentType.AttachmentEntitlementAccess
+		attachmentAccess = attachmentType.AttachmentEntitlementAccess
 	}
 
-	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
+	if attachmentAccess, ok := attachmentAccess.(*EntitlementMapAccess); ok {
 		codomain := attachmentAccess.Codomain()
 		attachmentType.Members.Foreach(func(_ string, member *Member) {
 			if memberAccess, ok := member.Access.(EntitlementSetAccess); ok {
@@ -624,8 +624,8 @@ func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclara
 	composite.baseType = checker.convertNominalType(declaration.BaseType)
 
 	attachmentAccess := checker.accessFromAstAccess(declaration.Access)
-	if attachmentAccess, ok := attachmentAccess.(EntitlementMapAccess); ok {
-		composite.AttachmentEntitlementAccess = &attachmentAccess
+	if attachmentAccess, ok := attachmentAccess.(*EntitlementMapAccess); ok {
+		composite.AttachmentEntitlementAccess = attachmentAccess
 	}
 
 	// add all the required entitlements to a set for this attachment
@@ -729,23 +729,31 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 	checker.Elaboration.SetCompositeNestedDeclarations(declaration, nestedDeclarations)
 
 	for _, nestedEntitlementType := range nestedEntitlementTypes {
-		compositeType.NestedTypes.Set(nestedEntitlementType.Identifier, nestedEntitlementType)
-		nestedEntitlementType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedEntitlementType.Identifier,
+			nestedEntitlementType,
+		)
 	}
 
 	for _, nestedEntitlementMapType := range nestedEntitlementMapTypes {
-		compositeType.NestedTypes.Set(nestedEntitlementMapType.Identifier, nestedEntitlementMapType)
-		nestedEntitlementMapType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedEntitlementMapType.Identifier,
+			nestedEntitlementMapType,
+		)
 	}
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
-		compositeType.NestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
-		nestedInterfaceType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedInterfaceType.Identifier,
+			nestedInterfaceType,
+		)
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
-		compositeType.NestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
-		nestedCompositeType.SetContainerType(compositeType)
+		compositeType.SetNestedType(
+			nestedCompositeType.Identifier,
+			nestedCompositeType,
+		)
 	}
 
 	return compositeType
@@ -837,7 +845,8 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 					ArgumentLabels:        nestedCompositeDeclarationVariable.ArgumentLabels,
 					IgnoreInSerialization: true,
 					DocString:             nestedCompositeDeclaration.DeclarationDocString(),
-				})
+				},
+			)
 		}
 		for _, nestedInterfaceDeclaration := range members.Interfaces() {
 			// resolve conformances
@@ -1144,18 +1153,27 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 
 	initializerCount := len(initializers)
 	if initializerCount > 0 {
+
 		firstInitializer := initializers[0]
+
 		parameters = checker.parameters(firstInitializer.FunctionDeclaration.ParameterList)
 
 		if initializerCount > 1 {
+
 			secondInitializer := initializers[1]
 
+			previousPos := firstInitializer.StartPosition()
+			pos := secondInitializer.StartPosition()
+
 			checker.report(
-				&UnsupportedOverloadingError{
-					DeclarationKind: common.DeclarationKindInitializer,
-					Range:           ast.NewRangeFromPositioned(checker.memoryGauge, secondInitializer),
+				&RedeclarationError{
+					Kind:        common.DeclarationKindInitializer,
+					Name:        common.DeclarationKindInitializer.Keywords(),
+					PreviousPos: &previousPos,
+					Pos:         pos,
 				},
 			)
+
 		}
 	}
 	return parameters
@@ -1704,7 +1722,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		fieldAccess := checker.accessFromAstAccess(field.Access)
 
-		if entitlementMapAccess, ok := fieldAccess.(EntitlementMapAccess); ok {
+		if entitlementMapAccess, ok := fieldAccess.(*EntitlementMapAccess); ok {
 			checker.entitlementMappingInScope = entitlementMapAccess.Type
 		}
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
@@ -2183,7 +2201,7 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 		if typedSelfType.AttachmentEntitlementAccess != nil {
 			selfAccess = typedSelfType.AttachmentEntitlementAccess.Codomain()
 		}
-		selfType = NewReferenceType(checker.memoryGauge, typedSelfType, selfAccess)
+		selfType = NewReferenceType(checker.memoryGauge, selfAccess, typedSelfType)
 	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
 }
@@ -2211,7 +2229,7 @@ func (checker *Checker) declareBaseValue(baseType Type, attachmentType *Composit
 			SetKind:      Conjunction,
 		}
 	}
-	base := NewReferenceType(checker.memoryGauge, baseType, baseAccess)
+	base := NewReferenceType(checker.memoryGauge, baseAccess, baseType)
 	checker.declareLowerScopedValue(base, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
 

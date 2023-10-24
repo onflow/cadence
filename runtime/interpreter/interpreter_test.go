@@ -169,7 +169,7 @@ func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {
 
 	inter := newTestInterpreter(b)
 	owner := common.Address{'A'}
-	typ := ConstantSizedStaticType{
+	typ := &ConstantSizedStaticType{
 		Type: PrimitiveStaticTypeString,
 		Size: size,
 	}

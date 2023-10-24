@@ -593,8 +593,8 @@ func (e *Encoder) encodeValue(
 		// If x.StaticType is nil, type value is encoded as nil.
 		return e.encodeNullableTypeValue(v.StaticType, ccfTypeIDByCadenceType{})
 
-	case cadence.IDCapability:
-		return e.encodeIDCapability(v)
+	case cadence.Capability:
+		return e.encodeCapability(v)
 
 	case cadence.Enum:
 		return e.encodeEnum(v, tids)
@@ -1106,7 +1106,7 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 	return e.enc.EncodeString(x.Identifier)
 }
 
-// encodeIDCapability encodes cadence.IDCapability as
+// encodeCapability encodes cadence.Capability as
 // language=CDDL
 // id-capability-value = [
 //
@@ -1114,7 +1114,7 @@ func (e *Encoder) encodePath(x cadence.Path) error {
 //	id: uint64-value
 //
 // ]
-func (e *Encoder) encodeIDCapability(capability cadence.IDCapability) error {
+func (e *Encoder) encodeCapability(capability cadence.Capability) error {
 	// Encode array head with length 2.
 	err := e.enc.EncodeRawBytes([]byte{
 		// array, 2 items follow
@@ -1305,9 +1305,9 @@ func (e *Encoder) encodeTypeValueRef(id ccfTypeID) error {
 //
 //	; cbor-tag-simple-type-value
 //	#6.185(simple-type-id)
-func (e *Encoder) encodeSimpleTypeValue(id uint64) error {
+func (e *Encoder) encodeSimpleTypeValue(id SimpleType) error {
 	rawTagNum := []byte{0xd8, CBORTagSimpleTypeValue}
-	return e.encodeSimpleTypeWithRawTag(id, rawTagNum)
+	return e.encodeSimpleTypeWithRawTag(uint64(id), rawTagNum)
 }
 
 // encodeOptionalTypeValue encodes cadence.OptionalType as
@@ -2015,9 +2015,10 @@ func isOptionalNeverType(t cadence.Type) bool {
 			return false
 		}
 
-		if ot.Type.Equal(cadence.NewNeverType()) {
+		if ot.Type.Equal(cadence.NeverType) {
 			return true
 		}
+
 		t = ot.Type
 	}
 }

@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/pretty"
 )
@@ -74,23 +75,6 @@ func (e *unsupportedOperation) Error() string {
 		e.kind.Name(),
 		e.operation.Symbol(),
 	)
-}
-
-// SuggestedFix
-
-type HasSuggestedFixes interface {
-	SuggestFixes(code string) []SuggestedFix
-}
-
-type SuggestedFix struct {
-	Message   string
-	TextEdits []TextEdit
-}
-
-type TextEdit struct {
-	Replacement string
-	Insertion   string
-	ast.Range
 }
 
 // InvalidPragmaError
@@ -495,7 +479,7 @@ type MissingArgumentLabelError struct {
 
 var _ SemanticError = &MissingArgumentLabelError{}
 var _ errors.UserError = &MissingArgumentLabelError{}
-var _ HasSuggestedFixes = &MissingArgumentLabelError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &MissingArgumentLabelError{}
 
 func (*MissingArgumentLabelError) isSemanticError() {}
 
@@ -508,11 +492,11 @@ func (e *MissingArgumentLabelError) Error() string {
 	)
 }
 
-func (e *MissingArgumentLabelError) SuggestFixes(_ string) []SuggestedFix {
-	return []SuggestedFix{
+func (e *MissingArgumentLabelError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "insert argument label",
-			TextEdits: []TextEdit{
+			TextEdits: []ast.TextEdit{
 				{
 					Insertion: fmt.Sprintf("%s: ", e.ExpectedArgumentLabel),
 					Range: ast.NewUnmeteredRange(
@@ -536,7 +520,7 @@ type IncorrectArgumentLabelError struct {
 var _ SemanticError = &IncorrectArgumentLabelError{}
 var _ errors.UserError = &IncorrectArgumentLabelError{}
 var _ errors.SecondaryError = &IncorrectArgumentLabelError{}
-var _ HasSuggestedFixes = &IncorrectArgumentLabelError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &IncorrectArgumentLabelError{}
 
 func (*IncorrectArgumentLabelError) isSemanticError() {}
 
@@ -558,12 +542,12 @@ func (e *IncorrectArgumentLabelError) SecondaryError() string {
 	)
 }
 
-func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []SuggestedFix {
+func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.SuggestedFix[ast.TextEdit] {
 	if len(e.ExpectedArgumentLabel) > 0 {
-		return []SuggestedFix{
+		return []errors.SuggestedFix[ast.TextEdit]{
 			{
 				Message: "replace argument label",
-				TextEdits: []TextEdit{
+				TextEdits: []ast.TextEdit{
 					{
 						Replacement: fmt.Sprintf("%s:", e.ExpectedArgumentLabel),
 						Range:       e.Range,
@@ -585,10 +569,10 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []SuggestedFix {
 
 		adjustedEndPos := endPos.Shifted(nil, whitespaceSuffixLength)
 
-		return []SuggestedFix{
+		return []errors.SuggestedFix[ast.TextEdit]{
 			{
 				Message: "remove argument label",
-				TextEdits: []TextEdit{
+				TextEdits: []ast.TextEdit{
 					{
 						Replacement: "",
 						Range: ast.Range{
@@ -789,7 +773,7 @@ func (e *InvalidAccessModifierError) Error() string {
 		return fmt.Sprintf(
 			"invalid access modifier for %s: `%s`%s",
 			e.DeclarationKind.Name(),
-			e.Access.AccessKeyword(),
+			e.Access.String(),
 			explanation,
 		)
 	}
@@ -804,7 +788,7 @@ func (e *InvalidAccessModifierError) EndPosition(memoryGauge common.MemoryGauge)
 		return e.Pos
 	}
 
-	length := len(e.Access.AccessKeyword())
+	length := len(e.Access.String())
 	return e.Pos.Shifted(memoryGauge, length-1)
 }
 
@@ -876,6 +860,23 @@ func (*InvalidNativeModifierError) IsUserError() {}
 
 func (e *InvalidNativeModifierError) Error() string {
 	return "invalid native modifier for declaration"
+}
+
+// NativeFunctionWithImplementationError
+
+type NativeFunctionWithImplementationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &NativeFunctionWithImplementationError{}
+var _ errors.UserError = &NativeFunctionWithImplementationError{}
+
+func (*NativeFunctionWithImplementationError) isSemanticError() {}
+
+func (*NativeFunctionWithImplementationError) IsUserError() {}
+
+func (e *NativeFunctionWithImplementationError) Error() string {
+	return "native function must not have an implementation"
 }
 
 // InvalidNameError
@@ -1023,7 +1024,7 @@ type NotDeclaredMemberError struct {
 var _ SemanticError = &NotDeclaredMemberError{}
 var _ errors.UserError = &NotDeclaredMemberError{}
 var _ errors.SecondaryError = &NotDeclaredMemberError{}
-var _ HasSuggestedFixes = &NotDeclaredMemberError{}
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &NotDeclaredMemberError{}
 
 func (*NotDeclaredMemberError) isSemanticError() {}
 
@@ -1063,7 +1064,7 @@ func (e *NotDeclaredMemberError) SecondaryError() string {
 	return "unknown member"
 }
 
-func (e *NotDeclaredMemberError) SuggestFixes(_ string) []SuggestedFix {
+func (e *NotDeclaredMemberError) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
 	optionalMember := e.findOptionalMember()
 	if optionalMember == "" {
 		return nil
@@ -1071,10 +1072,10 @@ func (e *NotDeclaredMemberError) SuggestFixes(_ string) []SuggestedFix {
 
 	accessPos := e.Expression.AccessPos
 
-	return []SuggestedFix{
+	return []errors.SuggestedFix[ast.TextEdit]{
 		{
 			Message: "use optional chaining",
-			TextEdits: []TextEdit{
+			TextEdits: []ast.TextEdit{
 				{
 					Insertion: "?",
 					Range: ast.Range{
@@ -2967,9 +2968,11 @@ func (e *InvalidOptionalChainingError) Error() string {
 // InvalidAccessError
 
 type InvalidAccessError struct {
-	Name              string
-	RestrictingAccess Access
-	DeclarationKind   common.DeclarationKind
+	Name                string
+	RestrictingAccess   Access
+	PossessedAccess     Access
+	DeclarationKind     common.DeclarationKind
+	suggestEntitlements bool
 	ast.Range
 }
 
@@ -2981,12 +2984,90 @@ func (*InvalidAccessError) isSemanticError() {}
 func (*InvalidAccessError) IsUserError() {}
 
 func (e *InvalidAccessError) Error() string {
+	var possessedDescription string
+	if e.PossessedAccess != nil {
+		if e.PossessedAccess.Equal(UnauthorizedAccess) {
+			possessedDescription = ", but reference is unauthorized"
+		} else {
+			possessedDescription = fmt.Sprintf(
+				", but reference only has `%s` authorization",
+				e.PossessedAccess.String(),
+			)
+		}
+	}
+
 	return fmt.Sprintf(
-		"cannot access `%s`: %s has %s access",
+		"cannot access `%s`: %s requires `%s` authorization%s",
 		e.Name,
 		e.DeclarationKind.Name(),
-		e.RestrictingAccess.Description(),
+		e.RestrictingAccess.String(),
+		possessedDescription,
 	)
+}
+
+// When e.PossessedAccess is a conjunctive entitlement set, we can suggest
+// which additional entitlements it would need to be given in order to have
+// e.RequiredAccess.
+func (e *InvalidAccessError) SecondaryError() string {
+	if !e.suggestEntitlements || e.PossessedAccess == nil || e.RestrictingAccess == nil {
+		return ""
+	}
+	possessedEntitlements, possessedOk := e.PossessedAccess.(EntitlementSetAccess)
+	requiredEntitlements, requiredOk := e.RestrictingAccess.(EntitlementSetAccess)
+	if !possessedOk && e.PossessedAccess.Equal(UnauthorizedAccess) {
+		possessedOk = true
+		// for this error reporting, model UnauthorizedAccess as an empty entitlement set
+		possessedEntitlements = NewEntitlementSetAccess(nil, Conjunction)
+	}
+	if !possessedOk || !requiredOk || possessedEntitlements.SetKind != Conjunction {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	enumerateEntitlements := func(len int, separator string) func(index int, key *EntitlementType, _ struct{}) {
+		return func(index int, key *EntitlementType, _ struct{}) {
+			fmt.Fprintf(&sb, "`%s`", key.QualifiedString())
+			if index < len-2 {
+				fmt.Fprint(&sb, ", ")
+			} else if index < len-1 {
+				if len > 2 {
+					fmt.Fprint(&sb, ",")
+				}
+				fmt.Fprintf(&sb, " %s ", separator)
+			}
+		}
+	}
+
+	switch requiredEntitlements.SetKind {
+	case Conjunction:
+		// when both `possessed` and `required` are conjunctions, the missing set is simple set difference:
+		// `missing` = `required` - `possessed`, and `missing` should be added to `possessed` to make `required`
+		missingEntitlements := orderedmap.New[EntitlementOrderedSet](0)
+		requiredEntitlements.Entitlements.Foreach(func(key *EntitlementType, _ struct{}) {
+			if !possessedEntitlements.Entitlements.Contains(key) {
+				missingEntitlements.Set(key, struct{}{})
+			}
+		})
+		missingLen := missingEntitlements.Len()
+		if missingLen == 1 {
+			fmt.Fprint(&sb, "reference needs entitlement ")
+			fmt.Fprintf(&sb, "`%s`", missingEntitlements.Newest().Key.QualifiedString())
+		} else {
+			fmt.Fprint(&sb, "reference needs all of entitlements ")
+			missingEntitlements.ForeachWithIndex(enumerateEntitlements(missingLen, "and"))
+		}
+	case Disjunction:
+		// when both `required` is a disjunction, we know `possessed` has none of the entitlements in it:
+		// suggest adding one of those entitlements
+		fmt.Fprint(&sb, "reference needs one of entitlements ")
+		requiredEntitlementsSet := requiredEntitlements.Entitlements
+		requiredLen := requiredEntitlementsSet.Len()
+		// singleton-1 sets are always conjunctions
+		requiredEntitlementsSet.ForeachWithIndex(enumerateEntitlements(requiredLen, "or"))
+	}
+
+	return sb.String()
 }
 
 // InvalidAssignmentAccessError
@@ -3009,10 +3090,10 @@ func (*InvalidAssignmentAccessError) IsUserError() {}
 
 func (e *InvalidAssignmentAccessError) Error() string {
 	return fmt.Sprintf(
-		"cannot assign to `%s`: %s has %s access",
+		"cannot assign to `%s`: %s has `%s` access",
 		e.Name,
 		e.DeclarationKind.Name(),
-		e.RestrictingAccess.Description(),
+		e.RestrictingAccess.String(),
 	)
 }
 
@@ -3044,13 +3125,13 @@ func (e *UnauthorizedReferenceAssignmentError) Error() string {
 	if e.FoundAccess == UnauthorizedAccess {
 		foundAccess = "non-auth"
 	} else {
-		foundAccess = fmt.Sprintf("(%s)", e.FoundAccess.Description())
+		foundAccess = fmt.Sprintf("(%s)", e.FoundAccess.String())
 	}
 
 	return fmt.Sprintf(
 		"invalid assignment: can only assign to a reference with (%s) or (%s) access, but found a %s reference",
-		e.RequiredAccess[0].Description(),
-		e.RequiredAccess[1].Description(),
+		e.RequiredAccess[0].String(),
+		e.RequiredAccess[1].String(),
 		foundAccess,
 	)
 }
@@ -3058,8 +3139,8 @@ func (e *UnauthorizedReferenceAssignmentError) Error() string {
 func (e *UnauthorizedReferenceAssignmentError) SecondaryError() string {
 	return fmt.Sprintf(
 		"consider taking a reference with `%s` or `%s` access",
-		e.RequiredAccess[0].Description(),
-		e.RequiredAccess[1].Description(),
+		e.RequiredAccess[0].String(),
+		e.RequiredAccess[1].String(),
 	)
 }
 
@@ -3299,8 +3380,8 @@ func (*InvalidTransactionPrepareParameterTypeError) IsUserError() {}
 
 func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 	return fmt.Sprintf(
-		"prepare parameter must be of type `%s`, not `%s`",
-		AuthAccountType,
+		"prepare parameter must be subtype of `%s`, not `%s`",
+		AccountReferenceType,
 		e.Type.QualifiedString(),
 	)
 }
@@ -4147,7 +4228,8 @@ func (*InvalidMappedEntitlementMemberError) isSemanticError() {}
 func (*InvalidMappedEntitlementMemberError) IsUserError() {}
 
 func (e *InvalidMappedEntitlementMemberError) Error() string {
-	return "mapped entitlement access modifiers may only be used for fields or accessors with a reference type authorized with the same mapped entitlement"
+	return "mapped entitlement access modifiers may only be used for fields or accessors with a container type, " +
+		" or a reference type authorized with the same mapped entitlement"
 }
 
 func (e *InvalidMappedEntitlementMemberError) StartPosition() ast.Position {
@@ -4205,7 +4287,18 @@ func (*UnrepresentableEntitlementMapOutputError) isSemanticError() {}
 func (*UnrepresentableEntitlementMapOutputError) IsUserError() {}
 
 func (e *UnrepresentableEntitlementMapOutputError) Error() string {
-	return fmt.Sprintf("cannot map %s through %s because the output is unrepresentable", e.Input.AccessKeyword(), e.Map.QualifiedString())
+	return fmt.Sprintf(
+		"cannot map `%s` through `%s` because the output is unrepresentable",
+		e.Input.String(),
+		e.Map.QualifiedString(),
+	)
+}
+
+func (e *UnrepresentableEntitlementMapOutputError) SecondaryError() string {
+	return fmt.Sprintf(
+		"this usually occurs because the input set is disjunctive and `%s` is one-to-many",
+		e.Map.QualifiedString(),
+	)
 }
 
 func (e *UnrepresentableEntitlementMapOutputError) StartPosition() ast.Position {
@@ -4231,7 +4324,7 @@ func (*InvalidMappedAuthorizationOutsideOfFieldError) IsUserError() {}
 
 func (e *InvalidMappedAuthorizationOutsideOfFieldError) Error() string {
 	return fmt.Sprintf(
-		"cannot use mapped entitlement authorization for %s outside of a field or accessor function using the same entitlement access",
+		"cannot use mapped entitlement authorization for `%s` outside of a field or accessor function using the same entitlement access",
 		e.Map.QualifiedIdentifier(),
 	)
 }
@@ -4242,6 +4335,72 @@ func (e *InvalidMappedAuthorizationOutsideOfFieldError) StartPosition() ast.Posi
 
 func (e *InvalidMappedAuthorizationOutsideOfFieldError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.EndPos
+}
+
+// InvalidEntitlementMappingInclusionError
+type InvalidEntitlementMappingInclusionError struct {
+	Map          *EntitlementMapType
+	IncludedType Type
+	ast.Range
+}
+
+var _ SemanticError = &InvalidEntitlementMappingInclusionError{}
+var _ errors.UserError = &InvalidEntitlementMappingInclusionError{}
+
+func (*InvalidEntitlementMappingInclusionError) isSemanticError() {}
+
+func (*InvalidEntitlementMappingInclusionError) IsUserError() {}
+
+func (e *InvalidEntitlementMappingInclusionError) Error() string {
+	return fmt.Sprintf(
+		"cannot include `%s` in the definition of `%s`, as it is not an entitlement map",
+		e.IncludedType.QualifiedString(),
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+// DuplicateEntitlementMappingInclusionError
+type DuplicateEntitlementMappingInclusionError struct {
+	Map          *EntitlementMapType
+	IncludedType *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &DuplicateEntitlementMappingInclusionError{}
+var _ errors.UserError = &DuplicateEntitlementMappingInclusionError{}
+
+func (*DuplicateEntitlementMappingInclusionError) isSemanticError() {}
+
+func (*DuplicateEntitlementMappingInclusionError) IsUserError() {}
+
+func (e *DuplicateEntitlementMappingInclusionError) Error() string {
+	return fmt.Sprintf(
+		"`%s` is already included in the definition of `%s`",
+		e.IncludedType.QualifiedIdentifier(),
+		e.Map.QualifiedIdentifier(),
+	)
+}
+
+// CyclicEntitlementMappingError
+type CyclicEntitlementMappingError struct {
+	Map          *EntitlementMapType
+	IncludedType *EntitlementMapType
+	ast.Range
+}
+
+var _ SemanticError = &CyclicEntitlementMappingError{}
+var _ errors.UserError = &CyclicEntitlementMappingError{}
+
+func (*CyclicEntitlementMappingError) isSemanticError() {}
+
+func (*CyclicEntitlementMappingError) IsUserError() {}
+
+func (e *CyclicEntitlementMappingError) Error() string {
+	return fmt.Sprintf(
+		"cannot include `%s` in the definition of `%s`, as it would create a cyclical mapping",
+		e.IncludedType.QualifiedIdentifier(),
+		e.Map.QualifiedIdentifier(),
+	)
 }
 
 type DuplicateEntitlementRequirementError struct {
@@ -4326,7 +4485,7 @@ func (*RequiredEntitlementNotProvidedError) IsUserError() {}
 
 func (e *RequiredEntitlementNotProvidedError) Error() string {
 	return fmt.Sprintf(
-		"attachment type %s requires entitlement %s to be provided when attaching",
+		"attachment type `%s` requires entitlement `%s` to be provided when attaching",
 		e.AttachmentType.QualifiedString(),
 		e.RequiredEntitlement.QualifiedString(),
 	)
@@ -4526,7 +4685,7 @@ func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
 	switch access := e.AttachmentAccessModifier.(type) {
 	case PrimitiveAccess:
 		return "attachments declared with `access(all)` access do not support entitlements on their members"
-	case EntitlementMapAccess:
+	case *EntitlementMapAccess:
 		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
 			e.InvalidEntitlement.QualifiedIdentifier(),
 			access.Type.QualifiedIdentifier())

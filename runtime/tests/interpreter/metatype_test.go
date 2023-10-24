@@ -303,6 +303,33 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			inter.Globals.Get("identifier").GetValue(),
 		)
 	})
+
+	t.Run("no loading of program", func(t *testing.T) {
+
+		t.Parallel()
+
+		// TypeValue.GetMember for `identifier` should not load the program
+
+		inter := parseCheckAndInterpret(t, `
+           fun test(_ type: Type): String {
+               return type.identifier
+           }
+        `)
+
+		location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+		result, err := inter.Invoke("test", typeValue)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("A.0000000000000001.Foo.Bar"),
+			result,
+		)
+	})
 }
 
 func TestInterpretIsInstance(t *testing.T) {
@@ -431,7 +458,7 @@ func TestInterpretIsInstance(t *testing.T) {
 	}
 }
 
-func TestInterpretIsSubtype(t *testing.T) {
+func TestInterpretMetaTypeIsSubtype(t *testing.T) {
 
 	t.Parallel()
 
@@ -495,8 +522,8 @@ func TestInterpretIsSubtype(t *testing.T) {
 		{
 			name: "resource is not a subtype of String",
 			code: `
-			  resource R {}
-			  let result = Type<@R>().isSubtype(of: Type<String>())
+              resource R {}
+              let result = Type<@R>().isSubtype(of: Type<String>())
             `,
 			result: false,
 		},
@@ -622,7 +649,8 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional auth ephemeral reference",
 			code: `
-			  entitlement X
+              entitlement X
+
               fun test(): Type {
                   let value = 1
                   let ref = &value as auth(X) &Int
@@ -631,8 +659,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						Authorization: interpreter.NewEntitlementSetAuthorization(
 							nil,
 							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
@@ -649,7 +677,8 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional ephemeral reference, auth to unauth",
 			code: `
-			  entitlement X
+              entitlement X
+
               fun test(): Type {
                   let value = 1
                   let ref = &value as auth(X) &Int
@@ -658,8 +687,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						// Reference was converted
 						Authorization:  interpreter.UnauthorizedAccess,
 						ReferencedType: interpreter.PrimitiveStaticTypeInt,
@@ -673,7 +702,8 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. EphemeralReferenceValue.StaticType is tested
 			name: "optional ephemeral reference, auth to auth",
 			code: `
-			  entitlement X
+              entitlement X
+
               fun test(): Type {
                   let value = 1
                   let ref = &value as auth(X) &Int
@@ -682,8 +712,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						Authorization: interpreter.NewEntitlementSetAuthorization(
 							nil,
 							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
@@ -699,11 +729,13 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. StorageReferenceValue.StaticType is tested
 			name: "optional storage reference, auth to unauth",
 			code: `
-			  entitlement X
-			  fun getStorageReference(): auth(X) &Int {
-				account.save(1, to: /storage/foo)
-				return account.borrow<auth(X) &Int>(from: /storage/foo)!
-			}
+              entitlement X
+
+              fun getStorageReference(): auth(X) &Int {
+                  account.storage.save(1, to: /storage/foo)
+                  return account.storage.borrow<auth(X) &Int>(from: /storage/foo)!
+              }
+
               fun test(): Type {
                   let ref = getStorageReference()
                   let optRef: &Int? = ref
@@ -711,8 +743,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						// Reference was converted
 						Authorization:  interpreter.UnauthorizedAccess,
 						ReferencedType: interpreter.PrimitiveStaticTypeInt,
@@ -726,11 +758,13 @@ func TestInterpretGetType(t *testing.T) {
 			// i.e. StorageReferenceValue.StaticType is tested
 			name: "optional storage reference, auth to auth",
 			code: `
-			  entitlement X
-			  fun getStorageReference(): auth(X) &Int {
-			      account.save(1, to: /storage/foo)
-				  return account.borrow<auth(X) &Int>(from: /storage/foo)!
-			  }
+              entitlement X
+
+              fun getStorageReference(): auth(X) &Int {
+                  account.storage.save(1, to: /storage/foo)
+                  return account.storage.borrow<auth(X) &Int>(from: /storage/foo)!
+              }
+
               fun test(): Type {
                   let ref = getStorageReference()
                   let optRef: auth(X) &Int? = ref
@@ -738,8 +772,8 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
 						Authorization: interpreter.NewEntitlementSetAuthorization(
 							nil,
 							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
@@ -758,7 +792,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.VariableSizedStaticType{
+				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			},
@@ -768,12 +802,7 @@ func TestInterpretGetType(t *testing.T) {
 	for _, testCase := range cases {
 		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 		t.Run(testCase.name, func(t *testing.T) {
-			inter, _ := testAccount(t,
-				address,
-				true,
-				testCase.code,
-				sema.Config{},
-			)
+			inter, _ := testAccount(t, address, true, nil, testCase.code, sema.Config{})
 
 			result, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -786,4 +815,25 @@ func TestInterpretGetType(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestInterpretMetaTypeHashInput(t *testing.T) {
+
+	t.Parallel()
+
+	// TypeValue.HashInput should not load the program
+
+	inter := parseCheckAndInterpret(t, `
+           fun test(_ type: Type) {
+               {type: 1}
+           }
+        `)
+
+	location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+	staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+	typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+	_, err := inter.Invoke("test", typeValue)
+	require.NoError(t, err)
+
 }

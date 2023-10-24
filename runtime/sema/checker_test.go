@@ -309,7 +309,7 @@ func TestReferenceSubtyping(t *testing.T) {
 		Identifier: "Z",
 	}
 
-	mapAccess := EntitlementMapAccess{
+	mapAccess := &EntitlementMapAccess{
 		Type: &EntitlementMapType{
 			Location:   testLocation,
 			Identifier: "M",
@@ -329,7 +329,7 @@ func TestReferenceSubtyping(t *testing.T) {
 		Identifier: "X",
 	}
 
-	containedMapAccess := EntitlementMapAccess{
+	containedMapAccess := &EntitlementMapAccess{
 		Type: &EntitlementMapType{
 			Location: testLocation,
 			containerType: &InterfaceType{

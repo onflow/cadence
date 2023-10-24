@@ -229,8 +229,8 @@ func exportValueWithInterpreter(
 		return exportPathValue(inter, v)
 	case interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
-	case *interpreter.IDCapabilityValue:
-		return exportIDCapabilityValue(v, inter)
+	case *interpreter.CapabilityValue:
+		return exportCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
@@ -453,69 +453,62 @@ func exportCompositeValue(
 		structure, err := cadence.NewMeteredStruct(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return structure.WithType(t.(*cadence.StructType)), nil
+
 	case common.CompositeKindResource:
 		resource, err := cadence.NewMeteredResource(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return resource.WithType(t.(*cadence.ResourceType)), nil
+
 	case common.CompositeKindAttachment:
 		attachment, err := cadence.NewMeteredAttachment(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return attachment.WithType(t.(*cadence.AttachmentType)), nil
+
 	case common.CompositeKindEvent:
 		event, err := cadence.NewMeteredEvent(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return event.WithType(t.(*cadence.EventType)), nil
+
 	case common.CompositeKindContract:
 		contract, err := cadence.NewMeteredContract(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
 		}
 		return contract.WithType(t.(*cadence.ContractType)), nil
+
 	case common.CompositeKindEnum:
 		enum, err := cadence.NewMeteredEnum(
 			inter,
 			len(fieldNames),
-			func() ([]cadence.Value, error) {
-				return makeFields()
-			},
+			makeFields,
 		)
 		if err != nil {
 			return nil, err
@@ -626,14 +619,14 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 	)
 }
 
-func exportIDCapabilityValue(
-	v *interpreter.IDCapabilityValue,
+func exportCapabilityValue(
+	v *interpreter.CapabilityValue,
 	inter *interpreter.Interpreter,
-) (cadence.IDCapability, error) {
+) (cadence.Capability, error) {
 	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
 	exportedBorrowType := ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
 
-	return cadence.NewMeteredIDCapability(
+	return cadence.NewMeteredCapability(
 		inter,
 		cadence.NewMeteredUInt64(inter, uint64(v.ID)),
 		cadence.NewMeteredAddress(inter, v.Address),
@@ -814,8 +807,8 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		)
 	case cadence.TypeValue:
 		return i.importTypeValue(v.StaticType)
-	case cadence.IDCapability:
-		return i.importIDCapability(
+	case cadence.Capability:
+		return i.importCapability(
 			v.ID,
 			v.Address,
 			v.BorrowType,
@@ -1099,12 +1092,12 @@ func (i valueImporter) importTypeValue(v cadence.Type) (interpreter.TypeValue, e
 	return interpreter.NewTypeValue(inter, typ), nil
 }
 
-func (i valueImporter) importIDCapability(
+func (i valueImporter) importCapability(
 	id cadence.UInt64,
 	address cadence.Address,
 	borrowType cadence.Type,
 ) (
-	*interpreter.IDCapabilityValue,
+	*interpreter.CapabilityValue,
 	error,
 ) {
 	_, ok := borrowType.(*cadence.ReferenceType)
@@ -1122,7 +1115,7 @@ func (i valueImporter) importIDCapability(
 		common.Address(address),
 	)
 
-	return interpreter.NewIDCapabilityValue(
+	return interpreter.NewCapabilityValue(
 		inter,
 		i.importUInt64(id),
 		addressValue,
@@ -1252,7 +1245,7 @@ func (i valueImporter) importDictionaryValue(
 		keysAndValues[pairIndex*2+1] = value
 	}
 
-	var dictionaryStaticType interpreter.DictionaryStaticType
+	var dictionaryStaticType *interpreter.DictionaryStaticType
 	if dictionaryType != nil {
 		dictionaryStaticType = interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(inter, dictionaryType)
 	} else {

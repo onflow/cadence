@@ -400,7 +400,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 		expected := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			ConstantSizedStaticType{
+			&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
 			},
@@ -432,7 +432,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 		expected := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -598,7 +598,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					0xc3,
 					// byte string, length 1
 					0x41,
-					// `-42` in decimal is is `0x2a` in hex.
+					// `-42` in decimal is `0x2a` in hex.
 					// CBOR requires negative values to be encoded as `-1-n`, which is `-n - 1`,
 					// which is `0x2a - 0x01`, which equals to `0x29`.
 					0x29,
@@ -3257,7 +3257,7 @@ func TestEncodeDecodePathValue(t *testing.T) {
 	})
 }
 
-func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
+func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -3267,7 +3267,7 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagIDCapabilityValue,
+			0xd8, CBORTagCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -3295,7 +3295,7 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := NewUnmeteredIDCapabilityValue(
+		value := NewUnmeteredCapabilityValue(
 			4,
 			NewUnmeteredAddressValueFromBytes([]byte{0x2}),
 			PrimitiveStaticTypeBool,
@@ -3303,7 +3303,7 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 
 		encoded := []byte{
 			// tag
-			0xd8, CBORTagIDCapabilityValue,
+			0xd8, CBORTagCapabilityValue,
 			// array, 3 items follow
 			0x83,
 			// tag for address
@@ -3337,12 +3337,12 @@ func TestEncodeDecodeIDCapabilityValue(t *testing.T) {
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
 		for i := uint64(0); i < maxInlineElementSize; i++ {
-			borrowType = OptionalStaticType{
+			borrowType = &OptionalStaticType{
 				Type: borrowType,
 			}
 		}
 
-		expected := NewUnmeteredIDCapabilityValue(
+		expected := NewUnmeteredCapabilityValue(
 			4,
 			NewUnmeteredAddressValueFromBytes([]byte{0x3}),
 			borrowType,
@@ -3584,7 +3584,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
-			BorrowType: ReferenceStaticType{
+			BorrowType: &ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeBool,
 				Authorization:  UnauthorizedAccess,
 			},
@@ -3620,8 +3620,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
-			BorrowType: ReferenceStaticType{
-				ReferencedType: OptionalStaticType{
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &OptionalStaticType{
 					Type: PrimitiveStaticTypeBool,
 				},
 				Authorization: UnauthorizedAccess,
@@ -3660,7 +3660,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
-			BorrowType: ReferenceStaticType{
+			BorrowType: &ReferenceStaticType{
 				ReferencedType: NewCompositeStaticTypeComputeTypeID(
 					nil,
 					utils.TestLocation,
@@ -3711,12 +3711,9 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
-			BorrowType: ReferenceStaticType{
-				ReferencedType: InterfaceStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "SimpleInterface",
-				},
-				Authorization: UnauthorizedAccess,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
+				Authorization:  UnauthorizedAccess,
 			},
 			CapabilityID: capabilityID,
 		}
@@ -3761,8 +3758,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
-			BorrowType: ReferenceStaticType{
-				ReferencedType: VariableSizedStaticType{
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &VariableSizedStaticType{
 					Type: PrimitiveStaticTypeBool,
 				},
 				Authorization: UnauthorizedAccess,
@@ -3801,8 +3798,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
-			BorrowType: ReferenceStaticType{
-				ReferencedType: ConstantSizedStaticType{
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeBool,
 					Size: 42,
 				},
@@ -3846,8 +3843,8 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
-			BorrowType: ReferenceStaticType{
-				ReferencedType: DictionaryStaticType{
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeBool,
 					ValueType: PrimitiveStaticTypeString,
 				},
@@ -3892,17 +3889,11 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		value := &StorageCapabilityControllerValue{
 			TargetPath: publicPathValue,
-			BorrowType: ReferenceStaticType{
+			BorrowType: &ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
-					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "I1",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "I2",
-						},
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I1"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I2"),
 					},
 				},
 				Authorization: UnauthorizedAccess,
@@ -3980,7 +3971,7 @@ func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
 
 		expected := &StorageCapabilityControllerValue{
 			TargetPath: path,
-			BorrowType: ReferenceStaticType{
+			BorrowType: &ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeNever,
 				Authorization:  UnauthorizedAccess,
 			},
@@ -4048,7 +4039,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		t.Parallel()
 
 		value := &AccountCapabilityControllerValue{
-			BorrowType: ReferenceStaticType{
+			BorrowType: &ReferenceStaticType{
 				Authorization:  UnauthorizedAccess,
 				ReferencedType: PrimitiveStaticTypeAuthAccount,
 			},
@@ -4078,18 +4069,50 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		)
 	})
 
+	t.Run("unauthorized reference, Account", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &AccountCapabilityControllerValue{
+			BorrowType: &ReferenceStaticType{
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeAccount,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			0xd8, CBORTagPrimitiveStaticType,
+			// unsigned 105
+			0x18, 0x69,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
 	t.Run("unauthorized reference, intersection I1", func(t *testing.T) {
 
 		t.Parallel()
 
 		value := &AccountCapabilityControllerValue{
-			BorrowType: ReferenceStaticType{
+			BorrowType: &ReferenceStaticType{
 				ReferencedType: &IntersectionStaticType{
-					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "SimpleInterface",
-						},
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
 					},
 				},
 				Authorization: UnauthorizedAccess,
@@ -4148,13 +4171,13 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
 		for i := uint64(0); i < maxInlineElementSize; i++ {
-			borrowType = OptionalStaticType{
+			borrowType = &OptionalStaticType{
 				Type: borrowType,
 			}
 		}
 
 		expected := &AccountCapabilityControllerValue{
-			BorrowType: ReferenceStaticType{
+			BorrowType: &ReferenceStaticType{
 				ReferencedType: borrowType,
 				Authorization:  UnauthorizedAccess,
 			},

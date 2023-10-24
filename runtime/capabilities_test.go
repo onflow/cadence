@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -24,8 +24,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -35,25 +37,25 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	newRuntime := func() (testInterpreterRuntime, *testRuntimeInterface) {
-		runtime := newTestInterpreterRuntime()
+	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
+		runtime := NewTestInterpreterRuntime()
 		accountCodes := map[common.Location][]byte{}
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				code = accountCodes[location]
 				return code, nil
 			},
-			emitEvent: func(event cadence.Event) error {
+			OnEmitEvent: func(event cadence.Event) error {
 				return nil
 			},
 		}
@@ -66,7 +68,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 		runtime, runtimeInterface := newRuntime()
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		// Deploy contract
 
@@ -113,7 +115,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun setup() {
                   let r <- create R()
-                  self.account.save(<-r, to: /storage/r)
+                  self.account.storage.save(<-r, to: /storage/r)
 
                   let rCap = self.account.capabilities.storage.issue<&R>(/storage/r)
                   self.account.capabilities.publish(rCap, at: /public/r)
@@ -124,13 +126,16 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   let rAsSCap = self.account.capabilities.storage.issue<&S>(/storage/r)
                   self.account.capabilities.publish(rAsSCap, at: /public/rAsS)
 
-                  let noCap = self.account.capabilities.storage.issue<&R>(/storage/nonExistent)
-                  self.account.capabilities.publish(noCap, at: /public/nonExistent)
+                  let noCap = self.account.capabilities.storage.issue<&R>(/storage/nonExistentTarget)
+                  self.account.capabilities.publish(noCap, at: /public/nonExistentTarget)
               }
 
               access(all)
               fun testR() {
-                  let cap = self.account.capabilities.get<&R>(/public/r)!
+                  let path = /public/r
+                  let cap = self.account.capabilities.get<&R>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       cap.check(),
@@ -156,7 +161,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testRAsR2() {
-                  let cap = self.account.capabilities.get<&R2>(/public/rAsR2)!
+                  let path = /public/rAsR2
+                  let cap = self.account.capabilities.get<&R2>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       !cap.check(),
@@ -176,7 +184,33 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testRAsS() {
-                  let cap = self.account.capabilities.get<&S>(/public/rAsS)!
+                  let path = /public/rAsS
+                  let cap = self.account.capabilities.get<&S>(path)!
+
+                  assert(self.account.capabilities.exists(path))
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
+              }
+
+              access(all)
+              fun testNonExistentTarget() {
+                  let path = /public/nonExistentTarget
+                  let cap = self.account.capabilities.get<&R>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       !cap.check(),
@@ -196,33 +230,20 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testNonExistent() {
-                  let cap = self.account.capabilities.get<&R>(/public/nonExistent)!
-
-                  assert(
-                      !cap.check(),
-                      message: "invalid check"
-                  )
-
-                  assert(
-                      cap.address == 0x1,
-                      message: "invalid address"
-                  )
-
-                  assert(
-                      cap.borrow() == nil,
-                      message: "invalid borrow"
-                  )
+                  let path = /public/nonExistent
+                  assert(self.account.capabilities.get<&AnyResource>(path) == nil)
+                  assert(!self.account.capabilities.exists(path))
               }
 
               access(all)
               fun testSwap(): Int {
                  let ref = self.account.capabilities.get<&R>(/public/r)!.borrow()!
 
-                 let r <- self.account.load<@R>(from: /storage/r)
+                 let r <- self.account.storage.load<@R>(from: /storage/r)
                  destroy r
 
                  let r2 <- create R2()
-                 self.account.save(<-r2, to: /storage/r)
+                 self.account.storage.save(<-r2, to: /storage/r)
 
                  return ref.foo
               }
@@ -274,6 +295,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		t.Run("testNonExistentTarget", func(t *testing.T) {
+			_, err := invoke("testNonExistentTarget")
+			require.NoError(t, err)
+		})
+
 		t.Run("testNonExistent", func(t *testing.T) {
 			_, err := invoke("testNonExistent")
 			require.NoError(t, err)
@@ -294,7 +320,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 		runtime, runtimeInterface := newRuntime()
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		// Deploy contract
 
@@ -341,7 +367,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun setup() {
                   let s = S()
-                  self.account.save(s, to: /storage/s)
+                  self.account.storage.save(s, to: /storage/s)
 
                   let sCap = self.account.capabilities.storage.issue<&S>(/storage/s)
                   self.account.capabilities.publish(sCap, at: /public/s)
@@ -352,13 +378,16 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   let sAsRCap = self.account.capabilities.storage.issue<&R>(/storage/s)
                   self.account.capabilities.publish(sAsRCap, at: /public/sAsR)
 
-                  let noCap = self.account.capabilities.storage.issue<&S>(/storage/nonExistent)
-                  self.account.capabilities.publish(noCap, at: /public/nonExistent)
+                  let noCap = self.account.capabilities.storage.issue<&S>(/storage/nonExistentTarget)
+                  self.account.capabilities.publish(noCap, at: /public/nonExistentTarget)
               }
 
               access(all)
               fun testS() {
-                  let cap = self.account.capabilities.get<&S>(/public/s)!
+                  let path = /public/s
+                  let cap = self.account.capabilities.get<&S>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                        cap.check(),
@@ -384,7 +413,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testSAsS2() {
-                  let cap = self.account.capabilities.get<&S2>(/public/sAsS2)!
+                  let path = /public/sAsS2
+                  let cap = self.account.capabilities.get<&S2>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       !cap.check(),
@@ -404,7 +436,33 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testSAsR() {
-                  let cap = self.account.capabilities.get<&R>(/public/sAsR)!
+                  let path = /public/sAsR
+                  let cap = self.account.capabilities.get<&R>(path)!
+
+                  assert(self.account.capabilities.exists(path))
+
+                  assert(
+                      !cap.check(),
+                      message: "invalid check"
+                  )
+
+                  assert(
+                      cap.address == 0x1,
+                      message: "invalid address"
+                  )
+
+                  assert(
+                      cap.borrow() == nil,
+                      message: "invalid borrow"
+                  )
+              }
+
+              access(all)
+              fun testNonExistentTarget() {
+                  let path = /public/nonExistentTarget
+                  let cap = self.account.capabilities.get<&S>(path)!
+
+                  assert(self.account.capabilities.exists(path))
 
                   assert(
                       !cap.check(),
@@ -424,32 +482,19 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testNonExistent() {
-                  let cap = self.account.capabilities.get<&S>(/public/nonExistent)!
-
-                  assert(
-                      !cap.check(),
-                      message: "invalid check"
-                  )
-
-                  assert(
-                      cap.address == 0x1,
-                      message: "invalid address"
-                  )
-
-                  assert(
-                      cap.borrow() == nil,
-                      message: "invalid borrow"
-                  )
+                  let path = /public/nonExistent
+                  assert(self.account.capabilities.get<&AnyStruct>(path) == nil)
+                  assert(!self.account.capabilities.exists(path))
               }
 
               access(all)
               fun testSwap(): Int {
                  let ref = self.account.capabilities.get<&S>(/public/s)!.borrow()!
 
-                 self.account.load<S>(from: /storage/s)
+                 self.account.storage.load<S>(from: /storage/s)
 
                  let s2 = S2()
-                 self.account.save(s2, to: /storage/s)
+                 self.account.storage.save(s2, to: /storage/s)
 
                  return ref.foo
               }
@@ -501,6 +546,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		t.Run("testNonExistentTarget", func(t *testing.T) {
+			_, err := invoke("testNonExistentTarget")
+			require.NoError(t, err)
+		})
+
 		t.Run("testNonExistent", func(t *testing.T) {
 			_, err := invoke("testNonExistent")
 			require.NoError(t, err)
@@ -521,7 +571,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 		runtime, runtimeInterface := newRuntime()
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		// Deploy contract
 
@@ -536,14 +586,14 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               entitlement X
 
               init() {
-                  self.cap = self.account.capabilities.account.issue<&AuthAccount>()
+                  self.cap = self.account.capabilities.account.issue<&Account>()
               }
 
               access(all)
               fun test() {
 
                   assert(
-                      self.cap.check<&AuthAccount>(),
+                      self.cap.check<&Account>(),
                       message: "check failed"
                   )
 
@@ -552,7 +602,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                       message: "invalid cap address"
                   )
 
-                  let ref = self.cap.borrow<&AuthAccount>()
+                  let ref = self.cap.borrow<&Account>()
                   assert(
                       ref != nil,
                       message: "borrow failed"
@@ -567,7 +617,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testAuth() {
                   assert(
-                      !self.cap.check<auth(X) &AuthAccount>(),
+                      !self.cap.check<auth(X) &Account>(),
                       message: "invalid check"
                   )
 
@@ -577,7 +627,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
                   )
 
                   assert(
-                      self.cap.borrow<auth(X) &AuthAccount>() == nil,
+                      self.cap.borrow<auth(X) &Account>() == nil,
                       message: "invalid borrow"
                   )
               }

@@ -36,7 +36,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheckWithPanic(t,
 			`
-            access(all) fun test(): Int {
+            fun test(): Int {
                 return panic("XXX")
             }
         `,
@@ -50,7 +50,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                access(all) fun test() {
+                fun test() {
                     var x: Never = 5
                 }
             `,
@@ -58,8 +58,8 @@ func TestCheckNever(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
-		typeMismatchErr := errors[0].(*sema.TypeMismatchError)
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchErr)
 
 		assert.Equal(t, sema.NeverType, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.IntType, typeMismatchErr.ActualType)
@@ -70,7 +70,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                access(all) fun test() {
+                fun test() {
                     var x: Never = "c"
                 }
             `,
@@ -78,8 +78,8 @@ func TestCheckNever(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
-		typeMismatchErr := errors[0].(*sema.TypeMismatchError)
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchErr)
 
 		assert.Equal(t, sema.NeverType, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.StringType, typeMismatchErr.ActualType)
@@ -90,7 +90,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                access(all) fun test() {
+                fun test() {
                     var x: Never = "hello"
                 }
             `,
@@ -98,8 +98,8 @@ func TestCheckNever(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
-		typeMismatchErr := errors[0].(*sema.TypeMismatchError)
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchErr)
 
 		assert.Equal(t, sema.NeverType, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.StringType, typeMismatchErr.ActualType)
@@ -110,15 +110,16 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                access(all) fun test(a: Never, b: Never) {
+                fun test(a: Never, b: Never) {
                     var x: Int = a + b
                 }
             `,
 		)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidBinaryOperandsError{}, errors[0])
-		binaryOpErr := errors[0].(*sema.InvalidBinaryOperandsError)
+
+		var binaryOpErr *sema.InvalidBinaryOperandsError
+		require.ErrorAs(t, errors[0], &binaryOpErr)
 
 		assert.Equal(t, sema.NeverType, binaryOpErr.LeftType)
 		assert.Equal(t, sema.NeverType, binaryOpErr.RightType)
@@ -129,15 +130,16 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                access(all) fun test(a: Never) {
+                fun test(a: Never) {
                     var x: Bool = !a
                 }
             `,
 		)
 
 		errors := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidUnaryOperandError{}, errors[0])
-		unaryOpErr := errors[0].(*sema.InvalidUnaryOperandError)
+
+		var unaryOpErr *sema.InvalidUnaryOperandError
+		require.ErrorAs(t, errors[0], &unaryOpErr)
 
 		assert.Equal(t, sema.BoolType, unaryOpErr.ExpectedType)
 		assert.Equal(t, sema.NeverType, unaryOpErr.ActualType)
@@ -148,7 +150,7 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                access(all) fun test(a: Never?) {
+                fun test(a: Never?) {
                     var x: Int = a ?? 4
                 }
             `,
@@ -162,17 +164,16 @@ func TestCheckNever(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-                enum Foo: Never {
-                }
+                enum Foo: Never {}
             `,
 		)
 
 		errors := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidEnumRawTypeError{}, errors[0])
-		typeMismatchErr := errors[0].(*sema.InvalidEnumRawTypeError)
+		var invalidEnumRawTypeErr *sema.InvalidEnumRawTypeError
+		require.ErrorAs(t, errors[0], &invalidEnumRawTypeErr)
 
-		assert.Equal(t, sema.NeverType, typeMismatchErr.Type)
+		assert.Equal(t, sema.NeverType, invalidEnumRawTypeErr.Type)
 	})
 
 	t.Run("tx prepare arg", func(t *testing.T) {
@@ -185,12 +186,7 @@ func TestCheckNever(t *testing.T) {
                 }
             `,
 		)
-
-		errors := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidTransactionPrepareParameterTypeError{}, errors[0])
-		typeMismatchErr := errors[0].(*sema.InvalidTransactionPrepareParameterTypeError)
-
-		assert.Equal(t, sema.NeverType, typeMismatchErr.Type)
+		// Useless, but not an error
+		require.NoError(t, err)
 	})
 }

@@ -289,8 +289,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		)
 	}
 
-	checker.Elaboration.SetInterfaceDeclarationType(declaration, interfaceType)
-	checker.Elaboration.SetInterfaceTypeDeclaration(interfaceType, declaration)
+	checker.Elaboration.SetInterfaceDeclarationWithType(declaration, interfaceType)
 
 	if !declaration.CompositeKind.SupportsInterfaces() {
 		checker.report(
@@ -471,8 +470,7 @@ func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDecla
 		)
 	}
 
-	checker.Elaboration.SetEntitlementDeclarationType(declaration, entitlementType)
-	checker.Elaboration.SetEntitlementTypeDeclaration(entitlementType, declaration)
+	checker.Elaboration.SetEntitlementDeclarationWithType(declaration, entitlementType)
 
 	return entitlementType
 }
@@ -519,9 +517,11 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 		)
 	}
 
-	entitlementRelations := make([]EntitlementRelation, 0, len(declaration.Associations))
+	relations := declaration.Relations()
 
-	for _, association := range declaration.Associations {
+	entitlementRelations := make([]EntitlementRelation, 0, len(relations))
+
+	for _, association := range relations {
 		input := checker.convertNominalType(association.Input)
 		inputEntitlement, isEntitlement := input.(*EntitlementType)
 
@@ -529,6 +529,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 			checker.report(&InvalidNonEntitlementTypeInMapError{
 				Pos: association.Input.Identifier.Pos,
 			})
+			continue
 		}
 
 		output := checker.convertNominalType(association.Output)
@@ -538,21 +539,18 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 			checker.report(&InvalidNonEntitlementTypeInMapError{
 				Pos: association.Output.Identifier.Pos,
 			})
+			continue
 		}
 
 		entitlementRelations = append(
 			entitlementRelations,
-			EntitlementRelation{
-				Input:  inputEntitlement,
-				Output: outputEntitlement,
-			},
+			NewEntitlementRelation(checker.memoryGauge, inputEntitlement, outputEntitlement),
 		)
 	}
 
 	entitlementMapType.Relations = entitlementRelations
 
-	checker.Elaboration.SetEntitlementMapDeclarationType(declaration, entitlementMapType)
-	checker.Elaboration.SetEntitlementMapTypeDeclaration(entitlementMapType, declaration)
+	checker.Elaboration.SetEntitlementMapDeclarationWithType(declaration, entitlementMapType)
 
 	return entitlementMapType
 }
@@ -572,6 +570,9 @@ func (checker *Checker) VisitEntitlementMappingDeclaration(declaration *ast.Enti
 		declaration.StartPos,
 		true,
 	)
+
+	entitlementMapType.resolveEntitlementMappingInclusions(checker, declaration, map[*EntitlementMapType]struct{}{})
+
 	return
 }
 

@@ -27,8 +27,6 @@ type Config struct {
 	Storage     Storage
 	// ImportLocationHandler is used to handle imports of locations
 	ImportLocationHandler ImportLocationHandlerFunc
-	// PublicAccountHandler is used to handle accounts
-	PublicAccountHandler PublicAccountHandlerFunc
 	// OnInvokedFunctionReturn is triggered when an invoked function returned
 	OnInvokedFunctionReturn OnInvokedFunctionReturnFunc
 	// OnRecordTrace is triggered when a trace is recorded
@@ -45,8 +43,8 @@ type Config struct {
 	OnEventEmitted OnEventEmittedFunc
 	// OnFunctionInvocation is triggered when a function invocation is about to be executed
 	OnFunctionInvocation OnFunctionInvocationFunc
-	// AuthAccountHandler is used to handle accounts
-	AuthAccountHandler AuthAccountHandlerFunc
+	// AccountHandler is used to handle accounts
+	AccountHandler AccountHandlerFunc
 	// UUIDHandler is used to handle the generation of UUIDs
 	UUIDHandler UUIDHandlerFunc
 	// CompositeTypeHandler is used to load composite types
@@ -66,8 +64,8 @@ type Config struct {
 	AtreeStorageValidationEnabled bool
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled
 	AtreeValueValidationEnabled bool
-	// IDCapabilityCheckHandler is used to check ID capabilities
-	IDCapabilityCheckHandler IDCapabilityCheckHandlerFunc
-	// IDCapabilityBorrowHandler is used to borrow ID capabilities
-	IDCapabilityBorrowHandler IDCapabilityBorrowHandlerFunc
+	// CapabilityCheckHandler is used to check ID capabilities
+	CapabilityCheckHandler CapabilityCheckHandlerFunc
+	// CapabilityBorrowHandler is used to borrow ID capabilities
+	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
 }

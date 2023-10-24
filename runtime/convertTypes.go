@@ -49,6 +49,188 @@ func ExportMeteredType(
 	}
 
 	result := func() cadence.Type {
+		switch t {
+		case sema.NumberType:
+			return cadence.NumberType
+		case sema.SignedNumberType:
+			return cadence.SignedNumberType
+		case sema.IntegerType:
+			return cadence.IntegerType
+		case sema.SignedIntegerType:
+			return cadence.SignedIntegerType
+		case sema.FixedPointType:
+			return cadence.FixedPointType
+		case sema.SignedFixedPointType:
+			return cadence.SignedFixedPointType
+		case sema.IntType:
+			return cadence.IntType
+		case sema.Int8Type:
+			return cadence.Int8Type
+		case sema.Int16Type:
+			return cadence.Int16Type
+		case sema.Int32Type:
+			return cadence.Int32Type
+		case sema.Int64Type:
+			return cadence.Int64Type
+		case sema.Int128Type:
+			return cadence.Int128Type
+		case sema.Int256Type:
+			return cadence.Int256Type
+		case sema.UIntType:
+			return cadence.UIntType
+		case sema.UInt8Type:
+			return cadence.UInt8Type
+		case sema.UInt16Type:
+			return cadence.UInt16Type
+		case sema.UInt32Type:
+			return cadence.UInt32Type
+		case sema.UInt64Type:
+			return cadence.UInt64Type
+		case sema.UInt128Type:
+			return cadence.UInt128Type
+		case sema.UInt256Type:
+			return cadence.UInt256Type
+		case sema.Word8Type:
+			return cadence.Word8Type
+		case sema.Word16Type:
+			return cadence.Word16Type
+		case sema.Word32Type:
+			return cadence.Word32Type
+		case sema.Word64Type:
+			return cadence.Word64Type
+		case sema.Word128Type:
+			return cadence.Word128Type
+		case sema.Word256Type:
+			return cadence.Word256Type
+		case sema.Fix64Type:
+			return cadence.Fix64Type
+		case sema.UFix64Type:
+			return cadence.UFix64Type
+		case sema.PathType:
+			return cadence.PathType
+		case sema.StoragePathType:
+			return cadence.StoragePathType
+		case sema.PrivatePathType:
+			return cadence.PrivatePathType
+		case sema.PublicPathType:
+			return cadence.PublicPathType
+		case sema.CapabilityPathType:
+			return cadence.CapabilityPathType
+		case sema.NeverType:
+			return cadence.NeverType
+		case sema.VoidType:
+			return cadence.VoidType
+		case sema.InvalidType:
+			return nil
+		case sema.MetaType:
+			return cadence.MetaType
+		case sema.BoolType:
+			return cadence.BoolType
+		case sema.CharacterType:
+			return cadence.CharacterType
+		case sema.AnyType:
+			return cadence.AnyType
+		case sema.AnyStructType:
+			return cadence.AnyStructType
+		case sema.AnyResourceType:
+			return cadence.AnyResourceType
+		case sema.AnyStructAttachmentType:
+			return cadence.AnyStructAttachmentType
+		case sema.AnyResourceAttachmentType:
+			return cadence.AnyResourceAttachmentType
+		case sema.BlockType:
+			return cadence.BlockType
+		case sema.StringType:
+			return cadence.StringType
+		case sema.StorageCapabilityControllerType:
+			return cadence.StorageCapabilityControllerType
+		case sema.AccountCapabilityControllerType:
+			return cadence.AccountCapabilityControllerType
+		case sema.Account_StorageType:
+			return cadence.Account_StorageType
+		case sema.Account_ContractsType:
+			return cadence.Account_ContractsType
+		case sema.Account_KeysType:
+			return cadence.Account_KeysType
+		case sema.Account_InboxType:
+			return cadence.Account_InboxType
+		case sema.Account_CapabilitiesType:
+			return cadence.Account_CapabilitiesType
+		case sema.Account_StorageCapabilitiesType:
+			return cadence.Account_StorageCapabilitiesType
+		case sema.Account_AccountCapabilitiesType:
+			return cadence.Account_AccountCapabilitiesType
+		case sema.AccountType:
+			return cadence.AccountType
+		case sema.DeployedContractType:
+			return cadence.DeployedContractType
+
+		case sema.MutateType:
+			return cadence.MutateType
+		case sema.InsertType:
+			return cadence.InsertType
+		case sema.RemoveType:
+			return cadence.RemoveType
+
+		case sema.StorageType:
+			return cadence.StorageType
+		case sema.SaveValueType:
+			return cadence.SaveValueType
+		case sema.LoadValueType:
+			return cadence.LoadValueType
+		case sema.CopyValueType:
+			return cadence.CopyValueType
+		case sema.BorrowValueType:
+			return cadence.BorrowValueType
+		case sema.ContractsType:
+			return cadence.ContractsType
+		case sema.AddContractType:
+			return cadence.AddContractType
+		case sema.UpdateContractType:
+			return cadence.UpdateContractType
+		case sema.RemoveContractType:
+			return cadence.RemoveContractType
+		case sema.KeysType:
+			return cadence.KeysType
+		case sema.AddKeyType:
+			return cadence.AddKeyType
+		case sema.RevokeKeyType:
+			return cadence.RevokeKeyType
+		case sema.InboxType:
+			return cadence.InboxType
+		case sema.PublishInboxCapabilityType:
+			return cadence.PublishInboxCapabilityType
+		case sema.UnpublishInboxCapabilityType:
+			return cadence.UnpublishInboxCapabilityType
+		case sema.ClaimInboxCapabilityType:
+			return cadence.ClaimInboxCapabilityType
+		case sema.CapabilitiesType:
+			return cadence.CapabilitiesType
+		case sema.StorageCapabilitiesType:
+			return cadence.StorageCapabilitiesType
+		case sema.AccountCapabilitiesType:
+			return cadence.AccountCapabilitiesType
+		case sema.PublishCapabilityType:
+			return cadence.PublishCapabilityType
+		case sema.UnpublishCapabilityType:
+			return cadence.UnpublishCapabilityType
+		case sema.GetStorageCapabilityControllerType:
+			return cadence.GetStorageCapabilityControllerType
+		case sema.IssueStorageCapabilityControllerType:
+			return cadence.IssueStorageCapabilityControllerType
+		case sema.GetAccountCapabilityControllerType:
+			return cadence.GetAccountCapabilityControllerType
+		case sema.IssueAccountCapabilityControllerType:
+			return cadence.IssueAccountCapabilityControllerType
+
+		case sema.CapabilitiesMappingType:
+			return cadence.CapabilitiesMappingType
+		case sema.AccountMappingType:
+			return cadence.AccountMappingType
+		case sema.IdentityType:
+			return cadence.IdentityType
+		}
+
 		switch t := t.(type) {
 		case *sema.OptionalType:
 			return exportOptionalType(gauge, t, results)
@@ -65,7 +247,7 @@ func ExportMeteredType(
 		case *sema.FunctionType:
 			return exportFunctionType(gauge, t, results)
 		case *sema.AddressType:
-			return cadence.TheAddressType
+			return cadence.AddressType
 		case *sema.ReferenceType:
 			return exportReferenceType(gauge, t, results)
 		case *sema.IntersectionType:
@@ -74,114 +256,7 @@ func ExportMeteredType(
 			return exportCapabilityType(gauge, t, results)
 		}
 
-		switch t {
-		case sema.NumberType:
-			return cadence.TheNumberType
-		case sema.SignedNumberType:
-			return cadence.TheSignedNumberType
-		case sema.IntegerType:
-			return cadence.TheIntegerType
-		case sema.SignedIntegerType:
-			return cadence.TheSignedIntegerType
-		case sema.FixedPointType:
-			return cadence.TheFixedPointType
-		case sema.SignedFixedPointType:
-			return cadence.TheSignedFixedPointType
-		case sema.IntType:
-			return cadence.TheIntType
-		case sema.Int8Type:
-			return cadence.TheInt8Type
-		case sema.Int16Type:
-			return cadence.TheInt16Type
-		case sema.Int32Type:
-			return cadence.TheInt32Type
-		case sema.Int64Type:
-			return cadence.TheInt64Type
-		case sema.Int128Type:
-			return cadence.TheInt128Type
-		case sema.Int256Type:
-			return cadence.TheInt256Type
-		case sema.UIntType:
-			return cadence.TheUIntType
-		case sema.UInt8Type:
-			return cadence.TheUInt8Type
-		case sema.UInt16Type:
-			return cadence.TheUInt16Type
-		case sema.UInt32Type:
-			return cadence.TheUInt32Type
-		case sema.UInt64Type:
-			return cadence.TheUInt64Type
-		case sema.UInt128Type:
-			return cadence.TheUInt128Type
-		case sema.UInt256Type:
-			return cadence.TheUInt256Type
-		case sema.Word8Type:
-			return cadence.TheWord8Type
-		case sema.Word16Type:
-			return cadence.TheWord16Type
-		case sema.Word32Type:
-			return cadence.TheWord32Type
-		case sema.Word64Type:
-			return cadence.TheWord64Type
-		case sema.Word128Type:
-			return cadence.TheWord128Type
-		case sema.Word256Type:
-			return cadence.TheWord256Type
-		case sema.Fix64Type:
-			return cadence.TheFix64Type
-		case sema.UFix64Type:
-			return cadence.TheUFix64Type
-		case sema.PathType:
-			return cadence.ThePathType
-		case sema.StoragePathType:
-			return cadence.TheStoragePathType
-		case sema.PrivatePathType:
-			return cadence.ThePrivatePathType
-		case sema.PublicPathType:
-			return cadence.ThePublicPathType
-		case sema.CapabilityPathType:
-			return cadence.TheCapabilityPathType
-		case sema.NeverType:
-			return cadence.TheNeverType
-		case sema.VoidType:
-			return cadence.TheVoidType
-		case sema.InvalidType:
-			return nil
-		case sema.MetaType:
-			return cadence.TheMetaType
-		case sema.BoolType:
-			return cadence.TheBoolType
-		case sema.CharacterType:
-			return cadence.TheCharacterType
-		case sema.AnyType:
-			return cadence.TheAnyType
-		case sema.AnyStructType:
-			return cadence.TheAnyStructType
-		case sema.AnyResourceType:
-			return cadence.TheAnyResourceType
-		case sema.BlockType:
-			return cadence.TheBlockType
-		case sema.StringType:
-			return cadence.TheStringType
-		case sema.AccountKeyType:
-			return cadence.TheAccountKeyType
-		case sema.PublicAccountContractsType:
-			return cadence.ThePublicAccountContractsType
-		case sema.AuthAccountContractsType:
-			return cadence.TheAuthAccountContractsType
-		case sema.PublicAccountKeysType:
-			return cadence.ThePublicAccountKeysType
-		case sema.AuthAccountKeysType:
-			return cadence.TheAuthAccountKeysType
-		case sema.PublicAccountType:
-			return cadence.ThePublicAccountType
-		case sema.AuthAccountType:
-			return cadence.TheAuthAccountType
-		case sema.DeployedContractType:
-			return cadence.TheDeployedContractType
-		}
-
-		panic(fmt.Sprintf("cannot export type of type %T", t))
+		panic(fmt.Sprintf("cannot export type %s", t))
 	}()
 
 	results[typeID] = result
@@ -475,7 +550,7 @@ func exportAuthorization(
 		if access.Equal(sema.UnauthorizedAccess) {
 			return cadence.UnauthorizedAccess
 		}
-	case sema.EntitlementMapAccess:
+	case *sema.EntitlementMapAccess:
 		common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindCadenceEntitlementMapAccess))
 		return cadence.EntitlementMapAuthorization{
 			TypeID: access.Type.ID(),
@@ -491,7 +566,7 @@ func exportAuthorization(
 		})
 		return cadence.EntitlementSetAuthorization{
 			Entitlements: entitlements,
-			Kind:         cadence.EntitlementSetKind(access.SetKind),
+			Kind:         access.SetKind,
 		}
 	}
 	panic(fmt.Sprintf("cannot export authorization with access %T", access))
@@ -546,20 +621,19 @@ func exportCapabilityType(
 	)
 }
 
-func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) interpreter.InterfaceStaticType {
-	return interpreter.NewInterfaceStaticType(
+func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType) *interpreter.InterfaceStaticType {
+	return interpreter.NewInterfaceStaticTypeComputeTypeID(
 		memoryGauge,
 		t.InterfaceTypeLocation(),
 		t.InterfaceTypeQualifiedIdentifier(),
 	)
 }
 
-func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) interpreter.CompositeStaticType {
-	return interpreter.NewCompositeStaticType(
+func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) *interpreter.CompositeStaticType {
+	return interpreter.NewCompositeStaticTypeComputeTypeID(
 		memoryGauge,
 		t.CompositeTypeLocation(),
 		t.CompositeTypeQualifiedIdentifier(),
-		"", // intentionally empty
 	)
 }
 
@@ -574,7 +648,7 @@ func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorizat
 			memoryGauge,
 			func() []common.TypeID { return auth.Entitlements },
 			len(auth.Entitlements),
-			sema.EntitlementSetKind(auth.Kind),
+			auth.Kind,
 		)
 	}
 	panic(fmt.Sprintf("cannot import authorization of type %T", auth))
@@ -582,116 +656,65 @@ func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorizat
 
 func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.StaticType {
 	switch t := t.(type) {
-	case cadence.AnyType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAny)
-	case cadence.AnyStructType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAnyStruct)
-	case cadence.AnyResourceType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAnyResource)
+	case cadence.PrimitiveType:
+		return interpreter.NewPrimitiveStaticType(
+			memoryGauge,
+			interpreter.PrimitiveStaticType(t),
+		)
+
 	case *cadence.OptionalType:
-		return interpreter.NewOptionalStaticType(memoryGauge, ImportType(memoryGauge, t.Type))
-	case cadence.MetaType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeMetaType)
-	case cadence.VoidType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeVoid)
-	case cadence.NeverType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeNever)
-	case cadence.BoolType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeBool)
-	case cadence.StringType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeString)
-	case cadence.CharacterType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeCharacter)
-	case cadence.AddressType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAddress)
-	case cadence.NumberType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeNumber)
-	case cadence.SignedNumberType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeSignedNumber)
-	case cadence.IntegerType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInteger)
-	case cadence.SignedIntegerType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeSignedInteger)
-	case cadence.FixedPointType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeFixedPoint)
-	case cadence.SignedFixedPointType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeSignedFixedPoint)
-	case cadence.IntType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt)
-	case cadence.Int8Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt8)
-	case cadence.Int16Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt16)
-	case cadence.Int32Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt32)
-	case cadence.Int64Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt64)
-	case cadence.Int128Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt128)
-	case cadence.Int256Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeInt256)
-	case cadence.UIntType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt)
-	case cadence.UInt8Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt8)
-	case cadence.UInt16Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt16)
-	case cadence.UInt32Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt32)
-	case cadence.UInt64Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt64)
-	case cadence.UInt128Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt128)
-	case cadence.UInt256Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUInt256)
-	case cadence.Word8Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord8)
-	case cadence.Word16Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord16)
-	case cadence.Word32Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord32)
-	case cadence.Word64Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord64)
-	case cadence.Word128Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord128)
-	case cadence.Word256Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeWord256)
-	case cadence.Fix64Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeFix64)
-	case cadence.UFix64Type:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeUFix64)
+		return interpreter.NewOptionalStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.Type),
+		)
+
 	case *cadence.VariableSizedArrayType:
-		return interpreter.NewVariableSizedStaticType(memoryGauge, ImportType(memoryGauge, t.ElementType))
+		return interpreter.NewVariableSizedStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.ElementType),
+		)
+
 	case *cadence.ConstantSizedArrayType:
 		return interpreter.NewConstantSizedStaticType(
 			memoryGauge,
 			ImportType(memoryGauge, t.ElementType),
 			int64(t.Size),
 		)
+
 	case *cadence.DictionaryType:
 		return interpreter.NewDictionaryStaticType(
 			memoryGauge,
 			ImportType(memoryGauge, t.KeyType),
 			ImportType(memoryGauge, t.ElementType),
 		)
+
 	case *cadence.StructType,
 		*cadence.ResourceType,
 		*cadence.EventType,
 		*cadence.ContractType,
 		*cadence.EnumType:
-		return importCompositeType(memoryGauge, t.(cadence.CompositeType))
+		return importCompositeType(
+			memoryGauge,
+			t.(cadence.CompositeType),
+		)
+
 	case *cadence.StructInterfaceType,
 		*cadence.ResourceInterfaceType,
 		*cadence.ContractInterfaceType:
-		return importInterfaceType(memoryGauge, t.(cadence.InterfaceType))
+		return importInterfaceType(
+			memoryGauge,
+			t.(cadence.InterfaceType),
+		)
+
 	case *cadence.ReferenceType:
 		return interpreter.NewReferenceStaticType(
 			memoryGauge,
 			importAuthorization(memoryGauge, t.Authorization),
 			ImportType(memoryGauge, t.Type),
 		)
+
 	case *cadence.IntersectionType:
-		types := make([]interpreter.InterfaceStaticType, 0, len(t.Types))
+		types := make([]*interpreter.InterfaceStaticType, 0, len(t.Types))
 		for _, typ := range t.Types {
 			intf, ok := typ.(cadence.InterfaceType)
 			if !ok {
@@ -703,34 +726,17 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			memoryGauge,
 			types,
 		)
-	case cadence.BlockType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeBlock)
-	case cadence.CapabilityPathType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeCapabilityPath)
-	case cadence.StoragePathType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeStoragePath)
-	case cadence.PublicPathType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicPath)
-	case cadence.PrivatePathType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePrivatePath)
+
 	case *cadence.CapabilityType:
-		return interpreter.NewCapabilityStaticType(memoryGauge, ImportType(memoryGauge, t.BorrowType))
-	case cadence.AccountKeyType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAccountKey)
-	case cadence.AuthAccountContractsType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAuthAccountContracts)
-	case cadence.AuthAccountKeysType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAuthAccountKeys)
-	case cadence.AuthAccountType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeAuthAccount)
-	case cadence.PublicAccountContractsType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicAccountContracts)
-	case cadence.PublicAccountKeysType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicAccountKeys)
-	case cadence.PublicAccountType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypePublicAccount)
-	case cadence.DeployedContractType:
-		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeDeployedContract)
+		if t.BorrowType == nil {
+			return interpreter.PrimitiveStaticTypeCapability
+		}
+
+		return interpreter.NewCapabilityStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.BorrowType),
+		)
+
 	default:
 		panic(fmt.Sprintf("cannot import type of type %T", t))
 	}

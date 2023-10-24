@@ -860,7 +860,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 	})
 }
 
-func TestRuntimeNestedInterfaceCast(t *testing.T) {
+func TestInterpretNestedInterfaceCast(t *testing.T) {
 
 	t.Parallel()
 

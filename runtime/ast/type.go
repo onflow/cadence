@@ -182,6 +182,8 @@ func (t *NominalType) CheckEqual(other Type, checker TypeEqualityChecker) error 
 	return checker.CheckNominalTypeEquality(t, other)
 }
 
+func (*NominalType) isEntitlementMapElement() {}
+
 // OptionalType represents am optional variant of another type
 
 type OptionalType struct {

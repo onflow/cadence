@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/activations"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +34,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
@@ -69,6 +69,65 @@ func parseCheckAndInterpretWithOptions(
 	err error,
 ) {
 	return parseCheckAndInterpretWithOptionsAndMemoryMetering(t, code, options, nil)
+}
+
+func parseCheckAndInterpretWithLogs(
+	tb testing.TB,
+	code string,
+) (
+	inter *interpreter.Interpreter,
+	getLogs func() []string,
+	err error,
+) {
+	var logs []string
+
+	logFunction := stdlib.NewStandardLibraryFunction(
+		"log",
+		&sema.FunctionType{
+			Parameters: []sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.VoidType,
+			),
+		},
+		``,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			message := invocation.Arguments[0].String()
+			logs = append(logs, message)
+			return interpreter.Void
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(logFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, logFunction)
+
+	result, err := parseCheckAndInterpretWithOptions(
+		tb,
+		code,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				BaseActivation: baseActivation,
+			},
+			CheckerConfig: &sema.Config{
+				BaseValueActivation: baseValueActivation,
+			},
+			HandleCheckerError: nil,
+		},
+	)
+
+	getLogs = func() []string {
+		return logs
+	}
+
+	return result, getLogs, err
 }
 
 func parseCheckAndInterpretWithMemoryMetering(
@@ -318,7 +377,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -787,7 +846,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 	expectedArray := interpreter.NewArrayValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.VariableSizedStaticType{
+		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
 		common.ZeroAddress,
@@ -2627,7 +2686,7 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.ZeroAddress,
@@ -2672,7 +2731,7 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.ZeroAddress,
@@ -2714,7 +2773,7 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.ZeroAddress,
@@ -2756,7 +2815,7 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.ZeroAddress,
@@ -2805,7 +2864,7 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.ZeroAddress,
@@ -2881,7 +2940,7 @@ func TestInterpretArrayCopy(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -2922,7 +2981,7 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -4318,7 +4377,7 @@ func TestInterpretDictionary(t *testing.T) {
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -4347,7 +4406,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -4604,7 +4663,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -4671,7 +4730,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	expectedDict := interpreter.NewDictionaryValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -4703,7 +4762,6 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredIntValueFromInt64(23),
@@ -5127,7 +5185,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
 				var auth interpreter.Authorization = interpreter.UnauthorizedAccess
 				if authorized {
-					auth = interpreter.ConvertSemaAccesstoStaticAuthorization(
+					auth = interpreter.ConvertSemaAccessToStaticAuthorization(
 						invocation.Interpreter,
 						sema.NewEntitlementSetAccess(
 							[]*sema.EntitlementType{getType("E").(*sema.EntitlementType)},
@@ -5377,7 +5435,6 @@ func TestInterpretArrayAppend(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5408,7 +5465,6 @@ func TestInterpretArrayAppendBound(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5438,7 +5494,6 @@ func TestInterpretArrayAppendAll(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5469,7 +5524,6 @@ func TestInterpretArrayAppendAllBound(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5498,7 +5552,6 @@ func TestInterpretArrayConcat(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5528,7 +5581,6 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5558,7 +5610,6 @@ func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -5630,7 +5681,6 @@ func TestInterpretArrayInsert(t *testing.T) {
 			AssertValueSlicesEqual(
 				t,
 				inter,
-
 				testCase.expectedValues,
 				ArrayElements(inter, actualArray.(*interpreter.ArrayValue)),
 			)
@@ -5693,7 +5743,6 @@ func TestInterpretArrayRemove(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(3),
@@ -5764,7 +5813,6 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(2),
 			interpreter.NewUnmeteredIntValueFromInt64(3),
@@ -5826,7 +5874,6 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -6155,7 +6202,6 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredStringValue("def"),
 			interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -6229,7 +6275,6 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewUnmeteredStringValue("abc"),
 			interpreter.NewUnmeteredStringValue("def"),
@@ -6754,7 +6799,7 @@ func TestInterpretSwapVariables(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -6795,7 +6840,7 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -7257,10 +7302,104 @@ func TestInterpretEmitEvent(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		expectedEvents,
 		actualEvents,
 	)
+}
+
+func TestInterpretReferenceEventParameter(t *testing.T) {
+
+	t.Parallel()
+
+	var actualEvents []interpreter.Value
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          event TestEvent(ref: &[{Int: String}])
+
+          fun test(ref: &[{Int: String}]) {
+              emit TestEvent(ref: ref)
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					eventType *sema.CompositeType,
+				) error {
+					actualEvents = append(actualEvents, event)
+					return nil
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	dictionaryStaticType := interpreter.NewDictionaryStaticType(
+		nil,
+		interpreter.PrimitiveStaticTypeInt,
+		interpreter.PrimitiveStaticTypeString,
+	)
+
+	dictionaryValue := interpreter.NewDictionaryValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		dictionaryStaticType,
+		interpreter.NewUnmeteredIntValueFromInt64(42),
+		interpreter.NewUnmeteredStringValue("answer"),
+	)
+
+	arrayStaticType := interpreter.NewVariableSizedStaticType(nil, dictionaryStaticType)
+
+	arrayValue := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		arrayStaticType,
+		common.ZeroAddress,
+		dictionaryValue,
+	)
+
+	ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+		interpreter.UnauthorizedAccess,
+		arrayValue,
+		inter.MustConvertStaticToSemaType(arrayStaticType),
+	)
+
+	_, err = inter.Invoke("test", ref)
+	require.NoError(t, err)
+
+	eventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TestEvent")
+
+	expectedEvents := []interpreter.Value{
+		interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			TestLocation,
+			TestLocation.QualifiedIdentifier(eventType.ID()),
+			common.CompositeKindEvent,
+			[]interpreter.CompositeField{
+				{
+					Name:  "ref",
+					Value: ref,
+				},
+			},
+			common.ZeroAddress,
+		),
+	}
+
+	for _, event := range expectedEvents {
+		event.(*interpreter.CompositeValue).InitializeFunctions(inter)
+	}
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		expectedEvents,
+		actualEvents,
+	)
+
 }
 
 type testValue struct {
@@ -7468,7 +7607,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				value: interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					},
 					common.ZeroAddress,
@@ -7482,7 +7621,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				value: interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.ConstantSizedStaticType{
+					&interpreter.ConstantSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 						Size: 1,
 					},
@@ -7497,7 +7636,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			value := interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 					ValueType: interpreter.ConvertSemaToStaticType(nil, testCase.ty),
 				},
@@ -7598,7 +7737,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			AssertValueSlicesEqual(
 				t,
 				inter,
-
 				expectedEvents,
 				actualEvents,
 			)
@@ -7780,7 +7918,7 @@ func TestInterpretReferenceUse(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -7832,7 +7970,7 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 			common.ZeroAddress,
@@ -8428,42 +8566,65 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
       access(all) let address2 = Test.test()
     `
 
-	addressValue := interpreter.AddressValue{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
+	t.Run("with custom handler", func(t *testing.T) {
+		addressValue := interpreter.AddressValue(common.MustBytesToAddress([]byte{0x1}))
 
-	inter, err := parseCheckAndInterpretWithOptions(t, code,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
-				InjectedCompositeFieldsHandler: func(
-					inter *interpreter.Interpreter,
-					_ common.Location,
-					_ string,
-					_ common.CompositeKind,
-				) map[string]interpreter.Value {
-					return map[string]interpreter.Value{
-						"account": newTestAuthAccountValue(inter, addressValue),
-					}
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+					InjectedCompositeFieldsHandler: func(
+						inter *interpreter.Interpreter,
+						_ common.Location,
+						_ string,
+						_ common.CompositeKind,
+					) map[string]interpreter.Value {
+
+						accountRef := stdlib.NewAccountReferenceValue(
+							nil,
+							nil,
+							addressValue,
+							interpreter.FullyEntitledAccountAccess,
+						)
+
+						return map[string]interpreter.Value{
+							sema.ContractAccountFieldName: accountRef,
+						}
+					},
 				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		addressValue,
-		inter.Globals.Get("address1").GetValue(),
-	)
+		AssertValuesEqual(
+			t,
+			inter,
+			addressValue,
+			inter.Globals.Get("address1").GetValue(),
+		)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		addressValue,
-		inter.Globals.Get("address2").GetValue(),
-	)
+		AssertValuesEqual(
+			t,
+			inter,
+			addressValue,
+			inter.Globals.Get("address2").GetValue(),
+		)
+	})
+
+	t.Run("with default handler", func(t *testing.T) {
+		env := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
+		_, err := parseCheckAndInterpretWithOptions(t, code,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					ContractValueHandler:           makeContractValueHandler(nil, nil, nil),
+					InjectedCompositeFieldsHandler: env.InterpreterConfig.InjectedCompositeFieldsHandler,
+				},
+			},
+		)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "error: member `account` is used before it has been initialized")
+	})
 }
 
 func TestInterpretConformToImportedInterface(t *testing.T) {
@@ -8840,7 +9001,6 @@ func TestInterpretHexDecode(t *testing.T) {
 		AssertValueSlicesEqual(
 			t,
 			inter,
-
 			expected,
 			ArrayElements(inter, arrayValue),
 		)
@@ -8865,7 +9025,6 @@ func TestInterpretHexDecode(t *testing.T) {
 		AssertValueSlicesEqual(
 			t,
 			inter,
-
 			expected,
 			ArrayElements(inter, arrayValue),
 		)
@@ -8936,7 +9095,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.ZeroAddress,
@@ -8961,9 +9120,9 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
           let r <- create R()
           addresses.append(r.owner?.address)
 
-          account.save(<-r, to: /storage/r)
+          account.storage.save(<-r, to: /storage/r)
 
-          let ref = account.borrow<&R>(from: /storage/r)
+          let ref = account.storage.borrow<&R>(from: /storage/r)
           addresses.append(ref?.owner?.address)
 
           return addresses
@@ -8971,15 +9130,18 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
     `
 	// `authAccount`
 
-	address := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
+	address := common.MustBytesToAddress([]byte{0x1})
 
 	valueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "account",
-		Type:  sema.AuthAccountType,
-		Value: newTestAuthAccountValue(nil, interpreter.AddressValue(address)),
-		Kind:  common.DeclarationKindConstant,
+		Name: "account",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: stdlib.NewAccountReferenceValue(
+			nil,
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.FullyEntitledAccountAccess,
+		),
+		Kind: common.DeclarationKindConstant,
 	}
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -8996,8 +9158,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			},
 			Config: &interpreter.Config{
 				BaseActivation: baseActivation,
-				PublicAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return newTestPublicAccountValue(nil, address)
+				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(nil, nil, address)
 				},
 			},
 		},
@@ -9015,158 +9177,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.AddressValue(address)),
 		},
 		ArrayElements(inter, result.(*interpreter.ArrayValue)),
-	)
-}
-
-func newPanicFunctionValue(gauge common.MemoryGauge) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		gauge,
-		stdlib.PanicFunction.Type.(*sema.FunctionType),
-		func(invocation interpreter.Invocation) interpreter.Value {
-			panic(errors.NewUnreachableError())
-		},
-	)
-}
-
-func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
-	panicFunctionValue := newPanicFunctionValue(gauge)
-	return interpreter.NewAuthAccountValue(
-		gauge,
-		addressValue,
-		returnZeroUFix64,
-		returnZeroUFix64,
-		returnZeroUInt64,
-		returnZeroUInt64,
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountContractsValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func(
-					inter *interpreter.Interpreter,
-					locationRange interpreter.LocationRange,
-				) *interpreter.ArrayValue {
-					return interpreter.NewArrayValue(
-						inter,
-						locationRange,
-						interpreter.VariableSizedStaticType{
-							Type: interpreter.PrimitiveStaticTypeString,
-						},
-						common.ZeroAddress,
-					)
-				},
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountKeysValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func() interpreter.UInt64Value {
-					panic(errors.NewUnreachableError())
-				},
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountInboxValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewAuthAccountCapabilitiesValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func() interpreter.Value {
-					return interpreter.NewAuthAccountStorageCapabilitiesValue(
-						gauge,
-						addressValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-					)
-				},
-				func() interpreter.Value {
-					return interpreter.NewAuthAccountAccountCapabilitiesValue(
-						gauge,
-						addressValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-						panicFunctionValue,
-					)
-				},
-			)
-		},
-	)
-}
-
-func newTestPublicAccountValue(gauge common.MemoryGauge, addressValue interpreter.AddressValue) interpreter.Value {
-
-	panicFunctionValue := newPanicFunctionValue(gauge)
-
-	return interpreter.NewPublicAccountValue(
-		gauge,
-		addressValue,
-		returnZeroUFix64,
-		returnZeroUFix64,
-		returnZeroUInt64,
-		returnZeroUInt64,
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountKeysValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				interpreter.AccountKeysCountGetter(func() interpreter.UInt64Value {
-					panic(errors.NewUnreachableError())
-				}),
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountContractsValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-				func(
-					inter *interpreter.Interpreter,
-					locationRange interpreter.LocationRange,
-				) *interpreter.ArrayValue {
-					return interpreter.NewArrayValue(
-						inter,
-						interpreter.EmptyLocationRange,
-						interpreter.VariableSizedStaticType{
-							Type: interpreter.PrimitiveStaticTypeString,
-						},
-						common.ZeroAddress,
-					)
-				},
-			)
-		},
-		func() interpreter.Value {
-			return interpreter.NewPublicAccountCapabilitiesValue(
-				gauge,
-				addressValue,
-				panicFunctionValue,
-				panicFunctionValue,
-			)
-		},
 	)
 }
 
@@ -9569,88 +9579,49 @@ func TestInterpretNestedDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	var logs []string
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+      resource B {
+          let id: Int
 
-	logFunction := stdlib.NewStandardLibraryFunction(
-		"log",
-		&sema.FunctionType{
-			Parameters: []sema.Parameter{
-				{
-					Label:          sema.ArgumentLabelNotRequired,
-					Identifier:     "value",
-					TypeAnnotation: sema.AnyStructTypeAnnotation,
-				},
-			},
-			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-		},
-		``,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].String()
-			logs = append(logs, message)
-			return interpreter.Void
-		},
-	)
-
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(logFunction)
-
-	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, logFunction)
-
-	inter, err := parseCheckAndInterpretWithOptions(t,
-		`
-          resource B {
-              let id: Int
-
-              init(_ id: Int){
-                  self.id = id
-              }
-
-              destroy(){
-                  log("destroying B with id:")
-                  log(self.id)
-              }
+          init(_ id: Int){
+              self.id = id
           }
 
-          resource A {
-              let id: Int
-              let bs: @[B]
+          destroy(){
+              log("destroying B with id:")
+              log(self.id)
+          }
+      }
 
-              init(_ id: Int){
-                  self.id = id
-                  self.bs <- []
-              }
+      resource A {
+          let id: Int
+          let bs: @[B]
 
-              fun add(_ b: @B){
-                  self.bs.append(<-b)
-              }
-
-              destroy() {
-                  log("destroying A with id:")
-                  log(self.id)
-                  destroy self.bs
-              }
+          init(_ id: Int){
+              self.id = id
+              self.bs <- []
           }
 
-          fun test() {
-              let a <- create A(1)
-              a.add(<- create B(2))
-              a.add(<- create B(3))
-              a.add(<- create B(4))
-
-              destroy a
+          fun add(_ b: @B){
+              self.bs.append(<-b)
           }
-        `,
-		ParseCheckAndInterpretOptions{
-			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
-			},
-			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-			},
-			HandleCheckerError: nil,
-		},
-	)
+
+          destroy() {
+              log("destroying A with id:")
+              log(self.id)
+              destroy self.bs
+          }
+      }
+
+      fun test() {
+          let a <- create A(1)
+          a.add(<- create B(2))
+          a.add(<- create B(3))
+          a.add(<- create B(4))
+
+          destroy a
+      }
+    `)
 	require.NoError(t, err)
 
 	value, err := inter.Invoke("test")
@@ -9674,7 +9645,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 			`"destroying B with id:"`,
 			"4",
 		},
-		logs,
+		getLogs(),
 	)
 }
 
@@ -9708,7 +9679,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	stringIntDictionaryStaticType := interpreter.DictionaryStaticType{
+	stringIntDictionaryStaticType := &interpreter.DictionaryStaticType{
 		KeyType:   interpreter.PrimitiveStaticTypeString,
 		ValueType: interpreter.PrimitiveStaticTypeInt,
 	}
@@ -9719,7 +9690,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: stringIntDictionaryStaticType,
 			},
 			common.ZeroAddress,
@@ -9836,7 +9807,7 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 		interpreter.NewDictionaryValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeString,
 			},
@@ -9935,7 +9906,7 @@ func BenchmarkNewInterpreter(b *testing.B) {
 	})
 }
 
-func TestHostFunctionStaticType(t *testing.T) {
+func TestInterpretHostFunctionStaticType(t *testing.T) {
 
 	t.Parallel()
 
@@ -10041,7 +10012,7 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 			t,
 			inter,
 			interpreter.TypeValue{
-				Type: interpreter.VariableSizedStaticType{
+				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 			},
@@ -10066,7 +10037,7 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 			t,
 			inter,
 			interpreter.TypeValue{
-				Type: interpreter.VariableSizedStaticType{
+				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			},
@@ -10197,12 +10168,13 @@ func TestInterpretArrayReverse(t *testing.T) {
 
 			return res
 		}
-		fun originalsa(): [Int] {		
+
+		fun originalsa(): [Int] {
 			let res: [Int] = [];
 			for s in sa {
 				res.append(s.test)
 			}
-		
+
 			return res
 		}
 
@@ -10216,12 +10188,13 @@ func TestInterpretArrayReverse(t *testing.T) {
 
 			return res
 		}
-		fun originalsa_fixed(): [Int] {		
+
+		fun originalsa_fixed(): [Int] {
 			let res: [Int] = [];
 			for s in sa_fixed {
 				res.append(s.test)
 			}
-		
+
 			return res
 		}
 	`)
@@ -10355,6 +10328,828 @@ func TestInterpretArrayReverse(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(3),
 			))
 	}
+}
+
+func TestInterpretArrayFilter(t *testing.T) {
+
+	runValidCase := func(
+		t *testing.T,
+		inter *interpreter.Interpreter,
+		filterFuncName,
+		originalFuncName string,
+		filteredArray, originalArray *interpreter.ArrayValue,
+	) {
+		val, err := inter.Invoke(filterFuncName)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			filteredArray,
+			val,
+		)
+
+		origVal, err := inter.Invoke(originalFuncName)
+		require.NoError(t, err)
+
+		// Original array remains unchanged
+		AssertValuesEqual(
+			t,
+			inter,
+			originalArray,
+			origVal,
+		)
+	}
+
+	t.Run("with variable sized empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let emptyVals: [Int] = []
+
+			let onlyEven =
+				view fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			fun filterempty(): [Int] {
+				return emptyVals.filter(onlyEven)
+			}
+			fun originalempty(): [Int] {
+				return emptyVals
+			}
+		`)
+
+		emptyVarSizedArray := interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+		)
+
+		runValidCase(
+			t,
+			inter,
+			"filterempty",
+			"originalempty",
+			emptyVarSizedArray,
+			emptyVarSizedArray,
+		)
+	})
+
+	t.Run("with variable sized array of integer", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let xs = [1, 2, 3, 100, 201]
+
+			let onlyEven =
+				view fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			fun filterxs(): [Int] {
+				return xs.filter(onlyEven)
+			}
+			fun originalxs(): [Int] {
+				return xs
+			}
+		`)
+
+		varSizedArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
+		runValidCase(
+			t,
+			inter,
+			"filterxs",
+			"originalxs",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				varSizedArrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				varSizedArrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+				interpreter.NewUnmeteredIntValueFromInt64(201),
+			),
+		)
+	})
+
+	t.Run("with variable sized array of struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct TestStruct {
+
+                var test: Int
+
+				init(_ t: Int) {
+					self.test = t
+				}
+			}
+
+			let onlyOddStruct =
+				view fun (_ x: TestStruct): Bool {
+					return x.test % 2 == 1
+				}
+
+			let sa = [TestStruct(1), TestStruct(2), TestStruct(3)]
+
+			fun filtersa(): [Int] {
+				let sa_filtered = sa.filter(onlyOddStruct)
+				let res: [Int] = [];
+				for s in sa_filtered {
+					res.append(s.test)
+				}
+				return res
+			}
+
+			fun originalsa(): [Int] {
+				let res: [Int] = [];
+				for s in sa {
+					res.append(s.test)
+				}
+				return res
+			}
+		`)
+
+		varSizedArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
+		runValidCase(
+			t,
+			inter,
+			"filtersa",
+			"originalsa",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				varSizedArrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				varSizedArrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+		)
+	})
+
+	t.Run("with fixed sized empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let emptyVals_fixed: [Int; 0] = []
+
+			let onlyEven =
+				view fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			fun filterempty_fixed(): [Int] {
+				return emptyVals_fixed.filter(onlyEven)
+			}
+			fun originalempty_fixed(): [Int; 0] {
+				return emptyVals_fixed
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"filterempty_fixed",
+			"originalempty_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+					Size: 0,
+				},
+				common.ZeroAddress,
+			),
+		)
+	})
+
+	t.Run("with fixed sized array of integer", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
+
+			let onlyEven =
+				view fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			fun filterxs_fixed(): [Int] {
+				return xs_fixed.filter(onlyEven)
+			}
+			fun originalxs_fixed(): [Int; 5] {
+				return xs_fixed
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"filterxs_fixed",
+			"originalxs_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+					Size: 5,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+				interpreter.NewUnmeteredIntValueFromInt64(201),
+			),
+		)
+	})
+
+	t.Run("with fixed sized array of struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct TestStruct {
+
+				var test: Int
+
+				init(_ t: Int) {
+					self.test = t
+				}
+			}
+
+			let onlyOddStruct =
+				view fun (_ x: TestStruct): Bool {
+					return x.test % 2 == 1
+				}
+
+			let sa_fixed: [TestStruct; 3] = [TestStruct(1), TestStruct(2), TestStruct(3)]
+
+			fun filtersa_fixed(): [Int] {
+				let sa_rev = sa_fixed.filter(onlyOddStruct)
+				let res: [Int] = [];
+				for s in sa_rev {
+					res.append(s.test)
+				}
+				return res
+			}
+			fun originalsa_fixed(): [Int] {
+				let res: [Int] = [];
+				for s in sa_fixed {
+					res.append(s.test)
+				}
+				return res
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"filtersa_fixed",
+			"originalsa_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+		)
+	})
+}
+
+func TestInterpretArrayMap(t *testing.T) {
+	t.Parallel()
+
+	runValidCase := func(
+		t *testing.T,
+		inter *interpreter.Interpreter,
+		mapFuncName,
+		originalFuncName string,
+		mappedArray, originalArray *interpreter.ArrayValue,
+	) {
+		val, err := inter.Invoke(mapFuncName)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			mappedArray,
+			val,
+		)
+
+		origVal, err := inter.Invoke(originalFuncName)
+		require.NoError(t, err)
+
+		// Original array remains unchanged
+		AssertValuesEqual(
+			t,
+			inter,
+			originalArray,
+			origVal,
+		)
+	}
+
+	t.Run("with variable sized empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let emptyVals: [Int] = []
+
+			let plusTen =
+				fun (_ x: Int): Int {
+					return x + 10
+				}
+
+			fun mapempty(): [Int] {
+				return emptyVals.map(plusTen)
+			}
+			fun originalempty(): [Int] {
+				return emptyVals
+			}
+		`)
+
+		emptyVarSizedArray := interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+			common.ZeroAddress,
+		)
+
+		runValidCase(
+			t,
+			inter,
+			"mapempty",
+			"originalempty",
+			emptyVarSizedArray,
+			emptyVarSizedArray,
+		)
+	})
+
+	t.Run("with variable sized array of integer to Int16", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let xs = [1, 2, 3, 100, 201]
+
+			let plusTen =
+				fun (_ x: Int): Int16 {
+					return Int16(x) + 10
+				}
+
+			fun mapxs(): [Int16] {
+				return xs.map(plusTen)
+			}
+			fun originalxs(): [Int] {
+				return xs
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"mapxs",
+			"originalxs",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt16,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredInt16Value(11),
+				interpreter.NewUnmeteredInt16Value(12),
+				interpreter.NewUnmeteredInt16Value(13),
+				interpreter.NewUnmeteredInt16Value(110),
+				interpreter.NewUnmeteredInt16Value(211),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+				interpreter.NewUnmeteredIntValueFromInt64(201),
+			),
+		)
+	})
+
+	t.Run("with variable sized array of struct to Int", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct TestStruct {
+				var test: Int
+
+				init(_ t: Int) {
+					self.test = t
+				}
+			}
+
+			let innerValueMinusOne =
+				fun (_ x: TestStruct): Int {
+					return x.test - 1
+				}
+
+			let sa = [TestStruct(1), TestStruct(2), TestStruct(3)]
+
+			fun mapsa(): [Int] {
+				return sa.map(innerValueMinusOne)
+			}
+
+			fun originalsa(): [Int] {
+				let res: [Int] = [];
+				for s in sa {
+					res.append(s.test)
+				}
+				return res
+			}
+		`)
+
+		varSizedArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
+		runValidCase(
+			t,
+			inter,
+			"mapsa",
+			"originalsa",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				varSizedArrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				varSizedArrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+		)
+	})
+
+	t.Run("with variable sized array of int to struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct TestStruct {
+				var test: Int
+
+				init(_ t: Int) {
+					self.test = t
+				}
+			}
+
+			let intPlusTenToStruct =
+				fun (_ x: Int): TestStruct {
+					return TestStruct(x + 10)
+				}
+
+			let orig = [1, 2, 3]
+
+			fun mapToStruct(): [Int] {
+				let mapped = orig.map(intPlusTenToStruct)
+				let res: [Int] = [];
+				for s in mapped {
+					res.append(s.test)
+				}
+				return res
+			}
+			fun original(): [Int] {
+				return orig
+			}
+		`)
+
+		varSizedArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
+		runValidCase(
+			t,
+			inter,
+			"mapToStruct",
+			"original",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				varSizedArrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(11),
+				interpreter.NewUnmeteredIntValueFromInt64(12),
+				interpreter.NewUnmeteredIntValueFromInt64(13),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				varSizedArrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+		)
+	})
+
+	t.Run("with fixed sized empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let emptyVals_fixed: [Int; 0] = []
+
+			let trueForEven =
+				fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+
+			fun mapempty_fixed(): [Bool; 0] {
+				return emptyVals_fixed.map(trueForEven)
+			}
+			fun originalempty_fixed(): [Int; 0] {
+				return emptyVals_fixed
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"mapempty_fixed",
+			"originalempty_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeBool,
+					Size: 0,
+				},
+				common.ZeroAddress,
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+					Size: 0,
+				},
+				common.ZeroAddress,
+			),
+		)
+	})
+
+	t.Run("with fixed sized array of integer to Int16", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
+
+			let plusTen =
+				fun (_ x: Int): Int16 {
+					return Int16(x) + 10
+				}
+
+			fun mapxs_fixed(): [Int16; 5] {
+				return xs_fixed.map(plusTen)
+			}
+			fun originalxs_fixed(): [Int; 5] {
+				return xs_fixed
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"mapxs_fixed",
+			"originalxs_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt16,
+					Size: 5,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredInt16Value(11),
+				interpreter.NewUnmeteredInt16Value(12),
+				interpreter.NewUnmeteredInt16Value(13),
+				interpreter.NewUnmeteredInt16Value(110),
+				interpreter.NewUnmeteredInt16Value(211),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+					Size: 5,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+				interpreter.NewUnmeteredIntValueFromInt64(201),
+			),
+		)
+	})
+
+	t.Run("with fixed sized array of struct to Int", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct TestStruct {
+				var test: Int
+
+				init(_ t: Int) {
+					self.test = t
+				}
+			}
+
+			let innerValueMinusOne =
+				fun (_ x: TestStruct): Int {
+					return x.test - 1
+				}
+
+			let sa_fixed: [TestStruct; 3] = [TestStruct(1), TestStruct(2), TestStruct(3)]
+
+			fun mapsa_fixed(): [Int; 3] {
+				return sa_fixed.map(innerValueMinusOne)
+			}
+
+			fun originalsa_fixed(): [Int] {
+				let res: [Int] = [];
+				for s in sa_fixed {
+					res.append(s.test)
+				}
+				return res
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"mapsa_fixed",
+			"originalsa_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+					Size: 3,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+		)
+	})
+
+	t.Run("with fixed sized array of Int to Struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct TestStruct {
+				var test: Int
+
+				init(_ t: Int) {
+					self.test = t
+				}
+			}
+
+			let intPlusTenToStruct =
+				fun (_ x: Int): TestStruct {
+					return TestStruct(x + 10)
+				}
+
+			let array_fixed: [Int; 3] = [1, 2, 3]
+
+			fun map_fixed(): [Int] {
+				let sa = array_fixed.map(intPlusTenToStruct)
+				let res: [Int] = [];
+				for s in sa {
+					res.append(s.test)
+				}
+				return res
+			}
+			fun original_fixed(): [Int; 3] {
+				return array_fixed
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			"map_fixed",
+			"original_fixed",
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(11),
+				interpreter.NewUnmeteredIntValueFromInt64(12),
+				interpreter.NewUnmeteredIntValueFromInt64(13),
+			),
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+					Size: 3,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			),
+		)
+	})
 }
 
 func TestInterpretOptionalReference(t *testing.T) {
@@ -10578,11 +11373,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t,
-				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				true,
-				fmt.Sprintf(
-					`
+			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
+				`
                       #allowAccountLinking
 
                       struct S {}
@@ -10599,11 +11391,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-					tc.typeName,
-					tc.code,
-				),
-				sema.Config{},
-			)
+				tc.typeName,
+				tc.code,
+			), sema.Config{})
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -10616,11 +11406,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t,
-				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				true,
-				fmt.Sprintf(
-					`
+			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
+				`
                       #allowAccountLinking
 
                       struct S {}
@@ -10633,11 +11420,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-					tc.typeName,
-					tc.code,
-				),
-				sema.Config{},
-			)
+				tc.typeName,
+				tc.code,
+			), sema.Config{})
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -10647,9 +11432,9 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:     "account reference",
-			typeName: "AuthAccount",
+			typeName: "Account",
 			code: `
-		      let ref = &account as &AuthAccount
+		      let ref = account
 		    `,
 		},
 	}
@@ -10677,8 +11462,8 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 				name:     fmt.Sprintf("storage reference%s", testNameSuffix),
 				typeName: "S",
 				code: fmt.Sprintf(`
-                      account.save(S(), to: /storage/s)
-                      let ref = account.borrow<%s &S>(from: /storage/s)!
+                      account.storage.save(S(), to: /storage/s)
+                      let ref = account.storage.borrow<%s &S>(from: /storage/s)!
                     `,
 					authKeyword,
 				),
@@ -10696,19 +11481,19 @@ func TestInterpretCompositeTypeHandler(t *testing.T) {
 
 	t.Parallel()
 
-	testType := &sema.CompositeType{}
+	testType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, stdlib.FlowLocation{}, "AccountContractAdded")
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           fun test(): Type? {
-              return CompositeType("TEST")
+              return CompositeType("flow.AccountContractAdded")
           }
         `,
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
 				CompositeTypeHandler: func(location common.Location, typeID common.TypeID) *sema.CompositeType {
-					if typeID == "TEST" {
-						return testType
+					if _, ok := location.(stdlib.FlowLocation); ok {
+						return stdlib.FlowEventTypes[typeID]
 					}
 
 					return nil
@@ -10721,10 +11506,8 @@ func TestInterpretCompositeTypeHandler(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	testStaticType := interpreter.ConvertSemaToStaticType(nil, testType)
-
 	require.Equal(t,
-		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredTypeValue(testStaticType)),
+		interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredTypeValue(testType)),
 		value,
 	)
 }
@@ -10756,5 +11539,316 @@ func TestInterpretConditionsWrapperFunctionType(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+}
+
+func TestInterpretSwapInSameArray(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resources, different indices", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {
+              let value: Int
+
+              init(value: Int) {
+                  self.value = value
+              }
+          }
+
+          fun test(): [Int] {
+             let rs <- [
+                 <- create R(value: 0),
+                 <- create R(value: 1),
+                 <- create R(value: 2)
+             ]
+
+             // We swap only '0' and '1'
+             rs[0] <-> rs[1]
+
+             let values = [
+                 rs[0].value,
+                 rs[1].value,
+                 rs[2].value
+             ]
+
+             destroy rs
+
+             return values
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			value,
+		)
+	})
+
+	t.Run("resources, same indices", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {
+              let value: Int
+
+              init(value: Int) {
+                  self.value = value
+              }
+          }
+
+          fun test(): [Int] {
+             let rs <- [
+                 <- create R(value: 0),
+                 <- create R(value: 1),
+                 <- create R(value: 2)
+             ]
+
+             // We swap only '1'
+             rs[1] <-> rs[1]
+
+             let values = [
+                 rs[0].value,
+                 rs[1].value,
+                 rs[2].value
+             ]
+
+             destroy rs
+
+             return values
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			value,
+		)
+	})
+
+	t.Run("structs", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {
+              let value: Int
+
+              init(value: Int) {
+                  self.value = value
+              }
+          }
+
+          fun test(): [Int] {
+             let structs = [
+                 S(value: 0),
+                 S(value: 1),
+                 S(value: 2)
+             ]
+
+             // We swap only '0' and '1'
+             structs[0] <-> structs[1]
+
+             return [
+                 structs[0].value,
+                 structs[1].value,
+                 structs[2].value
+             ]
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(0),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			value,
+		)
+	})
+}
+
+func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+          let xs: [{Int: String}] = [{2: "x"}, {3: "y"}]
+
+          fun a(): Int {
+              log("a")
+              return 0
+          }
+
+          fun b(): Int {
+              log("b")
+              return 2
+          }
+
+          fun c(): Int {
+              log("c")
+              return 1
+          }
+
+          fun d(): Int {
+              log("d")
+              return 3
+          }
+
+          fun test() {
+              log(xs)
+              xs[a()][b()] <-> xs[c()][d()]
+              log(xs)
+          }
+        `)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				`[{2: "x"}, {3: "y"}]`,
+				`"a"`,
+				`"b"`,
+				`"c"`,
+				`"d"`,
+				`[{2: "y"}, {3: "x"}]`,
+			},
+			getLogs(),
+		)
+
+	})
+
+	t.Run("resources", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+          resource Resource {
+              var value: Int
+
+              init(_ value: Int) {
+                  log(
+                      "Creating resource with UUID "
+                          .concat(self.uuid.toString())
+                          .concat(" and value ")
+                          .concat(value.toString())
+                  )
+                  self.value = value
+              }
+
+              destroy() {
+                  log(
+                      "Destroying resource with UUID "
+                          .concat(self.uuid.toString())
+                          .concat(" and value ")
+                          .concat(self.value.toString())
+                  )
+              }
+          }
+
+          resource ResourceLoser {
+              var dict: @{Int: Resource}
+              var toBeLost: @Resource
+
+              init(_ victim: @Resource) {
+                  self.dict <- {1: <- create Resource(2)}
+
+                  self.toBeLost <- victim
+
+                  // Magic happens during the swap below.
+                  self.dict[1] <-> self.dict[self.shenanigans()]
+              }
+
+              fun shenanigans(): Int {
+                  var d <- create Resource(3)
+
+                  self.toBeLost <-> d
+
+                  // This takes advantage of the fact that self.dict[1] has been
+                  // temporarily removed at the point of the swap when this gets called
+                  // We take advantage of this window of opportunity to
+                  // insert the "to-be-lost" resource in its place. The swap implementation
+                  // will blindly overwrite it.
+                  var old <- self.dict.insert(key: 1, <- d)
+
+                  // "old" will be nil here thanks to the removal done by the swap
+                  // implementation. We have to destroy it to please sema checker.
+                  destroy old
+
+                  return 1
+              }
+
+              destroy() {
+                  destroy self.dict
+                  destroy self.toBeLost
+              }
+          }
+
+          fun test() {
+              destroy <- create ResourceLoser(<- create Resource(1))
+          }
+        `)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				`"Creating resource with UUID 1 and value 1"`,
+				`"Creating resource with UUID 3 and value 2"`,
+				`"Creating resource with UUID 4 and value 3"`,
+				`"Destroying resource with UUID 3 and value 2"`,
+				`"Destroying resource with UUID 1 and value 1"`,
+				`"Destroying resource with UUID 4 and value 3"`,
+			},
+			getLogs(),
+		)
 	})
 }

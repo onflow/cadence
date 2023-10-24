@@ -21,4 +21,4 @@
 
 package cadence
 
-const Version = "v0.40.0"
+const Version = "v1.0.0-preview.1"

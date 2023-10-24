@@ -1743,7 +1743,7 @@ func TestInterpretInvalidatedResourceValidation(t *testing.T) {
 	})
 }
 
-func TestCheckResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
+func TestInterpretResourceInvalidationWithConditionalExprInDestroy(t *testing.T) {
 
 	t.Parallel()
 
@@ -2048,11 +2048,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccount(
-		t,
-		address,
-		true,
-		`
+	inter, _ := testAccount(t, address, true, nil, `
           resource R {
               access(all) let id: Int
 
@@ -2062,8 +2058,8 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
           }
 
           fun test() {
-              account.save(<-{0 : <-create R()}, to: /storage/x)
-              let collection = account.borrow<auth(Remove) &{Int: R}>(from: /storage/x)!
+              account.storage.save(<-{0 : <-create R()}, to: /storage/x)
+              let collection = account.storage.borrow<auth(Remove) &{Int: R}>(from: /storage/x)!
 
               let resourceRef = collection[0]!
               let token <- collection.remove(key: 0)
@@ -2071,9 +2067,7 @@ func TestInterpretOptionalResourceReference(t *testing.T) {
               let x = resourceRef.id
               destroy token
           }
-        `,
-		sema.Config{},
-	)
+        `, sema.Config{})
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
@@ -2086,11 +2080,7 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
 
-	inter, _ := testAccount(
-		t,
-		address,
-		true,
-		`
+	inter, _ := testAccount(t, address, true, nil, `
           resource R {
               access(all) let id: Int
 
@@ -2100,8 +2090,8 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
           }
 
           fun test() {
-              account.save(<-[<-create R()], to: /storage/x)
-              let collection = account.borrow<auth(Remove) &[R?]>(from: /storage/x)!
+              account.storage.save(<-[<-create R()], to: /storage/x)
+              let collection = account.storage.borrow<auth(Remove) &[R?]>(from: /storage/x)!
 
               let resourceRef = collection[0]!
               let token <- collection.remove(at: 0)
@@ -2109,9 +2099,7 @@ func TestInterpretArrayOptionalResourceReference(t *testing.T) {
               let x = resourceRef.id
               destroy token
           }
-        `,
-		sema.Config{},
-	)
+        `, sema.Config{})
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)

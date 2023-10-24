@@ -584,7 +584,7 @@ func (e UUIDUnavailableError) Error() string {
 
 // TypeLoadingError
 type TypeLoadingError struct {
-	TypeID common.TypeID
+	TypeID TypeID
 }
 
 var _ errors.UserError = TypeLoadingError{}
@@ -668,6 +668,23 @@ func (e ValueTransferTypeError) Error() string {
 		"invalid transfer of value: expected `%s`, got `%s`",
 		expected,
 		actual,
+	)
+}
+
+// UnexpectedMappedEntitlementError
+type UnexpectedMappedEntitlementError struct {
+	Type sema.Type
+	LocationRange
+}
+
+var _ errors.InternalError = UnexpectedMappedEntitlementError{}
+
+func (UnexpectedMappedEntitlementError) IsInternalError() {}
+
+func (e UnexpectedMappedEntitlementError) Error() string {
+	return fmt.Sprintf(
+		"invalid transfer of value: found an unexpected runtime mapped entitlement `%s`",
+		e.Type.QualifiedString(),
 	)
 }
 

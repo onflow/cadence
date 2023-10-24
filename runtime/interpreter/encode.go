@@ -202,7 +202,7 @@ const (
 	_ // DO NOT REPLACE! used to be used for account links
 	CBORTagStorageCapabilityControllerValue
 	CBORTagAccountCapabilityControllerValue
-	CBORTagIDCapabilityValue
+	CBORTagCapabilityValue
 	_
 	_
 	_
@@ -764,32 +764,32 @@ func (v PathValue) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedIDCapabilityValueAddressFieldKey    uint64 = 0
-	// encodedIDCapabilityValueIDFieldKey         uint64 = 1
-	// encodedIDCapabilityValueBorrowTypeFieldKey uint64 = 2
+	// encodedCapabilityValueAddressFieldKey    uint64 = 0
+	// encodedCapabilityValueIDFieldKey         uint64 = 1
+	// encodedCapabilityValueBorrowTypeFieldKey uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
-	// encodedIDCapabilityValueLength MUST be updated when new element is added.
+	// encodedCapabilityValueLength MUST be updated when new element is added.
 	// It is used to verify encoded capability length during decoding.
-	encodedIDCapabilityValueLength = 3
+	encodedCapabilityValueLength = 3
 )
 
-// Encode encodes IDCapabilityValue as
+// Encode encodes CapabilityValue as
 //
 //	cbor.Tag{
-//				Number: CBORTagIDCapabilityValue,
+//				Number: CBORTagCapabilityValue,
 //				Content: []any{
-//						encodedIDCapabilityValueAddressFieldKey:    AddressValue(v.Address),
-//						encodedIDCapabilityValueIDFieldKey:         v.ID,
-//						encodedIDCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
+//						encodedCapabilityValueAddressFieldKey:    AddressValue(v.Address),
+//						encodedCapabilityValueIDFieldKey:         v.ID,
+//						encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
 //					},
 //	}
-func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
+func (v *CapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagIDCapabilityValue,
+		0xd8, CBORTagCapabilityValue,
 		// array, 3 items follow
 		0x83,
 	})
@@ -797,19 +797,19 @@ func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode address at array index encodedIDCapabilityValueAddressFieldKey
+	// Encode address at array index encodedCapabilityValueAddressFieldKey
 	err = v.Address.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode ID at array index encodedIDCapabilityValueIDFieldKey
+	// Encode ID at array index encodedCapabilityValueIDFieldKey
 	err = e.CBOR.EncodeUint64(uint64(v.ID))
 	if err != nil {
 		return err
 	}
 
-	// Encode borrow type at array index encodedIDCapabilityValueBorrowTypeFieldKey
+	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
 	return v.BorrowType.Encode(e.CBOR)
 }
 
@@ -1146,7 +1146,7 @@ func (t PrimitiveStaticType) Encode(e *cbor.StreamEncoder) error {
 //			Number:  CBORTagOptionalStaticType,
 //			Content: StaticType(v.Type),
 //	}
-func (t OptionalStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *OptionalStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagOptionalStaticType,
@@ -1179,7 +1179,7 @@ const (
 //					encodedCompositeStaticTypeQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
 //			},
 //	}
-func (t CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *CompositeStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
@@ -1222,7 +1222,7 @@ const (
 //					encodedInterfaceStaticTypeQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
 //			},
 //	}
-func (t InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
@@ -1250,7 +1250,7 @@ func (t InterfaceStaticType) Encode(e *cbor.StreamEncoder) error {
 //			Number:  CBORTagVariableSizedStaticType,
 //			Content: StaticType(v.Type),
 //	}
-func (t VariableSizedStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *VariableSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagVariableSizedStaticType,
@@ -1282,7 +1282,7 @@ const (
 //					encodedConstantSizedStaticTypeTypeFieldKey: StaticType(v.Type),
 //			},
 //	}
-func (t ConstantSizedStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *ConstantSizedStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
@@ -1313,7 +1313,7 @@ func (t Unauthorized) Encode(e *cbor.StreamEncoder) error {
 	return e.EncodeNil()
 }
 
-func (t EntitlementMapAuthorization) Encode(e *cbor.StreamEncoder) error {
+func (a EntitlementMapAuthorization) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagEntitlementMapStaticAuthorization,
@@ -1321,7 +1321,7 @@ func (t EntitlementMapAuthorization) Encode(e *cbor.StreamEncoder) error {
 	if err != nil {
 		return err
 	}
-	return e.EncodeString(string(t.TypeID))
+	return e.EncodeString(string(a.TypeID))
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1336,7 +1336,7 @@ const (
 	encodedSetAuthorizationStaticTypeLength = 2
 )
 
-func (t EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
+func (a EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagEntitlementSetStaticAuthorization,
@@ -1347,16 +1347,16 @@ func (t EntitlementSetAuthorization) Encode(e *cbor.StreamEncoder) error {
 		return err
 	}
 
-	err = e.EncodeUint8(uint8(t.SetKind))
+	err = e.EncodeUint8(uint8(a.SetKind))
 	if err != nil {
 		return err
 	}
 
-	err = e.EncodeArrayHead(uint64(t.Entitlements.Len()))
+	err = e.EncodeArrayHead(uint64(a.Entitlements.Len()))
 	if err != nil {
 		return err
 	}
-	return t.Entitlements.ForeachWithError(func(entitlement common.TypeID, value struct{}) error {
+	return a.Entitlements.ForeachWithError(func(entitlement common.TypeID, value struct{}) error {
 		// Encode entitlement as array entitlements element
 		return e.EncodeString(string(entitlement))
 	})
@@ -1383,7 +1383,7 @@ const (
 //					encodedReferenceStaticTypeTypeFieldKey:          StaticType(v.Type),
 //			},
 //		}
-func (t ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *ReferenceStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
@@ -1424,7 +1424,7 @@ const (
 //					encodedDictionaryStaticTypeValueTypeFieldKey: StaticType(v.ValueType),
 //			},
 //	}
-func (t DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
@@ -1512,7 +1512,7 @@ func (t *IntersectionStaticType) Encode(e *cbor.StreamEncoder) error {
 //			Number:  CBORTagCapabilityStaticType,
 //			Content: StaticType(v.BorrowType),
 //	}
-func (t CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
+func (t *CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagCapabilityStaticType,

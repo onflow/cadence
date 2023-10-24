@@ -32,20 +32,19 @@ import (
 )
 
 type TestContractType struct {
-	Checker                           *sema.Checker
-	CompositeType                     *sema.CompositeType
-	InitializerTypes                  []sema.Type
-	emulatorBackendType               *testEmulatorBackendType
-	newEmulatorBlockchainFunctionType *sema.FunctionType
-	expectFunction                    interpreter.FunctionValue
-	newMatcherFunction                interpreter.FunctionValue
-	haveElementCountFunction          interpreter.FunctionValue
-	beEmptyFunction                   interpreter.FunctionValue
-	equalFunction                     interpreter.FunctionValue
-	beGreaterThanFunction             interpreter.FunctionValue
-	containFunction                   interpreter.FunctionValue
-	beLessThanFunction                interpreter.FunctionValue
-	expectFailureFunction             interpreter.FunctionValue
+	Checker                  *sema.Checker
+	CompositeType            *sema.CompositeType
+	InitializerTypes         []sema.Type
+	emulatorBackendType      *testEmulatorBackendType
+	expectFunction           interpreter.FunctionValue
+	newMatcherFunction       interpreter.FunctionValue
+	haveElementCountFunction interpreter.FunctionValue
+	beEmptyFunction          interpreter.FunctionValue
+	equalFunction            interpreter.FunctionValue
+	beGreaterThanFunction    interpreter.FunctionValue
+	containFunction          interpreter.FunctionValue
+	beLessThanFunction       interpreter.FunctionValue
+	expectFailureFunction    interpreter.FunctionValue
 }
 
 // 'Test.assert' function
@@ -362,65 +361,6 @@ func newTestTypeReadFileFunction(testFramework TestFramework) *interpreter.HostF
 			}
 
 			return interpreter.NewUnmeteredStringValue(content)
-		},
-	)
-}
-
-// 'Test.newEmulatorBlockchain' function
-
-const testTypeNewEmulatorBlockchainFunctionDocString = `
-Creates a blockchain which is backed by a new emulator instance.
-`
-
-const testTypeNewEmulatorBlockchainFunctionName = "newEmulatorBlockchain"
-
-const testBlockchainTypeName = "Blockchain"
-
-func newTestTypeNewEmulatorBlockchainFunctionType(blockchainType *sema.CompositeType) *sema.FunctionType {
-	return &sema.FunctionType{
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			blockchainType,
-		),
-	}
-}
-
-func (t *TestContractType) newNewEmulatorBlockchainFunction(
-	testFramework TestFramework,
-) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		t.newEmulatorBlockchainFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			// Create an `EmulatorBackend`
-			emulatorBackend := t.emulatorBackendType.newEmulatorBackend(
-				inter,
-				testFramework,
-				locationRange,
-			)
-
-			// Create a 'Blockchain' struct value, that wraps the emulator backend,
-			// by calling the constructor of 'Blockchain'.
-
-			blockchainConstructor := getNestedTypeConstructorValue(
-				*invocation.Self,
-				testBlockchainTypeName,
-			)
-
-			blockchain, err := inter.InvokeExternally(
-				blockchainConstructor,
-				blockchainConstructor.Type,
-				[]interpreter.Value{
-					emulatorBackend,
-				},
-			)
-
-			if err != nil {
-				panic(err)
-			}
-
-			return blockchain
 		},
 	)
 }
@@ -1035,8 +975,6 @@ func newTestContractType() *TestContractType {
 	matcherType := ty.matcherType()
 	matcherTestFunctionType := compositeFunctionType(matcherType, matcherTestFieldName)
 
-	blockchainType := ty.blockchainType()
-
 	// Test.assert()
 	compositeType.Members.Set(
 		testTypeAssertFunctionName,
@@ -1069,19 +1007,6 @@ func newTestContractType() *TestContractType {
 			testTypeFailFunctionDocString,
 		),
 	)
-
-	// Test.newEmulatorBlockchain()
-	newEmulatorBlockchainFunctionType := newTestTypeNewEmulatorBlockchainFunctionType(blockchainType)
-	compositeType.Members.Set(
-		testTypeNewEmulatorBlockchainFunctionName,
-		sema.NewUnmeteredPublicFunctionMember(
-			compositeType,
-			testTypeNewEmulatorBlockchainFunctionName,
-			newEmulatorBlockchainFunctionType,
-			testTypeNewEmulatorBlockchainFunctionDocString,
-		),
-	)
-	ty.newEmulatorBlockchainFunctionType = newEmulatorBlockchainFunctionType
 
 	// Test.readFile()
 	compositeType.Members.Set(
@@ -1233,6 +1158,7 @@ func newTestContractType() *TestContractType {
 	ty.expectFailureFunction = newTestTypeExpectFailureFunction(
 		expectFailureFunctionType,
 	)
+	compositeType.ResolveMembers()
 
 	return ty
 }
@@ -1273,23 +1199,6 @@ func (t *TestContractType) matcherType() *sema.CompositeType {
 	return matcherType
 }
 
-func (t *TestContractType) blockchainType() *sema.CompositeType {
-	typ, ok := t.CompositeType.NestedTypes.Get(testBlockchainTypeName)
-	if !ok {
-		panic(typeNotFoundError(testContractTypeName, testBlockchainTypeName))
-	}
-
-	matcherType, ok := typ.(*sema.CompositeType)
-	if !ok || matcherType.Kind != common.CompositeKindStructure {
-		panic(errors.NewUnexpectedError(
-			"invalid type for '%s'. expected struct type",
-			testMatcherTypeName,
-		))
-	}
-
-	return matcherType
-}
-
 func (t *TestContractType) NewTestContract(
 	inter *interpreter.Interpreter,
 	testFramework TestFramework,
@@ -1300,9 +1209,14 @@ func (t *TestContractType) NewTestContract(
 	error,
 ) {
 	initializerTypes := t.InitializerTypes
+	emulatorBackend := t.emulatorBackendType.newEmulatorBackend(
+		inter,
+		testFramework.EmulatorBackend(),
+		interpreter.EmptyLocationRange,
+	)
 	value, err := inter.InvokeFunctionValue(
 		constructor,
-		nil,
+		[]interpreter.Value{emulatorBackend},
 		initializerTypes,
 		initializerTypes,
 		invocationRange,
@@ -1318,8 +1232,6 @@ func (t *TestContractType) NewTestContract(
 	compositeValue.Functions[testTypeAssertEqualFunctionName] = testTypeAssertEqualFunction
 	compositeValue.Functions[testTypeFailFunctionName] = testTypeFailFunction
 	compositeValue.Functions[testTypeExpectFunctionName] = t.expectFunction
-	compositeValue.Functions[testTypeNewEmulatorBlockchainFunctionName] =
-		t.newNewEmulatorBlockchainFunction(testFramework)
 	compositeValue.Functions[testTypeReadFileFunctionName] =
 		newTestTypeReadFileFunction(testFramework)
 

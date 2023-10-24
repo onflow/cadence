@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -38,10 +39,10 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			CapabilityStaticType{
+			(&CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeString,
-			}.Equal(
-				CapabilityStaticType{
+			}).Equal(
+				&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
 				},
 			),
@@ -52,8 +53,8 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		a := CapabilityStaticType{}
-		b := CapabilityStaticType{}
+		a := &CapabilityStaticType{}
+		b := &CapabilityStaticType{}
 		require.True(t, a.Equal(b))
 	})
 
@@ -62,8 +63,8 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityStaticType{}.Equal(
-				CapabilityStaticType{
+			(&CapabilityStaticType{}).Equal(
+				&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
 				},
 			),
@@ -75,10 +76,10 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityStaticType{
+			(&CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeString,
-			}.Equal(
-				CapabilityStaticType{},
+			}).Equal(
+				&CapabilityStaticType{},
 			),
 		)
 	})
@@ -88,10 +89,10 @@ func TestCapabilityStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityStaticType{
+			(&CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeString,
-			}.Equal(
-				ReferenceStaticType{
+			}).Equal(
+				&ReferenceStaticType{
 					ReferencedType: PrimitiveStaticTypeString,
 				},
 			),
@@ -108,11 +109,11 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			ReferenceStaticType{
+			(&ReferenceStaticType{
 				Authorization:  UnauthorizedAccess,
 				ReferencedType: PrimitiveStaticTypeString,
-			}.Equal(
-				ReferenceStaticType{
+			}).Equal(
+				&ReferenceStaticType{
 					Authorization:  UnauthorizedAccess,
 					ReferencedType: PrimitiveStaticTypeString,
 				},
@@ -125,11 +126,11 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ReferenceStaticType{
+			(&ReferenceStaticType{
 				Authorization:  UnauthorizedAccess,
 				ReferencedType: PrimitiveStaticTypeInt,
-			}.Equal(
-				ReferenceStaticType{
+			}).Equal(
+				&ReferenceStaticType{
 					Authorization:  UnauthorizedAccess,
 					ReferencedType: PrimitiveStaticTypeString,
 				},
@@ -142,11 +143,11 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ReferenceStaticType{
+			(&ReferenceStaticType{
 				Authorization:  UnauthorizedAccess,
 				ReferencedType: PrimitiveStaticTypeInt,
-			}.Equal(
-				ReferenceStaticType{
+			}).Equal(
+				&ReferenceStaticType{
 					Authorization:  EntitlementMapAuthorization{TypeID: "Foo"},
 					ReferencedType: PrimitiveStaticTypeInt,
 				},
@@ -159,12 +160,12 @@ func TestReferenceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ReferenceStaticType{
+			(&ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeString,
-			}.Equal(
-				CapabilityStaticType{
+			}).Equal(
+				(&CapabilityStaticType{
 					BorrowType: PrimitiveStaticTypeString,
-				},
+				}),
 			),
 		)
 	})
@@ -317,10 +318,7 @@ func TestCompositeStaticType_Equal(t *testing.T) {
 				nil,
 				"X",
 			).Equal(
-				InterfaceStaticType{
-					Location:            nil,
-					QualifiedIdentifier: "X",
-				},
+				NewInterfaceStaticTypeComputeTypeID(nil, nil, "X"),
 			),
 		)
 	})
@@ -335,15 +333,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			InterfaceStaticType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X")),
 		)
 	})
 
@@ -352,49 +343,28 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Y",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y")),
 		)
 	})
 
-	t.Run("different locations, different identifier", func(t *testing.T) {
+	t.Run("different locations of same kind, same qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            common.IdentifierLocation("A"),
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            common.IdentifierLocation("B"),
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, common.IdentifierLocation("A"), "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, common.IdentifierLocation("B"), "X")),
 		)
 	})
 
-	t.Run("different locations, different identifier", func(t *testing.T) {
+	t.Run("different locations of different kinds, same qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            common.IdentifierLocation("A"),
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            common.StringLocation("A"),
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, common.IdentifierLocation("A"), "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, common.StringLocation("A"), "X")),
 		)
 	})
 
@@ -403,15 +373,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			InterfaceStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            nil,
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, nil, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, nil, "X")),
 		)
 	})
 
@@ -420,15 +383,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            nil,
-					QualifiedIdentifier: "Y",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, nil, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, nil, "Y")),
 		)
 	})
 
@@ -437,15 +393,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				InterfaceStaticType{
-					Location:            common.StringLocation("B"),
-					QualifiedIdentifier: "X",
-				},
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, nil, "X").
+				Equal(NewInterfaceStaticTypeComputeTypeID(nil, common.StringLocation("B"), "X")),
 		)
 	})
 
@@ -454,16 +403,8 @@ func TestInterfaceStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			InterfaceStaticType{
-				Location:            nil,
-				QualifiedIdentifier: "X",
-			}.Equal(
-				NewCompositeStaticTypeComputeTypeID(
-					nil,
-					nil,
-					"X",
-				),
-			),
+			NewInterfaceStaticTypeComputeTypeID(nil, nil, "X").
+				Equal(NewCompositeStaticTypeComputeTypeID(nil, nil, "X")),
 		)
 	})
 }
@@ -477,11 +418,11 @@ func TestConstantSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			ConstantSizedStaticType{
+			(&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeString,
 				Size: 10,
-			}.Equal(
-				ConstantSizedStaticType{
+			}).Equal(
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 					Size: 10,
 				},
@@ -494,11 +435,11 @@ func TestConstantSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ConstantSizedStaticType{
+			(&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeString,
 				Size: 20,
-			}.Equal(
-				ConstantSizedStaticType{
+			}).Equal(
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 					Size: 10,
 				},
@@ -511,11 +452,11 @@ func TestConstantSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ConstantSizedStaticType{
+			(&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Size: 10,
-			}.Equal(
-				ConstantSizedStaticType{
+			}).Equal(
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 					Size: 10,
 				},
@@ -528,11 +469,11 @@ func TestConstantSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			ConstantSizedStaticType{
+			(&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Size: 10,
-			}.Equal(
-				VariableSizedStaticType{
+			}).Equal(
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -549,10 +490,10 @@ func TestVariableSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			VariableSizedStaticType{
+			(&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
-				VariableSizedStaticType{
+			}).Equal(
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -564,10 +505,10 @@ func TestVariableSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			VariableSizedStaticType{
+			(&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				ConstantSizedStaticType{
+			}).Equal(
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 					Size: 10,
 				},
@@ -580,10 +521,10 @@ func TestVariableSizedStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			VariableSizedStaticType{
+			(&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				VariableSizedStaticType{
+			}).Equal(
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -620,7 +561,7 @@ func TestPrimitiveStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			PrimitiveStaticTypeInt.
-				Equal(CapabilityStaticType{}),
+				Equal(&CapabilityStaticType{}),
 		)
 	})
 }
@@ -634,10 +575,10 @@ func TestOptionalStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			OptionalStaticType{
+			(&OptionalStaticType{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
-				OptionalStaticType{
+			}).Equal(
+				&OptionalStaticType{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -649,10 +590,10 @@ func TestOptionalStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			OptionalStaticType{
+			(&OptionalStaticType{
 				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				OptionalStaticType{
+			}).Equal(
+				&OptionalStaticType{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -664,10 +605,10 @@ func TestOptionalStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			OptionalStaticType{
+			(&OptionalStaticType{
 				Type: PrimitiveStaticTypeInt,
-			}.Equal(
-				VariableSizedStaticType{
+			}).Equal(
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -684,11 +625,11 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			DictionaryStaticType{
+			(&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeString,
-			}.Equal(
-				DictionaryStaticType{
+			}).Equal(
+				&DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeInt,
 					ValueType: PrimitiveStaticTypeString,
 				},
@@ -701,11 +642,11 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			DictionaryStaticType{
+			(&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeString,
-			}.Equal(
-				DictionaryStaticType{
+			}).Equal(
+				&DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeVoid,
 					ValueType: PrimitiveStaticTypeString,
 				},
@@ -718,11 +659,11 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			DictionaryStaticType{
+			(&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeVoid,
-			}.Equal(
-				DictionaryStaticType{
+			}).Equal(
+				&DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeInt,
 					ValueType: PrimitiveStaticTypeString,
 				},
@@ -735,11 +676,11 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			DictionaryStaticType{
+			(&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeVoid,
-			}.Equal(
-				VariableSizedStaticType{
+			}).Equal(
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -757,27 +698,15 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			(&IntersectionStaticType{
-				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+				Types: []*InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
-					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
 					},
 				},
 			),
@@ -790,10 +719,10 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.True(t,
 			(&IntersectionStaticType{
-				Types: []InterfaceStaticType{},
+				Types: []*InterfaceStaticType{},
 			}).Equal(
 				&IntersectionStaticType{
-					Types: []InterfaceStaticType{},
+					Types: []*InterfaceStaticType{},
 				},
 			),
 		)
@@ -805,52 +734,56 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			(&IntersectionStaticType{
-				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+				Types: []*InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
-					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
 					},
 				},
 			),
 		)
 	})
 
-	t.Run("more intersections", func(t *testing.T) {
+	t.Run("same, restrictions in different order", func(t *testing.T) {
 
 		t.Parallel()
 
-		require.False(t,
+		require.True(t,
 			(&IntersectionStaticType{
-				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
+				Types: []*InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
-					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Y",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					},
+				},
+			),
+		)
+	})
+
+	t.Run("same, restrictions in same order", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			(&IntersectionStaticType{
+				Types: []*InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+				},
+			}).Equal(
+				&IntersectionStaticType{
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 					},
 				},
 			),
@@ -863,27 +796,56 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			(&IntersectionStaticType{
-				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+				Types: []*InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
 				&IntersectionStaticType{
-					Types: []InterfaceStaticType{
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "X",
-						},
-						{
-							Location:            utils.TestLocation,
-							QualifiedIdentifier: "Z",
-						},
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Z"),
+					},
+				},
+			),
+		)
+	})
+
+	t.Run("more restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			(&IntersectionStaticType{
+				Types: []*InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+				},
+			}).Equal(
+				&IntersectionStaticType{
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+					},
+				},
+			),
+		)
+	})
+
+	t.Run("different restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			(&IntersectionStaticType{
+				Types: []*InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
+				},
+			}).Equal(
+				&IntersectionStaticType{
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Z"),
 					},
 				},
 			),
@@ -896,18 +858,12 @@ func TestIntersectionStaticType_Equal(t *testing.T) {
 
 		require.False(t,
 			(&IntersectionStaticType{
-				Types: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "X",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "Y",
-					},
+				Types: []*InterfaceStaticType{
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "X"),
+					NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "Y"),
 				},
 			}).Equal(
-				ReferenceStaticType{
+				&ReferenceStaticType{
 					ReferencedType: PrimitiveStaticTypeInt,
 				},
 			),
@@ -924,7 +880,7 @@ func TestPrimitiveStaticTypeCount(t *testing.T) {
 	// (before the PrimitiveStaticType_Count of course).
 	// Only update this test if you are certain your change to this enum was to append new types to the end.
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(105), byte(PrimitiveStaticType_Count))
+		require.Equal(t, byte(152), byte(PrimitiveStaticType_Count))
 	})
 }
 
@@ -941,10 +897,11 @@ func TestStaticTypeConversion(t *testing.T) {
 		Identifier: testInterfaceQualifiedIdentifier,
 	}
 
-	testInterfaceStaticType := InterfaceStaticType{
-		Location:            testLocation,
-		QualifiedIdentifier: testInterfaceQualifiedIdentifier,
-	}
+	testInterfaceStaticType := NewInterfaceStaticTypeComputeTypeID(
+		nil,
+		testLocation,
+		testInterfaceQualifiedIdentifier,
+	)
 
 	const testCompositeQualifiedIdentifier = "TestComposite"
 
@@ -953,34 +910,39 @@ func TestStaticTypeConversion(t *testing.T) {
 		Identifier: testCompositeQualifiedIdentifier,
 	}
 
-	testCompositeStaticType := CompositeStaticType{
-		Location:            testLocation,
-		QualifiedIdentifier: testCompositeQualifiedIdentifier,
-		TypeID:              "S.test.TestComposite",
-	}
+	testCompositeStaticType := NewCompositeStaticTypeComputeTypeID(
+		nil,
+		testLocation,
+		testCompositeQualifiedIdentifier,
+	)
 
 	testFunctionType := &sema.FunctionType{}
 
-	tests := []struct {
+	type testCase struct {
 		name         string
 		semaType     sema.Type
 		staticType   StaticType
 		getInterface func(
+			t *testing.T,
 			location common.Location,
 			qualifiedIdentifier string,
+			typeID TypeID,
 		) (
 			*sema.InterfaceType,
 			error,
 		)
 		getComposite func(
+			t *testing.T,
 			location common.Location,
 			qualifiedIdentifier string,
-			typeID common.TypeID,
+			typeID TypeID,
 		) (
 			*sema.CompositeType,
 			error,
 		)
-	}{
+	}
+
+	tests := []testCase{
 		{
 			name:       "Void",
 			semaType:   sema.VoidType,
@@ -1215,52 +1177,242 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType:   sema.PrivatePathType,
 			staticType: PrimitiveStaticTypePrivatePath,
 		},
-
 		{
-			name:       "AuthAccount",
-			semaType:   sema.AuthAccountType,
-			staticType: PrimitiveStaticTypeAuthAccount,
+			name:       "Account",
+			semaType:   sema.AccountType,
+			staticType: PrimitiveStaticTypeAccount,
 		},
-		{
-			name:       "PublicAccount",
-			semaType:   sema.PublicAccountType,
-			staticType: PrimitiveStaticTypePublicAccount,
-		},
-
 		{
 			name:       "DeployedContract",
 			semaType:   sema.DeployedContractType,
 			staticType: PrimitiveStaticTypeDeployedContract,
 		},
 		{
-			name:       "AuthAccount.Contracts",
-			semaType:   sema.AuthAccountContractsType,
-			staticType: PrimitiveStaticTypeAuthAccountContracts,
+			name:       "Account.Storage",
+			semaType:   sema.Account_StorageType,
+			staticType: PrimitiveStaticTypeAccount_Storage,
 		},
 		{
-			name:       "PublicAccount.Contracts",
-			semaType:   sema.PublicAccountContractsType,
-			staticType: PrimitiveStaticTypePublicAccountContracts,
+			name:       "Account.Contracts",
+			semaType:   sema.Account_ContractsType,
+			staticType: PrimitiveStaticTypeAccount_Contracts,
 		},
 		{
-			name:       "AuthAccount.Keys",
-			semaType:   sema.AuthAccountKeysType,
-			staticType: PrimitiveStaticTypeAuthAccountKeys,
+			name:       "Account.Keys",
+			semaType:   sema.Account_KeysType,
+			staticType: PrimitiveStaticTypeAccount_Keys,
 		},
 		{
-			name:       "PublicAccount.Keys",
-			semaType:   sema.PublicAccountKeysType,
-			staticType: PrimitiveStaticTypePublicAccountKeys,
+			name:       "Account.Inbox",
+			semaType:   sema.Account_InboxType,
+			staticType: PrimitiveStaticTypeAccount_Inbox,
+		},
+		{
+			name:       "Account.Capabilities",
+			semaType:   sema.Account_CapabilitiesType,
+			staticType: PrimitiveStaticTypeAccount_Capabilities,
+		},
+		{
+			name:       "Account.StorageCapabilities",
+			semaType:   sema.Account_StorageCapabilitiesType,
+			staticType: PrimitiveStaticTypeAccount_StorageCapabilities,
+		},
+		{
+			name:       "Account.AccountCapabilities",
+			semaType:   sema.Account_AccountCapabilitiesType,
+			staticType: PrimitiveStaticTypeAccount_AccountCapabilities,
+		},
+		{
+			name:       "StorageCapabilityController",
+			semaType:   sema.StorageCapabilityControllerType,
+			staticType: PrimitiveStaticTypeStorageCapabilityController,
+		},
+		{
+			name:       "AccountCapabilityController",
+			semaType:   sema.AccountCapabilityControllerType,
+			staticType: PrimitiveStaticTypeAccountCapabilityController,
+		},
+
+		{
+			name:       "AnyResourceAttachment",
+			semaType:   sema.AnyResourceAttachmentType,
+			staticType: PrimitiveStaticTypeAnyResourceAttachment,
+		},
+
+		{
+			name:       "AnyStructAttachment",
+			semaType:   sema.AnyStructAttachmentType,
+			staticType: PrimitiveStaticTypeAnyStructAttachment,
 		},
 		{
 			name:       "AccountKey",
 			semaType:   sema.AccountKeyType,
-			staticType: PrimitiveStaticTypeAccountKey,
+			staticType: AccountKeyStaticType,
+			getComposite: func(
+				t *testing.T,
+				location common.Location,
+				qualifiedIdentifier string,
+				_ TypeID,
+			) (*sema.CompositeType, error) {
+				require.Nil(t, location)
+				require.Equal(t, "AccountKey", qualifiedIdentifier)
+				return sema.AccountKeyType, nil
+			},
 		},
 		{
-			name:       "AuthAccount.Inbox",
-			semaType:   sema.AuthAccountInboxType,
-			staticType: PrimitiveStaticTypeAuthAccountInbox,
+			name:       "Mutate",
+			semaType:   sema.MutateType,
+			staticType: PrimitiveStaticTypeMutate,
+		},
+		{
+			name:       "Insert",
+			semaType:   sema.InsertType,
+			staticType: PrimitiveStaticTypeInsert,
+		},
+		{
+			name:       "Remove",
+			semaType:   sema.RemoveType,
+			staticType: PrimitiveStaticTypeRemove,
+		},
+		{
+			name:       "Storage",
+			semaType:   sema.StorageType,
+			staticType: PrimitiveStaticTypeStorage,
+		},
+		{
+			name:       "SaveValue",
+			semaType:   sema.SaveValueType,
+			staticType: PrimitiveStaticTypeSaveValue,
+		},
+		{
+			name:       "LoadValue",
+			semaType:   sema.LoadValueType,
+			staticType: PrimitiveStaticTypeLoadValue,
+		},
+		{
+			name:       "CopyValue",
+			semaType:   sema.CopyValueType,
+			staticType: PrimitiveStaticTypeCopyValue,
+		},
+		{
+			name:       "BorrowValue",
+			semaType:   sema.BorrowValueType,
+			staticType: PrimitiveStaticTypeBorrowValue,
+		},
+		{
+			name:       "Contracts",
+			semaType:   sema.ContractsType,
+			staticType: PrimitiveStaticTypeContracts,
+		},
+		{
+			name:       "AddContract",
+			semaType:   sema.AddContractType,
+			staticType: PrimitiveStaticTypeAddContract,
+		},
+		{
+			name:       "UpdateContract",
+			semaType:   sema.UpdateContractType,
+			staticType: PrimitiveStaticTypeUpdateContract,
+		},
+		{
+			name:       "RemoveContract",
+			semaType:   sema.RemoveContractType,
+			staticType: PrimitiveStaticTypeRemoveContract,
+		},
+		{
+			name:       "Keys",
+			semaType:   sema.KeysType,
+			staticType: PrimitiveStaticTypeKeys,
+		},
+		{
+			name:       "AddKey",
+			semaType:   sema.AddKeyType,
+			staticType: PrimitiveStaticTypeAddKey,
+		},
+		{
+			name:       "RevokeKey",
+			semaType:   sema.RevokeKeyType,
+			staticType: PrimitiveStaticTypeRevokeKey,
+		},
+		{
+			name:       "Inbox",
+			semaType:   sema.InboxType,
+			staticType: PrimitiveStaticTypeInbox,
+		},
+		{
+			name:       "PublishInboxCapability",
+			semaType:   sema.PublishInboxCapabilityType,
+			staticType: PrimitiveStaticTypePublishInboxCapability,
+		},
+		{
+			name:       "UnpublishInboxCapability",
+			semaType:   sema.UnpublishInboxCapabilityType,
+			staticType: PrimitiveStaticTypeUnpublishInboxCapability,
+		},
+		{
+			name:       "ClaimInboxCapability",
+			semaType:   sema.ClaimInboxCapabilityType,
+			staticType: PrimitiveStaticTypeClaimInboxCapability,
+		},
+		{
+			name:       "Capabilities",
+			semaType:   sema.CapabilitiesType,
+			staticType: PrimitiveStaticTypeCapabilities,
+		},
+		{
+			name:       "StorageCapabilities",
+			semaType:   sema.StorageCapabilitiesType,
+			staticType: PrimitiveStaticTypeStorageCapabilities,
+		},
+		{
+			name:       "AccountCapabilities",
+			semaType:   sema.AccountCapabilitiesType,
+			staticType: PrimitiveStaticTypeAccountCapabilities,
+		},
+		{
+			name:       "PublishCapability",
+			semaType:   sema.PublishCapabilityType,
+			staticType: PrimitiveStaticTypePublishCapability,
+		},
+		{
+			name:       "UnpublishCapability",
+			semaType:   sema.UnpublishCapabilityType,
+			staticType: PrimitiveStaticTypeUnpublishCapability,
+		},
+		{
+			name:       "GetStorageCapabilityController",
+			semaType:   sema.GetStorageCapabilityControllerType,
+			staticType: PrimitiveStaticTypeGetStorageCapabilityController,
+		},
+		{
+			name:       "IssueStorageCapabilityController",
+			semaType:   sema.IssueStorageCapabilityControllerType,
+			staticType: PrimitiveStaticTypeIssueStorageCapabilityController,
+		},
+		{
+			name:       "GetAccountCapabilityController",
+			semaType:   sema.GetAccountCapabilityControllerType,
+			staticType: PrimitiveStaticTypeGetAccountCapabilityController,
+		},
+		{
+			name:       "IssueAccountCapabilityController",
+			semaType:   sema.IssueAccountCapabilityControllerType,
+			staticType: PrimitiveStaticTypeIssueAccountCapabilityController,
+		},
+		{
+			name:       "CapabilitiesMapping",
+			semaType:   sema.CapabilitiesMappingType,
+			staticType: PrimitiveStaticTypeCapabilitiesMapping,
+		},
+		{
+			name:       "AccountMapping",
+			semaType:   sema.AccountMappingType,
+			staticType: PrimitiveStaticTypeAccountMapping,
+		},
+		{
+			name:       "Identity",
+			semaType:   sema.IdentityType,
+			staticType: PrimitiveStaticTypeIdentity,
 		},
 
 		{
@@ -1273,7 +1425,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType: &sema.CapabilityType{
 				BorrowType: sema.IntType,
 			},
-			staticType: CapabilityStaticType{
+			staticType: &CapabilityStaticType{
 				BorrowType: PrimitiveStaticTypeInt,
 			},
 		},
@@ -1283,7 +1435,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType: &sema.VariableSizedType{
 				Type: sema.IntType,
 			},
-			staticType: VariableSizedStaticType{
+			staticType: &VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
 		},
@@ -1293,7 +1445,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				Type: sema.IntType,
 				Size: 42,
 			},
-			staticType: ConstantSizedStaticType{
+			staticType: &ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 				Size: 42,
 			},
@@ -1303,7 +1455,7 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType: &sema.OptionalType{
 				Type: sema.IntType,
 			},
-			staticType: OptionalStaticType{
+			staticType: &OptionalStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
 		},
@@ -1313,7 +1465,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				Type:          sema.IntType,
 				Authorization: sema.UnauthorizedAccess,
 			},
-			staticType: ReferenceStaticType{
+			staticType: &ReferenceStaticType{
 				ReferencedType: PrimitiveStaticTypeInt,
 				Authorization:  UnauthorizedAccess,
 			},
@@ -1324,7 +1476,7 @@ func TestStaticTypeConversion(t *testing.T) {
 				KeyType:   sema.IntType,
 				ValueType: sema.StringType,
 			},
-			staticType: DictionaryStaticType{
+			staticType: &DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeInt,
 				ValueType: PrimitiveStaticTypeString,
 			},
@@ -1337,11 +1489,16 @@ func TestStaticTypeConversion(t *testing.T) {
 				},
 			},
 			staticType: &IntersectionStaticType{
-				Types: []InterfaceStaticType{
+				Types: []*InterfaceStaticType{
 					testInterfaceStaticType,
 				},
 			},
-			getInterface: func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+			getInterface: func(
+				t *testing.T,
+				location common.Location,
+				qualifiedIdentifier string,
+				typeID TypeID,
+			) (*sema.InterfaceType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testInterfaceQualifiedIdentifier, qualifiedIdentifier)
 				return testInterfaceSemaType, nil
@@ -1351,7 +1508,12 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "Interface",
 			semaType:   testInterfaceSemaType,
 			staticType: testInterfaceStaticType,
-			getInterface: func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
+			getInterface: func(
+				t *testing.T,
+				location common.Location,
+				qualifiedIdentifier string,
+				typeID TypeID,
+			) (*sema.InterfaceType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testInterfaceQualifiedIdentifier, qualifiedIdentifier)
 				return testInterfaceSemaType, nil
@@ -1361,7 +1523,12 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "Composite",
 			semaType:   testCompositeSemaType,
 			staticType: testCompositeStaticType,
-			getComposite: func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
+			getComposite: func(
+				t *testing.T,
+				location common.Location,
+				qualifiedIdentifier string,
+				typeID TypeID,
+			) (*sema.CompositeType, error) {
 				require.Equal(t, testLocation, location)
 				require.Equal(t, testCompositeQualifiedIdentifier, qualifiedIdentifier)
 				return testCompositeSemaType, nil
@@ -1374,24 +1541,95 @@ func TestStaticTypeConversion(t *testing.T) {
 				Type: testFunctionType,
 			},
 		},
+
+		// Deprecated primitive static types, only exist for migration purposes
+		{
+			name:       "AuthAccount",
+			semaType:   nil,
+			staticType: PrimitiveStaticTypeAuthAccount,
+		},
+		{
+			name:       "PublicAccount",
+			semaType:   nil,
+			staticType: PrimitiveStaticTypePublicAccount,
+		},
+		{
+			name:       "AuthAccount.Contracts",
+			staticType: PrimitiveStaticTypeAuthAccountContracts,
+			semaType:   nil,
+		},
+		{
+			name:       "PublicAccount.Contracts",
+			staticType: PrimitiveStaticTypePublicAccountContracts,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccount.Keys",
+			staticType: PrimitiveStaticTypeAuthAccountKeys,
+			semaType:   nil,
+		},
+		{
+			name:       "PublicAccount.Keys",
+			staticType: PrimitiveStaticTypePublicAccountKeys,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccount.Inbox",
+			staticType: PrimitiveStaticTypeAuthAccountInbox,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccount.StorageCapabilities",
+			staticType: PrimitiveStaticTypeAuthAccountStorageCapabilities,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccount.AccountCapabilities",
+			staticType: PrimitiveStaticTypeAuthAccountAccountCapabilities,
+			semaType:   nil,
+		},
+		{
+			name:       "AuthAccount.Capabilities",
+			staticType: PrimitiveStaticTypeAuthAccountCapabilities,
+			semaType:   nil,
+		},
+		{
+			name:       "PublicAccount.Capabilities",
+			staticType: PrimitiveStaticTypePublicAccountCapabilities,
+			semaType:   nil,
+		},
+		{
+			name:       "AccountKey",
+			staticType: PrimitiveStaticTypeAccountKey,
+			semaType:   nil,
+		},
 	}
 
-	for _, test := range tests {
+	test := func(test testCase) {
 		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
 
 			// Test sema to static
 
-			convertedStaticType := ConvertSemaToStaticType(nil, test.semaType)
-			require.Equal(t,
-				test.staticType,
-				convertedStaticType,
-			)
+			if test.semaType != nil {
+				convertedStaticType := ConvertSemaToStaticType(nil, test.semaType)
+				require.Equal(t,
+					test.staticType,
+					convertedStaticType,
+				)
+			}
 
 			// Test static to sema
 
 			getInterface := test.getInterface
 			if getInterface == nil {
-				getInterface = func(_ common.Location, _ string) (*sema.InterfaceType, error) {
+				getInterface = func(
+					_ *testing.T,
+					_ common.Location,
+					_ string,
+					_ TypeID,
+				) (*sema.InterfaceType, error) {
 					require.FailNow(t, "getInterface should not be called")
 					return nil, nil
 				}
@@ -1399,7 +1637,12 @@ func TestStaticTypeConversion(t *testing.T) {
 
 			getComposite := test.getComposite
 			if getComposite == nil {
-				getComposite = func(_ common.Location, _ string, _ common.TypeID) (*sema.CompositeType, error) {
+				getComposite = func(
+					_ *testing.T,
+					_ common.Location,
+					_ string,
+					_ TypeID,
+				) (*sema.CompositeType, error) {
 					require.FailNow(t, "getComposite should not be called")
 					return nil, nil
 				}
@@ -1418,8 +1661,12 @@ func TestStaticTypeConversion(t *testing.T) {
 			convertedSemaType, err := ConvertStaticToSemaType(
 				nil,
 				test.staticType,
-				getInterface,
-				getComposite,
+				func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error) {
+					return getInterface(t, location, qualifiedIdentifier, typeID)
+				},
+				func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
+					return getComposite(t, location, qualifiedIdentifier, typeID)
+				},
 				getEntitlement,
 				getEntitlementMap,
 			)
@@ -1430,4 +1677,612 @@ func TestStaticTypeConversion(t *testing.T) {
 			)
 		})
 	}
+
+	testedStaticTypes := map[StaticType]struct{}{}
+
+	for _, testCase := range tests {
+		testedStaticTypes[testCase.staticType] = struct{}{}
+		test(testCase)
+	}
+
+	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+		if _, ok := testedStaticTypes[ty]; !ok {
+			t.Errorf("missing test case for primitive static type %s", ty)
+		}
+	}
+
+}
+
+func TestIntersectionStaticType_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level, single", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionStaticType(
+			nil,
+			[]*InterfaceStaticType{
+				NewInterfaceStaticTypeComputeTypeID(
+					nil,
+					testLocation,
+					"I",
+				),
+			},
+		)
+		assert.Equal(t,
+			TypeID("{S.test.I}"),
+			intersectionType.ID(),
+		)
+	})
+
+	t.Run("top-level, two", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionStaticType(
+			nil,
+			[]*InterfaceStaticType{
+				// NOTE: order
+				NewInterfaceStaticTypeComputeTypeID(
+					nil,
+					testLocation,
+					"I2",
+				),
+				NewInterfaceStaticTypeComputeTypeID(
+					nil,
+					testLocation,
+					"I1",
+				),
+			},
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("{S.test.I1,S.test.I2}"),
+			intersectionType.ID(),
+		)
+	})
+
+	t.Run("nested, two", func(t *testing.T) {
+		t.Parallel()
+
+		interfaceType1 := NewInterfaceStaticTypeComputeTypeID(
+			nil,
+			testLocation,
+			"C.I1",
+		)
+
+		interfaceType2 := NewInterfaceStaticTypeComputeTypeID(
+			nil,
+			testLocation,
+			"C.I2",
+		)
+
+		intersectionType := NewIntersectionStaticType(
+			nil,
+			[]*InterfaceStaticType{
+				// NOTE: order
+				interfaceType2,
+				interfaceType1,
+			},
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("{S.test.C.I1,S.test.C.I2}"),
+			intersectionType.ID(),
+		)
+	})
+}
+
+func TestIntersectionStaticType_String(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level, single", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionStaticType(
+			nil,
+			[]*InterfaceStaticType{
+				NewInterfaceStaticTypeComputeTypeID(
+					nil,
+					testLocation,
+					"I",
+				),
+			},
+		)
+		assert.Equal(t,
+			"{S.test.I}",
+			intersectionType.String(),
+		)
+	})
+
+	t.Run("top-level, two", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionStaticType(
+			nil,
+			[]*InterfaceStaticType{
+				// NOTE: order
+				NewInterfaceStaticTypeComputeTypeID(
+					nil,
+					testLocation,
+					"I2",
+				),
+				NewInterfaceStaticTypeComputeTypeID(
+					nil,
+					testLocation,
+					"I1",
+				),
+			},
+		)
+		// NOTE: order
+		assert.Equal(t,
+			"{S.test.I2, S.test.I1}",
+			intersectionType.String(),
+		)
+	})
+}
+
+func TestEntitlementMapAuthorization_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "M")
+		authorization := NewEntitlementMapAuthorization(nil, mapTypeID)
+		assert.Equal(t, TypeID("S.test.M"), authorization.ID())
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "C.M")
+		authorization := NewEntitlementMapAuthorization(nil, mapTypeID)
+		assert.Equal(t, TypeID("S.test.C.M"), authorization.ID())
+	})
+}
+
+func TestEntitlementMapAuthorization_String(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "M")
+		authorization := NewEntitlementMapAuthorization(nil, mapTypeID)
+		assert.Equal(t, "auth(S.test.M) ", authorization.String())
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "C.M")
+		authorization := NewEntitlementMapAuthorization(nil, mapTypeID)
+		assert.Equal(t, "auth(S.test.C.M) ", authorization.String())
+	})
+}
+
+func TestEntitlementSetAuthorization_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("single", func(t *testing.T) {
+		t.Parallel()
+
+		authorization := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					testLocation.TypeID(nil, "E"),
+				}
+			},
+			1,
+			sema.Conjunction,
+		)
+		assert.Equal(t,
+			TypeID("S.test.E"),
+			authorization.ID(),
+		)
+	})
+
+	t.Run("two, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "E2"),
+					testLocation.TypeID(nil, "E1"),
+				}
+			},
+			2,
+			sema.Conjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("S.test.E1,S.test.E2"),
+			access.ID(),
+		)
+	})
+
+	t.Run("two, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "E2"),
+					testLocation.TypeID(nil, "E1"),
+				}
+			},
+			2,
+			sema.Disjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("S.test.E1|S.test.E2"),
+			access.ID(),
+		)
+	})
+
+	t.Run("three, nested, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "C.E3"),
+					testLocation.TypeID(nil, "C.E2"),
+					testLocation.TypeID(nil, "C.E1"),
+				}
+			},
+			3,
+			sema.Conjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("S.test.C.E1,S.test.C.E2,S.test.C.E3"),
+			access.ID(),
+		)
+	})
+
+	t.Run("three, nested, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "C.E3"),
+					testLocation.TypeID(nil, "C.E2"),
+					testLocation.TypeID(nil, "C.E1"),
+				}
+			},
+			3,
+			sema.Disjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("S.test.C.E1|S.test.C.E2|S.test.C.E3"),
+			access.ID(),
+		)
+	})
+}
+
+func TestEntitlementSetAuthorization_String(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("single", func(t *testing.T) {
+		t.Parallel()
+
+		authorization := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					testLocation.TypeID(nil, "E"),
+				}
+			},
+			1,
+			sema.Conjunction,
+		)
+		assert.Equal(t,
+			"auth(S.test.E) ",
+			authorization.String(),
+		)
+	})
+
+	t.Run("two, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		authorization := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "E2"),
+					testLocation.TypeID(nil, "E1"),
+				}
+			},
+			2,
+			sema.Conjunction,
+		)
+		// NOTE: order
+		assert.Equal(t,
+			"auth(S.test.E2, S.test.E1) ",
+			authorization.String(),
+		)
+	})
+
+	t.Run("two, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		authorization := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "E2"),
+					testLocation.TypeID(nil, "E1"),
+				}
+			},
+			2,
+			sema.Disjunction,
+		)
+		// NOTE: order
+		assert.Equal(
+			t,
+			"auth(S.test.E2 | S.test.E1) ",
+			authorization.String(),
+		)
+	})
+
+	t.Run("three, nested, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		authorization := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "C.E3"),
+					testLocation.TypeID(nil, "C.E2"),
+					testLocation.TypeID(nil, "C.E1"),
+				}
+			},
+			3,
+			sema.Conjunction,
+		)
+		// NOTE: order
+		assert.Equal(
+			t,
+			"auth(S.test.C.E3, S.test.C.E2, S.test.C.E1) ",
+			authorization.String(),
+		)
+	})
+
+	t.Run("three, nested, disjunction", func(t *testing.T) {
+		t.Parallel()
+		authorization := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "C.E3"),
+					testLocation.TypeID(nil, "C.E2"),
+					testLocation.TypeID(nil, "C.E1"),
+				}
+			},
+			3,
+			sema.Disjunction,
+		)
+		// NOTE: order
+		assert.Equal(
+			t,
+			"auth(S.test.C.E3 | S.test.C.E2 | S.test.C.E1) ",
+			authorization.String(),
+		)
+	})
+}
+
+func TestReferenceStaticType_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level, unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		referenceType := NewReferenceStaticType(nil, UnauthorizedAccess, PrimitiveStaticTypeInt)
+		assert.Equal(t,
+			TypeID("&Int"),
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("top-level, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "M")
+		access := NewEntitlementMapAuthorization(nil, mapTypeID)
+
+		referenceType := NewReferenceStaticType(nil, access, PrimitiveStaticTypeInt)
+		assert.Equal(t,
+			TypeID("auth(S.test.M)&Int"),
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("top-level, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "E2"),
+					testLocation.TypeID(nil, "E1"),
+				}
+			},
+			2,
+			sema.Conjunction,
+		)
+
+		referenceType := NewReferenceStaticType(nil, access, PrimitiveStaticTypeInt)
+
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("auth(S.test.E1,S.test.E2)&Int"),
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("nested, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "C.M")
+		access := NewEntitlementMapAuthorization(nil, mapTypeID)
+
+		referenceType := NewReferenceStaticType(nil, access, PrimitiveStaticTypeInt)
+		assert.Equal(t,
+			TypeID("auth(S.test.C.M)&Int"),
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("nested, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "C.E2"),
+					testLocation.TypeID(nil, "C.E1"),
+				}
+			},
+			2,
+			sema.Conjunction,
+		)
+
+		referenceType := NewReferenceStaticType(nil, access, PrimitiveStaticTypeInt)
+
+		// NOTE: sorted
+		assert.Equal(t,
+			TypeID("auth(S.test.C.E1,S.test.C.E2)&Int"),
+			referenceType.ID(),
+		)
+	})
+}
+
+func TestReferenceStaticType_String(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		referenceType := NewReferenceStaticType(nil, UnauthorizedAccess, PrimitiveStaticTypeInt)
+		assert.Equal(t, "&Int", referenceType.String())
+	})
+
+	t.Run("top-level, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "M")
+		access := NewEntitlementMapAuthorization(nil, mapTypeID)
+
+		referenceType := NewReferenceStaticType(nil, access, PrimitiveStaticTypeInt)
+
+		assert.Equal(t,
+			"auth(S.test.M) &Int",
+			referenceType.String(),
+		)
+	})
+
+	t.Run("top-level, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "E2"),
+					testLocation.TypeID(nil, "E1"),
+				}
+			},
+			2,
+			sema.Conjunction,
+		)
+
+		referenceType := NewReferenceStaticType(nil, access, PrimitiveStaticTypeInt)
+
+		// NOTE: order
+		assert.Equal(t,
+			"auth(S.test.E2, S.test.E1) &Int",
+			referenceType.String(),
+		)
+	})
+
+	t.Run("nested, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "C.M")
+		access := NewEntitlementMapAuthorization(nil, mapTypeID)
+
+		referenceType := NewReferenceStaticType(nil, access, PrimitiveStaticTypeInt)
+
+		assert.Equal(t,
+			"auth(S.test.C.M) &Int",
+			referenceType.String(),
+		)
+	})
+
+	t.Run("nested, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			func() []TypeID {
+				return []TypeID{
+					// NOTE: order
+					testLocation.TypeID(nil, "C.E2"),
+					testLocation.TypeID(nil, "C.E1"),
+				}
+			},
+			2,
+			sema.Conjunction,
+		)
+
+		referenceType := NewReferenceStaticType(nil, access, PrimitiveStaticTypeInt)
+
+		// NOTE: order
+		assert.Equal(t,
+			"auth(S.test.C.E2, S.test.C.E1) &Int",
+			referenceType.String(),
+		)
+	})
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/hex"
@@ -27,8 +27,10 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -360,13 +362,13 @@ access(all) contract FlowToken: FungibleToken {
         }
     }
 
-    init(adminAccount: AuthAccount) {
+    init(adminAccount: auth(Storage, Capabilities) &Account) {
         self.totalSupply = 0.0
 
         // Create the Vault with the total supply of tokens and save it in storage
         //
         let vault <- create Vault(balance: self.totalSupply)
-        adminAccount.save(<-vault, to: /storage/flowTokenVault)
+        adminAccount.storage.save(<-vault, to: /storage/flowTokenVault)
 
         // Create a public capability to the stored Vault that only exposes
         // the 'deposit' method through the 'Receiver' interface
@@ -383,7 +385,7 @@ access(all) contract FlowToken: FungibleToken {
         adminAccount.capabilities.publish(balanceCap, at: /public/flowTokenBalance)
 
         let admin <- create Administrator()
-        adminAccount.save(<-admin, to: /storage/flowTokenAdmin)
+        adminAccount.storage.save(<-admin, to: /storage/flowTokenAdmin)
 
         // Emit an event that shows that the contract was initialized
         emit TokensInitialized(initialSupply: self.totalSupply)
@@ -397,11 +399,11 @@ import FlowToken from 0x1
 
 transaction {
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
 
-        if signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
+        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
             // Create a new flowToken Vault and put it in storage
-            signer.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
+            signer.storage.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
 
             // Create a public capability to the Vault that only exposes
             // the deposit function through the Receiver interface
@@ -429,7 +431,7 @@ transaction(recipient: Address, amount: UFix64) {
     let tokenAdmin: &FlowToken.Administrator
     let tokenReceiver: &{FungibleToken.Receiver}
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
         self.tokenAdmin = signer
             .borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
             ?? panic("Signer is not the token admin")
@@ -460,10 +462,10 @@ transaction(amount: UFix64, to: Address) {
     // The Vault resource that holds the tokens that are being transferred
     let sentVault: @{FungibleToken.Vault}
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
 
         // Get a reference to the signer's stored vault
-        let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+        let vaultRef = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
 			?? panic("Could not borrow reference to the owner's Vault!")
 
         // Withdraw tokens from the signer's stored vault
@@ -501,7 +503,7 @@ access(all) fun main(account: Address): UFix64 {
 
 func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
@@ -513,34 +515,34 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	signerAccount := contractsAddress
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(b),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		return json.Decode(runtimeInterface, b)
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
 	}
 
 	environment := NewBaseInterpreterEnvironment(Config{})
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy Fungible Token contract
 
@@ -567,7 +569,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				`
                   transaction {
 
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: &Account) {
                           signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
                       }
                   }
@@ -665,7 +667,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	sum := interpreter.NewUnmeteredUFix64ValueWithInteger(0, interpreter.EmptyLocationRange)
 
-	inter := newTestInterpreter(b)
+	inter := NewTestInterpreter(b)
 
 	for _, address := range []common.Address{
 		senderAddress,

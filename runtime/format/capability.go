@@ -22,7 +22,7 @@ import (
 	"fmt"
 )
 
-func IDCapability(borrowType string, address string, id string) string {
+func Capability(borrowType string, address string, id string) string {
 	return fmt.Sprintf(
 		"Capability<%s>(address: %s, id: %s)",
 		borrowType,
