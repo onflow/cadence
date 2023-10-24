@@ -265,6 +265,9 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagSomeValue:
 			storable, err = d.decodeSome()
 
+		case CBORTagSomeValueWithNestedLevels:
+			storable, err = d.decodeSomeWithNestedLevels()
+
 		case CBORTagAddressValue:
 			storable, err = d.decodeAddress()
 
@@ -863,6 +866,59 @@ func (d StorableDecoder) decodeSome() (SomeStorable, error) {
 		gauge:    d.memoryGauge,
 		Storable: storable,
 	}, nil
+}
+
+func (d StorableDecoder) decodeSomeWithNestedLevels() (SomeStorable, error) {
+	count, err := d.decoder.DecodeArrayHead()
+	if err != nil {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid some value with nested levels encoding: %w",
+			err,
+		)
+	}
+
+	if count != someStorableWithMultipleNestedLevelsArrayCount {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid array count for some value with nested levels encoding: got %d, expect %d",
+			count, someStorableWithMultipleNestedLevelsArrayCount,
+		)
+	}
+
+	nestedLevels, err := d.decoder.DecodeUint64()
+	if err != nil {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid nested levels for some value with nested levels encoding: %w",
+			err,
+		)
+	}
+
+	if nestedLevels == 1 {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid nested levels for some value with nested levels encoding: got %d, expect > 1",
+			nestedLevels,
+		)
+	}
+
+	innermostStorable, err := d.decodeStorable()
+	if err != nil {
+		return SomeStorable{}, errors.NewUnexpectedError(
+			"invalid innermost value for some value with nested levels encoding: %w",
+			err,
+		)
+	}
+
+	storable := SomeStorable{
+		gauge:    d.memoryGauge,
+		Storable: innermostStorable,
+	}
+	for i := 1; i < int(nestedLevels); i++ {
+		storable = SomeStorable{
+			gauge:    d.memoryGauge,
+			Storable: storable,
+		}
+	}
+
+	return storable, nil
 }
 
 func checkEncodedAddressLength(actualLength int) error {

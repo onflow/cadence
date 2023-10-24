@@ -2769,7 +2769,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("nil", func(t *testing.T) {
+	t.Run("SomeValue{nil}", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2786,31 +2786,53 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		)
 	})
 
-	t.Run("string", func(t *testing.T) {
-		t.Parallel()
+	t.Run("SomeValue{SomeValue{nil}}", func(t *testing.T) {
 
-		expectedString := NewUnmeteredStringValue("test")
+		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewUnmeteredSomeValueNonCopying(expectedString),
+				value: NewUnmeteredSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(Nil)),
 				encoded: []byte{
 					// tag
-					0xd8, CBORTagSomeValue,
-
-					// tag
-					0xd8, CBORTagStringValue,
-
-					// UTF-8 string, length 4
-					0x64,
-					// t, e, s, t
-					0x74, 0x65, 0x73, 0x74,
+					0xd8, CBORTagSomeValueWithNestedLevels,
+					// array of 2 elements
+					0x82,
+					// nested levels: 2
+					0x02,
+					// null
+					0xf6,
 				},
 			},
 		)
 	})
 
-	t.Run("bool", func(t *testing.T) {
+	t.Run("SomeValue{SomeValue{SomeValue{nil}}}", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(
+						NewUnmeteredSomeValueNonCopying(
+							Nil))),
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValueWithNestedLevels,
+					// array of 2 elements
+					0x82,
+					// nested levels: 3
+					0x03,
+					// null
+					0xf6,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{bool}", func(t *testing.T) {
 		t.Parallel()
 
 		testEncodeDecode(t,
@@ -2826,20 +2848,145 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		)
 	})
 
-	t.Run("larger than max inline size", func(t *testing.T) {
+	t.Run("SomeValue{SomeValue{bool}}", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(
+						TrueValue)),
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValueWithNestedLevels,
+					// array of 2 elements
+					0x82,
+					// nested levels: 2
+					0x02,
+					// true
+					0xf5,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{SomeValue{SomeValue{bool}}}", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(
+						NewUnmeteredSomeValueNonCopying(
+							TrueValue))),
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValueWithNestedLevels,
+					// array of 2 elements
+					0x82,
+					// nested levels: 3
+					0x03,
+					// true
+					0xf5,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{string}", func(t *testing.T) {
+		t.Parallel()
+
+		expectedString := NewUnmeteredStringValue("test")
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredSomeValueNonCopying(expectedString),
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValue,
+					// tag
+					0xd8, CBORTagStringValue,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{SomeValue{string}}", func(t *testing.T) {
+		t.Parallel()
+
+		expectedString := NewUnmeteredStringValue("test")
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(
+						expectedString)),
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValueWithNestedLevels,
+					// array of 2 elements
+					0x82,
+					// nested levels: 2
+					0x02,
+					// tag
+					0xd8, CBORTagStringValue,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{SomeValue{SomeValue{string}}}", func(t *testing.T) {
+		t.Parallel()
+
+		expectedString := NewUnmeteredStringValue("test")
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredSomeValueNonCopying(
+					NewUnmeteredSomeValueNonCopying(
+						NewUnmeteredSomeValueNonCopying(
+							expectedString))),
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValueWithNestedLevels,
+					// array of 2 elements
+					0x82,
+					// nested levels: 3
+					0x03,
+					// tag
+					0xd8, CBORTagStringValue,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{large_inlined_string}", func(t *testing.T) {
 
 		t.Parallel()
 
-		// Generate a strings that has an encoding size just below the max inline element size.
-		// It will not get inlined, but the outer value will
+		const (
+			cborTagSize = 2
+		)
 
 		var str *StringValue
-		maxInlineElementSize := atree.MaxInlineArrayElementSize()
+		maxInlineElementSize := uint64(64) // use a small max inline size for testing
 		for i := uint64(0); i < maxInlineElementSize; i++ {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
-			if uint64(size) == maxInlineElementSize-1 {
+			if uint64(size) < maxInlineElementSize-cborTagSize {
 				break
 			}
 		}
@@ -2852,16 +2999,75 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				maxInlineElementSize: maxInlineElementSize,
 				encoded: []byte{
 					// tag
-					0xd8, atree.CBORTagSlabID,
-
-					// storage ID
-					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+					0xd8, CBORTagSomeValue,
+					// tag
+					0xd8, CBORTagStringValue,
+					// text string (57 bytes)
+					0x78, 0x39,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78,
 				},
 			},
 		)
 	})
 
-	t.Run("inner path stored separately", func(t *testing.T) {
+	t.Run("SomeValue{SomeValue{large_inlined_string}}", func(t *testing.T) {
+
+		t.Parallel()
+
+		const (
+			cborTagSize      = 2
+			arraySize        = 1
+			nestedLevelsSize = 1
+		)
+
+		var str *StringValue
+		maxInlineElementSize := uint64(64) // use a small max inline size for testing
+		for i := uint64(0); i < maxInlineElementSize; i++ {
+			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
+			size, err := StorableSize(str)
+			require.NoError(t, err)
+			if uint64(size) < maxInlineElementSize-cborTagSize-arraySize-nestedLevelsSize {
+				break
+			}
+		}
+
+		expected := NewUnmeteredSomeValueNonCopying(NewUnmeteredSomeValueNonCopying(str))
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValueWithNestedLevels,
+					// array of 2 elements
+					0x82,
+					// nested levels: 2
+					0x02,
+					// tag
+					0xd8, CBORTagStringValue,
+					// text string (55 bytes)
+					0x78, 0x37,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+					0x78, 0x78, 0x78, 0x78, 0x78, 0x78, 0x78,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{large_string_stored_separately}", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2887,6 +3093,236 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
+					// value
+					0xd8, atree.CBORTagSlabID,
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{SomeValue{large_string_stored_separately}}", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Generate a string that has an encoding size just above the max inline element size
+
+		var str *StringValue
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
+		for i := uint64(0); i < maxInlineElementSize; i++ {
+			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
+			size, err := StorableSize(str)
+			require.NoError(t, err)
+			if uint64(size) == maxInlineElementSize+1 {
+				break
+			}
+		}
+
+		expected := NewUnmeteredSomeValueNonCopying(NewUnmeteredSomeValueNonCopying(str))
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValueWithNestedLevels,
+					// array of 2 elements
+					0x82,
+					// nested levels
+					0x02,
+					// value
+					0xd8, atree.CBORTagSlabID,
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{inlined_array}", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		expected := NewUnmeteredSomeValueNonCopying(
+			NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				ConstantSizedStaticType{
+					Type: PrimitiveStaticTypeAnyStruct,
+					Size: 0,
+				},
+				testOwner,
+			))
+
+		expectedEncoded := []byte{
+			// tag
+			0xd8, CBORTagSomeValue,
+
+			// tag
+			0xd8, atree.CBORTagInlinedArray,
+
+			// array of 3 elements
+			0x83,
+
+			// extra data index (extra data is encoded in slab header, not here)
+			0x18, 0x00,
+
+			// inlined array slab index
+			0x48, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+
+			// inlined array of 0 elements
+			0x99, 0x00, 0x00,
+		}
+
+		// Only test encoding here because decoding requires extra data section which is encoded in slab header.
+
+		storage := newUnmeteredInMemoryStorage()
+		storable, err := expected.Storable(
+			storage,
+			atree.Address(testOwner),
+			atree.MaxInlineArrayElementSize(),
+		)
+		require.NoError(t, err)
+
+		encoded, err := encodeStorable(storable, CBOREncMode)
+		require.NoError(t, err)
+		AssertEqualWithDiff(t, expectedEncoded, encoded)
+	})
+
+	t.Run("SomeValue{SomeValue{inlined_array}}", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		expected := NewUnmeteredSomeValueNonCopying(
+			NewUnmeteredSomeValueNonCopying(
+				NewArrayValue(
+					inter,
+					EmptyLocationRange,
+					ConstantSizedStaticType{
+						Type: PrimitiveStaticTypeAnyStruct,
+						Size: 0,
+					},
+					testOwner,
+				)))
+
+		expectedEncoded := []byte{
+			// tag
+			0xd8, CBORTagSomeValueWithNestedLevels,
+
+			// array of 2 elements
+			0x82,
+
+			// nested levels: 2
+			0x02,
+
+			// tag
+			0xd8, atree.CBORTagInlinedArray,
+
+			// array of 3 elements
+			0x83,
+
+			// extra data index (extra data section is encoded in slab header, not here)
+			0x18, 0x00,
+
+			// inlined array slab index
+			0x48, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+
+			// inlined array of 0 elements
+			0x99, 0x00, 0x00,
+		}
+
+		// Only test encoding here because decoding requires extra data section which is encoded in slab header.
+
+		storage := newUnmeteredInMemoryStorage()
+		storable, err := expected.Storable(
+			storage,
+			atree.Address(testOwner),
+			atree.MaxInlineArrayElementSize(),
+		)
+		require.NoError(t, err)
+
+		encoded, err := encodeStorable(storable, CBOREncMode)
+		require.NoError(t, err)
+		AssertEqualWithDiff(t, expectedEncoded, encoded)
+	})
+
+	t.Run("SomeValue{large_array_stored_separately}", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
+
+		expectedArray :=
+			NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				ConstantSizedStaticType{
+					Type: PrimitiveStaticTypeAnyStruct,
+					Size: 0,
+				},
+				testOwner,
+				NewUnmeteredStringValue(strings.Repeat("a", int(maxInlineElementSize/2))),
+				NewUnmeteredStringValue(strings.Repeat("b", int(maxInlineElementSize/2))),
+			)
+
+		expected := NewUnmeteredSomeValueNonCopying(expectedArray)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				storage:              inter.Storage(),
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValue,
+					// value
+					0xd8, atree.CBORTagSlabID,
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+
+	t.Run("SomeValue{SomeValue{large_array_stored_separately}}", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		maxInlineElementSize := atree.MaxInlineArrayElementSize()
+
+		expectedArray :=
+			NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				ConstantSizedStaticType{
+					Type: PrimitiveStaticTypeAnyStruct,
+					Size: 0,
+				},
+				testOwner,
+				NewUnmeteredStringValue(strings.Repeat("a", int(maxInlineElementSize/2))),
+				NewUnmeteredStringValue(strings.Repeat("b", int(maxInlineElementSize/2))),
+			)
+
+		expected := NewUnmeteredSomeValueNonCopying(NewUnmeteredSomeValueNonCopying(expectedArray))
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				storage:              inter.Storage(),
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValueWithNestedLevels,
+					// array of 2 elements
+					0x82,
+					// nested levels: 2
+					0x02,
 					// value
 					0xd8, atree.CBORTagSlabID,
 					// storage ID

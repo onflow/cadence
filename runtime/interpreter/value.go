@@ -19443,9 +19443,25 @@ func (v *SomeValue) Storable(
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
 
+	// SomeStorable returned from this function can be encoded in two ways:
+	// - if innermost value is too large, innermost value is encoded in a separate slab
+	//   while SomeStorable wrapper is encoded inline with reference to slab containing
+	//   innermost value.
+	// - otherwise, SomeStorable with innermost value is encoded inline.
+	// The above applies to both immutable innermost value (such as StringValue),
+	// and mutable innermost value (such as ArrayValue).
+
 	if v.valueStorable == nil {
-		var err error
-		v.valueStorable, err = v.value.Storable(
+
+		innermostValue, nestedLevels := v.getInnermostValue()
+
+		someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
+
+		// Reduce maxInlineSize for innermost value to make sure
+		// that SomeStorable wrapper is always encoded inline.
+		maxInlineSize -= uint64(someStorableEncodedPrefixSize)
+
+		innermostValueStorable, err := innermostValue.Storable(
 			storage,
 			address,
 			maxInlineSize,
@@ -19453,16 +19469,38 @@ func (v *SomeValue) Storable(
 		if err != nil {
 			return nil, err
 		}
+
+		valueStorable := innermostValueStorable
+		for i := 1; i < int(nestedLevels); i++ {
+			valueStorable = SomeStorable{
+				Storable: valueStorable,
+			}
+		}
+		v.valueStorable = valueStorable
 	}
 
-	return maybeLargeImmutableStorable(
-		SomeStorable{
-			Storable: v.valueStorable,
-		},
-		storage,
-		address,
-		maxInlineSize,
-	)
+	// No need to call maybeLargeImmutableStorable() here for SomeStorable because:
+	// - encoded SomeStorable size = someStorableEncodedPrefixSize + innermost storable size
+	// - innermost storable size < maxInlineSize - someStorableEncodedPrefixSize
+	return SomeStorable{
+		Storable: v.valueStorable,
+	}, nil
+}
+
+// getInnermostValue returns innermost value of SomeValue and nested levels.
+// For example, SomeValue{true} has innermost value true, and nested levels 1.
+func (v *SomeValue) getInnermostValue() (atree.Value, uint64) {
+	nestedLevels := uint64(1)
+	for {
+		switch value := v.value.(type) {
+		case *SomeValue:
+			nestedLevels++
+			v = value
+
+		default:
+			return value, nestedLevels
+		}
+	}
 }
 
 func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
@@ -19586,8 +19624,32 @@ func (s SomeStorable) HasPointer() bool {
 	}
 }
 
+func getSomeStorableEncodedPrefixSize(nestedLevels uint64) uint32 {
+	if nestedLevels == 1 {
+		return cborTagSize
+	}
+	return cborTagSize + someStorableWithMultipleNestedlevelsArraySize + getUintCBORSize(nestedLevels)
+}
+
 func (s SomeStorable) ByteSize() uint32 {
-	return cborTagSize + s.Storable.ByteSize()
+	innermostStorable, nestedLevels := s.getInnermostStorable()
+	return getSomeStorableEncodedPrefixSize(nestedLevels) + innermostStorable.ByteSize()
+}
+
+// getInnermostStorable returns innermost storable of SomeStorable and nested levels.
+// For example, SomeStorable{true} has innermost storable true, and nested levels 1.
+func (s SomeStorable) getInnermostStorable() (atree.Storable, uint64) {
+	nestedLevels := uint64(1)
+	for {
+		switch storable := s.Storable.(type) {
+		case SomeStorable:
+			nestedLevels++
+			s = storable
+
+		default:
+			return storable, nestedLevels
+		}
+	}
 }
 
 func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
