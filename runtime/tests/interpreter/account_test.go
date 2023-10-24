@@ -116,6 +116,7 @@ type testAccountHandler struct {
 	)
 	updateAccountContractCode func(location common.AddressLocation, code []byte) error
 	recordContractUpdate      func(location common.AddressLocation, value *interpreter.CompositeValue)
+	contractUpdateRecorded    func(location common.AddressLocation) bool
 	interpretContract         func(
 		location common.AddressLocation,
 		program *interpreter.Program,
@@ -315,6 +316,13 @@ func (t *testAccountHandler) RecordContractUpdate(location common.AddressLocatio
 		panic(errors.NewUnexpectedError("unexpected call to RecordContractUpdate"))
 	}
 	t.recordContractUpdate(location, value)
+}
+
+func (t *testAccountHandler) ContractUpdateRecorded(location common.AddressLocation) bool {
+	if t.contractUpdateRecorded == nil {
+		panic(errors.NewUnexpectedError("unexpected call to ContractUpdateRecorded"))
+	}
+	return t.contractUpdateRecorded(location)
 }
 
 func (t *testAccountHandler) InterpretContract(

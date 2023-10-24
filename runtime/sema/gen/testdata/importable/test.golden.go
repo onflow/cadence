@@ -1,4 +1,4 @@
-// Code generated from testdata/storable.cdc. DO NOT EDIT.
+// Code generated from testdata/importable/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -17,20 +17,22 @@
  * limitations under the License.
  */
 
-package sema
+package importable
+
+import "github.com/onflow/cadence/runtime/sema"
 
 const TestTypeName = "Test"
 
-var TestType = &SimpleType{
+var TestType = &sema.SimpleType{
 	Name:          TestTypeName,
 	QualifiedName: TestTypeName,
 	TypeID:        TestTypeName,
-	tag:           TestTypeTag,
+	TypeTag:       TestTypeTag,
 	IsResource:    false,
-	Storable:      true,
+	Storable:      false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    false,
-	Importable:    false,
+	Importable:    true,
 	ContainFields: false,
 }

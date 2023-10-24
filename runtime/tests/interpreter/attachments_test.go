@@ -2237,6 +2237,40 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+
+	t.Run("callback", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource R {
+                let foo: Int
+                init() {
+                    self.foo = 9
+                }
+            }
+            access(all) attachment A for R {
+                access(all) fun touchBase(): Int {
+                    var foo = base.foo
+                    return foo
+                }
+            }
+            access(all) fun main(): Int {
+                var r <- attach A() to <- create R()
+                var id: Int = 0
+                r.forEachAttachment(fun(a: &AnyResourceAttachment) {
+                    id = (a as! &A).touchBase()
+                });
+                destroy r
+                return id
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(9), value)
+	})
 }
 
 func TestInterpretBuiltinCompositeAttachment(t *testing.T) {

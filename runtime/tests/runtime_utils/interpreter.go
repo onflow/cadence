@@ -1,4 +1,3 @@
-// Code generated from testdata/simple-resource.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -17,20 +16,34 @@
  * limitations under the License.
  */
 
-package sema
+package runtime_utils
 
-const TestTypeName = "Test"
+import (
+	"testing"
 
-var TestType = &SimpleType{
-	Name:          TestTypeName,
-	QualifiedName: TestTypeName,
-	TypeID:        TestTypeName,
-	tag:           TestTypeTag,
-	IsResource:    true,
-	Storable:      false,
-	Equatable:     false,
-	Comparable:    false,
-	Exportable:    false,
-	Importable:    false,
-	ContainFields: false,
+	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/utils"
+)
+
+func NewTestInterpreter(tb testing.TB) *interpreter.Interpreter {
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
+	)
+	require.NoError(tb, err)
+
+	return inter
+}
+
+func NewUnmeteredInMemoryStorage() interpreter.Storage {
+	return interpreter.NewInMemoryStorage(nil)
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/json"
@@ -27,9 +27,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 )
 
 func TestRuntimeNewLocationCoverage(t *testing.T) {
@@ -1283,8 +1285,8 @@ func TestRuntimeCoverage(t *testing.T) {
 	`)
 
 	coverageReport := NewCoverageReport()
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return importedScript, nil
@@ -1294,8 +1296,9 @@ func TestRuntimeCoverage(t *testing.T) {
 		},
 	}
 
-	runtime := newTestInterpreterRuntime()
-	runtime.defaultConfig.CoverageReport = coverageReport
+	config := DefaultTestInterpreterConfig
+	config.CoverageReport = coverageReport
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	value, err := runtime.ExecuteScript(
 		Script{
@@ -1440,8 +1443,8 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	scriptlocation := common.ScriptLocation{}
 	coverageReport.ExcludeLocation(scriptlocation)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return importedScript, nil
@@ -1451,8 +1454,9 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 		},
 	}
 
-	runtime := newTestInterpreterRuntime()
-	runtime.defaultConfig.CoverageReport = coverageReport
+	config := DefaultTestInterpreterConfig
+	config.CoverageReport = coverageReport
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	value, err := runtime.ExecuteScript(
 		Script{
@@ -1581,8 +1585,8 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 	})
 	scriptlocation := common.ScriptLocation{0x1b, 0x2c}
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return importedScript, nil
@@ -1672,8 +1676,8 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 
 	scriptlocation := common.ScriptLocation{0x1b, 0x2c}
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("FooContract"):
 				return importedScript, nil
@@ -1794,8 +1798,8 @@ func TestRuntimeCoverageReportLCOVFormat(t *testing.T) {
 	scriptlocation := common.ScriptLocation{}
 	coverageReport.ExcludeLocation(scriptlocation)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("IntegerTraits"):
 				return integerTraits, nil
@@ -1805,8 +1809,9 @@ func TestRuntimeCoverageReportLCOVFormat(t *testing.T) {
 		},
 	}
 
-	runtime := newTestInterpreterRuntime()
-	runtime.defaultConfig.CoverageReport = coverageReport
+	config := DefaultTestInterpreterConfig
+	config.CoverageReport = coverageReport
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	value, err := runtime.ExecuteScript(
 		Script{

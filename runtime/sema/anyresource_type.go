@@ -23,7 +23,7 @@ var AnyResourceType = &SimpleType{
 	Name:          "AnyResource",
 	QualifiedName: "AnyResource",
 	TypeID:        "AnyResource",
-	tag:           AnyResourceTypeTag,
+	TypeTag:       AnyResourceTypeTag,
 	IsResource:    true,
 	// The actual storability of a value is checked at run-time
 	Storable:   true,

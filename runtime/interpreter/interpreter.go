@@ -1092,20 +1092,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 
-	constructorType := &sema.FunctionType{
-		IsConstructor: true,
-		Purity:        compositeType.ConstructorPurity,
-		Parameters:    compositeType.ConstructorParameters,
-		ReturnTypeAnnotation: sema.TypeAnnotation{
-			Type: compositeType,
-		},
-	}
+	initializerType := compositeType.InitializerFunctionType()
 
 	var initializerFunction FunctionValue
 	if declaration.Kind() == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
 			interpreter,
-			constructorType,
+			initializerType,
 			func(invocation Invocation) Value {
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -1201,6 +1194,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
 	config := interpreter.SharedState.Config
+
+	constructorType := compositeType.ConstructorFunctionType()
 
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
 		return NewHostFunctionValue(
@@ -2119,6 +2114,14 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		if !valueType.Equal(unwrappedTargetType) {
 			// transferring a reference at runtime does not change its entitlements; this is so that an upcast reference
 			// can later be downcast back to its original entitlement set
+
+			// check defensively that we never create a runtime mapped entitlement value
+			if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
+				panic(UnexpectedMappedEntitlementError{
+					Type:          unwrappedTargetType,
+					LocationRange: locationRange,
+				})
+			}
 
 			switch ref := value.(type) {
 			case *EphemeralReferenceValue:
@@ -4563,16 +4566,18 @@ func (interpreter *Interpreter) GetCompositeType(
 		if compositeType != nil {
 			return compositeType, nil
 		}
-	} else {
-		config := interpreter.SharedState.Config
-		compositeTypeHandler := config.CompositeTypeHandler
-		if compositeTypeHandler != nil {
-			compositeType = compositeTypeHandler(location, typeID)
-			if compositeType != nil {
-				return compositeType, nil
-			}
-		}
+	}
 
+	config := interpreter.SharedState.Config
+	compositeTypeHandler := config.CompositeTypeHandler
+	if compositeTypeHandler != nil {
+		compositeType = compositeTypeHandler(location, typeID)
+		if compositeType != nil {
+			return compositeType, nil
+		}
+	}
+
+	if location != nil {
 		compositeType = interpreter.getUserCompositeType(location, typeID)
 		if compositeType != nil {
 			return compositeType, nil
@@ -5074,8 +5079,10 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value, destr
 
 	switch value := value.(type) {
 	case *CompositeValue:
-		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) {
+		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) (resume bool) {
 			interpreter.invalidateReferencedResources(fieldValue, destroyed)
+			// continue iteration
+			return true
 		})
 		storageID = value.StorageID()
 	case *DictionaryValue:

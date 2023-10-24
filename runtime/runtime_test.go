@@ -16,30 +16,24 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/onflow/atree"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	runtimeErrors "github.com/onflow/cadence/runtime/errors"
@@ -47,658 +41,15 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
-
-type testLedger struct {
-	storedValues         map[string][]byte
-	valueExists          func(owner, key []byte) (exists bool, err error)
-	getValue             func(owner, key []byte) (value []byte, err error)
-	setValue             func(owner, key, value []byte) (err error)
-	allocateStorageIndex func(owner []byte) (atree.StorageIndex, error)
-}
-
-var _ atree.Ledger = testLedger{}
-
-func (s testLedger) GetValue(owner, key []byte) (value []byte, err error) {
-	return s.getValue(owner, key)
-}
-
-func (s testLedger) SetValue(owner, key, value []byte) (err error) {
-	return s.setValue(owner, key, value)
-}
-
-func (s testLedger) ValueExists(owner, key []byte) (exists bool, err error) {
-	return s.valueExists(owner, key)
-}
-
-func (s testLedger) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	return s.allocateStorageIndex(owner)
-}
-
-func (s testLedger) Dump() {
-	for key, data := range s.storedValues {
-		fmt.Printf("%s:\n", strconv.Quote(key))
-		fmt.Printf("%s\n", hex.Dump(data))
-		println()
-	}
-}
-
-func newTestLedger(
-	onRead func(owner, key, value []byte),
-	onWrite func(owner, key, value []byte),
-) testLedger {
-
-	storageKey := func(owner, key string) string {
-		return strings.Join([]string{owner, key}, "|")
-	}
-
-	storedValues := map[string][]byte{}
-
-	storageIndices := map[string]uint64{}
-
-	return testLedger{
-		storedValues: storedValues,
-		valueExists: func(owner, key []byte) (bool, error) {
-			value := storedValues[storageKey(string(owner), string(key))]
-			return len(value) > 0, nil
-		},
-		getValue: func(owner, key []byte) (value []byte, err error) {
-			value = storedValues[storageKey(string(owner), string(key))]
-			if onRead != nil {
-				onRead(owner, key, value)
-			}
-			return value, nil
-		},
-		setValue: func(owner, key, value []byte) (err error) {
-			storedValues[storageKey(string(owner), string(key))] = value
-			if onWrite != nil {
-				onWrite(owner, key, value)
-			}
-			return nil
-		},
-		allocateStorageIndex: func(owner []byte) (result atree.StorageIndex, err error) {
-			index := storageIndices[string(owner)] + 1
-			storageIndices[string(owner)] = index
-			binary.BigEndian.PutUint64(result[:], index)
-			return
-		},
-	}
-}
-
-type testInterpreterRuntime struct {
-	*interpreterRuntime
-}
-
-var _ Runtime = testInterpreterRuntime{}
-
-func newTestInterpreterRuntime() testInterpreterRuntime {
-	return testInterpreterRuntime{
-		interpreterRuntime: NewInterpreterRuntime(Config{
-			AtreeValidationEnabled: true,
-		}).(*interpreterRuntime),
-	}
-}
-
-func (r testInterpreterRuntime) ExecuteTransaction(script Script, context Context) error {
-	i := context.Interface.(*testRuntimeInterface)
-	i.onTransactionExecutionStart()
-	return r.interpreterRuntime.ExecuteTransaction(script, context)
-}
-
-func (r testInterpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
-	i := context.Interface.(*testRuntimeInterface)
-	i.onScriptExecutionStart()
-	value, err := r.interpreterRuntime.ExecuteScript(script, context)
-	// If there was a return value, let's also ensure it can be encoded
-	// TODO: also test CCF
-	if value != nil && err == nil {
-		_ = jsoncdc.MustEncode(value)
-	}
-	return value, err
-}
-
-type testRuntimeInterface struct {
-	resolveLocation  func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
-	getCode          func(_ Location) ([]byte, error)
-	getAndSetProgram func(
-		location Location,
-		load func() (*interpreter.Program, error),
-	) (*interpreter.Program, error)
-	setInterpreterSharedState func(state *interpreter.SharedState)
-	getInterpreterSharedState func() *interpreter.SharedState
-	storage                   testLedger
-	createAccount             func(payer Address) (address Address, err error)
-	addEncodedAccountKey      func(address Address, publicKey []byte) error
-	removeEncodedAccountKey   func(address Address, index int) (publicKey []byte, err error)
-	addAccountKey             func(
-		address Address,
-		publicKey *stdlib.PublicKey,
-		hashAlgo HashAlgorithm,
-		weight int,
-	) (*stdlib.AccountKey, error)
-	getAccountKey             func(address Address, index int) (*stdlib.AccountKey, error)
-	removeAccountKey          func(address Address, index int) (*stdlib.AccountKey, error)
-	accountKeysCount          func(address Address) (uint64, error)
-	updateAccountContractCode func(location common.AddressLocation, code []byte) error
-	getAccountContractCode    func(location common.AddressLocation) (code []byte, err error)
-	removeAccountContractCode func(location common.AddressLocation) (err error)
-	getSigningAccounts        func() ([]Address, error)
-	log                       func(string)
-	emitEvent                 func(cadence.Event) error
-	resourceOwnerChanged      func(
-		interpreter *interpreter.Interpreter,
-		resource *interpreter.CompositeValue,
-		oldAddress common.Address,
-		newAddress common.Address,
-	)
-	generateUUID       func() (uint64, error)
-	meterComputation   func(compKind common.ComputationKind, intensity uint) error
-	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
-	programParsed      func(location Location, duration time.Duration)
-	programChecked     func(location Location, duration time.Duration)
-	programInterpreted func(location Location, duration time.Duration)
-	readRandom         func([]byte) error
-	verifySignature    func(
-		signature []byte,
-		tag string,
-		signedData []byte,
-		publicKey []byte,
-		signatureAlgorithm SignatureAlgorithm,
-		hashAlgorithm HashAlgorithm,
-	) (bool, error)
-	hash                       func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error)
-	setCadenceValue            func(owner Address, key string, value cadence.Value) (err error)
-	getAccountBalance          func(_ Address) (uint64, error)
-	getAccountAvailableBalance func(_ Address) (uint64, error)
-	getStorageUsed             func(_ Address) (uint64, error)
-	getStorageCapacity         func(_ Address) (uint64, error)
-	programs                   map[Location]*interpreter.Program
-	implementationDebugLog     func(message string) error
-	validatePublicKey          func(publicKey *stdlib.PublicKey) error
-	bLSVerifyPOP               func(pk *stdlib.PublicKey, s []byte) (bool, error)
-	blsAggregateSignatures     func(sigs [][]byte) ([]byte, error)
-	blsAggregatePublicKeys     func(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error)
-	getAccountContractNames    func(address Address) ([]string, error)
-	recordTrace                func(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue)
-	meterMemory                func(usage common.MemoryUsage) error
-	computationUsed            func() (uint64, error)
-	memoryUsed                 func() (uint64, error)
-	interactionUsed            func() (uint64, error)
-	updatedContractCode        bool
-	generateAccountID          func(address common.Address) (uint64, error)
-
-	uuid       uint64
-	accountIDs map[common.Address]uint64
-}
-
-// testRuntimeInterface should implement Interface
-var _ Interface = &testRuntimeInterface{}
-
-func (i *testRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-	if i.resolveLocation == nil {
-		return []ResolvedLocation{
-			{
-				Location:    location,
-				Identifiers: identifiers,
-			},
-		}, nil
-	}
-	return i.resolveLocation(identifiers, location)
-}
-
-func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
-	if i.getCode == nil {
-		return nil, nil
-	}
-	return i.getCode(location)
-}
-
-func (i *testRuntimeInterface) GetOrLoadProgram(
-	location Location,
-	load func() (*interpreter.Program, error),
-) (
-	program *interpreter.Program,
-	err error,
-) {
-	if i.getAndSetProgram == nil {
-		if i.programs == nil {
-			i.programs = map[Location]*interpreter.Program{}
-		}
-
-		var ok bool
-		program, ok = i.programs[location]
-		if ok {
-			return
-		}
-
-		program, err = load()
-
-		// NOTE: important: still set empty program,
-		// even if error occurred
-
-		i.programs[location] = program
-
-		return
-	}
-
-	return i.getAndSetProgram(location, load)
-}
-
-func (i *testRuntimeInterface) SetInterpreterSharedState(state *interpreter.SharedState) {
-	if i.setInterpreterSharedState == nil {
-		return
-	}
-
-	i.setInterpreterSharedState(state)
-}
-
-func (i *testRuntimeInterface) GetInterpreterSharedState() *interpreter.SharedState {
-	if i.getInterpreterSharedState == nil {
-		return nil
-	}
-
-	return i.getInterpreterSharedState()
-}
-
-func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
-	if i.storage.valueExists == nil {
-		panic("must specify testRuntimeInterface.storage.valueExists")
-	}
-	return i.storage.ValueExists(owner, key)
-}
-
-func (i *testRuntimeInterface) GetValue(owner, key []byte) (value []byte, err error) {
-	if i.storage.getValue == nil {
-		panic("must specify testRuntimeInterface.storage.getValue")
-	}
-	return i.storage.GetValue(owner, key)
-}
-
-func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
-	if i.storage.setValue == nil {
-		panic("must specify testRuntimeInterface.storage.setValue")
-	}
-	return i.storage.SetValue(owner, key, value)
-}
-
-func (i *testRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	if i.storage.allocateStorageIndex == nil {
-		panic("must specify testRuntimeInterface.storage.allocateStorageIndex")
-	}
-	return i.storage.AllocateStorageIndex(owner)
-}
-
-func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
-	if i.createAccount == nil {
-		panic("must specify testRuntimeInterface.createAccount")
-	}
-	return i.createAccount(payer)
-}
-
-func (i *testRuntimeInterface) AddEncodedAccountKey(address Address, publicKey []byte) error {
-	if i.addEncodedAccountKey == nil {
-		panic("must specify testRuntimeInterface.addEncodedAccountKey")
-	}
-	return i.addEncodedAccountKey(address, publicKey)
-}
-
-func (i *testRuntimeInterface) RevokeEncodedAccountKey(address Address, index int) ([]byte, error) {
-	if i.removeEncodedAccountKey == nil {
-		panic("must specify testRuntimeInterface.removeEncodedAccountKey")
-	}
-	return i.removeEncodedAccountKey(address, index)
-}
-
-func (i *testRuntimeInterface) AddAccountKey(
-	address Address,
-	publicKey *stdlib.PublicKey,
-	hashAlgo HashAlgorithm,
-	weight int,
-) (*stdlib.AccountKey, error) {
-	if i.addAccountKey == nil {
-		panic("must specify testRuntimeInterface.addAccountKey")
-	}
-	return i.addAccountKey(address, publicKey, hashAlgo, weight)
-}
-
-func (i *testRuntimeInterface) GetAccountKey(address Address, index int) (*stdlib.AccountKey, error) {
-	if i.getAccountKey == nil {
-		panic("must specify testRuntimeInterface.getAccountKey")
-	}
-	return i.getAccountKey(address, index)
-}
-
-func (i *testRuntimeInterface) AccountKeysCount(address Address) (uint64, error) {
-	if i.accountKeysCount == nil {
-		panic("must specify testRuntimeInterface.accountKeysCount")
-	}
-	return i.accountKeysCount(address)
-}
-
-func (i *testRuntimeInterface) RevokeAccountKey(address Address, index int) (*stdlib.AccountKey, error) {
-	if i.removeAccountKey == nil {
-		panic("must specify testRuntimeInterface.removeAccountKey")
-	}
-	return i.removeAccountKey(address, index)
-}
-
-func (i *testRuntimeInterface) UpdateAccountContractCode(location common.AddressLocation, code []byte) (err error) {
-	if i.updateAccountContractCode == nil {
-		panic("must specify testRuntimeInterface.updateAccountContractCode")
-	}
-
-	err = i.updateAccountContractCode(location, code)
-	if err != nil {
-		return err
-	}
-
-	i.updatedContractCode = true
-
-	return nil
-}
-
-func (i *testRuntimeInterface) GetAccountContractCode(location common.AddressLocation) (code []byte, err error) {
-	if i.getAccountContractCode == nil {
-		panic("must specify testRuntimeInterface.getAccountContractCode")
-	}
-	return i.getAccountContractCode(location)
-}
-
-func (i *testRuntimeInterface) RemoveAccountContractCode(location common.AddressLocation) (err error) {
-	if i.removeAccountContractCode == nil {
-		panic("must specify testRuntimeInterface.removeAccountContractCode")
-	}
-	return i.removeAccountContractCode(location)
-}
-
-func (i *testRuntimeInterface) GetSigningAccounts() ([]Address, error) {
-	if i.getSigningAccounts == nil {
-		return nil, nil
-	}
-	return i.getSigningAccounts()
-}
-
-func (i *testRuntimeInterface) ProgramLog(message string) error {
-	i.log(message)
-	return nil
-}
-
-func (i *testRuntimeInterface) EmitEvent(event cadence.Event) error {
-	return i.emitEvent(event)
-}
-
-func (i *testRuntimeInterface) ResourceOwnerChanged(
-	interpreter *interpreter.Interpreter,
-	resource *interpreter.CompositeValue,
-	oldOwner common.Address,
-	newOwner common.Address,
-) {
-	if i.resourceOwnerChanged != nil {
-		i.resourceOwnerChanged(
-			interpreter,
-			resource,
-			oldOwner,
-			newOwner,
-		)
-	}
-}
-
-func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
-	if i.generateUUID == nil {
-		i.uuid++
-		return i.uuid, nil
-	}
-	return i.generateUUID()
-}
-
-func (i *testRuntimeInterface) MeterComputation(compKind common.ComputationKind, intensity uint) error {
-	if i.meterComputation == nil {
-		return nil
-	}
-	return i.meterComputation(compKind, intensity)
-}
-
-func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
-	return i.decodeArgument(b, t)
-}
-
-func (i *testRuntimeInterface) ProgramParsed(location Location, duration time.Duration) {
-	if i.programParsed == nil {
-		return
-	}
-	i.programParsed(location, duration)
-}
-
-func (i *testRuntimeInterface) ProgramChecked(location Location, duration time.Duration) {
-	if i.programChecked == nil {
-		return
-	}
-	i.programChecked(location, duration)
-}
-
-func (i *testRuntimeInterface) ProgramInterpreted(location Location, duration time.Duration) {
-	if i.programInterpreted == nil {
-		return
-	}
-	i.programInterpreted(location, duration)
-}
-
-func (i *testRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
-	return 1, nil
-}
-
-func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block stdlib.Block, exists bool, err error) {
-
-	buf := new(bytes.Buffer)
-	err = binary.Write(buf, binary.BigEndian, height)
-	if err != nil {
-		panic(err)
-	}
-
-	encoded := buf.Bytes()
-	var hash stdlib.BlockHash
-	copy(hash[sema.BlockTypeIdFieldType.Size-int64(len(encoded)):], encoded)
-
-	block = stdlib.Block{
-		Height:    height,
-		View:      height,
-		Hash:      hash,
-		Timestamp: time.Unix(int64(height), 0).UnixNano(),
-	}
-	return block, true, nil
-}
-
-func (i *testRuntimeInterface) ReadRandom(buffer []byte) error {
-	if i.readRandom == nil {
-		return nil
-	}
-	return i.readRandom(buffer)
-}
-
-func (i *testRuntimeInterface) VerifySignature(
-	signature []byte,
-	tag string,
-	signedData []byte,
-	publicKey []byte,
-	signatureAlgorithm SignatureAlgorithm,
-	hashAlgorithm HashAlgorithm,
-) (bool, error) {
-	if i.verifySignature == nil {
-		return false, nil
-	}
-	return i.verifySignature(
-		signature,
-		tag,
-		signedData,
-		publicKey,
-		signatureAlgorithm,
-		hashAlgorithm,
-	)
-}
-
-func (i *testRuntimeInterface) Hash(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
-	if i.hash == nil {
-		return nil, nil
-	}
-	return i.hash(data, tag, hashAlgorithm)
-}
-
-func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
-	if i.setCadenceValue == nil {
-		panic("must specify testRuntimeInterface.setCadenceValue")
-	}
-	return i.setCadenceValue(owner, key, value)
-}
-
-func (i *testRuntimeInterface) GetAccountBalance(address Address) (uint64, error) {
-	if i.getAccountBalance == nil {
-		panic("must specify testRuntimeInterface.getAccountBalance")
-	}
-	return i.getAccountBalance(address)
-}
-
-func (i *testRuntimeInterface) GetAccountAvailableBalance(address Address) (uint64, error) {
-	if i.getAccountAvailableBalance == nil {
-		panic("must specify testRuntimeInterface.getAccountAvailableBalance")
-	}
-	return i.getAccountAvailableBalance(address)
-}
-
-func (i *testRuntimeInterface) GetStorageUsed(address Address) (uint64, error) {
-	if i.getStorageUsed == nil {
-		panic("must specify testRuntimeInterface.getStorageUsed")
-	}
-	return i.getStorageUsed(address)
-}
-
-func (i *testRuntimeInterface) GetStorageCapacity(address Address) (uint64, error) {
-	if i.getStorageCapacity == nil {
-		panic("must specify testRuntimeInterface.getStorageCapacity")
-	}
-	return i.getStorageCapacity(address)
-}
-
-func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
-	if i.implementationDebugLog == nil {
-		return nil
-	}
-	return i.implementationDebugLog(message)
-}
-
-func (i *testRuntimeInterface) ValidatePublicKey(key *stdlib.PublicKey) error {
-	if i.validatePublicKey == nil {
-		return errors.New("mock defaults to public key validation failure")
-	}
-
-	return i.validatePublicKey(key)
-}
-
-func (i *testRuntimeInterface) BLSVerifyPOP(key *stdlib.PublicKey, s []byte) (bool, error) {
-	if i.bLSVerifyPOP == nil {
-		return false, nil
-	}
-
-	return i.bLSVerifyPOP(key, s)
-}
-
-func (i *testRuntimeInterface) BLSAggregateSignatures(sigs [][]byte) ([]byte, error) {
-	if i.blsAggregateSignatures == nil {
-		return []byte{}, nil
-	}
-
-	return i.blsAggregateSignatures(sigs)
-}
-
-func (i *testRuntimeInterface) BLSAggregatePublicKeys(keys []*stdlib.PublicKey) (*stdlib.PublicKey, error) {
-	if i.blsAggregatePublicKeys == nil {
-		return nil, nil
-	}
-
-	return i.blsAggregatePublicKeys(keys)
-}
-
-func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]string, error) {
-	if i.getAccountContractNames == nil {
-		return []string{}, nil
-	}
-
-	return i.getAccountContractNames(address)
-}
-
-func (i *testRuntimeInterface) GenerateAccountID(address common.Address) (uint64, error) {
-	if i.generateAccountID == nil {
-		if i.accountIDs == nil {
-			i.accountIDs = map[common.Address]uint64{}
-		}
-		i.accountIDs[address]++
-		return i.accountIDs[address], nil
-	}
-
-	return i.generateAccountID(address)
-}
-
-func (i *testRuntimeInterface) RecordTrace(operation string, location Location, duration time.Duration, attrs []attribute.KeyValue) {
-	if i.recordTrace == nil {
-		return
-	}
-	i.recordTrace(operation, location, duration, attrs)
-}
-
-func (i *testRuntimeInterface) MeterMemory(usage common.MemoryUsage) error {
-	if i.meterMemory == nil {
-		return nil
-	}
-
-	return i.meterMemory(usage)
-}
-
-func (i *testRuntimeInterface) ComputationUsed() (uint64, error) {
-	if i.computationUsed == nil {
-		return 0, nil
-	}
-
-	return i.computationUsed()
-}
-
-func (i *testRuntimeInterface) MemoryUsed() (uint64, error) {
-	if i.memoryUsed == nil {
-		return 0, nil
-	}
-
-	return i.memoryUsed()
-}
-
-func (i *testRuntimeInterface) InteractionUsed() (uint64, error) {
-	if i.interactionUsed == nil {
-		return 0, nil
-	}
-
-	return i.interactionUsed()
-}
-
-func (i *testRuntimeInterface) onTransactionExecutionStart() {
-	i.invalidateUpdatedPrograms()
-}
-
-func (i *testRuntimeInterface) onScriptExecutionStart() {
-	i.invalidateUpdatedPrograms()
-}
-
-func (i *testRuntimeInterface) invalidateUpdatedPrograms() {
-	if i.updatedContractCode {
-		for location := range i.programs {
-			delete(i.programs, location)
-		}
-		i.updatedContractCode = false
-	}
-}
 
 func TestRuntimeImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	importedScript := []byte(`
       access(all) fun answer(): Int {
@@ -720,8 +71,8 @@ func TestRuntimeImport(t *testing.T) {
 
 	var checkCount int
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return importedScript, nil
@@ -729,12 +80,12 @@ func TestRuntimeImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		programChecked: func(location Location, duration time.Duration) {
+		OnProgramChecked: func(location Location, duration time.Duration) {
 			checkCount += 1
 		},
 	}
 
-	nextScriptLocation := newScriptLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	const transactionCount = 10
 	for i := 0; i < transactionCount; i++ {
@@ -759,7 +110,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	importedScript := []byte(`
       access(all) fun answer(): Int {
@@ -783,8 +134,8 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 
 	var programs sync.Map
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return importedScript, nil
@@ -792,10 +143,10 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		programChecked: func(location Location, duration time.Duration) {
+		OnProgramChecked: func(location Location, duration time.Duration) {
 			atomic.AddUint64(&checkCount, 1)
 		},
-		getAndSetProgram: func(
+		OnGetAndSetProgram: func(
 			location Location,
 			load func() (*interpreter.Program, error),
 		) (
@@ -819,7 +170,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 		},
 	}
 
-	nextScriptLocation := newScriptLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	var wg sync.WaitGroup
 	const concurrency uint64 = 10
@@ -872,9 +223,9 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	importedScriptLocation := common.StringLocation("imported")
 	scriptLocation := common.StringLocation("placeholder")
 
-	runtime := newTestInterpreterRuntime()
-	runtimeInterface := &testRuntimeInterface{
-		getAndSetProgram: func(
+	runtime := NewTestInterpreterRuntime()
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetAndSetProgram: func(
 			location Location,
 			load func() (*interpreter.Program, error),
 		) (
@@ -899,7 +250,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 
 			return
 		},
-		getCode: func(location Location) ([]byte, error) {
+		OnGetCode: func(location Location) ([]byte, error) {
 			switch location {
 			case importedScriptLocation:
 				return importedScript, nil
@@ -989,29 +340,11 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	})
 }
 
-func newLocationGenerator[T ~[32]byte]() func() T {
-	var count uint64
-	return func() T {
-		t := T{}
-		newCount := atomic.AddUint64(&count, 1)
-		binary.LittleEndian.PutUint64(t[:], newCount)
-		return t
-	}
-}
-
-func newTransactionLocationGenerator() func() common.TransactionLocation {
-	return newLocationGenerator[common.TransactionLocation]()
-}
-
-func newScriptLocationGenerator() func() common.ScriptLocation {
-	return newLocationGenerator[common.ScriptLocation]()
-}
-
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -1020,13 +353,13 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -1045,7 +378,7 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -1057,18 +390,18 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 
 	var loggedMessage string
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				common.MustBytesToAddress([]byte{42}),
 			}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessage = message
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -1108,9 +441,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
-			},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewInt(42),
+			}),
 			expectedLogs: []string{"42"},
 		},
 		{
@@ -1126,9 +459,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
-			},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewInt(42),
+			}),
 			authorizers:  []Address{common.MustBytesToAddress([]byte{42})},
 			expectedLogs: []string{"0x000000000000002a", "42"},
 		},
@@ -1142,10 +475,10 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
-				jsoncdc.MustEncode(cadence.String("foo")),
-			},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewInt(42),
+				cadence.String("foo"),
+			}),
 			expectedLogs: []string{"42", `"foo"`},
 		},
 		{
@@ -1171,9 +504,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.String("foo")),
-			},
+			args: encodeArgs([]cadence.Value{
+				cadence.String("foo"),
+			}),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -1191,16 +524,14 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.BytesToAddress(
-						[]byte{
-							0x0, 0x0, 0x0, 0x0,
-							0x0, 0x0, 0x0, 0x1,
-						},
-					),
+			args: encodeArgs([]cadence.Value{
+				cadence.BytesToAddress(
+					[]byte{
+						0x0, 0x0, 0x0, 0x0,
+						0x0, 0x0, 0x0, 0x1,
+					},
 				),
-			},
+			}),
 			expectedLogs: []string{"0x0000000000000001"},
 		},
 		{
@@ -1212,17 +543,15 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewArray(
-						[]cadence.Value{
-							cadence.NewInt(1),
-							cadence.NewInt(2),
-							cadence.NewInt(3),
-						},
-					),
+			args: encodeArgs([]cadence.Value{
+				cadence.NewArray(
+					[]cadence.Value{
+						cadence.NewInt(1),
+						cadence.NewInt(2),
+						cadence.NewInt(3),
+					},
 				),
-			},
+			}),
 			expectedLogs: []string{"[1, 2, 3]"},
 		},
 		{
@@ -1234,18 +563,16 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewDictionary(
-						[]cadence.KeyValuePair{
-							{
-								Key:   cadence.String("y"),
-								Value: cadence.NewInt(42),
-							},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewDictionary(
+					[]cadence.KeyValuePair{
+						{
+							Key:   cadence.String("y"),
+							Value: cadence.NewInt(42),
 						},
-					),
+					},
 				),
-			},
+			}),
 			expectedLogs: []string{"42"},
 		},
 		{
@@ -1257,18 +584,16 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewDictionary(
-						[]cadence.KeyValuePair{
-							{
-								Key:   cadence.String("y"),
-								Value: cadence.NewInt(42),
-							},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewDictionary(
+					[]cadence.KeyValuePair{
+						{
+							Key:   cadence.String("y"),
+							Value: cadence.NewInt(42),
 						},
-					),
+					},
 				),
-			},
+			}),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -1305,25 +630,23 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                   }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.
-						NewStruct([]cadence.Value{cadence.String("bar")}).
-						WithType(&cadence.StructType{
-							Location: common.AddressLocation{
-								Address: common.MustBytesToAddress([]byte{0x1}),
-								Name:    "C",
+			args: encodeArgs([]cadence.Value{
+				cadence.
+					NewStruct([]cadence.Value{cadence.String("bar")}).
+					WithType(&cadence.StructType{
+						Location: common.AddressLocation{
+							Address: common.MustBytesToAddress([]byte{0x1}),
+							Name:    "C",
+						},
+						QualifiedIdentifier: "C.Foo",
+						Fields: []cadence.Field{
+							{
+								Identifier: "y",
+								Type:       cadence.StringType,
 							},
-							QualifiedIdentifier: "C.Foo",
-							Fields: []cadence.Field{
-								{
-									Identifier: "y",
-									Type:       cadence.StringType,
-								},
-							},
-						}),
-				),
-			},
+						},
+					}),
+			}),
 			expectedLogs: []string{`"bar"`},
 		},
 		{
@@ -1354,27 +677,25 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
                 }
               }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewArray([]cadence.Value{
-						cadence.
-							NewStruct([]cadence.Value{cadence.String("bar")}).
-							WithType(&cadence.StructType{
-								Location: common.AddressLocation{
-									Address: common.MustBytesToAddress([]byte{0x1}),
-									Name:    "C",
+			args: encodeArgs([]cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.
+						NewStruct([]cadence.Value{cadence.String("bar")}).
+						WithType(&cadence.StructType{
+							Location: common.AddressLocation{
+								Address: common.MustBytesToAddress([]byte{0x1}),
+								Name:    "C",
+							},
+							QualifiedIdentifier: "C.Foo",
+							Fields: []cadence.Field{
+								{
+									Identifier: "y",
+									Type:       cadence.StringType,
 								},
-								QualifiedIdentifier: "C.Foo",
-								Fields: []cadence.Field{
-									{
-										Identifier: "y",
-										Type:       cadence.StringType,
-									},
-								},
-							}),
-					}),
-				),
-			},
+							},
+						}),
+				}),
+			}),
 			expectedLogs: []string{`"bar"`},
 		},
 	}
@@ -1383,30 +704,27 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 		t.Run(tc.label, func(t *testing.T) {
 			t.Parallel()
-			rt := newTestInterpreterRuntime()
+			rt := NewTestInterpreterRuntime()
 
 			var loggedMessages []string
 
-			storage := newTestLedger(nil, nil)
+			storage := NewTestLedger(nil, nil)
 
-			runtimeInterface := &testRuntimeInterface{
-				storage: storage,
-				getSigningAccounts: func() ([]Address, error) {
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: storage,
+				OnGetSigningAccounts: func() ([]Address, error) {
 					return tc.authorizers, nil
 				},
-				resolveLocation: singleIdentifierLocationResolver(t),
-				getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+				OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 					return tc.contracts[location], nil
 				},
-				log: func(message string) {
+				OnProgramLog: func(message string) {
 					loggedMessages = append(loggedMessages, message)
 				},
-				meterMemory: func(_ common.MemoryUsage) error {
-					return nil
+				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return json.Decode(nil, b)
 				},
-			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(runtimeInterface, b)
 			}
 
 			err := rt.ExecuteTransaction(
@@ -1464,9 +782,9 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
-			},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewInt(42),
+			}),
 			expectedLogs: []string{"42"},
 		},
 		{
@@ -1477,10 +795,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(y)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
-				jsoncdc.MustEncode(cadence.String("foo")),
-			},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewInt(42),
+				cadence.String("foo"),
+			}),
 			expectedLogs: []string{"42", `"foo"`},
 		},
 		{
@@ -1506,9 +824,9 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.String("foo")),
-			},
+			args: encodeArgs([]cadence.Value{
+				cadence.String("foo"),
+			}),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -1525,16 +843,14 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.BytesToAddress(
-						[]byte{
-							0x0, 0x0, 0x0, 0x0,
-							0x0, 0x0, 0x0, 0x1,
-						},
-					),
+			args: encodeArgs([]cadence.Value{
+				cadence.BytesToAddress(
+					[]byte{
+						0x0, 0x0, 0x0, 0x0,
+						0x0, 0x0, 0x0, 0x1,
+					},
 				),
-			},
+			}),
 			expectedLogs: []string{"0x0000000000000001"},
 		},
 		{
@@ -1544,17 +860,15 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewArray(
-						[]cadence.Value{
-							cadence.NewInt(1),
-							cadence.NewInt(2),
-							cadence.NewInt(3),
-						},
-					),
+			args: encodeArgs([]cadence.Value{
+				cadence.NewArray(
+					[]cadence.Value{
+						cadence.NewInt(1),
+						cadence.NewInt(2),
+						cadence.NewInt(3),
+					},
 				),
-			},
+			}),
 			expectedLogs: []string{"[1, 2, 3]"},
 		},
 		{
@@ -1564,17 +878,15 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewArray(
-						[]cadence.Value{
-							cadence.NewInt(1),
-							cadence.NewInt(2),
-							cadence.NewInt(3),
-						},
-					),
+			args: encodeArgs([]cadence.Value{
+				cadence.NewArray(
+					[]cadence.Value{
+						cadence.NewInt(1),
+						cadence.NewInt(2),
+						cadence.NewInt(3),
+					},
 				),
-			},
+			}),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -1591,15 +903,13 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewArray(
-						[]cadence.Value{
-							cadence.NewInt(1),
-						},
-					),
+			args: encodeArgs([]cadence.Value{
+				cadence.NewArray(
+					[]cadence.Value{
+						cadence.NewInt(1),
+					},
 				),
-			},
+			}),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -1616,18 +926,16 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x["y"])
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewDictionary(
-						[]cadence.KeyValuePair{
-							{
-								Key:   cadence.String("y"),
-								Value: cadence.NewInt(42),
-							},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewDictionary(
+					[]cadence.KeyValuePair{
+						{
+							Key:   cadence.String("y"),
+							Value: cadence.NewInt(42),
 						},
-					),
+					},
 				),
-			},
+			}),
 			expectedLogs: []string{"42"},
 		},
 		{
@@ -1637,18 +945,16 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x["y"])
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewDictionary(
-						[]cadence.KeyValuePair{
-							{
-								Key:   cadence.String("y"),
-								Value: cadence.NewInt(42),
-							},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewDictionary(
+					[]cadence.KeyValuePair{
+						{
+							Key:   cadence.String("y"),
+							Value: cadence.NewInt(42),
 						},
-					),
+					},
 				),
-			},
+			}),
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
@@ -1673,22 +979,20 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x.y)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.
-						NewStruct([]cadence.Value{cadence.String("bar")}).
-						WithType(&cadence.StructType{
-							Location:            common.ScriptLocation{},
-							QualifiedIdentifier: "Foo",
-							Fields: []cadence.Field{
-								{
-									Identifier: "y",
-									Type:       cadence.StringType,
-								},
+			args: encodeArgs([]cadence.Value{
+				cadence.
+					NewStruct([]cadence.Value{cadence.String("bar")}).
+					WithType(&cadence.StructType{
+						Location:            common.ScriptLocation{},
+						QualifiedIdentifier: "Foo",
+						Fields: []cadence.Field{
+							{
+								Identifier: "y",
+								Type:       cadence.StringType,
 							},
-						}),
-				),
-			},
+						},
+					}),
+			}),
 			expectedLogs: []string{`"bar"`},
 		},
 		{
@@ -1707,24 +1011,22 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x.y)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewArray([]cadence.Value{
-						cadence.
-							NewStruct([]cadence.Value{cadence.String("bar")}).
-							WithType(&cadence.StructType{
-								Location:            common.ScriptLocation{},
-								QualifiedIdentifier: "Foo",
-								Fields: []cadence.Field{
-									{
-										Identifier: "y",
-										Type:       cadence.StringType,
-									},
+			args: encodeArgs([]cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.
+						NewStruct([]cadence.Value{cadence.String("bar")}).
+						WithType(&cadence.StructType{
+							Location:            common.ScriptLocation{},
+							QualifiedIdentifier: "Foo",
+							Fields: []cadence.Field{
+								{
+									Identifier: "y",
+									Type:       cadence.StringType,
 								},
-							}),
-					}),
-				),
-			},
+							},
+						}),
+				}),
+			}),
 			expectedLogs: []string{`"bar"`},
 		},
 		{
@@ -1734,12 +1036,12 @@ func TestRuntimeScriptArguments(t *testing.T) {
                     log(x)
                 }
             `,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.Path{
+			args: encodeArgs([]cadence.Value{
+				cadence.Path{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
-				}),
-			},
+				},
+			}),
 			expectedLogs: []string{
 				"/storage/foo",
 			},
@@ -1752,23 +1054,20 @@ func TestRuntimeScriptArguments(t *testing.T) {
 
 			t.Parallel()
 
-			rt := newTestInterpreterRuntime()
+			rt := NewTestInterpreterRuntime()
 
 			var loggedMessages []string
 
-			storage := newTestLedger(nil, nil)
+			storage := NewTestLedger(nil, nil)
 
-			runtimeInterface := &testRuntimeInterface{
-				storage: storage,
-				log: func(message string) {
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: storage,
+				OnProgramLog: func(message string) {
 					loggedMessages = append(loggedMessages, message)
 				},
-				meterMemory: func(_ common.MemoryUsage) error {
-					return nil
+				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return json.Decode(nil, b)
 				},
-			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(runtimeInterface, b)
 			}
 
 			_, err := rt.ExecuteScript(
@@ -1800,15 +1099,15 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       access(all) fun main() {}
     `)
 
-	runtimeInterface := &testRuntimeInterface{}
+	runtimeInterface := &TestRuntimeInterface{}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -1828,7 +1127,7 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -1839,9 +1138,9 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{}
+	runtimeInterface := &TestRuntimeInterface{}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -1920,7 +1219,7 @@ func TestRuntimeStorage(t *testing.T) {
 
 	for name, code := range tests {
 		t.Run(name, func(t *testing.T) {
-			runtime := newTestInterpreterRuntime()
+			runtime := NewTestInterpreterRuntime()
 
 			imported := []byte(`
               access(all) resource R {}
@@ -1946,8 +1245,8 @@ func TestRuntimeStorage(t *testing.T) {
 
 			var loggedMessages []string
 
-			runtimeInterface := &testRuntimeInterface{
-				getCode: func(location Location) ([]byte, error) {
+			runtimeInterface := &TestRuntimeInterface{
+				OnGetCode: func(location Location) ([]byte, error) {
 					switch location {
 					case common.StringLocation("imported"):
 						return imported, nil
@@ -1955,16 +1254,16 @@ func TestRuntimeStorage(t *testing.T) {
 						return nil, fmt.Errorf("unknown import location: %s", location)
 					}
 				},
-				storage: newTestLedger(nil, nil),
-				getSigningAccounts: func() ([]Address, error) {
+				Storage: NewTestLedger(nil, nil),
+				OnGetSigningAccounts: func() ([]Address, error) {
 					return []Address{{42}}, nil
 				},
-				log: func(message string) {
+				OnProgramLog: func(message string) {
 					loggedMessages = append(loggedMessages, message)
 				},
 			}
 
-			nextTransactionLocation := newTransactionLocationGenerator()
+			nextTransactionLocation := NewTransactionLocationGenerator()
 
 			err := runtime.ExecuteTransaction(
 				Script{
@@ -1986,7 +1285,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	container := []byte(`
       access(all) resource Container {
@@ -2051,8 +1350,8 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("container"):
 				return container, nil
@@ -2060,16 +1359,16 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -2111,7 +1410,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	deepThought := []byte(`
       access(all) resource DeepThought {
@@ -2150,10 +1449,10 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
 	var loggedMessages []string
 
-	ledger := newTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("deep-thought"):
 				return deepThought, nil
@@ -2161,16 +1460,16 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: ledger,
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: ledger,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -2203,7 +1502,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	imported := []byte(`
       access(all) resource SomeNumber {
@@ -2243,8 +1542,8 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return imported, nil
@@ -2252,16 +1551,16 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -2295,7 +1594,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	imported := []byte(`
       // function must have arguments
@@ -2335,8 +1634,8 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return imported, nil
@@ -2344,13 +1643,13 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -2379,7 +1678,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	imported := []byte(`
       access(all) resource R {
@@ -2418,8 +1717,8 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return imported, nil
@@ -2427,16 +1726,16 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -2467,7 +1766,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	imported := []byte(`
       access(all) resource R {
@@ -2508,8 +1807,8 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return imported, nil
@@ -2517,16 +1816,16 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -2557,7 +1856,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	imported1 := []byte(`
       access(all) resource interface RI {
@@ -2610,8 +1909,8 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported1"):
 				return imported1, nil
@@ -2621,16 +1920,16 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -2662,12 +1961,12 @@ func TestRuntimeParseAndCheckProgram(t *testing.T) {
 	t.Parallel()
 
 	t.Run("ValidProgram", func(t *testing.T) {
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte("access(all) fun test(): Int { return 42 }")
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		_, err := runtime.ParseAndCheckProgram(
 			script,
@@ -2680,12 +1979,12 @@ func TestRuntimeParseAndCheckProgram(t *testing.T) {
 	})
 
 	t.Run("InvalidSyntax", func(t *testing.T) {
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte("invalid syntax")
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		_, err := runtime.ParseAndCheckProgram(
 			script,
@@ -2698,12 +1997,12 @@ func TestRuntimeParseAndCheckProgram(t *testing.T) {
 	})
 
 	t.Run("InvalidSemantics", func(t *testing.T) {
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`access(all) let a: Int = "b"`)
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		_, err := runtime.ParseAndCheckProgram(
 			script,
@@ -2728,13 +2027,13 @@ func TestRuntimeScriptReturnSpecial(t *testing.T) {
 
 	test := func(t *testing.T, test testCase) {
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
 		}
@@ -2889,7 +2188,7 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       access(all) fun main(x: fun(): Int) {
@@ -2897,8 +2196,8 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
 	}
@@ -2922,7 +2221,7 @@ func TestRuntimeSyntaxError(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       access(all) fun main(): String {
@@ -2930,13 +2229,13 @@ func TestRuntimeSyntaxError(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	_, err := runtime.ExecuteScript(
 		Script{
@@ -2955,7 +2254,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	imported := []byte(`
       access(all) resource X {
@@ -3001,8 +2300,8 @@ func TestRuntimeStorageChanges(t *testing.T) {
 
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return imported, nil
@@ -3010,16 +2309,16 @@ func TestRuntimeStorageChanges(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3050,7 +2349,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -3064,16 +2363,16 @@ func TestRuntimeAccountAddress(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{42})
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3093,7 +2392,7 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -3107,16 +2406,16 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 
 	address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x42})
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return nil, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3141,7 +2440,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	imported := []byte(`
       access(all) resource R {
@@ -3187,8 +2486,8 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) ([]byte, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) ([]byte, error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return imported, nil
@@ -3196,16 +2495,16 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3236,7 +2535,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -3248,21 +2547,21 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	var events []cadence.Event
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		createAccount: func(payer Address) (address Address, err error) {
+		OnCreateAccount: func(payer Address) (address Address, err error) {
 			return Address{42}, nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3287,7 +2586,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -3330,30 +2629,30 @@ func TestRuntimeContractAccount(t *testing.T) {
 	var accountCode []byte
 	var events []cadence.Event
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3403,7 +2702,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3438,33 +2737,33 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	var accountCode []byte
 	var loggedMessage string
 
-	storage := newTestLedger(nil, nil)
+	storage := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: storage,
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessage = message
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3725,7 +3024,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3764,31 +3063,31 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 	var accountCode []byte
 	var loggedMessage string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessage = message
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3821,7 +3120,7 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3862,29 +3161,29 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 	var accountCode []byte
 	var loggedMessage string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error { return nil },
-		log: func(message string) {
+		OnEmitEvent: func(event cadence.Event) error { return nil },
+		OnProgramLog: func(message string) {
 			loggedMessage = message
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -3916,7 +3215,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -3957,29 +3256,29 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 	var accountCode []byte
 	var loggedMessage string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error { return nil },
-		log: func(message string) {
+		OnEmitEvent: func(event cadence.Event) error { return nil },
+		OnProgramLog: func(message string) {
 			loggedMessage = message
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -4012,7 +3311,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -4053,32 +3352,32 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 
 	var accountCode []byte
 
-	ledger := newTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: ledger,
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: ledger,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		removeAccountContractCode: func(_ common.AddressLocation) (err error) {
+		OnRemoveAccountContractCode: func(_ common.AddressLocation) (err error) {
 			accountCode = nil
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error { return nil },
+		OnEmitEvent: func(event cadence.Event) error { return nil },
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy the contract
 
@@ -4231,7 +3530,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	address1Value := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -4286,29 +3585,29 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
 	signerAccount := address1Value
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -4350,7 +3649,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	address1Value := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -4414,32 +3713,32 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
 	signerAccount := address1Value
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		createAccount: func(payer Address) (address Address, err error) {
+		Storage: NewTestLedger(nil, nil),
+		OnCreateAccount: func(payer Address) (address Address, err error) {
 			return address2Value, nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -4479,7 +3778,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	makeDeployTransaction := func(name, code string) []byte {
 		return []byte(fmt.Sprintf(
@@ -4568,34 +3867,34 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 	var nextAccount byte = 0x2
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		createAccount: func(payer Address) (address Address, err error) {
+		Storage: NewTestLedger(nil, nil),
+		OnCreateAccount: func(payer Address) (address Address, err error) {
 			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
 			nextAccount++
 			return result.ToAddress(), nil
 		},
-		getSigningAccounts: func() ([]Address, error) {
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{0x1}}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	deployTransaction := makeDeployTransaction("TestContractInterface", contractInterfaceCode)
 	err := runtime.ExecuteTransaction(
@@ -4665,7 +3964,7 @@ func TestRuntimeBlock(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -4689,19 +3988,19 @@ func TestRuntimeBlock(t *testing.T) {
 
 	var loggedMessages []string
 
-	storage := newTestLedger(nil, nil)
+	storage := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: storage,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return nil, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -4735,7 +4034,7 @@ func TestRuntimeUnsafeRandom(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -4748,17 +4047,17 @@ func TestRuntimeUnsafeRandom(t *testing.T) {
 
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		readRandom: func(buffer []byte) error {
+	runtimeInterface := &TestRuntimeInterface{
+		OnReadRandom: func(buffer []byte) error {
 			binary.LittleEndian.PutUint64(buffer, 7558174677681708339)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -4784,7 +4083,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("transaction with function", func(t *testing.T) {
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
           access(all) fun test() {}
@@ -4792,13 +4091,13 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
           transaction {}
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -4813,7 +4112,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 	})
 
 	t.Run("transaction with resource", func(t *testing.T) {
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
           access(all) resource R {}
@@ -4821,13 +4120,13 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
           transaction {}
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -4855,7 +4154,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := interpreter.AddressValue{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xDE,
@@ -4888,28 +4187,28 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 			var accountCode []byte
 			var events []cadence.Event
 
-			runtimeInterface := &testRuntimeInterface{
-				getCode: func(_ Location) (bytes []byte, err error) {
+			runtimeInterface := &TestRuntimeInterface{
+				OnGetCode: func(_ Location) (bytes []byte, err error) {
 					return accountCode, nil
 				},
-				storage: newTestLedger(nil, nil),
-				getSigningAccounts: func() ([]Address, error) {
+				Storage: NewTestLedger(nil, nil),
+				OnGetSigningAccounts: func() ([]Address, error) {
 					return []Address{addressValue.ToAddress()}, nil
 				},
-				getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+				OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 					return accountCode, nil
 				},
-				updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+				OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 					accountCode = code
 					return nil
 				},
-				emitEvent: func(event cadence.Event) error {
+				OnEmitEvent: func(event cadence.Event) error {
 					events = append(events, event)
 					return nil
 				},
 			}
 
-			nextTransactionLocation := newTransactionLocationGenerator()
+			nextTransactionLocation := NewTransactionLocationGenerator()
 
 			err := runtime.ExecuteTransaction(
 				Script{
@@ -4931,7 +4230,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	address := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -5012,50 +4311,50 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	storage := newTestLedger(nil, nil)
+	storage := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: storage,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		getAccountBalance: func(_ Address) (uint64, error) {
+		OnGetAccountBalance: func(_ Address) (uint64, error) {
 			// return a dummy value
 			return 12300000000, nil
 		},
-		getAccountAvailableBalance: func(_ Address) (uint64, error) {
+		OnGetAccountAvailableBalance: func(_ Address) (uint64, error) {
 			// return a dummy value
 			return 152300000000, nil
 		},
-		getStorageUsed: func(_ Address) (uint64, error) {
+		OnGetStorageUsed: func(_ Address) (uint64, error) {
 			// return a dummy value
 			return 120, nil
 		},
-		getStorageCapacity: func(_ Address) (uint64, error) {
+		OnGetStorageCapacity: func(_ Address) (uint64, error) {
 			// return a dummy value
 			return 1245, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -5126,7 +4425,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	address := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -5212,32 +4511,32 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -5300,7 +4599,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	address := Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -5386,32 +4685,32 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -5474,7 +4773,7 @@ func TestRuntimeMetrics(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	imported1Location := common.StringLocation("imported1")
 
@@ -5514,7 +4813,7 @@ func TestRuntimeMetrics(t *testing.T) {
       }
     `)
 
-	storage := newTestLedger(nil, nil)
+	storage := NewTestLedger(nil, nil)
 
 	type reports struct {
 		programParsed      map[Location]int
@@ -5530,12 +4829,12 @@ func TestRuntimeMetrics(t *testing.T) {
 			programInterpreted: map[common.Location]int{},
 		}
 
-		runtimeInterface = &testRuntimeInterface{
-			storage: storage,
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface = &TestRuntimeInterface{
+			Storage: storage,
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			getCode: func(location Location) (bytes []byte, err error) {
+			OnGetCode: func(location Location) (bytes []byte, err error) {
 				switch location {
 				case imported1Location:
 					return importedScript1, nil
@@ -5545,13 +4844,13 @@ func TestRuntimeMetrics(t *testing.T) {
 					return nil, fmt.Errorf("unknown import location: %s", location)
 				}
 			},
-			programParsed: func(location common.Location, duration time.Duration) {
+			OnProgramParsed: func(location common.Location, duration time.Duration) {
 				r.programParsed[location]++
 			},
-			programChecked: func(location common.Location, duration time.Duration) {
+			OnProgramChecked: func(location common.Location, duration time.Duration) {
 				r.programChecked[location]++
 			},
-			programInterpreted: func(location common.Location, duration time.Duration) {
+			OnProgramInterpreted: func(location common.Location, duration time.Duration) {
 				r.programInterpreted[location]++
 			},
 		}
@@ -5561,7 +4860,7 @@ func TestRuntimeMetrics(t *testing.T) {
 
 	i1, r1 := newRuntimeInterface()
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	transactionLocation := nextTransactionLocation()
 	err := runtime.ExecuteTransaction(
@@ -5645,7 +4944,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -5700,32 +4999,32 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		})
 	}
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, onWrite),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, onWrite),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) (err error) {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -5805,7 +5104,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -5846,32 +5145,32 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		})
 	}
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, onWrite),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, onWrite),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -6025,7 +5324,7 @@ func TestRuntimeExternalError(t *testing.T) {
 
 	t.Parallel()
 
-	interpreterRuntime := newTestInterpreterRuntime()
+	interpreterRuntime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -6035,16 +5334,16 @@ func TestRuntimeExternalError(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return nil, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			panic(logPanicError{})
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := interpreterRuntime.ExecuteTransaction(
 		Script{
@@ -6065,7 +5364,7 @@ func TestRuntimeExternalNonError(t *testing.T) {
 
 	t.Parallel()
 
-	interpreterRuntime := newTestInterpreterRuntime()
+	interpreterRuntime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       transaction {
@@ -6077,16 +5376,16 @@ func TestRuntimeExternalNonError(t *testing.T) {
 
 	type logPanic struct{}
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return nil, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			panic(logPanic{})
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := interpreterRuntime.ExecuteTransaction(
 		Script{
@@ -6146,7 +5445,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	deployTx := DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
@@ -6155,33 +5454,33 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	var signerAddresses []Address
 
-	runtimeInterface := &testRuntimeInterface{
-		createAccount: func(payer Address) (address Address, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnCreateAccount: func(payer Address) (address Address, err error) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},
-		getCode: func(location Location) (bytes []byte, err error) {
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return signerAddresses, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// create the account
 
@@ -6280,7 +5579,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	deployTx := DeploymentTransaction("HelloWorld", []byte(helloWorldContract1))
 	updateTx := UpdateTransaction("HelloWorld", []byte(helloWorldContract2))
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
@@ -6292,37 +5591,37 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	var programHits []string
 
-	runtimeInterface := &testRuntimeInterface{
-		createAccount: func(payer Address) (address Address, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnCreateAccount: func(payer Address) (address Address, err error) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},
-		getCode: func(location Location) (bytes []byte, err error) {
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return signerAddresses, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	// create the account
 
@@ -6362,7 +5661,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		Name:    "HelloWorld",
 	}
 
-	require.NotContains(t, runtimeInterface.programs, location)
+	require.NotContains(t, runtimeInterface.Programs, location)
 
 	// call the initial hello function
 
@@ -6384,7 +5683,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	// assert that it was stored in the program storage
 	// after it was parsed and checked
 
-	initialProgram := runtimeInterface.programs[location]
+	initialProgram := runtimeInterface.Programs[location]
 	require.NotNil(t, initialProgram)
 
 	// update the contract
@@ -6408,9 +5707,9 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	require.Same(t,
 		initialProgram,
-		runtimeInterface.programs[location],
+		runtimeInterface.Programs[location],
 	)
-	require.NotNil(t, runtimeInterface.programs[location])
+	require.NotNil(t, runtimeInterface.Programs[location])
 
 	// call the new hello function from a script
 
@@ -6490,7 +5789,7 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 
 	deployTx := DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 	var events []cadence.Event
@@ -6503,15 +5802,15 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 
 	var programsHits []Location
 
-	runtimeInterface := &testRuntimeInterface{
-		createAccount: func(payer Address) (address Address, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnCreateAccount: func(payer Address) (address Address, err error) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},
-		getCode: func(location Location) (bytes []byte, err error) {
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		getAndSetProgram: func(
+		OnGetAndSetProgram: func(
 			location Location,
 			load func() (*interpreter.Program, error),
 		) (
@@ -6535,25 +5834,25 @@ func TestRuntimeProgramsHitForToplevelPrograms(t *testing.T) {
 
 			return
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return signerAddresses, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	signerAddresses = []Address{{accountCounter}}
 
@@ -6629,7 +5928,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	const contract1 = `
       access(all) contract Test {
@@ -6694,15 +5993,15 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	signerAddress := common.MustBytesToAddress([]byte{0x42})
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},
-		getCode: func(_ Location) (bytes []byte, err error) {
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 			require.Empty(t, identifiers)
 			require.IsType(t, common.AddressLocation{}, location)
 
@@ -6720,20 +6019,20 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 				},
 			}, nil
 		},
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy the Test contract
 
@@ -6755,7 +6054,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 		Name:    "Test",
 	}
 
-	require.NotContains(t, runtimeInterface.programs, location)
+	require.NotContains(t, runtimeInterface.Programs, location)
 
 	// Use the Test contract
 
@@ -6775,7 +6074,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
       }
     `)
 
-	nextScriptLocation := newScriptLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	_, err = runtime.ExecuteScript(
 		Script{
@@ -6792,7 +6091,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	// assert that it was stored in the program storage
 	// after it was parsed and checked
 
-	initialProgram := runtimeInterface.programs[location]
+	initialProgram := runtimeInterface.Programs[location]
 	require.NotNil(t, initialProgram)
 
 	// Update the Test contract
@@ -6815,9 +6114,9 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	require.Same(t,
 		initialProgram,
-		runtimeInterface.programs[location],
+		runtimeInterface.Programs[location],
 	)
-	require.NotNil(t, runtimeInterface.programs[location])
+	require.NotNil(t, runtimeInterface.Programs[location])
 
 	// Use the new Test contract
 
@@ -6854,7 +6153,7 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       access(all) fun main(num: Int) {}
@@ -6872,16 +6171,13 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 			// NOTE: to parallelize this sub-test,
 			// access to `programs` must be made thread-safe first
 
-			storage := newTestLedger(nil, nil)
+			storage := NewTestLedger(nil, nil)
 
-			runtimeInterface := &testRuntimeInterface{
-				storage: storage,
-				meterMemory: func(_ common.MemoryUsage) error {
-					return nil
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: storage,
+				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return json.Decode(nil, b)
 				},
-			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(runtimeInterface, b)
 			}
 
 			_, err := runtime.ExecuteScript(
@@ -6915,17 +6211,17 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 		},
 		{
 			name: "correct number of arguments",
-			arguments: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(1)),
-			},
+			arguments: encodeArgs([]cadence.Value{
+				cadence.NewInt(1),
+			}),
 			valid: true,
 		},
 		{
 			name: "too many arguments",
-			arguments: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(1)),
-				jsoncdc.MustEncode(cadence.NewInt(2)),
-			},
+			arguments: encodeArgs([]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewInt(2),
+			}),
 			valid: false,
 		},
 	} {
@@ -6933,57 +6229,11 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 	}
 }
 
-func singleIdentifierLocationResolver(t testing.TB) func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-	return func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-		require.Len(t, identifiers, 1)
-		require.IsType(t, common.AddressLocation{}, location)
-
-		return []ResolvedLocation{
-			{
-				Location: common.AddressLocation{
-					Address: location.(common.AddressLocation).Address,
-					Name:    identifiers[0].Identifier,
-				},
-				Identifiers: identifiers,
-			},
-		}, nil
-	}
-}
-
-func multipleIdentifierLocationResolver(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
-
-	// Resolve each identifier as an address location
-
-	for _, identifier := range identifiers {
-		result = append(result, sema.ResolvedLocation{
-			Location: common.AddressLocation{
-				Address: location.(common.AddressLocation).Address,
-				Name:    identifier.Identifier,
-			},
-			Identifiers: []ast.Identifier{
-				identifier,
-			},
-		})
-	}
-
-	return
-}
-
-func TestRuntimeGetConfig(t *testing.T) {
-	t.Parallel()
-
-	rt := newTestInterpreterRuntime()
-
-	config := rt.Config()
-	expected := rt.defaultConfig
-	require.Equal(t, expected, config)
-}
-
 func TestRuntimePanics(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       access(all) fun main() {
@@ -6991,16 +6241,16 @@ func TestRuntimePanics(t *testing.T) {
       }
     `)
 
-	storage := newTestLedger(nil, nil)
+	storage := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: storage,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	_, err := runtime.ExecuteScript(
 		Script{
@@ -7022,7 +6272,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 	t.Run("store auth account reference", func(t *testing.T) {
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
           access(all) fun main() {
@@ -7032,7 +6282,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
           }
         `)
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -7051,7 +6301,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
           access(all) fun main() {
@@ -7061,7 +6311,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
           }
         `)
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &TestRuntimeInterface{}
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -7085,7 +6335,7 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
           access(all) fun main() {
@@ -7095,8 +6345,8 @@ func TestRuntimeAccountsInDictionary(t *testing.T) {
           }
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
 		}
 
 		_, err := runtime.ExecuteScript(
@@ -7120,7 +6370,7 @@ func TestRuntimeStackOverflow(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	const contract = `
 
@@ -7143,36 +6393,33 @@ func TestRuntimeStackOverflow(t *testing.T) {
 	var signerAddress common.Address
 	accountCodes := map[common.Location]string{}
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = string(code)
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = []byte(accountCodes[location])
 			return code, nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		meterMemory: func(_ common.MemoryUsage) error {
-			return nil
+		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
 		},
 	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		return json.Decode(runtimeInterface, b)
-	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy
 
@@ -7207,10 +6454,10 @@ func TestRuntimeInternalErrors(t *testing.T) {
           }
         `)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			log: func(message string) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnProgramLog: func(message string) {
 				// panic due to go-error in cadence implementation
 				var val any = message
 				_ = val.(int)
@@ -7242,10 +6489,10 @@ func TestRuntimeInternalErrors(t *testing.T) {
           }
         `)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			log: func(message string) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnProgramLog: func(message string) {
 				// intentionally panic
 				panic(fmt.Errorf("panic trying to log %s", message))
 			},
@@ -7279,10 +6526,10 @@ func TestRuntimeInternalErrors(t *testing.T) {
           }
         `)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			log: func(message string) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnProgramLog: func(message string) {
 				// panic due to Cadence implementation error
 				var val any = message
 				_ = val.(int)
@@ -7322,34 +6569,34 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		var accountCode []byte
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{addressValue}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
-			updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 				accountCode = code
 				return nil
 			},
-			emitEvent: func(_ cadence.Event) error {
+			OnEmitEvent: func(_ cadence.Event) error {
 				return nil
 			},
-			log: func(message string) {
+			OnProgramLog: func(message string) {
 				// panic due to Cadence implementation error
 				var val any = message
 				_ = val.(int)
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		deploy := DeploymentTransaction("Test", contract)
 		err := runtime.ExecuteTransaction(
@@ -7390,15 +6637,15 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		script := []byte("access(all) fun test() {}")
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			getAndSetProgram: func(_ Location, _ func() (*interpreter.Program, error)) (*interpreter.Program, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetAndSetProgram: func(_ Location, _ func() (*interpreter.Program, error)) (*interpreter.Program, error) {
 				panic(errors.New("crash while getting/setting program"))
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		_, err := runtime.ParseAndCheckProgram(
 			script,
@@ -7417,11 +6664,11 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: testLedger{
-				getValue: func(owner, key []byte) (value []byte, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: TestLedger{
+				OnGetValue: func(owner, key []byte) (value []byte, err error) {
 					panic(errors.New("crasher"))
 				},
 			},
@@ -7450,11 +6697,11 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: testLedger{
-				getValue: func(owner, key []byte) (value []byte, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: TestLedger{
+				OnGetValue: func(owner, key []byte) (value []byte, err error) {
 					panic(errors.New("crasher"))
 				},
 			},
@@ -7485,10 +6732,10 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		script := []byte(`access(all) fun main() {}`)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(usage common.MemoryUsage) error {
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: func(usage common.MemoryUsage) error {
 				// panic with a non-error type
 				panic("crasher")
 			},
@@ -7592,7 +6839,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
 				),
 			)
 
-			runtime := newTestInterpreterRuntime()
+			runtime := NewTestInterpreterRuntime()
 
 			compErr := errors.New("computation exceeded limit")
 			var hits, totalIntensity uint
@@ -7607,15 +6854,15 @@ func TestRuntimeComputationMetring(t *testing.T) {
 
 			address := common.MustBytesToAddress([]byte{0x1})
 
-			runtimeInterface := &testRuntimeInterface{
-				storage: newTestLedger(nil, nil),
-				getSigningAccounts: func() ([]Address, error) {
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: NewTestLedger(nil, nil),
+				OnGetSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
-				meterComputation: meterComputationFunc,
+				OnMeterComputation: meterComputationFunc,
 			}
 
-			nextTransactionLocation := newTransactionLocationGenerator()
+			nextTransactionLocation := NewTransactionLocationGenerator()
 
 			err := runtime.ExecuteTransaction(
 				Script{
@@ -7646,28 +6893,25 @@ func TestRuntimeImportAnyStruct(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	var loggedMessages []string
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	storage := newTestLedger(nil, nil)
+	storage := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: storage,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		meterMemory: func(_ common.MemoryUsage) error {
-			return nil
+		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		return json.Decode(runtimeInterface, b)
 	}
 
 	err := rt.ExecuteTransaction(
@@ -7726,8 +6970,8 @@ func assertRuntimeErrorIsExternalError(t *testing.T, err error) {
 
 func BenchmarkRuntimeScriptNoop(b *testing.B) {
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
 	}
 
 	script := Script{
@@ -7744,7 +6988,7 @@ func BenchmarkRuntimeScriptNoop(b *testing.B) {
 
 	require.NotNil(b, stdlib.CryptoChecker())
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -7758,9 +7002,9 @@ func TestRuntimeImportTestStdlib(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
-	runtimeInterface := &testRuntimeInterface{}
+	runtimeInterface := &TestRuntimeInterface{}
 
 	_, err := rt.ExecuteScript(
 		Script{
@@ -7791,9 +7035,9 @@ func TestRuntimeGetCurrentBlockScript(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
-	runtimeInterface := &testRuntimeInterface{}
+	runtimeInterface := &TestRuntimeInterface{}
 
 	_, err := rt.ExecuteScript(
 		Script{
@@ -7819,7 +7063,7 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	address1 := common.MustBytesToAddress([]byte{0x1})
 	address2 := common.MustBytesToAddress([]byte{0x2})
@@ -7837,30 +7081,30 @@ func TestRuntimeTypeMismatchErrorMessage(t *testing.T) {
 
 	signerAccount := address1
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	// Deploy same contract to two different accounts
 
@@ -7935,7 +7179,7 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	script := []byte(`
     access(all) fun main(): Int {
@@ -7950,13 +7194,13 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
     }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		getAccountBalance:          noopRuntimeUInt64Getter,
-		getAccountAvailableBalance: noopRuntimeUInt64Getter,
-		getStorageUsed:             noopRuntimeUInt64Getter,
-		getStorageCapacity:         noopRuntimeUInt64Getter,
-		accountKeysCount:           noopRuntimeUInt64Getter,
-		storage:                    newTestLedger(nil, nil),
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetAccountBalance:          noopRuntimeUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
+		OnGetStorageUsed:             noopRuntimeUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
+		OnAccountKeysCount:           noopRuntimeUInt64Getter,
+		Storage:                      NewTestLedger(nil, nil),
 	}
 
 	_, err := rt.ExecuteScript(
@@ -7986,7 +7230,7 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	script := []byte(`
     access(all) fun main(): String {
@@ -8002,13 +7246,13 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
     }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		getAccountBalance:          noopRuntimeUInt64Getter,
-		getAccountAvailableBalance: noopRuntimeUInt64Getter,
-		getStorageUsed:             noopRuntimeUInt64Getter,
-		getStorageCapacity:         noopRuntimeUInt64Getter,
-		accountKeysCount:           noopRuntimeUInt64Getter,
-		storage:                    newTestLedger(nil, nil),
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetAccountBalance:          noopRuntimeUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
+		OnGetStorageUsed:             noopRuntimeUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
+		OnAccountKeysCount:           noopRuntimeUInt64Getter,
+		Storage:                      NewTestLedger(nil, nil),
 	}
 
 	_, err := rt.ExecuteScript(
@@ -8040,7 +7284,7 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	script := []byte(`
       access(all) fun main(address: Address): AnyStruct {
@@ -8056,12 +7300,12 @@ func TestRuntimeAccountTypeEquality(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return jsoncdc.Decode(nil, b)
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
 		},
-		emitEvent: func(_ cadence.Event) error {
+		OnEmitEvent: func(_ cadence.Event) error {
 			return nil
 		},
 	}
@@ -8090,7 +7334,7 @@ func TestRuntimeUserPanicToError(t *testing.T) {
 		"wrapped: %w",
 		runtimeErrors.NewDefaultUserError("user error"),
 	)
-	retErr := userPanicToError(func() { panic(err) })
+	retErr := UserPanicToError(func() { panic(err) })
 	require.Equal(t, retErr, err)
 }
 
@@ -8098,7 +7342,7 @@ func TestRuntimeDestructorReentrancyPrevention(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	script := []byte(`
       access(all) resource Vault {
@@ -8181,8 +7425,8 @@ func TestRuntimeDestructorReentrancyPrevention(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
 	}
 
 	_, err := rt.ExecuteScript(
@@ -8203,7 +7447,7 @@ func TestRuntimeFlowEventTypes(t *testing.T) {
 
 	t.Parallel()
 
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	script := []byte(`
       access(all) fun main(): Type? {
@@ -8211,8 +7455,8 @@ func TestRuntimeFlowEventTypes(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
 	}
 
 	result, err := rt.ExecuteScript(
@@ -8245,7 +7489,7 @@ func TestRuntimeInvalidatedResourceUse(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 
@@ -8254,29 +7498,29 @@ func TestRuntimeInvalidatedResourceUse(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return signers, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	attacker := []byte(fmt.Sprintf(`
 		import VictimContract from %s
@@ -8436,7 +7680,7 @@ func TestRuntimeInvalidatedResourceUse2(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 
@@ -8445,29 +7689,29 @@ func TestRuntimeInvalidatedResourceUse2(t *testing.T) {
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return signers, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	attacker := []byte(fmt.Sprintf(`
         import VictimContract from %s
@@ -8642,8 +7886,9 @@ func TestRuntimeInvalidRecursiveTransferViaVariableDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
-	runtime.defaultConfig.AtreeValidationEnabled = false
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		AtreeValidationEnabled: false,
+	})
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -8699,29 +7944,29 @@ func TestRuntimeInvalidRecursiveTransferViaVariableDeclaration(t *testing.T) {
 	var accountCode []byte
 	var events []cadence.Event
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy
 
@@ -8756,8 +8001,9 @@ func TestRuntimeInvalidRecursiveTransferViaFunctionArgument(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
-	runtime.defaultConfig.AtreeValidationEnabled = false
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		AtreeValidationEnabled: false,
+	})
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -8806,29 +8052,29 @@ func TestRuntimeInvalidRecursiveTransferViaFunctionArgument(t *testing.T) {
 	var accountCode []byte
 	var events []cadence.Event
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy
 
@@ -8903,7 +8149,7 @@ func TestRuntimeOptionalReferenceAttack(t *testing.T) {
       }
     `
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 
@@ -8911,34 +8157,34 @@ func TestRuntimeOptionalReferenceAttack(t *testing.T) {
 
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 
-	storage := newTestLedger(nil, nil)
+	storage := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: storage,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(s string) {
+		OnProgramLog: func(s string) {
 
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		return json.Decode(nil, b)
+		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
+		},
 	}
 
 	_, err := runtime.ExecuteScript(
@@ -8966,7 +8212,7 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
       access(all) resource Foo {}
@@ -8985,8 +8231,8 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
 	}
 
 	// Test
@@ -9009,7 +8255,7 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	t.Run("regular error returned", func(t *testing.T) {
 		t.Parallel()
@@ -9022,9 +8268,9 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
             }
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			meterComputation: func(compKind common.ComputationKind, intensity uint) error {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
 				return fmt.Errorf("computation limit exceeded")
 			},
 		}
@@ -9057,9 +8303,9 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
             }
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			meterComputation: func(compKind common.ComputationKind, intensity uint) error {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
 				panic(fmt.Errorf("computation limit exceeded"))
 			},
 		}
@@ -9092,9 +8338,9 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
             }
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			meterComputation: func(compKind common.ComputationKind, intensity uint) error {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) error {
 				// Cause a runtime error
 				var x any = "hello"
 				_ = x.(int)
@@ -9129,9 +8375,9 @@ func TestRuntimeComputationMeteringError(t *testing.T) {
             }
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			meterComputation: func(compKind common.ComputationKind, intensity uint) (err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnMeterComputation: func(compKind common.ComputationKind, intensity uint) (err error) {
 				// Cause a runtime error. Catch it and return.
 				var x any = "hello"
 				defer func() {
@@ -9222,8 +8468,9 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
         }
     `)
 
-	runtime := newTestInterpreterRuntime()
-	runtime.defaultConfig.AtreeValidationEnabled = false
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		AtreeValidationEnabled: false,
+	})
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
@@ -9234,30 +8481,30 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 
 	isContractBroken := false
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return contractCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			if isContractBroken && contractCode != nil {
 				return brokenFoo, nil
 			}
 			return contractCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			contractCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		getAndSetProgram: func(location Location, load func() (*interpreter.Program, error)) (*interpreter.Program, error) {
+		OnGetAndSetProgram: func(location Location, load func() (*interpreter.Program, error)) (*interpreter.Program, error) {
 			program, err := load()
 			if err == nil {
 				return program, nil
@@ -9266,7 +8513,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy
 
@@ -9318,7 +8565,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 
 func BenchmarkRuntimeResourceTracking(b *testing.B) {
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -9326,33 +8573,33 @@ func BenchmarkRuntimeResourceTracking(b *testing.B) {
 
 	signerAccount := contractsAddress
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(b),
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		return json.Decode(runtimeInterface, b)
+		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
+		},
 	}
 
 	environment := NewBaseInterpreterEnvironment(Config{})
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy contract
 
@@ -9499,7 +8746,7 @@ func TestRuntimeEventEmission(t *testing.T) {
 	t.Run("primitive", func(t *testing.T) {
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
           access(all)
@@ -9513,15 +8760,15 @@ func TestRuntimeEventEmission(t *testing.T) {
 
 		var events []cadence.Event
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			emitEvent: func(event cadence.Event) error {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnEmitEvent: func(event cadence.Event) error {
 				events = append(events, event)
 				return nil
 			},
 		}
 
-		nextScriptLocation := newScriptLocationGenerator()
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		location := nextScriptLocation()
 
@@ -9558,7 +8805,7 @@ func TestRuntimeEventEmission(t *testing.T) {
 	t.Run("reference", func(t *testing.T) {
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
           access(all)
@@ -9572,15 +8819,15 @@ func TestRuntimeEventEmission(t *testing.T) {
 
 		var events []cadence.Event
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			emitEvent: func(event cadence.Event) error {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnEmitEvent: func(event cadence.Event) error {
 				events = append(events, event)
 				return nil
 			},
 		}
 
-		nextScriptLocation := newScriptLocationGenerator()
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		location := nextScriptLocation()
 
@@ -9613,4 +8860,135 @@ func TestRuntimeEventEmission(t *testing.T) {
 		)
 
 	})
+}
+
+func TestRuntimeInvalidWrappedPrivateCapability(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		AtreeValidationEnabled: false,
+	})
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	helperContract := []byte(`
+      access(all)
+      contract Foo {
+
+          access(all)
+          struct Thing {
+
+              access(all)
+              let cap: Capability
+
+              init(cap: Capability) {
+                  self.cap = cap
+              }
+          }
+      }
+    `)
+
+	getCapScript := []byte(`
+      import Foo from 0x1
+
+      access(all)
+      fun main(addr: Address): AnyStruct {
+          let acct = getAuthAccount<auth(Capabilities) &Account>(addr)
+          let cap = acct.capabilities.account.issue<auth(Storage) &Account>()
+          return Foo.Thing(cap: cap)
+      }
+	`)
+
+	attackTx := []byte(`
+      import Foo from 0x1
+
+      transaction(thing: Foo.Thing) {
+          prepare(_: &Account) {
+ 		      thing.cap.borrow<auth(Storage) &Account>()!
+                  .storage.save("Hello, World", to: /storage/attack)
+          }
+      }
+    `)
+
+	deploy := DeploymentTransaction("Foo", helperContract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	// Deploy helper contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Get Capability
+
+	capability, err := runtime.ExecuteScript(
+		Script{
+			Source: getCapScript,
+			Arguments: encodeArgs([]cadence.Value{
+				cadence.BytesToAddress([]byte{0x1}),
+			}),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Attack
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: attackTx,
+			Arguments: encodeArgs([]cadence.Value{
+				capability,
+			}),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var argumentNotImportableErr *ArgumentNotImportableError
+	require.ErrorAs(t, err, &argumentNotImportableErr)
 }

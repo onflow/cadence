@@ -1461,19 +1461,78 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
+	t.Run("accessor function with mapped ref arg", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement H
+            entitlement mapping M {
+                E -> F
+                G -> H
+            }
+            struct interface S {
+                access(M) fun foo(_ arg: auth(M) &Int): auth(M) &Int
+            }
+
+            fun foo(s: auth(E) &{S}) {
+                s.foo(&1 as auth(F) &Int)
+            }
+        `)
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("accessor function with invalid mapped ref arg", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-            entitlement mapping M {}
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement H
+            entitlement mapping M {
+                E -> F
+                G -> H
+            }
             struct interface S {
-                access(M) fun foo(arg: auth(M) &Int): auth(M) &Int
+                access(M) fun foo(_ arg: auth(M) &Int): auth(M) &Int
+            }
+
+            fun foo(s: auth(E) &{S}) {
+                s.foo(&1 as auth(H) &Int)
             }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("accessor function with full mapped ref arg", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement H
+            entitlement mapping M {
+                E -> F
+                G -> H
+            }
+            struct interface S {
+                access(M) fun foo(_ arg: auth(M) &Int): auth(M) &Int
+            }
+
+            fun foo(s: {S}) {
+                s.foo(&1 as auth(F, H) &Int)
+            }
+        `)
+
+		assert.NoError(t, err)
 	})
 
 	t.Run("multiple mappings conjunction", func(t *testing.T) {
@@ -7220,5 +7279,558 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 			"",
 			invalidAccessErr.SecondaryError(),
 		)
+	})
+}
+
+func TestCheckEntitlementOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("optional chain function call", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            struct S {
+                access(X) fun foo() {}
+            }
+
+            fun bar(r: &S?) {
+                r?.foo()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+	})
+
+	t.Run("optional chain field access", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X, Y) let foo: Int
+                init() {
+                    self.foo = 0
+                }
+            }
+
+            fun bar(r: auth(X) &S?) {
+                r?.foo
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var invalidAccessErr *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessErr)
+	})
+
+	t.Run("optional chain non reference", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X, Y) let foo: Int
+                init() {
+                    self.foo = 0
+                }
+            }
+
+            fun bar(r: S?) {
+                r?.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("optional chain mapping", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement X
+            entitlement Y
+
+            entitlement mapping E {
+                X -> Y
+            }
+
+            struct S {
+                access(E) let foo: auth(E) &Int
+                init() {
+                    self.foo = &0 as auth(Y) &Int
+                }
+            }
+
+            fun bar(r: (auth(X) &S)?): (auth(Y) &Int)? {
+                return r?.foo
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckEntitlementMissingInMap(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("missing type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        access(all) entitlement X
+        access(all) entitlement mapping M {
+            X -> X
+            NonExistingEntitlement -> X
+        }
+        access(all) struct S {
+            access(M) var foo: auth(M) &Int
+            init() {
+                self.foo = &3 as auth(X) &Int
+                var selfRef = &self as auth(X) &S
+                selfRef.foo
+            }
+        }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.NotDeclaredError{}, errors[0])
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errors[1])
+	})
+
+	t.Run("non entitlement type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        access(all) entitlement X
+        access(all) entitlement mapping M {
+            X -> X
+            Int -> X
+        }
+        access(all) struct S {
+            access(M) var foo: auth(M) &Int
+            init() {
+                self.foo = &3 as auth(X) &Int
+                var selfRef = &self as auth(X) &S
+                selfRef.foo
+            }
+        }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidNonEntitlementTypeInMapError{}, errors[0])
+	})
+}
+
+func TestInterpretMappingEscalation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("escalate", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Insert
+				Y -> Remove
+			}
+			struct S {
+				access(M) var member: auth(M) &[Int]?
+				init() {
+					self.member = nil;
+				}
+				access(all) fun grantRemovePrivileges(param: auth(Insert) &[Int]): Void{
+					var selfRef = &self as auth(X) &S;
+					selfRef.member = param;
+				}
+			}
+			fun main(): Void {
+				var arr: [Int] = [123];
+				var arrRef = &arr as auth(Insert) &[Int];
+				let s = S()
+				s.grantRemovePrivileges(param: arrRef);
+				s.member?.removeLast()
+			} 
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("field assign", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Insert
+				Y -> Remove
+			}
+			struct S {
+				access(M) var member: auth(M) &[Int]?
+				init() {
+					self.member = nil;
+				}
+				access(all) fun grantRemovePrivileges(sRef: auth(X) &S, param: auth(Insert) &[Int]): Void{
+					sRef.member = param;
+				}
+			}
+			fun main(): Void {
+				var arr: [Int] = [123];
+				var arrRef = &arr as auth(Insert) &[Int];
+				let s = S()
+				s.grantRemovePrivileges(sRef: &s as auth(X) &S, param: arrRef);
+				s.member?.removeLast()
+			} 
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+}
+
+func TestCheckEntitlementMappingComplexFields(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array mapped field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Inner1
+            entitlement Inner2
+            entitlement Outer1
+            entitlement Outer2
+
+            entitlement mapping MyMap {
+                Outer1 -> Inner1
+                Outer2 -> Inner2
+            }
+            struct InnerObj {
+                access(Inner1) fun first(): Int{ return 9999 }
+                access(Inner2) fun second(): Int{ return 8888 }
+            }
+
+            struct Carrier{
+                access(MyMap) let arr: [auth(MyMap) &InnerObj]
+                init() {
+                    self.arr = [&InnerObj()]
+                }
+            }    
+
+            fun foo() {
+                let x: auth(Inner1, Inner2) &InnerObj = Carrier().arr[0]
+                x.first()
+                x.second()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array mapped field via reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Inner1
+            entitlement Inner2
+            entitlement Outer1
+            entitlement Outer2
+
+            entitlement mapping MyMap {
+                Outer1 -> Inner1
+                Outer2 -> Inner2
+            }
+            struct InnerObj {
+                access(Inner1) fun first(): Int{ return 9999 }
+                access(Inner2) fun second(): Int{ return 8888 }
+            }
+
+            struct Carrier{
+                access(MyMap) let arr: [auth(MyMap) &InnerObj]
+                init() {
+                    self.arr = [&InnerObj()]
+                }
+            }    
+
+            fun foo() {
+                let x = (&Carrier() as auth(Outer1) &Carrier).arr[0]
+                x.first() // ok
+                x.second() // fails
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAccessError{}, errors[0])
+	})
+
+	t.Run("array mapped function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Inner1
+            entitlement Inner2
+            entitlement Outer1
+            entitlement Outer2
+
+            entitlement mapping MyMap {
+                Outer1 -> Inner1
+                Outer2 -> Inner2
+            }
+            struct InnerObj {
+                access(Inner1) fun first(): Int{ return 9999 }
+                access(Inner2) fun second(): Int{ return 8888 }
+            }
+
+            struct Carrier{
+                access(MyMap) fun getArr(): [auth(MyMap) &InnerObj] {
+                    return [&InnerObj()]
+                }
+            }    
+
+           
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errors[0])
+	})
+
+	t.Run("array mapped field escape", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Inner1
+            entitlement Inner2
+            entitlement Outer1
+            entitlement Outer2
+
+            entitlement mapping MyMap {
+                Outer1 -> Inner1
+                Outer2 -> Inner2
+            }
+            struct InnerObj {
+                access(Inner1) fun first(): Int{ return 9999 }
+                access(Inner2) fun second(): Int{ return 8888 }
+            }
+
+            struct Carrier{
+                access(MyMap) let arr: [auth(MyMap) &InnerObj]
+                init() {
+                    self.arr = [&InnerObj()]
+                }
+            }   
+            
+            struct TranslatorStruct {
+                access(self) var carrier: &Carrier;
+                access(MyMap) fun translate(): auth(MyMap) &InnerObj {
+                    return self.carrier.arr[0] // type mismatch
+                }
+                init(_ carrier: &Carrier) {
+                    self.carrier = carrier 
+                }
+            }    
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("dictionary mapped field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Inner1
+            entitlement Inner2
+            entitlement Outer1
+            entitlement Outer2
+
+            entitlement mapping MyMap {
+                Outer1 -> Inner1
+                Outer2 -> Inner2
+            }
+            struct InnerObj {
+                access(Inner1) fun first(): Int{ return 9999 }
+                access(Inner2) fun second(): Int{ return 8888 }
+            }
+
+            struct Carrier{
+                access(MyMap) let dict: {String: auth(MyMap) &InnerObj}
+                init() {
+                    self.dict = {"": &InnerObj()}
+                }
+            }    
+
+            fun foo() {
+                let x: auth(Inner1, Inner2) &InnerObj = Carrier().dict[""]!
+                x.first()
+                x.second()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary mapped field via reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Inner1
+            entitlement Inner2
+            entitlement Outer1
+            entitlement Outer2
+
+            entitlement mapping MyMap {
+                Outer1 -> Inner1
+                Outer2 -> Inner2
+            }
+            struct InnerObj {
+                access(Inner1) fun first(): Int{ return 9999 }
+                access(Inner2) fun second(): Int{ return 8888 }
+            }
+
+            struct Carrier{
+                access(MyMap) let dict: {String: auth(MyMap) &InnerObj}
+                init() {
+                    self.dict = {"": &InnerObj()}
+                }
+            }    
+
+            fun foo() {
+                let x = (&Carrier() as auth(Outer1) &Carrier).dict[""]!
+                x.first() // ok
+                x.second() // fails
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAccessError{}, errors[0])
+	})
+
+	t.Run("array mapped function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Inner1
+            entitlement Inner2
+            entitlement Outer1
+            entitlement Outer2
+
+            entitlement mapping MyMap {
+                Outer1 -> Inner1
+                Outer2 -> Inner2
+            }
+            struct InnerObj {
+                access(Inner1) fun first(): Int{ return 9999 }
+                access(Inner2) fun second(): Int{ return 8888 }
+            }
+
+            struct Carrier{
+                access(MyMap) fun getDict(): {String: auth(MyMap) &InnerObj} {
+                    return {"": &InnerObj()}
+                }
+            }    
+
+           
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errors[0])
+	})
+
+	t.Run("lambda mapped array field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement Inner1
+            entitlement Inner2
+            entitlement Outer1
+            entitlement Outer2
+
+            entitlement mapping MyMap {
+                Outer1 -> Inner1
+                Outer2 -> Inner2
+            }
+            struct InnerObj {
+                access(Inner1) fun first(): Int{ return 9999 }
+                access(Inner2) fun second(): Int{ return 8888 }
+            }
+
+            struct Carrier{
+                access(MyMap) let fnArr: [fun(auth(MyMap) &InnerObj): auth(MyMap) &InnerObj]
+                init() {
+                    let innerObj = &InnerObj() as auth(Inner1, Inner2) &InnerObj
+                    self.fnArr = [fun(_ x: &InnerObj): auth(Inner1, Inner2) &InnerObj {
+                        return innerObj
+                    }]
+                }
+             
+            }    
+
+            fun foo() {
+                let x = (&Carrier() as auth(Outer1) &Carrier).fnArr[0]
+                x(&InnerObj()).first() // ok
+
+                x(&InnerObj() as auth(Inner1) &InnerObj).first() // ok
+
+                x(&InnerObj() as auth(Inner2) &InnerObj).first() // mismatch
+
+                x(&InnerObj()).second() // fails
+            }
+          
+        `)
+
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errors[1])
+	})
+
+	t.Run("lambda escape", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement Inner1
+			entitlement Inner2
+			entitlement Outer1
+			entitlement Outer2
+
+			entitlement mapping MyMap {
+				Outer1 -> Inner1
+				Outer2 -> Inner2
+			}
+			struct InnerObj {
+				access(Inner1) fun first(): Int{ return 9999 }
+				access(Inner2) fun second(): Int{ return 8888 }
+			}
+
+			struct FuncGenerator {
+				access(MyMap) fun generate(): auth(MyMap) &Int? {
+                    // cannot declare lambda with mapped entitlement
+					fun innerFunc(_ param: auth(MyMap) &InnerObj): Int {
+						return 123;
+					}
+					var f = innerFunc; // will fail if we're called via a reference
+					return nil;
+				}
+			}      
+
+			fun test() {
+				(&FuncGenerator() as auth(Outer1) &FuncGenerator).generate()
+			}
+		`)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidMappedAuthorizationOutsideOfFieldError{}, errors[0])
 	})
 }

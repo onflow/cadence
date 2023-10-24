@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/binary"
@@ -27,10 +27,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -42,7 +44,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		storage *Storage,
 	) {
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		accountCodes := map[Location][]byte{}
 
@@ -136,30 +138,30 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 		signers := []Address{testSigners[0]}
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			log: func(message string) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnProgramLog: func(message string) {
 				// NO-OP
 			},
-			emitEvent: func(event cadence.Event) error {
+			OnEmitEvent: func(event cadence.Event) error {
 				// NO-OP
 				return nil
 			},
-			getSigningAccounts: func() ([]Address, error) {
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return signers, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				accountCodes[location] = code
 				return nil
 			},
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				code = accountCodes[location]
 				return code, nil
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		// Deploy contract
 
@@ -227,11 +229,14 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						`
                             transaction {
                                 prepare(signer: auth(Capabilities) &Account) {
+                                    let path = /public/x
+
                                     // Act
                                     let gotCap: Capability<&AnyStruct>? =
-                                        %s.capabilities.get<&AnyStruct>(/public/x)
+                                        %[1]s.capabilities.get<&AnyStruct>(path)
 
                                     // Assert
+                                    assert(!%[1]s.capabilities.exists(path))
                                     assert(gotCap == nil)
                                 }
                             }
@@ -269,9 +274,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R> =
-                                          %s.capabilities.get<&Test.R>(publicPath)!
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)!
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.check())
                                       assert(gotCap.id == expectedCapID)
@@ -302,9 +308,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Account> =
-                                          %s.capabilities.get<&Account>(publicPath)!
+                                          %[1]s.capabilities.get<&Account>(publicPath)!
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.check())
                                       assert(gotCap.id == expectedCapID)
@@ -346,10 +353,11 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R> =
-                                          %s.capabilities.get<&Test.R>(publicPath)!
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)!
                                       let ref: &Test.R = gotCap.borrow()!
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.check())
                                       assert(gotCap.id == expectedCapID)
@@ -382,10 +390,11 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Account> =
-                                          %s.capabilities.get<&Account>(publicPath)!
+                                          %[1]s.capabilities.get<&Account>(publicPath)!
                                       let ref: &Account = gotCap.borrow()!
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.check())
                                       assert(gotCap.id == expectedCapID)
@@ -428,9 +437,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<auth(Test.X) &Test.R>? =
-                                          %s.capabilities.get<auth(Test.X) &Test.R>(publicPath)
+                                          %[1]s.capabilities.get<auth(Test.X) &Test.R>(publicPath)
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap == nil)
                                   }
@@ -463,9 +473,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R>? =
-                                          %s.capabilities.get<&Test.R>(publicPath)
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap == nil)
                                   }
@@ -506,9 +517,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.S>? =
-                                          %s.capabilities.get<&Test.S>(publicPath)
+                                          %[1]s.capabilities.get<&Test.S>(publicPath)
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap == nil)
                                   }
@@ -539,9 +551,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&AnyResource>? =
-                                          %s.capabilities.get<&AnyResource>(publicPath)
+                                          %[1]s.capabilities.get<&AnyResource>(publicPath)
 
                                       // Assert
+                                      assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap == nil)
                                   }
@@ -582,9 +595,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R>? =
-                                          %s.capabilities.get<&Test.R>(publicPath)
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)
 
                                       // Assert
+                                      assert(!%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(unpublishedcap!.id == expectedCapID)
                                       assert(gotCap == nil)
@@ -616,9 +630,10 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Account>? =
-                                          %s.capabilities.get<&Account>(publicPath)
+                                          %[1]s.capabilities.get<&Account>(publicPath)
 
                                       // Assert
+                                      assert(!%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(unpublishedcap!.id == expectedCapID)
                                       assert(gotCap == nil)
@@ -2760,7 +2775,7 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contract := []byte(`
         access(all) contract Test {
@@ -2799,28 +2814,28 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
 
 	var accountCode []byte
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy
 
@@ -2848,4 +2863,187 @@ func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+}
+
+func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
+
+	t.Parallel()
+
+	type operation struct {
+		name string
+		code string
+	}
+
+	type testCase struct {
+		name       string
+		setup      string
+		operations []operation
+	}
+
+	test := func(testCase testCase, operation operation) {
+
+		testName := fmt.Sprintf("%s: %s", testCase.name, operation.name)
+
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
+
+			rt := NewTestInterpreterRuntime()
+
+			tx := []byte(fmt.Sprintf(
+				`
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          %s
+                          %s
+                      }
+                  }
+                `,
+				testCase.setup,
+				operation.code,
+			))
+
+			address := common.MustBytesToAddress([]byte{0x1})
+			accountIDs := map[common.Address]uint64{}
+
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: NewTestLedger(nil, nil),
+				OnGetSigningAccounts: func() ([]Address, error) {
+					return []Address{address}, nil
+				},
+				OnEmitEvent: func(event cadence.Event) error {
+					return nil
+				},
+				OnGenerateAccountID: func(address common.Address) (uint64, error) {
+					accountID := accountIDs[address] + 1
+					accountIDs[address] = accountID
+					return accountID, nil
+				},
+			}
+
+			nextTransactionLocation := NewTransactionLocationGenerator()
+
+			// Test
+
+			err := rt.ExecuteTransaction(
+				Script{
+					Source: tx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+
+			require.ErrorContains(t, err, "controller is deleted")
+		})
+	}
+
+	testCases := []testCase{
+		{
+			name: "Storage capability controller",
+			setup: `
+              // Issue capability and get controller
+              let storageCapabilities = signer.capabilities.storage
+              let capability = storageCapabilities.issue<&AnyStruct>(/storage/test1)
+              let controller = storageCapabilities.getController(byCapabilityID: capability.id)!
+
+              // Prepare bound functions
+              let delete = controller.delete
+              let tag = controller.tag
+              let setTag = controller.setTag
+              let target = controller.target
+              let retarget = controller.retarget
+
+              // Delete
+              controller.delete()
+            `,
+			operations: []operation{
+				// Read
+				{
+					name: "get capability",
+					code: `controller.capability`,
+				},
+				{
+					name: "get tag",
+					code: `controller.tag`,
+				},
+				{
+					name: "get borrow type",
+					code: `controller.borrowType`,
+				},
+				{
+					name: "get ID",
+					code: `controller.capabilityID`,
+				},
+				// Mutate
+				{
+					name: "delete",
+					code: `delete()`,
+				},
+				{
+					name: "set tag",
+					code: `setTag("test")`,
+				},
+				{
+					name: "target",
+					code: `target()`,
+				},
+				{
+					name: "retarget",
+					code: `retarget(/storage/test2)`,
+				},
+			},
+		},
+		{
+			name: "Account capability controller",
+			setup: `
+              // Issue capability and get controller
+              let accountCapabilities = signer.capabilities.account
+              let capability = accountCapabilities.issue<auth(Storage) &Account>()
+              let controller = accountCapabilities.getController(byCapabilityID: capability.id)!
+
+              // Prepare bound functions
+              let delete = controller.delete
+              let tag = controller.tag
+              let setTag = controller.setTag
+
+              // Delete
+              controller.delete()
+            `,
+			operations: []operation{
+				// Read
+				{
+					name: "get capability",
+					code: `controller.capability`,
+				},
+				{
+					name: "get tag",
+					code: `controller.tag`,
+				},
+				{
+					name: "get borrow type",
+					code: `controller.borrowType`,
+				},
+				{
+					name: "get ID",
+					code: `controller.capabilityID`,
+				},
+				// Mutate
+				{
+					name: "delete",
+					code: `delete()`,
+				},
+				{
+					name: "set tag",
+					code: `setTag("test")`,
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		for _, operation := range testCase.operations {
+			test(testCase, operation)
+		}
+	}
 }

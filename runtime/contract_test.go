@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/hex"
@@ -26,15 +26,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
-
-	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestRuntimeContract(t *testing.T) {
@@ -53,7 +54,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		var loggedMessages []string
 
@@ -168,17 +169,17 @@ func TestRuntimeContract(t *testing.T) {
 
 		var events []cadence.Event
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{signerAddress}, nil
 			},
-			log: func(message string) {
+			OnProgramLog: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				require.Equal(t, tc.name, location.Name)
 				assert.Equal(t, signerAddress, location.Address)
 
@@ -186,14 +187,14 @@ func TestRuntimeContract(t *testing.T) {
 
 				return nil
 			},
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				if location.Name == tc.name {
 					return deployedCode, nil
 				}
 
 				return nil, nil
 			},
-			removeAccountContractCode: func(location common.AddressLocation) error {
+			OnRemoveAccountContractCode: func(location common.AddressLocation) error {
 				require.Equal(t, tc.name, location.Name)
 				assert.Equal(t, signerAddress, location.Address)
 
@@ -201,15 +202,15 @@ func TestRuntimeContract(t *testing.T) {
 
 				return nil
 			},
-			emitEvent: func(event cadence.Event) error {
+			OnEmitEvent: func(event cadence.Event) error {
 				events = append(events, event)
 				return nil
 			},
 		}
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 		codeArrayString := interpreter.ByteSliceToByteArrayValue(inter, []byte(tc.code)).String()
 		code2ArrayString := interpreter.ByteSliceToByteArrayValue(inter, []byte(tc.code2)).String()
 
@@ -307,6 +308,8 @@ func TestRuntimeContract(t *testing.T) {
 				},
 			)
 			RequireError(t, err)
+
+			require.ErrorContains(t, err, "cannot overwrite existing contract")
 
 			// the deployed code should not have been updated,
 			// and no events should have been emitted,
@@ -449,6 +452,8 @@ func TestRuntimeContract(t *testing.T) {
 			} else {
 				RequireError(t, err)
 
+				require.ErrorContains(t, err, "cannot overwrite existing contract")
+
 				require.Empty(t, deployedCode)
 				require.Empty(t, events)
 				require.Empty(t, loggedMessages)
@@ -474,9 +479,11 @@ func TestRuntimeContract(t *testing.T) {
 					Location:  nextTransactionLocation(),
 				},
 			)
-			require.NoError(t, err)
+			RequireError(t, err)
 
-			require.Equal(t, []byte(tc.code2), deployedCode)
+			require.ErrorContains(t, err, "cannot overwrite existing contract")
+
+			require.Empty(t, deployedCode)
 
 			require.Equal(t,
 				[]string{
@@ -485,20 +492,18 @@ func TestRuntimeContract(t *testing.T) {
 					`"Test"`,
 					codeArrayString,
 					`nil`,
-					`"Test"`,
-					code2ArrayString,
-					`"Test"`,
-					code2ArrayString,
 				},
 				loggedMessages,
 			)
 
-			require.Len(t, events, 2)
-			assert.EqualValues(t, stdlib.AccountContractRemovedEventType.ID(), events[0].Type().ID())
-			assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[1].Type().ID())
+			require.Len(t, events, 1)
+			assert.EqualValues(t,
+				stdlib.AccountContractRemovedEventType.ID(),
+				events[0].Type().ID(),
+			)
 
 			contractValueExists := getContractValueExists()
-
+			// contract still exists (from previous transaction), if not interface
 			if tc.isInterface {
 				require.False(t, contractValueExists)
 			} else {
@@ -658,36 +663,36 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
-		removeAccountContractCode: func(location common.AddressLocation) error {
+		OnRemoveAccountContractCode: func(location common.AddressLocation) error {
 			delete(accountCodes, location)
 			return nil
 		},
-		resolveLocation: multipleIdentifierLocationResolver,
-		log: func(message string) {
+		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	for _, contract := range []struct{ name, code string }{
 		{"A", contractA},
@@ -785,8 +790,8 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
@@ -822,28 +827,28 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 
 	var actualEvents []cadence.Event
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			actualEvents = append(actualEvents, event)
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -898,8 +903,8 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntime()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
 	accountCodes := map[Location][]byte{}
 
 	deployInterfaceTx := DeploymentTransaction("TestInterface", []byte(`
@@ -945,28 +950,28 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 
 	var actualEvents []cadence.Event
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log:     func(message string) {},
-		emitEvent: func(event cadence.Event) error {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage:      storage,
+		OnProgramLog: func(message string) {},
+		OnEmitEvent: func(event cadence.Event) error {
 			actualEvents = append(actualEvents, event)
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -1021,28 +1026,28 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 func TestRuntimeContractTryUpdate(t *testing.T) {
 	t.Parallel()
 
-	newTestRuntimeInterface := func(onUpdate func()) *testRuntimeInterface {
+	newTestRuntimeInterface := func(onUpdate func()) *TestRuntimeInterface {
 		var actualEvents []cadence.Event
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 		accountCodes := map[Location][]byte{}
 
-		return &testRuntimeInterface{
-			storage: storage,
-			log:     func(message string) {},
-			emitEvent: func(event cadence.Event) error {
+		return &TestRuntimeInterface{
+			Storage:      storage,
+			OnProgramLog: func(message string) {},
+			OnEmitEvent: func(event cadence.Event) error {
 				actualEvents = append(actualEvents, event)
 				return nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getSigningAccounts: func() ([]Address, error) {
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 			},
-			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 				onUpdate()
 				accountCodes[location] = code
 				return nil
 			},
-			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 				code = accountCodes[location]
 				return code, nil
 			},
@@ -1053,7 +1058,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
 
@@ -1086,7 +1091,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 		`)
 
 		runtimeInterface := newTestRuntimeInterface(func() {})
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		// Deploy 'Foo'
 		err := rt.ExecuteTransaction(
@@ -1129,7 +1134,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		updateTx := []byte(`
 			transaction {
@@ -1155,7 +1160,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 		`)
 
 		runtimeInterface := newTestRuntimeInterface(func() {})
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		// Update non-existing 'Foo'. Should not panic.
 		err := rt.ExecuteTransaction(
@@ -1192,7 +1197,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
 
@@ -1213,7 +1218,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		runtimeInterface := newTestRuntimeInterface(func() {})
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		// Deploy 'Foo'
 		err := rt.ExecuteTransaction(
@@ -1247,7 +1252,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 
 		t.Parallel()
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		deployTx := DeploymentTransaction("Foo", []byte(`access(all) contract Foo {}`))
 
@@ -1274,7 +1279,7 @@ func TestRuntimeContractTryUpdate(t *testing.T) {
 			}
 		})
 
-		nextTransactionLocation := newTransactionLocationGenerator()
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
 		// Deploy 'Foo'
 		err := rt.ExecuteTransaction(

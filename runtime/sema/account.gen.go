@@ -1287,6 +1287,26 @@ Returns nil if the capability does not exist, or cannot be borrowed using the gi
 The function is equivalent to ` + "`get(path)?.borrow()`" + `.
 `
 
+const Account_CapabilitiesTypeExistsFunctionName = "exists"
+
+var Account_CapabilitiesTypeExistsFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(PublicPathType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
+
+const Account_CapabilitiesTypeExistsFunctionDocString = `
+Returns true if a capability exists at the given public path.
+`
+
 const Account_CapabilitiesTypePublishFunctionName = "publish"
 
 var Account_CapabilitiesTypePublishFunctionType = &FunctionType{
@@ -1388,6 +1408,13 @@ func init() {
 			Account_CapabilitiesTypeBorrowFunctionName,
 			Account_CapabilitiesTypeBorrowFunctionType,
 			Account_CapabilitiesTypeBorrowFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_CapabilitiesType,
+			PrimitiveAccess(ast.AccessAll),
+			Account_CapabilitiesTypeExistsFunctionName,
+			Account_CapabilitiesTypeExistsFunctionType,
+			Account_CapabilitiesTypeExistsFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			Account_CapabilitiesType,
@@ -2072,57 +2099,30 @@ var CapabilitiesMappingType = &EntitlementMapType{
 
 func init() {
 	BuiltinEntitlementMappings[AccountMappingType.Identifier] = AccountMappingType
-	addToBaseActivation(AccountMappingType)
 	BuiltinEntitlementMappings[CapabilitiesMappingType.Identifier] = CapabilitiesMappingType
-	addToBaseActivation(CapabilitiesMappingType)
 	BuiltinEntitlements[StorageType.Identifier] = StorageType
-	addToBaseActivation(StorageType)
 	BuiltinEntitlements[SaveValueType.Identifier] = SaveValueType
-	addToBaseActivation(SaveValueType)
 	BuiltinEntitlements[LoadValueType.Identifier] = LoadValueType
-	addToBaseActivation(LoadValueType)
 	BuiltinEntitlements[CopyValueType.Identifier] = CopyValueType
-	addToBaseActivation(CopyValueType)
 	BuiltinEntitlements[BorrowValueType.Identifier] = BorrowValueType
-	addToBaseActivation(BorrowValueType)
 	BuiltinEntitlements[ContractsType.Identifier] = ContractsType
-	addToBaseActivation(ContractsType)
 	BuiltinEntitlements[AddContractType.Identifier] = AddContractType
-	addToBaseActivation(AddContractType)
 	BuiltinEntitlements[UpdateContractType.Identifier] = UpdateContractType
-	addToBaseActivation(UpdateContractType)
 	BuiltinEntitlements[RemoveContractType.Identifier] = RemoveContractType
-	addToBaseActivation(RemoveContractType)
 	BuiltinEntitlements[KeysType.Identifier] = KeysType
-	addToBaseActivation(KeysType)
 	BuiltinEntitlements[AddKeyType.Identifier] = AddKeyType
-	addToBaseActivation(AddKeyType)
 	BuiltinEntitlements[RevokeKeyType.Identifier] = RevokeKeyType
-	addToBaseActivation(RevokeKeyType)
 	BuiltinEntitlements[InboxType.Identifier] = InboxType
-	addToBaseActivation(InboxType)
 	BuiltinEntitlements[PublishInboxCapabilityType.Identifier] = PublishInboxCapabilityType
-	addToBaseActivation(PublishInboxCapabilityType)
 	BuiltinEntitlements[UnpublishInboxCapabilityType.Identifier] = UnpublishInboxCapabilityType
-	addToBaseActivation(UnpublishInboxCapabilityType)
 	BuiltinEntitlements[ClaimInboxCapabilityType.Identifier] = ClaimInboxCapabilityType
-	addToBaseActivation(ClaimInboxCapabilityType)
 	BuiltinEntitlements[CapabilitiesType.Identifier] = CapabilitiesType
-	addToBaseActivation(CapabilitiesType)
 	BuiltinEntitlements[StorageCapabilitiesType.Identifier] = StorageCapabilitiesType
-	addToBaseActivation(StorageCapabilitiesType)
 	BuiltinEntitlements[AccountCapabilitiesType.Identifier] = AccountCapabilitiesType
-	addToBaseActivation(AccountCapabilitiesType)
 	BuiltinEntitlements[PublishCapabilityType.Identifier] = PublishCapabilityType
-	addToBaseActivation(PublishCapabilityType)
 	BuiltinEntitlements[UnpublishCapabilityType.Identifier] = UnpublishCapabilityType
-	addToBaseActivation(UnpublishCapabilityType)
 	BuiltinEntitlements[GetStorageCapabilityControllerType.Identifier] = GetStorageCapabilityControllerType
-	addToBaseActivation(GetStorageCapabilityControllerType)
 	BuiltinEntitlements[IssueStorageCapabilityControllerType.Identifier] = IssueStorageCapabilityControllerType
-	addToBaseActivation(IssueStorageCapabilityControllerType)
 	BuiltinEntitlements[GetAccountCapabilityControllerType.Identifier] = GetAccountCapabilityControllerType
-	addToBaseActivation(GetAccountCapabilityControllerType)
 	BuiltinEntitlements[IssueAccountCapabilityControllerType.Identifier] = IssueAccountCapabilityControllerType
-	addToBaseActivation(IssueAccountCapabilityControllerType)
 }

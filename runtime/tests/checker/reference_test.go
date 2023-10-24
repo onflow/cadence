@@ -2998,3 +2998,82 @@ func TestCheckReferenceCreationWithInvalidType(t *testing.T) {
 		require.ErrorAs(t, errs[0], &nonReferenceTypeReferenceError)
 	})
 }
+
+func TestCheckResourceReferenceFieldNilAssignment(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        access(all) resource Outer {
+            access(all) var inner : @Inner?
+
+            init(_ v: @Inner){
+                self.inner <- v
+                var outerRef = &self as &Outer
+                outerRef.inner = nil
+            }
+
+            destroy(){
+                destroy self.inner
+            }
+        }
+
+        access(all) resource Inner {}
+
+        fun main() {
+            let inner <- create Inner()
+            let outer <- create Outer(<- inner)
+            destroy outer
+        }
+    `)
+
+	errors := RequireCheckerErrors(t, err, 2)
+	require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
+	require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[1])
+}
+
+func TestCheckResourceReferenceIndexNilAssignment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("one level", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource Foo {}
+
+            fun main() {
+                let array: @[Foo?] <- [<- create Foo()]
+                let arrayRef = &array as auth(Mutate) &[Foo?]
+
+                arrayRef[0] = nil
+
+                destroy array
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
+		require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[1])
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource Foo {}
+
+            fun main() {
+                let array: @[[Foo?]] <- [<- [<- create Foo()]]
+                let arrayRef = &array as auth(Mutate) &[[Foo?]]
+
+                arrayRef[0][0] = nil
+
+                destroy array
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 3)
+		require.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errors[0])
+		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[1])
+		require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[2])
+	})
+}

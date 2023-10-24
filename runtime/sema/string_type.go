@@ -37,12 +37,22 @@ const StringTypeFromCharactersFunctionDocString = `
 Returns a string from the given array of characters
 `
 
+const StringTypeJoinFunctionName = "join"
+const StringTypeJoinFunctionDocString = `
+Returns a string after joining the array of strings with the provided separator.
+`
+
+const StringTypeSplitFunctionName = "split"
+const StringTypeSplitFunctionDocString = `
+Returns a variable-sized array of strings after splitting the string on the delimiter.
+`
+
 // StringType represents the string type
 var StringType = &SimpleType{
 	Name:          "String",
 	QualifiedName: "String",
 	TypeID:        "String",
-	tag:           StringTypeTag,
+	TypeTag:       StringTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
@@ -100,6 +110,18 @@ func init() {
 				StringTypeToLowerFunctionType,
 				stringTypeToLowerFunctionDocString,
 			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeSplitFunctionName,
+				StringTypeSplitFunctionType,
+				StringTypeSplitFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeReplaceAllFunctionName,
+				StringTypeReplaceAllFunctionType,
+				StringTypeReplaceAllFunctionDocString,
+			),
 		})
 	}
 }
@@ -145,6 +167,13 @@ Returns a new string containing the slice of the characters in the given string 
 This function creates a new string whose length is ` + "`upTo - from`" + `.
 It does not modify the original string.
 If either of the parameters are out of the bounds of the string, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail
+`
+
+const StringTypeReplaceAllFunctionName = "replaceAll"
+const StringTypeReplaceAllFunctionDocString = `
+Returns a new string after replacing all the occurrences of parameter ` + "`of` with the parameter `with`" + `.
+
+If ` + "`with`" + ` is empty, it matches at the beginning of the string and after each UTF-8 sequence, yielding k+1 replacements for a string of length k.
 `
 
 // ByteArrayType represents the type [UInt8]
@@ -252,6 +281,13 @@ var StringFunctionType = func() *FunctionType {
 		StringTypeFromCharactersFunctionDocString,
 	))
 
+	addMember(NewUnmeteredPublicFunctionMember(
+		functionType,
+		StringTypeJoinFunctionName,
+		StringTypeJoinFunctionType,
+		StringTypeJoinFunctionDocString,
+	))
+
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
@@ -301,6 +337,54 @@ var StringTypeFromCharactersFunctionType = NewSimpleFunctionType(
 			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
 				Type: CharacterType,
 			}),
+		},
+	},
+	StringTypeAnnotation,
+)
+
+var StringTypeJoinFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "strings",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+				Type: StringType,
+			}),
+		},
+		{
+			Identifier:     "separator",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	StringTypeAnnotation,
+)
+
+var StringTypeSplitFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Identifier:     "separator",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	NewTypeAnnotation(
+		&VariableSizedType{
+			Type: StringType,
+		},
+	),
+)
+
+var StringTypeReplaceAllFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Identifier:     "of",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+		{
+			Identifier:     "with",
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
 	StringTypeAnnotation,

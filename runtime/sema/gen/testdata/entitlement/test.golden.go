@@ -1,4 +1,4 @@
-// Code generated from testdata/entitlement.cdc. DO NOT EDIT.
+// Code generated from testdata/entitlement/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -17,32 +17,34 @@
  * limitations under the License.
  */
 
-package sema
+package entitlement
 
-var FooType = &EntitlementType{
+import "github.com/onflow/cadence/runtime/sema"
+
+var FooType = &sema.EntitlementType{
 	Identifier: "Foo",
 }
 
-var BarType = &EntitlementType{
+var BarType = &sema.EntitlementType{
 	Identifier: "Bar",
 }
 
-var BazType = &EntitlementMapType{
+var BazType = &sema.EntitlementMapType{
 	Identifier:       "Baz",
 	IncludesIdentity: false,
-	Relations: []EntitlementRelation{
-		EntitlementRelation{
+	Relations: []sema.EntitlementRelation{
+		sema.EntitlementRelation{
 			Input:  FooType,
 			Output: BarType,
 		},
 	},
 }
 
-var QuxType = &EntitlementMapType{
+var QuxType = &sema.EntitlementMapType{
 	Identifier:       "Qux",
 	IncludesIdentity: true,
-	Relations: []EntitlementRelation{
-		EntitlementRelation{
+	Relations: []sema.EntitlementRelation{
+		sema.EntitlementRelation{
 			Input:  FooType,
 			Output: BarType,
 		},
@@ -50,12 +52,8 @@ var QuxType = &EntitlementMapType{
 }
 
 func init() {
-	BuiltinEntitlementMappings[BazType.Identifier] = BazType
-	addToBaseActivation(BazType)
-	BuiltinEntitlementMappings[QuxType.Identifier] = QuxType
-	addToBaseActivation(QuxType)
-	BuiltinEntitlements[FooType.Identifier] = FooType
-	addToBaseActivation(FooType)
-	BuiltinEntitlements[BarType.Identifier] = BarType
-	addToBaseActivation(BarType)
+	sema.BuiltinEntitlementMappings[BazType.Identifier] = BazType
+	sema.BuiltinEntitlementMappings[QuxType.Identifier] = QuxType
+	sema.BuiltinEntitlements[FooType.Identifier] = FooType
+	sema.BuiltinEntitlements[BarType.Identifier] = BarType
 }
