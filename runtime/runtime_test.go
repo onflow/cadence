@@ -4754,8 +4754,8 @@ func TestRuntimeRandom(t *testing.T) {
 	script := []byte(`
       transaction {
         prepare() {
-		  let rand1 = revertibleRandom()
-		  log(rand1)
+          let rand1 = revertibleRandom()
+          log(rand1)
           let rand2 = unsafeRandom()
           log(rand2)
         }
