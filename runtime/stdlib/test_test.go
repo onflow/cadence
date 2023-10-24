@@ -61,17 +61,19 @@ func newTestContractInterpreterWithTestFramework(
 	)
 	require.NoError(t, err)
 
-	activation := sema.NewVariableActivation(sema.BaseValueActivation)
-	activation.DeclareValue(stdlib.AssertFunction)
-	activation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.AssertFunction)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
 	checker, err := sema.NewChecker(
 		program,
 		utils.TestLocation,
 		nil,
 		&sema.Config{
-			BaseValueActivation: activation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+			AccessCheckMode: sema.AccessCheckModeStrict,
 			ImportHandler: func(
 				checker *sema.Checker,
 				importedLocation common.Location,
@@ -110,8 +112,10 @@ func newTestContractInterpreterWithTestFramework(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		&interpreter.Config{
-			Storage:        storage,
-			BaseActivation: baseActivation,
+			Storage: storage,
+			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				if location == stdlib.TestContractLocation {
 					program := interpreter.ProgramFromChecker(stdlib.GetTestContractType().Checker)

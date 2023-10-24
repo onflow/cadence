@@ -40,15 +40,14 @@ func ParseAndCheckAccountWithConfig(t *testing.T, code string, config sema.Confi
 		}
 	}
 
-	baseValueActivation := config.BaseValueActivation
-	if baseValueActivation == nil {
-		baseValueActivation = sema.BaseValueActivation
-	}
-
-	baseValueActivation = sema.NewVariableActivation(baseValueActivation)
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(constantDeclaration("authAccount", sema.AuthAccountType))
 	baseValueActivation.DeclareValue(constantDeclaration("publicAccount", sema.PublicAccountType))
-	config.BaseValueActivation = baseValueActivation
+
+	require.Nil(t, config.BaseValueActivationHandler)
+	config.BaseValueActivationHandler = func(_ common.Location) *sema.VariableActivation {
+		return baseValueActivation
+	}
 
 	return ParseAndCheckWithOptions(t,
 		code,

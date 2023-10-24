@@ -53,7 +53,7 @@ type Config struct {
 	CompositeTypeHandler CompositeTypeHandlerFunc
 	// CompositeValueFunctionsHandler is used to load composite value functions
 	CompositeValueFunctionsHandler CompositeValueFunctionsHandlerFunc
-	BaseActivation                 *VariableActivation
+	BaseActivationHandler func(location common.Location) *VariableActivation
 	Debugger                       *Debugger
 	// OnStatement is triggered when a statement is about to be executed
 	OnStatement OnStatementFunc

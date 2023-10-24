@@ -66,7 +66,9 @@ var beforeType = func() *FunctionType {
 	}
 }()
 
-type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) common.DeclarationKindSet
+type ValidTopLevelDeclarationsHandlerFunc func(common.Location) common.DeclarationKindSet
+
+type ActivationHandlerFunc func(common.Location) *VariableActivation
 
 type CheckHandlerFunc func(checker *Checker, check func())
 
@@ -119,6 +121,21 @@ var _ ast.DeclarationVisitor[struct{}] = &Checker{}
 var _ ast.StatementVisitor[struct{}] = &Checker{}
 var _ ast.ExpressionVisitor[Type] = &Checker{}
 
+func NewVariableActivationsFromHandler(
+	handler ActivationHandlerFunc,
+	location common.Location,
+	defaultActivation *VariableActivation,
+) *VariableActivations {
+	var activation *VariableActivation
+	if handler != nil {
+		activation = handler(location)
+	}
+	if activation == nil {
+		activation = defaultActivation
+	}
+	return NewVariableActivations(activation)
+}
+
 func NewChecker(
 	program *ast.Program,
 	location common.Location,
@@ -160,19 +177,19 @@ func NewChecker(
 
 	// Initialize value activations
 
-	baseValueActivation := config.BaseValueActivation
-	if baseValueActivation == nil {
-		baseValueActivation = BaseValueActivation
-	}
-	checker.valueActivations = NewVariableActivations(baseValueActivation)
+	checker.valueActivations = NewVariableActivationsFromHandler(
+		config.BaseValueActivationHandler,
+		location,
+		BaseValueActivation,
+	)
 
 	// Initialize type activations
 
-	baseTypeActivation := config.BaseTypeActivation
-	if baseTypeActivation == nil {
-		baseTypeActivation = BaseTypeActivation
-	}
-	checker.typeActivations = NewVariableActivations(baseTypeActivation)
+	checker.typeActivations = NewVariableActivationsFromHandler(
+		config.BaseTypeActivationHandler,
+		location,
+		BaseTypeActivation,
+	)
 
 	// Initialize position info, if enabled
 	if checker.Config.PositionInfoEnabled {
