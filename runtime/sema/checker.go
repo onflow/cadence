@@ -1026,9 +1026,14 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 	var ty Type
 
 	if t.Authorization != nil {
-		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
-		switch mapAccess := access.(type) {
-		case *EntitlementMapAccess:
+		switch auth := t.Authorization.(type) {
+		case ast.EntitlementSet:
+			access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: auth})
+		case *ast.MappedAccess:
+			access = checker.accessFromAstAccess(auth)
+		}
+
+		if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
 			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
 			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
 				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
@@ -1934,6 +1939,31 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 	case ast.PrimitiveAccess:
 		return PrimitiveAccess(access)
 
+	case *ast.MappedAccess:
+		semaAccess, hasAccess := checker.Elaboration.GetSemanticAccess(access)
+		if hasAccess {
+			return semaAccess
+		}
+		defer func() {
+			checker.Elaboration.SetSemanticAccess(access, result)
+		}()
+
+		switch nominalType := checker.convertNominalType(access.EntitlementMap).(type) {
+		case *EntitlementMapType:
+			result = NewEntitlementMapAccess(nominalType)
+		default:
+			if nominalType != InvalidType {
+				checker.report(
+					&InvalidEntitlementMappingTypeError{
+						Type: nominalType,
+						Pos:  access.EntitlementMap.Identifier.Pos,
+					},
+				)
+			}
+			result = PrimitiveAccess(ast.AccessNotSpecified)
+		}
+		return
+
 	case ast.EntitlementAccess:
 		semaAccess, hasAccess := checker.Elaboration.GetSemanticAccess(access)
 		if hasAccess {
@@ -1944,62 +1974,43 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 		}()
 
 		astEntitlements := access.EntitlementSet.Entitlements()
-		nominalType := checker.convertNominalType(astEntitlements[0])
 
-		switch nominalType := nominalType.(type) {
-		case *EntitlementType:
-			semanticEntitlements := make([]*EntitlementType, 0, len(astEntitlements))
-			semanticEntitlements = append(semanticEntitlements, nominalType)
+		semanticEntitlements := make([]*EntitlementType, 0, len(astEntitlements))
 
-			for _, entitlement := range astEntitlements[1:] {
-				nominalType := checker.convertNominalType(entitlement)
-				entitlementType, ok := nominalType.(*EntitlementType)
-				if !ok {
-					// don't duplicate errors when the type here is invalid, as this will have triggered an error before
-					if nominalType != InvalidType {
+		for _, entitlement := range astEntitlements {
+			nominalType := checker.convertNominalType(entitlement)
+			entitlementType, ok := nominalType.(*EntitlementType)
+			if !ok {
+				// don't duplicate errors when the type here is invalid, as this will have triggered an error before
+				if nominalType != InvalidType {
+					if _, isMap := nominalType.(*EntitlementMapType); isMap {
+						checker.report(
+							&MappingAccessMissingKeywordError{
+								Type:  nominalType,
+								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+							},
+						)
+					} else {
 						checker.report(
 							&InvalidNonEntitlementAccessError{
 								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
 							},
 						)
 					}
-					result = PrimitiveAccess(ast.AccessNotSpecified)
-					return
 				}
-				semanticEntitlements = append(semanticEntitlements, entitlementType)
-			}
-			if access.EntitlementSet.Separator() == ast.Conjunction {
-				result = NewEntitlementSetAccess(semanticEntitlements, Conjunction)
-				return
-			}
-			result = NewEntitlementSetAccess(semanticEntitlements, Disjunction)
-			return
-		case *EntitlementMapType:
-			// 0-length entitlement lists are rejected by the parser
-			if len(astEntitlements) != 1 {
-				checker.report(
-					&InvalidMultipleMappedEntitlementError{
-						Pos: astEntitlements[1].Identifier.Pos,
-					},
-				)
 				result = PrimitiveAccess(ast.AccessNotSpecified)
 				return
 			}
-			result = NewEntitlementMapAccess(nominalType)
-			return
-		default:
-			// don't duplicate errors when the type here is invalid, as this will have triggered an error before
-			if nominalType != InvalidType {
-				checker.report(
-					&InvalidNonEntitlementAccessError{
-						Range: ast.NewRangeFromPositioned(checker.memoryGauge, astEntitlements[0]),
-					},
-				)
-			}
-			result = PrimitiveAccess(ast.AccessNotSpecified)
+			semanticEntitlements = append(semanticEntitlements, entitlementType)
+		}
+		if access.EntitlementSet.Separator() == ast.Conjunction {
+			result = NewEntitlementSetAccess(semanticEntitlements, Conjunction)
 			return
 		}
+		result = NewEntitlementSetAccess(semanticEntitlements, Disjunction)
+		return
 	}
+
 	panic(errors.NewUnreachableError())
 }
 
