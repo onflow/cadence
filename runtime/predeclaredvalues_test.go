@@ -685,8 +685,8 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 	// Run script
 
 	scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
-	scriptEnvironment.DeclareValue(xConstructorDeclaration)
-	scriptEnvironment.DeclareType(xTypeDeclaration)
+	scriptEnvironment.DeclareValue(xConstructorDeclaration, nil)
+	scriptEnvironment.DeclareType(xTypeDeclaration, nil)
 	scriptEnvironment.SetCompositeValueFunctionsHandler(
 		xType.ID(),
 		func(
