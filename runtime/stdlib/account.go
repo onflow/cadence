@@ -3042,14 +3042,15 @@ func getAccountCapabilityControllerIDsIterator(
 
 func newAccountCapabilitiesPublishFunction(
 	gauge common.MemoryGauge,
-	addressValue interpreter.AddressValue,
+	accountAddressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
-	address := addressValue.ToAddress()
+	accountAddress := accountAddressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		sema.Account_CapabilitiesTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// Get capability argument
 
@@ -3064,6 +3065,15 @@ func newAccountCapabilitiesPublishFunction(
 				panic(errors.NewUnreachableError())
 			}
 
+			capabilityAddressValue := capabilityValue.Address
+			if capabilityAddressValue != accountAddressValue {
+				panic(interpreter.CapabilityAddressPublishingError{
+					LocationRange:     locationRange,
+					CapabilityAddress: capabilityAddressValue,
+					AccountAddress:    accountAddressValue,
+				})
+			}
+
 			// Get path argument
 
 			pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
@@ -3076,28 +3086,24 @@ func newAccountCapabilitiesPublishFunction(
 
 			// Prevent an overwrite
 
-			locationRange := invocation.LocationRange
-
 			storageMapKey := interpreter.StringStorageMapKey(identifier)
 
 			if inter.StoredValueExists(
-				address,
+				accountAddress,
 				domain,
 				storageMapKey,
 			) {
-				panic(
-					interpreter.OverwriteError{
-						Address:       addressValue,
-						Path:          pathValue,
-						LocationRange: locationRange,
-					},
-				)
+				panic(interpreter.OverwriteError{
+					Address:       accountAddressValue,
+					Path:          pathValue,
+					LocationRange: locationRange,
+				})
 			}
 
 			capabilityValue, ok = capabilityValue.Transfer(
 				inter,
 				locationRange,
-				atree.Address(address),
+				atree.Address(accountAddress),
 				true,
 				nil,
 				nil,
@@ -3109,7 +3115,7 @@ func newAccountCapabilitiesPublishFunction(
 			// Write new value
 
 			inter.WriteStored(
-				address,
+				accountAddress,
 				domain,
 				storageMapKey,
 				capabilityValue,
