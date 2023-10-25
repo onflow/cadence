@@ -429,14 +429,15 @@ func testAccountWithErrorHandler(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
-	if checkerConfig.BaseValueActivation == nil {
-		checkerConfig.BaseValueActivation = sema.BaseValueActivation
-	}
-	baseValueActivation := sema.NewVariableActivation(checkerConfig.BaseValueActivation)
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
-	checkerConfig.BaseValueActivation = baseValueActivation
+
+	require.Nil(t, checkerConfig.BaseValueActivationHandler)
+	checkerConfig.BaseValueActivationHandler = func(_ common.Location) *sema.VariableActivation {
+		return baseValueActivation
+	}
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range valueDeclarations {
@@ -448,8 +449,10 @@ func testAccountWithErrorHandler(
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &checkerConfig,
 			Config: &interpreter.Config{
-				BaseActivation:                       baseActivation,
-				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				InvalidatedResourceValidationEnabled: true,
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
 					return stdlib.NewAccountValue(nil, nil, address)

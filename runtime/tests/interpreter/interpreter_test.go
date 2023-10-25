@@ -114,10 +114,14 @@ func parseCheckAndInterpretWithLogs(
 		code,
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 			HandleCheckerError: nil,
 		},
@@ -144,7 +148,9 @@ func parseCheckAndInterpretWithMemoryMetering(
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 		memoryGauge,
@@ -2019,8 +2025,10 @@ func TestInterpretHostFunction(t *testing.T) {
 		TestLocation,
 		nil,
 		&sema.Config{
-			BaseValueActivation: baseValueActivation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+			AccessCheckMode: sema.AccessCheckModeStrict,
 		},
 	)
 	require.NoError(t, err)
@@ -2037,8 +2045,10 @@ func TestInterpretHostFunction(t *testing.T) {
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		&interpreter.Config{
-			Storage:        storage,
-			BaseActivation: baseActivation,
+			Storage: storage,
+			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
 		},
 	)
 	require.NoError(t, err)
@@ -2126,8 +2136,10 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 		TestLocation,
 		nil,
 		&sema.Config{
-			BaseValueActivation: baseValueActivation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+			AccessCheckMode: sema.AccessCheckModeStrict,
 		},
 	)
 	require.NoError(t, err)
@@ -2144,8 +2156,10 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		&interpreter.Config{
-			Storage:        storage,
-			BaseActivation: baseActivation,
+			Storage: storage,
+			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
 		},
 	)
 	require.NoError(t, err)
@@ -2230,8 +2244,10 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 		TestLocation,
 		nil,
 		&sema.Config{
-			BaseValueActivation: baseValueActivation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+			AccessCheckMode: sema.AccessCheckModeStrict,
 		},
 	)
 	require.NoError(t, err)
@@ -2248,8 +2264,10 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		&interpreter.Config{
-			Storage:        storage,
-			BaseActivation: baseActivation,
+			Storage: storage,
+			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
 		},
 	)
 	require.NoError(t, err)
@@ -4233,7 +4251,9 @@ func TestInterpretImportError(t *testing.T) {
 			checker.ParseAndCheckOptions{
 				Location: location,
 				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 					ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						switch importedLocation {
 						case importedLocation1:
@@ -4293,8 +4313,10 @@ func TestInterpretImportError(t *testing.T) {
 		interpreter.ProgramFromChecker(mainChecker),
 		mainChecker.Location,
 		&interpreter.Config{
-			Storage:        storage,
-			BaseActivation: baseActivation,
+			Storage: storage,
+			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
 			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				var importedChecker *sema.Checker
 				switch location {
@@ -5247,11 +5269,15 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 	            `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					Storage:        storage,
-					BaseActivation: baseActivation,
+					Storage: storage,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -7295,10 +7321,6 @@ func TestInterpretEmitEvent(t *testing.T) {
 		),
 	}
 
-	for _, event := range expectedEvents {
-		event.(*interpreter.CompositeValue).InitializeFunctions(inter)
-	}
-
 	AssertValueSlicesEqual(
 		t,
 		inter,
@@ -7389,17 +7411,12 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		),
 	}
 
-	for _, event := range expectedEvents {
-		event.(*interpreter.CompositeValue).InitializeFunctions(inter)
-	}
-
 	AssertValueSlicesEqual(
 		t,
 		inter,
 		expectedEvents,
 		actualEvents,
 	)
-
 }
 
 type testValue struct {
@@ -7687,8 +7704,12 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(
 				t, code, ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
-						BaseValueActivation: baseValueActivation,
-						BaseTypeActivation:  baseTypeActivation,
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+						BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseTypeActivation
+						},
 					},
 					Config: &interpreter.Config{
 						Storage: storage,
@@ -7728,10 +7749,6 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					fields,
 					common.ZeroAddress,
 				),
-			}
-
-			for _, event := range expectedEvents {
-				event.(*interpreter.CompositeValue).InitializeFunctions(inter)
 			}
 
 			AssertValueSlicesEqual(
@@ -8275,10 +8292,14 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)
@@ -8315,10 +8336,14 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)
@@ -8513,11 +8538,15 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 		code,
 		ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				BaseActivation:       baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 			},
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)
@@ -8983,10 +9012,14 @@ func TestInterpretHexDecode(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -9154,10 +9187,14 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
 					return stdlib.NewAccountValue(nil, nil, address)
 				},
@@ -11287,10 +11324,14 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)

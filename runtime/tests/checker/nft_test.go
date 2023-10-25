@@ -997,7 +997,9 @@ access(all) contract TopShot: NonFungibleToken {
 						Elaboration: nftChecker.Elaboration,
 					}, nil
 				},
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)

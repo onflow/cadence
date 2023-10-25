@@ -100,7 +100,15 @@ func (checker *Checker) visitFunctionDeclaration(
 	access := checker.accessFromAstAccess(declaration.Access)
 
 	if functionType == nil {
-		functionType = checker.functionType(declaration.Purity, access, declaration.ParameterList, declaration.ReturnTypeAnnotation)
+
+		functionType = checker.functionType(
+			declaration.IsNative(),
+			declaration.Purity,
+			access,
+			declaration.TypeParameterList,
+			declaration.ParameterList,
+			declaration.ReturnTypeAnnotation,
+		)
 
 		if options.declareFunction {
 			checker.declareFunctionDeclaration(declaration, functionType)
@@ -493,8 +501,10 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 
 	// TODO: infer
 	functionType := checker.functionType(
+		false,
 		expression.Purity,
 		UnauthorizedAccess,
+		nil,
 		expression.ParameterList,
 		expression.ReturnTypeAnnotation,
 	)
