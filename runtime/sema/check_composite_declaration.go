@@ -1436,33 +1436,6 @@ func (checker *Checker) checkMemberConflicts(
 
 			return true
 		}
-
-		// At most one of them have could default impls.
-		// If one has a default impl, then the other MUST have a condition.
-		// FLIP: https://github.com/onflow/flips/pull/83
-
-		if newMember.HasImplementation {
-			if existingMember.HasConditions {
-				continue
-			}
-		} else if existingMember.HasImplementation {
-			if newMember.HasConditions {
-				continue
-			}
-		} else {
-			// None of them have default impls
-			continue
-		}
-
-		checker.report(
-			&DefaultFunctionConflictError{
-				CompositeKindedType: compositeType,
-				Member:              newMember,
-				Range:               errorRange,
-			},
-		)
-
-		return true
 	}
 
 	return false

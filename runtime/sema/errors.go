@@ -1645,29 +1645,6 @@ func (e *SpecialFunctionDefaultImplementationError) EndPosition(memoryGauge comm
 	return e.Identifier.EndPosition(memoryGauge)
 }
 
-// DefaultFunctionConflictError
-type DefaultFunctionConflictError struct {
-	CompositeKindedType CompositeKindedType
-	Member              *Member
-	ast.Range
-}
-
-var _ SemanticError = &DefaultFunctionConflictError{}
-var _ errors.UserError = &DefaultFunctionConflictError{}
-
-func (*DefaultFunctionConflictError) isSemanticError() {}
-
-func (*DefaultFunctionConflictError) IsUserError() {}
-
-func (e *DefaultFunctionConflictError) Error() string {
-	return fmt.Sprintf(
-		"%s `%s` has conflicting requirements for function `%s`",
-		e.CompositeKindedType.GetCompositeKind().Name(),
-		e.CompositeKindedType.QualifiedString(),
-		e.Member.Identifier.Identifier,
-	)
-}
-
 // InterfaceMemberConflictError
 type InterfaceMemberConflictError struct {
 	InterfaceType            *InterfaceType
