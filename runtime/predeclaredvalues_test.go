@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"math/big"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -601,5 +602,130 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		var typeLoadingErr interpreter.TypeLoadingError
 		require.ErrorAs(t, err, &typeLoadingErr)
 	})
+
+}
+
+func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
+
+	t.Parallel()
+
+	xType := &sema.CompositeType{
+		Identifier: "X",
+		Kind:       common.CompositeKindStructure,
+		Members:    &sema.StringMemberOrderedMap{},
+	}
+
+	const fooFunctionName = "foo"
+	fooFunctionType := &sema.FunctionType{
+		Parameters: []sema.Parameter{
+			{
+				Identifier:     "bar",
+				TypeAnnotation: sema.NewTypeAnnotation(sema.UInt8Type),
+			},
+		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+	}
+
+	fooFunctionMember := sema.NewPublicFunctionMember(
+		nil,
+		xType,
+		fooFunctionName,
+		fooFunctionType,
+		"",
+	)
+	xType.Members.Set(fooFunctionName, fooFunctionMember)
+
+	xConstructorType := &sema.FunctionType{
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(xType),
+	}
+
+	xConstructorDeclaration := stdlib.StandardLibraryValue{
+		Name: "X",
+		Type: xConstructorType,
+		Kind: common.DeclarationKindConstant,
+		Value: interpreter.NewHostFunctionValue(
+			nil,
+			xConstructorType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				return interpreter.NewCompositeValue(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					xType.Location,
+					xType.QualifiedIdentifier(),
+					xType.Kind,
+					nil,
+					common.ZeroAddress,
+				)
+			},
+		),
+	}
+
+	xTypeDeclaration := stdlib.StandardLibraryType{
+		Name: "X",
+		Type: xType,
+		Kind: common.DeclarationKindType,
+	}
+
+	script := []byte(`
+      pub fun main(): String {
+          return X().foo(bar: 1)
+      }
+	`)
+
+	runtime := newTestInterpreterRuntime()
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+	}
+
+	// Run script
+
+	scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+	scriptEnvironment.DeclareValue(xConstructorDeclaration, nil)
+	scriptEnvironment.DeclareType(xTypeDeclaration, nil)
+	scriptEnvironment.SetCompositeValueFunctionsHandler(
+		xType.ID(),
+		func(
+			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
+			compositeValue *interpreter.CompositeValue,
+		) map[string]interpreter.FunctionValue {
+			require.NotNil(t, compositeValue)
+
+			return map[string]interpreter.FunctionValue{
+				fooFunctionName: interpreter.NewHostFunctionValue(
+					inter,
+					fooFunctionType,
+					func(invocation interpreter.Invocation) interpreter.Value {
+						arg := invocation.Arguments[0]
+						require.IsType(t, interpreter.UInt8Value(0), arg)
+
+						return interpreter.NewUnmeteredStringValue(strconv.Itoa(int(arg.(interpreter.UInt8Value) + 1)))
+					},
+				),
+			}
+		},
+	)
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    common.ScriptLocation{},
+			Environment: scriptEnvironment,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.String("2"),
+		result,
+	)
 
 }

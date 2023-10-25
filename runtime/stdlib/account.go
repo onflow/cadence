@@ -638,8 +638,6 @@ func newAccountKeysAddFunction(
 				locationRange,
 				accountKey,
 				handler,
-				handler,
-				handler,
 			)
 		},
 	)
@@ -710,8 +708,6 @@ func newAccountKeysGetFunction(
 					locationRange,
 					accountKey,
 					provider,
-					provider,
-					provider,
 				),
 			)
 		},
@@ -760,8 +756,6 @@ func newAccountKeysForEachFunction(
 					inter,
 					locationRange,
 					key,
-					provider,
-					provider,
 					provider,
 				)
 			}
@@ -910,8 +904,6 @@ func newAccountKeysRevokeFunction(
 					inter,
 					locationRange,
 					accountKey,
-					handler,
-					handler,
 					handler,
 				),
 			)
@@ -2152,8 +2144,6 @@ func NewAccountKeyValue(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	accountKey *AccountKey,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 	hasher Hasher,
 ) interpreter.Value {
 
@@ -2170,8 +2160,6 @@ func NewAccountKeyValue(
 			inter,
 			locationRange,
 			accountKey.PublicKey,
-			publicKeySignatureVerifier,
-			blsPoPVerifier,
 		),
 		hashAlgorithm,
 		interpreter.NewUFix64ValueWithInteger(

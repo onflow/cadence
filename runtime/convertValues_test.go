@@ -437,8 +437,6 @@ func TestExportValue(t *testing.T) {
 							PublicKey: []byte{1, 2, 3},
 							SignAlgo:  2,
 						},
-						nil,
-						nil,
 					),
 					hashAlgorithm,
 					interpreter.NewUnmeteredUFix64ValueWithInteger(10, interpreter.EmptyLocationRange),
