@@ -1291,7 +1291,6 @@ func (checker *Checker) functionType(
 	}
 	defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
 
-
 	// Convert type parameters (if any)
 
 	var convertedTypeParameters []*TypeParameter

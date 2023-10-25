@@ -19,7 +19,6 @@
 package runtime_test
 
 import (
-	"github.com/onflow/cadence/encoding/json"
 	"strings"
 	"testing"
 
@@ -27,9 +26,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
-	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 )
 
 func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
