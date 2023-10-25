@@ -684,11 +684,11 @@ func (v UFix64Value) Encode(e *atree.Encoder) error {
 var _ atree.ContainerStorable = &SomeStorable{}
 
 func (s SomeStorable) Encode(e *atree.Encoder) error {
-	innermostStorable, nestedLevels := s.getInnermostStorable()
+	nonSomeStorable, nestedLevels := s.nonSomeStorable()
 	if nestedLevels == 1 {
 		return s.encode(e)
 	}
-	return s.encodeMultipleNestedLevels(e, nestedLevels, innermostStorable)
+	return s.encodeMultipleNestedLevels(e, nestedLevels, nonSomeStorable)
 }
 
 // encode encodes SomeStorable with nested levels = 1 as
@@ -723,7 +723,7 @@ const (
 func (s SomeStorable) encodeMultipleNestedLevels(
 	e *atree.Encoder,
 	levels uint64,
-	innermostStorable atree.Storable,
+	nonSomeStorable atree.Storable,
 ) error {
 	// NOTE: when updating, also update SomeStorable.ByteSize
 	err := e.CBOR.EncodeRawBytes([]byte{
@@ -741,7 +741,7 @@ func (s SomeStorable) encodeMultipleNestedLevels(
 		return err
 	}
 
-	return innermostStorable.Encode(e)
+	return nonSomeStorable.Encode(e)
 }
 
 // Encode encodes AddressValue as

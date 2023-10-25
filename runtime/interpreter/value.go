@@ -19444,24 +19444,25 @@ func (v *SomeValue) Storable(
 ) (atree.Storable, error) {
 
 	// SomeStorable returned from this function can be encoded in two ways:
-	// - if innermost value is too large, innermost value is encoded in a separate slab
+	// - if non-SomeStorable is too large, non-SomeStorable is encoded in a separate slab
 	//   while SomeStorable wrapper is encoded inline with reference to slab containing
-	//   innermost value.
-	// - otherwise, SomeStorable with innermost value is encoded inline.
-	// The above applies to both immutable innermost value (such as StringValue),
-	// and mutable innermost value (such as ArrayValue).
+	//   non-SomeStorable.
+	// - otherwise, SomeStorable with non-SomeStorable is encoded inline.
+	//
+	// The above applies to both immutable non-SomeValue (such as StringValue),
+	// and mutable non-SomeValue (such as ArrayValue).
 
 	if v.valueStorable == nil {
 
-		innermostValue, nestedLevels := v.getInnermostValue()
+		nonSomeValue, nestedLevels := v.nonSomeValue()
 
 		someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
 
-		// Reduce maxInlineSize for innermost value to make sure
+		// Reduce maxInlineSize for non-SomeValue to make sure
 		// that SomeStorable wrapper is always encoded inline.
 		maxInlineSize -= uint64(someStorableEncodedPrefixSize)
 
-		innermostValueStorable, err := innermostValue.Storable(
+		nonSomeValueStorable, err := nonSomeValue.Storable(
 			storage,
 			address,
 			maxInlineSize,
@@ -19470,7 +19471,7 @@ func (v *SomeValue) Storable(
 			return nil, err
 		}
 
-		valueStorable := innermostValueStorable
+		valueStorable := nonSomeValueStorable
 		for i := 1; i < int(nestedLevels); i++ {
 			valueStorable = SomeStorable{
 				Storable: valueStorable,
@@ -19480,16 +19481,22 @@ func (v *SomeValue) Storable(
 	}
 
 	// No need to call maybeLargeImmutableStorable() here for SomeStorable because:
-	// - encoded SomeStorable size = someStorableEncodedPrefixSize + innermost storable size
-	// - innermost storable size < maxInlineSize - someStorableEncodedPrefixSize
+	// - encoded SomeStorable size = someStorableEncodedPrefixSize + non-SomeValueStorable size
+	// - non-SomeValueStorable size < maxInlineSize - someStorableEncodedPrefixSize
 	return SomeStorable{
 		Storable: v.valueStorable,
 	}, nil
 }
 
-// getInnermostValue returns innermost value of SomeValue and nested levels.
-// For example, SomeValue{true} has innermost value true, and nested levels 1.
-func (v *SomeValue) getInnermostValue() (atree.Value, uint64) {
+// nonSomeValue returns a non-SomeValue and nested levels of SomeValue reached
+// by traversing nested SomeValue (SomeValue containing SomeValue, etc.)
+// until it reaches a non-SomeValue.
+// For example,
+//   - `SomeValue{true}` has non-SomeValue `true`, and nested levels 1
+//   - `SomeValue{SomeValue{1}}` has non-SomeValue `1` and nested levels 2
+//   - `SomeValue{SomeValue{[SomeValue{SomeValue{SomeValue{1}}}]}} has
+//     non-SomeValue `[SomeValue{SomeValue{SomeValue{1}}}]` and nested levels 2
+func (v *SomeValue) nonSomeValue() (atree.Value, uint64) {
 	nestedLevels := uint64(1)
 	for {
 		switch value := v.value.(type) {
@@ -19632,13 +19639,19 @@ func getSomeStorableEncodedPrefixSize(nestedLevels uint64) uint32 {
 }
 
 func (s SomeStorable) ByteSize() uint32 {
-	innermostStorable, nestedLevels := s.getInnermostStorable()
-	return getSomeStorableEncodedPrefixSize(nestedLevels) + innermostStorable.ByteSize()
+	nonSomeStorable, nestedLevels := s.nonSomeStorable()
+	return getSomeStorableEncodedPrefixSize(nestedLevels) + nonSomeStorable.ByteSize()
 }
 
-// getInnermostStorable returns innermost storable of SomeStorable and nested levels.
-// For example, SomeStorable{true} has innermost storable true, and nested levels 1.
-func (s SomeStorable) getInnermostStorable() (atree.Storable, uint64) {
+// nonSomeStorable returns a non-SomeStorable and nested levels of SomeStorable reached
+// by traversing nested SomeStorable (SomeStorable containing SomeStorable, etc.)
+// until it reaches a non-SomeStorable.
+// For example,
+//   - `SomeStorable{true}` has non-SomeStorable `true`, and nested levels 1
+//   - `SomeStorable{SomeStorable{1}}` has non-SomeStorable `1` and nested levels 2
+//   - `SomeStorable{SomeStorable{[SomeStorable{SomeStorable{SomeStorable{1}}}]}} has
+//     non-SomeStorable `[SomeStorable{SomeStorable{SomeStorable{1}}}]` and nested levels 2
+func (s SomeStorable) nonSomeStorable() (atree.Storable, uint64) {
 	nestedLevels := uint64(1)
 	for {
 		switch storable := s.Storable.(type) {
