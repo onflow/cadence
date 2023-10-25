@@ -46,6 +46,7 @@ const compositeMaxFields = 10
 
 var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
 var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
+var smokeTestSeed = flag.Int64("smokeTestSeed", -1, "Seed for prng (-1 specifies current Unix time)")
 
 func TestRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
@@ -1138,7 +1139,10 @@ type randomValueGenerator struct {
 }
 
 func newRandomValueGenerator() randomValueGenerator {
-	seed := time.Now().UnixNano()
+	seed := *smokeTestSeed
+	if seed == -1 {
+		seed = time.Now().UnixNano()
+	}
 
 	return randomValueGenerator{
 		seed: seed,
