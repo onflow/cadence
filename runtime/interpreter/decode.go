@@ -896,26 +896,26 @@ func (d StorableDecoder) decodeSomeWithNestedLevels() (SomeStorable, error) {
 		)
 	}
 
-	if nestedLevels == 1 {
+	if nestedLevels <= 1 {
 		return SomeStorable{}, errors.NewUnexpectedError(
 			"invalid nested levels for some value with nested levels encoding: got %d, expect > 1",
 			nestedLevels,
 		)
 	}
 
-	innermostStorable, err := d.decodeStorable()
+	nonSomeStorable, err := d.decodeStorable()
 	if err != nil {
 		return SomeStorable{}, errors.NewUnexpectedError(
-			"invalid innermost value for some value with nested levels encoding: %w",
+			"invalid nonSomeStorable for some value with nested levels encoding: %w",
 			err,
 		)
 	}
 
 	storable := SomeStorable{
 		gauge:    d.memoryGauge,
-		Storable: innermostStorable,
+		Storable: nonSomeStorable,
 	}
-	for i := 1; i < int(nestedLevels); i++ {
+	for i := uint64(1); i < nestedLevels; i++ {
 		storable = SomeStorable{
 			gauge:    d.memoryGauge,
 			Storable: storable,
