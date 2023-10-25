@@ -3331,6 +3331,78 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("SomeValue{SomeValue{[SomeValue{SomeValue{SomeValue{1}}}]}}", func(t *testing.T) {
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
+
+		// [ SomeValue { SomeValue { SomeValue { 1 } } } ]
+		expectedArray :=
+			NewArrayValue(
+				inter,
+				EmptyLocationRange,
+				ConstantSizedStaticType{
+					Type: PrimitiveStaticTypeAnyStruct,
+					Size: 0,
+				},
+				testOwner,
+				NewUnmeteredSomeValueNonCopying( // SomeValue { SomeValue { SomeValue { 1 } } }
+					NewUnmeteredSomeValueNonCopying(
+						NewUnmeteredSomeValueNonCopying(
+							UInt64Value(1)))),
+			)
+
+		// SomeValue { SomeValue { [ SomeValue { SomeValue { SomeValue { 1 } } } ] } }
+		expected := NewUnmeteredSomeValueNonCopying(
+			NewUnmeteredSomeValueNonCopying(
+				expectedArray,
+			))
+
+		expectedEncoded := []byte{
+			// tag
+			0xd8, CBORTagSomeValueWithNestedLevels,
+			// array of 2 elements
+			0x82,
+			// nested levels: 2
+			0x02,
+			// value
+			0xd8, atree.CBORTagInlinedArray,
+			// array of 3 elements
+			0x83,
+			// extra data index (extra data section is encoded in slab header, not here)
+			0x18, 0x00,
+			// inlined array slab index
+			0x48, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			// inlined array of 1 elements
+			0x99, 0x00, 0x01,
+			// element 0: SomeValue { SomeValue { SomeValue { 1 } } }
+			// tag
+			0xd8, CBORTagSomeValueWithNestedLevels,
+			// array of 2 elements
+			0x82,
+			// nested levels: 3
+			0x03,
+			// tag
+			0xd8, CBORTagUInt64Value,
+			// integer 1
+			0x1,
+		}
+
+		// Only test encoding here because decoding requires extra data section which is encoded in slab header.
+
+		storage := newUnmeteredInMemoryStorage()
+		storable, err := expected.Storable(
+			storage,
+			atree.Address(testOwner),
+			atree.MaxInlineArrayElementSize(),
+		)
+		require.NoError(t, err)
+
+		encoded, err := encodeStorable(storable, CBOREncMode)
+		require.NoError(t, err)
+		AssertEqualWithDiff(t, expectedEncoded, encoded)
+	})
 }
 
 func TestEncodeDecodeFix64Value(t *testing.T) {
