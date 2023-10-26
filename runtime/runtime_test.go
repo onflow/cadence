@@ -3231,6 +3231,9 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 	script := []byte(`
       transaction {
         prepare(signer: AuthAccount) {
+          // Important: Perform a write which will be pending until the end of the transaction,
+          // but should be (temporarily) committed when the AuthAccount constructor is called
+          signer.save(42, to: /storage/answer)
           AuthAccount(payer: signer)
         }
       }
@@ -3238,12 +3241,20 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	var events []cadence.Event
 
+	var performedWrite bool
+
+	onWrite := func(owner, key, value []byte) {
+		performedWrite = true
+	}
+
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
+		storage: newTestLedger(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
 		createAccount: func(payer Address) (address Address, err error) {
+			// Check that pending writes were committed before
+			assert.True(t, performedWrite)
 			return Address{42}, nil
 		},
 		emitEvent: func(event cadence.Event) error {
