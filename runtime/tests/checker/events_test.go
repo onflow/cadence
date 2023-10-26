@@ -782,6 +782,23 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
+	t.Run("self", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: @R = self)
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 4)
+
+		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+		assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[2])
+		assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[3])
+	})
+
 	t.Run("array field", func(t *testing.T) {
 
 		t.Parallel()
@@ -1037,6 +1054,32 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				init() {
 					self.field = 3
 				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("field name conflict", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for R {
+				event ResourceDestroyed(name: Int = self.self, x: String = base.base)
+				let self: Int
+				let base: String
+				init() {
+					self.base = "foo"
+					self.self = 3
+				}
+			}
+
+			resource R {
+				let base: String
+				init() {
+					self.base = "foo"
+				}
+				event ResourceDestroyed(name: String? = self[A]?.base, x: Int? = self[A]?.self)
 			}
         `)
 		require.NoError(t, err)
