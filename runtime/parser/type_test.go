@@ -322,14 +322,12 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorization: &ast.Authorization{
-					EntitlementSet: &ast.ConjunctiveEntitlementSet{
-						Elements: []*ast.NominalType{
-							{
-								Identifier: ast.Identifier{
-									Identifier: "X",
-									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
-								},
+				Authorization: &ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
 							},
 						},
 					},
@@ -355,20 +353,18 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorization: &ast.Authorization{
-					EntitlementSet: &ast.ConjunctiveEntitlementSet{
-						Elements: []*ast.NominalType{
-							{
-								Identifier: ast.Identifier{
-									Identifier: "X",
-									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
-								},
+				Authorization: &ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
 							},
-							{
-								Identifier: ast.Identifier{
-									Identifier: "Y",
-									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
-								},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "Y",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
 							},
 						},
 					},
@@ -394,20 +390,18 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorization: &ast.Authorization{
-					EntitlementSet: &ast.DisjunctiveEntitlementSet{
-						Elements: []*ast.NominalType{
-							{
-								Identifier: ast.Identifier{
-									Identifier: "X",
-									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
-								},
+				Authorization: &ast.DisjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
 							},
-							{
-								Identifier: ast.Identifier{
-									Identifier: "Y",
-									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
-								},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "Y",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
 							},
 						},
 					},
@@ -467,6 +461,52 @@ func TestParseReferenceType(t *testing.T) {
 				&SyntaxError{
 					Message: "unexpected token: got ',', expected '|' or ')'",
 					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("authorized, map", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth ( mapping X ) & Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.MappedAccess{
+					EntitlementMap: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "X",
+							Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, map no name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth( mapping ) &Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in type: ')'",
+					Pos:     ast.Position{Offset: 15, Line: 1, Column: 15},
 				},
 			},
 			errs,

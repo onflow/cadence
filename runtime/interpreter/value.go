@@ -235,6 +235,12 @@ type ContractValue interface {
 type IterableValue interface {
 	Value
 	Iterator(interpreter *Interpreter) ValueIterator
+	ForEach(
+		interpreter *Interpreter,
+		elementType sema.Type,
+		function func(value Value) (resume bool),
+		locationRange LocationRange,
+	)
 }
 
 // ValueIterator is an iterator which returns values.
@@ -1583,6 +1589,25 @@ func (v *StringValue) ConformsToStaticType(
 func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
+	}
+}
+
+func (v *StringValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	_ LocationRange,
+) {
+	iterator := v.Iterator(interpreter)
+	for {
+		value := iterator.Next(interpreter)
+		if value == nil {
+			return
+		}
+
+		if !function(value) {
+			return
+		}
 	}
 }
 
@@ -3075,6 +3100,9 @@ func (v *ArrayValue) Reverse(
 				return nil
 			}
 
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+
 			value := v.Get(interpreter, locationRange, index)
 			index--
 
@@ -3126,6 +3154,9 @@ func (v *ArrayValue) Filter(
 			var value Value
 
 			for {
+				// Meter computation for iterating the array.
+				interpreter.ReportComputation(common.ComputationKindLoop, 1)
+
 				atreeValue, err := iterator.Next()
 				if err != nil {
 					panic(errors.NewExternalError(err))
@@ -3220,6 +3251,9 @@ func (v *ArrayValue) Map(
 		uint64(v.Count()),
 		func() Value {
 
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+
 			atreeValue, err := iterator.Next()
 			if err != nil {
 				panic(errors.NewExternalError(err))
@@ -3242,6 +3276,15 @@ func (v *ArrayValue) Map(
 			)
 		},
 	)
+}
+
+func (v *ArrayValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	_ LocationRange,
+) {
+	v.Iterate(interpreter, function)
 }
 
 // NumberValue
@@ -16311,8 +16354,8 @@ type CompositeValue struct {
 	Location        common.Location
 	staticType      StaticType
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
-	InjectedFields  map[string]Value
-	ComputedFields  map[string]ComputedField
+	injectedFields  map[string]Value
+	computedFields  map[string]ComputedField
 	NestedVariables map[string]*Variable
 	Functions       map[string]FunctionValue
 	dictionary      *atree.OrderedMap
@@ -16640,19 +16683,15 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		return builtin
 	}
 
-	storable, err := v.dictionary.Get(
-		StringAtreeValueComparator,
-		StringAtreeValueHashInput,
-		StringAtreeValue(name),
-	)
-	if err != nil {
-		var keyNotFoundError *atree.KeyNotFoundError
-		if !goerrors.As(err, &keyNotFoundError) {
-			panic(errors.NewExternalError(err))
+	// Give computed fields precedence over stored fields for built-in types
+	if v.Location == nil {
+		if computedField := v.GetComputedField(interpreter, locationRange, name); computedField != nil {
+			return computedField
 		}
 	}
-	if storable != nil {
-		return StoredValue(interpreter, storable, config.Storage)
+
+	if field := v.GetField(interpreter, locationRange, name); field != nil {
+		return field
 	}
 
 	if v.NestedVariables != nil {
@@ -16664,42 +16703,18 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 
 	interpreter = v.getInterpreter(interpreter)
 
-	if v.ComputedFields != nil {
-		if computedField, ok := v.ComputedFields[name]; ok {
-			return computedField(interpreter, locationRange)
-		}
+	// Dynamically link in the computed fields, injected fields, and functions
+
+	if computedField := v.GetComputedField(interpreter, locationRange, name); computedField != nil {
+		return computedField
 	}
 
-	// If the composite value was deserialized, dynamically link in the functions
-	// and get injected fields
-
-	v.InitializeFunctions(interpreter)
-
-	injectedCompositeFieldsHandler := config.InjectedCompositeFieldsHandler
-	if v.InjectedFields == nil && injectedCompositeFieldsHandler != nil {
-		v.InjectedFields = injectedCompositeFieldsHandler(
-			interpreter,
-			v.Location,
-			v.QualifiedIdentifier,
-			v.Kind,
-		)
+	if injectedField := v.GetInjectedField(interpreter, name); injectedField != nil {
+		return injectedField
 	}
 
-	if v.InjectedFields != nil {
-		value, ok := v.InjectedFields[name]
-		if ok {
-			return value
-		}
-	}
-
-	function, ok := v.Functions[name]
-	if ok {
-		var base *EphemeralReferenceValue
-		var self MemberAccessibleValue = v
-		if v.Kind == common.CompositeKindAttachment {
-			base, self = attachmentBaseAndSelfValues(interpreter, v)
-		}
-		return NewBoundFunctionValue(interpreter, function, &self, base, nil)
+	if function := v.GetFunction(interpreter, locationRange, name); function != nil {
+		return function
 	}
 
 	return nil
@@ -16731,12 +16746,53 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 	return interpreter.EnsureLoaded(v.Location)
 }
 
-func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
-	if v.Functions != nil {
-		return
+func (v *CompositeValue) GetComputedFields(interpreter *Interpreter) map[string]ComputedField {
+	if v.computedFields == nil {
+		v.computedFields = interpreter.GetCompositeValueComputedFields(v)
+	}
+	return v.computedFields
+}
+
+func (v *CompositeValue) GetComputedField(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+	computedFields := v.GetComputedFields(interpreter)
+
+	computedField, ok := computedFields[name]
+	if !ok {
+		return nil
 	}
 
-	v.Functions = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
+	return computedField(interpreter, locationRange)
+}
+
+func (v *CompositeValue) GetInjectedField(interpreter *Interpreter, name string) Value {
+	if v.injectedFields == nil {
+		v.injectedFields = interpreter.GetCompositeValueInjectedFields(v)
+	}
+
+	value, ok := v.injectedFields[name]
+	if !ok {
+		return nil
+	}
+
+	return value
+}
+
+func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange LocationRange, name string) FunctionValue {
+	if v.Functions == nil {
+		v.Functions = interpreter.GetCompositeValueFunctions(v, locationRange)
+	}
+
+	function, ok := v.Functions[name]
+	if !ok {
+		return nil
+	}
+
+	var base *EphemeralReferenceValue
+	var self MemberAccessibleValue = v
+	if v.Kind == common.CompositeKindAttachment {
+		base, self = attachmentBaseAndSelfValues(interpreter, v)
+	}
+	return NewBoundFunctionValue(interpreter, function, &self, base, nil)
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange LocationRange) OptionalValue {
@@ -17122,22 +17178,26 @@ func (v *CompositeValue) ConformsToStaticType(
 	}
 
 	fieldsLen := int(v.dictionary.Count())
-	if v.ComputedFields != nil {
-		fieldsLen += len(v.ComputedFields)
+
+	computedFields := v.GetComputedFields(interpreter)
+	if computedFields != nil {
+		fieldsLen += len(computedFields)
 	}
 
-	if fieldsLen != len(compositeType.Fields) {
+	// The composite might store additional fields
+	// which are not statically declared in the composite type.
+	if fieldsLen < len(compositeType.Fields) {
 		return false
 	}
 
 	for _, fieldName := range compositeType.Fields {
 		value := v.GetField(interpreter, locationRange, fieldName)
 		if value == nil {
-			if v.ComputedFields == nil {
+			if computedFields == nil {
 				return false
 			}
 
-			fieldGetter, ok := v.ComputedFields[fieldName]
+			fieldGetter, ok := computedFields[fieldName]
 			if !ok {
 				return false
 			}
@@ -17387,8 +17447,8 @@ func (v *CompositeValue) Transfer(
 			dictionary,
 		)
 
-		res.InjectedFields = v.InjectedFields
-		res.ComputedFields = v.ComputedFields
+		res.injectedFields = v.injectedFields
+		res.computedFields = v.computedFields
 		res.NestedVariables = v.NestedVariables
 		res.Functions = v.Functions
 		res.Stringer = v.Stringer
@@ -17469,8 +17529,8 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		Location:            v.Location,
 		QualifiedIdentifier: v.QualifiedIdentifier,
 		Kind:                v.Kind,
-		InjectedFields:      v.InjectedFields,
-		ComputedFields:      v.ComputedFields,
+		injectedFields:      v.injectedFields,
+		computedFields:      v.computedFields,
 		NestedVariables:     v.NestedVariables,
 		Functions:           v.Functions,
 		Stringer:            v.Stringer,
@@ -19514,7 +19574,7 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.value.RecursiveString(seenReferences)
 }
 
-func (v SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 	return v.value.MeteredString(memoryGauge, seenReferences)
 }
 
@@ -19808,6 +19868,7 @@ var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
 var _ AuthorizedValue = &StorageReferenceValue{}
 var _ ReferenceValue = &StorageReferenceValue{}
+var _ IterableValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
 	authorization Authorization,
@@ -20160,6 +20221,62 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*StorageReferenceValue) isReference() {}
 
+func (v *StorageReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+	// Not used for now
+	panic(errors.NewUnreachableError())
+}
+
+func (v *StorageReferenceValue) ForEach(
+	interpreter *Interpreter,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+	forEachReference(
+		interpreter,
+		referencedValue,
+		elementType,
+		function,
+		locationRange,
+	)
+}
+
+func forEachReference(
+	interpreter *Interpreter,
+	referencedValue Value,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	referencedIterable, ok := referencedValue.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	referenceType, isResultReference := sema.MaybeReferenceType(elementType)
+
+	updatedFunction := func(value Value) (resume bool) {
+		if isResultReference {
+			value = interpreter.getReferenceValue(value, elementType)
+		}
+
+		return function(value)
+	}
+
+	referencedElementType := elementType
+	if isResultReference {
+		referencedElementType = referenceType.Type
+	}
+
+	referencedIterable.ForEach(
+		interpreter,
+		referencedElementType,
+		updatedFunction,
+		locationRange,
+	)
+}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -20176,6 +20293,7 @@ var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 var _ AuthorizedValue = &EphemeralReferenceValue{}
 var _ ReferenceValue = &EphemeralReferenceValue{}
+var _ IterableValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
 	authorization Authorization,
@@ -20504,6 +20622,27 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 }
 
 func (*EphemeralReferenceValue) isReference() {}
+
+func (v *EphemeralReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+	// Not used for now
+	panic(errors.NewUnreachableError())
+}
+
+func (v *EphemeralReferenceValue) ForEach(
+	interpreter *Interpreter,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	referencedValue := v.MustReferencedValue(interpreter, locationRange)
+	forEachReference(
+		interpreter,
+		referencedValue,
+		elementType,
+		function,
+		locationRange,
+	)
+}
 
 // AddressValue
 type AddressValue common.Address

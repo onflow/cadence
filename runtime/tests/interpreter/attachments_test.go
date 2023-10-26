@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -1868,13 +1869,13 @@ func TestInterpretForEachAttachment(t *testing.T) {
                 E -> Y
             }
             struct S {}
-            access(M) attachment A for S {
+            access(mapping M) attachment A for S {
                 access(F) fun foo(_ x: Int): Int { return 7 + x }
             }
-            access(N) attachment B for S {
+            access(mapping N) attachment B for S {
                 access(Y) fun foo(): Int { return 10 }
             }
-            access(O) attachment C for S {
+            access(mapping O) attachment C for S {
                 access(Y) fun foo(_ x: Int): Int { return 8 + x }
             }
             fun test(): Int {
@@ -2188,8 +2189,6 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 	for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 		stdlib.NewPublicKeyConstructor(
 			assumeValidPublicKeyValidator{},
-			nil,
-			nil,
 		),
 		stdlib.SignatureAlgorithmConstructor,
 	} {
@@ -2216,11 +2215,15 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-				AttachmentsEnabled:  true,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+				AttachmentsEnabled: true,
 			},
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)

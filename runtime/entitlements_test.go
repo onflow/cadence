@@ -235,7 +235,7 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 
             access(all) resource R {}
 
-            access(M) attachment A for R {
+            access(mapping M) attachment A for R {
                 access(Y) fun foo() {}
             }
 
@@ -1172,7 +1172,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
             }
 
             access(all) struct S {
-                access(M) fun performMap(): auth(M) &Int {
+                access(mapping M) fun performMap(): auth(mapping M) &Int {
                     return &1
                 }
             } 

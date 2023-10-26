@@ -930,8 +930,10 @@ func newTestContractType() *TestContractType {
 		TestContractLocation,
 		nil,
 		&sema.Config{
-			BaseValueActivation: activation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return activation
+			},
+			AccessCheckMode: sema.AccessCheckModeStrict,
 		},
 	)
 	if err != nil {

@@ -89,8 +89,6 @@ func newBLSAggregatePublicKeysFunction(
 				inter,
 				locationRange,
 				aggregatedPublicKey,
-				aggregator,
-				aggregator,
 			)
 
 			return interpreter.NewSomeValueNonCopying(

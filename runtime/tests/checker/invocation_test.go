@@ -333,7 +333,9 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)

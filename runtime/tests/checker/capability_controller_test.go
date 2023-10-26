@@ -44,7 +44,9 @@ func TestCheckStorageCapabilityController(t *testing.T) {
 			code,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -105,7 +107,9 @@ func TestCheckAccountCapabilityController(t *testing.T) {
 			code,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)

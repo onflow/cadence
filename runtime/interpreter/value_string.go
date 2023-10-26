@@ -132,6 +132,10 @@ func stringFunctionJoin(invocation Invocation) Value {
 	first := true
 
 	stringArray.Iterate(inter, func(element Value) (resume bool) {
+
+		// Meter computation for iterating the array.
+		inter.ReportComputation(common.ComputationKindLoop, 1)
+
 		// Add separator
 		if !first {
 			// Construct directly instead of using NewStringMemoryUsage to avoid
