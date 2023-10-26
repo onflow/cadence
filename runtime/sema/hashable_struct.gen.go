@@ -1,3 +1,4 @@
+// Code generated from hashable_struct.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -18,18 +19,17 @@
 
 package sema
 
-// HashableStructType represents the type that can be used as a Dictionary key type.
+const HashableStructTypeName = "HashableStruct"
+
 var HashableStructType = &SimpleType{
-	Name:          "HashableStruct",
-	QualifiedName: "HashableStruct",
-	TypeID:        "HashableStruct",
+	Name:          HashableStructTypeName,
+	QualifiedName: HashableStructTypeName,
+	TypeID:        HashableStructTypeName,
 	tag:           HashableStructTypeTag,
 	IsResource:    false,
-	// The actual storability of a value is checked at run-time
-	Storable:   true,
-	Equatable:  false,
-	Comparable: false,
-	Exportable: true,
-	// The actual importability is checked at runtime
-	Importable: true,
+	Storable:      true,
+	Equatable:     false,
+	Comparable:    false,
+	Exportable:    true,
+	Importable:    true,
 }
