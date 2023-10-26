@@ -43,41 +43,17 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 
 	valueType := checker.VisitExpression(valueExpression, expectedType)
 
-	var elementType Type = InvalidType
-
-	if !valueType.IsInvalidType() {
-
-		// Only get the element type if the array is not a resource array.
-		// Otherwise, in addition to the `UnsupportedResourceForLoopError`,
-		// the loop variable will be declared with the resource-typed element type,
-		// leading to an additional `ResourceLossError`.
-
-		if valueType.IsResourceType() {
-			checker.report(
-				&UnsupportedResourceForLoopError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, valueExpression),
-				},
-			)
-		} else if arrayType, ok := valueType.(ArrayType); ok {
-			elementType = arrayType.ElementType(false)
-		} else if valueType == StringType {
-			elementType = CharacterType
-		} else {
-			checker.report(
-				&TypeMismatchWithDescriptionError{
-					ExpectedTypeDescription: "array",
-					ActualType:              valueType,
-					Range:                   ast.NewRangeFromPositioned(checker.memoryGauge, valueExpression),
-				},
-			)
-		}
-	}
+	// Only get the element type if the array is not a resource array.
+	// Otherwise, in addition to the `UnsupportedResourceForLoopError`,
+	// the loop variable will be declared with the resource-typed element type,
+	// leading to an additional `ResourceLossError`.
+	loopVariableType := checker.loopVariableType(valueType, valueExpression)
 
 	identifier := statement.Identifier.Identifier
 
 	variable, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               identifier,
-		ty:                       elementType,
+		ty:                       loopVariableType,
 		kind:                     common.DeclarationKindConstant,
 		pos:                      statement.Identifier.Pos,
 		isConstant:               true,
@@ -90,11 +66,14 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 	}
 
+	var indexType Type
+
 	if statement.Index != nil {
 		index := statement.Index.Identifier
+		indexType = IntType
 		indexVariable, err := checker.valueActivations.declare(variableDeclaration{
 			identifier:               index,
-			ty:                       IntType,
+			ty:                       indexType,
 			kind:                     common.DeclarationKindConstant,
 			pos:                      statement.Index.Pos,
 			isConstant:               true,
@@ -107,6 +86,11 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 			checker.recordVariableDeclarationOccurrence(index, indexVariable)
 		}
 	}
+
+	checker.Elaboration.SetForStatementType(statement, ForStatementTypes{
+		IndexVariableType: indexType,
+		ValueVariableType: loopVariableType,
+	})
 
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and
@@ -122,4 +106,69 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	})
 
 	return
+}
+
+func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosition) Type {
+	if valueType.IsInvalidType() {
+		return InvalidType
+	}
+
+	// Resources cannot be looped.
+	if valueType.IsResourceType() {
+		checker.report(
+			&UnsupportedResourceForLoopError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+			},
+		)
+		return InvalidType
+	}
+
+	// If it's a reference, check whether the referenced type is iterable.
+	// If yes, then determine the loop-var type depending on the
+	// element-type of the referenced type.
+	// If that element type is:
+	//  a) A container type, then the loop-var is also a reference-type.
+	//  b) A primitive type, then the loop-var is the concrete type itself.
+
+	if referenceType, ok := valueType.(*ReferenceType); ok {
+		referencedType := referenceType.Type
+		referencedIterableElementType := checker.iterableElementType(referencedType, hasPosition)
+
+		if referencedIterableElementType.IsInvalidType() {
+			return referencedIterableElementType
+		}
+
+		// Case (a): Element type is a container type.
+		// Then the loop-var must also be a reference type.
+		if referencedIterableElementType.ContainFieldsOrElements() {
+			return checker.getReferenceType(referencedIterableElementType, false, UnauthorizedAccess)
+		}
+
+		// Case (b): Element type is a primitive type.
+		// Then the loop-var must be the concrete type.
+		return referencedIterableElementType
+	}
+
+	// If it's not a reference, then simply get the element type.
+	return checker.iterableElementType(valueType, hasPosition)
+}
+
+func (checker *Checker) iterableElementType(valueType Type, hasPosition ast.HasPosition) Type {
+	if arrayType, ok := valueType.(ArrayType); ok {
+		return arrayType.ElementType(false)
+	}
+
+	if valueType == StringType {
+		return CharacterType
+	}
+
+	checker.report(
+		&TypeMismatchWithDescriptionError{
+			ExpectedTypeDescription: "array",
+			ActualType:              valueType,
+			Range:                   ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+		},
+	)
+
+	return InvalidType
 }

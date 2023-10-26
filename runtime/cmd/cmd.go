@@ -88,8 +88,10 @@ func DefaultCheckerConfig(
 	}
 
 	return &sema.Config{
-		BaseValueActivation: baseValueActivation,
-		AccessCheckMode:     sema.AccessCheckModeStrict,
+		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+			return baseValueActivation
+		},
+		AccessCheckMode: sema.AccessCheckModeStrict,
 		ImportHandler: func(
 			checker *sema.Checker,
 			importedLocation common.Location,
@@ -200,8 +202,10 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 	}
 
 	config := &interpreter.Config{
-		BaseActivation: baseActivation,
-		Storage:        storage,
+		BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+			return baseActivation
+		},
+		Storage: storage,
 		UUIDHandler: func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
@@ -364,6 +368,11 @@ func (*StandardLibraryHandler) UpdateAccountContractCode(_ common.AddressLocatio
 
 func (*StandardLibraryHandler) RecordContractUpdate(_ common.AddressLocation, _ *interpreter.CompositeValue) {
 	// NO-OP
+}
+
+func (h *StandardLibraryHandler) ContractUpdateRecorded(_ common.AddressLocation) bool {
+	// NO-OP
+	return false
 }
 
 func (*StandardLibraryHandler) InterpretContract(

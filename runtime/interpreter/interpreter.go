@@ -160,6 +160,13 @@ type UUIDHandlerFunc func() (uint64, error)
 // CompositeTypeHandlerFunc is a function that loads composite types.
 type CompositeTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.CompositeType
 
+// CompositeValueFunctionsHandlerFunc is a function that loads composite value functions.
+type CompositeValueFunctionsHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	compositeValue *CompositeValue,
+) map[string]FunctionValue
+
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
@@ -267,9 +274,15 @@ func NewInterpreterWithSharedState(
 		sharedState.allInterpreters[location] = interpreter
 	}
 
+	// Initialize activations
+
 	interpreter.activations = activations.NewActivations[*Variable](interpreter)
 
-	baseActivation := sharedState.Config.BaseActivation
+	var baseActivation *VariableActivation
+	baseActivationHandler := sharedState.Config.BaseActivationHandler
+	if baseActivationHandler != nil {
+		baseActivation = baseActivationHandler(location)
+	}
 	if baseActivation == nil {
 		baseActivation = BaseActivation
 	}
@@ -1247,7 +1260,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					address,
 				)
 
-				value.InjectedFields = injectedFields
+				value.injectedFields = injectedFields
 				value.Functions = functions
 
 				var self MemberAccessibleValue = value
@@ -2044,6 +2057,14 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		if !valueType.Equal(unwrappedTargetType) {
 			// transferring a reference at runtime does not change its entitlements; this is so that an upcast reference
 			// can later be downcast back to its original entitlement set
+
+			// check defensively that we never create a runtime mapped entitlement value
+			if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
+				panic(UnexpectedMappedEntitlementError{
+					Type:          unwrappedTargetType,
+					LocationRange: locationRange,
+				})
+			}
 
 			switch ref := value.(type) {
 			case *EphemeralReferenceValue:
@@ -4452,6 +4473,80 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	}
 
 	return contractValue, nil
+}
+
+func GetNativeCompositeValueComputedFields(v *CompositeValue) map[string]ComputedField {
+	switch v.QualifiedIdentifier {
+	case sema.PublicKeyType.Identifier:
+		return map[string]ComputedField{
+			sema.PublicKeyTypePublicKeyFieldName: func(interpreter *Interpreter, locationRange LocationRange) Value {
+				publicKeyValue := v.GetField(interpreter, locationRange, sema.PublicKeyTypePublicKeyFieldName)
+				return publicKeyValue.Transfer(
+					interpreter,
+					locationRange,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+				)
+			},
+		}
+	}
+
+	return nil
+}
+
+func (interpreter *Interpreter) GetCompositeValueComputedFields(v *CompositeValue) map[string]ComputedField {
+
+	var computedFields map[string]ComputedField
+	if v.Location == nil {
+		computedFields = GetNativeCompositeValueComputedFields(v)
+		if computedFields != nil {
+			return computedFields
+		}
+	}
+
+	// TODO: add handler to config
+
+	return nil
+}
+
+func (interpreter *Interpreter) GetCompositeValueInjectedFields(v *CompositeValue) map[string]Value {
+	config := interpreter.SharedState.Config
+	injectedCompositeFieldsHandler := config.InjectedCompositeFieldsHandler
+	if injectedCompositeFieldsHandler == nil {
+		return nil
+	}
+
+	return injectedCompositeFieldsHandler(
+		interpreter,
+		v.Location,
+		v.QualifiedIdentifier,
+		v.Kind,
+	)
+}
+
+func (interpreter *Interpreter) GetCompositeValueFunctions(
+	v *CompositeValue,
+	locationRange LocationRange,
+) map[string]FunctionValue {
+
+	var functions map[string]FunctionValue
+
+	typeID := v.TypeID()
+
+	sharedState := interpreter.SharedState
+
+	compositeValueFunctionsHandler := sharedState.Config.CompositeValueFunctionsHandler
+	if compositeValueFunctionsHandler != nil {
+		functions = compositeValueFunctionsHandler(interpreter, locationRange, v)
+		if functions != nil {
+			return functions
+		}
+	}
+
+	compositeCodes := sharedState.typeCodes.CompositeCodes
+	return compositeCodes[typeID].CompositeFunctions
 }
 
 func (interpreter *Interpreter) GetCompositeType(

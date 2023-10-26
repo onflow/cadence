@@ -39,6 +39,31 @@ func TestPrimitiveAccess_MarshalJSON(t *testing.T) {
 	}
 }
 
+func TestMappedAccess_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	e := NewNominalType(nil, NewIdentifier(nil, "E", Position{Offset: 1, Line: 2, Column: 3}), []Identifier{})
+
+	access := NewMappedAccess(e, Position{Offset: 0, Line: 0, Column: 0})
+	actual, err := json.Marshal(access)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `{
+		"EntitlementMap": {
+			"Type": "NominalType",
+			"Identifier": {
+				"Identifier": "E",
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+				"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+			},
+			"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+			"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+		},
+		"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+	}`, string(actual))
+}
+
 func TestEntitlementAccess_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

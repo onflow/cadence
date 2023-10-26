@@ -671,6 +671,23 @@ func (e ValueTransferTypeError) Error() string {
 	)
 }
 
+// UnexpectedMappedEntitlementError
+type UnexpectedMappedEntitlementError struct {
+	Type sema.Type
+	LocationRange
+}
+
+var _ errors.InternalError = UnexpectedMappedEntitlementError{}
+
+func (UnexpectedMappedEntitlementError) IsInternalError() {}
+
+func (e UnexpectedMappedEntitlementError) Error() string {
+	return fmt.Sprintf(
+		"invalid transfer of value: found an unexpected runtime mapped entitlement `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
 // ResourceConstructionError
 type ResourceConstructionError struct {
 	CompositeType *sema.CompositeType
@@ -978,4 +995,23 @@ func WrappedExternalError(err error) error {
 	default:
 		return errors.NewExternalError(err)
 	}
+}
+
+// CapabilityAddressPublishingError
+type CapabilityAddressPublishingError struct {
+	LocationRange
+	CapabilityAddress AddressValue
+	AccountAddress    AddressValue
+}
+
+var _ errors.UserError = CapabilityAddressPublishingError{}
+
+func (CapabilityAddressPublishingError) IsUserError() {}
+
+func (e CapabilityAddressPublishingError) Error() string {
+	return fmt.Sprintf(
+		"cannot publish capability of account %s in account %s",
+		e.CapabilityAddress.String(),
+		e.AccountAddress.String(),
+	)
 }

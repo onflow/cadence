@@ -2011,6 +2011,48 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
+	t.Run("access, entitlement map", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( mapping foo )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.MappedAccess{
+				EntitlementMap: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+				StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+			},
+			result,
+		)
+	})
+
+	t.Run("access, entitlement map no name", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( mapping )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in type: ')'",
+					Pos:     ast.Position{Offset: 18, Line: 1, Column: 18},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
 }
 
 func TestParseImportDeclaration(t *testing.T) {
@@ -7774,9 +7816,8 @@ func TestParseDestructor(t *testing.T) {
 	_, errs := testParseDeclarations(code)
 	utils.AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message: "custom destructor definitions are no longer permitted",
-				Pos:     ast.Position{Offset: 37, Line: 3, Column: 12},
+			&CustomDestructorError{
+				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
 			},
 		},
 		errs,

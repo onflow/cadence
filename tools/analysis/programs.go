@@ -109,8 +109,10 @@ func (programs Programs) check(
 		location,
 		nil,
 		&sema.Config{
-			BaseValueActivation: baseValueActivation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+			AccessCheckMode: sema.AccessCheckModeStrict,
 			LocationHandler: sema.AddressLocationHandlerFunc(
 				config.ResolveAddressContractNames,
 			),

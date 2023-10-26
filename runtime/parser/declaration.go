@@ -400,6 +400,20 @@ func parseAccess(p *parser) (ast.Access, error) {
 			// Skip the keyword
 			p.nextSemanticToken()
 
+		case KeywordMapping:
+
+			keywordPos := p.current.StartPos
+			// Skip the keyword
+			p.nextSemanticToken()
+
+			entitlementMapName, err := parseNominalType(p, lowestBindingPower)
+			if err != nil {
+				return ast.AccessNotSpecified, err
+			}
+			access = ast.NewMappedAccess(entitlementMapName, keywordPos)
+
+			p.skipSpaceAndComments()
+
 		default:
 			entitlements, err := parseEntitlementList(p)
 			if err != nil {
@@ -1886,7 +1900,7 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindInitializer
 
 	case KeywordDestroy:
-		p.report(NewSyntaxError(identifier.Pos, "custom destructor definitions are no longer permitted"))
+		p.report(&CustomDestructorError{Pos: identifier.Pos})
 
 	case KeywordPrepare:
 		declarationKind = common.DeclarationKindPrepare

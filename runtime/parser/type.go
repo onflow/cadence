@@ -921,11 +921,30 @@ func defineIdentifierTypes() {
 					return nil, err
 				}
 
-				entitlements, err := parseEntitlementList(p)
-				if err != nil {
-					return nil, err
+				p.skipSpaceAndComments()
+
+				keyword := p.currentTokenSource()
+				switch string(keyword) {
+				case KeywordMapping:
+					keywordPos := p.current.StartPos
+					// Skip the keyword
+					p.nextSemanticToken()
+
+					entitlementMapName, err := parseNominalType(p, lowestBindingPower)
+					if err != nil {
+						return nil, err
+					}
+					authorization = ast.NewMappedAccess(entitlementMapName, keywordPos)
+					p.skipSpaceAndComments()
+
+				default:
+					entitlements, err := parseEntitlementList(p)
+					if err != nil {
+						return nil, err
+					}
+					authorization = entitlements
 				}
-				authorization.EntitlementSet = entitlements
+
 				_, err = p.mustOne(lexer.TokenParenClose)
 				if err != nil {
 					return nil, err
@@ -944,7 +963,7 @@ func defineIdentifierTypes() {
 
 				return ast.NewReferenceType(
 					p.memoryGauge,
-					&authorization,
+					authorization,
 					right,
 					token.StartPos,
 				), nil

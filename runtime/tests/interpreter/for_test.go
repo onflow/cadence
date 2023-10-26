@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -225,35 +226,105 @@ func TestInterpretForString(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-      fun test(): [Character] {
-          let characters: [Character] = []
-          let hello = "👪❤️"
-          for c in hello {
-              characters.append(c)
-          }
-          return characters
-      }
-    `)
+	t.Run("basic", func(t *testing.T) {
 
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [Character] {
+                let characters: [Character] = []
+                let hello = "👪❤️"
+                for c in hello {
+                    characters.append(c)
+                }
+                return characters
+            }
+        `)
 
-	RequireValuesEqual(
-		t,
-		inter,
-		interpreter.NewArrayValue(
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
 			inter,
-			interpreter.EmptyLocationRange,
-			&interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeCharacter,
-			},
-			common.ZeroAddress,
-			interpreter.NewUnmeteredCharacterValue("👪"),
-			interpreter.NewUnmeteredCharacterValue("❤️"),
-		),
-		value,
-	)
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeCharacter,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredCharacterValue("👪"),
+				interpreter.NewUnmeteredCharacterValue("❤️"),
+			),
+			value,
+		)
+	})
+
+	t.Run("return", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [Character] {
+                let characters: [Character] = []
+                let hello = "abc"
+                for c in hello {
+                    characters.append(c)
+                    return characters
+                }
+                return characters
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeCharacter,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredCharacterValue("a"),
+			),
+			value,
+		)
+	})
+
+	t.Run("break", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [Character] {
+                let characters: [Character] = []
+                let hello = "abc"
+                for c in hello {
+                    characters.append(c)
+                    break
+                }
+                return characters
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeCharacter,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredCharacterValue("a"),
+			),
+			value,
+		)
+	})
+
 }
 
 func TestInterpretForStatementCapturing(t *testing.T) {
@@ -293,4 +364,373 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 		},
 		ArrayElements(inter, arrayValue),
 	)
+}
+
+func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Primitive array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                let array = ["Hello", "World", "Foo", "Bar"]
+                let arrayRef = &array as &[String]
+
+                for element in arrayRef {
+                    let e: String = element
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Struct array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                let array = [Foo(), Foo()]
+                let arrayRef = &array as &[Foo]
+
+                for element in arrayRef {
+                    let e: &Foo = element
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Resource array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo{}
+
+            fun main() {
+                let array <- [ <- create Foo(), <- create Foo()]
+                let arrayRef = &array as &[Foo]
+
+                for element in arrayRef {
+                    let e: &Foo = element
+                }
+
+                destroy array
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Moved resource array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo{}
+
+            fun main() {
+                let array <- [ <- create Foo(), <- create Foo()]
+                let arrayRef = returnSameRef(&array as &[Foo])
+                let movedArray <- array
+
+                for element in arrayRef {
+                    let e: &Foo = element
+                }
+
+                destroy movedArray
+            }
+
+            fun returnSameRef(_ ref: &[Foo]): &[Foo] {
+                return ref
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("Auth ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                let array = [Foo(), Foo()]
+                let arrayRef = &array as auth(Mutate) &[Foo]
+
+                for element in arrayRef {
+                    let e: &Foo = element    // Should be non-auth
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Optional array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                let array: [Foo?] = [Foo(), Foo()]
+                let arrayRef = &array as &[Foo?]
+
+                for element in arrayRef {
+                    let e: &Foo? = element    // Should be an optional reference
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Nil array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                let array: [Foo?] = [nil, nil]
+                let arrayRef = &array as &[Foo?]
+
+                for element in arrayRef {
+                    let e: &Foo? = element    // Should be an optional reference
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{}
+
+            fun main() {
+                let elementRef = &Foo() as &Foo
+                let array: [&Foo] = [elementRef, elementRef]
+                let arrayRef = &array as &[&Foo]
+
+                for element in arrayRef {
+                    let e: &Foo = element
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("Mutating reference to resource array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo{
+                fun sayHello() {}
+            }
+
+            fun main() {
+                let array <- [ <- create Foo()]
+                let arrayRef = &array as auth(Mutate) &[Foo]
+
+                for element in arrayRef {
+                    // Move the actual element
+                    // This mutation should fail.
+                    let oldElement <- arrayRef.remove(at: 0)
+
+                    // Use the element reference
+                    element.sayHello()
+
+                    destroy oldElement
+                }
+
+                destroy array
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
+
+	t.Run("Mutating reference to struct array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo{
+                fun sayHello() {}
+            }
+
+            fun main() {
+                let array = [Foo()]
+                let arrayRef = &array as auth(Mutate) &[Foo]
+
+                for element in arrayRef {
+                    // Move the actual element
+                    let oldElement = arrayRef.remove(at: 0)
+
+                    // Use the element reference
+                    element.sayHello()
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("String ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main(): [Character] {
+                let s = "Hello"
+                let sRef = &s as &String
+                let characters: [Character] = []
+
+                for char in sRef {
+                    characters.append(char)
+                }
+
+                return characters
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeCharacter,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredCharacterValue("H"),
+				interpreter.NewUnmeteredCharacterValue("e"),
+				interpreter.NewUnmeteredCharacterValue("l"),
+				interpreter.NewUnmeteredCharacterValue("l"),
+				interpreter.NewUnmeteredCharacterValue("o"),
+			),
+			value,
+		)
+	})
+}
+
+func TestInterpretStorageReferencesInForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Primitive array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            fun test() {
+                let array = ["Hello", "World", "Foo", "Bar"]
+                account.storage.save(array, to: /storage/array)
+
+                let arrayRef = account.storage.borrow<&[String]>(from: /storage/array)!
+
+                for element in arrayRef {
+                    let e: String = element    // Must be the concrete string
+                }
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("Struct array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            struct Foo{}
+
+            fun test() {
+                let array = [Foo(), Foo()]
+                account.storage.save(array, to: /storage/array)
+
+                let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
+
+                for element in arrayRef {
+                    let e: &Foo = element    // Must be a reference
+                }
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("Resource array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            resource Foo{}
+
+            fun test() {
+                let array <- [ <- create Foo(), <- create Foo()]
+                account.storage.save(<- array, to: /storage/array)
+
+                let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
+
+                for element in arrayRef {
+                    let e: &Foo = element    // Must be a reference
+                }
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("Moved resource array", func(t *testing.T) {
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            resource Foo{}
+
+            fun test() {
+                let array <- [ <- create Foo(), <- create Foo()]
+                account.storage.save(<- array, to: /storage/array)
+
+                let arrayRef = account.storage.borrow<&[Foo]>(from: /storage/array)!
+
+                let movedArray <- account.storage.load<@[Foo]>(from: /storage/array)!
+
+                for element in arrayRef {
+                    let e: &Foo = element    // Must be a reference
+                }
+
+                destroy movedArray
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.DereferenceError{})
+	})
 }
