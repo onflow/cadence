@@ -1438,6 +1438,15 @@ type AccountContractAdditionHandler interface {
 		error,
 	)
 	TemporarilyRecordCode(location common.AddressLocation, code []byte)
+
+	// StartContractAddition starts adding a contract.
+	StartContractAddition(location common.AddressLocation)
+
+	// EndContractAddition ends adding the contract
+	EndContractAddition(location common.AddressLocation)
+
+	// IsContractBeingAdded checks whether a contract is being added in the current execution.
+	IsContractBeingAdded(location common.AddressLocation) bool
 }
 
 // newAuthAccountContractsChangeFunction called when e.g.
@@ -1513,7 +1522,10 @@ func newAuthAccountContractsChangeFunction(
 				// Ensure that no contract/contract interface with the given name exists already,
 				// and no contract deploy or update was recorded before
 
-				if len(existingCode) > 0 || handler.ContractUpdateRecorded(location) {
+				if len(existingCode) > 0 ||
+					handler.ContractUpdateRecorded(location) ||
+					handler.IsContractBeingAdded(location) {
+
 					panic(errors.NewDefaultUserError(
 						"cannot overwrite existing contract with name %q in account %s",
 						contractName,
@@ -1780,6 +1792,13 @@ func updateAccountContractCode(
 	constructorArgumentTypes []sema.Type,
 	options updateAccountContractCodeOptions,
 ) error {
+
+	// Start tracking the contract addition.
+	// This must be done even before the contract code gets added,
+	// to avoid the same contract being updated during the deployment of itself.
+	handler.StartContractAddition(location)
+	defer handler.EndContractAddition(location)
+
 	// If the code declares a contract, instantiate it and store it.
 	//
 	// This function might be called when
