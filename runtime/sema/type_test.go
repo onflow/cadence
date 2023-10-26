@@ -778,11 +778,10 @@ func TestCommonSuperType(t *testing.T) {
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				tt := LeastCommonSuperType(test.types...)
 				assert.Equal(
 					t,
 					test.expectedSuperType,
-					tt,
+					LeastCommonSuperType(test.types...),
 				)
 			})
 		}
