@@ -4726,3 +4726,20 @@ func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
 func (e *InvalidAttachmentEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
 }
+
+// InvalidTypeParameterizedNonNativeFunctionError
+
+type InvalidTypeParameterizedNonNativeFunctionError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidTypeParameterizedNonNativeFunctionError{}
+var _ errors.UserError = &InvalidTypeParameterizedNonNativeFunctionError{}
+
+func (*InvalidTypeParameterizedNonNativeFunctionError) isSemanticError() {}
+
+func (*InvalidTypeParameterizedNonNativeFunctionError) IsUserError() {}
+
+func (e *InvalidTypeParameterizedNonNativeFunctionError) Error() string {
+	return "invalid type parameters in non-native function"
+}

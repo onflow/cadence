@@ -1695,6 +1695,13 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
+	config := &sema.Config{
+		AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+			return baseValueActivation
+		},
+	}
+
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -1703,10 +1710,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 			program,
 			TestLocation,
 			nil,
-			&sema.Config{
-				AccessCheckMode:     sema.AccessCheckModeNotSpecifiedUnrestricted,
-				BaseValueActivation: baseValueActivation,
-			},
+			config,
 		)
 		if err != nil {
 			b.Fatal(err)

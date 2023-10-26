@@ -1057,10 +1057,14 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			script,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 			meter,
@@ -1091,8 +1095,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
-				nil,
-				nil,
 			),
 			stdlib.SignatureAlgorithmConstructor,
 		} {
@@ -1106,10 +1108,14 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			script,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 			meter,
@@ -1120,7 +1126,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 1 host function created for 'decodeHex' of String value
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 
 	t.Run("multiple public key creation", func(t *testing.T) {
@@ -1145,8 +1151,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
-				nil,
-				nil,
 			),
 			stdlib.SignatureAlgorithmConstructor,
 		} {
@@ -1160,10 +1164,14 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			script,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 			meter,
@@ -1174,7 +1182,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 2 = 2x 1 host function created for 'decodeHex' of String value
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 }
 
@@ -8677,10 +8685,14 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 			meter,
@@ -9013,10 +9025,14 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 			meter,

@@ -1793,8 +1793,10 @@ func (checker *Checker) defaultMembersAndOrigins(
 		functionAccess := checker.accessFromAstAccess(function.Access)
 
 		functionType := checker.functionType(
+			function.IsNative(),
 			function.Purity,
 			functionAccess,
+			function.TypeParameterList,
 			function.ParameterList,
 			function.ReturnTypeAnnotation,
 		)

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -2282,8 +2283,6 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 	for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 		stdlib.NewPublicKeyConstructor(
 			assumeValidPublicKeyValidator{},
-			nil,
-			nil,
 		),
 		stdlib.SignatureAlgorithmConstructor,
 	} {
@@ -2310,11 +2309,15 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-				AttachmentsEnabled:  true,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+				AttachmentsEnabled: true,
 			},
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)

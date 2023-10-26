@@ -303,7 +303,6 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 			locationRange := invocation.LocationRange
 
 			return newTestAccountValue(
-				blockchain,
 				inter,
 				locationRange,
 				account,
@@ -313,7 +312,6 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 }
 
 func newTestAccountValue(
-	blockchain Blockchain,
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	account *Account,
@@ -322,14 +320,10 @@ func newTestAccountValue(
 	// Create address value
 	address := interpreter.NewAddressValue(nil, account.Address)
 
-	standardLibraryHandler := blockchain.StandardLibraryHandler()
-
 	publicKey := NewPublicKeyValue(
 		inter,
 		locationRange,
 		account.PublicKey,
-		standardLibraryHandler,
-		standardLibraryHandler,
 	)
 
 	// Create an 'Account' by calling its constructor.
@@ -382,7 +376,6 @@ func (t *testEmulatorBackendType) newGetAccountFunction(
 			locationRange := invocation.LocationRange
 
 			return newTestAccountValue(
-				blockchain,
 				inter,
 				locationRange,
 				account,
@@ -645,7 +638,6 @@ func (t *testEmulatorBackendType) newServiceAccountFunction(
 			}
 
 			return newTestAccountValue(
-				blockchain,
 				invocation.Interpreter,
 				invocation.LocationRange,
 				serviceAccount,
