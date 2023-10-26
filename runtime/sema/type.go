@@ -5723,7 +5723,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return !subType.IsResourceType() && isAttachmentType(subType)
 
 	case HashableStructType:
-		return !subType.IsResourceType() && IsHashableStructType(subType)
+		return IsHashableStructType(subType)
 
 	case PathType:
 		return IsSubType(subType, StoragePathType) ||
