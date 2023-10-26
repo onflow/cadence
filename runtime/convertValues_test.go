@@ -3269,30 +3269,28 @@ func TestRuntimeComplexStructWithHashableStructFields(t *testing.T) {
 
 	script := fmt.Sprintf(
 		`
-          pub fun main(arg: %[1]s): %[1]s {
-
+          access(all) fun main(arg: %[1]s): %[1]s {
               if !arg.isInstance(Type<%[1]s>()) {
                   panic("Not a %[1]s value")
               }
-
               return arg
           }
 
-          pub struct Foo {
-              pub var a: HashableStruct?
-              pub var b: {String: HashableStruct}
-              pub var c: [HashableStruct]
-              pub var d: [HashableStruct; 2]
-              pub var e: HashableStruct
+          access(all) struct Foo {
+            access(all) var a: HashableStruct?
+            access(all) var b: {String: HashableStruct}
+            access(all) var c: [HashableStruct]
+            access(all) var d: [HashableStruct; 2]
+            access(all) var e: HashableStruct
 
-              init() {
-                  self.a = "Hello"
-                  self.b = {}
-                  self.c = []
-                  self.d = ["foo", "bar"]
-                  self.e = /storage/foo
-              }
-        }
+            init() {
+              self.a = "Hello"
+              self.b = {}
+              self.c = []
+              self.d = ["foo", "bar"]
+              self.e = /storage/foo
+            }
+          }
         `,
 		"Foo",
 	)
