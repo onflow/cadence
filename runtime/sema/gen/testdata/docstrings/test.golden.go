@@ -1,4 +1,4 @@
-// Code generated from testdata/docstrings.cdc. DO NOT EDIT.
+// Code generated from testdata/docstrings/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -17,13 +17,16 @@
  * limitations under the License.
  */
 
-package sema
+package docstrings
 
-import "github.com/onflow/cadence/runtime/ast"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/sema"
+)
 
 const DocstringsTypeOwoFieldName = "owo"
 
-var DocstringsTypeOwoFieldType = IntType
+var DocstringsTypeOwoFieldType = sema.IntType
 
 const DocstringsTypeOwoFieldDocString = `
 This is a 1-line docstring.
@@ -31,8 +34,8 @@ This is a 1-line docstring.
 
 const DocstringsTypeUwuFieldName = "uwu"
 
-var DocstringsTypeUwuFieldType = &VariableSizedType{
-	Type: IntType,
+var DocstringsTypeUwuFieldType = &sema.VariableSizedType{
+	Type: sema.IntType,
 }
 
 const DocstringsTypeUwuFieldDocString = `
@@ -42,16 +45,16 @@ This is the second line.
 
 const DocstringsTypeNwnFunctionName = "nwn"
 
-var DocstringsTypeNwnFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var DocstringsTypeNwnFunctionType = &sema.FunctionType{
+	Parameters: []sema.Parameter{
 		{
 			Identifier:     "x",
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: StringType,
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		&sema.OptionalType{
+			Type: sema.StringType,
 		},
 	),
 }
@@ -64,7 +67,7 @@ And the third line!
 
 const DocstringsTypeWithBlanksFieldName = "withBlanks"
 
-var DocstringsTypeWithBlanksFieldType = IntType
+var DocstringsTypeWithBlanksFieldType = sema.IntType
 
 const DocstringsTypeWithBlanksFieldDocString = `
 This is a multiline docstring.
@@ -74,9 +77,9 @@ There should be two newlines before this line!
 
 const DocstringsTypeIsSmolBeanFunctionName = "isSmolBean"
 
-var DocstringsTypeIsSmolBeanFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		BoolType,
+var DocstringsTypeIsSmolBeanFunctionType = &sema.FunctionType{
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.BoolType,
 	),
 }
 
@@ -87,10 +90,10 @@ These should be handled accordingly.
 
 const DocstringsTypeRunningOutOfIdeasFunctionName = "runningOutOfIdeas"
 
-var DocstringsTypeRunningOutOfIdeasFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: UInt64Type,
+var DocstringsTypeRunningOutOfIdeasFunctionType = &sema.FunctionType{
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		&sema.OptionalType{
+			Type: sema.UInt64Type,
 		},
 	),
 }
@@ -103,11 +106,11 @@ Look, I did it ` + "`again`" + `, wowie!!
 
 const DocstringsTypeName = "Docstrings"
 
-var DocstringsType = &SimpleType{
+var DocstringsType = &sema.SimpleType{
 	Name:          DocstringsTypeName,
 	QualifiedName: DocstringsTypeName,
 	TypeID:        DocstringsTypeName,
-	tag:           DocstringsTypeTag,
+	TypeTag:       DocstringsTypeTag,
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
@@ -118,49 +121,49 @@ var DocstringsType = &SimpleType{
 }
 
 func init() {
-	DocstringsType.Members = func(t *SimpleType) map[string]MemberResolver {
-		return MembersAsResolvers([]*Member{
-			NewUnmeteredFieldMember(
+	DocstringsType.Members = func(t *sema.SimpleType) map[string]sema.MemberResolver {
+		return sema.MembersAsResolvers([]*sema.Member{
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DocstringsTypeOwoFieldName,
 				DocstringsTypeOwoFieldType,
 				DocstringsTypeOwoFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DocstringsTypeUwuFieldName,
 				DocstringsTypeUwuFieldType,
 				DocstringsTypeUwuFieldDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				DocstringsTypeNwnFunctionName,
 				DocstringsTypeNwnFunctionType,
 				DocstringsTypeNwnFunctionDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DocstringsTypeWithBlanksFieldName,
 				DocstringsTypeWithBlanksFieldType,
 				DocstringsTypeWithBlanksFieldDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				DocstringsTypeIsSmolBeanFunctionName,
 				DocstringsTypeIsSmolBeanFunctionType,
 				DocstringsTypeIsSmolBeanFunctionDocString,
 			),
-			NewUnmeteredFunctionMember(
+			sema.NewUnmeteredFunctionMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				DocstringsTypeRunningOutOfIdeasFunctionName,
 				DocstringsTypeRunningOutOfIdeasFunctionType,
 				DocstringsTypeRunningOutOfIdeasFunctionDocString,

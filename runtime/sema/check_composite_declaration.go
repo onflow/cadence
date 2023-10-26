@@ -1455,33 +1455,6 @@ func (checker *Checker) checkMemberConflicts(
 
 			return true
 		}
-
-		// At most one of them have could default impls.
-		// If one has a default impl, then the other MUST have a condition.
-		// FLIP: https://github.com/onflow/flips/pull/83
-
-		if newMember.HasImplementation {
-			if existingMember.HasConditions {
-				continue
-			}
-		} else if existingMember.HasImplementation {
-			if newMember.HasConditions {
-				continue
-			}
-		} else {
-			// None of them have default impls
-			continue
-		}
-
-		checker.report(
-			&DefaultFunctionConflictError{
-				CompositeKindedType: compositeType,
-				Member:              newMember,
-				Range:               errorRange,
-			},
-		)
-
-		return true
 	}
 
 	return false
@@ -1839,8 +1812,10 @@ func (checker *Checker) defaultMembersAndOrigins(
 		functionAccess := checker.accessFromAstAccess(function.Access)
 
 		functionType := checker.functionType(
+			function.IsNative(),
 			function.Purity,
 			functionAccess,
+			function.TypeParameterList,
 			function.ParameterList,
 			function.ReturnTypeAnnotation,
 		)
@@ -2065,7 +2040,7 @@ func (checker *Checker) checkDefaultDestroyEvent(
 			// indexing expressions on dicts, or composites (for attachments) will return `nil` and thus never fail
 			targetExprType := checker.Elaboration.IndexExpressionTypes(arg).IndexedType
 			switch targetExprType.(type) {
-			case *VariableSizedType, *ConstantSizedType:
+			case ArrayType:
 				checker.report(&DefaultDestroyInvalidArgumentError{
 					Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
 				})
@@ -2077,6 +2052,9 @@ func (checker *Checker) checkDefaultDestroyEvent(
 			})
 		}
 	}
+
+	checker.enterValueScope()
+	defer checker.leaveValueScope(eventDeclaration.EndPosition, true)
 
 	for index, param := range eventType.ConstructorParameters {
 		paramType := param.TypeAnnotation.Type

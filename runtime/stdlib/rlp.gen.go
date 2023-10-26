@@ -34,13 +34,13 @@ var RLPTypeDecodeStringFunctionType = &sema.FunctionType{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",
 			TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{
-				Type: UInt8Type,
+				Type: sema.UInt8Type,
 			}),
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		&sema.VariableSizedType{
-			Type: UInt8Type,
+			Type: sema.UInt8Type,
 		},
 	),
 }
@@ -61,14 +61,14 @@ var RLPTypeDecodeListFunctionType = &sema.FunctionType{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "input",
 			TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{
-				Type: UInt8Type,
+				Type: sema.UInt8Type,
 			}),
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		&sema.VariableSizedType{
 			Type: &sema.VariableSizedType{
-				Type: UInt8Type,
+				Type: sema.UInt8Type,
 			},
 		},
 	),

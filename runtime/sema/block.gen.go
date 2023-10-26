@@ -69,7 +69,7 @@ var BlockType = &SimpleType{
 	Name:          BlockTypeName,
 	QualifiedName: BlockTypeName,
 	TypeID:        BlockTypeName,
-	tag:           BlockTypeTag,
+	TypeTag:       BlockTypeTag,
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,

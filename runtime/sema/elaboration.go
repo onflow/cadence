@@ -111,6 +111,11 @@ type ExpressionTypes struct {
 	ExpectedType Type
 }
 
+type ForStatementTypes struct {
+	IndexVariableType Type
+	ValueVariableType Type
+}
+
 type Elaboration struct {
 	interfaceTypesAndDeclarationsBiMap      *bimap.BiMap[*InterfaceType, *ast.InterfaceDeclaration]
 	entitlementTypesAndDeclarationsBiMap    *bimap.BiMap[*EntitlementType, *ast.EntitlementDeclaration]
@@ -118,6 +123,7 @@ type Elaboration struct {
 
 	fixedPointExpressionTypes         map[*ast.FixedPointExpression]Type
 	swapStatementTypes                map[*ast.SwapStatement]SwapStatementTypes
+	forStatementTypes                 map[*ast.ForStatement]ForStatementTypes
 	assignmentStatementTypes          map[*ast.AssignmentStatement]AssignmentStatementTypes
 	compositeDeclarationTypes         map[ast.CompositeLikeDeclaration]*CompositeType
 	compositeTypeDeclarations         map[*CompositeType]ast.CompositeLikeDeclaration
@@ -1031,4 +1037,18 @@ func (e *Elaboration) GetSemanticAccess(access ast.Access) (semaAccess Access, p
 	}
 	semaAccess, present = e.semanticAccesses[access]
 	return
+}
+
+func (e *Elaboration) SetForStatementType(statement *ast.ForStatement, types ForStatementTypes) {
+	if e.forStatementTypes == nil {
+		e.forStatementTypes = map[*ast.ForStatement]ForStatementTypes{}
+	}
+	e.forStatementTypes[statement] = types
+}
+
+func (e *Elaboration) ForStatementType(statement *ast.ForStatement) (types ForStatementTypes) {
+	if e.forStatementTypes == nil {
+		return
+	}
+	return e.forStatementTypes[statement]
 }

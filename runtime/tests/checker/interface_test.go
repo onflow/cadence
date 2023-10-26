@@ -1695,6 +1695,13 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
+	config := &sema.Config{
+		AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+			return baseValueActivation
+		},
+	}
+
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -1703,10 +1710,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 			program,
 			TestLocation,
 			nil,
-			&sema.Config{
-				AccessCheckMode:     sema.AccessCheckModeNotSpecifiedUnrestricted,
-				BaseValueActivation: baseValueActivation,
-			},
+			config,
 		)
 		if err != nil {
 			b.Fatal(err)
@@ -1894,9 +1898,7 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.DefaultFunctionConflictError{}, errs[0])
+		require.NoError(t, err)
 	})
 }
 
@@ -3017,12 +3019,28 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
+	})
 
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	t.Run("default impl in child, declaration in parent, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello()
+            }
+
+            struct interface B: A {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct C: B {}
+        `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("default impl in both", func(t *testing.T) {
@@ -3073,7 +3091,7 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -3082,11 +3100,6 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 
 		require.ErrorAs(t, errs[1], &memberConflictError)
-		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "B", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
-
-		require.ErrorAs(t, errs[2], &memberConflictError)
 		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
 		assert.Equal(t, "hello", memberConflictError.MemberName)
 		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
@@ -3360,13 +3373,7 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             struct interface D: A, B, C {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
-		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
+		require.NoError(t, err)
 	})
 
 	t.Run("all three formats of function, concrete type", func(t *testing.T) {
@@ -3393,10 +3400,7 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             struct D: A, B, C {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		defaultFunctionConflictError := &sema.DefaultFunctionConflictError{}
-		require.ErrorAs(t, errs[0], &defaultFunctionConflictError)
+		require.NoError(t, err)
 	})
 }
 

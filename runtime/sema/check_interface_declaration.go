@@ -538,6 +538,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 			checker.report(&InvalidNonEntitlementTypeInMapError{
 				Pos: association.Input.Identifier.Pos,
 			})
+			continue
 		}
 
 		output := checker.convertNominalType(association.Output)
@@ -547,14 +548,12 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 			checker.report(&InvalidNonEntitlementTypeInMapError{
 				Pos: association.Output.Identifier.Pos,
 			})
+			continue
 		}
 
 		entitlementRelations = append(
 			entitlementRelations,
-			EntitlementRelation{
-				Input:  inputEntitlement,
-				Output: outputEntitlement,
-			},
+			NewEntitlementRelation(checker.memoryGauge, inputEntitlement, outputEntitlement),
 		)
 	}
 
@@ -608,7 +607,7 @@ func (checker *Checker) checkInterfaceConformance(
 
 		var isDuplicate bool
 
-		// Check if the members coming from other conformances have conflicts.
+		// Check if the members coming from other conformances (siblings) have conflicts.
 		inheritedMembers, ok := inheritedMembersByName[name]
 		if ok {
 			for _, conflictingMember := range inheritedMembers {
@@ -619,6 +618,7 @@ func (checker *Checker) checkInterfaceConformance(
 					conflictingInterface,
 					conflictingMember,
 					interfaceDeclaration.Identifier,
+					false, // conflicting member is a sibling
 				)
 			}
 		}
@@ -632,6 +632,7 @@ func (checker *Checker) checkInterfaceConformance(
 				conformance,
 				conformanceMember,
 				declarationMember.Identifier,
+				true, // conflicting member is an inherited member
 			)
 		}
 
@@ -649,6 +650,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	conflictingInterfaceType *InterfaceType,
 	conflictingMember *Member,
 	hasPosition ast.HasPosition,
+	isConflictingMemberInherited bool,
 ) (isDuplicate bool) {
 
 	reportMemberConflictError := func() {
@@ -682,24 +684,31 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	// Having conflicting identical functions with:
 	//  - (1) and (1) - OK
 	//  - (1) and (2) - OK
-	//  - (1) and (3) - Not OK
+	//  - (1) and (3) - OK
+	//  - (2) and (1) - OK
 	//  - (2) and (2) - OK
 	//  - (2) and (3) - OK
+	//  - (3) and (1) - Not OK (order matters)
+	//  - (3) and (2) - OK
 	//  - (3) and (3) - Not OK
 
-	if interfaceMember.HasImplementation {
-		if conflictingMember.HasImplementation || !conflictingMember.HasConditions {
-			reportMemberConflictError()
-			return
-		}
+	if interfaceMember.HasImplementation && conflictingMember.HasImplementation {
+		reportMemberConflictError()
+		return
 	}
 
-	if conflictingMember.HasImplementation {
-		if !interfaceMember.HasConditions {
-			reportMemberConflictError()
-			return
-		}
+	// If the conflicting member is an inherited member, it is OK to override
+	// the inherited declaration, by a default implementation.
+	// However, a default implementation cannot be overridden by an empty declaration.
+
+	if isConflictingMemberInherited &&
+		conflictingMember.HasImplementation && !interfaceMember.HasConditions {
+		reportMemberConflictError()
+		return
 	}
+
+	// If the conflicting member is not an inherited one, (i.e.a member from a sibling conformance)
+	// then default implementation takes the precedence.
 
 	return
 }

@@ -2011,6 +2011,48 @@ func TestParseAccess(t *testing.T) {
 		)
 	})
 
+	t.Run("access, entitlement map", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( mapping foo )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.MappedAccess{
+				EntitlementMap: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Offset: 17, Line: 1, Column: 17},
+					},
+				},
+				StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+			},
+			result,
+		)
+	})
+
+	t.Run("access, entitlement map no name", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( mapping )")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in type: ')'",
+					Pos:     ast.Position{Offset: 18, Line: 1, Column: 18},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessNotSpecified,
+			result,
+		)
+	})
+
 }
 
 func TestParseImportDeclaration(t *testing.T) {
@@ -2577,18 +2619,18 @@ func TestParseEvent(t *testing.T) {
 												TypeAnnotation: &ast.TypeAnnotation{
 													Type: &ast.NominalType{
 														Identifier: ast.Identifier{
-															Identifier: "Int",
+															Identifier: "String",
 															Pos: ast.Position{
-																Offset: 29,
+																Offset: 43,
 																Line:   1,
-																Column: 29,
+																Column: 43,
 															},
 														},
 													},
 													StartPos: ast.Position{
-														Offset: 29,
+														Offset: 43,
 														Line:   1,
-														Column: 29,
+														Column: 43,
 													},
 												},
 												DefaultArgument: &ast.StringExpression{
@@ -7210,6 +7252,39 @@ func TestParseInvalidImportWithPurity(t *testing.T) {
 	)
 }
 
+func TestParseInvalidDefaultArgument(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function declaration ", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) fun foo ( a : Int = 3) { } ")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 31, Offset: 31},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
+	})
+
+	t.Run("function expression ", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" let foo = fun ( a : Int = 3) { } ")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 25, Offset: 25},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
+	})
+}
+
 func TestParseInvalidEventWithPurity(t *testing.T) {
 
 	t.Parallel()
@@ -7741,9 +7816,8 @@ func TestParseDestructor(t *testing.T) {
 	_, errs := testParseDeclarations(code)
 	utils.AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message: "custom destructor definitions are no longer permitted",
-				Pos:     ast.Position{Offset: 37, Line: 3, Column: 12},
+			&CustomDestructorError{
+				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
 			},
 		},
 		errs,

@@ -163,7 +163,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 			accessChain = append(accessChain, elementType)
 		case *ast.MemberExpression:
 			target = targetExp.Expression
-			memberType, _, _, _ := checker.visitMember(targetExp)
+			memberType, _, _, _ := checker.visitMember(targetExp, true)
 			accessChain = append(accessChain, memberType)
 		default:
 			inAccessChain = false
@@ -329,7 +329,7 @@ func (checker *Checker) visitIndexExpressionAssignment(
 	elementType = checker.visitIndexExpression(indexExpression, true)
 
 	indexExprTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
-	indexedRefType, isReference := referenceType(indexExprTypes.IndexedType)
+	indexedRefType, isReference := MaybeReferenceType(indexExprTypes.IndexedType)
 
 	if isReference &&
 		!mutableEntitledAccess.PermitsAccess(indexedRefType.Authorization) &&
@@ -352,7 +352,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 	target *ast.MemberExpression,
 ) (memberType Type) {
 
-	_, memberType, member, isOptional := checker.visitMember(target)
+	_, memberType, member, isOptional := checker.visitMember(target, true)
 
 	if member == nil {
 		return InvalidType

@@ -3807,8 +3807,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 					Mutate -> Insert
 				}
 
-				access(M) attachment A for R {
-					access(Identity) let x: [String]
+				access(mapping M) attachment A for R {
+					access(mapping Identity) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -3891,8 +3891,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 						xRef.append("y")
 					}
 				}
-				access(M) attachment A for R {
-					access(Identity) let x: [String]
+				access(mapping M) attachment A for R {
+					access(mapping Identity) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -4460,7 +4460,7 @@ func TestCheckAttachmentForEachAttachment(t *testing.T) {
 				}
 			}
 			resource R {}
-			access(M) attachment A for R {
+			access(mapping M) attachment A for R {
 				access(F) fun foo() {}
 			}
 			access(all) fun foo(s: @R) {
@@ -4471,5 +4471,196 @@ func TestCheckAttachmentForEachAttachment(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+}
+
+func TestCheckAttachmentRemoveLossTracking(t *testing.T) {
+
+	t.Run("remove immediately added attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {}
+			attachment A for R {}
+			fun loseResource(r: @R) {
+				remove A from <- attach A() to <- r
+			}
+			fun test() {
+				loseResource(r: <- create R())
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("remove from function call result", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {}
+			attachment A for R {}
+			fun createRwithA(): @R {
+				return <- attach A() to <- create R()
+			}
+			fun loseResource() {
+				remove A from <- createRwithA()
+			}
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+}
+
+func TestCheckAttachmentPurity(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				s[Test]
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach with constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				init() {}
+			}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("attach with pure constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				view init() {}
+			}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				remove Test from s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("remove from global", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			var s: S = S()
+			view fun foo() {
+				remove Test from s
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("remove from field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			struct Container {
+				let s: S
+				init() {
+					self.s = S()
+				}
+				view fun foo() {
+					remove Test from self.s
+				}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("remove from resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment Test for R {}
+			view fun foo(r: @R): @R {
+				remove Test from r
+				return <-r
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
 }

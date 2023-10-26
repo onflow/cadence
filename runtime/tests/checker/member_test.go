@@ -764,7 +764,7 @@ func TestCheckMemberAccess(t *testing.T) {
             }
 
             struct S {
-                access(M) let foo: [String]
+                access(mapping M) let foo: [String]
                 init() {
                     self.foo = []
                 }
@@ -796,13 +796,13 @@ func TestCheckMemberAccess(t *testing.T) {
                 C -> D
             }
             struct Foo {
-                access(FooMapping) let bars: [Bar]
+                access(mapping FooMapping) let bars: [Bar]
                 init() {
                     self.bars = [Bar()]
                 }
             }
             struct Bar {
-                access(BarMapping) let baz: Baz
+                access(mapping BarMapping) let baz: Baz
                 init() {
                     self.baz = Baz()
                 }
@@ -843,14 +843,14 @@ func TestCheckMemberAccess(t *testing.T) {
             }
 
             struct Foo {
-                access(FooMapping) let bars: [Bar]
+                access(mapping FooMapping) let bars: [Bar]
                 init() {
                     self.bars = [Bar()]
                 }
             }
 
             struct Bar {
-                access(BarMapping) let baz: Baz
+                access(mapping BarMapping) let baz: Baz
                 init() {
                     self.baz = Baz()
                 }

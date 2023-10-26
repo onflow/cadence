@@ -1014,3 +1014,92 @@ func TestCheckRewrittenPostConditions(t *testing.T) {
 
 	})
 }
+
+func TestCheckBeforeConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function call", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+      fun impure(): Int { 
+        return 0
+      }
+
+      fun test() {
+          post {
+            before(impure()) > 0
+          }
+      }
+    `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("view function call", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            view fun pure(): Int { 
+                return 0
+            }
+
+            fun test() {
+                post {
+                    before(pure()) > 0
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("nested function call", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            view fun pure(): Int { 
+                return 0
+            }
+
+            fun impure(): Int { 
+                return 0
+            }
+
+            fun test() {
+                post {
+                    before(before(impure())) > pure()
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("nested pure function call", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            view fun pure(): Int { 
+                return 0
+            }
+
+            fun test() {
+                post {
+                    before(before(pure())) > 0 
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}

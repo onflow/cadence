@@ -25,8 +25,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var PublicKeyType = sema.PublicKeyType
-
 const publicKeyConstructorFunctionDocString = `
 Constructs a new public key
 `
@@ -79,8 +77,6 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 
 func NewPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		sema.PublicKeyTypeName,
@@ -107,8 +103,6 @@ func NewPublicKeyConstructor(
 				publicKey,
 				signAlgo,
 				publicKeyValidator,
-				publicKeySignatureVerifier,
-				blsPoPVerifier,
 			)
 		},
 	)
@@ -120,8 +114,6 @@ func NewPublicKeyFromFields(
 	publicKey *interpreter.ArrayValue,
 	signAlgo *interpreter.SimpleCompositeValue,
 	publicKeyValidator PublicKeyValidator,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		inter,
@@ -129,8 +121,6 @@ func NewPublicKeyFromFields(
 		publicKey,
 		signAlgo,
 		newPublicKeyValidationHandler(publicKeyValidator),
-		newPublicKeyVerifySignatureFunction(inter, publicKeySignatureVerifier),
-		newPublicKeyVerifyPoPFunction(inter, blsPoPVerifier),
 	)
 }
 
@@ -142,8 +132,6 @@ func NewPublicKeyValue(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	publicKey *PublicKey,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		inter,
@@ -157,8 +145,6 @@ func NewPublicKeyValue(
 		),
 		// public keys converted from "native" (non-interpreter) keys are assumed to be already validated
 		assumePublicKeyIsValid,
-		newPublicKeyVerifySignatureFunction(inter, publicKeySignatureVerifier),
-		newPublicKeyVerifyPoPFunction(inter, blsPoPVerifier),
 	)
 }
 
@@ -226,7 +212,7 @@ type PublicKeySignatureVerifier interface {
 
 func newPublicKeyVerifySignatureFunction(
 	gauge common.MemoryGauge,
-	verififier PublicKeySignatureVerifier,
+	verifier PublicKeySignatureVerifier,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
@@ -260,7 +246,7 @@ func newPublicKeyVerifySignatureFunction(
 
 			inter.ExpectType(
 				publicKeyValue,
-				PublicKeyType,
+				sema.PublicKeyType,
 				locationRange,
 			)
 
@@ -285,7 +271,7 @@ func newPublicKeyVerifySignatureFunction(
 
 			var valid bool
 			errors.WrapPanic(func() {
-				valid, err = verififier.VerifySignature(
+				valid, err = verifier.VerifySignature(
 					signature,
 					domainSeparationTag,
 					signedData,
@@ -330,7 +316,7 @@ func newPublicKeyVerifyPoPFunction(
 
 			inter.ExpectType(
 				publicKeyValue,
-				PublicKeyType,
+				sema.PublicKeyType,
 				locationRange,
 			)
 
@@ -354,4 +340,19 @@ func newPublicKeyVerifyPoPFunction(
 			return interpreter.AsBoolValue(valid)
 		},
 	)
+}
+
+type PublicKeyFunctionsHandler interface {
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+}
+
+func PublicKeyFunctions(
+	gauge common.MemoryGauge,
+	handler PublicKeyFunctionsHandler,
+) map[string]interpreter.FunctionValue {
+	return map[string]interpreter.FunctionValue{
+		sema.PublicKeyTypeVerifyFunctionName:    newPublicKeyVerifySignatureFunction(gauge, handler),
+		sema.PublicKeyTypeVerifyPoPFunctionName: newPublicKeyVerifyPoPFunction(gauge, handler),
+	}
 }

@@ -116,6 +116,7 @@ type testAccountHandler struct {
 	)
 	updateAccountContractCode func(location common.AddressLocation, code []byte) error
 	recordContractUpdate      func(location common.AddressLocation, value *interpreter.CompositeValue)
+	contractUpdateRecorded    func(location common.AddressLocation) bool
 	interpretContract         func(
 		location common.AddressLocation,
 		program *interpreter.Program,
@@ -317,6 +318,13 @@ func (t *testAccountHandler) RecordContractUpdate(location common.AddressLocatio
 	t.recordContractUpdate(location, value)
 }
 
+func (t *testAccountHandler) ContractUpdateRecorded(location common.AddressLocation) bool {
+	if t.contractUpdateRecorded == nil {
+		panic(errors.NewUnexpectedError("unexpected call to ContractUpdateRecorded"))
+	}
+	return t.contractUpdateRecorded(location)
+}
+
 func (t *testAccountHandler) InterpretContract(
 	location common.AddressLocation,
 	program *interpreter.Program,
@@ -421,14 +429,15 @@ func testAccountWithErrorHandler(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
-	if checkerConfig.BaseValueActivation == nil {
-		checkerConfig.BaseValueActivation = sema.BaseValueActivation
-	}
-	baseValueActivation := sema.NewVariableActivation(checkerConfig.BaseValueActivation)
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
-	checkerConfig.BaseValueActivation = baseValueActivation
+
+	require.Nil(t, checkerConfig.BaseValueActivationHandler)
+	checkerConfig.BaseValueActivationHandler = func(_ common.Location) *sema.VariableActivation {
+		return baseValueActivation
+	}
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range valueDeclarations {
@@ -440,7 +449,9 @@ func testAccountWithErrorHandler(
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &checkerConfig,
 			Config: &interpreter.Config{
-				BaseActivation:                       baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
 				InvalidatedResourceValidationEnabled: true,
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {

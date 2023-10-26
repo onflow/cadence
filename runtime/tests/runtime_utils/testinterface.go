@@ -200,49 +200,49 @@ func (i *TestRuntimeInterface) GetInterpreterSharedState() *interpreter.SharedSt
 
 func (i *TestRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
 	if i.Storage.OnValueExists == nil {
-		panic("must specify testRuntimeInterface.storage.valueExists")
+		panic("must specify TestRuntimeInterface.Storage.OnValueExists")
 	}
 	return i.Storage.ValueExists(owner, key)
 }
 
 func (i *TestRuntimeInterface) GetValue(owner, key []byte) (value []byte, err error) {
 	if i.Storage.OnGetValue == nil {
-		panic("must specify testRuntimeInterface.storage.getValue")
+		panic("must specify TestRuntimeInterface.Storage.OnGetValue")
 	}
 	return i.Storage.GetValue(owner, key)
 }
 
 func (i *TestRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
 	if i.Storage.OnSetValue == nil {
-		panic("must specify testRuntimeInterface.storage.setValue")
+		panic("must specify TestRuntimeInterface.Storage.SetValue")
 	}
 	return i.Storage.SetValue(owner, key, value)
 }
 
 func (i *TestRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
 	if i.Storage.OnAllocateStorageIndex == nil {
-		panic("must specify testRuntimeInterface.storage.allocateStorageIndex")
+		panic("must specify TestRuntimeInterface.storage.OnAllocateStorageIndex")
 	}
 	return i.Storage.AllocateStorageIndex(owner)
 }
 
 func (i *TestRuntimeInterface) CreateAccount(payer runtime.Address) (address runtime.Address, err error) {
 	if i.OnCreateAccount == nil {
-		panic("must specify testRuntimeInterface.createAccount")
+		panic("must specify TestRuntimeInterface.OnCreateAccount")
 	}
 	return i.OnCreateAccount(payer)
 }
 
 func (i *TestRuntimeInterface) AddEncodedAccountKey(address runtime.Address, publicKey []byte) error {
 	if i.OnAddEncodedAccountKey == nil {
-		panic("must specify testRuntimeInterface.addEncodedAccountKey")
+		panic("must specify TestRuntimeInterface.OnAddEncodedAccountKey")
 	}
 	return i.OnAddEncodedAccountKey(address, publicKey)
 }
 
 func (i *TestRuntimeInterface) RevokeEncodedAccountKey(address runtime.Address, index int) ([]byte, error) {
 	if i.OnRemoveEncodedAccountKey == nil {
-		panic("must specify testRuntimeInterface.removeEncodedAccountKey")
+		panic("must specify TestRuntimeInterface.OnRemoveEncodedAccountKey")
 	}
 	return i.OnRemoveEncodedAccountKey(address, index)
 }
@@ -254,35 +254,35 @@ func (i *TestRuntimeInterface) AddAccountKey(
 	weight int,
 ) (*stdlib.AccountKey, error) {
 	if i.OnAddAccountKey == nil {
-		panic("must specify testRuntimeInterface.addAccountKey")
+		panic("must specify TestRuntimeInterface.OnAddAccountKey")
 	}
 	return i.OnAddAccountKey(address, publicKey, hashAlgo, weight)
 }
 
 func (i *TestRuntimeInterface) GetAccountKey(address runtime.Address, index int) (*stdlib.AccountKey, error) {
 	if i.OnGetAccountKey == nil {
-		panic("must specify testRuntimeInterface.getAccountKey")
+		panic("must specify TestRuntimeInterface.OnGetAccountKey")
 	}
 	return i.OnGetAccountKey(address, index)
 }
 
 func (i *TestRuntimeInterface) AccountKeysCount(address runtime.Address) (uint64, error) {
 	if i.OnAccountKeysCount == nil {
-		panic("must specify testRuntimeInterface.accountKeysCount")
+		panic("must specify TestRuntimeInterface.OnAccountKeysCount")
 	}
 	return i.OnAccountKeysCount(address)
 }
 
 func (i *TestRuntimeInterface) RevokeAccountKey(address runtime.Address, index int) (*stdlib.AccountKey, error) {
 	if i.OnRemoveAccountKey == nil {
-		panic("must specify testRuntimeInterface.removeAccountKey")
+		panic("must specify TestRuntimeInterface.OnRemoveAccountKey")
 	}
 	return i.OnRemoveAccountKey(address, index)
 }
 
 func (i *TestRuntimeInterface) UpdateAccountContractCode(location common.AddressLocation, code []byte) (err error) {
 	if i.OnUpdateAccountContractCode == nil {
-		panic("must specify testRuntimeInterface.updateAccountContractCode")
+		panic("must specify TestRuntimeInterface.OnUpdateAccountContractCode")
 	}
 
 	err = i.OnUpdateAccountContractCode(location, code)
@@ -297,14 +297,14 @@ func (i *TestRuntimeInterface) UpdateAccountContractCode(location common.Address
 
 func (i *TestRuntimeInterface) GetAccountContractCode(location common.AddressLocation) (code []byte, err error) {
 	if i.OnGetAccountContractCode == nil {
-		panic("must specify testRuntimeInterface.getAccountContractCode")
+		panic("must specify TestRuntimeInterface.OnGetAccountContractCode")
 	}
 	return i.OnGetAccountContractCode(location)
 }
 
 func (i *TestRuntimeInterface) RemoveAccountContractCode(location common.AddressLocation) (err error) {
 	if i.OnRemoveAccountContractCode == nil {
-		panic("must specify testRuntimeInterface.removeAccountContractCode")
+		panic("must specify TestRuntimeInterface.OnRemoveAccountContractCode")
 	}
 	return i.OnRemoveAccountContractCode(location)
 }
@@ -357,6 +357,9 @@ func (i *TestRuntimeInterface) MeterComputation(compKind common.ComputationKind,
 }
 
 func (i *TestRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
+	if i.OnDecodeArgument == nil {
+		panic("must specify TestRuntimeInterface.OnDecodeArgument")
+	}
 	return i.OnDecodeArgument(b, t)
 }
 
@@ -443,35 +446,35 @@ func (i *TestRuntimeInterface) Hash(data []byte, tag string, hashAlgorithm runti
 
 func (i *TestRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
 	if i.OnSetCadenceValue == nil {
-		panic("must specify testRuntimeInterface.setCadenceValue")
+		panic("must specify TestRuntimeInterface.OnSetCadenceValue")
 	}
 	return i.OnSetCadenceValue(owner, key, value)
 }
 
 func (i *TestRuntimeInterface) GetAccountBalance(address runtime.Address) (uint64, error) {
 	if i.OnGetAccountBalance == nil {
-		panic("must specify testRuntimeInterface.getAccountBalance")
+		panic("must specify TestRuntimeInterface.OnGetAccountBalance")
 	}
 	return i.OnGetAccountBalance(address)
 }
 
 func (i *TestRuntimeInterface) GetAccountAvailableBalance(address runtime.Address) (uint64, error) {
 	if i.OnGetAccountAvailableBalance == nil {
-		panic("must specify testRuntimeInterface.getAccountAvailableBalance")
+		panic("must specify TestRuntimeInterface.OnGetAccountAvailableBalance")
 	}
 	return i.OnGetAccountAvailableBalance(address)
 }
 
 func (i *TestRuntimeInterface) GetStorageUsed(address runtime.Address) (uint64, error) {
 	if i.OnGetStorageUsed == nil {
-		panic("must specify testRuntimeInterface.getStorageUsed")
+		panic("must specify TestRuntimeInterface.OnGetStorageUsed")
 	}
 	return i.OnGetStorageUsed(address)
 }
 
 func (i *TestRuntimeInterface) GetStorageCapacity(address runtime.Address) (uint64, error) {
 	if i.OnGetStorageCapacity == nil {
-		panic("must specify testRuntimeInterface.getStorageCapacity")
+		panic("must specify TestRuntimeInterface.OnGetStorageCapacity")
 	}
 	return i.OnGetStorageCapacity(address)
 }

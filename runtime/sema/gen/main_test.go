@@ -38,21 +38,22 @@ func TestFiles(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(inputPath string) {
-		// The test name is the filename without the extension.
-		_, filename := filepath.Split(inputPath)
-		testname := filename[:len(filename)-len(filepath.Ext(inputPath))]
+	test := func(dirPath string) {
+		// The test name is the directory name
+		_, testName := filepath.Split(dirPath)
 
-		t.Run(testname, func(t *testing.T) {
+		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
 			outFile, err := os.CreateTemp(t.TempDir(), "gen.*.go")
 			require.NoError(t, err)
 			defer outFile.Close()
 
-			gen(inputPath, outFile, "github.com/onflow/cadence/runtime/sema")
+			inputPath := filepath.Join(dirPath, "test.cdc")
 
-			goldenPath := filepath.Join(testDataDirectory, testname+".golden.go")
+			gen(inputPath, outFile, "github.com/onflow/cadence/runtime/sema/gen/"+dirPath)
+
+			goldenPath := filepath.Join(dirPath, "test.golden.go")
 			want, err := os.ReadFile(goldenPath)
 			require.NoError(t, err)
 
@@ -66,7 +67,7 @@ func TestFiles(t *testing.T) {
 		})
 	}
 
-	paths, err := filepath.Glob(filepath.Join(testDataDirectory, "*.cdc"))
+	paths, err := filepath.Glob(filepath.Join(testDataDirectory, "*"))
 	require.NoError(t, err)
 
 	for _, path := range paths {

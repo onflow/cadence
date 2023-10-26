@@ -48,8 +48,6 @@ const accountAddressFieldName = "address"
 
 const matcherTestFieldName = "test"
 
-const addressesFieldName = "addresses"
-
 const TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
 var testOnce sync.Once

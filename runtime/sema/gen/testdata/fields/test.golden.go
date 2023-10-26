@@ -1,4 +1,4 @@
-// Code generated from testdata/fields.cdc. DO NOT EDIT.
+// Code generated from testdata/fields/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -17,13 +17,16 @@
  * limitations under the License.
  */
 
-package sema
+package fields
 
-import "github.com/onflow/cadence/runtime/ast"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/sema"
+)
 
 const TestTypeTestIntFieldName = "testInt"
 
-var TestTypeTestIntFieldType = UInt64Type
+var TestTypeTestIntFieldType = sema.UInt64Type
 
 const TestTypeTestIntFieldDocString = `
 This is a test integer.
@@ -31,8 +34,8 @@ This is a test integer.
 
 const TestTypeTestOptIntFieldName = "testOptInt"
 
-var TestTypeTestOptIntFieldType = &OptionalType{
-	Type: UInt64Type,
+var TestTypeTestOptIntFieldType = &sema.OptionalType{
+	Type: sema.UInt64Type,
 }
 
 const TestTypeTestOptIntFieldDocString = `
@@ -41,9 +44,9 @@ This is a test optional integer.
 
 const TestTypeTestRefIntFieldName = "testRefInt"
 
-var TestTypeTestRefIntFieldType = &ReferenceType{
-	Type:          UInt64Type,
-	Authorization: UnauthorizedAccess,
+var TestTypeTestRefIntFieldType = &sema.ReferenceType{
+	Type:          sema.UInt64Type,
+	Authorization: sema.UnauthorizedAccess,
 }
 
 const TestTypeTestRefIntFieldDocString = `
@@ -52,8 +55,8 @@ This is a test integer reference.
 
 const TestTypeTestVarIntsFieldName = "testVarInts"
 
-var TestTypeTestVarIntsFieldType = &VariableSizedType{
-	Type: UInt64Type,
+var TestTypeTestVarIntsFieldType = &sema.VariableSizedType{
+	Type: sema.UInt64Type,
 }
 
 const TestTypeTestVarIntsFieldDocString = `
@@ -62,8 +65,8 @@ This is a test variable-sized integer array.
 
 const TestTypeTestConstIntsFieldName = "testConstInts"
 
-var TestTypeTestConstIntsFieldType = &ConstantSizedType{
-	Type: UInt64Type,
+var TestTypeTestConstIntsFieldType = &sema.ConstantSizedType{
+	Type: sema.UInt64Type,
 	Size: 2,
 }
 
@@ -73,9 +76,9 @@ This is a test constant-sized integer array.
 
 const TestTypeTestIntDictFieldName = "testIntDict"
 
-var TestTypeTestIntDictFieldType = &DictionaryType{
-	KeyType:   UInt64Type,
-	ValueType: BoolType,
+var TestTypeTestIntDictFieldType = &sema.DictionaryType{
+	KeyType:   sema.UInt64Type,
+	ValueType: sema.BoolType,
 }
 
 const TestTypeTestIntDictFieldDocString = `
@@ -84,7 +87,7 @@ This is a test integer dictionary.
 
 const TestTypeTestParamFieldName = "testParam"
 
-var TestTypeTestParamFieldType = MustInstantiate(
+var TestTypeTestParamFieldType = sema.MustInstantiate(
 	FooType,
 	BarType,
 )
@@ -95,7 +98,7 @@ This is a test parameterized-type field.
 
 const TestTypeTestAddressFieldName = "testAddress"
 
-var TestTypeTestAddressFieldType = TheAddressType
+var TestTypeTestAddressFieldType = sema.TheAddressType
 
 const TestTypeTestAddressFieldDocString = `
 This is a test address field.
@@ -103,7 +106,7 @@ This is a test address field.
 
 const TestTypeTestTypeFieldName = "testType"
 
-var TestTypeTestTypeFieldType = MetaType
+var TestTypeTestTypeFieldType = sema.MetaType
 
 const TestTypeTestTypeFieldDocString = `
 This is a test type field.
@@ -111,7 +114,7 @@ This is a test type field.
 
 const TestTypeTestCapFieldName = "testCap"
 
-var TestTypeTestCapFieldType = &CapabilityType{}
+var TestTypeTestCapFieldType = &sema.CapabilityType{}
 
 const TestTypeTestCapFieldDocString = `
 This is a test unparameterized capability field.
@@ -119,9 +122,9 @@ This is a test unparameterized capability field.
 
 const TestTypeTestCapIntFieldName = "testCapInt"
 
-var TestTypeTestCapIntFieldType = MustInstantiate(
-	&CapabilityType{},
-	IntType,
+var TestTypeTestCapIntFieldType = sema.MustInstantiate(
+	&sema.CapabilityType{},
+	sema.IntType,
 )
 
 const TestTypeTestCapIntFieldDocString = `
@@ -130,8 +133,8 @@ This is a test parameterized capability field.
 
 const TestTypeTestIntersectionWithoutTypeFieldName = "testIntersectionWithoutType"
 
-var TestTypeTestIntersectionWithoutTypeFieldType = &IntersectionType{
-	Types: []*InterfaceType{BarType, BazType},
+var TestTypeTestIntersectionWithoutTypeFieldType = &sema.IntersectionType{
+	Types: []*sema.InterfaceType{BarType, BazType},
 }
 
 const TestTypeTestIntersectionWithoutTypeFieldDocString = `
@@ -140,11 +143,11 @@ This is a test intersection type (without type) field.
 
 const TestTypeName = "Test"
 
-var TestType = &SimpleType{
+var TestType = &sema.SimpleType{
 	Name:          TestTypeName,
 	QualifiedName: TestTypeName,
 	TypeID:        TestTypeName,
-	tag:           TestTypeTag,
+	TypeTag:       TestTypeTag,
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
@@ -155,99 +158,99 @@ var TestType = &SimpleType{
 }
 
 func init() {
-	TestType.Members = func(t *SimpleType) map[string]MemberResolver {
-		return MembersAsResolvers([]*Member{
-			NewUnmeteredFieldMember(
+	TestType.Members = func(t *sema.SimpleType) map[string]sema.MemberResolver {
+		return sema.MembersAsResolvers([]*sema.Member{
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestIntFieldName,
 				TestTypeTestIntFieldType,
 				TestTypeTestIntFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestOptIntFieldName,
 				TestTypeTestOptIntFieldType,
 				TestTypeTestOptIntFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestRefIntFieldName,
 				TestTypeTestRefIntFieldType,
 				TestTypeTestRefIntFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestVarIntsFieldName,
 				TestTypeTestVarIntsFieldType,
 				TestTypeTestVarIntsFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestConstIntsFieldName,
 				TestTypeTestConstIntsFieldType,
 				TestTypeTestConstIntsFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestIntDictFieldName,
 				TestTypeTestIntDictFieldType,
 				TestTypeTestIntDictFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestParamFieldName,
 				TestTypeTestParamFieldType,
 				TestTypeTestParamFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestAddressFieldName,
 				TestTypeTestAddressFieldType,
 				TestTypeTestAddressFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestTypeFieldName,
 				TestTypeTestTypeFieldType,
 				TestTypeTestTypeFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestCapFieldName,
 				TestTypeTestCapFieldType,
 				TestTypeTestCapFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestCapIntFieldName,
 				TestTypeTestCapIntFieldType,
 				TestTypeTestCapIntFieldDocString,
 			),
-			NewUnmeteredFieldMember(
+			sema.NewUnmeteredFieldMember(
 				t,
-				PrimitiveAccess(ast.AccessAll),
+				sema.PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				TestTypeTestIntersectionWithoutTypeFieldName,
 				TestTypeTestIntersectionWithoutTypeFieldType,

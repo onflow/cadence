@@ -1,4 +1,4 @@
-// Code generated from testdata/nested.cdc. DO NOT EDIT.
+// Code generated from testdata/nested/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -17,18 +17,19 @@
  * limitations under the License.
  */
 
-package sema
+package nested
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 const FooTypeFooFunctionName = "foo"
 
-var FooTypeFooFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
+var FooTypeFooFunctionType = &sema.FunctionType{
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
 	),
 }
 
@@ -46,9 +47,9 @@ Bar
 
 const Foo_BarTypeBarFunctionName = "bar"
 
-var Foo_BarTypeBarFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
+var Foo_BarTypeBarFunctionType = &sema.FunctionType{
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.VoidType,
 	),
 }
 
@@ -58,8 +59,8 @@ bar
 
 const Foo_BarTypeName = "Bar"
 
-var Foo_BarType = func() *CompositeType {
-	var t = &CompositeType{
+var Foo_BarType = func() *sema.CompositeType {
+	var t = &sema.CompositeType{
 		Identifier:         Foo_BarTypeName,
 		Kind:               common.CompositeKindStructure,
 		ImportableBuiltin:  false,
@@ -70,24 +71,24 @@ var Foo_BarType = func() *CompositeType {
 }()
 
 func init() {
-	var members = []*Member{
-		NewUnmeteredFunctionMember(
+	var members = []*sema.Member{
+		sema.NewUnmeteredFunctionMember(
 			Foo_BarType,
-			PrimitiveAccess(ast.AccessAll),
+			sema.PrimitiveAccess(ast.AccessAll),
 			Foo_BarTypeBarFunctionName,
 			Foo_BarTypeBarFunctionType,
 			Foo_BarTypeBarFunctionDocString,
 		),
 	}
 
-	Foo_BarType.Members = MembersAsMap(members)
-	Foo_BarType.Fields = MembersFieldNames(members)
+	Foo_BarType.Members = sema.MembersAsMap(members)
+	Foo_BarType.Fields = sema.MembersFieldNames(members)
 }
 
 const FooTypeName = "Foo"
 
-var FooType = func() *CompositeType {
-	var t = &CompositeType{
+var FooType = func() *sema.CompositeType {
+	var t = &sema.CompositeType{
 		Identifier:         FooTypeName,
 		Kind:               common.CompositeKindStructure,
 		ImportableBuiltin:  false,
@@ -99,17 +100,17 @@ var FooType = func() *CompositeType {
 }()
 
 func init() {
-	var members = []*Member{
-		NewUnmeteredFunctionMember(
+	var members = []*sema.Member{
+		sema.NewUnmeteredFunctionMember(
 			FooType,
-			PrimitiveAccess(ast.AccessAll),
+			sema.PrimitiveAccess(ast.AccessAll),
 			FooTypeFooFunctionName,
 			FooTypeFooFunctionType,
 			FooTypeFooFunctionDocString,
 		),
-		NewUnmeteredFieldMember(
+		sema.NewUnmeteredFieldMember(
 			FooType,
-			PrimitiveAccess(ast.AccessAll),
+			sema.PrimitiveAccess(ast.AccessAll),
 			ast.VariableKindConstant,
 			FooTypeBarFieldName,
 			FooTypeBarFieldType,
@@ -117,6 +118,6 @@ func init() {
 		),
 	}
 
-	FooType.Members = MembersAsMap(members)
-	FooType.Fields = MembersFieldNames(members)
+	FooType.Members = sema.MembersAsMap(members)
+	FooType.Fields = sema.MembersFieldNames(members)
 }

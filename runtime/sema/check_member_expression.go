@@ -25,7 +25,7 @@ import (
 
 // NOTE: only called if the member expression is *not* an assignment
 func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) Type {
-	accessedType, memberType, member, isOptional := checker.visitMember(expression)
+	accessedType, memberType, member, isOptional := checker.visitMember(expression, false)
 
 	if !accessedType.IsInvalidType() {
 		memberAccessType := accessedType
@@ -111,21 +111,30 @@ func (checker *Checker) getReferenceType(typ Type, substituteAuthorization bool,
 	return NewReferenceType(checker.memoryGauge, auth, typ)
 }
 
-func shouldReturnReference(parentType, memberType Type) bool {
-	if _, isReference := referenceType(parentType); !isReference {
+func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
+	if isAssignment {
+		return false
+	}
+
+	if _, isReference := MaybeReferenceType(parentType); !isReference {
 		return false
 	}
 
 	return memberType.ContainFieldsOrElements()
 }
 
-func referenceType(typ Type) (*ReferenceType, bool) {
+func MaybeReferenceType(typ Type) (*ReferenceType, bool) {
 	unwrappedType := UnwrapOptionalType(typ)
 	refType, isReference := unwrappedType.(*ReferenceType)
 	return refType, isReference
 }
 
-func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, resultingType Type, member *Member, isOptional bool) {
+func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignment bool) (
+	accessedType Type,
+	resultingType Type,
+	member *Member,
+	isOptional bool,
+) {
 	memberInfo, ok := checker.Elaboration.MemberExpressionMemberAccessInfo(expression)
 	if ok {
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
@@ -312,12 +321,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		switch ty := resultingType.(type) {
 		case *ReferenceType:
 			return NewReferenceType(checker.memoryGauge, resultingAuthorization, ty.Type)
-		case *OptionalType:
-			switch innerTy := ty.Type.(type) {
-			case *ReferenceType:
-				return NewOptionalType(checker.memoryGauge,
-					NewReferenceType(checker.memoryGauge, resultingAuthorization, innerTy.Type))
-			}
 		}
 		return resultingType
 	}
@@ -325,16 +328,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	shouldSubstituteAuthorization := !member.Access.Equal(resultingAuthorization)
 
 	if shouldSubstituteAuthorization {
-		switch ty := resultingType.(type) {
-		case *FunctionType:
-			resultingType = NewSimpleFunctionType(
-				ty.Purity,
-				ty.Parameters,
-				NewTypeAnnotation(substituteConcreteAuthorization(ty.ReturnTypeAnnotation.Type)),
-			)
-		default:
-			resultingType = substituteConcreteAuthorization(resultingType)
-		}
+		resultingType = resultingType.Map(checker.memoryGauge, make(map[*TypeParameter]*TypeParameter), substituteConcreteAuthorization)
 	}
 
 	// Check that the member access is not to a function of resource type
@@ -367,7 +361,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	// i.e: `accessedSelfMember == nil`
 
 	if accessedSelfMember == nil &&
-		shouldReturnReference(accessedType, resultingType) &&
+		shouldReturnReference(accessedType, resultingType, isAssignment) &&
 		member.DeclarationKind == common.DeclarationKindField {
 
 		// Get a reference to the type
@@ -419,6 +413,8 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, resu
 		}
 	case EntitlementSetAccess:
 		switch ty := accessedType.(type) {
+		case *OptionalType:
+			return checker.isReadableMember(ty.Type, member, resultingType, accessRange)
 		case *ReferenceType:
 			// when accessing a member on a reference, the read is allowed if
 			// the member's access permits the reference's authorization
@@ -452,6 +448,28 @@ func (checker *Checker) mapAccess(
 			// since we are already reporting an error that the map is unrepresentable,
 			// pretend that the access succeeds to prevent a redundant access error report
 			return true, UnauthorizedAccess
+		}
+		// when we are in an assignment statement,
+		// we need full permissions to the map regardless of the input authorization of the reference
+		// Consider:
+		//
+		//    entitlement X
+		//    entitlement Y
+		//    entitlement mapping M {
+		//    	X -> Insert
+		//    	Y -> Remove
+		//    }
+		//    struct S {
+		//	    access(M) var member: auth(M) &[T]?
+		//      ...
+		//     }
+		//
+		//  If we were able to assign a `auth(Insert) &[T]` value to `ref.member` when `ref` has type `auth(X) &S`
+		//  we could use this to then extract a `auth(Insert, Remove) &[T]` reference to that array by accessing `member`
+		//  on an owned copy of `S`. As such, when in an assignment, we return the full codomain here as the "granted authorization"
+		//  of the access expression, since the checker will later enforce that the incoming reference value is a subtype of that full codomain.
+		if checker.inAssignment {
+			return true, mappedAccess.Codomain()
 		}
 		return true, grantedAccess
 

@@ -18,9 +18,11 @@
 
 package stdlib
 
-import "github.com/onflow/cadence/runtime/sema"
-
-var UInt8Type = sema.UInt8Type
+import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+)
 
 type StandardLibraryHandler interface {
 	Logger
@@ -48,7 +50,7 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		NewGetCurrentBlockFunction(handler),
 		NewGetAccountFunction(handler),
 		NewAccountConstructor(handler),
-		NewPublicKeyConstructor(handler, handler, handler),
+		NewPublicKeyConstructor(handler),
 		NewBLSContract(nil, handler),
 		NewHashAlgorithmConstructor(handler),
 	}
@@ -59,4 +61,26 @@ func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []Standa
 		DefaultStandardLibraryValues(handler),
 		NewGetAuthAccountFunction(handler),
 	)
+}
+
+type CompositeValueFunctionsHandler func(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	compositeValue *interpreter.CompositeValue,
+) map[string]interpreter.FunctionValue
+
+type CompositeValueFunctionsHandlers map[common.TypeID]CompositeValueFunctionsHandler
+
+func DefaultStandardLibraryCompositeValueFunctionHandlers(
+	handler StandardLibraryHandler,
+) CompositeValueFunctionsHandlers {
+	return CompositeValueFunctionsHandlers{
+		sema.PublicKeyType.ID(): func(
+			inter *interpreter.Interpreter,
+			_ interpreter.LocationRange,
+			_ *interpreter.CompositeValue,
+		) map[string]interpreter.FunctionValue {
+			return PublicKeyFunctions(inter, handler)
+		},
+	}
 }

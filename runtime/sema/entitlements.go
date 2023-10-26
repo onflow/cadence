@@ -19,3 +19,9 @@
 package sema
 
 //go:generate go run ./gen entitlements.cdc entitlements.gen.go
+
+func init() {
+	addToBaseActivation(MutateType)
+	addToBaseActivation(InsertType)
+	addToBaseActivation(RemoveType)
+}

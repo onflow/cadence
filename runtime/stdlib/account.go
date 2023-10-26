@@ -619,8 +619,6 @@ func newAccountKeysAddFunction(
 				locationRange,
 				accountKey,
 				handler,
-				handler,
-				handler,
 			)
 		},
 	)
@@ -691,8 +689,6 @@ func newAccountKeysGetFunction(
 					locationRange,
 					accountKey,
 					provider,
-					provider,
-					provider,
 				),
 			)
 		},
@@ -742,8 +738,6 @@ func newAccountKeysForEachFunction(
 					inter,
 					locationRange,
 					key,
-					provider,
-					provider,
 					provider,
 				)
 			}
@@ -892,8 +886,6 @@ func newAccountKeysRevokeFunction(
 					inter,
 					locationRange,
 					accountKey,
-					handler,
-					handler,
 					handler,
 				),
 			)
@@ -1349,7 +1341,11 @@ type AccountContractAdditionHandler interface {
 	) (*interpreter.Program, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(location common.AddressLocation, code []byte) error
-	RecordContractUpdate(location common.AddressLocation, value *interpreter.CompositeValue)
+	RecordContractUpdate(
+		location common.AddressLocation,
+		value *interpreter.CompositeValue,
+	)
+	ContractUpdateRecorded(location common.AddressLocation) bool
 	InterpretContract(
 		location common.AddressLocation,
 		program *interpreter.Program,
@@ -1443,9 +1439,10 @@ func changeAccountContracts(
 
 	} else {
 		// We are adding a new contract.
-		// Ensure that no contract/contract interface with the given name exists already
+		// Ensure that no contract/contract interface with the given name exists already,
+		// and no contract deploy or update was recorded before
 
-		if len(existingCode) > 0 {
+		if len(existingCode) > 0 || handler.ContractUpdateRecorded(location) {
 			panic(errors.NewDefaultUserError(
 				"cannot overwrite existing contract with name %q in account %s",
 				contractName,
@@ -2077,8 +2074,6 @@ func NewAccountKeyValue(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	accountKey *AccountKey,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 	hasher Hasher,
 ) interpreter.Value {
 
@@ -2095,8 +2090,6 @@ func NewAccountKeyValue(
 			inter,
 			locationRange,
 			accountKey.PublicKey,
-			publicKeySignatureVerifier,
-			blsPoPVerifier,
 		),
 		hashAlgorithm,
 		interpreter.NewUFix64ValueWithInteger(
@@ -2653,33 +2646,32 @@ func getCapabilityController(
 		capabilityID := controller.CapabilityID
 
 		controller.GetCapability =
-			newCapabilityControllerGetCapabilityFunction(inter, address, controller)
+			newCapabilityControllerGetCapabilityFunction(address, controller)
 
 		controller.GetTag =
-			newCapabilityControllerGetTagFunction(inter, address, capabilityID)
+			newCapabilityControllerGetTagFunction(address, capabilityID)
 		controller.SetTag =
-			newCapabilityControllerSetTagFunction(inter, address, capabilityID)
+			newCapabilityControllerSetTagFunction(address, capabilityID)
 
-		controller.TargetFunction =
-			newStorageCapabilityControllerTargetFunction(inter, controller)
-		controller.RetargetFunction =
-			newStorageCapabilityControllerRetargetFunction(inter, address, controller)
-		controller.DeleteFunction =
-			newStorageCapabilityControllerDeleteFunction(inter, address, controller)
+		controller.Delete =
+			newStorageCapabilityControllerDeleteFunction(address, controller)
+
+		controller.SetTarget =
+			newStorageCapabilityControllerSetTargetFunction(address, controller)
 
 	case *interpreter.AccountCapabilityControllerValue:
 		capabilityID := controller.CapabilityID
 
 		controller.GetCapability =
-			newCapabilityControllerGetCapabilityFunction(inter, address, controller)
+			newCapabilityControllerGetCapabilityFunction(address, controller)
 
 		controller.GetTag =
-			newCapabilityControllerGetTagFunction(inter, address, capabilityID)
+			newCapabilityControllerGetTagFunction(address, capabilityID)
 		controller.SetTag =
-			newCapabilityControllerSetTagFunction(inter, address, capabilityID)
+			newCapabilityControllerSetTagFunction(address, capabilityID)
 
-		controller.DeleteFunction =
-			newAccountCapabilityControllerDeleteFunction(inter, address, controller)
+		controller.Delete =
+			newAccountCapabilityControllerDeleteFunction(address, controller)
 	}
 
 	return controller
@@ -2709,94 +2701,59 @@ func getStorageCapabilityControllerReference(
 	)
 }
 
-func newStorageCapabilityControllerTargetFunction(
-	inter *interpreter.Interpreter,
-	controller *interpreter.StorageCapabilityControllerValue,
-) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		inter,
-		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			return controller.TargetPath
-		},
-	)
-}
-
-func newStorageCapabilityControllerRetargetFunction(
-	inter *interpreter.Interpreter,
+func newStorageCapabilityControllerSetTargetFunction(
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
-) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		inter,
-		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			locationRange := invocation.LocationRange
+) func(*interpreter.Interpreter, interpreter.LocationRange, interpreter.PathValue) {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		newTargetPathValue interpreter.PathValue,
+	) {
+		oldTargetPathValue := controller.TargetPath
+		capabilityID := controller.CapabilityID
 
-			// Get path argument
-
-			newTargetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
-			if !ok || newTargetPathValue.Domain != common.PathDomainStorage {
-				panic(errors.NewUnreachableError())
-			}
-
-			oldTargetPathValue := controller.TargetPath
-
-			capabilityID := controller.CapabilityID
-			unrecordStorageCapabilityController(
-				inter,
-				locationRange,
-				address,
-				oldTargetPathValue,
-				capabilityID,
-			)
-			recordStorageCapabilityController(
-				inter,
-				locationRange,
-				address,
-				newTargetPathValue,
-				capabilityID,
-			)
-
-			controller.TargetPath = newTargetPathValue
-
-			return interpreter.Void
-		},
-	)
+		unrecordStorageCapabilityController(
+			inter,
+			locationRange,
+			address,
+			oldTargetPathValue,
+			capabilityID,
+		)
+		recordStorageCapabilityController(
+			inter,
+			locationRange,
+			address,
+			newTargetPathValue,
+			capabilityID,
+		)
+	}
 }
 
 func newStorageCapabilityControllerDeleteFunction(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
-) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		inter,
-		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
+) func(*interpreter.Interpreter, interpreter.LocationRange) {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+	) {
+		targetPathValue := controller.TargetPath
+		capabilityID := controller.CapabilityID
 
-			capabilityID := controller.CapabilityID
-
-			unrecordStorageCapabilityController(
-				inter,
-				locationRange,
-				address,
-				controller.TargetPath,
-				capabilityID,
-			)
-			removeCapabilityController(
-				inter,
-				address,
-				capabilityID,
-			)
-
-			controller.SetDeleted(inter)
-
-			return interpreter.Void
-		},
-	)
+		unrecordStorageCapabilityController(
+			inter,
+			locationRange,
+			address,
+			targetPathValue,
+			capabilityID,
+		)
+		removeCapabilityController(
+			inter,
+			address,
+			capabilityID,
+		)
+	}
 }
 
 var capabilityIDSetStaticType = &interpreter.DictionaryStaticType{
@@ -3073,14 +3030,15 @@ func getAccountCapabilityControllerIDsIterator(
 
 func newAccountCapabilitiesPublishFunction(
 	gauge common.MemoryGauge,
-	addressValue interpreter.AddressValue,
+	accountAddressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
-	address := addressValue.ToAddress()
+	accountAddress := accountAddressValue.ToAddress()
 	return interpreter.NewHostFunctionValue(
 		gauge,
 		sema.Account_CapabilitiesTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// Get capability argument
 
@@ -3095,6 +3053,15 @@ func newAccountCapabilitiesPublishFunction(
 				panic(errors.NewUnreachableError())
 			}
 
+			capabilityAddressValue := capabilityValue.Address
+			if capabilityAddressValue != accountAddressValue {
+				panic(interpreter.CapabilityAddressPublishingError{
+					LocationRange:     locationRange,
+					CapabilityAddress: capabilityAddressValue,
+					AccountAddress:    accountAddressValue,
+				})
+			}
+
 			// Get path argument
 
 			pathValue, ok := invocation.Arguments[1].(interpreter.PathValue)
@@ -3107,28 +3074,24 @@ func newAccountCapabilitiesPublishFunction(
 
 			// Prevent an overwrite
 
-			locationRange := invocation.LocationRange
-
 			storageMapKey := interpreter.StringStorageMapKey(identifier)
 
 			if inter.StoredValueExists(
-				address,
+				accountAddress,
 				domain,
 				storageMapKey,
 			) {
-				panic(
-					interpreter.OverwriteError{
-						Address:       addressValue,
-						Path:          pathValue,
-						LocationRange: locationRange,
-					},
-				)
+				panic(interpreter.OverwriteError{
+					Address:       accountAddressValue,
+					Path:          pathValue,
+					LocationRange: locationRange,
+				})
 			}
 
 			capabilityValue, ok = capabilityValue.Transfer(
 				inter,
 				locationRange,
-				atree.Address(address),
+				atree.Address(accountAddress),
 				true,
 				nil,
 				nil,
@@ -3140,7 +3103,7 @@ func newAccountCapabilitiesPublishFunction(
 			// Write new value
 
 			inter.WriteStored(
-				address,
+				accountAddress,
 				domain,
 				storageMapKey,
 				capabilityValue,
@@ -3745,37 +3708,24 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 }
 
 func newAccountCapabilityControllerDeleteFunction(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	controller *interpreter.AccountCapabilityControllerValue,
-) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		inter,
-		sema.StorageCapabilityControllerTypeTargetFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
+) func(*interpreter.Interpreter, interpreter.LocationRange) {
+	return func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange) {
+		capabilityID := controller.CapabilityID
 
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
-
-			capabilityID := controller.CapabilityID
-
-			unrecordAccountCapabilityController(
-				inter,
-				locationRange,
-				address,
-				capabilityID,
-			)
-			removeCapabilityController(
-				inter,
-				address,
-				capabilityID,
-			)
-
-			controller.SetDeleted(inter)
-
-			return interpreter.Void
-		},
-	)
+		unrecordAccountCapabilityController(
+			inter,
+			locationRange,
+			address,
+			capabilityID,
+		)
+		removeCapabilityController(
+			inter,
+			address,
+			capabilityID,
+		)
+	}
 }
 
 // CapabilityControllerTagStorageDomain is the storage domain which stores
@@ -3806,16 +3756,15 @@ func getCapabilityControllerTag(
 }
 
 func newCapabilityControllerGetCapabilityFunction(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	controller interpreter.CapabilityControllerValue,
-) func() *interpreter.CapabilityValue {
+) func(inter *interpreter.Interpreter) *interpreter.CapabilityValue {
 
 	addressValue := interpreter.AddressValue(address)
 	capabilityID := controller.ControllerCapabilityID()
 	borrowType := controller.CapabilityControllerBorrowType()
 
-	return func() *interpreter.CapabilityValue {
+	return func(inter *interpreter.Interpreter) *interpreter.CapabilityValue {
 		return interpreter.NewCapabilityValue(
 			inter,
 			capabilityID,
@@ -3826,12 +3775,11 @@ func newCapabilityControllerGetCapabilityFunction(
 }
 
 func newCapabilityControllerGetTagFunction(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
-) func() *interpreter.StringValue {
+) func(*interpreter.Interpreter) *interpreter.StringValue {
 
-	return func() *interpreter.StringValue {
+	return func(inter *interpreter.Interpreter) *interpreter.StringValue {
 		return getCapabilityControllerTag(
 			inter,
 			address,
@@ -3861,11 +3809,10 @@ func setCapabilityControllerTag(
 }
 
 func newCapabilityControllerSetTagFunction(
-	inter *interpreter.Interpreter,
 	address common.Address,
 	capabilityIDValue interpreter.UInt64Value,
-) func(tagValue *interpreter.StringValue) {
-	return func(tagValue *interpreter.StringValue) {
+) func(*interpreter.Interpreter, *interpreter.StringValue) {
+	return func(inter *interpreter.Interpreter, tagValue *interpreter.StringValue) {
 		setCapabilityControllerTag(
 			inter,
 			address,
