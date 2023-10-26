@@ -3054,7 +3054,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
               pub var h: PublicPath
               pub var i: PrivatePath
               pub var j: AnyStruct
-			  pub var k: HashableStruct
+              pub var k: HashableStruct
 
               init() {
                   self.a = "Hello"
