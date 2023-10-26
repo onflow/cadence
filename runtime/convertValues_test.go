@@ -3067,7 +3067,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
                   self.h = /public/foo
                   self.i = /private/foo
                   self.j = nil
-				  self.k = "hashable_struct_value"
+                  self.k = "hashable_struct_value"
               }
           }
         `,
