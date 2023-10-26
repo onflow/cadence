@@ -7597,9 +7597,8 @@ func TestParseDestructor(t *testing.T) {
 	_, errs := testParseDeclarations(code)
 	utils.AssertEqualWithDiff(t,
 		[]error{
-			&SyntaxError{
-				Message: "custom destructor definitions are no longer permitted",
-				Pos:     ast.Position{Offset: 37, Line: 3, Column: 12},
+			&CustomDestructorError{
+				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
 			},
 		},
 		errs,

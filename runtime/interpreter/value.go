@@ -1880,8 +1880,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	config := interpreter.SharedState.Config
 
-	interpreter.invalidateResource(v)
-
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
@@ -16548,8 +16546,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
-	interpreter.invalidateResource(v)
-
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
@@ -18229,8 +18225,6 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	config := interpreter.SharedState.Config
 
-	interpreter.invalidateResource(v)
-
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
@@ -19314,7 +19308,7 @@ func (NilValue) IsDestroyed() bool {
 }
 
 func (v NilValue) Destroy(interpreter *Interpreter, _ LocationRange) {
-	interpreter.invalidateResource(v)
+
 }
 
 func (NilValue) String() string {
@@ -19497,8 +19491,6 @@ func (v *SomeValue) IsDestroyed() bool {
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 	config := interpreter.SharedState.Config
-
-	interpreter.invalidateResource(v)
 
 	if config.InvalidatedResourceValidationEnabled {
 		v.checkInvalidatedResourceUse(locationRange)

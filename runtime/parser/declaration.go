@@ -1884,7 +1884,7 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindInitializer
 
 	case KeywordDestroy:
-		p.report(NewSyntaxError(identifier.Pos, "custom destructor definitions are no longer permitted"))
+		p.report(&CustomDestructorError{Pos: identifier.Pos})
 
 	case KeywordPrepare:
 		declarationKind = common.DeclarationKindPrepare
