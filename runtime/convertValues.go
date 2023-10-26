@@ -406,10 +406,8 @@ func exportCompositeValue(
 
 			case *interpreter.CompositeValue:
 				fieldValue = v.GetField(inter, locationRange, fieldName)
-				if fieldValue == nil && v.ComputedFields != nil {
-					if computedField, ok := v.ComputedFields[fieldName]; ok {
-						fieldValue = computedField(inter, locationRange)
-					}
+				if fieldValue == nil {
+					fieldValue = v.GetComputedField(inter, locationRange, fieldName)
 				}
 			}
 
@@ -1448,8 +1446,6 @@ func (i valueImporter) importPublicKey(
 		i.locationRange,
 		publicKeyValue,
 		signAlgoValue,
-		i.standardLibraryHandler,
-		i.standardLibraryHandler,
 		i.standardLibraryHandler,
 	), nil
 }

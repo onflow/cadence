@@ -16,49 +16,50 @@
  * limitations under the License.
  */
 
-package checker
+package interpreter
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func TestCheckPredeclaredValues(t *testing.T) {
+func TestLargeStringAtreeValueInSeparateSlab(t *testing.T) {
 
 	t.Parallel()
 
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	// Ensure that StringAtreeValue handles the case where it is stored in a separate slab,
+	// when the string is very large
 
-	valueDeclaration := stdlib.NewStandardLibraryFunction(
-		"foo",
-		&sema.FunctionType{
-			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-		},
-		"",
+	storage := NewInMemoryStorage(nil)
+
+	storageMap := storage.GetStorageMap(
+		common.MustBytesToAddress([]byte{0x1}),
+		common.PathDomainStorage.Identifier(),
+		true,
+	)
+
+	inter, err := NewInterpreter(
 		nil,
-	)
-	baseValueActivation.DeclareValue(valueDeclaration)
-
-	_, err := ParseAndCheckWithOptions(t,
-		`
-            access(all) fun test() {
-                foo()
-            }
-        `,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-					return baseValueActivation
-				},
-			},
+		common.StringLocation("test"),
+		&Config{
+			Storage: storage,
 		},
 	)
-
 	require.NoError(t, err)
 
+	// Generate a large key to force the string to get stored in a separate slab
+	keyValue := NewStringAtreeValue(nil, strings.Repeat("x", 10_000))
+
+	key := StringStorageMapKey(keyValue)
+
+	expected := NewUnmeteredUInt8Value(42)
+	storageMap.SetValue(inter, key, expected)
+
+	actual := storageMap.ReadValue(nil, key)
+
+	require.Equal(t, expected, actual)
 }

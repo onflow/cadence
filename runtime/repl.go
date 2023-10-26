@@ -87,7 +87,9 @@ func NewREPL() (*REPL, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
 		},
-		BaseActivation: baseActivation,
+		BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+			return baseActivation
+		},
 		OnEventEmitted: standardLibraryHandler.NewOnEventEmittedHandler(),
 	}
 
@@ -342,7 +344,7 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 		names[name] = variable.Type.String()
 	})
 
-	_ = r.checker.Config.BaseValueActivation.ForEach(func(name string, variable *sema.Variable) error {
+	_ = r.checker.Config.BaseValueActivationHandler(nil).ForEach(func(name string, variable *sema.Variable) error {
 		if names[name] == "" {
 			names[name] = variable.Type.String()
 		}

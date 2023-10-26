@@ -1069,7 +1069,7 @@ func TestInterpretMemberAccess(t *testing.T) {
             }
 
             struct S {
-                access(M) let foo: [String]
+                access(mapping M) let foo: [String]
                 init() {
                     self.foo = []
                 }

@@ -76,11 +76,17 @@ func TestInterpretTransferCheck(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseTypeActivation:  baseTypeActivation,
-					BaseValueActivation: baseValueActivation,
+					BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseTypeActivation
+					},
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)

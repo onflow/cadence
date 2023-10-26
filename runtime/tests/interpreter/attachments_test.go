@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -1868,13 +1869,13 @@ func TestInterpretForEachAttachment(t *testing.T) {
                 E -> Y
             }
             struct S {}
-            access(M) attachment A for S {
+            access(mapping M) attachment A for S {
                 access(F) fun foo(_ x: Int): Int { return 7 + x }
             }
-            access(N) attachment B for S {
+            access(mapping N) attachment B for S {
                 access(Y) fun foo(): Int { return 10 }
             }
-            access(O) attachment C for S {
+            access(mapping O) attachment C for S {
                 access(Y) fun foo(_ x: Int): Int { return 8 + x }
             }
             fun test(): Int {
@@ -2143,6 +2144,40 @@ func TestInterpretMutationDuringForEachAttachment(t *testing.T) {
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
 	})
+
+	t.Run("callback", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource R {
+                let foo: Int
+                init() {
+                    self.foo = 9
+                }
+            }
+            access(all) attachment A for R {
+                access(all) fun touchBase(): Int {
+                    var foo = base.foo
+                    return foo
+                }
+            }
+            access(all) fun main(): Int {
+                var r <- attach A() to <- create R()
+                var id: Int = 0
+                r.forEachAttachment(fun(a: &AnyResourceAttachment) {
+                    id = (a as! &A).touchBase()
+                });
+                destroy r
+                return id
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(9), value)
+	})
 }
 
 func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
@@ -2154,8 +2189,6 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 	for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 		stdlib.NewPublicKeyConstructor(
 			assumeValidPublicKeyValidator{},
-			nil,
-			nil,
 		),
 		stdlib.SignatureAlgorithmConstructor,
 	} {
@@ -2182,11 +2215,15 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-				AttachmentsEnabled:  true,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+				AttachmentsEnabled: true,
 			},
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)

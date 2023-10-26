@@ -19,9 +19,11 @@
 package runtime_test
 
 import (
+	"encoding/binary"
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -37,7 +39,7 @@ import (
 func TestRuntimeCapabilityControllers(t *testing.T) {
 	t.Parallel()
 
-	test := func(tx string) (
+	testWithSignerCount := func(t *testing.T, tx string, signerCount int) (
 		err error,
 		storage *Storage,
 	) {
@@ -122,7 +124,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `),
 		)
 
-		signer := common.MustBytesToAddress([]byte{0x1})
+		if signerCount < 1 {
+			signerCount = 1
+		}
+
+		testSigners := make([]Address, signerCount)
+		for signerIndex := 0; signerIndex < signerCount; signerIndex++ {
+			binary.BigEndian.PutUint64(
+				testSigners[signerIndex][:],
+				uint64(signerIndex+1),
+			)
+		}
+
+		signers := []Address{testSigners[0]}
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -134,7 +148,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				return nil
 			},
 			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{signer}, nil
+				return signers, nil
 			},
 			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
@@ -164,6 +178,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 		// Call contract
 
+		signers = testSigners
+
 		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
@@ -179,6 +195,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		})
 
 		return
+	}
+
+	test := func(t *testing.T, tx string) (
+		err error,
+		storage *Storage,
+	) {
+		return testWithSignerCount(t, tx, 1)
 	}
 
 	authAccountType := sema.FullyEntitledAccountReferenceType
@@ -200,6 +223,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -229,6 +253,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -267,6 +292,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -306,6 +332,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -347,6 +374,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -388,6 +416,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -426,6 +455,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -466,6 +496,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -504,6 +535,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -541,6 +573,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -580,6 +613,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -619,6 +653,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -645,6 +680,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -681,6 +717,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -718,6 +755,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -755,6 +793,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -794,6 +833,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -831,6 +871,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -867,6 +908,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -905,6 +947,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -945,6 +988,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 					t.Run("storage capability", func(t *testing.T) {
 						err, _ := test(
+							t,
 							// language=cadence
 							`
                               import Test from 0x1
@@ -974,6 +1018,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 					t.Run("storage capability", func(t *testing.T) {
 						err, _ := test(
+							t,
 							// language=cadence
 							`
                               transaction {
@@ -999,11 +1044,94 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					})
 				})
 
+				t.Run("publish different account", func(t *testing.T) {
+
+					t.Parallel()
+
+					t.Run("storage capability", func(t *testing.T) {
+
+						err, _ := testWithSignerCount(
+							t,
+							// language=cadence
+							`
+                               transaction {
+                                   prepare(
+                                       signer1: auth(Capabilities) &Account,
+                                       signer2: auth(Capabilities) &Account
+                                   ) {
+                                       let publicPath = /public/r
+                                       let storagePath = /storage/r
+
+                                       // Arrange
+                                       let issuedCap: Capability<&AnyStruct> =
+                                           signer1.capabilities.storage.issue<&AnyStruct>(storagePath)
+
+                                       // Act
+                                       signer2.capabilities.publish(issuedCap, at: publicPath)
+                                   }
+                               }
+                             `,
+							2,
+						)
+						RequireError(t, err)
+
+						var publishingError interpreter.CapabilityAddressPublishingError
+						require.ErrorAs(t, err, &publishingError)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+							publishingError.AccountAddress,
+						)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+							publishingError.CapabilityAddress,
+						)
+					})
+
+					t.Run("account capability", func(t *testing.T) {
+
+						err, _ := testWithSignerCount(
+							t,
+							// language=cadence
+							`
+                              transaction {
+                                  prepare(
+                                      signer1: auth(Capabilities) &Account,
+                                      signer2: auth(Capabilities) &Account
+                                  ) {
+                                      let publicPath = /public/r
+
+                                      // Arrange
+                                      let issuedCap: Capability<&Account> =
+                                          signer1.capabilities.account.issue<&Account>()
+
+                                      // Act
+                                      signer2.capabilities.publish(issuedCap, at: publicPath)
+                                  }
+                              }
+                            `,
+							2,
+						)
+						RequireError(t, err)
+
+						var publishingError interpreter.CapabilityAddressPublishingError
+						require.ErrorAs(t, err, &publishingError)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+							publishingError.AccountAddress,
+						)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+							publishingError.CapabilityAddress,
+						)
+					})
+				})
+
 				t.Run("unpublish non-existing", func(t *testing.T) {
 
 					t.Parallel()
 
 					err, _ := test(
+						t,
 						// language=cadence
 						`
                           transaction {
@@ -1041,6 +1169,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1077,6 +1206,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1102,6 +1232,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1128,6 +1259,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1185,6 +1317,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1240,6 +1373,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1270,6 +1404,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1338,6 +1473,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1377,6 +1513,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1410,6 +1547,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1446,6 +1584,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1479,6 +1618,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1520,6 +1660,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1548,6 +1689,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1573,6 +1715,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1599,6 +1742,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1640,6 +1784,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1686,6 +1831,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1714,6 +1860,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1764,6 +1911,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1798,6 +1946,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1829,6 +1978,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1857,6 +2007,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1888,6 +2039,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1920,6 +2072,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1957,6 +2110,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -2001,6 +2155,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2105,6 +2260,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2144,6 +2300,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2186,6 +2343,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2231,6 +2389,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2270,6 +2429,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2300,6 +2460,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2330,6 +2491,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2360,6 +2522,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, storage := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2395,6 +2558,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2438,6 +2602,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -2471,6 +2636,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -2511,6 +2677,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       transaction {
@@ -2546,6 +2713,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       transaction {
@@ -2572,6 +2740,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       transaction {

@@ -20,6 +20,8 @@
 package stdlib
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -41,7 +43,6 @@ type testEmulatorBackendType struct {
 	executeNextTransactionFunctionType *sema.FunctionType
 	commitBlockFunctionType            *sema.FunctionType
 	deployContractFunctionType         *sema.FunctionType
-	useConfigFunctionType              *sema.FunctionType
 	logsFunctionType                   *sema.FunctionType
 	serviceAccountFunctionType         *sema.FunctionType
 	eventsFunctionType                 *sema.FunctionType
@@ -49,6 +50,7 @@ type testEmulatorBackendType struct {
 	moveTimeFunctionType               *sema.FunctionType
 	createSnapshotFunctionType         *sema.FunctionType
 	loadSnapshotFunctionType           *sema.FunctionType
+	getAccountFunctionType             *sema.FunctionType
 }
 
 func newTestEmulatorBackendType(
@@ -84,11 +86,6 @@ func newTestEmulatorBackendType(
 		testEmulatorBackendTypeDeployContractFunctionName,
 	)
 
-	useConfigFunctionType := interfaceFunctionType(
-		blockchainBackendInterfaceType,
-		testEmulatorBackendTypeUseConfigFunctionName,
-	)
-
 	logsFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeLogsFunctionName,
@@ -122,6 +119,11 @@ func newTestEmulatorBackendType(
 	loadSnapshotFunctionType := interfaceFunctionType(
 		blockchainBackendInterfaceType,
 		testEmulatorBackendTypeLoadSnapshotFunctionName,
+	)
+
+	getAccountFunctionType := interfaceFunctionType(
+		blockchainBackendInterfaceType,
+		testEmulatorBackendTypeGetAccountFunctionName,
 	)
 
 	compositeType := &sema.CompositeType{
@@ -172,12 +174,6 @@ func newTestEmulatorBackendType(
 		),
 		sema.NewUnmeteredPublicFunctionMember(
 			compositeType,
-			testEmulatorBackendTypeUseConfigFunctionName,
-			useConfigFunctionType,
-			testEmulatorBackendTypeUseConfigFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			compositeType,
 			testEmulatorBackendTypeLogsFunctionName,
 			logsFunctionType,
 			testEmulatorBackendTypeLogsFunctionDocString,
@@ -218,6 +214,12 @@ func newTestEmulatorBackendType(
 			loadSnapshotFunctionType,
 			testEmulatorBackendTypeLoadSnapshotFunctionDocString,
 		),
+		sema.NewUnmeteredPublicFunctionMember(
+			compositeType,
+			testEmulatorBackendTypeGetAccountFunctionName,
+			getAccountFunctionType,
+			testEmulatorBackendTypeGetAccountFunctionDocString,
+		),
 	}
 
 	compositeType.Members = sema.MembersAsMap(members)
@@ -231,7 +233,6 @@ func newTestEmulatorBackendType(
 		executeNextTransactionFunctionType: executeNextTransactionFunctionType,
 		commitBlockFunctionType:            commitBlockFunctionType,
 		deployContractFunctionType:         deployContractFunctionType,
-		useConfigFunctionType:              useConfigFunctionType,
 		logsFunctionType:                   logsFunctionType,
 		serviceAccountFunctionType:         serviceAccountFunctionType,
 		eventsFunctionType:                 eventsFunctionType,
@@ -239,6 +240,7 @@ func newTestEmulatorBackendType(
 		moveTimeFunctionType:               moveTimeFunctionType,
 		createSnapshotFunctionType:         createSnapshotFunctionType,
 		loadSnapshotFunctionType:           loadSnapshotFunctionType,
+		getAccountFunctionType:             getAccountFunctionType,
 	}
 }
 
@@ -301,7 +303,6 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 			locationRange := invocation.LocationRange
 
 			return newTestAccountValue(
-				blockchain,
 				inter,
 				locationRange,
 				account,
@@ -311,7 +312,6 @@ func (t *testEmulatorBackendType) newCreateAccountFunction(
 }
 
 func newTestAccountValue(
-	blockchain Blockchain,
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	account *Account,
@@ -320,14 +320,10 @@ func newTestAccountValue(
 	// Create address value
 	address := interpreter.NewAddressValue(nil, account.Address)
 
-	standardLibraryHandler := blockchain.StandardLibraryHandler()
-
 	publicKey := NewPublicKeyValue(
 		inter,
 		locationRange,
 		account.PublicKey,
-		standardLibraryHandler,
-		standardLibraryHandler,
 	)
 
 	// Create an 'Account' by calling its constructor.
@@ -346,6 +342,46 @@ func newTestAccountValue(
 	}
 
 	return accountValue
+}
+
+// 'EmulatorBackend.getAccount' function
+
+const testEmulatorBackendTypeGetAccountFunctionName = "getAccount"
+
+const testEmulatorBackendTypeGetAccountFunctionDocString = `
+Returns the account for the given address.
+`
+
+func (t *testEmulatorBackendType) newGetAccountFunction(
+	blockchain Blockchain,
+) *interpreter.HostFunctionValue {
+	return interpreter.NewUnmeteredHostFunctionValue(
+		t.getAccountFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			address, ok := invocation.Arguments[0].(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			account, err := blockchain.GetAccount(address)
+			if err != nil {
+				msg := fmt.Sprintf("account with address: %s was not found", address)
+				panic(PanicError{
+					Message:       msg,
+					LocationRange: invocation.LocationRange,
+				})
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			return newTestAccountValue(
+				inter,
+				locationRange,
+				account,
+			)
+		},
+	)
 }
 
 // 'EmulatorBackend.addTransaction' function
@@ -509,22 +545,14 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			// Contract code
-			code, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			// Contract file path
+			path, ok := invocation.Arguments[1].(*interpreter.StringValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-
-			// authorizer
-			accountValue, ok := invocation.Arguments[2].(interpreter.MemberAccessibleValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			account := accountFromValue(inter, accountValue, invocation.LocationRange)
 
 			// Contract init arguments
-			args, err := arrayValueToSlice(inter, invocation.Arguments[3])
+			args, err := arrayValueToSlice(inter, invocation.Arguments[2])
 			if err != nil {
 				panic(err)
 			}
@@ -532,71 +560,11 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 			err = blockchain.DeployContract(
 				inter,
 				name.Str,
-				code.Str,
-				account,
+				path.Str,
 				args,
 			)
 
 			return newErrorValue(inter, err)
-		},
-	)
-}
-
-// 'EmulatorBackend.useConfiguration' function
-
-const testEmulatorBackendTypeUseConfigFunctionName = "useConfiguration"
-
-const testEmulatorBackendTypeUseConfigFunctionDocString = `
-Set the configuration to be used by the blockchain.
-Overrides any existing configuration.
-`
-
-func (t *testEmulatorBackendType) newUseConfigFunction(
-	blockchain Blockchain,
-) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
-		t.useConfigFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-
-			// configurations
-			configsValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			addresses, ok := configsValue.GetMember(
-				inter,
-				invocation.LocationRange,
-				addressesFieldName,
-			).(*interpreter.DictionaryValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			mapping := make(map[string]common.Address, addresses.Count())
-
-			addresses.Iterate(inter, func(locationValue, addressValue interpreter.Value) bool {
-				location, ok := locationValue.(*interpreter.StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				address, ok := addressValue.(interpreter.AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				mapping[location.Str] = common.Address(address)
-
-				return true
-			})
-
-			blockchain.UseConfiguration(&Configuration{
-				Addresses: mapping,
-			})
-
-			return interpreter.Void
 		},
 	)
 }
@@ -670,7 +638,6 @@ func (t *testEmulatorBackendType) newServiceAccountFunction(
 			}
 
 			return newTestAccountValue(
-				blockchain,
 				invocation.Interpreter,
 				invocation.LocationRange,
 				serviceAccount,
@@ -847,10 +814,6 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 			Value: t.newDeployContractFunction(blockchain),
 		},
 		{
-			Name:  testEmulatorBackendTypeUseConfigFunctionName,
-			Value: t.newUseConfigFunction(blockchain),
-		},
-		{
 			Name:  testEmulatorBackendTypeLogsFunctionName,
 			Value: t.newLogsFunction(blockchain),
 		},
@@ -877,6 +840,10 @@ func (t *testEmulatorBackendType) newEmulatorBackend(
 		{
 			Name:  testEmulatorBackendTypeLoadSnapshotFunctionName,
 			Value: t.newLoadSnapshotFunction(blockchain),
+		},
+		{
+			Name:  testEmulatorBackendTypeGetAccountFunctionName,
+			Value: t.newGetAccountFunction(blockchain),
 		},
 	}
 
