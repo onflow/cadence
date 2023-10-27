@@ -71,7 +71,15 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 
 // `unsafeRandom` related constants and functions will be deleted
 // when the function is deprecated
-const unsafeRandomFunctionDocString = revertibleRandomFunctionDocString
+const unsafeRandomFunctionDocString = `
+Warning: this function will be deprecated, use revertibleRandom function instead. 
+
+Returns a pseudo-random number.
+
+NOTE: The use of this function is unsafe if not used correctly.
+
+Follow best practices to prevent security issues when using this function
+`
 
 var unsafeRandomFunctionType = revertibleRandomFunctionType
 
