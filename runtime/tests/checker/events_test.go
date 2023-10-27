@@ -761,6 +761,34 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Type = Type<@R>())
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[1])
+	})
+
+	t.Run("raw type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Type = R)
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[1])
+	})
+
 	t.Run("address expr", func(t *testing.T) {
 
 		t.Parallel()
