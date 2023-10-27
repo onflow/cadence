@@ -26,7 +26,7 @@ import (
 
 type StandardLibraryHandler interface {
 	Logger
-	UnsafeRandomGenerator
+	RandomGenerator
 	BlockAtHeightProvider
 	CurrentBlockProvider
 	PublicAccountHandler
@@ -46,6 +46,7 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		SignatureAlgorithmConstructor,
 		RLPContract,
 		NewLogFunction(handler),
+		NewRevertibleRandomFunction(handler),
 		NewUnsafeRandomFunction(handler),
 		NewGetBlockFunction(handler),
 		NewGetCurrentBlockFunction(handler),

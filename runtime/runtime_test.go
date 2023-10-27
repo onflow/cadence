@@ -4734,7 +4734,7 @@ func TestRuntimeBlock(t *testing.T) {
 	)
 }
 
-func TestRuntimeUnsafeRandom(t *testing.T) {
+func TestRuntimeRandom(t *testing.T) {
 
 	t.Parallel()
 
@@ -4743,8 +4743,10 @@ func TestRuntimeUnsafeRandom(t *testing.T) {
 	script := []byte(`
       transaction {
         prepare() {
-          let rand = unsafeRandom()
-          log(rand)
+          let rand1 = revertibleRandom()
+          log(rand1)
+          let rand2 = unsafeRandom()
+          log(rand2)
         }
       }
     `)
@@ -4776,6 +4778,7 @@ func TestRuntimeUnsafeRandom(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
+			"7558174677681708339",
 			"7558174677681708339",
 		},
 		loggedMessages,
