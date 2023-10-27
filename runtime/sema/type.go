@@ -5729,6 +5729,10 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return IsSubType(subType, StoragePathType) ||
 			IsSubType(subType, CapabilityPathType)
 
+	case StorableType:
+		storableResults := map[*Member]bool{}
+		return subType.IsStorable(storableResults)
+
 	case CapabilityPathType:
 		return IsSubType(subType, PrivatePathType) ||
 			IsSubType(subType, PublicPathType)
@@ -6333,12 +6337,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				}
 			}
 		}
-
-	case *SimpleType:
-		if typedSuperType.IsSuperTypeOf == nil {
-			return false
-		}
-		return typedSuperType.IsSuperTypeOf(subType)
 	}
 
 	// TODO: enforce type arguments, remove this rule
