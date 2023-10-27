@@ -1348,7 +1348,7 @@ func (i valueImporter) importDictionaryValue(
 		keySuperType := sema.LeastCommonSuperType(keyTypes...)
 		valueSuperType := sema.LeastCommonSuperType(valueTypes...)
 
-		if !sema.IsValidDictionaryKeyType(keySuperType) {
+		if !sema.IsSubType(keySuperType, sema.HashableStructType) {
 			return nil, errors.NewDefaultUserError(
 				"cannot import dictionary: keys does not belong to the same type",
 			)

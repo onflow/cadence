@@ -35,7 +35,6 @@ type ValueIndexingInfo struct {
 // SimpleType represents a simple nominal type.
 type SimpleType struct {
 	ValueIndexingInfo   ValueIndexingInfo
-	IsSuperTypeOf       func(subType Type) bool
 	NestedTypes         *StringTypeOrderedMap
 	memberResolvers     map[string]MemberResolver
 	Members             func(*SimpleType) map[string]MemberResolver

@@ -236,6 +236,9 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 	case TypeAnyStruct:
 		return cadence.TheAnyStructType, nil
 
+	case TypeHashableStruct:
+		return cadence.TheHashableStructType, nil
+
 	case TypeAnyResource:
 		return cadence.TheAnyResourceType, nil
 

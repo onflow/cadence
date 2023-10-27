@@ -1068,7 +1068,7 @@ func (checker *Checker) convertDictionaryType(t *ast.DictionaryType) Type {
 	keyType := checker.ConvertType(t.KeyType)
 	valueType := checker.ConvertType(t.ValueType)
 
-	if !IsValidDictionaryKeyType(keyType) {
+	if !IsSubType(keyType, HashableStructType) {
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,

@@ -85,6 +85,7 @@ const ( // Cadence simple type IDs
 	TypeWord256
 	TypeAnyStructAttachmentType
 	TypeAnyResourceAttachmentType
+	TypeHashableStruct
 )
 
 // NOTE: cadence.FunctionType isn't included in simpleTypeIDByType
@@ -98,6 +99,9 @@ func simpleTypeIDByType(typ cadence.Type) (uint64, bool) {
 
 	case cadence.AnyStructType:
 		return TypeAnyStruct, true
+
+	case cadence.HashableStructType:
+		return TypeHashableStruct, true
 
 	case cadence.AnyResourceType:
 		return TypeAnyResource, true

@@ -763,6 +763,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 	switch typ := typ.(type) {
 	case cadence.AnyType,
 		cadence.AnyStructType,
+		cadence.HashableStructType,
 		cadence.AnyStructAttachmentType,
 		cadence.AnyResourceType,
 		cadence.AnyResourceAttachmentType,

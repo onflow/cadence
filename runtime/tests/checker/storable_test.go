@@ -86,7 +86,7 @@ func TestCheckStorable(t *testing.T) {
 			)
 		}
 
-		if sema.IsValidDictionaryKeyType(ty) {
+		if sema.IsSubType(ty, sema.HashableStructType) {
 			nestedTypes = append(nestedTypes,
 				&sema.DictionaryType{
 					KeyType:   ty,
