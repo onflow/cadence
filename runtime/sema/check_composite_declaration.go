@@ -1995,6 +1995,63 @@ func (checker *Checker) enumMembersAndOrigins(
 	return
 }
 
+func (checker *Checker) checkDefaultDestroyParamExpressionKind(
+	arg ast.Expression,
+) {
+	switch arg := arg.(type) {
+	case *ast.StringExpression,
+		*ast.BoolExpression,
+		*ast.NilExpression,
+		*ast.IntegerExpression,
+		*ast.FixedPointExpression,
+		*ast.PathExpression:
+		break
+	case *ast.IdentifierExpression:
+		// these are guaranteed to exist at time of destruction, so we allow them
+		if arg.Identifier.Identifier == SelfIdentifier || arg.Identifier.Identifier == BaseIdentifier {
+			break
+		}
+		// if it's an attachment, then it's also okay
+		if checker.typeActivations.Find(arg.Identifier.Identifier) != nil {
+			break
+		}
+		checker.report(&DefaultDestroyInvalidArgumentError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+		})
+	case *ast.MemberExpression:
+		checker.checkDefaultDestroyParamExpressionKind(arg.Expression)
+	case *ast.IndexExpression:
+		checker.checkDefaultDestroyParamExpressionKind(arg.TargetExpression)
+		checker.checkDefaultDestroyParamExpressionKind(arg.IndexingExpression)
+
+		// indexing expressions on arrays can fail, and must be disallowed, but
+		// indexing expressions on dicts, or composites (for attachments) will return `nil` and thus never fail
+		targetExprType := checker.Elaboration.IndexExpressionTypes(arg).IndexedType
+		// `nil` indicates that the index is a type-index (i.e. for an attachment access)
+		if targetExprType == nil {
+			return
+		}
+
+		switch targetExprType := targetExprType.(type) {
+		case *DictionaryType:
+			return
+		case *ReferenceType:
+			if _, isDictionaryType := targetExprType.Type.(*DictionaryType); isDictionaryType {
+				return
+			}
+		}
+
+		checker.report(&DefaultDestroyInvalidArgumentError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+		})
+
+	default:
+		checker.report(&DefaultDestroyInvalidArgumentError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+		})
+	}
+}
+
 func (checker *Checker) checkDefaultDestroyEvent(
 	eventType *CompositeType,
 	eventDeclaration ast.CompositeLikeDeclaration,
@@ -2006,51 +2063,6 @@ func (checker *Checker) checkDefaultDestroyEvent(
 	members := eventDeclaration.DeclarationMembers()
 	functions := members.SpecialFunctions()
 	constructorFunctionParameters := functions[0].FunctionDeclaration.ParameterList.Parameters
-
-	var checkParamExpressionKind func(ast.Expression)
-	checkParamExpressionKind = func(arg ast.Expression) {
-		switch arg := arg.(type) {
-		case *ast.StringExpression,
-			*ast.BoolExpression,
-			*ast.NilExpression,
-			*ast.IntegerExpression,
-			*ast.FixedPointExpression,
-			*ast.PathExpression:
-			break
-		case *ast.IdentifierExpression:
-			// these are guaranteed to exist at time of destruction, so we allow them
-			if arg.Identifier.Identifier == SelfIdentifier || arg.Identifier.Identifier == BaseIdentifier {
-				break
-			}
-			// if it's an attachment, then it's also okay
-			if checker.typeActivations.Find(arg.Identifier.Identifier) != nil {
-				break
-			}
-			checker.report(&DefaultDestroyInvalidArgumentError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
-			})
-		case *ast.MemberExpression:
-			checkParamExpressionKind(arg.Expression)
-		case *ast.IndexExpression:
-			checkParamExpressionKind(arg.TargetExpression)
-			checkParamExpressionKind(arg.IndexingExpression)
-
-			// indexing expressions on arrays can fail, and must be disallowed, but
-			// indexing expressions on dicts, or composites (for attachments) will return `nil` and thus never fail
-			targetExprType := checker.Elaboration.IndexExpressionTypes(arg).IndexedType
-			switch targetExprType.(type) {
-			case ArrayType:
-				checker.report(&DefaultDestroyInvalidArgumentError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
-				})
-			}
-
-		default:
-			checker.report(&DefaultDestroyInvalidArgumentError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
-			})
-		}
-	}
 
 	checker.enterValueScope()
 	defer checker.leaveValueScope(eventDeclaration.EndPosition, true)
@@ -2084,7 +2096,7 @@ func (checker *Checker) checkDefaultDestroyEvent(
 			})
 		}
 
-		checkParamExpressionKind(paramDefaultArgument)
+		checker.checkDefaultDestroyParamExpressionKind(paramDefaultArgument)
 	}
 }
 
