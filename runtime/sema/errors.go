@@ -2490,6 +2490,23 @@ func (e *EmitNonEventError) Error() string {
 	)
 }
 
+// EmitDefaultDestroyEventError
+
+type EmitDefaultDestroyEventError struct {
+	ast.Range
+}
+
+var _ SemanticError = &EmitDefaultDestroyEventError{}
+var _ errors.UserError = &EmitDefaultDestroyEventError{}
+
+func (*EmitDefaultDestroyEventError) isSemanticError() {}
+
+func (*EmitDefaultDestroyEventError) IsUserError() {}
+
+func (e *EmitDefaultDestroyEventError) Error() string {
+	return "default destruction events may not be explicitly emitted"
+}
+
 // EmitImportedEventError
 
 type EmitImportedEventError struct {

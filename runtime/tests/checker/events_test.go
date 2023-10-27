@@ -636,6 +636,41 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[3])
 	})
+
+	t.Run("explicit emit disallowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+				fun foo() {
+					emit ResourceDestroyed()
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
+	})
+
+	t.Run("explicit emit disallowed outside", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+			}
+
+			fun foo() {
+				emit R.ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
+	})
 }
 
 func TestCheckDefaultEventParamChecking(t *testing.T) {

@@ -849,7 +849,6 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 					checker.typeActivations.Find(identifier.Identifier)
 				defaultEventComposite := defaultEventType.Type.(*CompositeType)
 				compositeType.DefaultDestroyEvent = defaultEventComposite
-				return
 			}
 
 			declarationMembers.Set(

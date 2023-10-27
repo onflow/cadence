@@ -45,6 +45,15 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) (_ stru
 		return
 	}
 
+	if compositeType.Identifier == ast.ResourceDestructionDefaultEventName {
+		checker.report(
+			&EmitDefaultDestroyEventError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
+			},
+		)
+		return
+	}
+
 	checker.Elaboration.SetEmitStatementEventType(statement, compositeType)
 
 	// Check that the emitted event is declared in the same location
