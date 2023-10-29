@@ -63,7 +63,7 @@ func NewPublicKeyValue(
 		common.ZeroAddress,
 	)
 
-	publicKeyValue.ComputedFields = map[string]ComputedField{
+	publicKeyValue.computedFields = map[string]ComputedField{
 		sema.PublicKeyTypePublicKeyFieldName: func(interpreter *Interpreter, locationRange LocationRange) Value {
 			return publicKey.Transfer(
 				interpreter,
