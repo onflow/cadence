@@ -290,7 +290,7 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	}
 
 	for _, nestedComposite := range members.Composites() {
-		if compositeType.DefaultDestroyEvent != nil {
+		if compositeType.DefaultDestroyEvent != nil && nestedComposite.IsResourceDestructionDefaultEvent() {
 			// we enforce elsewhere that each composite can have only one default destroy event
 			checker.checkDefaultDestroyEvent(compositeType.DefaultDestroyEvent, nestedComposite, compositeType, declaration)
 		}
@@ -2055,14 +2055,12 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 
 func (checker *Checker) checkDefaultDestroyEventParam(
 	param Parameter,
-	index int,
-	constructorFunctionParameters []*ast.Parameter,
+	astParam *ast.Parameter,
 	containerType ContainerType,
 	containerDeclaration ast.Declaration,
 ) {
 	paramType := param.TypeAnnotation.Type
-	paramExpr := constructorFunctionParameters[index]
-	paramDefaultArgument := paramExpr.DefaultArgument
+	paramDefaultArgument := astParam.DefaultArgument
 
 	// make `self` and `base` available when checking default arguments so the fields of the composite are available
 	checker.declareSelfValue(containerType, containerDeclaration.DeclarationDocString())
@@ -2084,7 +2082,7 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 		!IsSubType(unwrappedParamType, BoolType) {
 		checker.report(&DefaultDestroyInvalidParameterError{
 			ParamType: paramType,
-			Range:     ast.NewRangeFromPositioned(checker.memoryGauge, paramExpr),
+			Range:     ast.NewRangeFromPositioned(checker.memoryGauge, astParam),
 		})
 	}
 
@@ -2107,7 +2105,7 @@ func (checker *Checker) checkDefaultDestroyEvent(
 	defer checker.leaveValueScope(eventDeclaration.EndPosition, true)
 
 	for index, param := range eventType.ConstructorParameters {
-		checker.checkDefaultDestroyEventParam(param, index, constructorFunctionParameters, containerType, containerDeclaration)
+		checker.checkDefaultDestroyEventParam(param, constructorFunctionParameters[index], containerType, containerDeclaration)
 	}
 }
 
