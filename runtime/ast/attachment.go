@@ -29,13 +29,12 @@ import (
 // AttachmentDeclaration
 
 type AttachmentDeclaration struct {
-	Access               Access
-	Identifier           Identifier
-	BaseType             *NominalType
-	Conformances         []*NominalType
-	RequiredEntitlements []*NominalType
-	Members              *Members
-	DocString            string
+	Access       Access
+	Identifier   Identifier
+	BaseType     *NominalType
+	Conformances []*NominalType
+	Members      *Members
+	DocString    string
 	Range
 }
 
@@ -50,7 +49,6 @@ func NewAttachmentDeclaration(
 	identifier Identifier,
 	baseType *NominalType,
 	conformances []*NominalType,
-	requiredEntitlements []*NominalType,
 	members *Members,
 	docString string,
 	declarationRange Range,
@@ -58,14 +56,13 @@ func NewAttachmentDeclaration(
 	common.UseMemory(memoryGauge, common.AttachmentDeclarationMemoryUsage)
 
 	return &AttachmentDeclaration{
-		Access:               access,
-		Identifier:           identifier,
-		BaseType:             baseType,
-		Conformances:         conformances,
-		RequiredEntitlements: requiredEntitlements,
-		Members:              members,
-		DocString:            docString,
-		Range:                declarationRange,
+		Access:       access,
+		Identifier:   identifier,
+		BaseType:     baseType,
+		Conformances: conformances,
+		Members:      members,
+		DocString:    docString,
+		Range:        declarationRange,
 	}
 }
 
@@ -113,10 +110,6 @@ func (d *AttachmentDeclaration) ConformanceList() []*NominalType {
 	return d.Conformances
 }
 
-func (d *AttachmentDeclaration) RequiredEntitlementsToAttach() []*NominalType {
-	return d.RequiredEntitlements
-}
-
 const attachmentStatementDoc = prettier.Text("attachment")
 const attachmentStatementForDoc = prettier.Text("for")
 const attachmentConformancesSeparatorDoc = prettier.Text(":")
@@ -151,31 +144,7 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 	)
 	var membersDoc prettier.Concat
 
-	if d.RequiredEntitlements != nil && len(d.RequiredEntitlements) > 0 {
-		membersDoc = append(membersDoc, membersStartDoc)
-		for _, entitlement := range d.RequiredEntitlements {
-			var entitlementRequiredDoc = prettier.Indent{
-				Doc: prettier.Concat{
-					attachmentRequireDoc,
-					prettier.Space,
-					attachmentEntitlementDoc,
-					prettier.Space,
-					entitlement.Doc(),
-				},
-			}
-			membersDoc = append(
-				membersDoc,
-				prettier.HardLine{},
-				entitlementRequiredDoc,
-			)
-		}
-		if len(d.Members.declarations) > 0 {
-			membersDoc = append(membersDoc, prettier.HardLine{}, d.Members.docWithNoBraces())
-		}
-		membersDoc = append(membersDoc, prettier.HardLine{}, membersEndDoc)
-	} else {
-		membersDoc = append(membersDoc, prettier.Line{}, d.Members.Doc())
-	}
+	membersDoc = append(membersDoc, prettier.Line{}, d.Members.Doc())
 
 	if len(d.Conformances) > 0 {
 		conformancesDoc := prettier.Concat{

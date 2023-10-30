@@ -56,22 +56,6 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
 				),
 			},
 		},
-		RequiredEntitlements: []*NominalType{
-			{
-				Identifier: NewIdentifier(
-					nil,
-					"X",
-					Position{Offset: 1, Line: 2, Column: 3},
-				),
-			},
-			{
-				Identifier: NewIdentifier(
-					nil,
-					"Y",
-					Position{Offset: 1, Line: 2, Column: 3},
-				),
-			},
-		},
 		Members:   NewMembers(nil, []Declaration{}),
 		DocString: "test",
 		Range: Range{
@@ -119,28 +103,6 @@ func TestAttachmentDeclaration_MarshallJSON(t *testing.T) {
                     "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
                 }
             ], 
-			"RequiredEntitlements": [
-                {
-                    "Type": "NominalType",
-                    "Identifier": {
-                        "Identifier": "X",
-                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                        "EndPos":  {"Offset": 1, "Line": 2, "Column": 3}
-                    },
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                    "EndPos":  {"Offset": 1, "Line": 2, "Column": 3}
-                },
-				{
-                    "Type": "NominalType",
-                    "Identifier": {
-                        "Identifier": "Y",
-                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                        "EndPos":  {"Offset": 1, "Line": 2, "Column": 3}
-                    },
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                    "EndPos":  {"Offset": 1, "Line": 2, "Column": 3}
-                }
-            ], 
             "Members": {
                 "Declarations": []
             }
@@ -179,22 +141,6 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 				),
 			},
 		},
-		RequiredEntitlements: []*NominalType{
-			{
-				Identifier: NewIdentifier(
-					nil,
-					"X",
-					Position{Offset: 1, Line: 2, Column: 3},
-				),
-			},
-			{
-				Identifier: NewIdentifier(
-					nil,
-					"Y",
-					Position{Offset: 1, Line: 2, Column: 3},
-				),
-			},
-		},
 		Members:   NewMembers(nil, []Declaration{}),
 		DocString: "test",
 		Range: Range{
@@ -225,29 +171,8 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 							Doc: prettier.Concat{
 								prettier.Line{},
 								prettier.Concat{
-									prettier.Text("{"),
-									prettier.HardLine{},
-									prettier.Indent{
-										Doc: prettier.Concat{
-											prettier.Text("require"),
-											prettier.Text(" "),
-											prettier.Text("entitlement"),
-											prettier.Text(" "),
-											prettier.Text("X"),
-										},
-									},
-									prettier.HardLine{},
-									prettier.Indent{
-										Doc: prettier.Concat{
-											prettier.Text("require"),
-											prettier.Text(" "),
-											prettier.Text("entitlement"),
-											prettier.Text(" "),
-											prettier.Text("Y"),
-										},
-									},
-									prettier.HardLine{},
-									prettier.Text("}"),
+									prettier.Line{},
+									prettier.Text("{}"),
 								},
 							},
 						},
@@ -260,10 +185,7 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 
 	require.Equal(t,
 		`access(all)
-attachment Foo for Bar: Baz {
-require entitlement X
-require entitlement Y
-}`,
+attachment Foo for Bar: Baz  {}`,
 		decl.String(),
 	)
 }

@@ -17842,14 +17842,6 @@ func attachmentBaseAuthorization(
 	attachment *CompositeValue,
 ) Authorization {
 	var auth Authorization = UnauthorizedAccess
-	attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
-	if attachmentType.RequiredEntitlements.Len() > 0 {
-		baseAccess := sema.EntitlementSetAccess{
-			SetKind:      sema.Conjunction,
-			Entitlements: attachmentType.RequiredEntitlements,
-		}
-		auth = ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
-	}
 	return auth
 }
 

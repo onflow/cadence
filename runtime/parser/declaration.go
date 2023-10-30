@@ -1342,47 +1342,6 @@ func parseCompositeOrInterfaceDeclaration(
 	}
 }
 
-func parseRequiredEntitlement(p *parser) (*ast.NominalType, error) {
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordRequire) {
-		return nil, p.syntaxError(
-			"expected 'require', got %s",
-			p.current.Type,
-		)
-	}
-
-	// skip the `require` keyword
-	p.nextSemanticToken()
-
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordEntitlement) {
-		return nil, p.syntaxError(
-			"expected 'entitlement', got %s",
-			p.current.Type,
-		)
-	}
-
-	// skip the `entitlement` keyword
-	p.nextSemanticToken()
-
-	return rejectAccessKeywords(p, func() (*ast.NominalType, error) {
-		return parseNominalType(p, lowestBindingPower)
-	})
-}
-
-func parseRequiredEntitlements(p *parser) ([]*ast.NominalType, error) {
-	var requiredEntitlements []*ast.NominalType
-
-	for p.isToken(p.current, lexer.TokenIdentifier, KeywordRequire) {
-		requiredEntitlement, err := parseRequiredEntitlement(p)
-		if err != nil {
-			return nil, err
-		}
-		requiredEntitlements = append(requiredEntitlements, requiredEntitlement)
-		p.skipSpaceAndComments()
-	}
-
-	return requiredEntitlements, nil
-}
-
 func parseAttachmentDeclaration(
 	p *parser,
 	access ast.Access,
@@ -1448,13 +1407,6 @@ func parseAttachmentDeclaration(
 
 	p.skipSpaceAndComments()
 
-	requiredEntitlements, err := parseRequiredEntitlements(p)
-	if err != nil {
-		return nil, err
-	}
-
-	p.skipSpaceAndComments()
-
 	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
 	if err != nil {
 		return nil, err
@@ -1479,7 +1431,6 @@ func parseAttachmentDeclaration(
 		identifier,
 		baseNominalType,
 		conformances,
-		requiredEntitlements,
 		members,
 		docString,
 		declarationRange,

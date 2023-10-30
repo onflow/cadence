@@ -628,27 +628,6 @@ func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclara
 		composite.AttachmentEntitlementAccess = attachmentAccess
 	}
 
-	// add all the required entitlements to a set for this attachment
-	requiredEntitlements := orderedmap.New[EntitlementOrderedSet](len(declaration.RequiredEntitlements))
-	for _, entitlement := range declaration.RequiredEntitlements {
-		nominalType := checker.convertNominalType(entitlement)
-		if entitlementType, isEntitlement := nominalType.(*EntitlementType); isEntitlement {
-			_, present := requiredEntitlements.Set(entitlementType, struct{}{})
-			if present {
-				checker.report(&DuplicateEntitlementRequirementError{
-					Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
-					Entitlement: entitlementType,
-				})
-			}
-			continue
-		}
-		checker.report(&InvalidNonEntitlementRequirement{
-			Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
-			InvalidType: nominalType,
-		})
-	}
-	composite.RequiredEntitlements = requiredEntitlements
-
 	return composite
 }
 
@@ -2225,12 +2204,6 @@ func (checker *Checker) declareBaseValue(baseType Type, attachmentType *Composit
 	// -------------------------------
 	// within the body of `foo`, the `base` value will be entitled to `E` but not `F`, because only `E` was required in the attachment's declaration
 	var baseAccess Access = UnauthorizedAccess
-	if attachmentType.RequiredEntitlements.Len() > 0 {
-		baseAccess = EntitlementSetAccess{
-			Entitlements: attachmentType.RequiredEntitlements,
-			SetKind:      Conjunction,
-		}
-	}
 	base := NewReferenceType(checker.memoryGauge, baseAccess, baseType)
 	checker.declareLowerScopedValue(base, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }
