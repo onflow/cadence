@@ -147,12 +147,6 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 			validator.checkConformances(oldDecl, newDecl)
 		}
 	}
-
-	if newDecl, ok := newDeclaration.(*ast.AttachmentDeclaration); ok {
-		if oldDecl, ok := oldDeclaration.(*ast.AttachmentDeclaration); ok {
-			validator.checkRequiredEntitlements(oldDecl, newDecl)
-		}
-	}
 }
 
 func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
@@ -334,47 +328,6 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 				FoundName:    newEnumCase.Identifier.Identifier,
 				Range:        ast.NewUnmeteredRangeFromPositioned(newEnumCase),
 			})
-		}
-	}
-}
-
-func (validator *ContractUpdateValidator) checkRequiredEntitlements(
-	oldDecl *ast.AttachmentDeclaration,
-	newDecl *ast.AttachmentDeclaration,
-) {
-	oldEntitlements := oldDecl.RequiredEntitlements
-	newEntitlements := newDecl.RequiredEntitlements
-
-	// updates cannot add new entitlement requirements, or equivalently,
-	// the new entitlements must all be present in the old entitlements list
-	// Adding new entitlement requirements has to be prohibited because it would
-	// be a security vulnerability. If your attachment previously only requires X access to the base,
-	// people who might be okay giving an attachment X access to their resource would be willing to attach it.
-	// If the author could later add a requirement to the attachment declaration asking for Y access as well,
-	// then they would be able to access Y-entitled values on existing attached bases without ever having
-	// received explicit permission from the resource owners to access that entitlement.
-
-	for _, newEntitlement := range newEntitlements {
-		found := false
-		for index, oldEntitlement := range oldEntitlements {
-			err := oldEntitlement.CheckEqual(newEntitlement, validator)
-			if err == nil {
-				found = true
-
-				// Remove the matched entitlement, so we don't have to check it again.
-				// i.e: optimization
-				oldEntitlements = append(oldEntitlements[:index], oldEntitlements[index+1:]...)
-				break
-			}
-		}
-
-		if !found {
-			validator.report(&RequiredEntitlementMismatchError{
-				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
-			})
-
-			return
 		}
 	}
 }
@@ -593,21 +546,6 @@ func (*ConformanceMismatchError) IsUserError() {}
 
 func (e *ConformanceMismatchError) Error() string {
 	return fmt.Sprintf("conformances does not match in `%s`", e.DeclName)
-}
-
-// RequiredEntitlementMismatchError is reported during a contract update, when the required entitlements of the new attachment
-// does not match the existing one.
-type RequiredEntitlementMismatchError struct {
-	DeclName string
-	ast.Range
-}
-
-var _ errors.UserError = &RequiredEntitlementMismatchError{}
-
-func (*RequiredEntitlementMismatchError) IsUserError() {}
-
-func (e *RequiredEntitlementMismatchError) Error() string {
-	return fmt.Sprintf("required entitlements do not match in `%s`", e.DeclName)
 }
 
 // EnumCaseMismatchError is reported during an enum update, when an updated enum case

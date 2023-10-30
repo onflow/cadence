@@ -113,8 +113,6 @@ func (d *AttachmentDeclaration) ConformanceList() []*NominalType {
 const attachmentStatementDoc = prettier.Text("attachment")
 const attachmentStatementForDoc = prettier.Text("for")
 const attachmentConformancesSeparatorDoc = prettier.Text(":")
-const attachmentEntitlementDoc = prettier.Text("entitlement")
-const attachmentRequireDoc = prettier.Text("require")
 
 var attachmentConformanceSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Text(","),
@@ -213,10 +211,9 @@ func (d *AttachmentDeclaration) String() string {
 
 // AttachExpression
 type AttachExpression struct {
-	Base         Expression
-	Attachment   *InvocationExpression
-	Entitlements []*NominalType
-	StartPos     Position `json:"-"`
+	Base       Expression
+	Attachment *InvocationExpression
+	StartPos   Position `json:"-"`
 }
 
 var _ Element = &AttachExpression{}
@@ -239,16 +236,14 @@ func NewAttachExpression(
 	gauge common.MemoryGauge,
 	base Expression,
 	attachment *InvocationExpression,
-	entitlements []*NominalType,
 	startPos Position,
 ) *AttachExpression {
 	common.UseMemory(gauge, common.AttachExpressionMemoryUsage)
 
 	return &AttachExpression{
-		Base:         base,
-		Attachment:   attachment,
-		Entitlements: entitlements,
-		StartPos:     startPos,
+		Base:       base,
+		Attachment: attachment,
+		StartPos:   startPos,
 	}
 }
 
@@ -258,8 +253,6 @@ func (e *AttachExpression) String() string {
 
 const attachExpressionDoc = prettier.Text("attach")
 const attachExpressionToDoc = prettier.Text("to")
-const attachExpressionWithDoc = prettier.Text("with")
-const attachExpressionCommaDoc = prettier.Text(",")
 
 func (e *AttachExpression) Doc() prettier.Doc {
 	var doc prettier.Concat
@@ -274,17 +267,6 @@ func (e *AttachExpression) Doc() prettier.Doc {
 		prettier.Space,
 		e.Base.Doc(),
 	)
-	if len(e.Entitlements) > 0 {
-		entitlementsLen := len(e.Entitlements)
-		doc = append(doc, prettier.Space, attachExpressionWithDoc, prettier.Space, openParenthesisDoc)
-		for i, entitlement := range e.Entitlements {
-			doc = append(doc, entitlement.Doc())
-			if i < entitlementsLen-1 {
-				doc = append(doc, attachExpressionCommaDoc, prettier.Space)
-			}
-		}
-		doc = append(doc, closeParenthesisDoc)
-	}
 	return doc
 }
 
@@ -293,9 +275,6 @@ func (e *AttachExpression) StartPosition() Position {
 }
 
 func (e *AttachExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
-	if len(e.Entitlements) > 0 {
-		return e.Entitlements[len(e.Entitlements)-1].EndPosition(memoryGauge)
-	}
 	return e.Base.EndPosition(memoryGauge)
 }
 
