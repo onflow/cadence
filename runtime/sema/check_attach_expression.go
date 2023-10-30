@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) Type {
@@ -106,26 +105,6 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	}
 
 	checker.Elaboration.SetAttachTypes(expression, attachmentCompositeType)
-
-	// compute the set of all the entitlements provided to this attachment
-	providedEntitlements := orderedmap.New[EntitlementOrderedSet](len(expression.Entitlements))
-	for _, entitlement := range expression.Entitlements {
-		nominalType := checker.convertNominalType(entitlement)
-		if entitlementType, isEntitlement := nominalType.(*EntitlementType); isEntitlement {
-			_, present := providedEntitlements.Set(entitlementType, struct{}{})
-			if present {
-				checker.report(&DuplicateEntitlementProvidedError{
-					Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
-					Entitlement: entitlementType,
-				})
-			}
-			continue
-		}
-		checker.report(&InvalidNonEntitlementProvidedError{
-			Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
-			InvalidType: nominalType,
-		})
-	}
 
 	return baseType
 }
