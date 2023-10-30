@@ -3865,13 +3865,11 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-				access(all) resource R {}
-
-				entitlement mapping M {
-					Mutate -> Insert
+				access(all) resource R {
+					access(Mutate) fun foo() {}
 				}
 
-				access(mapping M) attachment A for R {
+				access(all) attachment A for R {
 					access(mapping Identity) let x: [String]
 					init() {
 						self.x = ["x"]
@@ -3897,6 +3895,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			`
 				access(all) resource R {
 					access(all) fun foo() {
+						// this only works because A supports all the entitlements of R
 						self[A]!.x.append("y")
 					}
 				}
@@ -3945,17 +3944,13 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-				entitlement mapping M {
-					Mutate -> Insert
-				}
-
 				access(all) resource R {
-					access(all) fun foo() {
+					access(Insert) fun foo() {
 						var xRef = self[A]!.x
 						xRef.append("y")
 					}
 				}
-				access(mapping M) attachment A for R {
+				access(all) attachment A for R {
 					access(mapping Identity) let x: [String]
 					init() {
 						self.x = ["x"]
@@ -4523,8 +4518,10 @@ func TestCheckAttachmentForEachAttachment(t *testing.T) {
 					a.foo()
 				}
 			}
-			resource R {}
-			access(mapping M) attachment A for R {
+			resource R {
+				access(F) fun foo() {}
+			}
+			access(all) attachment A for R {
 				access(F) fun foo() {}
 			}
 			access(all) fun foo(s: @R) {
