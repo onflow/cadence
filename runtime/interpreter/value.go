@@ -46,8 +46,6 @@ type typeConformanceResultEntry struct {
 // as not all values are Go hashable, i.e. this might lead to run-time panics
 type SeenReferences map[*EphemeralReferenceValue]struct{}
 
-// NonStorable represents a value that cannot be stored
-
 // Value is the Cadence value hierarchy which is heavily tied to the interpreter and persistent storage,
 // and has lots of implementation details.
 //
@@ -408,13 +406,6 @@ type BigNumberValue interface {
 	NumberValue
 	ByteLength() int
 	ToBigInt(memoryGauge common.MemoryGauge) *big.Int
-}
-
-// FixedPointValue is a fixed-point number value
-type FixedPointValue interface {
-	NumberValue
-	IntegerPart() NumberValue
-	Scale() int
 }
 
 type SomeStorable struct {

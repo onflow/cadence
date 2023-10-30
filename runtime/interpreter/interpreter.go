@@ -42,6 +42,14 @@ import (
 )
 
 //
+// OptionalValue
+
+type OptionalValue interface {
+	Value
+	isOptionalValue()
+	forEach(f func(Value))
+	fmap(inter *Interpreter, f func(Value) Value) OptionalValue
+}
 
 var emptyFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.TypeAnnotation{
@@ -1274,7 +1282,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					address,
 				)
 
-				value.InjectedFields = injectedFields
+				value.injectedFields = injectedFields
 				value.Functions = functions
 				value.Destructor = destructorFunction
 

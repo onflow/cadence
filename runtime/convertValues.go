@@ -412,8 +412,13 @@ func exportCompositeValue(
 
 			case *interpreter.CompositeValue:
 				fieldValue = v.GetField(inter, locationRange, fieldName)
-				if fieldValue == nil && v.ComputedFields != nil {
-					if computedField, ok := v.ComputedFields[fieldName]; ok {
+
+				computedField := v.GetComputedField(inter, locationRange, fieldName)
+
+				computedField
+
+				if fieldValue == nil && computedField != nil {
+					if computedField, ok := fieldValue; ok {
 						fieldValue = computedField(inter, locationRange)
 					}
 				}

@@ -15,6 +15,13 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+// FixedPointValue is a fixed-point number value
+type FixedPointValue interface {
+	NumberValue
+	IntegerPart() NumberValue
+	Scale() int
+}
+
 // Fix64Value
 type Fix64Value int64
 
@@ -591,13 +598,4 @@ func (v Fix64Value) IntegerPart() NumberValue {
 
 func (Fix64Value) Scale() int {
 	return sema.Fix64Scale
-}
-
-// OptionalValue
-
-type OptionalValue interface {
-	Value
-	isOptionalValue()
-	forEach(f func(Value))
-	fmap(inter *Interpreter, f func(Value) Value) OptionalValue
 }
