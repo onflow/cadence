@@ -491,7 +491,7 @@ func (m *Migration) migrateLinkToCapabilityController(
 			Type: sema.AnyType,
 		},
 	)
-	// TODO: skip cyclic links
+	// TODO: skip cyclic links instead of panic-ing
 	if err != nil {
 		panic(err)
 	}
@@ -519,7 +519,6 @@ func (m *Migration) migrateLinkToCapabilityController(
 		)
 
 	case accountCapabilityTarget:
-
 		capabilityID, _ = stdlib.IssueAccountCapabilityController(
 			m.interpreter,
 			locationRange,
