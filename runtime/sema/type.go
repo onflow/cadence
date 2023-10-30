@@ -4508,6 +4508,13 @@ func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 		set.SetAll(it.SupportedEntitlements())
 	})
 
+	// attachments support at least the entitlements supported by their base
+	if entitlementSupportingBase, isEntitlementSupportingBase :=
+		// must ensure there is no recursive case
+		t.GetBaseType().(EntitlementSupportingType); isEntitlementSupportingBase && entitlementSupportingBase != t {
+		set.SetAll(entitlementSupportingBase.SupportedEntitlements())
+	}
+
 	t.supportedEntitlements = set
 	return set
 }
@@ -6016,6 +6023,9 @@ func (t *ReferenceType) String() string {
 	if t.Authorization != UnauthorizedAccess {
 		authorization = t.Authorization.String()
 	}
+	if _, isMapping := t.Authorization.(*EntitlementMapAccess); isMapping {
+		authorization = "mapping " + authorization
+	}
 	return formatReferenceType(" ", authorization, t.Type.String())
 }
 
@@ -6026,6 +6036,9 @@ func (t *ReferenceType) QualifiedString() string {
 	var authorization string
 	if t.Authorization != UnauthorizedAccess {
 		authorization = t.Authorization.QualifiedString()
+	}
+	if _, isMapping := t.Authorization.(*EntitlementMapAccess); isMapping {
+		authorization = "mapping " + authorization
 	}
 	return formatReferenceType(" ", authorization, t.Type.QualifiedString())
 }
