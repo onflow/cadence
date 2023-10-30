@@ -17825,16 +17825,8 @@ func attachmentReferenceAuthorization(
 	attachmentType *sema.CompositeType,
 	baseAccess sema.Access,
 ) (Authorization, error) {
-	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
-	var attachmentReferenceAuth Authorization = UnauthorizedAccess
-	if attachmentType.AttachmentEntitlementAccess == nil {
-		return attachmentReferenceAuth, nil
-	}
-	attachmentReferenceAccess, err := attachmentType.AttachmentEntitlementAccess.Image(baseAccess, func() ast.Range { return ast.EmptyRange })
-	if err != nil {
-		return nil, err
-	}
-	return ConvertSemaAccessToStaticAuthorization(interpreter, attachmentReferenceAccess), nil
+	// The attachment reference has the same entitlements as the base access
+	return ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess), nil
 }
 
 func attachmentBaseAuthorization(
@@ -17851,12 +17843,7 @@ func attachmentBaseAndSelfValues(
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	base = v.getBaseValue()
 
-	attachmentType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
-
 	var attachmentReferenceAuth Authorization = UnauthorizedAccess
-	if attachmentType.AttachmentEntitlementAccess != nil {
-		attachmentReferenceAuth = ConvertSemaAccessToStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
-	}
 
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
@@ -17932,8 +17919,8 @@ func (v *CompositeValue) GetTypeKey(
 ) Value {
 	var access sema.Access = sema.UnauthorizedAccess
 	attachmentTyp, isAttachmentType := ty.(*sema.CompositeType)
-	if isAttachmentType && attachmentTyp.AttachmentEntitlementAccess != nil {
-		access = attachmentTyp.AttachmentEntitlementAccess.Domain()
+	if isAttachmentType {
+		access = sema.NewEntitlementSetAccessFromSet(attachmentTyp.SupportedEntitlements(), sema.Conjunction)
 	}
 	return v.getTypeKey(interpreter, locationRange, ty, access)
 }

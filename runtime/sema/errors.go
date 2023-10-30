@@ -4595,10 +4595,10 @@ func (e *AttachmentsNotEnabledError) Error() string {
 
 // InvalidAttachmentEntitlementError
 type InvalidAttachmentEntitlementError struct {
-	Attachment               *CompositeType
-	AttachmentAccessModifier Access
-	InvalidEntitlement       *EntitlementType
-	Pos                      ast.Position
+	Attachment         *CompositeType
+	BaseType           Type
+	InvalidEntitlement *EntitlementType
+	Pos                ast.Position
 }
 
 var _ SemanticError = &InvalidAttachmentEntitlementError{}
@@ -4620,15 +4620,10 @@ func (e *InvalidAttachmentEntitlementError) Error() string {
 }
 
 func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
-	switch access := e.AttachmentAccessModifier.(type) {
-	case PrimitiveAccess:
-		return "attachments declared with `access(all)` access do not support entitlements on their members"
-	case *EntitlementMapAccess:
-		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
-			e.InvalidEntitlement.QualifiedIdentifier(),
-			access.Type.QualifiedIdentifier())
-	}
-	return ""
+	return fmt.Sprintf("`%s` must appear in the base type `%s`",
+		e.InvalidEntitlement.QualifiedIdentifier(),
+		e.BaseType.String(),
+	)
 }
 
 func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {

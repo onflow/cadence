@@ -1298,9 +1298,12 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					// Self's type in the constructor is codomain of the attachment's entitlement map, since
 					// the constructor can only be called when in possession of the base resource
 					// if the attachment is declared with access(all) access, then self is unauthorized
-					if attachmentType.AttachmentEntitlementAccess != nil {
-						auth = ConvertSemaAccessToStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
-					}
+
+					auth = ConvertSemaAccessToStaticAuthorization(
+						interpreter,
+						sema.NewEntitlementSetAccessFromSet(attachmentType.SupportedEntitlements(), sema.Conjunction),
+					)
+
 					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType)
 
 					// set the base to the implicitly provided value, and remove this implicit argument from the list

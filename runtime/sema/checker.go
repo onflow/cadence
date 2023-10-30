@@ -1900,12 +1900,7 @@ func (checker *Checker) checkEntitlementMapAccess(
 	containerKind *common.CompositeKind,
 	startPos ast.Position,
 ) {
-	// attachments may be declared with an entitlement map access
-	if declarationKind == common.DeclarationKindAttachment {
-		return
-	}
-
-	// otherwise, mapped entitlements may only be used in structs, resources and attachments
+	// mapped entitlements may only be used in structs, resources and attachments
 	if containerKind == nil ||
 		(*containerKind != common.CompositeKindResource &&
 			*containerKind != common.CompositeKindStructure &&
@@ -1918,7 +1913,7 @@ func (checker *Checker) checkEntitlementMapAccess(
 		return
 	}
 
-	// mapped entitlement fields must be, one of:
+	// mapped entitlement fields must be one of:
 	// 1) An [optional] reference that is authorized to the same mapped entitlement.
 	// 2) A function that return an [optional] reference authorized to the same mapped entitlement.
 	// 3) A container - So if the parent is a reference, entitlements can be granted to the resulting field reference.
