@@ -127,7 +127,7 @@ type interpreterEnvironment struct {
 
 var _ Environment = &interpreterEnvironment{}
 var _ stdlib.Logger = &interpreterEnvironment{}
-var _ stdlib.UnsafeRandomGenerator = &interpreterEnvironment{}
+var _ stdlib.RandomGenerator = &interpreterEnvironment{}
 var _ stdlib.BlockAtHeightProvider = &interpreterEnvironment{}
 var _ stdlib.CurrentBlockProvider = &interpreterEnvironment{}
 var _ stdlib.PublicAccountHandler = &interpreterEnvironment{}
