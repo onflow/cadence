@@ -16351,7 +16351,6 @@ func (UFix64Value) Scale() int {
 // CompositeValue
 
 type CompositeValue struct {
-	Destructor      FunctionValue
 	Location        common.Location
 	staticType      StaticType
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
@@ -16620,46 +16619,13 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		storageID,
 		locationRange,
 		func() {
-			// if this type has attachments, destroy all of them before invoking the destructor
-			v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
-				// an attachment's destructor may make reference to `base`, so we must set the base value
-				// for the attachment before invoking its destructor. For other functions, this happens
-				// automatically when the attachment is accessed with the access expression `v[A]`, which
-				// is a necessary pre-requisite for calling any members of the attachment. However, in
-				// the case of a destructor, this is called implicitly, and thus must have its `base`
-				// set manually
-				attachment.setBaseValue(interpreter, v)
-				attachment.Destroy(interpreter, locationRange)
-			})
-
 			interpreter = v.getInterpreter(interpreter)
 
-			// if composite was deserialized, dynamically link in the destructor
-			if v.Destructor == nil {
-				v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-			}
-
-			destructor := v.Destructor
-
-			if destructor != nil {
-				var base *EphemeralReferenceValue
-				var self MemberAccessibleValue = v
-				if v.Kind == common.CompositeKindAttachment {
-					base, self = attachmentBaseAndSelfValues(interpreter, v)
-				}
-				invocation := NewInvocation(
-					interpreter,
-					&self,
-					base,
-					nil,
-					nil,
-					nil,
-					nil,
-					locationRange,
-				)
-
-				destructor.invoke(invocation)
-			}
+			// destroy every nested resource in this composite; note that this iteration includes attachments
+			v.ForEachField(interpreter, func(_ string, fieldValue Value) bool {
+				maybeDestroy(interpreter, locationRange, fieldValue)
+				return true
+			})
 		},
 	)
 
@@ -17485,7 +17451,6 @@ func (v *CompositeValue) Transfer(
 		res.computedFields = v.computedFields
 		res.NestedVariables = v.NestedVariables
 		res.Functions = v.Functions
-		res.Destructor = v.Destructor
 		res.Stringer = v.Stringer
 		res.isDestroyed = v.isDestroyed
 		res.typeID = v.typeID
@@ -17568,7 +17533,6 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		computedFields:      v.computedFields,
 		NestedVariables:     v.NestedVariables,
 		Functions:           v.Functions,
-		Destructor:          v.Destructor,
 		Stringer:            v.Stringer,
 		isDestroyed:         v.isDestroyed,
 		typeID:              v.typeID,
@@ -19403,8 +19367,8 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {
-	// NO-OP
+func (v NilValue) Destroy(interpreter *Interpreter, _ LocationRange) {
+
 }
 
 func (NilValue) String() string {

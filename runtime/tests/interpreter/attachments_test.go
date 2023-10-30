@@ -597,9 +597,6 @@ func TestInterpretNestedAttach(t *testing.T) {
                 self.y <- y
                 self.i = base.i
             }
-            destroy() {
-                destroy self.y
-            }
         }
         attachment B for Y { }
         fun test(): Int {
@@ -638,9 +635,6 @@ func TestInterpretNestedAttachFunction(t *testing.T) {
             init(_ y: @Y) {
                 self.y <- y
                 self.i = base.i
-            }
-            destroy() {
-                destroy self.y
             }
         }
         attachment B for Y { }
@@ -1249,11 +1243,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             var destructorRun = false
             resource R {}
-            attachment A for R {
-                destroy() {
-                    destructorRun = true
-                }
-            }
+            attachment A for R {}
             fun test() {
                 let r <- create R()
                 let r2 <- attach A() to <-r
@@ -1264,7 +1254,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+		// DestructorTODO: replace with test for destruction event of A
 	})
 
 	t.Run("base destructor executed last", func(t *testing.T) {
@@ -1272,27 +1262,10 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            var lastDestructorRun = ""
-            resource R {
-                destroy() {
-                    lastDestructorRun = "R"
-                }
-            }
-            attachment A for R {
-                destroy() {
-                    lastDestructorRun = "A"
-                }
-            }
-            attachment B for R {
-                destroy() {
-                    lastDestructorRun = "B"
-                }
-            }
-            attachment C for R {
-                destroy() {
-                    lastDestructorRun = "C"
-                }
-            }
+            resource R {}
+            attachment A for R { }
+            attachment B for R { }
+            attachment C for R { }
             fun test() {
                 let r <- create R()
                 let r2 <- attach A() to <- attach B() to <- attach C() to <-r
@@ -1303,42 +1276,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredStringValue("R"), inter.Globals.Get("lastDestructorRun").GetValue())
-	})
-
-	t.Run("base destructor cannot add mutate attachments mid-destroy", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R {
-                fun foo() {
-                    remove B from self
-                }
-                destroy() {}
-            }
-            attachment A for R {
-                destroy() {
-                   
-                }
-            }
-            attachment B for R {
-                destroy() {}
-            }
-            attachment C for R {
-                destroy() {
-                    base.foo()
-                }
-            }
-            fun test() {
-                let r <- create R()
-                let r2 <- attach A() to <- attach B() to <- attach C() to <-r
-                destroy r2
-            }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+		// DestructorTODO: replace with test for destruction event for R being the last emitted
 	})
 
 	t.Run("remove runs destroy", func(t *testing.T) {
@@ -1346,11 +1284,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             var destructorRun = false
             resource R {}
-            attachment A for R {
-                destroy() {
-                    destructorRun = true
-                }
-            }
+            attachment A for R {}
             fun test(): @R {
                 let r <- create R()
                 let r2 <- attach A() to <-r
@@ -1362,27 +1296,19 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+		// DestructorTODO: replace with test for destruction event of both A
 	})
 
 	t.Run("remove runs resource field destroy", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
-            var destructorRun = false
             resource R {}
-            resource R2 {
-                destroy() {
-                    destructorRun = true
-                }
-            }
+            resource R2 {}
             attachment A for R {
                 let r2: @R2
                 init() {
                     self.r2 <- create R2()
                 }
-                destroy() {
-                    destroy self.r2
-                }
             }
             fun test(): @R {
                 let r <- create R()
@@ -1395,27 +1321,19 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+		// DestructorTODO: replace with test for destruction event of R2
 	})
 
 	t.Run("nested attachments destroyed", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
-            var destructorRun = false
             resource R {}
             resource R2 {}
-            attachment B for R2 {
-                destroy() {
-                    destructorRun = true
-                }
-            }
+            attachment B for R2 { }
             attachment A for R {
                 let r2: @R2
                 init() {
                     self.r2 <- attach B() to <-create R2()
-                }
-                destroy() {
-                    destroy self.r2
                 }
             }
             fun test(): @R {
@@ -1429,7 +1347,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+		// DestructorTODO: replace with test for destruction event of both B
 	})
 }
 
@@ -1523,9 +1441,6 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 let r: @R 
                 init(r: @R) {
                     self.r <- r
-                }
-                destroy() {
-                    destroy self.r
                 }
             }
             attachment A for R {
@@ -1621,9 +1536,6 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 let r: @R 
                 init(r: @R) {
                     self.r <- r
-                }
-                destroy() {
-                    destroy self.r
                 }
             }
             attachment A for R {
@@ -2007,18 +1919,12 @@ func TestInterpretForEachAttachment(t *testing.T) {
                 init(_ name: String) {
                     self.r <- create Sub(name)
                 }
-                destroy() {
-                    destroy self.r
-                }
             }
             attachment B for R {}
             attachment C for R {
                 let r: @Sub
                 init(_ name: String) {
                     self.r <- create Sub(name)
-                }
-                destroy() {
-                    destroy self.r
                 }
             }
             fun test(): String {

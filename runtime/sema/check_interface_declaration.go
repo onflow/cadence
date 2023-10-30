@@ -134,16 +134,6 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		fieldPositionGetter,
 	)
 
-	checker.checkDestructors(
-		declaration.Members.Destructors(),
-		declaration.Members.FieldsByIdentifier(),
-		interfaceType.Members,
-		interfaceType,
-		declaration.DeclarationKind(),
-		declaration.DeclarationDocString(),
-		kind,
-	)
-
 	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
