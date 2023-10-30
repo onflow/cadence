@@ -68,66 +68,37 @@ func (checker *Checker) checkAttachmentBaseType(attachmentType *CompositeType, a
 
 func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeType) {
 
-	// all the access modifiers for attachment members must be elements of the
-	// codomain of the attachment's entitlement map. This is because the codomain
-	// of the attachment's declared map specifies all the entitlements one can possibly
-	// have to that attachment, since the only way to obtain an attachment reference
-	// is to access it off of a base (and hence through the map).
-	// ---------------------------------------------------
-	// entitlement map M {
-	//     E -> F
-	//     X -> Y
-	//     U -> V
-	// }
-	//
-	// access(M) attachment A for R {
-	//	  access(F) fun foo() {}
-	//	  access(Y | F) fun bar() {}
-	//	  access(V & Y) fun baz() {}
-	//
-	//    access(V | Q) fun qux() {}
-	// }
-	// ---------------------------------------------------
-	//
-	// in this example, the only entitlements one can ever obtain to an &A reference are
-	// `F`, `Y` and `V`, and as such these are the only entitlements that may be used
-	// in `A`'s definition.  Thus the definitions of `foo`, `bar`, and `baz` are valid,
-	// while the definition of `qux` is not.
-	var attachmentAccess Access = UnauthorizedAccess
-	if attachmentType.AttachmentEntitlementAccess != nil {
-		attachmentAccess = attachmentType.AttachmentEntitlementAccess
+	// all the access modifiers for attachment members must be valid entitlements for the base type
+	var supportedBaseEntitlements *EntitlementOrderedSet = &orderedmap.OrderedMap[*EntitlementType, struct{}]{}
+	baseType := attachmentType.GetBaseType()
+	switch base := attachmentType.GetBaseType().(type) {
+	case *CompositeType:
+		supportedBaseEntitlements = base.SupportedEntitlements()
 	}
 
-	if attachmentAccess, ok := attachmentAccess.(*EntitlementMapAccess); ok {
-		codomain := attachmentAccess.Codomain()
-		attachmentType.Members.Foreach(func(_ string, member *Member) {
-			if memberAccess, ok := member.Access.(EntitlementSetAccess); ok {
-				memberAccess.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-					if !codomain.Entitlements.Contains(entitlement) {
-						checker.report(&InvalidAttachmentEntitlementError{
-							Attachment:               attachmentType,
-							AttachmentAccessModifier: attachmentAccess,
-							InvalidEntitlement:       entitlement,
-							Pos:                      member.Identifier.Pos,
-						})
-					}
+	attachmentType.Members.Foreach(func(_ string, member *Member) {
+		var requestedEntitlements *EntitlementOrderedSet = &orderedmap.OrderedMap[*EntitlementType, struct{}]{}
+		switch memberAccess := member.Access.(type) {
+		case EntitlementSetAccess:
+			requestedEntitlements = memberAccess.Entitlements
+		// if the attachment field/function is declared with mapped access, the domain of the map must be a
+		// subset of the supported entitlements on the base. This is because the attachment reference
+		// will never be able to possess any entitlements other than these, so any map relations that map
+		// from other entitlements will be unreachable
+		case *EntitlementMapAccess:
+			requestedEntitlements = memberAccess.Domain().Entitlements
+		}
+
+		requestedEntitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+			if !supportedBaseEntitlements.Contains(entitlement) {
+				checker.report(&InvalidAttachmentEntitlementError{
+					Attachment:         attachmentType,
+					BaseType:           baseType,
+					InvalidEntitlement: entitlement,
+					Pos:                member.Identifier.Pos,
 				})
 			}
 		})
-		return
-	}
-
-	// if the attachment's access is public, its members may not have entitlement access
-	attachmentType.Members.Foreach(func(_ string, member *Member) {
-		if _, ok := member.Access.(PrimitiveAccess); ok {
-			return
-		}
-		checker.report(&InvalidAttachmentEntitlementError{
-			Attachment:               attachmentType,
-			AttachmentAccessModifier: attachmentAccess,
-			Pos:                      member.Identifier.Pos,
-		})
-
 	})
 
 }
@@ -630,14 +601,7 @@ func (checker *Checker) declareNestedDeclarations(
 func (checker *Checker) declareAttachmentType(declaration *ast.AttachmentDeclaration) *CompositeType {
 
 	composite := checker.declareCompositeType(declaration)
-
 	composite.baseType = checker.convertNominalType(declaration.BaseType)
-
-	attachmentAccess := checker.accessFromAstAccess(declaration.Access)
-	if attachmentAccess, ok := attachmentAccess.(*EntitlementMapAccess); ok {
-		composite.AttachmentEntitlementAccess = attachmentAccess
-	}
-
 	return composite
 }
 
@@ -2321,12 +2285,9 @@ func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 	// inside of an attachment, self is a reference to the attachment's type, because
 	// attachments are never first class values, they must always exist inside references
 	if typedSelfType, ok := selfType.(*CompositeType); ok && typedSelfType.Kind == common.CompositeKindAttachment {
-		// the `self` value in an attachment is considered fully-entitled to that attachment, or
-		// equivalently the entire codomain of the attachment's map
+		// the `self` value in an attachment is entitled to the same entitlements required by the containing function
 		var selfAccess Access = UnauthorizedAccess
-		if typedSelfType.AttachmentEntitlementAccess != nil {
-			selfAccess = typedSelfType.AttachmentEntitlementAccess.Codomain()
-		}
+		// EntitlementsTODO: self access should be the based on the function
 		selfType = NewReferenceType(checker.memoryGauge, selfAccess, typedSelfType)
 	}
 	checker.declareLowerScopedValue(selfType, selfDocString, SelfIdentifier, common.DeclarationKindSelf)
@@ -2338,17 +2299,9 @@ func (checker *Checker) declareBaseValue(baseType Type, attachmentType *Composit
 		// to be referenced by `base`
 		baseType = NewIntersectionType(checker.memoryGauge, []*InterfaceType{typedBaseType})
 	}
-	// the `base` value in an attachment function has the set of entitlements defined by the required entitlements specified in the attachment's declaration
-	// -------------------------------
-	// entitlement E
-	// entitlement F
-	// access(all) attachment A for R {
-	//     require entitlement E
-	//     access(all) fun foo() { ... }
-	// }
-	// -------------------------------
-	// within the body of `foo`, the `base` value will be entitled to `E` but not `F`, because only `E` was required in the attachment's declaration
+	// the `base` value in an attachment is entitled to the same entitlements required by the containing function
 	var baseAccess Access = UnauthorizedAccess
+	// EntitlementsTODO: base access should be the based on the function
 	base := NewReferenceType(checker.memoryGauge, baseAccess, baseType)
 	checker.declareLowerScopedValue(base, superDocString, BaseIdentifier, common.DeclarationKindBase)
 }

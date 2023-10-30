@@ -72,6 +72,16 @@ func NewEntitlementSetAccess(
 	}
 }
 
+func NewEntitlementSetAccessFromSet(
+	set *EntitlementOrderedSet,
+	setKind EntitlementSetKind,
+) EntitlementSetAccess {
+	return EntitlementSetAccess{
+		Entitlements: set,
+		SetKind:      setKind,
+	}
+}
+
 func (EntitlementSetAccess) isAccess() {}
 
 func (e EntitlementSetAccess) ID() TypeID {

@@ -3583,7 +3583,7 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("mapping allowed", func(t *testing.T) {
+	t.Run("mapping not allowed", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -3592,7 +3592,9 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
             access(mapping E) attachment A for AnyStruct {}
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("entitlement set not allowed", func(t *testing.T) {
@@ -3611,7 +3613,7 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
 		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
 	})
 
-	t.Run("mapping allowed in contract", func(t *testing.T) {
+	t.Run("mapping not allowed in contract", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -3624,12 +3626,14 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
                 X -> Y
             }
             access(mapping E) attachment A for AnyStruct {
-                access(Y) fun foo() {}
+                access(all) fun foo() {}
             }
         }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("entitlement set not allowed in contract", func(t *testing.T) {
@@ -4969,7 +4973,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
             X -> Z
         }
         struct S {}
-        access(mapping M) attachment A for S {
+        access(all) attachment A for S {
             access(Y, Z) fun foo() {}
         }
         let s = attach A() to S()
