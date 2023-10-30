@@ -43,6 +43,8 @@ type CompositeLikeDeclaration interface {
 	Kind() common.CompositeKind
 }
 
+const ResourceDestructionDefaultEventName = "ResourceDestroyed"
+
 type CompositeDeclaration struct {
 	Members      *Members
 	DocString    string
@@ -278,6 +280,11 @@ func (d *CompositeDeclaration) Kind() common.CompositeKind {
 
 func (d *CompositeDeclaration) ConformanceList() []*NominalType {
 	return d.Conformances
+}
+
+func (d *CompositeDeclaration) IsResourceDestructionDefaultEvent() bool {
+	return d.CompositeKind == common.CompositeKindEvent &&
+		d.Identifier.Identifier == ResourceDestructionDefaultEventName
 }
 
 // FieldDeclarationFlags

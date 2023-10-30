@@ -92,24 +92,7 @@ func (l *ParameterList) Doc() prettier.Doc {
 	parameterDocs := make([]prettier.Doc, 0, len(l.Parameters))
 
 	for _, parameter := range l.Parameters {
-		var parameterDoc prettier.Concat
-
-		if parameter.Label != "" {
-			parameterDoc = append(
-				parameterDoc,
-				prettier.Text(parameter.Label),
-				prettier.Space,
-			)
-		}
-
-		parameterDoc = append(
-			parameterDoc,
-			prettier.Text(parameter.Identifier.Identifier),
-			typeSeparatorSpaceDoc,
-			parameter.TypeAnnotation.Doc(),
-		)
-
-		parameterDocs = append(parameterDocs, parameterDoc)
+		parameterDocs = append(parameterDocs, parameter.Doc())
 	}
 
 	return prettier.WrapParentheses(

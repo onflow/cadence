@@ -388,7 +388,7 @@ func TestParseParameterList(t *testing.T) {
 		return Parse(
 			nil,
 			[]byte(input),
-			parseParameterList,
+			func(p *parser) (*ast.ParameterList, error) { return parseParameterList(p, false) },
 			Config{},
 		)
 	}
@@ -2597,6 +2597,150 @@ func TestParseEvent(t *testing.T) {
 			},
 			result,
 		)
+	})
+
+	t.Run("default event", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(` access(all) event ResourceDestroyed ( a : String = "foo")`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												TypeAnnotation: &ast.TypeAnnotation{
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "String",
+															Pos: ast.Position{
+																Offset: 43,
+																Line:   1,
+																Column: 43,
+															},
+														},
+													},
+													StartPos: ast.Position{
+														Offset: 43,
+														Line:   1,
+														Column: 43,
+													},
+												},
+												DefaultArgument: &ast.StringExpression{
+													Value: "foo",
+													Range: ast.Range{
+														StartPos: ast.Position{
+															Offset: 52,
+															Line:   1,
+															Column: 52,
+														},
+														EndPos: ast.Position{
+															Offset: 56,
+															Line:   1,
+															Column: 56,
+														},
+													},
+												},
+												Identifier: ast.Identifier{
+													Identifier: "a",
+													Pos: ast.Position{
+														Offset: 39,
+														Line:   1,
+														Column: 39,
+													},
+												},
+												StartPos: ast.Position{
+													Offset: 39,
+													Line:   1,
+													Column: 39,
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 37,
+												Line:   1,
+												Column: 37,
+											},
+											EndPos: ast.Position{
+												Offset: 57,
+												Line:   1,
+												Column: 57,
+											},
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 37,
+										Line:   1,
+										Column: 37,
+									},
+									Access: ast.AccessNotSpecified,
+								},
+								Kind: common.DeclarationKindInitializer,
+							},
+						},
+					),
+					Identifier: ast.Identifier{
+						Identifier: "ResourceDestroyed",
+						Pos: ast.Position{
+							Offset: 19,
+							Line:   1,
+							Column: 19,
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 1,
+							Line:   1,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 57,
+							Line:   1,
+							Column: 57,
+						},
+					},
+					Access:        ast.AccessAll,
+					CompositeKind: common.CompositeKindEvent,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("default event with no default arg", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) event ResourceDestroyed ( a : Int )")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 47, Offset: 47},
+				Message: "expected a default argument after type annotation, got ')'",
+			},
+		}, errs)
+	})
+
+	t.Run("non-default event with default arg", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) event Foo ( a : Int = 3)")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 33, Offset: 33},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
 	})
 
 	t.Run("invalid event name", func(t *testing.T) {
@@ -7106,6 +7250,39 @@ func TestParseInvalidImportWithPurity(t *testing.T) {
 		},
 		errs,
 	)
+}
+
+func TestParseInvalidDefaultArgument(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function declaration ", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) fun foo ( a : Int = 3) { } ")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 31, Offset: 31},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
+	})
+
+	t.Run("function expression ", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" let foo = fun ( a : Int = 3) { } ")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 25, Offset: 25},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
+	})
 }
 
 func TestParseInvalidEventWithPurity(t *testing.T) {
