@@ -319,7 +319,7 @@ func (m *Migration) migratePathCapability(
 
 		// Migrate composite's fields
 
-		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) {
+		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
 			newFieldValue := m.migratePathCapability(address, fieldValue, reporter)
 			if newFieldValue != nil {
 				composite.SetMember(
@@ -329,6 +329,9 @@ func (m *Migration) migratePathCapability(
 					newFieldValue,
 				)
 			}
+
+			// continue iteration
+			return true
 		})
 
 		// The composite itself does not have to be replaced
