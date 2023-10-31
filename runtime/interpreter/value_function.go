@@ -165,7 +165,7 @@ func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter) {
+func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -314,7 +314,7 @@ func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
+func (*HostFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -441,6 +441,6 @@ func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
+func (BoundFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }

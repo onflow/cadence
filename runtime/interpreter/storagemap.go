@@ -130,7 +130,7 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key StorageMapKey, value 
 	existed = existingStorable != nil
 	if existed {
 		existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
-		existingValue.DeepRemove(interpreter)
+		existingValue.DeepRemove(interpreter, true)
 		interpreter.RemoveReferencedSlab(existingStorable)
 	}
 	return
@@ -165,7 +165,7 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (ex
 	existed = existingValueStorable != nil
 	if existed {
 		existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
-		existingValue.DeepRemove(interpreter)
+		existingValue.DeepRemove(interpreter, true)
 		interpreter.RemoveReferencedSlab(existingValueStorable)
 	}
 	return
