@@ -132,6 +132,7 @@ var _ ast.ExpressionVisitor[Type] = &Checker{}
 
 var baseFunctionType = NewSimpleFunctionType(
 	FunctionPurityImpure,
+	UnauthorizedAccess,
 	nil,
 	VoidTypeAnnotation,
 )
@@ -1128,6 +1129,7 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 
 	return NewSimpleFunctionType(
 		purity,
+		UnauthorizedAccess,
 		parameters,
 		returnTypeAnnotation,
 	)

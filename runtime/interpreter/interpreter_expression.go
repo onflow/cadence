@@ -290,7 +290,6 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 
 	auth := interpreter.getEffectiveAuthorization(referenceType)
 
-	interpreter.maybeTrackReferencedResourceKindedValue(value)
 	return NewEphemeralReferenceValue(interpreter, auth, value, referenceType.Type)
 }
 
@@ -1036,10 +1035,10 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	// Bound functions
 	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
 		self := *boundFunction.Self
-		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
-			storageID := resource.StorageID()
-			interpreter.trackReferencedResourceKindedValue(storageID, resource)
-		}
+		// Explicitly track the reference here, because the receiver 'act' as a reference,
+		// but a reference is never created during bound function invocation.
+		// This was a fix to the issue: https://github.com/onflow/cadence/pull/2561
+		interpreter.maybeTrackReferencedResourceKindedValue(self)
 	}
 
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
@@ -1252,8 +1251,6 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	interpreter.maybeTrackReferencedResourceKindedValue(result)
-
 	makeReference := func(value Value, typ *sema.ReferenceType) *EphemeralReferenceValue {
 		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
 		// of that mapped access in the body of the function should be replaced with the computed output of the map
@@ -1293,7 +1290,6 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			}
 
 			innerValue := result.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
 
 			return NewSomeValueNonCopying(
 				interpreter,
@@ -1422,7 +1418,6 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
-	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 
 	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(
 		attachExpression.Attachment,
@@ -1432,9 +1427,6 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-
-	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
 
 	base = base.Transfer(
 		interpreter,

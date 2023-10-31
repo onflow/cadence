@@ -34,6 +34,7 @@ Returns the current block, i.e. the block which contains the currently executed 
 
 var getCurrentBlockFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
+	sema.UnauthorizedAccess,
 	nil,
 	sema.BlockTypeAnnotation,
 )
@@ -44,6 +45,7 @@ Returns the block at the given height. If the given block does not exist the fun
 
 var getBlockFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
+	sema.UnauthorizedAccess,
 	[]sema.Parameter{
 		{
 			Label:          "at",

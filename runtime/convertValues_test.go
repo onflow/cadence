@@ -131,6 +131,7 @@ func TestRuntimeExportValue(t *testing.T) {
 	testFunction := &interpreter.InterpretedFunctionValue{
 		Type: sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
+			sema.UnauthorizedAccess,
 			nil,
 			sema.VoidTypeAnnotation,
 		),

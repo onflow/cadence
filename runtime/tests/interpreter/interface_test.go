@@ -563,6 +563,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		logFunctionType := sema.NewSimpleFunctionType(
 			sema.FunctionPurityView,
+			sema.UnauthorizedAccess,
 			[]sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
@@ -675,6 +676,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		logFunctionType := sema.NewSimpleFunctionType(
 			sema.FunctionPurityView,
+			sema.UnauthorizedAccess,
 			[]sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
@@ -787,6 +789,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 
 		logFunctionType := sema.NewSimpleFunctionType(
 			sema.FunctionPurityView,
+			sema.UnauthorizedAccess,
 			[]sema.Parameter{
 				{
 					Label:          sema.ArgumentLabelNotRequired,
