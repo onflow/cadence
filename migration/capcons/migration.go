@@ -68,6 +68,10 @@ type LinkMigrationReporter interface {
 		capabilityID interpreter.UInt64Value,
 	)
 	CyclicLink(err CyclicLinkError)
+	MissingTarget(
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+	)
 }
 
 type PathCapabilityMigrationReporter interface {
@@ -514,7 +518,7 @@ func (m *Migration) migrateLinkToCapabilityController(
 
 	switch target := target.(type) {
 	case nil:
-		// TODO: report/warn
+		reporter.MissingTarget(addressValue, pathValue)
 		return 0
 
 	case pathCapabilityTarget:

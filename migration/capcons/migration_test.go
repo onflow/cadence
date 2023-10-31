@@ -62,18 +62,17 @@ type testCapConsMissingCapabilityID struct {
 	addressPath interpreter.AddressPath
 }
 
+type testMissingTarget struct {
+	address interpreter.AddressValue
+	path    interpreter.PathValue
+}
+
 type testMigrationReporter struct {
 	linkMigrations             []testCapConsLinkMigration
 	pathCapabilityMigrations   []testCapConsPathCapabilityMigration
 	missingCapabilityIDs       []testCapConsMissingCapabilityID
 	cyclicLinkCyclicLinkErrors []CyclicLinkError
-}
-
-func (t *testMigrationReporter) CyclicLink(cyclicLinkError CyclicLinkError) {
-	t.cyclicLinkCyclicLinkErrors = append(
-		t.cyclicLinkCyclicLinkErrors,
-		cyclicLinkError,
-	)
+	missingTargets             []testMissingTarget
 }
 
 var _ MigrationReporter = &testMigrationReporter{}
@@ -113,6 +112,26 @@ func (t *testMigrationReporter) MissingCapabilityID(
 		testCapConsMissingCapabilityID{
 			address:     address,
 			addressPath: addressPath,
+		},
+	)
+}
+
+func (t *testMigrationReporter) CyclicLink(cyclicLinkError CyclicLinkError) {
+	t.cyclicLinkCyclicLinkErrors = append(
+		t.cyclicLinkCyclicLinkErrors,
+		cyclicLinkError,
+	)
+}
+
+func (t *testMigrationReporter) MissingTarget(
+	address interpreter.AddressValue,
+	path interpreter.PathValue,
+) {
+	t.missingTargets = append(
+		t.missingTargets,
+		testMissingTarget{
+			address: address,
+			path:    path,
 		},
 	)
 }
@@ -191,10 +210,15 @@ func TestMigration(t *testing.T) {
 
               access(all)
               fun checkMigratedValues(getter: fun(AnyStruct): Capability) {
-                  self.account.storage.save(<-create R(), to: /storage/r)
+                  self.account.storage.save(<-create R(), to: /storage/working)
                   self.checkMigratedValue(
-                  capValuePath: /storage/publicCapValue, getter: getter)
-                  self.checkMigratedValue(capValuePath: /storage/privateCapValue, getter: getter)
+                      capValuePath: /storage/publicCapValue, 
+                      getter: getter
+                  )
+                  self.checkMigratedValue(
+                      capValuePath: /storage/privateCapValue, 
+                      getter: getter
+                  )
               }
 
               access(self)
@@ -276,6 +300,10 @@ func TestMigration(t *testing.T) {
 			rCompositeStaticType,
 		)
 
+		const pathIdentifierWorking = "working"
+		const pathIdentifierCyclic = "cyclic"
+		const pathIdentifierDeadEnd = "deadEnd"
+
 		for name, domain := range map[string]common.PathDomain{
 			"publicCap":  common.PathDomainPublic,
 			"privateCap": common.PathDomainPrivate,
@@ -289,7 +317,7 @@ func TestMigration(t *testing.T) {
 						BorrowType: rReferenceStaticType,
 						Path: interpreter.PathValue{
 							Domain:     domain,
-							Identifier: "r",
+							Identifier: pathIdentifierWorking,
 						},
 						Address: interpreter.AddressValue(address),
 					},
@@ -317,35 +345,42 @@ func TestMigration(t *testing.T) {
 			// Working chain
 			{
 				Domain:     common.PathDomainPublic,
-				Identifier: "r",
+				Identifier: pathIdentifierWorking,
 			}: {
 				Domain:     common.PathDomainPrivate,
-				Identifier: "r",
+				Identifier: pathIdentifierWorking,
 			},
 			{
 				Domain:     common.PathDomainPrivate,
-				Identifier: "r",
+				Identifier: pathIdentifierWorking,
 			}: {
 				Domain:     common.PathDomainStorage,
-				Identifier: "r",
+				Identifier: pathIdentifierWorking,
 			},
 			// Cyclic chain
 			{
 				Domain:     common.PathDomainPublic,
-				Identifier: "r2",
+				Identifier: pathIdentifierCyclic,
 			}: {
 				Domain:     common.PathDomainPrivate,
-				Identifier: "r2",
+				Identifier: pathIdentifierCyclic,
 			},
 			{
 				Domain:     common.PathDomainPrivate,
-				Identifier: "r2",
+				Identifier: pathIdentifierCyclic,
 			}: {
 				Domain:     common.PathDomainPublic,
-				Identifier: "r2",
+				Identifier: pathIdentifierCyclic,
+			},
+			// Dead end
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: pathIdentifierDeadEnd,
+			}: {
+				Domain:     common.PathDomainPrivate,
+				Identifier: pathIdentifierDeadEnd,
 			},
 		} {
-
 			storage.GetStorageMap(address, sourcePath.Domain.Identifier(), true).
 				SetValue(
 					inter,
@@ -423,7 +458,7 @@ func TestMigration(t *testing.T) {
 						Address: address,
 						Path: interpreter.NewUnmeteredPathValue(
 							common.PathDomainPublic,
-							"r",
+							pathIdentifierWorking,
 						),
 					},
 					capabilityID: 1,
@@ -433,7 +468,7 @@ func TestMigration(t *testing.T) {
 						Address: address,
 						Path: interpreter.NewUnmeteredPathValue(
 							common.PathDomainPrivate,
-							"r",
+							pathIdentifierWorking,
 						),
 					},
 					capabilityID: 2,
@@ -446,22 +481,34 @@ func TestMigration(t *testing.T) {
 			[]CyclicLinkError{
 				{
 					Paths: []interpreter.PathValue{
-						{Domain: common.PathDomainPublic, Identifier: "r2"},
-						{Domain: common.PathDomainPrivate, Identifier: "r2"},
-						{Domain: common.PathDomainPublic, Identifier: "r2"},
+						{Domain: common.PathDomainPublic, Identifier: pathIdentifierCyclic},
+						{Domain: common.PathDomainPrivate, Identifier: pathIdentifierCyclic},
+						{Domain: common.PathDomainPublic, Identifier: pathIdentifierCyclic},
 					},
 					Address: address,
 				},
 				{
 					Paths: []interpreter.PathValue{
-						{Domain: common.PathDomainPrivate, Identifier: "r2"},
-						{Domain: common.PathDomainPublic, Identifier: "r2"},
-						{Domain: common.PathDomainPrivate, Identifier: "r2"},
+						{Domain: common.PathDomainPrivate, Identifier: pathIdentifierCyclic},
+						{Domain: common.PathDomainPublic, Identifier: pathIdentifierCyclic},
+						{Domain: common.PathDomainPrivate, Identifier: pathIdentifierCyclic},
 					},
 					Address: address,
 				},
 			},
 			reporter.cyclicLinkCyclicLinkErrors,
+		)
+		assert.Equal(t,
+			[]testMissingTarget{
+				{
+					address: interpreter.AddressValue(address),
+					path: interpreter.NewUnmeteredPathValue(
+						common.PathDomainPublic,
+						pathIdentifierDeadEnd,
+					),
+				},
+			},
+			reporter.missingTargets,
 		)
 
 		// Check migrated capabilities
@@ -474,7 +521,7 @@ func TestMigration(t *testing.T) {
 						Address: address,
 						Path: interpreter.NewUnmeteredPathValue(
 							common.PathDomainPrivate,
-							"r",
+							pathIdentifierWorking,
 						),
 					},
 				},
@@ -484,7 +531,7 @@ func TestMigration(t *testing.T) {
 						Address: address,
 						Path: interpreter.NewUnmeteredPathValue(
 							common.PathDomainPublic,
-							"r",
+							pathIdentifierWorking,
 						),
 					},
 				},
