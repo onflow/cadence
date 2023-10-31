@@ -426,9 +426,12 @@ func (m *Migration) migratePathCapability(
 	case *interpreter.CapabilityValue:
 		// Already migrated
 		return nil
+
+	default:
+		panic(errors.NewUnexpectedError("unsupported value type: %T", value))
 	}
 
-	panic(errors.NewUnexpectedError("unsupported value type: %T", value))
+	return nil
 }
 
 func (m *Migration) migrateLinkToCapabilityController(
@@ -488,7 +491,8 @@ func (m *Migration) migrateLinkToCapabilityController(
 		// TODO:
 		// Use top-most type to follow link all the way to final target
 		&sema.ReferenceType{
-			Type: sema.AnyType,
+			Authorization: sema.UnauthorizedAccess,
+			Type:          sema.AnyType,
 		},
 	)
 	// TODO: skip cyclic links instead of panic-ing
