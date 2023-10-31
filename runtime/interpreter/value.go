@@ -16598,7 +16598,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 				var self MemberAccessibleValue = v
 				if v.Kind == common.CompositeKindAttachment {
 					attachmentType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
-					destructorAccess := sema.NewEntitlementSetAccessFromSet(attachmentType.SupportedEntitlements(), sema.Conjunction)
+					destructorAccess := sema.NewAccessFromEntitlementSet(attachmentType.SupportedEntitlements(), sema.Conjunction)
 					base, self = attachmentBaseAndSelfValues(interpreter, destructorAccess, v)
 				}
 				invocation := NewInvocation(
@@ -17830,12 +17830,7 @@ func (v *CompositeValue) GetTypeKey(
 	var access sema.Access = sema.UnauthorizedAccess
 	attachmentTyp, isAttachmentType := ty.(*sema.CompositeType)
 	if isAttachmentType {
-		supportedEntitlements := attachmentTyp.SupportedEntitlements()
-		if supportedEntitlements.Len() == 0 {
-			access = sema.UnauthorizedAccess
-		} else {
-			access = sema.NewEntitlementSetAccessFromSet(attachmentTyp.SupportedEntitlements(), sema.Conjunction)
-		}
+		access = sema.NewAccessFromEntitlementSet(attachmentTyp.SupportedEntitlements(), sema.Conjunction)
 	}
 	return v.getTypeKey(interpreter, locationRange, ty, access)
 }

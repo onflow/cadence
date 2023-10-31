@@ -72,10 +72,14 @@ func NewEntitlementSetAccess(
 	}
 }
 
-func NewEntitlementSetAccessFromSet(
+func NewAccessFromEntitlementSet(
 	set *EntitlementOrderedSet,
 	setKind EntitlementSetKind,
-) EntitlementSetAccess {
+) Access {
+	if set.Len() == 0 {
+		return UnauthorizedAccess
+	}
+
 	return EntitlementSetAccess{
 		Entitlements: set,
 		SetKind:      setKind,

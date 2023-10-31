@@ -1299,7 +1299,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 					auth = ConvertSemaAccessToStaticAuthorization(
 						interpreter,
-						sema.NewEntitlementSetAccessFromSet(attachmentType.SupportedEntitlements(), sema.Conjunction),
+						sema.NewAccessFromEntitlementSet(attachmentType.SupportedEntitlements(), sema.Conjunction),
 					)
 
 					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType)
