@@ -4709,7 +4709,12 @@ func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ func() ast.
 	case *CompositeType:
 		// when accessed on an owned value, the produced attachment reference is entitled to all the
 		// entitlements it supports
-		access = NewEntitlementSetAccessFromSet(attachment.SupportedEntitlements(), Conjunction)
+		supportedEntitlements := attachment.SupportedEntitlements()
+		if supportedEntitlements.Len() == 0 {
+			access = UnauthorizedAccess
+		} else {
+			access = NewEntitlementSetAccessFromSet(supportedEntitlements, Conjunction)
+		}
 	}
 
 	return &OptionalType{
@@ -7267,7 +7272,12 @@ func (t *IntersectionType) TypeIndexingElementType(indexingType Type, _ func() a
 	case *CompositeType:
 		// when accessed on an owned value, the produced attachment reference is entitled to all the
 		// entitlements it supports
-		access = NewEntitlementSetAccessFromSet(attachment.SupportedEntitlements(), Conjunction)
+		supportedEntitlements := attachment.SupportedEntitlements()
+		if supportedEntitlements.Len() == 0 {
+			access = UnauthorizedAccess
+		} else {
+			access = NewEntitlementSetAccessFromSet(supportedEntitlements, Conjunction)
+		}
 	}
 
 	return &OptionalType{
