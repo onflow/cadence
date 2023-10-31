@@ -17820,30 +17820,23 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 	)
 }
 
-func attachmentReferenceAuthorization(
-	interpreter *Interpreter,
-	attachmentType *sema.CompositeType,
-	baseAccess sema.Access,
-) (Authorization, error) {
-	// The attachment reference has the same entitlements as the base access
-	return ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess), nil
-}
-
 func attachmentBaseAuthorization(
 	interpreter *Interpreter,
 	attachment *CompositeValue,
 ) Authorization {
 	var auth Authorization = UnauthorizedAccess
+	// EntitlementsTODO: this should not be unauthorized
 	return auth
 }
 
 func attachmentBaseAndSelfValues(
 	interpreter *Interpreter,
+	fnAccess sema.Access,
 	v *CompositeValue,
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	base = v.getBaseValue()
 
-	var attachmentReferenceAuth Authorization = UnauthorizedAccess
+	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(interpreter, fnAccess)
 
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
@@ -17898,15 +17891,16 @@ func (v *CompositeValue) getTypeKey(
 		return Nil
 	}
 	attachmentType := keyType.(*sema.CompositeType)
-	// dynamically set the attachment's base to this composite, but with authorization based on the requested access on that attachment
+	// dynamically set the attachment's base to this composite
 	attachment.setBaseValue(interpreter, v)
 
-	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
-	attachmentReferenceAuth, err := attachmentReferenceAuthorization(interpreter, attachmentType, baseAccess)
-	if err != nil {
-		return Nil
-	}
-	attachmentRef := NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, attachment, attachmentType)
+	// The attachment reference has the same entitlements as the base access
+	attachmentRef := NewEphemeralReferenceValue(
+		interpreter,
+		ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess),
+		attachment,
+		attachmentType,
+	)
 	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
 
 	return NewSomeValueNonCopying(interpreter, attachmentRef)
