@@ -22,12 +22,15 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -169,27 +172,26 @@ func TestCapConsMigration(t *testing.T) {
               }
 
               access(all)
-              fun saveExisting(_ wrapper: fun(Capability): AnyStruct) {
-                  self.account.link<&Test.R>(/public/r, target: /private/r)
-                  self.account.link<&Test.R>(/private/r, target: /storage/r)
-
-                  let publicCap = self.account.getCapability<&Test.R>(/public/r)
-                  let privateCap = self.account.getCapability<&Test.R>(/private/r)
-
-                  self.account.save(wrapper(publicCap), to: /storage/publicCapValue)
-                  self.account.save(wrapper(privateCap), to: /storage/privateCapValue)
+              fun saveExisting(
+                  publicCap: Capability,
+                  privateCap: Capability,
+                  wrapper: fun(Capability): AnyStruct
+              ) {
+                  self.account.storage.save(wrapper(publicCap), to: /storage/publicCapValue)
+                  self.account.storage.save(wrapper(privateCap), to: /storage/privateCapValue)
               }
 
               access(all)
               fun checkMigratedValues(getter: fun(AnyStruct): Capability) {
-                  self.account.save(<-create R(), to: /storage/r)
-                  self.checkMigratedValue(capValuePath: /storage/publicCapValue, getter: getter)
+                  self.account.storage.save(<-create R(), to: /storage/r)
+                  self.checkMigratedValue(
+                  capValuePath: /storage/publicCapValue, getter: getter)
                   self.checkMigratedValue(capValuePath: /storage/privateCapValue, getter: getter)
               }
 
               access(self)
               fun checkMigratedValue(capValuePath: StoragePath, getter: fun(AnyStruct): Capability) {
-                  let capValue = self.account.copy<AnyStruct>(from: capValuePath)!
+                  let capValue = self.account.storage.copy<AnyStruct>(from: capValuePath)!
                   let cap = getter(capValue)
                   assert(cap.id != 0)
                   let ref = cap.borrow<&R>()!
@@ -227,6 +229,7 @@ func TestCapConsMigration(t *testing.T) {
 		}
 
 		nextTransactionLocation := NewTransactionLocationGenerator()
+		nextScriptLocation := NewScriptLocationGenerator()
 
 		// Deploy contract
 
@@ -244,26 +247,109 @@ func TestCapConsMigration(t *testing.T) {
 
 		// Setup
 
+		setupTransactionLocation := nextTransactionLocation()
+		contractLocation := common.NewAddressLocation(nil, address, "Test")
+
+		environment := runtime.NewBaseInterpreterEnvironment(runtime.Config{})
+
+		// Inject old PathCapabilityValues.
+		// We don't have a way to create them in Cadence anymore.
+		//
+		// Equivalent to:
+		//   let publicCap = account.getCapability<&Test.R>(/public/r)
+		//   let privateCap = account.getCapability<&Test.R>(/private/r)
+
+		// TODO: what about the migration of reference type authorized flag?
+
+		rCompositeStaticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, contractLocation, "Test.R")
+		rReferenceStaticType := interpreter.NewReferenceStaticType(
+			nil,
+			interpreter.UnauthorizedAccess,
+			rCompositeStaticType,
+		)
+
+		for name, domain := range map[string]common.PathDomain{
+			"publicCap":  common.PathDomainPublic,
+			"privateCap": common.PathDomainPrivate,
+		} {
+			environment.DeclareValue(
+				stdlib.StandardLibraryValue{
+					Name: name,
+					Type: &sema.CapabilityType{},
+					Kind: common.DeclarationKindConstant,
+					Value: &interpreter.PathCapabilityValue{
+						BorrowType: rReferenceStaticType,
+						Path: interpreter.PathValue{
+							Domain:     domain,
+							Identifier: "r",
+						},
+						Address: interpreter.AddressValue(address),
+					},
+				},
+				setupTransactionLocation,
+			)
+		}
+
+		// Create and store links.
+		//
+		// Equivalent to:
+		//   account.link<&Test.R>(/public/r, target: /private/r)
+		//   account.link<&Test.R>(/private/r, target: /storage/r)
+
+		storage, inter, err := rt.Storage(runtime.Context{
+			Interface: runtimeInterface,
+		})
+		require.NoError(t, err)
+
+		for sourceDomain, targetDomain := range map[common.PathDomain]common.PathDomain{
+			common.PathDomainPublic:  common.PathDomainPrivate,
+			common.PathDomainPrivate: common.PathDomainStorage,
+		} {
+			const pathIdentifier = "r"
+
+			storage.GetStorageMap(address, sourceDomain.Identifier(), true).
+				SetValue(
+					inter,
+					interpreter.StringStorageMapKey(pathIdentifier),
+					interpreter.PathLinkValue{
+						Type: rReferenceStaticType,
+						TargetPath: interpreter.PathValue{
+							Domain:     targetDomain,
+							Identifier: pathIdentifier,
+						},
+					},
+				)
+		}
+
+		err = storage.Commit(inter, false)
+		require.NoError(t, err)
+
 		setupTx := fmt.Sprintf(
 			// language=cadence
 			`
               import Test from 0x1
 
               transaction {
-                  prepare(signer: AuthAccount) {
-                     Test.saveExisting(%s)
+                  prepare(signer: &Account) {
+                     Test.saveExisting(
+                         publicCap: publicCap,
+                         privateCap: privateCap,
+                         wrapper: %s
+                     )
                   }
               }
             `,
 			setupFunction,
 		)
+
 		err = rt.ExecuteTransaction(
 			runtime.Script{
 				Source: []byte(setupTx),
 			},
 			runtime.Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
+				Interface:   runtimeInterface,
+				Environment: environment,
+				Location:    setupTransactionLocation,
 			},
 		)
 		require.NoError(t, err)
@@ -291,7 +377,7 @@ func TestCapConsMigration(t *testing.T) {
 
 		// Check migrated links
 
-		require.Equal(t,
+		assert.Equal(t,
 			[]testCapConsLinkMigration{
 				{
 					addressPath: interpreter.AddressPath{
@@ -319,7 +405,7 @@ func TestCapConsMigration(t *testing.T) {
 
 		// Check migrated capabilities
 
-		require.Equal(t,
+		assert.Equal(t,
 			[]testCapConsPathCapabilityMigration{
 				{
 					address: address,
@@ -344,6 +430,7 @@ func TestCapConsMigration(t *testing.T) {
 			},
 			reporter.pathCapabilityMigrations,
 		)
+		require.Empty(t, reporter.missingCapabilityIDs)
 
 		// Check
 
@@ -365,7 +452,7 @@ func TestCapConsMigration(t *testing.T) {
 			},
 			runtime.Context{
 				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
+				Location:  nextScriptLocation(),
 			},
 		)
 		require.NoError(t, err)
@@ -373,7 +460,6 @@ func TestCapConsMigration(t *testing.T) {
 
 	t.Run("directly", func(t *testing.T) {
 		t.Parallel()
-		t.Skip()
 
 		test(t,
 			// language=cadence
@@ -393,7 +479,6 @@ func TestCapConsMigration(t *testing.T) {
 
 	t.Run("composite", func(t *testing.T) {
 		t.Parallel()
-		t.Skip()
 
 		test(t,
 			// language=cadence
@@ -414,7 +499,6 @@ func TestCapConsMigration(t *testing.T) {
 
 	t.Run("optional", func(t *testing.T) {
 		t.Parallel()
-		t.Skip()
 
 		test(t,
 			// language=cadence
@@ -435,7 +519,6 @@ func TestCapConsMigration(t *testing.T) {
 
 	t.Run("array", func(t *testing.T) {
 		t.Parallel()
-		t.Skip()
 
 		test(t,
 			// language=cadence
@@ -456,7 +539,6 @@ func TestCapConsMigration(t *testing.T) {
 
 	t.Run("dictionary, value", func(t *testing.T) {
 		t.Parallel()
-		t.Skip()
 
 		test(t,
 			// language=cadence
@@ -477,5 +559,6 @@ func TestCapConsMigration(t *testing.T) {
 
 	// TODO: add more cases
 	// TODO: test non existing
+	// TODO: account link
 
 }
