@@ -25,6 +25,8 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+// TODO: remove once migrated
+
 // Deprecated: PathCapabilityValue
 type PathCapabilityValue struct {
 	BorrowType StaticType
@@ -49,8 +51,11 @@ func (v *PathCapabilityValue) Walk(_ *Interpreter, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) StaticType(_ *Interpreter) StaticType {
-	panic(errors.NewUnreachableError())
+func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
+	return NewCapabilityStaticType(
+		inter,
+		v.BorrowType,
+	)
 }
 
 func (v *PathCapabilityValue) IsImportable(_ *Interpreter) bool {
@@ -90,7 +95,23 @@ func (v *PathCapabilityValue) ConformsToStaticType(
 }
 
 func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
-	panic(errors.NewUnreachableError())
+	otherCapability, ok := other.(*PathCapabilityValue)
+	if !ok {
+		return false
+	}
+
+	// BorrowType is optional
+
+	if v.BorrowType == nil {
+		if otherCapability.BorrowType != nil {
+			return false
+		}
+	} else if !v.BorrowType.Equal(otherCapability.BorrowType) {
+		return false
+	}
+
+	return otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
+		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
 }
 
 func (*PathCapabilityValue) IsStorable() bool {
@@ -98,19 +119,24 @@ func (*PathCapabilityValue) IsStorable() bool {
 }
 
 func (v *PathCapabilityValue) Storable(
-	_ atree.SlabStorage,
-	_ atree.Address,
-	_ uint64,
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
 ) (atree.Storable, error) {
-	panic(errors.NewUnreachableError())
+	return maybeLargeImmutableStorable(
+		v,
+		storage,
+		address,
+		maxInlineSize,
+	)
 }
 
 func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
-	panic(errors.NewUnreachableError())
+	return false
 }
 
 func (*PathCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
-	panic(errors.NewUnreachableError())
+	return false
 }
 
 func (v *PathCapabilityValue) Transfer(
@@ -138,24 +164,79 @@ func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter) {
 }
 
 func (v *PathCapabilityValue) ByteSize() uint32 {
-	panic(errors.NewUnreachableError())
+	return mustStorableSize(v)
 }
 
 func (v *PathCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	panic(errors.NewUnreachableError())
+	return v, nil
 }
 
 func (v *PathCapabilityValue) ChildStorables() []atree.Storable {
-	panic(errors.NewUnreachableError())
-}
-
-func (v *PathCapabilityValue) Encode(_ *atree.Encoder) error {
-	panic(errors.NewUnreachableError())
+	return []atree.Storable{
+		v.Address,
+		v.Path,
+	}
 }
 
 func (v *PathCapabilityValue) AddressPath() AddressPath {
 	return AddressPath{
 		Address: common.Address(v.Address),
 		Path:    v.Path,
+	}
+}
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// encodedPathCapabilityValueAddressFieldKey    uint64 = 0
+	// encodedPathCapabilityValuePathFieldKey       uint64 = 1
+	// encodedPathCapabilityValueBorrowTypeFieldKey uint64 = 2
+
+	// !!! *WARNING* !!!
+	//
+	// encodedPathCapabilityValueLength MUST be updated when new element is added.
+	// It is used to verify encoded capability length during decoding.
+	encodedPathCapabilityValueLength = 3
+)
+
+// Encode encodes PathCapabilityValue as
+//
+//	cbor.Tag{
+//				Number: CBORTagPathCapabilityValue,
+//				Content: []any{
+//						encodedPathCapabilityValueAddressFieldKey:    AddressValue(v.Address),
+//						encodedPathCapabilityValuePathFieldKey:       PathValue(v.Path),
+//						encodedPathCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
+//					},
+//	}
+func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
+	// Encode tag number and array head
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagPathCapabilityValue,
+		// array, 3 items follow
+		0x83,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Encode address at array index encodedPathCapabilityValueAddressFieldKey
+	err = v.Address.Encode(e)
+	if err != nil {
+		return err
+	}
+
+	// Encode path at array index encodedPathCapabilityValuePathFieldKey
+	err = v.Path.Encode(e)
+	if err != nil {
+		return err
+	}
+
+	// Encode borrow type at array index encodedPathCapabilityValueBorrowTypeFieldKey
+
+	if v.BorrowType == nil {
+		return e.CBOR.EncodeNil()
+	} else {
+		return v.BorrowType.Encode(e.CBOR)
 	}
 }

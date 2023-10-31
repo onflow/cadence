@@ -25,6 +25,8 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+// TODO: remove once migrated
+
 // Deprecated: LinkValue
 type LinkValue interface {
 	Value
@@ -36,6 +38,8 @@ type PathLinkValue struct {
 	Type       StaticType
 	TargetPath PathValue
 }
+
+var EmptyPathLinkValue = PathLinkValue{}
 
 var _ Value = PathLinkValue{}
 var _ atree.Value = PathLinkValue{}
@@ -82,16 +86,22 @@ func (v PathLinkValue) ConformsToStaticType(
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Equal(_ *Interpreter, _ LocationRange, _ Value) bool {
-	panic(errors.NewUnreachableError())
+func (v PathLinkValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+	otherLink, ok := other.(PathLinkValue)
+	if !ok {
+		return false
+	}
+
+	return otherLink.TargetPath.Equal(interpreter, locationRange, v.TargetPath) &&
+		otherLink.Type.Equal(v.Type)
 }
 
 func (PathLinkValue) IsStorable() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	panic(errors.NewUnreachableError())
+func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (PathLinkValue) NeedsStoreTo(_ atree.Address) bool {
@@ -125,15 +135,17 @@ func (PathLinkValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v PathLinkValue) ByteSize() uint32 {
-	panic(errors.NewUnreachableError())
+	return mustStorableSize(v)
 }
 
 func (v PathLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	panic(errors.NewUnreachableError())
+	return v, nil
 }
 
 func (v PathLinkValue) ChildStorables() []atree.Storable {
-	panic(errors.NewUnreachableError())
+	return []atree.Storable{
+		v.TargetPath,
+	}
 }
 
 // Deprecated: AccountLinkValue
@@ -236,4 +248,63 @@ func (v AccountLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 
 func (v AccountLinkValue) ChildStorables() []atree.Storable {
 	panic(errors.NewUnreachableError())
+}
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// encodedPathLinkValueTargetPathFieldKey uint64 = 0
+	// encodedPathLinkValueTypeFieldKey       uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedPathLinkValueLength MUST be updated when new element is added.
+	// It is used to verify encoded link length during decoding.
+	encodedPathLinkValueLength = 2
+)
+
+// Encode encodes PathLinkValue as
+//
+//	cbor.Tag{
+//				Number: CBORTagPathLinkValue,
+//				Content: []any{
+//					encodedPathLinkValueTargetPathFieldKey: PathValue(v.TargetPath),
+//					encodedPathLinkValueTypeFieldKey:       StaticType(v.Type),
+//				},
+//	}
+func (v PathLinkValue) Encode(e *atree.Encoder) error {
+	// Encode tag number and array head
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagPathLinkValue,
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+	// Encode path at array index encodedPathLinkValueTargetPathFieldKey
+	err = v.TargetPath.Encode(e)
+	if err != nil {
+		return err
+	}
+	// Encode type at array index encodedPathLinkValueTypeFieldKey
+	return v.Type.Encode(e.CBOR)
+}
+
+// cborAccountLinkValue represents the CBOR value:
+//
+//	cbor.Tag{
+//		Number: CBORTagAccountLinkValue,
+//		Content: nil
+//	}
+var cborAccountLinkValue = []byte{
+	// tag
+	0xd8, CBORTagAccountLinkValue,
+	// null
+	0xf6,
+}
+
+// Encode writes a value of type AccountValue to the encoder
+func (AccountLinkValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeRawBytes(cborAccountLinkValue)
 }

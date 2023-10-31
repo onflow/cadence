@@ -195,11 +195,14 @@ const (
 	// Storage
 
 	CBORTagPathValue
-	_ // DO NOT REPLACE! used to be used for path capabilities
+	// Deprecated: CBORTagPathCapabilityValue
+	CBORTagPathCapabilityValue
 	_ // DO NOT REPLACE! used to be used for storage references
-	_ // DO NOT REPLACE! used to be used for path links
+	// Deprecated: CBORTagPathLinkValue
+	CBORTagPathLinkValue
 	CBORTagPublishedValue
-	_ // DO NOT REPLACE! used to be used for account links
+	// Deprecated: CBORTagAccountLinkValue
+	CBORTagAccountLinkValue
 	CBORTagStorageCapabilityControllerValue
 	CBORTagAccountCapabilityControllerValue
 	CBORTagCapabilityValue
