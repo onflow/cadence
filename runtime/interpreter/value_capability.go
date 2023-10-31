@@ -192,7 +192,7 @@ func (v *CapabilityValue) Transfer(
 	_ map[atree.ValueID]struct{},
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter)
+		v.DeepRemove(interpreter, true)
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
@@ -206,8 +206,8 @@ func (v *CapabilityValue) Clone(interpreter *Interpreter) Value {
 	)
 }
 
-func (v *CapabilityValue) DeepRemove(interpreter *Interpreter) {
-	v.Address.DeepRemove(interpreter)
+func (v *CapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
+	v.Address.DeepRemove(interpreter, false)
 }
 
 func (v *CapabilityValue) ByteSize() uint32 {

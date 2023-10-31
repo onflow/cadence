@@ -193,7 +193,7 @@ func (v *AccountCapabilityControllerValue) Clone(_ *Interpreter) Value {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) DeepRemove(_ *Interpreter) {
+func (v *AccountCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

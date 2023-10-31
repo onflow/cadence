@@ -130,7 +130,7 @@ func (v PathLinkValue) Clone(_ *Interpreter) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (PathLinkValue) DeepRemove(_ *Interpreter) {
+func (PathLinkValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -235,7 +235,7 @@ func (AccountLinkValue) Clone(_ *Interpreter) Value {
 	return AccountLinkValue{}
 }
 
-func (AccountLinkValue) DeepRemove(_ *Interpreter) {
+func (AccountLinkValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

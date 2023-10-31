@@ -146,7 +146,7 @@ func (v *PathCapabilityValue) Transfer(
 	_ map[atree.ValueID]struct{},
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter)
+		v.DeepRemove(interpreter, true)
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
@@ -156,9 +156,9 @@ func (v *PathCapabilityValue) Clone(_ *Interpreter) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter) {
-	v.Address.DeepRemove(interpreter)
-	v.Path.DeepRemove(interpreter)
+func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
+	v.Address.DeepRemove(interpreter, false)
+	v.Path.DeepRemove(interpreter, false)
 }
 
 func (v *PathCapabilityValue) ByteSize() uint32 {

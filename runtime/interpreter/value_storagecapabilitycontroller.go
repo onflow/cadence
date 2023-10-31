@@ -219,7 +219,7 @@ func (v *StorageCapabilityControllerValue) Clone(interpreter *Interpreter) Value
 	}
 }
 
-func (v *StorageCapabilityControllerValue) DeepRemove(_ *Interpreter) {
+func (v *StorageCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

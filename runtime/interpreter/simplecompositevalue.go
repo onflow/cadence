@@ -291,6 +291,6 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *SimpleCompositeValue) DeepRemove(_ *Interpreter) {
+func (v *SimpleCompositeValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
