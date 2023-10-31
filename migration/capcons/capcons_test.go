@@ -277,7 +277,7 @@ func TestCapConsMigration(t *testing.T) {
 					Name: name,
 					Type: &sema.CapabilityType{},
 					Kind: common.DeclarationKindConstant,
-					Value: &interpreter.PathCapabilityValue{
+					Value: &interpreter.PathCapabilityValue{ //nolint:staticcheck
 						BorrowType: rReferenceStaticType,
 						Path: interpreter.PathValue{
 							Domain:     domain,
@@ -311,7 +311,7 @@ func TestCapConsMigration(t *testing.T) {
 				SetValue(
 					inter,
 					interpreter.StringStorageMapKey(pathIdentifier),
-					interpreter.PathLinkValue{
+					interpreter.PathLinkValue{ //nolint:staticcheck
 						Type: rReferenceStaticType,
 						TargetPath: interpreter.PathValue{
 							Domain:     targetDomain,

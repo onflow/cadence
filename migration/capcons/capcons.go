@@ -287,7 +287,7 @@ func (m *Migration) migratePathCapability(
 	locationRange := interpreter.EmptyLocationRange
 
 	switch value := value.(type) {
-	case *interpreter.PathCapabilityValue:
+	case *interpreter.PathCapabilityValue: //nolint:staticcheck
 
 		// Migrate the path capability to an ID capability
 
@@ -385,7 +385,7 @@ func (m *Migration) migratePathCapability(
 
 			switch key.(type) {
 			case *interpreter.CapabilityValue,
-				*interpreter.PathCapabilityValue:
+				*interpreter.PathCapabilityValue: //nolint:staticcheck
 
 				panic(errors.NewUnreachableError())
 			}
@@ -460,14 +460,14 @@ func (m *Migration) migrateLinkToCapabilityController(
 		// Already migrated
 		return 0
 
-	case interpreter.PathLinkValue:
+	case interpreter.PathLinkValue: //nolint:staticcheck
 		var ok bool
 		borrowStaticType, ok = readValue.Type.(*interpreter.ReferenceStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-	case interpreter.AccountLinkValue:
+	case interpreter.AccountLinkValue: //nolint:staticcheck
 		borrowStaticType = interpreter.NewReferenceStaticType(
 			nil,
 			interpreter.FullyEntitledAccountAccess,
@@ -569,7 +569,7 @@ func (m *Migration) migrateLinkToCapabilityController(
 var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(
 	nil,
 	interpreter.UnauthorizedAccess,
-	interpreter.PrimitiveStaticTypeAuthAccount,
+	interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck
 )
 
 func (m *Migration) getPathCapabilityFinalTarget(
@@ -623,7 +623,7 @@ func (m *Migration) getPathCapabilityFinalTarget(
 			}
 
 			switch value := value.(type) {
-			case interpreter.PathLinkValue:
+			case interpreter.PathLinkValue: //nolint:staticcheck
 				allowedType := m.interpreter.MustConvertStaticToSemaType(value.Type)
 
 				if !sema.IsSubType(allowedType, wantedBorrowType) {
@@ -634,7 +634,7 @@ func (m *Migration) getPathCapabilityFinalTarget(
 				paths = append(paths, targetPath)
 				path = targetPath
 
-			case interpreter.AccountLinkValue:
+			case interpreter.AccountLinkValue: //nolint:staticcheck
 				if !m.interpreter.IsSubTypeOfSemaType(
 					authAccountReferenceStaticType,
 					wantedBorrowType,
