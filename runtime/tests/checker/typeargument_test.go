@@ -54,29 +54,6 @@ func TestCheckTypeArguments(t *testing.T) {
 		require.Nil(t, capType.(*sema.CapabilityType).BorrowType)
 	})
 
-	t.Run("inclusive range, no instantiation", func(t *testing.T) {
-
-		t.Parallel()
-
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
-
-		_, err := ParseAndCheckWithOptions(t,
-			`
-              let inclusiveRange: InclusiveRange = InclusiveRange(1, 10)
-            `,
-			ParseAndCheckOptions{
-				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
-				},
-			},
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
-	})
-
 	t.Run("inclusive range, instantiation with more than arguments", func(t *testing.T) {
 
 		t.Parallel()
@@ -176,6 +153,79 @@ func TestCheckTypeArguments(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidTypeArgumentCountError{}, errs[0])
 	})
+}
+
+type checkParameterizedTypeIsInstantiatedTestCase struct {
+	name string
+	code string
+}
+
+func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+	options := ParseAndCheckOptions{
+		Config: &sema.Config{
+			BaseValueActivation: baseValueActivation,
+		},
+	}
+
+	runTestCase := func(t *testing.T, testCase checkParameterizedTypeIsInstantiatedTestCase) {
+		t.Run(testCase.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckWithOptions(t,
+				testCase.code,
+				options,
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+		})
+	}
+
+	testCases := []checkParameterizedTypeIsInstantiatedTestCase{
+		{
+			name: "InclusiveRange",
+			code: "let inclusiveRange: InclusiveRange = InclusiveRange(1, 10)",
+		},
+		{
+			name: "VariableSizedArray with InclusiveRange",
+			code: "let r: [InclusiveRange] = []",
+		},
+		{
+			name: "ConstantSizedType with InclusiveRange",
+			code: "let r: [InclusiveRange; 2] = [InclusiveRange(1, 2), InclusiveRange(3, 4)]",
+		},
+		{
+			name: "OptionalType with InclusiveRange",
+			code: "let r: InclusiveRange? = nil",
+		},
+		{
+			name: "DictionaryType with InclusiveRange",
+			code: "let r: {Int: InclusiveRange} = {}",
+		},
+		{
+			name: "Struct with InclusiveRange",
+			code: `
+				pub struct Foo {
+					pub let a: InclusiveRange
+
+					init() {
+						self.a = InclusiveRange(1, 10)
+					}
+				}
+			`,
+		},
+	}
+
+	for _, test := range testCases {
+		runTestCase(t, test)
+	}
 }
 
 func TestCheckTypeArgumentSubtyping(t *testing.T) {

@@ -2069,37 +2069,74 @@ func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition
 }
 
 func (checker *Checker) checkParameterizedTypeIsInstantiated(ty Type, pos ast.HasPosition) {
-	parameterizedType, ok := ty.(ParameterizedType)
-	if !ok {
-		return
-	}
+	switch t := ty.(type) {
+	case *OptionalType:
+		checker.checkParameterizedTypeIsInstantiated(t.Type, pos)
 
-	typeArgs := parameterizedType.TypeArguments()
-	typeParameters := parameterizedType.TypeParameters()
+	case ArrayType:
+		checker.checkParameterizedTypeIsInstantiated(t.ElementType(false), pos)
 
-	typeArgumentCount := len(typeArgs)
-	typeParameterCount := len(typeParameters)
+	case *DictionaryType:
+		checker.checkParameterizedTypeIsInstantiated(t.KeyType, pos)
+		checker.checkParameterizedTypeIsInstantiated(t.ValueType, pos)
 
-	if typeArgumentCount != typeParameterCount {
-		checker.report(
-			&InvalidTypeArgumentCountError{
-				TypeParameterCount: typeParameterCount,
-				TypeArgumentCount:  typeArgumentCount,
-				Range: ast.NewRange(
-					checker.memoryGauge,
-					pos.StartPosition(),
-					pos.EndPosition(checker.memoryGauge),
-				),
-			},
-		)
-	}
+	case *ReferenceType:
+		checker.checkParameterizedTypeIsInstantiated(t.Type, pos)
 
-	// Ensure that each non-optional typeparameter is non-nil.
-	for index, typeParam := range typeParameters {
-		if !typeParam.Optional && typeArgs[index] == nil {
+	case *FunctionType:
+		for _, tyParam := range t.TypeParameters {
+			checker.checkParameterizedTypeIsInstantiated(tyParam.TypeBound, pos)
+		}
+
+		for _, param := range t.Parameters {
+			checker.checkParameterizedTypeIsInstantiated(param.TypeAnnotation.Type, pos)
+		}
+
+		checker.checkParameterizedTypeIsInstantiated(t.ReturnTypeAnnotation.Type, pos)
+
+	case *RestrictedType:
+		checker.checkParameterizedTypeIsInstantiated(t.Type, pos)
+
+	case *CompositeType:
+		if t.EnumRawType != nil {
+			checker.checkParameterizedTypeIsInstantiated(t.EnumRawType, pos)
+		}
+		if t.containerType != nil {
+			checker.checkParameterizedTypeIsInstantiated(t.containerType, pos)
+		}
+		if t.baseType != nil {
+			checker.checkParameterizedTypeIsInstantiated(t.baseType, pos)
+		}
+
+		for _, typ := range t.ImplicitTypeRequirementConformances {
+			checker.checkParameterizedTypeIsInstantiated(typ, pos)
+		}
+
+		for _, typ := range t.ExplicitInterfaceConformances {
+			checker.checkParameterizedTypeIsInstantiated(typ, pos)
+		}
+
+	case *InterfaceType:
+		if t.containerType != nil {
+			checker.checkParameterizedTypeIsInstantiated(t.containerType, pos)
+		}
+
+		for _, param := range t.InitializerParameters {
+			checker.checkParameterizedTypeIsInstantiated(param.TypeAnnotation.Type, pos)
+		}
+
+	case ParameterizedType:
+		typeArgs := t.TypeArguments()
+		typeParameters := t.TypeParameters()
+
+		typeArgumentCount := len(typeArgs)
+		typeParameterCount := len(typeParameters)
+
+		if typeArgumentCount != typeParameterCount {
 			checker.report(
-				&MissingTypeArgumentError{
-					TypeArgumentName: typeParam.Name,
+				&InvalidTypeArgumentCountError{
+					TypeParameterCount: typeParameterCount,
+					TypeArgumentCount:  typeArgumentCount,
 					Range: ast.NewRange(
 						checker.memoryGauge,
 						pos.StartPosition(),
@@ -2107,6 +2144,22 @@ func (checker *Checker) checkParameterizedTypeIsInstantiated(ty Type, pos ast.Ha
 					),
 				},
 			)
+		}
+
+		// Ensure that each non-optional typeparameter is non-nil.
+		for index, typeParam := range typeParameters {
+			if !typeParam.Optional && typeArgs[index] == nil {
+				checker.report(
+					&MissingTypeArgumentError{
+						TypeArgumentName: typeParam.Name,
+						Range: ast.NewRange(
+							checker.memoryGauge,
+							pos.StartPosition(),
+							pos.EndPosition(checker.memoryGauge),
+						),
+					},
+				)
+			}
 		}
 	}
 }
