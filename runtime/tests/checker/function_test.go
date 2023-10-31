@@ -537,6 +537,7 @@ func TestCheckNativeFunctionDeclaration(t *testing.T) {
 
 		assert.Equal(t,
 			sema.NewTypeAnnotation(&sema.FunctionType{
+				Access: sema.PrimitiveAccess(ast.AccessNotSpecified),
 				Parameters: []sema.Parameter{
 					{
 						Identifier:     "foo",
