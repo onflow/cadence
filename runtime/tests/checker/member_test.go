@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -274,6 +275,7 @@ func TestCheckFunctionTypeReceiverType(t *testing.T) {
 		assert.Equal(t,
 			&sema.FunctionType{
 				Purity:               sema.FunctionPurityImpure,
+				Access:               sema.PrimitiveAccess(ast.AccessNotSpecified),
 				Parameters:           []sema.Parameter{},
 				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
