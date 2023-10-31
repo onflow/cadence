@@ -45,6 +45,7 @@ import (
 
 var emptyImpureFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
+	sema.UnauthorizedAccess,
 	nil,
 	sema.VoidTypeAnnotation,
 )
@@ -3558,6 +3559,7 @@ func functionTypeFunction(invocation Invocation) Value {
 		interpreter,
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
+			sema.UnauthorizedAccess,
 			parameterTypes,
 			sema.NewTypeAnnotation(returnType),
 		),

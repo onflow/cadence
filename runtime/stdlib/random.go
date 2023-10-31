@@ -36,6 +36,7 @@ Follow best practices to prevent security issues when using this function
 
 var unsafeRandomFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
+	sema.UnauthorizedAccess,
 	nil,
 	sema.UInt64TypeAnnotation,
 )

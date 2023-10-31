@@ -406,6 +406,7 @@ const IsInstanceFunctionName = "isInstance"
 
 var IsInstanceFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -426,6 +427,7 @@ const GetTypeFunctionName = "getType"
 
 var GetTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	nil,
 	MetaTypeAnnotation,
 )
@@ -440,6 +442,7 @@ const ToStringFunctionName = "toString"
 
 var ToStringFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	nil,
 	StringTypeAnnotation,
 )
@@ -477,6 +480,7 @@ func FromStringFunctionDocstring(ty Type) string {
 func FromStringFunctionType(ty Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityView,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -506,6 +510,7 @@ func FromBigEndianBytesFunctionDocstring(ty Type) string {
 func FromBigEndianBytesFunctionType(ty Type) *FunctionType {
 	return &FunctionType{
 		Purity: FunctionPurityView,
+		Access: UnauthorizedAccess,
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -527,6 +532,7 @@ const ToBigEndianBytesFunctionName = "toBigEndianBytes"
 
 var ToBigEndianBytesFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	nil,
 	ByteArrayTypeAnnotation,
 )
@@ -809,6 +815,7 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 
 	return &FunctionType{
 		Purity: functionPurity,
+		Access: UnauthorizedAccess,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -819,6 +826,7 @@ func OptionalTypeMapFunctionType(typ Type) *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(
 					&FunctionType{
 						Purity: functionPurity,
+						Access: UnauthorizedAccess,
 						Parameters: []Parameter{
 							{
 								Label:          ArgumentLabelNotRequired,
@@ -1025,6 +1033,7 @@ var SaturatingArithmeticTypeFunctionTypes = map[Type]*FunctionType{}
 func registerSaturatingArithmeticType(t Type) {
 	SaturatingArithmeticTypeFunctionTypes[t] = NewSimpleFunctionType(
 		FunctionPurityView,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2372,6 +2381,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
+		UnauthorizedAccess,
 		nil,
 		NewTypeAnnotation(elementType),
 	)
@@ -2380,6 +2390,7 @@ func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
 func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
+		UnauthorizedAccess,
 		nil,
 		NewTypeAnnotation(elementType),
 	)
@@ -2388,6 +2399,7 @@ func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
 func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Identifier:     "at",
@@ -2401,6 +2413,7 @@ func ArrayRemoveFunctionType(elementType Type) *FunctionType {
 func ArrayInsertFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Identifier:     "at",
@@ -2420,6 +2433,7 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 	typeAnnotation := NewTypeAnnotation(arrayType)
 	return NewSimpleFunctionType(
 		FunctionPurityView,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2434,6 +2448,7 @@ func ArrayConcatFunctionType(arrayType Type) *FunctionType {
 func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityView,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Identifier:     "of",
@@ -2448,6 +2463,7 @@ func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityView,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2462,6 +2478,7 @@ func ArrayContainsFunctionType(elementType Type) *FunctionType {
 func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2476,6 +2493,7 @@ func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
 func ArrayAppendFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2490,6 +2508,7 @@ func ArrayAppendFunctionType(elementType Type) *FunctionType {
 func ArraySliceFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityView,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Identifier:     "from",
@@ -2509,6 +2528,7 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
 	return &FunctionType{
 		Parameters:           []Parameter{},
+		Access:               UnauthorizedAccess,
 		ReturnTypeAnnotation: NewTypeAnnotation(arrayType),
 		Purity:               FunctionPurityView,
 	}
@@ -2518,6 +2538,7 @@ func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *
 	// fun filter(_ function: ((T): Bool)): [T]
 	// funcType: elementType -> Bool
 	funcType := &FunctionType{
+		Access: UnauthorizedAccess,
 		Parameters: []Parameter{
 			{
 				Identifier:     "element",
@@ -2529,6 +2550,7 @@ func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *
 	}
 
 	return &FunctionType{
+		Access: UnauthorizedAccess,
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -2567,6 +2589,7 @@ func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *
 
 	// transformFuncType: elementType -> U
 	transformFuncType := &FunctionType{
+		Access: UnauthorizedAccess,
 		Parameters: []Parameter{
 			{
 				Identifier:     "element",
@@ -2577,6 +2600,7 @@ func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *
 	}
 
 	return &FunctionType{
+		Access: UnauthorizedAccess,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -3153,6 +3177,7 @@ func (p FunctionPurity) String() string {
 
 type FunctionType struct {
 	Purity                   FunctionPurity
+	Access                   Access
 	ReturnTypeAnnotation     TypeAnnotation
 	Arity                    *Arity
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
@@ -3166,11 +3191,13 @@ type FunctionType struct {
 
 func NewSimpleFunctionType(
 	purity FunctionPurity,
+	access Access,
 	parameters []Parameter,
 	returnTypeAnnotation TypeAnnotation,
 ) *FunctionType {
 	return &FunctionType{
 		Purity:               purity,
+		Access:               access,
 		Parameters:           parameters,
 		ReturnTypeAnnotation: returnTypeAnnotation,
 	}
@@ -3524,6 +3551,7 @@ func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
 
 		return &FunctionType{
 			Purity:               t.Purity,
+			Access:               t.Access,
 			TypeParameters:       rewrittenTypeParameters,
 			Parameters:           rewrittenParameters,
 			ReturnTypeAnnotation: NewTypeAnnotation(rewrittenReturnType),
@@ -3641,6 +3669,7 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 	return &FunctionType{
 		Purity:               t.Purity,
+		Access:               t.Access,
 		Parameters:           newParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(newReturnType),
 		Arity:                t.Arity,
@@ -3696,7 +3725,7 @@ func (t *FunctionType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParam
 
 	returnType := t.ReturnTypeAnnotation.Map(gauge, typeParamMap, f)
 
-	functionType := NewSimpleFunctionType(t.Purity, newParameters, returnType)
+	functionType := NewSimpleFunctionType(t.Purity, t.Access, newParameters, returnType)
 	functionType.TypeParameters = newTypeParameters
 	return f(functionType)
 }
@@ -4020,6 +4049,7 @@ func init() {
 func NumberConversionFunctionType(numberType Type) *FunctionType {
 	return &FunctionType{
 		Purity: FunctionPurityView,
+		Access: UnauthorizedAccess,
 		Parameters: []Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -4054,6 +4084,7 @@ func baseFunctionVariable(name string, ty *FunctionType, docString string) *Vari
 
 var AddressConversionFunctionType = &FunctionType{
 	Purity: FunctionPurityView,
+	Access: UnauthorizedAccess,
 	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -4084,6 +4115,7 @@ Returns an Address from the given byte array
 
 var AddressTypeFromBytesFunctionType = &FunctionType{
 	Purity: FunctionPurityView,
+	Access: UnauthorizedAccess,
 	Parameters: []Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -4189,6 +4221,7 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 func pathConversionFunctionType(pathType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityView,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Identifier:     "identifier",
@@ -4225,6 +4258,7 @@ func init() {
 			typeName,
 			&FunctionType{
 				Purity:               FunctionPurityView,
+				Access:               UnauthorizedAccess,
 				TypeParameters:       []*TypeParameter{{Name: "T"}},
 				ReturnTypeAnnotation: MetaTypeAnnotation,
 			},
@@ -4706,6 +4740,7 @@ func CompositeForEachAttachmentFunctionType(t common.CompositeKind) *FunctionTyp
 				Identifier: "f",
 				TypeAnnotation: NewTypeAnnotation(
 					&FunctionType{
+						Access: UnauthorizedAccess,
 						Parameters: []Parameter{
 							{
 								TypeAnnotation: NewTypeAnnotation(
@@ -4808,6 +4843,7 @@ func (t *CompositeType) SetNestedType(name string, nestedType ContainedType) {
 func (t *CompositeType) ConstructorFunctionType() *FunctionType {
 	return &FunctionType{
 		IsConstructor:        true,
+		Access:               UnauthorizedAccess,
 		Purity:               t.ConstructorPurity,
 		Parameters:           t.ConstructorParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(t),
@@ -4817,6 +4853,7 @@ func (t *CompositeType) ConstructorFunctionType() *FunctionType {
 func (t *CompositeType) InitializerFunctionType() *FunctionType {
 	return &FunctionType{
 		IsConstructor:        true,
+		Access:               UnauthorizedAccess,
 		Purity:               t.ConstructorPurity,
 		Parameters:           t.ConstructorParameters,
 		ReturnTypeAnnotation: VoidTypeAnnotation,
@@ -5812,6 +5849,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityView,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -5826,6 +5864,7 @@ func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
 func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Identifier:     "key",
@@ -5848,6 +5887,7 @@ func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
 func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Identifier:     "key",
@@ -5868,6 +5908,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 	// fun(K): Bool
 	funcType := NewSimpleFunctionType(
 		functionPurity,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Identifier:     "key",
@@ -5880,6 +5921,7 @@ func DictionaryForEachKeyFunctionType(t *DictionaryType) *FunctionType {
 	// fun forEachKey(_ function: fun(K): Bool): Void
 	return NewSimpleFunctionType(
 		functionPurity,
+		UnauthorizedAccess,
 		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
@@ -6318,6 +6360,7 @@ const AddressTypeToBytesFunctionName = `toBytes`
 
 var AddressTypeToBytesFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	nil,
 	ByteArrayTypeAnnotation,
 )
@@ -6806,6 +6849,7 @@ var _ Type = &TransactionType{}
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
+		UnauthorizedAccess,
 		append(t.Parameters, t.PrepareParameters...),
 		VoidTypeAnnotation,
 	)
@@ -6814,6 +6858,7 @@ func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 func (t *TransactionType) PrepareFunctionType() *FunctionType {
 	return &FunctionType{
 		Purity:               FunctionPurityImpure,
+		Access:               UnauthorizedAccess,
 		IsConstructor:        true,
 		Parameters:           t.PrepareParameters,
 		ReturnTypeAnnotation: VoidTypeAnnotation,
@@ -6822,6 +6867,7 @@ func (t *TransactionType) PrepareFunctionType() *FunctionType {
 
 var transactionTypeExecuteFunctionType = &FunctionType{
 	Purity:               FunctionPurityImpure,
+	Access:               UnauthorizedAccess,
 	IsConstructor:        true,
 	ReturnTypeAnnotation: VoidTypeAnnotation,
 }
@@ -7447,6 +7493,7 @@ func CapabilityTypeBorrowFunctionType(borrowType Type) *FunctionType {
 
 	return &FunctionType{
 		Purity:         FunctionPurityView,
+		Access:         UnauthorizedAccess,
 		TypeParameters: typeParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			&OptionalType{
@@ -7468,6 +7515,7 @@ func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 
 	return &FunctionType{
 		Purity:               FunctionPurityView,
+		Access:               UnauthorizedAccess,
 		TypeParameters:       typeParameters,
 		ReturnTypeAnnotation: BoolTypeAnnotation,
 	}
@@ -7698,6 +7746,7 @@ var PublicKeyArrayTypeAnnotation = NewTypeAnnotation(PublicKeyArrayType)
 
 var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Identifier:     "signature",
@@ -7721,6 +7770,7 @@ var PublicKeyVerifyFunctionType = NewSimpleFunctionType(
 
 var PublicKeyVerifyPoPFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,

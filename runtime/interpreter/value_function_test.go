@@ -45,6 +45,7 @@ func TestFunctionStaticType(t *testing.T) {
 
 		hostFunctionType := sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
+			sema.UnauthorizedAccess,
 			nil,
 			sema.BoolTypeAnnotation,
 		)
@@ -71,6 +72,7 @@ func TestFunctionStaticType(t *testing.T) {
 
 		hostFunctionType := sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
+			sema.UnauthorizedAccess,
 			nil,
 			sema.BoolTypeAnnotation,
 		)

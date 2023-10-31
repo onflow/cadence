@@ -9977,6 +9977,7 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
 				nil,
 				&sema.FunctionType{
 					Purity:               sema.FunctionPurityView,
+					Access:               sema.UnauthorizedAccess,
 					ReturnTypeAnnotation: sema.MetaTypeAnnotation,
 				},
 			),

@@ -1312,11 +1312,13 @@ func (checker *Checker) checkCompositeLikeConformance(
 
 		initializerType := NewSimpleFunctionType(
 			compositeType.ConstructorPurity,
+			UnauthorizedAccess,
 			compositeType.ConstructorParameters,
 			VoidTypeAnnotation,
 		)
 		interfaceInitializerType := NewSimpleFunctionType(
 			conformance.InitializerPurity,
+			UnauthorizedAccess,
 			conformance.InitializerParameters,
 			VoidTypeAnnotation,
 		)
@@ -2085,6 +2087,7 @@ func (checker *Checker) checkSpecialFunction(
 
 	functionType := NewSimpleFunctionType(
 		purity,
+		fnAccess,
 		parameters,
 		VoidTypeAnnotation,
 	)

@@ -128,6 +128,7 @@ func init() {
 
 var StringTypeConcatFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -146,6 +147,7 @@ Returns a new string which contains the given string concatenated to the end of 
 
 var StringTypeSliceFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Identifier:     "from",
@@ -192,6 +194,7 @@ var ByteArrayArrayTypeAnnotation = NewTypeAnnotation(ByteArrayArrayType)
 
 var StringTypeDecodeHexFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	nil,
 	ByteArrayTypeAnnotation,
 )
@@ -219,6 +222,7 @@ The byte array of the UTF-8 encoding
 
 var StringTypeToLowerFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	nil,
 	StringTypeAnnotation,
 )
@@ -245,6 +249,7 @@ var StringFunctionType = func() *FunctionType {
 
 	functionType := NewSimpleFunctionType(
 		FunctionPurityView,
+		UnauthorizedAccess,
 		nil,
 		StringTypeAnnotation,
 	)
@@ -302,6 +307,7 @@ var StringFunctionType = func() *FunctionType {
 
 var StringTypeEncodeHexFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -314,6 +320,7 @@ var StringTypeEncodeHexFunctionType = NewSimpleFunctionType(
 
 var StringTypeFromUtf8FunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -330,6 +337,7 @@ var StringTypeFromUtf8FunctionType = NewSimpleFunctionType(
 
 var StringTypeFromCharactersFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -344,6 +352,7 @@ var StringTypeFromCharactersFunctionType = NewSimpleFunctionType(
 
 var StringTypeJoinFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -362,6 +371,7 @@ var StringTypeJoinFunctionType = NewSimpleFunctionType(
 
 var StringTypeSplitFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Identifier:     "separator",
@@ -377,6 +387,7 @@ var StringTypeSplitFunctionType = NewSimpleFunctionType(
 
 var StringTypeReplaceAllFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
+	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Identifier:     "of",
