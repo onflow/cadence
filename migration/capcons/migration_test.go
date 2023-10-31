@@ -301,21 +301,32 @@ func TestMigration(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		for sourceDomain, targetDomain := range map[common.PathDomain]common.PathDomain{
-			common.PathDomainPublic:  common.PathDomainPrivate,
-			common.PathDomainPrivate: common.PathDomainStorage,
+		for sourcePath, targetPath := range map[interpreter.PathValue]interpreter.PathValue{
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "r",
+			}: {
+				Domain:     common.PathDomainPrivate,
+				Identifier: "r",
+			},
+			{
+				Domain:     common.PathDomainPrivate,
+				Identifier: "r",
+			}: {
+				Domain:     common.PathDomainStorage,
+				Identifier: "r",
+			},
 		} {
-			const pathIdentifier = "r"
 
-			storage.GetStorageMap(address, sourceDomain.Identifier(), true).
+			storage.GetStorageMap(address, sourcePath.Domain.Identifier(), true).
 				SetValue(
 					inter,
-					interpreter.StringStorageMapKey(pathIdentifier),
+					interpreter.StringStorageMapKey(sourcePath.Identifier),
 					interpreter.PathLinkValue{ //nolint:staticcheck
 						Type: rReferenceStaticType,
 						TargetPath: interpreter.PathValue{
-							Domain:     targetDomain,
-							Identifier: pathIdentifier,
+							Domain:     targetPath.Domain,
+							Identifier: targetPath.Identifier,
 						},
 					},
 				)
