@@ -2106,7 +2106,9 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.array)
+	interpreter.maybeValidateAtreeStorage()
 
 	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 
@@ -2178,7 +2180,9 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.array)
+	interpreter.maybeValidateAtreeStorage()
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, locationRange LocationRange, other *ArrayValue) {
@@ -2240,7 +2244,9 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.array)
+	interpreter.maybeValidateAtreeStorage()
 }
 
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
@@ -2269,7 +2275,9 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.array)
+	interpreter.maybeValidateAtreeStorage()
 
 	value := StoredValue(interpreter, storable, interpreter.Storage())
 
@@ -2861,7 +2869,9 @@ func (v *ArrayValue) Transfer(
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
+
 			interpreter.maybeValidateAtreeValue(v.array)
+			interpreter.maybeValidateAtreeStorage()
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -2973,8 +2983,10 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter, atRoot bool) {
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
+	interpreter.maybeValidateAtreeValue(v.array)
 	if atRoot {
-		interpreter.maybeValidateAtreeValue(v.array)
+		interpreter.maybeValidateAtreeStorage()
 	}
 }
 
@@ -17089,7 +17101,9 @@ func (v *CompositeValue) RemoveMember(
 		}
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	// Key
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
@@ -17162,7 +17176,9 @@ func (v *CompositeValue) SetMember(
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	if existingStorable != nil {
 		existingValue := StoredValue(interpreter, existingStorable, config.Storage)
@@ -17671,7 +17687,9 @@ func (v *CompositeValue) Transfer(
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
+
 			interpreter.maybeValidateAtreeValue(v.dictionary)
+			interpreter.maybeValidateAtreeStorage()
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -17834,8 +17852,10 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter, atRoot bool) {
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
+	interpreter.maybeValidateAtreeValue(v.dictionary)
 	if atRoot {
-		interpreter.maybeValidateAtreeValue(v.dictionary)
+		interpreter.maybeValidateAtreeStorage()
 	}
 }
 
@@ -17933,7 +17953,9 @@ func (v *CompositeValue) RemoveField(
 		}
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	// Key
 
@@ -19135,7 +19157,9 @@ func (v *DictionaryValue) Remove(
 		}
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	storage := interpreter.Storage()
 
@@ -19223,7 +19247,9 @@ func (v *DictionaryValue) Insert(
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	if existingValueStorable == nil {
 		return NilOptionalValue
@@ -19508,7 +19534,9 @@ func (v *DictionaryValue) Transfer(
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
+
 			interpreter.maybeValidateAtreeValue(v.dictionary)
+			interpreter.maybeValidateAtreeStorage()
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -19635,8 +19663,10 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, atRoot bool) {
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
+	interpreter.maybeValidateAtreeValue(v.dictionary)
 	if atRoot {
-		interpreter.maybeValidateAtreeValue(v.dictionary)
+		interpreter.maybeValidateAtreeStorage()
 	}
 }
 

@@ -5030,6 +5030,10 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	if config.AtreeValueValidationEnabled {
 		interpreter.ValidateAtreeValue(v)
 	}
+}
+
+func (interpreter *Interpreter) maybeValidateAtreeStorage() {
+	config := interpreter.SharedState.Config
 
 	if config.AtreeStorageValidationEnabled {
 		err := config.Storage.CheckHealth()

@@ -125,7 +125,9 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key StorageMapKey, value 
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
+	interpreter.maybeValidateAtreeStorage()
 
 	existed = existingStorable != nil
 	if existed {
@@ -152,7 +154,9 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (ex
 		}
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
+	interpreter.maybeValidateAtreeStorage()
 
 	// Key
 
