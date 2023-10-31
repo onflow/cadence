@@ -2816,8 +2816,6 @@ func (v *ArrayValue) Transfer(
 		}
 	}
 
-	var res *ArrayValue
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -2833,18 +2831,16 @@ func (v *ArrayValue) Transfer(
 		v.array = nil
 	}
 
-	if res == nil {
-		res = newArrayValueFromAtreeArray(
-			interpreter,
-			v.Type,
-			v.elementSize,
-			array,
-		)
+	res := newArrayValueFromAtreeArray(
+		interpreter,
+		v.Type,
+		v.elementSize,
+		array,
+	)
 
-		res.semaType = v.semaType
-		res.isResourceKinded = v.isResourceKinded
-		res.isDestroyed = v.isDestroyed
-	}
+	res.semaType = v.semaType
+	res.isResourceKinded = v.isResourceKinded
+	res.isDestroyed = v.isDestroyed
 
 	return res
 }
@@ -17387,8 +17383,6 @@ func (v *CompositeValue) Transfer(
 		}
 	}
 
-	var res *CompositeValue
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -17404,31 +17398,29 @@ func (v *CompositeValue) Transfer(
 		v.dictionary = nil
 	}
 
-	if res == nil {
-		info := NewCompositeTypeInfo(
-			interpreter,
-			v.Location,
-			v.QualifiedIdentifier,
-			v.Kind,
-		)
+	info := NewCompositeTypeInfo(
+		interpreter,
+		v.Location,
+		v.QualifiedIdentifier,
+		v.Kind,
+	)
 
-		res = newCompositeValueFromAtreeMap(
-			interpreter,
-			info,
-			dictionary,
-		)
+	res := newCompositeValueFromAtreeMap(
+		interpreter,
+		info,
+		dictionary,
+	)
 
-		res.injectedFields = v.injectedFields
-		res.computedFields = v.computedFields
-		res.NestedVariables = v.NestedVariables
-		res.Functions = v.Functions
-		res.Destructor = v.Destructor
-		res.Stringer = v.Stringer
-		res.isDestroyed = v.isDestroyed
-		res.typeID = v.typeID
-		res.staticType = v.staticType
-		res.base = v.base
-	}
+	res.injectedFields = v.injectedFields
+	res.computedFields = v.computedFields
+	res.NestedVariables = v.NestedVariables
+	res.Functions = v.Functions
+	res.Destructor = v.Destructor
+	res.Stringer = v.Stringer
+	res.isDestroyed = v.isDestroyed
+	res.typeID = v.typeID
+	res.staticType = v.staticType
+	res.base = v.base
 
 	onResourceOwnerChange := config.OnResourceOwnerChange
 
@@ -19083,8 +19075,6 @@ func (v *DictionaryValue) Transfer(
 		}
 	}
 
-	var res *DictionaryValue
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -19100,18 +19090,16 @@ func (v *DictionaryValue) Transfer(
 		v.dictionary = nil
 	}
 
-	if res == nil {
-		res = newDictionaryValueFromAtreeMap(
-			interpreter,
-			v.Type,
-			v.elementSize,
-			dictionary,
-		)
+	res := newDictionaryValueFromAtreeMap(
+		interpreter,
+		v.Type,
+		v.elementSize,
+		dictionary,
+	)
 
-		res.semaType = v.semaType
-		res.isResourceKinded = v.isResourceKinded
-		res.isDestroyed = v.isDestroyed
-	}
+	res.semaType = v.semaType
+	res.isResourceKinded = v.isResourceKinded
+	res.isDestroyed = v.isDestroyed
 
 	return res
 }
@@ -19671,8 +19659,6 @@ func (v *SomeValue) Transfer(
 		}
 	}
 
-	var res *SomeValue
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -19685,11 +19671,9 @@ func (v *SomeValue) Transfer(
 		v.value = nil
 	}
 
-	if res == nil {
-		res = NewSomeValueNonCopying(interpreter, innerValue)
-		res.valueStorable = nil
-		res.isDestroyed = v.isDestroyed
-	}
+	res := NewSomeValueNonCopying(interpreter, innerValue)
+	res.valueStorable = nil
+	res.isDestroyed = v.isDestroyed
 
 	return res
 }

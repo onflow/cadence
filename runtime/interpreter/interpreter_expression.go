@@ -1035,6 +1035,9 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	// Bound functions
 	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
 		self := *boundFunction.Self
+		// Explicitly track the reference here, because the receiver 'act' as a reference,
+		// but a reference is never created during bound function invocation.
+		// This was a fix to the issue: https://github.com/onflow/cadence/pull/2561
 		interpreter.maybeTrackReferencedResourceKindedValue(self)
 	}
 
