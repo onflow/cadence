@@ -62,15 +62,15 @@ type testCapConsMissingCapabilityID struct {
 	addressPath interpreter.AddressPath
 }
 
-type testCapConsMigrationReporter struct {
+type testMigrationReporter struct {
 	linkMigrations           []testCapConsLinkMigration
 	pathCapabilityMigrations []testCapConsPathCapabilityMigration
 	missingCapabilityIDs     []testCapConsMissingCapabilityID
 }
 
-var _ MigrationReporter = &testCapConsMigrationReporter{}
+var _ MigrationReporter = &testMigrationReporter{}
 
-func (t *testCapConsMigrationReporter) MigratedLink(
+func (t *testMigrationReporter) MigratedLink(
 	addressPath interpreter.AddressPath,
 	capabilityID interpreter.UInt64Value,
 ) {
@@ -83,7 +83,7 @@ func (t *testCapConsMigrationReporter) MigratedLink(
 	)
 }
 
-func (t *testCapConsMigrationReporter) MigratedPathCapability(
+func (t *testMigrationReporter) MigratedPathCapability(
 	address common.Address,
 	addressPath interpreter.AddressPath,
 ) {
@@ -96,7 +96,7 @@ func (t *testCapConsMigrationReporter) MigratedPathCapability(
 	)
 }
 
-func (t *testCapConsMigrationReporter) MissingCapabilityID(
+func (t *testMigrationReporter) MissingCapabilityID(
 	address common.Address,
 	addressPath interpreter.AddressPath,
 ) {
@@ -109,7 +109,7 @@ func (t *testCapConsMigrationReporter) MissingCapabilityID(
 	)
 }
 
-func TestCapConsMigration(t *testing.T) {
+func TestMigration(t *testing.T) {
 
 	t.Parallel()
 
@@ -370,7 +370,7 @@ func TestCapConsMigration(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		reporter := &testCapConsMigrationReporter{}
+		reporter := &testMigrationReporter{}
 
 		err = migrator.Migrate(reporter)
 		require.NoError(t, err)
