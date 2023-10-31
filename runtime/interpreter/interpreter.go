@@ -37,6 +37,7 @@ import (
 	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -165,7 +166,7 @@ type CompositeValueFunctionsHandlerFunc func(
 	inter *Interpreter,
 	locationRange LocationRange,
 	compositeValue *CompositeValue,
-) map[string]FunctionValue
+) *FunctionOrderedMap
 
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
@@ -174,7 +175,7 @@ type CompositeValueFunctionsHandlerFunc func(
 // As there is no support for inheritance of concrete types,
 // these are the "leaf" nodes in the call chain, and are functions.
 type CompositeTypeCode struct {
-	CompositeFunctions map[string]FunctionValue
+	CompositeFunctions *FunctionOrderedMap
 }
 
 type FunctionWrapper = func(inner FunctionValue) FunctionValue
@@ -187,7 +188,7 @@ type FunctionWrapper = func(inner FunctionValue) FunctionValue
 type WrapperCode struct {
 	InitializerFunctionWrapper     FunctionWrapper
 	FunctionWrappers               map[string]FunctionWrapper
-	Functions                      map[string]FunctionValue
+	Functions                      *FunctionOrderedMap
 	DefaultDestroyEventConstructor FunctionValue
 }
 
@@ -1195,7 +1196,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	functions := interpreter.compositeFunctions(declaration, lexicalScope)
 
 	if destroyEventConstructor != nil {
-		functions[resourceDefaultDestroyEventName(compositeType)] = destroyEventConstructor
+		functions.Set(resourceDefaultDestroyEventName(compositeType), destroyEventConstructor)
 	}
 
 	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
@@ -1215,14 +1216,16 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, function := range code.Functions { //nolint:maprange
-			if functions[name] != nil {
-				continue
-			}
-			if functions == nil {
-				functions = map[string]FunctionValue{}
-			}
-			functions[name] = function
+		if code.Functions != nil {
+			code.Functions.Foreach(func(name string, function FunctionValue) {
+				if functions == nil {
+					functions = orderedmap.New[FunctionOrderedMap](code.Functions.Len())
+				}
+				if functions.Contains(name) {
+					return
+				}
+				functions.Set(name, function)
+			})
 		}
 
 		// Wrap functions
@@ -1232,11 +1235,12 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
-			functions[name] = functionWrapper(functions[name])
+			fn, _ := functions.Get(name)
+			functions.Set(name, functionWrapper(fn))
 		}
 
 		if code.DefaultDestroyEventConstructor != nil {
-			functions[resourceDefaultDestroyEventName(ty)] = code.DefaultDestroyEventConstructor
+			functions.Set(resourceDefaultDestroyEventName(ty), code.DefaultDestroyEventConstructor)
 		}
 	}
 
@@ -1594,7 +1598,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 func (interpreter *Interpreter) defaultFunctions(
 	members *ast.Members,
 	lexicalScope *VariableActivation,
-) map[string]FunctionValue {
+) *FunctionOrderedMap {
 
 	functionDeclarations := members.Functions()
 	functionCount := len(functionDeclarations)
@@ -1603,7 +1607,7 @@ func (interpreter *Interpreter) defaultFunctions(
 		return nil
 	}
 
-	functions := make(map[string]FunctionValue, functionCount)
+	functions := orderedmap.New[FunctionOrderedMap](functionCount)
 
 	for _, functionDeclaration := range functionDeclarations {
 		name := functionDeclaration.Identifier.Identifier
@@ -1611,9 +1615,12 @@ func (interpreter *Interpreter) defaultFunctions(
 			continue
 		}
 
-		functions[name] = interpreter.compositeFunction(
-			functionDeclaration,
-			lexicalScope,
+		functions.Set(
+			name,
+			interpreter.compositeFunction(
+				functionDeclaration,
+				lexicalScope,
+			),
 		)
 	}
 
@@ -1623,17 +1630,19 @@ func (interpreter *Interpreter) defaultFunctions(
 func (interpreter *Interpreter) compositeFunctions(
 	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
-) map[string]FunctionValue {
+) *FunctionOrderedMap {
 
-	functions := map[string]FunctionValue{}
+	functions := orderedmap.New[FunctionOrderedMap](len(compositeDeclaration.DeclarationMembers().Functions()))
 
 	for _, functionDeclaration := range compositeDeclaration.DeclarationMembers().Functions() {
 		name := functionDeclaration.Identifier.Identifier
-		functions[name] =
+		functions.Set(
+			name,
 			interpreter.compositeFunction(
 				functionDeclaration,
 				lexicalScope,
-			)
+			),
+		)
 	}
 
 	return functions
@@ -4615,9 +4624,9 @@ func (interpreter *Interpreter) GetCompositeValueInjectedFields(v *CompositeValu
 func (interpreter *Interpreter) GetCompositeValueFunctions(
 	v *CompositeValue,
 	locationRange LocationRange,
-) map[string]FunctionValue {
+) *FunctionOrderedMap {
 
-	var functions map[string]FunctionValue
+	var functions *FunctionOrderedMap
 
 	typeID := v.TypeID()
 

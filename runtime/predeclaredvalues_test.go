@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -697,21 +698,21 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			inter *interpreter.Interpreter,
 			locationRange interpreter.LocationRange,
 			compositeValue *interpreter.CompositeValue,
-		) map[string]interpreter.FunctionValue {
+		) *interpreter.FunctionOrderedMap {
 			require.NotNil(t, compositeValue)
 
-			return map[string]interpreter.FunctionValue{
-				fooFunctionName: interpreter.NewHostFunctionValue(
-					inter,
-					fooFunctionType,
-					func(invocation interpreter.Invocation) interpreter.Value {
-						arg := invocation.Arguments[0]
-						require.IsType(t, interpreter.UInt8Value(0), arg)
+			functions := orderedmap.New[interpreter.FunctionOrderedMap](1)
+			functions.Set(fooFunctionName, interpreter.NewHostFunctionValue(
+				inter,
+				fooFunctionType,
+				func(invocation interpreter.Invocation) interpreter.Value {
+					arg := invocation.Arguments[0]
+					require.IsType(t, interpreter.UInt8Value(0), arg)
 
-						return interpreter.NewUnmeteredStringValue(strconv.Itoa(int(arg.(interpreter.UInt8Value) + 1)))
-					},
-				),
-			}
+					return interpreter.NewUnmeteredStringValue(strconv.Itoa(int(arg.(interpreter.UInt8Value) + 1)))
+				},
+			))
+			return functions
 		},
 	)
 

@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -7383,7 +7384,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		nil,
 		common.ZeroAddress,
 	)
-	sValue.Functions = map[string]interpreter.FunctionValue{}
+	sValue.Functions = orderedmap.New[interpreter.FunctionOrderedMap](0)
 
 	validTypes := map[string]testValue{
 		"String": {

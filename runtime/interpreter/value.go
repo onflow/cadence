@@ -37,6 +37,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
@@ -16350,6 +16351,8 @@ func (UFix64Value) Scale() int {
 
 // CompositeValue
 
+type FunctionOrderedMap = orderedmap.OrderedMap[string, FunctionValue]
+
 type CompositeValue struct {
 	Location        common.Location
 	staticType      StaticType
@@ -16357,7 +16360,7 @@ type CompositeValue struct {
 	injectedFields  map[string]Value
 	computedFields  map[string]ComputedField
 	NestedVariables map[string]*Variable
-	Functions       map[string]FunctionValue
+	Functions       *FunctionOrderedMap
 	dictionary      *atree.OrderedMap
 	typeID          TypeID
 
@@ -16591,11 +16594,14 @@ func resourceDefaultDestroyEventName(t sema.ContainerType) string {
 }
 
 func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []FunctionValue) {
-	for name, f := range v.Functions {
+	if v.Functions == nil {
+		return
+	}
+	v.Functions.Foreach(func(name string, f FunctionValue) {
 		if strings.HasPrefix(name, resourceDefaultDestroyEventPrefix) {
 			constructors = append(constructors, f)
 		}
-	}
+	})
 	return
 }
 
@@ -16831,9 +16837,13 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	if v.Functions == nil {
 		v.Functions = interpreter.GetCompositeValueFunctions(v, locationRange)
 	}
+	// if no functions were produced, the `Get` below will be nil
+	if v.Functions == nil {
+		return nil
+	}
 
-	function, ok := v.Functions[name]
-	if !ok {
+	function, present := v.Functions.Get(name)
+	if !present {
 		return nil
 	}
 
@@ -17718,7 +17728,7 @@ func NewEnumCaseValue(
 	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
-	functions map[string]FunctionValue,
+	functions *FunctionOrderedMap,
 ) *CompositeValue {
 
 	fields := []CompositeField{
