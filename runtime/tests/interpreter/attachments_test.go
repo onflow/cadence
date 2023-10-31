@@ -2327,123 +2327,24 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestInterpretAttachmentSelfInvalidation(t *testing.T) {
+func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
 	t.Parallel()
-
-	t.Run("basic", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-        access(all) resource Vault {
-            access(all) var balance: UFix64
-            init(balance: UFix64) {
-                self.balance = balance
-            }
-            access(all) fun withdraw(amount: UFix64): @Vault {
-                self.balance = self.balance - amount
-                return <-create Vault(balance: amount)
-            }
-            access(all) fun deposit(from: @Vault) {
-                self.balance = self.balance + from.balance
-                destroy from
-            }
-        }
-        access(all) resource R{
-            access(all) var ref: &A?
-            access(all) let collectorVault: @Vault
-            init(_ collector: @Vault) {
-                self.collectorVault <- collector
-                self.ref = nil
-            }
-            access(all) fun setRef(_ new: &A) {
-                self.ref = new
-            }
-            destroy() {
-                destroy self.collectorVault
-            }
-        }
-        access(all) attachment A for R{
-            access(all) var vault: @Vault
-            access(all) fun zombieFunction(target: &Vault) {
-                var c  <- self.vault.withdraw(amount: self.vault.balance)
-                target.deposit(from: <- c)
-            }
-            init(vault: @Vault) {
-                self.vault <- vault
-                base.setRef(self)
-            }
-            destroy() {
-                base.collectorVault.deposit(from: <- self.vault)
-            }
-        }
-        access(all) fun doubleVault(_ v: @Vault): @Vault{
-            var res <- v.withdraw(amount: 0.0)
-            var r <- create R(<- v.withdraw(amount: 0.0))
-            var r2 <- attach A(vault: <- v) to <- r
-            remove A from r2
-            // Should not succeed, the attachment pointed to by r2.ref was destroyed 
-            r2.ref!.zombieFunction(target: &res as &Vault)
-            res.deposit(from: <- r2.collectorVault.withdraw(amount: r2.collectorVault.balance))
-            destroy r2
-            return <- res
-        }
-        access(all) fun main() {
-            let v <- create Vault(balance: 10.0)
-            let double <- doubleVault(<- v)
-            destroy double
-        }
-        `)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-	})
 
 	t.Run("with iteration", func(t *testing.T) {
 
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            access(all) resource Vault {
-                access(all) var balance: UFix64
-                init(balance: UFix64) {
-                    self.balance = balance
-                }
-                access(all) fun withdraw(amount: UFix64): @Vault {
-                        self.balance = self.balance - amount
-                        return <-create Vault(balance: amount)
-                }
-                access(all) fun deposit(from: @Vault) {
-                        self.balance = self.balance + from.balance
-                        destroy from
-                }
-            }
             access(all) resource R{
-                access(all) let collectorVault: @Vault
-                init(_ collector: @Vault) {
-                    self.collectorVault <- collector
-                }
-                destroy() {
-                    destroy self.collectorVault
-                }
+                init() {}
             }
             access(all) attachment A for R{
-                access(all) var vault: @Vault
-                access(all) fun zombieFunction(target: &Vault) {
-                    var c  <- self.vault.withdraw(amount: self.vault.balance)
-                    target.deposit(from: <- c)
-                }
-                init(vault: @Vault) {
-                    self.vault <- vault
-                }
-                destroy() {
-                    base.collectorVault.deposit(from: <- self.vault)
-                }
+                access(all) fun zombieFunction() {}
             }
-            access(all) fun doubleVault(_ v: @Vault): @Vault{
-                var res <- v.withdraw(amount: 0.0)
-                var r <- create R(<- v.withdraw(amount: 0.0))
-                var r2 <- attach A(vault: <- v) to <- r
+            
+            access(all) fun main() {
+                var r <- create R()
+                var r2 <- attach A() to <- r
                 var aRef: &A? = nil
                 r2.forEachAttachment(fun(a: &AnyResourceAttachment) {
                     aRef = (a as! &A)
@@ -2451,20 +2352,14 @@ func TestInterpretAttachmentSelfInvalidation(t *testing.T) {
                 remove A from r2
                 
                 // Should not succeed, the attachment pointed to by aRef was destroyed
-                aRef!.zombieFunction(target: &res as &Vault)
-                res.deposit(from: <- r2.collectorVault.withdraw(amount: r2.collectorVault.balance))
+                aRef!.zombieFunction()
                 destroy r2
-                return <- res
-            }
-            
-            access(all) fun main() {
-                let v <- create Vault(balance: 10.0)
-                let double <-  doubleVault(<- v)
-                destroy double
             }
         `)
 
 		_, err := inter.Invoke("main")
-		require.NoError(t, err)
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }

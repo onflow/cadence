@@ -17868,7 +17868,6 @@ func attachmentBaseAndSelfValues(
 
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
-	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
 
 	return
 }
@@ -17895,6 +17894,8 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 		}
 		if strings.HasPrefix(string(key.(StringAtreeValue)), attachmentNamePrefix) {
 			attachment, ok := MustConvertStoredValue(interpreter, value).(*CompositeValue)
+			interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
+
 			if !ok {
 				panic(errors.NewExternalError(err))
 			}

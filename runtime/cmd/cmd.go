@@ -214,6 +214,7 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 		ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 			panic("Importing programs is not supported yet")
 		},
+		InvalidatedResourceValidationEnabled: true,
 	}
 
 	inter, err := interpreter.NewInterpreter(
