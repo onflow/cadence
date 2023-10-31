@@ -1943,32 +1943,23 @@ func TestInterpretForEachAttachment(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            entitlement E 
             entitlement F
-            entitlement X
             entitlement Y
-            entitlement mapping M {
-                E -> F
+            struct S {
+                access(F, Y) fun foo() {}
             }
-            entitlement mapping N {
-                X -> Y
-            }
-            entitlement mapping O {
-                E -> Y
-            }
-            struct S {}
-            access(mapping M) attachment A for S {
+            access(all) attachment A for S {
                 access(F) fun foo(_ x: Int): Int { return 7 + x }
             }
-            access(mapping N) attachment B for S {
+            access(all) attachment B for S {
                 access(Y) fun foo(): Int { return 10 }
             }
-            access(mapping O) attachment C for S {
+            access(all) attachment C for S {
                 access(Y) fun foo(_ x: Int): Int { return 8 + x }
             }
             fun test(): Int {
                 var s = attach C() to attach B() to attach A() to S()
-                let ref = &s as auth(E) &S
+                let ref = &s as auth(F, Y) &S
                 var i = 0
                 ref.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                     if let a = attachmentRef as? auth(F) &A {
