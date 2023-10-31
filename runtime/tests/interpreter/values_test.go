@@ -1612,3 +1612,84 @@ func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.V
 func (m *valueMap) size() int {
 	return len(m.keys)
 }
+
+// TODO: Make this test pass.
+// This test is a reproducer for "slab was not reachable from leaves" false alarm.
+// https://github.com/onflow/cadence/pull/2882#issuecomment-1781298107
+// In this test, storage.CheckHealth() should be called after array.DeepRemove(),
+// not in the middle of array.DeepRemove().
+// CheckHealth() is called in the middle of array.DeepRemove() when:
+// - array.DeepRemove() calls childArray1 and childArray2 DeepRemove()
+// - DeepRemove() calls maybeValidateAtreeValue()
+// - maybeValidateAtreeValue() calls CheckHealth()
+func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Program:     ast.NewProgram(nil, []ast.Declaration{}),
+			Elaboration: sema.NewElaboration(nil),
+		},
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				return interpreter.VirtualImport{
+					Elaboration: inter.Program.Elaboration,
+				}
+			},
+			AtreeStorageValidationEnabled: true,
+			AtreeValueValidationEnabled:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	owner := common.Address{'A'}
+
+	// Create a small child array which will be inlined in parent container.
+	childArray1 := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		interpreter.NewUnmeteredStringValue("a"),
+	)
+
+	size := int(atree.MaxInlineArrayElementSize()) - 10
+
+	// Create a large child array which will NOT be inlined in parent container.
+	childArray2 := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		interpreter.NewUnmeteredStringValue(strings.Repeat("b", size)),
+		interpreter.NewUnmeteredStringValue(strings.Repeat("c", size)),
+	)
+
+	// Create an array with childArray1 and childArray2.
+	array := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		childArray1, // inlined
+		childArray2, // not inlined
+	)
+
+	// DeepRemove removes all elements (childArray1 and childArray2) recursively in array.
+	array.DeepRemove(inter)
+
+	// As noted earlier in comments at the top of this test:
+	// storage.CheckHealth() should be called after array.DeepRemove(), not in the middle of array.DeepRemove().
+	// This happens when:
+	// - array.DeepRemove() calls childArray1 and childArray2 DeepRemove()
+	// - DeepRemove() calls maybeValidateAtreeValue()
+	// - maybeValidateAtreeValue() calls CheckHealth()
+}
