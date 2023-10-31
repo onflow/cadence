@@ -16774,7 +16774,8 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	var base *EphemeralReferenceValue
 	var self MemberAccessibleValue = v
 	if v.Kind == common.CompositeKindAttachment {
-		base, self = attachmentBaseAndSelfValues(interpreter, v)
+		functionAccess := function.FunctionType().Access
+		base, self = attachmentBaseAndSelfValues(interpreter, functionAccess, v)
 	}
 	return NewBoundFunctionValue(interpreter, function, &self, base, nil)
 }
@@ -17745,16 +17746,6 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 			return Void
 		},
 	)
-}
-
-func attachmentBaseAuthorization(
-	interpreter *Interpreter,
-	fnAccess sema.Access,
-	attachment *CompositeValue,
-) Authorization {
-	var auth Authorization = UnauthorizedAccess
-	// EntitlementsTODO: this should not be unauthorized
-	return auth
 }
 
 func attachmentBaseAndSelfValues(
