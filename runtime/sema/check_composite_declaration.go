@@ -845,6 +845,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 
 			if identifier.Identifier == ast.ResourceDestructionDefaultEventName {
 				// Find the default event's type declaration
+				checker.Elaboration.SetDefaultDestroyDeclaration(declaration, nestedCompositeDeclaration)
 				defaultEventType :=
 					checker.typeActivations.Find(identifier.Identifier)
 				defaultEventComposite := defaultEventType.Type.(*CompositeType)

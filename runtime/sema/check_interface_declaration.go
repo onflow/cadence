@@ -443,6 +443,9 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
 				if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+
+					checker.Elaboration.SetDefaultDestroyDeclaration(declaration, nestedCompositeDeclaration)
+
 					// Find the value declaration
 					nestedEvent :=
 						checker.typeActivations.Find(nestedCompositeDeclaration.Identifier.Identifier)

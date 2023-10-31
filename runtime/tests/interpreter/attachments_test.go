@@ -1256,7 +1256,12 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
             }
         `, ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
 					events = append(events, event)
 					return nil
 				},
@@ -1301,7 +1306,12 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
             }
         `, ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
 					events = append(events, event)
 					return nil
 				},
@@ -1342,7 +1352,12 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
             }
         `, ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
 					events = append(events, event)
 					return nil
 				},
@@ -1386,7 +1401,12 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
             }
         `, ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
 					events = append(events, event)
 					return nil
 				},
@@ -1434,7 +1454,12 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
             }
         `, ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
 					events = append(events, event)
 					return nil
 				},
@@ -1490,7 +1515,12 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
             }
         `, ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
 					events = append(events, event)
 					return nil
 				},

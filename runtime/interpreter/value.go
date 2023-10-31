@@ -16380,7 +16380,7 @@ type CompositeField struct {
 }
 
 const unrepresentableNamePrefix = "$"
-const resourceDefaultDestroyEventPrefix = "ResourceDestroyed" + unrepresentableNamePrefix
+const resourceDefaultDestroyEventPrefix = ast.ResourceDestructionDefaultEventName + unrepresentableNamePrefix
 
 var _ TypeIndexableValue = &CompositeValue{}
 

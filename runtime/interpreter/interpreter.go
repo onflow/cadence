@@ -2256,17 +2256,13 @@ func (interpreter *Interpreter) declareInterface(
 	)
 
 	var defaultDestroyEventConstructor FunctionValue
-	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-		// statically we know there is at most one of these
-		if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
-			var nestedVariable *Variable
-			lexicalScope, nestedVariable = interpreter.declareCompositeValue(
-				nestedCompositeDeclaration,
-				lexicalScope,
-			)
-			defaultDestroyEventConstructor = nestedVariable.GetValue().(FunctionValue)
-			break
-		}
+	if defautlDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defautlDestroyEvent != nil {
+		var nestedVariable *Variable
+		lexicalScope, nestedVariable = interpreter.declareCompositeValue(
+			defautlDestroyEvent,
+			lexicalScope,
+		)
+		defaultDestroyEventConstructor = nestedVariable.GetValue().(FunctionValue)
 	}
 
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
