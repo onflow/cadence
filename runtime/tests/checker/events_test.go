@@ -636,6 +636,41 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[3])
 	})
+
+	t.Run("explicit emit disallowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+				fun foo() {
+					emit ResourceDestroyed()
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
+	})
+
+	t.Run("explicit emit disallowed outside", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+			}
+
+			fun foo() {
+				emit R.ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
+	})
 }
 
 func TestCheckDefaultEventParamChecking(t *testing.T) {
@@ -724,6 +759,34 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			}
         `)
 		require.NoError(t, err)
+	})
+
+	t.Run("type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Type = Type<@R>())
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[1])
+	})
+
+	t.Run("raw type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Type = R)
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[1])
 	})
 
 	t.Run("address expr", func(t *testing.T) {
@@ -950,6 +1013,25 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
 	})
 
+	t.Run("array reference index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				var arr : &[String] 
+				event ResourceDestroyed(name: String? = self.arr[0])
+
+				init() {
+					self.arr = &[]
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+	})
+
 	t.Run("dict index expression", func(t *testing.T) {
 
 		t.Parallel()
@@ -961,6 +1043,23 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 
 				init() {
 					self.dict = {}
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("dict reference index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let dict : &{Int: String} 
+				event ResourceDestroyed(name: String? = self.dict[0])
+
+				init() {
+					self.dict = &{}
 				}
 			}
         `)
