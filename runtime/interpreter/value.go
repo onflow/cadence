@@ -17749,7 +17749,6 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 
 	authorization := attachmentBaseAuthorization(interpreter, v)
 	v.base = NewEphemeralReferenceValue(interpreter, authorization, base, baseType)
-	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
 
 func attachmentMemberName(ty sema.Type) string {
@@ -17868,7 +17867,6 @@ func attachmentBaseAndSelfValues(
 
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
-	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
 
 	return
 }
@@ -17927,8 +17925,8 @@ func (v *CompositeValue) getTypeKey(
 	if err != nil {
 		return Nil
 	}
+
 	attachmentRef := NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, attachment, attachmentType)
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
 
 	return NewSomeValueNonCopying(interpreter, attachmentRef)
 }
@@ -20344,12 +20342,13 @@ func NewUnmeteredEphemeralReferenceValue(
 }
 
 func NewEphemeralReferenceValue(
-	gauge common.MemoryGauge,
+	interpreter *Interpreter,
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	common.UseMemory(gauge, common.EphemeralReferenceValueMemoryUsage)
+	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
+	interpreter.maybeTrackReferencedResourceKindedValue(value)
 	return NewUnmeteredEphemeralReferenceValue(authorization, value, borrowedType)
 }
 
