@@ -2166,15 +2166,12 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			entitlement X
 			entitlement Y 
 			entitlement Z 
-			entitlement mapping M {
-				X -> Y
-				X -> Z
+			struct S {
+				access(Y, Z) fun foo() {}
 			}
-			struct S {}
-			access(mapping M) attachment A for S {}
+			access(all) attachment A for S {}
 			fun test(): auth(Y, Z) &A {
 				let s = attach A() to S()
 				return s[A]!
@@ -2200,20 +2197,17 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			entitlement X
 			entitlement Y 
 			entitlement Z 
-			entitlement mapping M {
-				X -> Y
-				X -> Z
+			struct S {
+				access(Y | Z) fun foo() {}
 			}
-			struct S {}
-			access(mapping M) attachment A for S {
-				access(Y | Z) fun entitled(): auth(Y, Z) &A {
+			access(all) attachment A for S {
+				access(Y | Z) fun entitled(): auth(Y | Z) &A {
 					return self
 				} 
 			}
-			fun test(): auth(Y, Z) &A {
+			fun test(): auth(Y | Z) &A {
 				let s = attach A() to S()
 				return s[A]!.entitled()
 			}
@@ -2228,7 +2222,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 				nil,
 				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.Z"} },
 				2,
-				sema.Conjunction,
+				sema.Disjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
