@@ -17856,7 +17856,12 @@ func (v *CompositeValue) GetTypeKey(
 	var access sema.Access = sema.UnauthorizedAccess
 	attachmentTyp, isAttachmentType := ty.(*sema.CompositeType)
 	if isAttachmentType {
-		access = sema.NewEntitlementSetAccessFromSet(attachmentTyp.SupportedEntitlements(), sema.Conjunction)
+		supportedEntitlements := attachmentTyp.SupportedEntitlements()
+		if supportedEntitlements.Len() == 0 {
+			access = sema.UnauthorizedAccess
+		} else {
+			access = sema.NewEntitlementSetAccessFromSet(attachmentTyp.SupportedEntitlements(), sema.Conjunction)
+		}
 	}
 	return v.getTypeKey(interpreter, locationRange, ty, access)
 }
