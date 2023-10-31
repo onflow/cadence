@@ -4725,3 +4725,33 @@ func TestCheckAttachmentPurity(t *testing.T) {
 		assert.IsType(t, &sema.PurityError{}, errs[0])
 	})
 }
+
+func TestCheckAccessOnNonEntitlementSupportingBaseCreatesUnauthorizedReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		access(all) contract Test {
+			access(all) resource R {}
+			access(all) attachment A for R {}
+			access(all) fun makeRWithA(): @R {
+				return <- attach A() to <-create R()
+			}
+		}
+		access(all) fun main(): &Test.A? {
+			let r <- Test.makeRWithA()
+			var a = r[Test.A]
+
+			a = returnSameRef(a)
+
+			destroy r
+			return a
+		}
+
+		access(all) fun returnSameRef(_ ref: &Test.A?): &Test.A? {
+			return ref
+		}
+    `)
+
+	require.NoError(t, err)
+}
