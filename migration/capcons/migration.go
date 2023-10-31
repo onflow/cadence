@@ -19,6 +19,8 @@
 package capcons
 
 import (
+	goerrors "errors"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime"
@@ -65,6 +67,7 @@ type LinkMigrationReporter interface {
 		addressPath interpreter.AddressPath,
 		capabilityID interpreter.UInt64Value,
 	)
+	CyclicLink(err CyclicLinkError)
 }
 
 type PathCapabilityMigrationReporter interface {
@@ -207,7 +210,7 @@ func (m *Migration) migrateLink(
 	path interpreter.PathValue,
 	reporter LinkMigrationReporter,
 ) {
-	capabilityID := m.migrateLinkToCapabilityController(address, path)
+	capabilityID := m.migrateLinkToCapabilityController(address, path, reporter)
 	if capabilityID == 0 {
 		return
 	}
@@ -437,6 +440,7 @@ func (m *Migration) migratePathCapability(
 func (m *Migration) migrateLinkToCapabilityController(
 	addressValue interpreter.AddressValue,
 	pathValue interpreter.PathValue,
+	reporter LinkMigrationReporter,
 ) interpreter.UInt64Value {
 
 	locationRange := interpreter.EmptyLocationRange
@@ -495,8 +499,12 @@ func (m *Migration) migrateLinkToCapabilityController(
 			Type:          sema.AnyType,
 		},
 	)
-	// TODO: skip cyclic links instead of panic-ing
 	if err != nil {
+		var cyclicLinkErr CyclicLinkError
+		if goerrors.As(err, &cyclicLinkErr) {
+			reporter.CyclicLink(cyclicLinkErr)
+			return 0
+		}
 		panic(err)
 	}
 

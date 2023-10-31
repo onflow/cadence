@@ -63,9 +63,17 @@ type testCapConsMissingCapabilityID struct {
 }
 
 type testMigrationReporter struct {
-	linkMigrations           []testCapConsLinkMigration
-	pathCapabilityMigrations []testCapConsPathCapabilityMigration
-	missingCapabilityIDs     []testCapConsMissingCapabilityID
+	linkMigrations             []testCapConsLinkMigration
+	pathCapabilityMigrations   []testCapConsPathCapabilityMigration
+	missingCapabilityIDs       []testCapConsMissingCapabilityID
+	cyclicLinkCyclicLinkErrors []CyclicLinkError
+}
+
+func (t *testMigrationReporter) CyclicLink(cyclicLinkError CyclicLinkError) {
+	t.cyclicLinkCyclicLinkErrors = append(
+		t.cyclicLinkCyclicLinkErrors,
+		cyclicLinkError,
+	)
 }
 
 var _ MigrationReporter = &testMigrationReporter{}
@@ -293,8 +301,12 @@ func TestMigration(t *testing.T) {
 		// Create and store links.
 		//
 		// Equivalent to:
+		//   // Working chain
 		//   account.link<&Test.R>(/public/r, target: /private/r)
 		//   account.link<&Test.R>(/private/r, target: /storage/r)
+		//   // Cyclic chain
+		//   account.link<&Test.R>(/public/r2, target: /private/r2)
+		//   account.link<&Test.R>(/private/r2, target: /public/r2)
 
 		storage, inter, err := rt.Storage(runtime.Context{
 			Interface: runtimeInterface,
@@ -302,6 +314,7 @@ func TestMigration(t *testing.T) {
 		require.NoError(t, err)
 
 		for sourcePath, targetPath := range map[interpreter.PathValue]interpreter.PathValue{
+			// Working chain
 			{
 				Domain:     common.PathDomainPublic,
 				Identifier: "r",
@@ -315,6 +328,21 @@ func TestMigration(t *testing.T) {
 			}: {
 				Domain:     common.PathDomainStorage,
 				Identifier: "r",
+			},
+			// Cyclic chain
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "r2",
+			}: {
+				Domain:     common.PathDomainPrivate,
+				Identifier: "r2",
+			},
+			{
+				Domain:     common.PathDomainPrivate,
+				Identifier: "r2",
+			}: {
+				Domain:     common.PathDomainPublic,
+				Identifier: "r2",
 			},
 		} {
 
@@ -412,6 +440,28 @@ func TestMigration(t *testing.T) {
 				},
 			},
 			reporter.linkMigrations,
+		)
+		assert.Equal(
+			t,
+			[]CyclicLinkError{
+				{
+					Paths: []interpreter.PathValue{
+						{Domain: common.PathDomainPublic, Identifier: "r2"},
+						{Domain: common.PathDomainPrivate, Identifier: "r2"},
+						{Domain: common.PathDomainPublic, Identifier: "r2"},
+					},
+					Address: address,
+				},
+				{
+					Paths: []interpreter.PathValue{
+						{Domain: common.PathDomainPrivate, Identifier: "r2"},
+						{Domain: common.PathDomainPublic, Identifier: "r2"},
+						{Domain: common.PathDomainPrivate, Identifier: "r2"},
+					},
+					Address: address,
+				},
+			},
+			reporter.cyclicLinkCyclicLinkErrors,
 		)
 
 		// Check migrated capabilities
