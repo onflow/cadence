@@ -988,28 +988,35 @@ func (interpreter *Interpreter) declareAttachmentValue(
 // and c) functions cannot currently be explicitly invoked if they have default arguments
 //
 // if we plan to generalize this further, we will need to relax those assumptions
-func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
+func (declarationInterpreter *Interpreter) evaluateDefaultDestroyEvent(
 	containingResourceComposite *CompositeValue,
 	eventDecl *ast.CompositeDeclaration,
+	invocation Invocation,
+	invocationActivation *VariableActivation,
 ) (arguments []Value) {
 	parameters := eventDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
 
+	declarationInterpreter.activations.PushNewWithParent(invocationActivation)
+	declarationInterpreter.SharedState.callStack.Push(invocation)
+
+	// interpreter.activations.PushNewWithParent(inter.activations.CurrentOrNew())
+	// interpreter.SharedState.callStack.Push(invocation)
 	defer func() {
 		// Only unwind the call stack if there was no error
 		if r := recover(); r != nil {
 			panic(r)
 		}
-		interpreter.SharedState.callStack.Pop()
+		declarationInterpreter.SharedState.callStack.Pop()
 	}()
-	defer interpreter.activations.Pop()
+	defer declarationInterpreter.activations.Pop()
 
 	var self MemberAccessibleValue = containingResourceComposite
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
 		var base *EphemeralReferenceValue
-		base, self = attachmentBaseAndSelfValues(interpreter, containingResourceComposite)
-		interpreter.declareVariable(sema.BaseIdentifier, base)
+		base, self = attachmentBaseAndSelfValues(declarationInterpreter, containingResourceComposite)
+		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
 	}
-	interpreter.declareVariable(sema.SelfIdentifier, self)
+	declarationInterpreter.declareVariable(sema.SelfIdentifier, self)
 
 	for _, parameter := range parameters {
 		// "lazily" evaluate the default argument expressions.
@@ -1018,7 +1025,7 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 		// `self.x` is evaluated in the context that exists when the event is destroyed,
 		// not the context when it is declared. This function is only called after the destroy
 		// triggers the event emission, so with respect to this function it's "eager".
-		defaultArg := interpreter.evalExpression(parameter.DefaultArgument)
+		defaultArg := declarationInterpreter.evalExpression(parameter.DefaultArgument)
 		arguments = append(arguments, defaultArg)
 	}
 
@@ -1055,7 +1062,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 	}
 }
 
-func (interpreter *Interpreter) declareNonEnumCompositeValue(
+func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
@@ -1064,7 +1071,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 ) {
 	identifier := declaration.DeclarationIdentifier().Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
-	variable = interpreter.findOrDeclareVariable(identifier)
+	variable = declarationInterpreter.findOrDeclareVariable(identifier)
 
 	// Make the value available in the initializer
 	lexicalScope.Set(identifier, variable)
@@ -1077,15 +1084,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	var destroyEventConstructor FunctionValue
 
 	(func() {
-		interpreter.activations.PushNewWithCurrent()
-		defer interpreter.activations.Pop()
+		declarationInterpreter.activations.PushNewWithCurrent()
+		defer declarationInterpreter.activations.Pop()
 
 		// Pre-declare empty variables for all interfaces, composites, and function declarations
 		predeclare := func(identifier ast.Identifier) {
 			name := identifier.Identifier
 			lexicalScope.Set(
 				name,
-				interpreter.declareVariable(name, nil),
+				declarationInterpreter.declareVariable(name, nil),
 			)
 		}
 
@@ -1104,7 +1111,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 
 		for _, nestedInterfaceDeclaration := range members.Interfaces() {
-			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
+			declarationInterpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
 		for _, nestedCompositeDeclaration := range members.Composites() {
@@ -1115,7 +1122,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			var nestedVariable *Variable
 			lexicalScope, nestedVariable =
-				interpreter.declareCompositeValue(
+				declarationInterpreter.declareCompositeValue(
 					nestedCompositeDeclaration,
 					lexicalScope,
 				)
@@ -1137,7 +1144,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			var nestedVariable *Variable
 			lexicalScope, nestedVariable =
-				interpreter.declareAttachmentValue(
+				declarationInterpreter.declareAttachmentValue(
 					nestedAttachmentDeclaration,
 					lexicalScope,
 				)
@@ -1147,17 +1154,17 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	})()
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
+	compositeType := declarationInterpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 
 	initializerType := compositeType.InitializerFunctionType()
 
 	var initializerFunction FunctionValue
 	if declaration.Kind() == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
-			interpreter,
+			declarationInterpreter,
 			initializerType,
 			func(invocation Invocation) Value {
-				inter := invocation.Interpreter
+				invocationInterpreter := invocation.Interpreter
 				locationRange := invocation.LocationRange
 				self := *invocation.Self
 
@@ -1170,18 +1177,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				if compositeDecl.IsResourceDestructionDefaultEvent() {
 					// we implicitly pass the containing composite value as an argument to this invocation
 					containerComposite := invocation.Arguments[0].(*CompositeValue)
-					interpreter.activations.PushNewWithParent(inter.activations.CurrentOrNew())
-					interpreter.SharedState.callStack.Push(invocation)
-					invocation.Arguments = interpreter.evaluateDefaultDestroyEvent(
+					invocation.Arguments = declarationInterpreter.evaluateDefaultDestroyEvent(
 						containerComposite,
 						compositeDecl,
+						invocation,
+						invocationInterpreter.activations.CurrentOrNew(),
 					)
 				}
 
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
 					self.SetMember(
-						inter,
+						invocationInterpreter,
 						locationRange,
 						parameter.Identifier,
 						argument,
@@ -1191,13 +1198,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			},
 		)
 	} else {
-		compositeInitializerFunction := interpreter.compositeInitializerFunction(declaration, lexicalScope)
+		compositeInitializerFunction := declarationInterpreter.compositeInitializerFunction(declaration, lexicalScope)
 		if compositeInitializerFunction != nil {
 			initializerFunction = compositeInitializerFunction
 		}
 	}
 
-	functions := interpreter.compositeFunctions(declaration, lexicalScope)
+	functions := declarationInterpreter.compositeFunctions(declaration, lexicalScope)
 
 	if destroyEventConstructor != nil {
 		functions.Set(resourceDefaultDestroyEventName(compositeType), destroyEventConstructor)
@@ -1251,24 +1258,24 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	conformances := compositeType.EffectiveInterfaceConformances()
 	for i := len(conformances) - 1; i >= 0; i-- {
 		conformance := conformances[i].InterfaceType
-		wrapFunctions(conformance, interpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
+		wrapFunctions(conformance, declarationInterpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
-	interpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
+	declarationInterpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
 		CompositeFunctions: functions,
 	}
 
-	location := interpreter.Location
+	location := declarationInterpreter.Location
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
-	config := interpreter.SharedState.Config
+	config := declarationInterpreter.SharedState.Config
 
 	constructorType := compositeType.ConstructorFunctionType()
 
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
 		return NewHostFunctionValue(
-			interpreter,
+			declarationInterpreter,
 			constructorType,
 			func(invocation Invocation) Value {
 
@@ -1395,10 +1402,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	if declaration.Kind() == common.CompositeKindContract {
 		variable.getter = func() Value {
-			positioned := ast.NewRangeFromPositioned(interpreter, declaration.DeclarationIdentifier())
+			positioned := ast.NewRangeFromPositioned(declarationInterpreter, declaration.DeclarationIdentifier())
 
 			contractValue := config.ContractValueHandler(
-				interpreter,
+				declarationInterpreter,
 				compositeType,
 				constructorGenerator,
 				positioned,
