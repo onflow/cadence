@@ -1,6 +1,6 @@
 {
   "name": "@onflow/cadence-parser",
-  "version": "0.42.1",
+  "version": "0.42.2",
   "description": "The Cadence parser",
   "homepage": "https://github.com/onflow/cadence",
   "repository": {
@@ -10,17 +10,22 @@
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.mjs",
   "types": "./dist/types/index.d.ts",
+  "browser": {
+    "./dist/esm/index.mjs": "./dist/browser/index.js"
+  },
   "exports": {
     ".": {
       "require": "./dist/cjs/index.js",
       "import": "./dist/esm/index.mjs",
-      "types": "./dist/types/index.d.ts"
+      "types": "./dist/types/index.d.ts",
+      "browser": "./dist/browser/index.js"
     }
   },
   "scripts": {
-    "build": "npm run build:types && npm run build:esm && npm run build:cjs && GOARCH=wasm GOOS=js go build -o ./dist/cadence-parser.wasm ../../runtime/cmd/parse",
+    "build": "npm run build:types && npm run build:browser && npm run build:esm && npm run build:cjs && GOARCH=wasm GOOS=js go build -o ./dist/cadence-parser.wasm ../../runtime/cmd/parse",
     "build:types": "tsc --emitDeclarationOnly --module system --outDir dist/types",
-    "build:esm": "esbuild src/index.ts --bundle --sourcemap --format=esm --outfile=dist/esm/index.mjs",
+    "build:esm": "esbuild src/index.ts --bundle --sourcemap --platform=neutral --minify=false --external:get-random-values --outfile=dist/esm/index.mjs",
+    "build:browser": "tsc --module es6 --target es6 --outDir dist/browser --declaration false",
     "build:cjs": "tsc --module commonjs --target es6 --outDir dist/cjs --declaration false",
     "test": "jest"
   },
