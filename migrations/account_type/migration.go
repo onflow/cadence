@@ -27,9 +27,8 @@ import (
 )
 
 type AccountTypeMigration struct {
-	storage       *runtime.Storage
-	interpreter   *interpreter.Interpreter
-	capabilityIDs map[interpreter.AddressPath]interpreter.UInt64Value
+	storage     *runtime.Storage
+	interpreter *interpreter.Interpreter
 }
 
 func NewAccountTypeMigration(runtime runtime.Runtime, context runtime.Context) (*AccountTypeMigration, error) {
@@ -81,6 +80,7 @@ func (m *AccountTypeMigration) migrateTypeValuesInAccount(
 func (m *AccountTypeMigration) migrateValue(value interpreter.Value) interpreter.Value {
 	typeValue, ok := value.(interpreter.TypeValue)
 	if !ok {
+		// TODO: support migration for type-values nested inside other values.
 		return nil
 	}
 
