@@ -29,16 +29,25 @@ type AccountStorage struct {
 	address common.Address
 }
 
+// NewAccountStorage constructs an `AccountStorage` for a given account.
+func NewAccountStorage(storage *runtime.Storage, address common.Address) AccountStorage {
+	return AccountStorage{
+		storage: storage,
+		address: address,
+	}
+}
+
+// ForEachValue iterates over the values in the account.
 func (i *AccountStorage) ForEachValue(
 	inter *interpreter.Interpreter,
 	domains []common.PathDomain,
 	valueConverter func(interpreter.Value) interpreter.Value,
-	reporter MigrationReporter,
+	reporter Reporter,
 ) {
 	for _, domain := range domains {
 		storageMap := i.storage.GetStorageMap(i.address, domain.Identifier(), false)
 		if storageMap == nil {
-			return
+			continue
 		}
 
 		iterator := storageMap.Iterator(inter)
@@ -48,7 +57,7 @@ func (i *AccountStorage) ForEachValue(
 			for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
 				newValue := valueConverter(value)
 
-				// if the converter returns a new value, then replace the existing value with the new one.
+				// If the converter returns a new value, then replace the existing value with the new one.
 				if newValue != nil {
 					// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
 					identifier := string(key.(interpreter.StringAtreeValue))
@@ -58,7 +67,7 @@ func (i *AccountStorage) ForEachValue(
 						newValue,
 					)
 
-					reporter.Report(i.address, identifier, "")
+					reporter.Report(i.address, domain, identifier, newValue)
 				}
 			}
 		}

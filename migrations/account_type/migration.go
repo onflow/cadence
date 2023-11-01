@@ -16,19 +16,15 @@
  * limitations under the License.
  */
 
-package migrations
+package account_type
 
 import (
+	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
-
-type MigrationReporter interface {
-	Report(address common.Address, key string, message string)
-	ReportErrors(message string)
-}
 
 type AccountTypeMigration struct {
 	storage       *runtime.Storage
@@ -36,7 +32,7 @@ type AccountTypeMigration struct {
 	capabilityIDs map[interpreter.AddressPath]interpreter.UInt64Value
 }
 
-func NewCapConsMigration(runtime runtime.Runtime, context runtime.Context) (*AccountTypeMigration, error) {
+func NewAccountTypeMigration(runtime runtime.Runtime, context runtime.Context) (*AccountTypeMigration, error) {
 	storage, inter, err := runtime.Storage(context)
 	if err != nil {
 		return nil, err
@@ -49,8 +45,8 @@ func NewCapConsMigration(runtime runtime.Runtime, context runtime.Context) (*Acc
 }
 
 func (m *AccountTypeMigration) Migrate(
-	addressIterator AddressIterator,
-	reporter MigrationReporter,
+	addressIterator migrations.AddressIterator,
+	reporter migrations.Reporter,
 ) {
 	for {
 		address := addressIterator.NextAddress()
@@ -69,13 +65,10 @@ func (m *AccountTypeMigration) Migrate(
 // to the account reference type (&Account).
 func (m *AccountTypeMigration) migrateTypeValuesInAccount(
 	address common.Address,
-	reporter MigrationReporter,
+	reporter migrations.Reporter,
 ) {
 
-	accountStorage := AccountStorage{
-		storage: m.storage,
-		address: address,
-	}
+	accountStorage := migrations.NewAccountStorage(m.storage, address)
 
 	accountStorage.ForEachValue(
 		m.interpreter,
@@ -86,7 +79,7 @@ func (m *AccountTypeMigration) migrateTypeValuesInAccount(
 }
 
 func (m *AccountTypeMigration) migrateValue(value interpreter.Value) interpreter.Value {
-	typeValue, ok := value.(*interpreter.TypeValue)
+	typeValue, ok := value.(interpreter.TypeValue)
 	if !ok {
 		return nil
 	}
@@ -135,18 +128,20 @@ func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.St
 		}
 
 	case *interpreter.IntersectionStaticType:
-		convertedTypes := make([]interpreter.StaticType, len(staticType.Types))
-
-		converted := false
-
-		for _, interfaceType := range staticType.Types {
-			convertedInterfaceType := m.maybeConvertAccountType(interfaceType)
-
-		}
+		// Nothing to do. Inner types can only be interfaces.
 
 	case *interpreter.OptionalStaticType:
+		convertedInnerType := m.maybeConvertAccountType(staticType.Type)
+		if convertedInnerType != nil {
+			return interpreter.NewOptionalStaticType(nil, convertedInnerType)
+		}
 
 	case *interpreter.ReferenceStaticType:
+		// TODO: Reference of references must not be allowed?
+		convertedReferencedType := m.maybeConvertAccountType(staticType.ReferencedType)
+		if convertedReferencedType != nil {
+			return interpreter.NewReferenceStaticType(nil, staticType.Authorization, convertedReferencedType)
+		}
 
 	case interpreter.FunctionStaticType:
 		// Non-storable
@@ -159,25 +154,9 @@ func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.St
 		// Is it safe to do so?
 		switch staticType {
 		case interpreter.PrimitiveStaticTypePublicAccount:
-			return interpreter.NewReferenceStaticType(
-				nil,
-				nil,
-				interpreter.PrimitiveStaticTypeAccount,
-			)
+			return unauthorizedAccountReferenceType
 		case interpreter.PrimitiveStaticTypeAuthAccount:
-			auth := interpreter.NewEntitlementSetAuthorization(
-				nil,
-				func() []common.TypeID {
-					return authAccountEntitlements
-				},
-				0,
-				sema.Conjunction,
-			)
-			return interpreter.NewReferenceStaticType(
-				nil,
-				auth,
-				interpreter.PrimitiveStaticTypeAccount,
-			)
+			return authAccountReferenceType
 
 		// TODO: What about these?
 		case interpreter.PrimitiveStaticTypeAuthAccountCapabilities:
@@ -205,3 +184,25 @@ var authAccountEntitlements = []common.TypeID{
 	sema.InboxType.ID(),
 	sema.CapabilitiesType.ID(),
 }
+
+var authAccountReferenceType = func() *interpreter.ReferenceStaticType {
+	auth := interpreter.NewEntitlementSetAuthorization(
+		nil,
+		func() []common.TypeID {
+			return authAccountEntitlements
+		},
+		len(authAccountEntitlements),
+		sema.Conjunction,
+	)
+	return interpreter.NewReferenceStaticType(
+		nil,
+		auth,
+		interpreter.PrimitiveStaticTypeAccount,
+	)
+}()
+
+var unauthorizedAccountReferenceType = interpreter.NewReferenceStaticType(
+	nil,
+	interpreter.UnauthorizedAccess,
+	interpreter.PrimitiveStaticTypeAccount,
+)
