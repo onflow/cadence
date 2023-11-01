@@ -980,7 +980,7 @@ func (interpreter *Interpreter) declareAttachmentValue(
 	return interpreter.declareCompositeValue(declaration, lexicalScope)
 }
 
-// evaluates all the implicit default arguments to the default destroy event
+// evaluateDefaultDestroyEvent evaluates all the implicit default arguments to the default destroy event.
 //
 // the handling of default arguments makes a number of assumptions to simplify the implementation;
 // namely that a) all default arguments are lazily evaluated at the site of the invocation,
