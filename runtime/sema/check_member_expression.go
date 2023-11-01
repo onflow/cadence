@@ -376,7 +376,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 // in the current location of the checker, along with the authorzation with which the result can be used
 func (checker *Checker) isReadableMember(accessedType Type, member *Member, resultingType Type, accessRange func() ast.Range) (bool, Access) {
 	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
-		checker.containerTypes[member.ContainerType] {
+		// only allow references unrestricted access to members in their own container that are not entitled
+		// this prevents rights escalation attacks on entitlements
+		(member.Access.isPrimitiveAccess() && checker.containerTypes[member.ContainerType]) {
 
 		if mappedAccess, isMappedAccess := member.Access.(*EntitlementMapAccess); isMappedAccess {
 			return checker.mapAccess(mappedAccess, accessedType, resultingType, accessRange)

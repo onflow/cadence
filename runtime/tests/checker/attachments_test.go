@@ -1394,6 +1394,29 @@ func TestCheckAttachmentSelfTyping(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("self access restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			entitlement E
+			resource R {
+				access(E) fun foo() {}
+			}
+			attachment Test for R {
+				access(E) fun bar() {}
+				fun foo(t: &Test) {
+					t.bar()
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
 }
 
 func TestCheckAttachmentType(t *testing.T) {
@@ -4089,6 +4112,283 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("entitlement mapped field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement G
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(G) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) let x: [String]
+					init() {
+						self.x = ["x"]
+					}
+				}
+				fun foo() {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let x: auth(F) &[String] = a.x
+					destroy r
+				}
+				`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("entitlement mapped function self value cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(F) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteSelf = self as? auth(F) &A {
+							return &concreteSelf.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("entitlement mapped function self value cast invalid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteSelf = self as? auth(F) &A {
+							return &concreteSelf.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("entitlement mapped function base value cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(F) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(E) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteBase = base as? auth(F) &R {
+							return &concreteBase.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("entitlement mapped function base value cast invalid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteBase = base as? auth(F) &R {
+							return &concreteBase.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("entitlement mapped function self value access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						return &self.x
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	t.Run("entitlement mapped function base value access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						return &base.x
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
 }
 
 func TestCheckAttachmentsResourceReference(t *testing.T) {
@@ -4510,9 +4810,6 @@ func TestCheckAttachmentForEachAttachment(t *testing.T) {
 			`
 			entitlement F
 			entitlement E
-			entitlement mapping M {
-				E -> F
-			}
 			fun bar (attachmentRef: &AnyResourceAttachment) {
 				if let a = attachmentRef as? auth(F) &A {
 					a.foo()
