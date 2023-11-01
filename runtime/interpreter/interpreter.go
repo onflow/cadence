@@ -1012,7 +1012,12 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 	interpreter.declareVariable(sema.SelfIdentifier, self)
 
 	for _, parameter := range parameters {
-		// lazily evaluate the default argument expressions
+		// "lazily" evaluate the default argument expressions.
+		// This "lazy" with respect to the event's declaration:
+		// if we declare a default event `ResourceDestroyed(foo: Int = self.x)`,
+		// `self.x` is evaluated in the context that exists when the event is destroyed,
+		// not the context when it is declared. This function is only called after the destroy
+		// triggers the event emission, so with respect to this function it's "eager".
 		defaultArg := interpreter.evalExpression(parameter.DefaultArgument)
 		arguments = append(arguments, defaultArg)
 	}
