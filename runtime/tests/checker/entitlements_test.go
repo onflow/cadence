@@ -4694,7 +4694,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		)
 	})
 
-	t.Run("base type with sufficent requirements", func(t *testing.T) {
+	t.Run("base type with sufficient requirements", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `

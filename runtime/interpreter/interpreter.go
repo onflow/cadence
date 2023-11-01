@@ -1346,12 +1346,11 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {
 
-					var auth Authorization = UnauthorizedAccess
 					attachmentType := interpreter.MustSemaTypeOfValue(value).(*sema.CompositeType)
 					// Self's type in the constructor is fully entitled, since
 					// the constructor can only be called when in possession of the base resource
 
-					auth = ConvertSemaAccessToStaticAuthorization(
+					auth := ConvertSemaAccessToStaticAuthorization(
 						interpreter,
 						sema.NewAccessFromEntitlementSet(attachmentType.SupportedEntitlements(), sema.Conjunction),
 					)
