@@ -1949,6 +1949,108 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 	})
 }
 
+func TestInterpretAttachmentMappedMembers(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("mapped self cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement mapping M {
+                E -> F
+            }
+
+            access(all) resource R {
+                access(E) fun foo() {}
+                access(F) fun bar() {}
+            }
+            access(all) attachment A for R {
+                access(F) let x: Int
+                init() {
+                    self.x = 3
+                }
+                access(mapping M) fun foo(): auth(mapping M) &Int {
+                    if let concreteSelf = self as? auth(F) &A {
+                        return &concreteSelf.x
+                    } 
+                    return &1
+                }
+            }
+            fun test(): &Int {
+                let r <- attach A() to <- create R()
+                let a = r[A]!
+                let i = a.foo()
+                destroy r
+                return i
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
+	})
+
+	t.Run("mapped base cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement E
+            entitlement F
+            entitlement mapping M {
+                E -> F
+            }
+
+            access(all) resource R {
+                access(F) let x: Int
+                init() {
+                    self.x = 3
+                }
+                access(E) fun bar() {}
+            }
+            access(all) attachment A for R {
+                access(mapping M) fun foo(): auth(mapping M) &Int {
+                    if let concreteBase = base as? auth(F) &R {
+                        return &concreteBase.x
+                    } 
+                    return &1
+                }
+            }
+            fun test(): &Int {
+                let r <- attach A() to <- create R()
+                let a = r[A]!
+                let i = a.foo()
+                destroy r
+                return i
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
+	})
+
+}
+
 func TestInterpretForEachAttachment(t *testing.T) {
 
 	t.Parallel()

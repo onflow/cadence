@@ -1180,8 +1180,11 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		valueStaticType := value.StaticType(interpreter)
-		valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
+		// if the value itself has a mapped entitlement type in its authorization
+		// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
+		// substitution must also be performed on its entitlements
+		valueSemaType := interpreter.substituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
+		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
 		switch expression.Operation {

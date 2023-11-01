@@ -2176,7 +2176,8 @@ func (checker *Checker) checkSpecialFunction(
 	checker.enterValueScope()
 	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
-	fnAccess := checker.effectiveMemberAccess(checker.accessFromAstAccess(specialFunction.FunctionDeclaration.Access), containerKind)
+	// initializers and destructors are considered fully entitled to their container type
+	fnAccess := NewAccessFromEntitlementSet(containerType.SupportedEntitlements(), Conjunction)
 
 	checker.declareSelfValue(fnAccess, containerType, containerDocString)
 	if containerType.GetCompositeKind() == common.CompositeKindAttachment {

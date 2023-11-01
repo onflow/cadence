@@ -304,6 +304,7 @@ func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdent
 // CompositeKindedType is a type which has a composite kind
 type CompositeKindedType interface {
 	Type
+	EntitlementSupportingType
 	GetCompositeKind() common.CompositeKind
 }
 
