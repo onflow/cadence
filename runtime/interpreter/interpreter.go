@@ -989,31 +989,30 @@ func (interpreter *Interpreter) declareAttachmentValue(
 //
 // if we plan to generalize this further, we will need to relax those assumptions
 func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
-	containerComposite *CompositeValue,
-	compositeDecl *ast.CompositeDeclaration,
-	compositeType *sema.CompositeType,
-	locationRange LocationRange,
+	containingResourceComposite *CompositeValue,
+	eventDecl *ast.CompositeDeclaration,
 ) (arguments []Value) {
-	parameters := compositeDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
+	parameters := eventDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
 
-	interpreter.activations.PushNewWithParent(interpreter.activations.CurrentOrNew())
+	defer func() {
+		// Only unwind the call stack if there was no error
+		if r := recover(); r != nil {
+			panic(r)
+		}
+		interpreter.SharedState.callStack.Pop()
+	}()
 	defer interpreter.activations.Pop()
 
-	var self MemberAccessibleValue = containerComposite
-	if containerComposite.Kind == common.CompositeKindAttachment {
+	var self MemberAccessibleValue = containingResourceComposite
+	if containingResourceComposite.Kind == common.CompositeKindAttachment {
 		var base *EphemeralReferenceValue
-		base, self = attachmentBaseAndSelfValues(interpreter, containerComposite)
+		base, self = attachmentBaseAndSelfValues(interpreter, containingResourceComposite)
 		interpreter.declareVariable(sema.BaseIdentifier, base)
 	}
 	interpreter.declareVariable(sema.SelfIdentifier, self)
 
 	for _, parameter := range parameters {
 		// lazily evaluate the default argument expressions
-		// note that we must evaluate them in the interpreter context that existed when the event
-		// was defined (i.e. the contract defining the resource) rather than the interpreter context
-		// that exists when the resource is destroyed. We accomplish this by using the original interpreter of the
-		// composite declaration, rather than the interpreter of the destroy expression
-
 		defaultArg := interpreter.evalExpression(parameter.DefaultArgument)
 		arguments = append(arguments, defaultArg)
 	}
@@ -1166,11 +1165,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				if compositeDecl.IsResourceDestructionDefaultEvent() {
 					// we implicitly pass the containing composite value as an argument to this invocation
 					containerComposite := invocation.Arguments[0].(*CompositeValue)
+					interpreter.activations.PushNewWithParent(inter.activations.CurrentOrNew())
+					interpreter.SharedState.callStack.Push(invocation)
 					invocation.Arguments = interpreter.evaluateDefaultDestroyEvent(
 						containerComposite,
 						compositeDecl,
-						compositeType,
-						locationRange,
 					)
 				}
 

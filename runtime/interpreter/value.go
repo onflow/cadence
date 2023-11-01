@@ -16593,6 +16593,10 @@ func resourceDefaultDestroyEventName(t sema.ContainerType) string {
 	return resourceDefaultDestroyEventPrefix + string(t.ID())
 }
 
+// get all the default destroy event constructors associated with this composite value.
+// note that there can be more than one in the case where a resource inherits from an interface
+// that also defines a default destroy event. When that composite is destroyed, all of these
+// events will need to be emitted.
 func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []FunctionValue) {
 	if v.Functions == nil {
 		return
@@ -16648,7 +16652,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 		// pass the container value to the creation of the default event as an implicit argument, so that
 		// its fields are accessible in the body of the event constructor
-		mockInvocation := NewInvocation(
+		eventConstructorInvocation := NewInvocation(
 			interpreter,
 			nil,
 			nil,
@@ -16659,7 +16663,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			locationRange,
 		)
 
-		event := constructor.invoke(mockInvocation).(*CompositeValue)
+		event := constructor.invoke(eventConstructorInvocation).(*CompositeValue)
 		eventType := interpreter.MustSemaTypeOfValue(event).(*sema.CompositeType)
 
 		// emit the event once destruction is complete
