@@ -991,23 +991,11 @@ func (interpreter *Interpreter) declareAttachmentValue(
 func (declarationInterpreter *Interpreter) evaluateDefaultDestroyEvent(
 	containingResourceComposite *CompositeValue,
 	eventDecl *ast.CompositeDeclaration,
-	invocation Invocation,
-	invocationActivation *VariableActivation,
+	declarationActivation *VariableActivation,
 ) (arguments []Value) {
 	parameters := eventDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
 
-	declarationInterpreter.activations.PushNewWithParent(invocationActivation)
-	declarationInterpreter.SharedState.callStack.Push(invocation)
-
-	// interpreter.activations.PushNewWithParent(inter.activations.CurrentOrNew())
-	// interpreter.SharedState.callStack.Push(invocation)
-	defer func() {
-		// Only unwind the call stack if there was no error
-		if r := recover(); r != nil {
-			panic(r)
-		}
-		declarationInterpreter.SharedState.callStack.Pop()
-	}()
+	declarationInterpreter.activations.Push(declarationActivation)
 	defer declarationInterpreter.activations.Pop()
 
 	var self MemberAccessibleValue = containingResourceComposite
@@ -1158,6 +1146,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 
 	initializerType := compositeType.InitializerFunctionType()
 
+	declarationActivation := declarationInterpreter.activations.CurrentOrNew()
+
 	var initializerFunction FunctionValue
 	if declaration.Kind() == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
@@ -1180,8 +1170,9 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 					invocation.Arguments = declarationInterpreter.evaluateDefaultDestroyEvent(
 						containerComposite,
 						compositeDecl,
-						invocation,
-						invocationInterpreter.activations.CurrentOrNew(),
+						// to properly lexically scope the evaluation of default arguments, we capture the
+						// activations existing at the time when the event was defined and use them here
+						declarationActivation,
 					)
 				}
 

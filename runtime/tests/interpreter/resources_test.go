@@ -2459,3 +2459,45 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
 	require.Equal(t, events[0].QualifiedIdentifier, "I.ResourceDestroyed")
 	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
 }
+
+func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
+
+	t.Parallel()
+
+	var events []*interpreter.CompositeValue
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+		let x = 1
+
+		resource R {
+			event ResourceDestroyed(x: Int = x)
+		}
+		
+		fun test() {
+			let x = 2
+			let r <- create R()
+			// should emit R.ResourceDestroyed(x: 1), not R.ResourceDestroyed(x: 2)
+			destroy r
+		}
+        `, ParseCheckAndInterpretOptions{
+		Config: &interpreter.Config{
+			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				events = append(events, event)
+				return nil
+			},
+		},
+		HandleCheckerError: func(err error) {
+			errs := checker.RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+			// ...
+		},
+	})
+
+	require.NoError(t, err)
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Len(t, events, 1)
+	require.Equal(t, events[0].QualifiedIdentifier, "R.ResourceDestroyed")
+	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "x"), interpreter.NewIntValueFromInt64(nil, 1))
+}
