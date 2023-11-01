@@ -173,7 +173,7 @@ func TestRandomMapOperations(t *testing.T) {
 	})
 
 	t.Run("deep remove", func(t *testing.T) {
-		copyOfTestMap.DeepRemove(inter)
+		copyOfTestMap.DeepRemove(inter, true)
 		err = storage.Remove(copyOfTestMap.SlabID())
 		require.NoError(t, err)
 
@@ -622,7 +622,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	})
 
 	t.Run("deep removal", func(t *testing.T) {
-		copyOfTestArray.DeepRemove(inter)
+		copyOfTestArray.DeepRemove(inter, true)
 		err = storage.Remove(copyOfTestArray.SlabID())
 		require.NoError(t, err)
 
@@ -967,7 +967,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	})
 
 	t.Run("deep remove", func(t *testing.T) {
-		copyOfTestComposite.DeepRemove(inter)
+		copyOfTestComposite.DeepRemove(inter, true)
 		err = storage.Remove(copyOfTestComposite.SlabID())
 		require.NoError(t, err)
 
@@ -1694,7 +1694,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 	)
 
 	// DeepRemove removes all elements (childArray1 and childArray2) recursively in array.
-	array.DeepRemove(inter)
+	array.DeepRemove(inter, true)
 
 	// As noted earlier in comments at the top of this test:
 	// storage.CheckHealth() should be called after array.DeepRemove(), not in the middle of array.DeepRemove().

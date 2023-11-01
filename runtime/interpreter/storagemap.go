@@ -125,12 +125,14 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key StorageMapKey, value 
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
+	interpreter.maybeValidateAtreeStorage()
 
 	existed = existingStorable != nil
 	if existed {
 		existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
-		existingValue.DeepRemove(interpreter)
+		existingValue.DeepRemove(interpreter, true)
 		interpreter.RemoveReferencedSlab(existingStorable)
 	}
 	return
@@ -152,7 +154,9 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (ex
 		}
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
+	interpreter.maybeValidateAtreeStorage()
 
 	// Key
 
@@ -165,7 +169,7 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (ex
 	existed = existingValueStorable != nil
 	if existed {
 		existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
-		existingValue.DeepRemove(interpreter)
+		existingValue.DeepRemove(interpreter, true)
 		interpreter.RemoveReferencedSlab(existingValueStorable)
 	}
 	return

@@ -100,6 +100,6 @@ func (f placeholderValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (placeholderValue) DeepRemove(_ *Interpreter) {
+func (placeholderValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }

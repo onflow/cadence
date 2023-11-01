@@ -85,7 +85,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 		optionalValue,
 	)
 
-	compositeValue.DeepRemove(inter)
+	compositeValue.DeepRemove(inter, true)
 
 	// Only count non-temporary slabs,
 	// i.e. ones which have a non-empty address

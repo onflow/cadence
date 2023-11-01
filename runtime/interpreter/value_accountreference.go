@@ -292,7 +292,7 @@ func (v *AccountReferenceValue) Clone(_ *Interpreter) Value {
 	)
 }
 
-func (*AccountReferenceValue) DeepRemove(_ *Interpreter) {
+func (*AccountReferenceValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
