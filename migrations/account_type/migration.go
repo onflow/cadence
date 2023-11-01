@@ -140,7 +140,17 @@ func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.St
 		// TODO: Reference of references must not be allowed?
 		convertedReferencedType := m.maybeConvertAccountType(staticType.ReferencedType)
 		if convertedReferencedType != nil {
-			return interpreter.NewReferenceStaticType(nil, staticType.Authorization, convertedReferencedType)
+			switch convertedReferencedType {
+
+			// If the converted type is already an account reference, then return as-is.
+			// i.e: Do not create reference to a reference.
+			case authAccountReferenceType,
+				unauthorizedAccountReferenceType:
+				return convertedReferencedType
+
+			default:
+				return interpreter.NewReferenceStaticType(nil, staticType.Authorization, convertedReferencedType)
+			}
 		}
 
 	case interpreter.FunctionStaticType:
@@ -158,19 +168,29 @@ func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.St
 		case interpreter.PrimitiveStaticTypeAuthAccount:
 			return authAccountReferenceType
 
-		// TODO: What about these?
-		case interpreter.PrimitiveStaticTypeAuthAccountCapabilities:
-		case interpreter.PrimitiveStaticTypeAuthAccountAccountCapabilities:
-		case interpreter.PrimitiveStaticTypeAuthAccountStorageCapabilities:
-		case interpreter.PrimitiveStaticTypeAuthAccountContracts:
-		case interpreter.PrimitiveStaticTypeAuthAccountKeys:
-		case interpreter.PrimitiveStaticTypeAuthAccountInbox:
+		case interpreter.PrimitiveStaticTypeAuthAccountCapabilities,
+			interpreter.PrimitiveStaticTypePublicAccountCapabilities:
+			return interpreter.PrimitiveStaticTypeAccount_Capabilities
 
-		case interpreter.PrimitiveStaticTypePublicAccountCapabilities:
-		case interpreter.PrimitiveStaticTypePublicAccountContracts:
-		case interpreter.PrimitiveStaticTypePublicAccountKeys:
+		case interpreter.PrimitiveStaticTypeAuthAccountAccountCapabilities:
+			return interpreter.PrimitiveStaticTypeAccount_AccountCapabilities
+
+		case interpreter.PrimitiveStaticTypeAuthAccountStorageCapabilities:
+			return interpreter.PrimitiveStaticTypeAccount_StorageCapabilities
+
+		case interpreter.PrimitiveStaticTypeAuthAccountContracts,
+			interpreter.PrimitiveStaticTypePublicAccountContracts:
+			return interpreter.PrimitiveStaticTypeAccount_Contracts
+
+		case interpreter.PrimitiveStaticTypeAuthAccountKeys,
+			interpreter.PrimitiveStaticTypePublicAccountKeys:
+			return interpreter.PrimitiveStaticTypeAccount_Keys
+
+		case interpreter.PrimitiveStaticTypeAuthAccountInbox:
+			return interpreter.PrimitiveStaticTypeAccount_Inbox
 
 		case interpreter.PrimitiveStaticTypeAccountKey:
+			return interpreter.AccountKeyStaticType
 		}
 	}
 
