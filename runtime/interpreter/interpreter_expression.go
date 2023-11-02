@@ -335,16 +335,6 @@ func (interpreter *Interpreter) checkMemberAccess(
 
 	targetStaticType := target.StaticType(interpreter)
 
-	// if both the targetType and the expectedType are references, we unwrap them and instead compare their underlying type
-	// this is because the "real" type of the target's entitlements may not yet be populated until after the member access
-	// succeeds, leading to extraneous errors here. The entitlements are enforced instead at checking time.
-	if referenceStaticType, isReferenceStaticType := targetStaticType.(*ReferenceStaticType); isReferenceStaticType {
-		targetStaticType = referenceStaticType.ReferencedType
-		if referenceType, isReferenceType := expectedType.(*sema.ReferenceType); isReferenceType {
-			expectedType = referenceType.Type
-		}
-	}
-
 	if !interpreter.IsSubTypeOfSemaType(targetStaticType, expectedType) {
 		targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
 
