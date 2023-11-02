@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/activations"
@@ -261,9 +262,8 @@ func TestInterpretForString(t *testing.T) {
 }
 
 type inclusiveRangeForInLoopTest struct {
-	start, end, step        int8
-	expectedLoopCount int
-	onlySignedTest    bool
+	start, end, step int8
+	loopElements     []int
 }
 
 func TestInclusiveRangeForInLoop(t *testing.T) {
@@ -275,25 +275,27 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
 
-	testCases := []inclusiveRangeForInLoopTest{
+	unsignedTestCases := []inclusiveRangeForInLoopTest{
 		{
-			s:                 0,
-			e:                 10,
-			step:              1,
-			expectedLoopCount: 11,
+			start:        0,
+			end:          10,
+			step:         1,
+			loopElements: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 		},
 		{
-			s:                 0,
-			e:                 10,
-			step:              2,
-			expectedLoopCount: 6,
+			start:        0,
+			end:          10,
+			step:         2,
+			loopElements: []int{0, 2, 4, 6, 8, 10},
 		},
+	}
+
+	signedTestCases := []inclusiveRangeForInLoopTest{
 		{
-			s:                 10,
-			e:                 -10,
-			step:              -2,
-			expectedLoopCount: 11,
-			onlySignedTest:    true,
+			start:        10,
+			end:          -10,
+			step:         -2,
+			loopElements: []int{10, 8, 6, 4, 2, 0, -2, -4, -6, -8, -10},
 		},
 	}
 
@@ -303,22 +305,22 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 
 			code := fmt.Sprintf(
 				`
-					fun test(): Int {
-						let s : %[1]s = %[2]d
-						let e : %[1]s = %[3]d
+					fun test(): [%[1]s] {
+						let start : %[1]s = %[2]d
+						let end : %[1]s = %[3]d
 						let step : %[1]s = %[4]d
-						let r: InclusiveRange<%[1]s> = InclusiveRange(s, e, step: step)
+						let range: InclusiveRange<%[1]s> = InclusiveRange(start, end, step: step)
 
-						var count = 0
-						for c in r {
-							count = count + 1
+						var elements : [%[1]s] = []
+						for element in range {
+							elements.append(element)
 						}
-						return count
+						return elements
 					}
 				`,
 				typ.String(),
-				testCase.s,
-				testCase.e,
+				testCase.start,
+				testCase.end,
 				testCase.step,
 			)
 
@@ -334,32 +336,59 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 			)
 
 			require.NoError(t, err)
-			countValue, err := inter.Invoke("test")
+			loopElements, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			AssertValuesEqual(
-				t,
-				inter,
-				interpreter.NewIntValueFromInt64(nil, int64(testCase.expectedLoopCount)),
-				countValue,
+			integerStaticType := interpreter.ConvertSemaToStaticType(
+				nil,
+				typ,
 			)
+
+			count := 0
+			iterator := (loopElements).(*interpreter.ArrayValue).Iterator(inter)
+			for {
+				elem := iterator.Next(inter)
+				if elem == nil {
+					break
+				}
+
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.GetSmallIntegerValue(
+						int8(testCase.loopElements[count]),
+						integerStaticType,
+					),
+					elem,
+				)
+
+				count += 1
+			}
+
+			assert.Equal(t, len(testCase.loopElements), count)
 		})
 	}
 
 	for _, typ := range sema.AllIntegerTypes {
-		for _, testCase := range testCases {
-			if testCase.onlySignedTest {
-				continue
-			}
+		// Only test leaf types
+		switch typ {
+		case sema.IntegerType, sema.SignedIntegerType:
+			continue
+		}
+
+		for _, testCase := range unsignedTestCases {
 			runTestCase(t, typ, testCase)
 		}
 	}
 
 	for _, typ := range sema.AllSignedIntegerTypes {
-		for _, testCase := range testCases {
-			if !testCase.onlySignedTest {
-				continue
-			}
+		// Only test leaf types
+		switch typ {
+		case sema.SignedIntegerType:
+			continue
+		}
+
+		for _, testCase := range signedTestCases {
 			runTestCase(t, typ, testCase)
 		}
 	}
