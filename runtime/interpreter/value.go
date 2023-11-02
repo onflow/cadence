@@ -17786,13 +17786,9 @@ func (v *CompositeValue) RemoveTypeKey(
 func (v *CompositeValue) Iterator(interpreter *Interpreter) ValueIterator {
 	staticType := v.StaticType(interpreter)
 
-	switch staticType.(type) {
+	switch typ := staticType.(type) {
 	case InclusiveRangeStaticType:
-		startValue := v.GetField(interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStartFieldName).(IntegerValue)
-		return &InclusiveRangeIterator{
-			rangeValue: v,
-			next:       startValue,
-		}
+		return NewInclusiveRangeIterator(v, interpreter, typ)
 
 	default:
 		// Must be caught in the checker.
@@ -17801,11 +17797,30 @@ func (v *CompositeValue) Iterator(interpreter *Interpreter) ValueIterator {
 }
 
 type InclusiveRangeIterator struct {
-	rangeValue *CompositeValue
-	next       IntegerValue
+	rangeValue   *CompositeValue
+	next         IntegerValue
+	stepNegative bool
 }
 
 var _ ValueIterator = &InclusiveRangeIterator{}
+
+func NewInclusiveRangeIterator(
+	v *CompositeValue,
+	interpreter *Interpreter,
+	typ InclusiveRangeStaticType,
+) *InclusiveRangeIterator {
+	startValue := v.GetField(interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStartFieldName).(IntegerValue)
+
+	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
+	stepValue := v.GetField(interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStepFieldName).(IntegerValue)
+	stepNegative := stepValue.Less(interpreter, zeroValue, EmptyLocationRange)
+
+	return &InclusiveRangeIterator{
+		rangeValue:   v,
+		next:         startValue,
+		stepNegative: bool(stepNegative),
+	}
+}
 
 func (i *InclusiveRangeIterator) Next(interpreter *Interpreter) Value {
 	valueToReturn := i.next
@@ -17813,26 +17828,11 @@ func (i *InclusiveRangeIterator) Next(interpreter *Interpreter) Value {
 	end := getFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeEndFieldName)
 	step := getFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStepFieldName)
 
-	staticType := i.rangeValue.StaticType(interpreter)
-	var elementType StaticType
-	switch typ := staticType.(type) {
-	case InclusiveRangeStaticType:
-		elementType = typ.ElementType
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	zeroValue := GetSmallIntegerValue(0, elementType)
-
 	// Ensure that valueToReturn is within the bounds.
-	if step.Less(interpreter, zeroValue, EmptyLocationRange) {
-		if valueToReturn.Less(interpreter, end, EmptyLocationRange) {
-			return nil
-		}
-	} else {
-		if valueToReturn.Greater(interpreter, end, EmptyLocationRange) {
-			return nil
-		}
+	if i.stepNegative && bool(valueToReturn.Less(interpreter, end, EmptyLocationRange)) {
+		return nil
+	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, end, EmptyLocationRange)) {
+		return nil
 	}
 
 	// Update the next value.
