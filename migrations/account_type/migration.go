@@ -58,6 +58,11 @@ func (m *AccountTypeMigration) Migrate(
 			reporter,
 		)
 	}
+
+	err := m.storage.Commit(m.interpreter, false)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // migrateTypeValuesInAccount migrates `AuthAccount` and `PublicAccount` types in a given account
@@ -77,21 +82,133 @@ func (m *AccountTypeMigration) migrateTypeValuesInAccount(
 	)
 }
 
-func (m *AccountTypeMigration) migrateValue(value interpreter.Value) interpreter.Value {
-	typeValue, ok := value.(interpreter.TypeValue)
-	if !ok {
-		// TODO: support migration for type-values nested inside other values.
-		return nil
+var locationRange = interpreter.EmptyLocationRange
+
+func (m *AccountTypeMigration) migrateValue(value interpreter.Value) (newValue interpreter.Value, updated bool) {
+	switch value := value.(type) {
+	case interpreter.TypeValue:
+		convertedType := m.maybeConvertAccountType(value.Type)
+		if convertedType == nil {
+			return
+		}
+
+		return interpreter.NewTypeValue(nil, convertedType), true
+
+	case *interpreter.SomeValue:
+		innerValue := value.InnerValue(m.interpreter, locationRange)
+		newInnerValue, _ := m.migrateValue(innerValue)
+		if newInnerValue != nil {
+			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue), true
+		}
+
+		return
+
+	case *interpreter.ArrayValue:
+		var index int
+
+		// Migrate array elements
+
+		value.Iterate(m.interpreter, func(element interpreter.Value) (resume bool) {
+			newElement, elementUpdated := m.migrateValue(element)
+			if newElement != nil {
+				value.Set(
+					m.interpreter,
+					locationRange,
+					index,
+					newElement,
+				)
+			}
+
+			index++
+
+			updated = updated || elementUpdated
+
+			return true
+		})
+
+		// The array itself doesn't need to be replaced.
+		return
+
+	case *interpreter.CompositeValue:
+		value.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
+			newFieldValue, fieldUpdated := m.migrateValue(fieldValue)
+			if newFieldValue != nil {
+				value.SetMember(
+					m.interpreter,
+					locationRange,
+					fieldName,
+					newFieldValue,
+				)
+			}
+
+			updated = updated || fieldUpdated
+
+			// continue iteration
+			return true
+		})
+
+		// The composite itself does not have to be replaced
+		return
+
+	case *interpreter.DictionaryValue:
+		dictionary := value
+
+		type migratedKeyValue struct {
+			oldKey   interpreter.Value
+			newKey   interpreter.Value
+			newValue interpreter.Value
+		}
+
+		var keyValues []migratedKeyValue
+
+		dictionary.Iterate(m.interpreter, func(key, value interpreter.Value) (resume bool) {
+			newKey, keyUpdated := m.migrateValue(key)
+			newValue, valueUpdated := m.migrateValue(value)
+
+			if newKey != nil || newValue != nil {
+				keyValues = append(
+					keyValues,
+					migratedKeyValue{
+						oldKey:   key,
+						newKey:   newKey,
+						newValue: newValue,
+					},
+				)
+			}
+
+			updated = updated || keyUpdated || valueUpdated
+
+			return true
+		})
+
+		for _, keyValue := range keyValues {
+			var key, value interpreter.Value
+
+			// We only reach here is either the key or value has been migrated.
+
+			if keyValue.newKey != nil {
+				// Key was migrated.
+				// Remove the old value at the old key.
+				// This old value will be inserted again with the new key, unless the value is also migrated.
+				value = dictionary.RemoveKey(m.interpreter, locationRange, keyValue.oldKey)
+				key = keyValue.newKey
+			} else {
+				key = keyValue.oldKey
+			}
+
+			// Value was migrated
+			if keyValue.newValue != nil {
+				value = keyValue.newValue
+			}
+
+			dictionary.SetKey(m.interpreter, locationRange, key, value)
+		}
+
+		// The dictionary itself does not have to be replaced
+		return
+	default:
+		return
 	}
-
-	innerType := typeValue.Type
-
-	convertedType := m.maybeConvertAccountType(innerType)
-	if convertedType == nil {
-		return nil
-	}
-
-	return interpreter.NewTypeValue(nil, convertedType)
 }
 
 func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.StaticType) interpreter.StaticType {

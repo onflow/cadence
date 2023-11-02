@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime"
@@ -33,9 +34,36 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-type testCase struct {
-	storedType   interpreter.StaticType
-	expectedType interpreter.StaticType
+var _ migrations.Reporter = &testReporter{}
+
+type testReporter struct {
+	migratedPaths map[common.Address]map[common.PathDomain]map[string]struct{}
+}
+
+func newTestReporter() *testReporter {
+	return &testReporter{
+		migratedPaths: map[common.Address]map[common.PathDomain]map[string]struct{}{},
+	}
+}
+
+func (t *testReporter) Report(
+	address common.Address,
+	domain common.PathDomain,
+	identifier string,
+) {
+	migratedPathsInAddress, ok := t.migratedPaths[address]
+	if !ok {
+		migratedPathsInAddress = make(map[common.PathDomain]map[string]struct{})
+		t.migratedPaths[address] = migratedPathsInAddress
+	}
+
+	migratedPathsInDomain, ok := migratedPathsInAddress[domain]
+	if !ok {
+		migratedPathsInDomain = make(map[string]struct{})
+		migratedPathsInAddress[domain] = migratedPathsInDomain
+	}
+
+	migratedPathsInDomain[identifier] = struct{}{}
 }
 
 func TestMigration(t *testing.T) {
@@ -47,6 +75,11 @@ func TestMigration(t *testing.T) {
 	const publicAccountType = interpreter.PrimitiveStaticTypePublicAccount
 	const authAccountType = interpreter.PrimitiveStaticTypeAuthAccount
 	const stringType = interpreter.PrimitiveStaticTypeString
+
+	type testCase struct {
+		storedType   interpreter.StaticType
+		expectedType interpreter.StaticType
+	}
 
 	testCases := map[string]testCase{
 		"public_account": {
@@ -285,7 +318,6 @@ func TestMigration(t *testing.T) {
 	// Migrate
 
 	rt := runtime_utils.NewTestInterpreterRuntime()
-
 	runtimeInterface := &runtime_utils.TestRuntimeInterface{
 		Storage: ledger,
 	}
@@ -296,7 +328,6 @@ func TestMigration(t *testing.T) {
 			Interface: runtimeInterface,
 		},
 	)
-
 	require.NoError(t, err)
 
 	reporter := newTestReporter()
@@ -310,15 +341,11 @@ func TestMigration(t *testing.T) {
 		reporter,
 	)
 
+	// Check reported migrated paths
+
 	migratedPathsInDomain := reporter.migratedPaths[account][pathDomain]
-
-	for path, _ := range migratedPathsInDomain {
-		require.Contains(t, testCases, path)
-	}
-
 	for path, test := range testCases {
-		t.Run(path, func(t *testing.T) {
-
+		t.Run(fmt.Sprintf("reported_%s", path), func(t *testing.T) {
 			test := test
 			path := path
 
@@ -328,16 +355,34 @@ func TestMigration(t *testing.T) {
 				require.NotContains(t, migratedPathsInDomain, path)
 			} else {
 				require.Contains(t, migratedPathsInDomain, path)
-
-				actualValue := migratedPathsInDomain[path]
-				actualTypeValue := actualValue.(interpreter.TypeValue)
-
-				assert.True(
-					t,
-					test.expectedType.Equal(actualTypeValue.Type),
-					fmt.Sprintf("expected `%s`, found `%s`", test.expectedType, actualTypeValue.Type),
-				)
 			}
+		})
+	}
+
+	// Assert the migrated values.
+	// Traverse through the storage and see if the values are updated now.
+
+	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
+	require.NotNil(t, storageMap)
+	require.Greater(t, storageMap.Count(), uint64(0))
+
+	iterator := storageMap.Iterator(inter)
+
+	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
+		identifier := string(key.(interpreter.StringAtreeValue))
+
+		t.Run(identifier, func(t *testing.T) {
+			testCase, ok := testCases[identifier]
+			require.True(t, ok)
+
+			var storageValue interpreter.Value
+			if testCase.expectedType != nil {
+				storageValue = interpreter.NewTypeValue(nil, testCase.expectedType)
+			} else {
+				storageValue = interpreter.NewTypeValue(nil, testCase.storedType)
+			}
+
+			utils.AssertValuesEqual(t, inter, storageValue, value)
 		})
 	}
 }
@@ -357,39 +402,172 @@ func storeTypeValue(
 	)
 }
 
-var _ migrations.Reporter = &testReporter{}
+func TestNestedTypeValueMigration(t *testing.T) {
+	t.Parallel()
 
-type testReporter struct {
-	migratedPaths map[common.Address]map[common.PathDomain]map[string]interpreter.Value
-}
+	account := common.Address{0x42}
+	pathDomain := common.PathDomainPublic
 
-func newTestReporter() *testReporter {
-	return &testReporter{
-		migratedPaths: map[common.Address]map[common.PathDomain]map[string]interpreter.Value{},
-	}
-}
-
-func (t *testReporter) Report(
-	address common.Address,
-	domain common.PathDomain,
-	identifier string,
-	value interpreter.Value,
-) {
-	migratedPathsInAddress, ok := t.migratedPaths[address]
-	if !ok {
-		migratedPathsInAddress = make(map[common.PathDomain]map[string]interpreter.Value)
-		t.migratedPaths[address] = migratedPathsInAddress
+	type testCase struct {
+		storedValue   interpreter.Value
+		expectedValue interpreter.Value
 	}
 
-	migratedPathsInDomain, ok := migratedPathsInAddress[domain]
-	if !ok {
-		migratedPathsInDomain = make(map[string]interpreter.Value)
-		migratedPathsInAddress[domain] = migratedPathsInDomain
+	storedAccountTypeValue := interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypePublicAccount)
+	expectedAccountTypeValue := interpreter.NewTypeValue(nil, unauthorizedAccountReferenceType)
+	stringTypeValue := interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypeString)
+
+	ledger := runtime_utils.NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil)
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   false,
+			AtreeStorageValidationEnabled: false,
+		},
+	)
+	require.NoError(t, err)
+
+	testCases := map[string]testCase{
+		"account_some_value": {
+			storedValue:   interpreter.NewUnmeteredSomeValueNonCopying(storedAccountTypeValue),
+			expectedValue: interpreter.NewUnmeteredSomeValueNonCopying(expectedAccountTypeValue),
+		},
+		"int8_some_value": {
+			storedValue: interpreter.NewUnmeteredSomeValueNonCopying(stringTypeValue),
+		},
+		"account_array": {
+			storedValue: interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
+				common.ZeroAddress,
+				stringTypeValue,
+				storedAccountTypeValue,
+				stringTypeValue,
+				stringTypeValue,
+				storedAccountTypeValue,
+			),
+			expectedValue: interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
+				common.ZeroAddress,
+				stringTypeValue,
+				expectedAccountTypeValue,
+				stringTypeValue,
+				stringTypeValue,
+				expectedAccountTypeValue,
+			),
+		},
+		"non_account_array": {
+			storedValue: interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
+				common.ZeroAddress,
+				stringTypeValue,
+				stringTypeValue,
+				stringTypeValue,
+			),
+		},
+		"dictionary_with_account_type_value": {
+			storedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeInt8,
+					interpreter.PrimitiveStaticTypeAnyStruct,
+				),
+				interpreter.NewUnmeteredInt8Value(4),
+				interpreter.NewUnmeteredSomeValueNonCopying(storedAccountTypeValue),
+			),
+			expectedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeInt8,
+					interpreter.PrimitiveStaticTypeAnyStruct,
+				),
+				interpreter.NewUnmeteredInt8Value(4),
+				interpreter.NewUnmeteredSomeValueNonCopying(expectedAccountTypeValue),
+			),
+		},
 	}
 
-	migratedPathsInDomain[identifier] = value
-}
+	// Store values
 
-func (t *testReporter) ReportError(err error) {
-	panic("implement me")
+	for name, testCase := range testCases {
+		transferredValue := testCase.storedValue.Transfer(
+			inter,
+			locationRange,
+			atree.Address(account),
+			true,
+			nil,
+			nil,
+		)
+
+		inter.WriteStored(
+			account,
+			pathDomain.Identifier(),
+			interpreter.StringStorageMapKey(name),
+			transferredValue,
+		)
+	}
+
+	err = storage.Commit(inter, true)
+	require.NoError(t, err)
+
+	// Migrate
+
+	rt := runtime_utils.NewTestInterpreterRuntime()
+	runtimeInterface := &runtime_utils.TestRuntimeInterface{
+		Storage: ledger,
+	}
+
+	migration, err := NewAccountTypeMigration(
+		rt,
+		runtime.Context{
+			Interface: runtimeInterface,
+		},
+	)
+	require.NoError(t, err)
+
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				account,
+			},
+		},
+		nil,
+	)
+
+	// Assert: Traverse through the storage and see if the values are updated now.
+
+	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
+	require.NotNil(t, storageMap)
+	require.Greater(t, storageMap.Count(), uint64(0))
+
+	iterator := storageMap.Iterator(inter)
+
+	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
+		identifier := string(key.(interpreter.StringAtreeValue))
+
+		t.Run(identifier, func(t *testing.T) {
+			testCase, ok := testCases[identifier]
+			require.True(t, ok)
+
+			expectedStoredValue := testCase.expectedValue
+			if expectedStoredValue == nil {
+				expectedStoredValue = testCase.storedValue
+			}
+
+			utils.AssertValuesEqual(t, inter, expectedStoredValue, value)
+		})
+	}
 }

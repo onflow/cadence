@@ -41,35 +41,35 @@ func NewAccountStorage(storage *runtime.Storage, address common.Address) Account
 func (i *AccountStorage) ForEachValue(
 	inter *interpreter.Interpreter,
 	domains []common.PathDomain,
-	valueConverter func(interpreter.Value) interpreter.Value,
+	valueConverter func(interpreter.Value) (newValue interpreter.Value, updated bool),
 	reporter Reporter,
 ) {
 	for _, domain := range domains {
 		storageMap := i.storage.GetStorageMap(i.address, domain.Identifier(), false)
-		if storageMap == nil {
+		if storageMap == nil || storageMap.Count() == 0 {
 			continue
 		}
 
 		iterator := storageMap.Iterator(inter)
 
-		count := storageMap.Count()
-		if count > 0 {
-			for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
-				newValue := valueConverter(value)
-
-				// If the converter returns a new value, then replace the existing value with the new one.
-				if newValue != nil {
-					// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
-					identifier := string(key.(interpreter.StringAtreeValue))
-					storageMap.SetValue(
-						inter,
-						interpreter.StringStorageMapKey(identifier),
-						newValue,
-					)
-
-					reporter.Report(i.address, domain, identifier, newValue)
-				}
+		for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
+			newValue, updated := valueConverter(value)
+			if newValue == nil && !updated {
+				continue
 			}
+
+			identifier := string(key.(interpreter.StringAtreeValue))
+
+			if newValue != nil {
+				// If the converter returns a new value, then replace the existing value with the new one.
+				storageMap.SetValue(
+					inter,
+					interpreter.StringStorageMapKey(identifier),
+					newValue,
+				)
+			}
+
+			reporter.Report(i.address, domain, identifier)
 		}
 	}
 }
