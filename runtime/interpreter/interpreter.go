@@ -995,7 +995,7 @@ func (declarationInterpreter *Interpreter) evaluateDefaultDestroyEvent(
 ) (arguments []Value) {
 	parameters := eventDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
 
-	declarationInterpreter.activations.Push(declarationActivation)
+	declarationInterpreter.activations.PushNewWithParent(declarationActivation)
 	defer declarationInterpreter.activations.Pop()
 
 	var self MemberAccessibleValue = containingResourceComposite
