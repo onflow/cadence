@@ -2098,6 +2098,10 @@ func (checker *Checker) checkCompositeFunctions(
 			defer checker.leaveValueScope(function.EndPosition, true)
 
 			fnAccess := checker.effectiveMemberAccess(checker.accessFromAstAccess(function.Access), ContainerKindComposite)
+			// all non-entitlement functions produce unauthorized references in attachments
+			if fnAccess.IsPrimitiveAccess() {
+				fnAccess = UnauthorizedAccess
+			}
 
 			checker.declareSelfValue(fnAccess, selfType, selfDocString)
 			if selfType.GetCompositeKind() == common.CompositeKindAttachment {
