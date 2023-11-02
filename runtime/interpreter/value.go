@@ -17810,8 +17810,8 @@ var _ ValueIterator = &InclusiveRangeIterator{}
 func (i *InclusiveRangeIterator) Next(interpreter *Interpreter) Value {
 	valueToReturn := i.next
 
-	end := GetFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeEndFieldName)
-	step := GetFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStepFieldName)
+	end := getFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeEndFieldName)
+	step := getFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStepFieldName)
 
 	staticType := i.rangeValue.StaticType(interpreter)
 	var elementType StaticType
