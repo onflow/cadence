@@ -16803,6 +16803,24 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	var self MemberAccessibleValue = v
 	if v.Kind == common.CompositeKindAttachment {
 		functionAccess := function.FunctionType().Access
+		// with respect to entitlements, any access inside an attachment that is not an entitlement access
+		// does not provide any entitlements to base and self
+		// E.g. consider:
+		//
+		//    access(E) fun foo() {}
+		//    access(self) fun bar() {
+		//        self.foo()
+		//    }
+		//    access(all) fun baz() {
+		//        self.bar()
+		//    }
+		//
+		// clearly `bar` should be callable within `baz`, but we cannot allow `foo`
+		// to be callable within `bar`, or it will be possible to access `E` entitled
+		// methods on `base`
+		if functionAccess.IsPrimitiveAccess() {
+			functionAccess = sema.UnauthorizedAccess
+		}
 		base, self = attachmentBaseAndSelfValues(interpreter, functionAccess, v)
 	}
 	return NewBoundFunctionValue(interpreter, function, &self, base, nil)
