@@ -88,12 +88,14 @@ func TestCheckForInclusiveRange(t *testing.T) {
 	for _, typ := range sema.AllIntegerTypes {
 		code := fmt.Sprintf(`
             fun test() {
-                let s : %[1]s = 1
-                let e : %[1]s = 2
+                let start : %[1]s = 1
+                let end : %[1]s = 2
                 let step : %[1]s = 1
-                let r: InclusiveRange<%[1]s> = InclusiveRange(s, e, step: step)
+                let range: InclusiveRange<%[1]s> = InclusiveRange(start, end, step: step)
                 
-                for c in r {}
+                for value in range {
+                    var typedValue: %[1]s = value
+                }
             }
         `, typ.String())
 
