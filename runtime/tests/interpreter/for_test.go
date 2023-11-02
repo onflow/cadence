@@ -261,7 +261,7 @@ func TestInterpretForString(t *testing.T) {
 }
 
 type inclusiveRangeForInLoopTest struct {
-	s, e, step        int8
+	start, end, step        int8
 	expectedLoopCount int
 	onlySignedTest    bool
 }
