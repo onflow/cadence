@@ -1846,6 +1846,45 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 	})
 }
 
+func TestInterpretAttachmentSelfAccessMembers(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+            access(all) resource R{
+                access(all) fun baz() {}
+            }
+            access(all) attachment A for R{
+                access(all) fun foo() {}
+                access(self) fun qux1() {
+                    self.foo()
+                    base.baz()
+                }
+                access(contract) fun qux2() {
+                    self.foo()
+                    base.baz()
+                }
+                access(account) fun qux3() {
+                    self.foo()
+                    base.baz()
+                }
+                access(all) fun bar() {
+                    self.qux1()
+                    self.qux2()
+                    self.qux3()
+                }
+            }
+            
+            access(all) fun main() {
+                var r <- attach A() to <- create R()
+                r[A]!.bar()
+                destroy r
+            }
+        `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+}
+
 func TestInterpretAttachmentMappedMembers(t *testing.T) {
 
 	t.Parallel()

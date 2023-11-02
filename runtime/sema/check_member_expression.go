@@ -378,7 +378,7 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member, resu
 	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
 		// only allow references unrestricted access to members in their own container that are not entitled
 		// this prevents rights escalation attacks on entitlements
-		(member.Access.isPrimitiveAccess() && checker.containerTypes[member.ContainerType]) {
+		(member.Access.IsPrimitiveAccess() && checker.containerTypes[member.ContainerType]) {
 
 		if mappedAccess, isMappedAccess := member.Access.(*EntitlementMapAccess); isMappedAccess {
 			return checker.mapAccess(mappedAccess, accessedType, resultingType, accessRange)

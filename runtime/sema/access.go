@@ -32,7 +32,7 @@ import (
 
 type Access interface {
 	isAccess()
-	isPrimitiveAccess() bool
+	IsPrimitiveAccess() bool
 	ID() TypeID
 	String() string
 	QualifiedString() string
@@ -88,7 +88,7 @@ func NewAccessFromEntitlementSet(
 }
 
 func (EntitlementSetAccess) isAccess() {}
-func (EntitlementSetAccess) isPrimitiveAccess() bool {
+func (EntitlementSetAccess) IsPrimitiveAccess() bool {
 	return false
 }
 
@@ -283,7 +283,7 @@ func NewEntitlementMapAccess(mapType *EntitlementMapType) *EntitlementMapAccess 
 }
 
 func (*EntitlementMapAccess) isAccess() {}
-func (*EntitlementMapAccess) isPrimitiveAccess() bool {
+func (*EntitlementMapAccess) IsPrimitiveAccess() bool {
 	return false
 }
 
@@ -455,7 +455,7 @@ type PrimitiveAccess ast.PrimitiveAccess
 var _ Access = PrimitiveAccess(0)
 
 func (PrimitiveAccess) isAccess() {}
-func (PrimitiveAccess) isPrimitiveAccess() bool {
+func (PrimitiveAccess) IsPrimitiveAccess() bool {
 	return true
 }
 
