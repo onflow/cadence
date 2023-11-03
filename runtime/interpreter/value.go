@@ -17788,7 +17788,7 @@ func (v *CompositeValue) Iterator(interpreter *Interpreter) ValueIterator {
 
 	switch typ := staticType.(type) {
 	case InclusiveRangeStaticType:
-		return NewInclusiveRangeIterator(v, interpreter, typ)
+		return NewInclusiveRangeIterator(interpreter, v, typ)
 
 	default:
 		// Must be caught in the checker.
@@ -17797,46 +17797,51 @@ func (v *CompositeValue) Iterator(interpreter *Interpreter) ValueIterator {
 }
 
 type InclusiveRangeIterator struct {
-	rangeValue   *CompositeValue
-	next         IntegerValue
+	rangeValue *CompositeValue
+	next       IntegerValue
+
+	// Cached values
 	stepNegative bool
+	step         IntegerValue
+	end          IntegerValue
 }
 
 var _ ValueIterator = &InclusiveRangeIterator{}
 
 func NewInclusiveRangeIterator(
-	v *CompositeValue,
 	interpreter *Interpreter,
+	v *CompositeValue,
 	typ InclusiveRangeStaticType,
 ) *InclusiveRangeIterator {
 	startValue := v.GetField(interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStartFieldName).(IntegerValue)
 
 	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
-	stepValue := v.GetField(interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStepFieldName).(IntegerValue)
+	endValue := getFieldAsIntegerValue(interpreter, v, EmptyLocationRange, sema.InclusiveRangeTypeEndFieldName)
+
+	stepValue := getFieldAsIntegerValue(interpreter, v, EmptyLocationRange, sema.InclusiveRangeTypeStepFieldName)
 	stepNegative := stepValue.Less(interpreter, zeroValue, EmptyLocationRange)
 
 	return &InclusiveRangeIterator{
 		rangeValue:   v,
 		next:         startValue,
 		stepNegative: bool(stepNegative),
+		step:         stepValue,
+		end:          endValue,
 	}
 }
 
 func (i *InclusiveRangeIterator) Next(interpreter *Interpreter) Value {
 	valueToReturn := i.next
 
-	end := getFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeEndFieldName)
-	step := getFieldAsIntegerValue(i.rangeValue, interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStepFieldName)
-
 	// Ensure that valueToReturn is within the bounds.
-	if i.stepNegative && bool(valueToReturn.Less(interpreter, end, EmptyLocationRange)) {
+	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, EmptyLocationRange)) {
 		return nil
-	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, end, EmptyLocationRange)) {
+	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, EmptyLocationRange)) {
 		return nil
 	}
 
 	// Update the next value.
-	nextValueToReturn, ok := valueToReturn.Plus(interpreter, step, EmptyLocationRange).(IntegerValue)
+	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, EmptyLocationRange).(IntegerValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
