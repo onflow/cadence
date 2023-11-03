@@ -2938,3 +2938,46 @@ func TestInterpretInnerResourceDestruction(t *testing.T) {
 	var destroyedResourceErr interpreter.DestroyedResourceError
 	require.ErrorAs(t, err, &destroyedResourceErr)
 }
+
+func TestInterpretInnerResourceMove(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        pub resource OuterResource {
+            pub var a: @InnerResource
+            pub var b: @InnerResource
+
+            init() {
+                 self.a <- create InnerResource()
+                 self.b <- create InnerResource()
+            }
+
+            pub fun swap() {
+                self.a <-> self.b
+            }
+
+            destroy() {
+                // Nested resource is moved here once
+                var a <- self.a
+
+                // Nested resource is again moved here. This one should fail.
+                self.swap()
+
+                destroy a
+                destroy self.b
+            }
+        }
+
+        pub resource InnerResource {}
+
+        pub fun main() {
+            let a <- create OuterResource()
+            destroy a
+        }`,
+	)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+}
