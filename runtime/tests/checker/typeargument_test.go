@@ -155,11 +155,6 @@ func TestCheckTypeArguments(t *testing.T) {
 	})
 }
 
-type checkParameterizedTypeIsInstantiatedTestCase struct {
-	name string
-	code string
-}
-
 func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 	t.Parallel()
@@ -170,6 +165,11 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		Config: &sema.Config{
 			BaseValueActivation: baseValueActivation,
 		},
+	}
+
+	type checkParameterizedTypeIsInstantiatedTestCase struct {
+		name string
+		code string
 	}
 
 	runTestCase := func(t *testing.T, testCase checkParameterizedTypeIsInstantiatedTestCase) {
