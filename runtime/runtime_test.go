@@ -9509,7 +9509,7 @@ func TestNestedResourceMoveInDestructor(t *testing.T) {
                 self.temp <- nil
             }
 
-            pub fun doubler(_ vault: @Bar.Vault): @Bar.Vault{
+            pub fun doubler(_ vault: @Bar.Vault): @Bar.Vault {
                 destroy  <- create R(<-vault)
                 var doubled <- self.temp <- nil
                 return <- doubled!
@@ -9519,16 +9519,16 @@ func TestNestedResourceMoveInDestructor(t *testing.T) {
                 pub var bounty: @Bar.Vault
                 pub var dummy: @Bar.Vault
 
-                init(_ v: @Bar.Vault){
+                init(_ v: @Bar.Vault) {
                      self.bounty <- v
                      self.dummy <- Bar.createEmptyVault()
                 }
 
-                pub fun swap(){
+                pub fun swap() {
                     self.bounty <-> self.dummy
                 }
 
-                destroy(){
+                destroy() {
                     // Nested resource is moved here once
                     var bounty <- self.bounty
 
@@ -9623,7 +9623,7 @@ func TestNestedResourceMoveInDestructor(t *testing.T) {
         import Bar from %[1]s
 
         transaction {
-            prepare(acc: AuthAccount){
+            prepare(acc: AuthAccount) {
                 acc.save(<- Bar.createVault(balance: 100.0), to: /storage/vault)!
                 var vault = acc.borrow<&Bar.Vault>(from: /storage/vault)!
                 var flow <- vault.withdraw(amount: 42.0)
