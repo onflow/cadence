@@ -212,8 +212,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		{
 			name: "Struct with InclusiveRange",
 			code: `
-				pub struct Foo {
-					pub let a: InclusiveRange
+				struct Foo {
+					let a: InclusiveRange
 
 					init() {
 						self.a = InclusiveRange(1, 10)
