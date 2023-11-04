@@ -545,6 +545,44 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("Contract with StructInterface with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				contract C {
+					struct interface Foo {
+						fun getRange(): InclusiveRange<Int>
+					}
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Contract with StructInterface with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				contract C {
+					struct interface Foo {
+						fun getRange(): InclusiveRange
+					}
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
 	t.Run("Resource with InclusiveRange", func(t *testing.T) {
 
 		t.Parallel()
@@ -657,6 +695,44 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 			`
 				resource interface Bar {
 					fun getRange(): InclusiveRange
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Contract with ResourceInterface with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				contract C {
+					resource interface Foo {
+						fun getRange(): InclusiveRange<Int>
+					}
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Contract with ResourceInterface with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				contract C {
+					resource interface Foo {
+						fun getRange(): InclusiveRange
+					}
 				}
 			`,
 			options,
