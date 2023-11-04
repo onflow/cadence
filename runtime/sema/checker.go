@@ -2101,9 +2101,6 @@ func (checker *Checker) checkParameterizedTypeIsInstantiated(ty Type, pos ast.Ha
 		if t.EnumRawType != nil {
 			checker.checkParameterizedTypeIsInstantiated(t.EnumRawType, pos)
 		}
-		if t.containerType != nil {
-			checker.checkParameterizedTypeIsInstantiated(t.containerType, pos)
-		}
 		if t.baseType != nil {
 			checker.checkParameterizedTypeIsInstantiated(t.baseType, pos)
 		}
@@ -2117,10 +2114,6 @@ func (checker *Checker) checkParameterizedTypeIsInstantiated(ty Type, pos ast.Ha
 		}
 
 	case *InterfaceType:
-		if t.containerType != nil {
-			checker.checkParameterizedTypeIsInstantiated(t.containerType, pos)
-		}
-
 		for _, param := range t.InitializerParameters {
 			checker.checkParameterizedTypeIsInstantiated(param.TypeAnnotation.Type, pos)
 		}

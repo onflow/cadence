@@ -167,51 +167,162 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		},
 	}
 
-	type checkParameterizedTypeIsInstantiatedTestCase struct {
-		name string
-		code string
-	}
+	t.Run("InclusiveRange<Int>", func(t *testing.T) {
 
-	runTestCase := func(t *testing.T, testCase checkParameterizedTypeIsInstantiatedTestCase) {
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Parallel()
 
-			t.Parallel()
+		_, err := ParseAndCheckWithOptions(t,
+			"let inclusiveRange: InclusiveRange<Int> = InclusiveRange(1, 10)",
+			options,
+		)
 
-			_, err := ParseAndCheckWithOptions(t,
-				testCase.code,
-				options,
-			)
+		require.NoError(t, err)
+	})
 
-			errs := RequireCheckerErrors(t, err, 1)
+	t.Run("InclusiveRange", func(t *testing.T) {
 
-			assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
-		})
-	}
+		t.Parallel()
 
-	testCases := []checkParameterizedTypeIsInstantiatedTestCase{
-		{
-			name: "InclusiveRange",
-			code: "let inclusiveRange: InclusiveRange = InclusiveRange(1, 10)",
-		},
-		{
-			name: "VariableSizedArray with InclusiveRange",
-			code: "let r: [InclusiveRange] = []",
-		},
-		{
-			name: "ConstantSizedType with InclusiveRange",
-			code: "let r: [InclusiveRange; 2] = [InclusiveRange(1, 2), InclusiveRange(3, 4)]",
-		},
-		{
-			name: "OptionalType with InclusiveRange",
-			code: "let r: InclusiveRange? = nil",
-		},
-		{
-			name: "DictionaryType with InclusiveRange",
-			code: "let r: {Int: InclusiveRange} = {}",
-		},
-		{
-			name: "Struct with InclusiveRange",
-			code: `
+		_, err := ParseAndCheckWithOptions(t,
+			"let inclusiveRange: InclusiveRange = InclusiveRange(1, 10)",
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("VariableSizedArray with InclusiveRange<Int8>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"let r: [InclusiveRange<Int8>] = []",
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("VariableSizedArray with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"let r: [InclusiveRange] = []",
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("ConstantSizedType with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"let r: [InclusiveRange<Int>; 2] = [InclusiveRange(1, 2), InclusiveRange(3, 4)]",
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ConstantSizedType with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"let r: [InclusiveRange; 2] = [InclusiveRange(1, 2), InclusiveRange(3, 4)]",
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("OptionalType with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"let r: InclusiveRange<Int>? = nil",
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("OptionalType with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"let r: InclusiveRange? = nil",
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("DictionaryType with InclusiveRange<UInt128>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"let r: {Int: InclusiveRange<UInt128>} = {}",
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("DictionaryType with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"let r: {Int: InclusiveRange} = {}",
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Struct with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				struct Foo {
+					let a: InclusiveRange<Int>
+
+					init() {
+						self.a = InclusiveRange(1, 10)
+					}
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Struct with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
 				struct Foo {
 					let a: InclusiveRange
 
@@ -220,12 +331,427 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-		},
-	}
+			options,
+		)
 
-	for _, test := range testCases {
-		runTestCase(t, test)
-	}
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Nested Struct with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				struct Bar {
+					let a: InclusiveRange<Int>
+
+					init() {
+						self.a = InclusiveRange(1, 10)
+					}
+				}
+
+				struct Foo {
+					let bar: Bar
+
+					init(b : Bar) {
+						self.bar = b
+					}
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Nested Struct with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				struct Bar {
+					let a: InclusiveRange
+
+					init() {
+						self.a = InclusiveRange(1, 10)
+					}
+				}
+
+				struct Foo {
+					let bar: Bar
+
+					init(b : Bar) {
+						self.bar = b
+					}
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Contract with Struct with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				contract C {
+					struct Foo {
+						let a: InclusiveRange<Int>
+	
+						init() {
+							self.a = InclusiveRange(1, 10)
+						}
+					}
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Contract with Struct with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				contract C {
+					struct Foo {
+						let a: InclusiveRange
+	
+						init() {
+							self.a = InclusiveRange(1, 10)
+						}
+					}
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Struct with function returning InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				struct Bar {
+					let f: ((): InclusiveRange<Int>)
+
+					init() {
+						self.f = fun () : InclusiveRange<Int> {
+							return InclusiveRange(1, 10)
+						}
+					}
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Struct with function returning InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				struct Bar {
+					let f: ((): InclusiveRange)
+
+					init() {
+						self.f = fun () : InclusiveRange {
+							return InclusiveRange(1, 10)
+						}
+					}
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		// 2 errors for the two occurences of InclusiveRange.
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[1])
+	})
+
+	t.Run("StructInterface with function returning InclusiveRange<UInt>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				struct interface Bar {
+					fun getRange(): InclusiveRange<UInt>
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("StructInterface with function returning InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				struct interface Bar {
+					fun getRange(): InclusiveRange
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Resource with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				resource Foo {
+					let a: InclusiveRange<Int>
+
+					init() {
+						self.a = InclusiveRange(1, 10)
+					}
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Resource with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				resource Foo {
+					let a: InclusiveRange
+
+					init() {
+						self.a = InclusiveRange(1, 10)
+					}
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Nested Resource with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				resource Bar {
+					let a: InclusiveRange<Int>
+
+					init() {
+						self.a = InclusiveRange(1, 10)
+					}
+				}
+
+				resource Foo {
+					let bar: @Bar
+
+					init(b : @Bar) {
+						self.bar <- b
+					}
+
+					destroy() {
+						destroy self.bar
+					}
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Nested Resource with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				resource Bar {
+					let a: InclusiveRange
+
+					init() {
+						self.a = InclusiveRange(1, 10)
+					}
+				}
+
+				resource Foo {
+					let bar: @Bar
+
+					init(b : @Bar) {
+						self.bar <- b
+					}
+
+					destroy() {
+						destroy self.bar
+					}
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("ResourceInterface with function returning InclusiveRange<UInt>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				resource interface Bar {
+					fun getRange(): InclusiveRange<UInt>
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("ResourceInterface with function returning InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				resource interface Bar {
+					fun getRange(): InclusiveRange
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Type with InclusiveRange<Word256>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				pub fun main(): Type {
+					return Type<InclusiveRange<Word256>>()
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Type with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				pub fun main(): Type {
+					return Type<InclusiveRange>()
+				}
+			`,
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Event with InclusiveRange<Int>", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"event Foo(bar: InclusiveRange<Int>)",
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[0])
+	})
+
+	t.Run("Event with InclusiveRange", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			"event Foo(bar: InclusiveRange)",
+			options,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+		assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
+	})
+
+	t.Run("Enum Declaration", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+				pub fun main(): Direction {
+					return Direction.RIGHT
+				}
+
+				pub enum Direction: Int {
+					pub case UP
+					pub case DOWN
+					pub case LEFT
+					pub case RIGHT
+				}
+			`,
+			options,
+		)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckTypeArgumentSubtyping(t *testing.T) {
