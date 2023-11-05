@@ -486,7 +486,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		// 2 errors for the two occurences of InclusiveRange.
+		// 2 errors for the two occurrences of InclusiveRange.
 		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
 		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[1])
 	})
