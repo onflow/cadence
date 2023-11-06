@@ -29,6 +29,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1893,7 +1894,7 @@ func TestInterpretAttachmentMappedMembers(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
             entitlement E
             entitlement F
             entitlement G
@@ -1924,7 +1925,15 @@ func TestInterpretAttachmentMappedMembers(t *testing.T) {
                 destroy r
                 return i
             }
-        `)
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -1942,7 +1951,7 @@ func TestInterpretAttachmentMappedMembers(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
             entitlement E
             entitlement F
             entitlement mapping M {
@@ -1971,7 +1980,15 @@ func TestInterpretAttachmentMappedMembers(t *testing.T) {
                 destroy r
                 return i
             }
-        `)
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
 
 		value, err := inter.Invoke("test")
 		require.NoError(t, err)
