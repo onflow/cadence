@@ -507,7 +507,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 			inter,
 			locationRange,
 			atree.Address(account),
-			true,
+			false,
 			nil,
 			nil,
 		)

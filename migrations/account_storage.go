@@ -52,24 +52,36 @@ func (i *AccountStorage) ForEachValue(
 
 		iterator := storageMap.Iterator(inter)
 
-		for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
+		// Read the keys first, so the iteration wouldn't be affected
+		// by the modification of the storage values.
+		var keys []string
+		for key, _ := iterator.Next(); key != nil; key, _ = iterator.Next() {
+			identifier := string(key.(interpreter.StringAtreeValue))
+			keys = append(keys, identifier)
+		}
+
+		for _, key := range keys {
+			storageKey := interpreter.StringStorageMapKey(key)
+
+			value := storageMap.ReadValue(nil, storageKey)
+
 			newValue, updated := valueConverter(value)
 			if newValue == nil && !updated {
 				continue
 			}
 
-			identifier := string(key.(interpreter.StringAtreeValue))
-
 			if newValue != nil {
 				// If the converter returns a new value, then replace the existing value with the new one.
 				storageMap.SetValue(
 					inter,
-					interpreter.StringStorageMapKey(identifier),
+					storageKey,
 					newValue,
 				)
 			}
 
-			reporter.Report(i.address, domain, identifier)
+			if reporter != nil {
+				reporter.Report(i.address, domain, key)
+			}
 		}
 	}
 }
