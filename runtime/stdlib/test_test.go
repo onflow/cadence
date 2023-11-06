@@ -57,7 +57,10 @@ func newTestContractInterpreterWithTestFramework(
 	program, err := parser.ParseProgram(
 		nil,
 		[]byte(code),
-		parser.Config{},
+		parser.Config{
+			NativeModifierEnabled: true,
+			TypeParametersEnabled: true,
+		},
 	)
 	require.NoError(t, err)
 
@@ -73,7 +76,8 @@ func newTestContractInterpreterWithTestFramework(
 			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 				return baseValueActivation
 			},
-			AccessCheckMode: sema.AccessCheckModeStrict,
+			AccessCheckMode:         sema.AccessCheckModeStrict,
+			AllowNativeDeclarations: true,
 			ImportHandler: func(
 				checker *sema.Checker,
 				importedLocation common.Location,
@@ -712,6 +716,80 @@ func TestTestEqualMatcher(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
+}
+
+func TestAssertFunction(t *testing.T) {
+	t.Parallel()
+
+	const script = `
+        import Test
+
+        access(all)
+        fun testAssertWithNoArgs() {
+            Test.assert(true)
+        }
+
+        access(all)
+        fun testAssertWithNoArgsFail() {
+            Test.assert(false)
+        }
+
+        access(all)
+        fun testAssertWithMessage() {
+            Test.assert(true, message: "some reason")
+        }
+
+        access(all)
+        fun testAssertWithMessageFail() {
+            Test.assert(false, message: "some reason")
+        }
+	`
+
+	inter, err := newTestContractInterpreter(t, script)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testAssertWithNoArgs")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testAssertWithNoArgsFail")
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "assertion failed")
+
+	_, err = inter.Invoke("testAssertWithMessage")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testAssertWithMessageFail")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "assertion failed: some reason")
+}
+
+func TestFailFunction(t *testing.T) {
+	t.Parallel()
+
+	const script = `
+        import Test
+
+        access(all)
+        fun testFailWithoutMessage() {
+            Test.fail()
+        }
+
+        access(all)
+        fun testFailWithMessage() {
+            Test.fail(message: "some error")
+        }
+	`
+
+	inter, err := newTestContractInterpreter(t, script)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("testFailWithoutMessage")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "assertion failed")
+
+	_, err = inter.Invoke("testFailWithMessage")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "assertion failed: some error")
 }
 
 func TestAssertEqual(t *testing.T) {
@@ -2209,7 +2287,7 @@ func TestBlockchain(t *testing.T) {
 
                 Test.expect(events, Test.beEmpty())
             }
-        `
+		`
 
 		eventsInvoked := false
 
@@ -2258,7 +2336,7 @@ func TestBlockchain(t *testing.T) {
 
                 Test.expect(events, Test.beEmpty())
             }
-        `
+		`
 
 		eventsInvoked := false
 
@@ -2303,7 +2381,7 @@ func TestBlockchain(t *testing.T) {
             fun test() {
                 Test.reset(to: 5)
             }
-        `
+		`
 
 		resetInvoked := false
 
@@ -2337,7 +2415,7 @@ func TestBlockchain(t *testing.T) {
             fun test() {
                 Test.reset(to: 5.5)
             }
-        `
+		`
 
 		resetInvoked := false
 
@@ -2370,7 +2448,7 @@ func TestBlockchain(t *testing.T) {
                 let timeDelta = Fix64(35 * 24 * 60 * 60)
                 Test.moveTime(by: timeDelta)
             }
-        `
+		`
 
 		moveTimeInvoked := false
 
@@ -2407,7 +2485,7 @@ func TestBlockchain(t *testing.T) {
                 let timeDelta = Fix64(35 * 24 * 60 * 60) * -1.0
                 Test.moveTime(by: timeDelta)
             }
-        `
+		`
 
 		moveTimeInvoked := false
 
@@ -2441,7 +2519,7 @@ func TestBlockchain(t *testing.T) {
             fun testMoveTime() {
                 Test.moveTime(by: 3000)
             }
-        `
+		`
 
 		moveTimeInvoked := false
 
@@ -2471,7 +2549,7 @@ func TestBlockchain(t *testing.T) {
             fun test() {
                 Test.createSnapshot(name: "adminCreated")
             }
-        `
+		`
 
 		createSnapshotInvoked := false
 
@@ -2507,7 +2585,7 @@ func TestBlockchain(t *testing.T) {
             fun test() {
                 Test.createSnapshot(name: "adminCreated")
             }
-        `
+		`
 
 		createSnapshotInvoked := false
 
@@ -2544,7 +2622,7 @@ func TestBlockchain(t *testing.T) {
                 Test.createSnapshot(name: "adminCreated")
                 Test.loadSnapshot(name: "adminCreated")
             }
-        `
+		`
 
 		loadSnapshotInvoked := false
 
@@ -2586,7 +2664,7 @@ func TestBlockchain(t *testing.T) {
                 Test.createSnapshot(name: "adminCreated")
                 Test.loadSnapshot(name: "contractDeployed")
             }
-        `
+		`
 
 		loadSnapshotInvoked := false
 
@@ -2633,7 +2711,7 @@ func TestBlockchain(t *testing.T) {
 
                 Test.expect(err, Test.beNil())
             }
-        `
+		`
 
 		deployContractInvoked := false
 
@@ -2687,7 +2765,7 @@ func TestBlockchain(t *testing.T) {
                     err!.message
                 )
             }
-        `
+		`
 
 		deployContractInvoked := false
 
@@ -2726,9 +2804,9 @@ func TestBlockchain(t *testing.T) {
             access(all)
             fun test() {
                 let account = Test.getAccount(0x0000000000000009)
-                Test.assertEqual(0x0000000000000009 as Address, account.address)
+                Test.assertEqual(Address(0x0000000000000009), account.address)
             }
-        `
+		`
 
 		getAccountInvoked := false
 
@@ -2774,7 +2852,7 @@ func TestBlockchain(t *testing.T) {
             fun test() {
                 let account = Test.getAccount(0x0000000000000009)
             }
-        `
+		`
 
 		getAccountInvoked := false
 
@@ -2804,6 +2882,79 @@ func TestBlockchain(t *testing.T) {
 		assert.True(t, getAccountInvoked)
 	})
 
+	t.Run("readFile", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun test() {
+                let content = Test.readFile("some_file.cdc")
+                Test.assertEqual("Hey there!", content)
+            }
+		`
+
+		readFileInvoked := false
+
+		testFramework := &mockedTestFramework{
+			emulatorBackend: func() stdlib.Blockchain {
+				return &mockedBlockchain{}
+			},
+			readFile: func(path string) (string, error) {
+				readFileInvoked = true
+				assert.Equal(t, "some_file.cdc", path)
+
+				return "Hey there!", nil
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.True(t, readFileInvoked)
+	})
+
+	t.Run("readFile with failure", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun test() {
+                let content = Test.readFile("some_file.cdc")
+                Test.assertEqual("Hey there!", content)
+            }
+		`
+
+		readFileInvoked := false
+
+		testFramework := &mockedTestFramework{
+			emulatorBackend: func() stdlib.Blockchain {
+				return &mockedBlockchain{}
+			},
+			readFile: func(path string) (string, error) {
+				readFileInvoked = true
+				assert.Equal(t, "some_file.cdc", path)
+
+				return "", fmt.Errorf("could not read file: %s", path)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "could not read file: some_file.cdc")
+
+		assert.True(t, readFileInvoked)
+	})
+
 	// TODO: Add more tests for the remaining functions.
 }
 
@@ -2820,9 +2971,9 @@ func TestBlockchainAccount(t *testing.T) {
             access(all)
             fun test() {
                 let account = Test.createAccount()
-                assert(account.address == 0x0100000000000000)
+                Test.assertEqual(Address(0x0100000000000000), account.address)
             }
-        `
+		`
 
 		testFramework := &mockedTestFramework{
 			emulatorBackend: func() stdlib.Blockchain {

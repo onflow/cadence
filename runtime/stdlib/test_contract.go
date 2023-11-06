@@ -64,13 +64,12 @@ var testTypeAssertFunctionType = &sema.FunctionType{
 			TypeAnnotation: sema.BoolTypeAnnotation,
 		},
 		{
-			Identifier:     "message",
-			TypeAnnotation: sema.StringTypeAnnotation,
+			Identifier:      "message",
+			TypeAnnotation:  sema.StringTypeAnnotation,
+			DefaultArgument: sema.StringType,
 		},
 	},
 	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-	// `message` parameter is optional
-	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
 var testTypeAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -181,13 +180,12 @@ var testTypeFailFunctionType = &sema.FunctionType{
 	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
-			Identifier:     "message",
-			TypeAnnotation: sema.StringTypeAnnotation,
+			Identifier:      "message",
+			TypeAnnotation:  sema.StringTypeAnnotation,
+			DefaultArgument: sema.StringType,
 		},
 	},
 	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-	// `message` parameter is optional
-	Arity: &sema.Arity{Min: 0, Max: 1},
 }
 
 var testTypeFailFunction = interpreter.NewUnmeteredHostFunctionValue(
@@ -915,7 +913,10 @@ func newTestContractType() *TestContractType {
 	program, err := parser.ParseProgram(
 		nil,
 		contracts.TestContract,
-		parser.Config{},
+		parser.Config{
+			NativeModifierEnabled: true,
+			TypeParametersEnabled: true,
+		},
 	)
 	if err != nil {
 		panic(err)
@@ -933,7 +934,8 @@ func newTestContractType() *TestContractType {
 			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 				return activation
 			},
-			AccessCheckMode: sema.AccessCheckModeStrict,
+			AccessCheckMode:         sema.AccessCheckModeStrict,
+			AllowNativeDeclarations: true,
 		},
 	)
 	if err != nil {
@@ -1160,7 +1162,6 @@ func newTestContractType() *TestContractType {
 	ty.expectFailureFunction = newTestTypeExpectFailureFunction(
 		expectFailureFunctionType,
 	)
-	compositeType.ResolveMembers()
 
 	return ty
 }

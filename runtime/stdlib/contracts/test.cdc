@@ -473,4 +473,87 @@ contract Test {
 
         assert(found, message: "the error message did not contain the given sub-string")
     }
+
+    /// Creates a matcher with a test function.
+    /// The test function is of type 'fun(T): Bool',
+    /// where 'T' is bound to 'AnyStruct'.
+    ///
+    access(all)
+    native fun newMatcher<T: AnyStruct>(_ test: fun(T): Bool): Test.Matcher {}
+
+    /// Wraps a function call in a closure, and expects it to fail with
+    /// an error message that contains the given error message portion.
+    ///
+    access(all)
+    native fun expectFailure(
+        _ functionWrapper: fun(): Void,
+        errorMessageSubstring: String
+    ) {}
+
+    /// Expect function tests a value against a matcher
+    /// and fails the test if it's not a match.
+    ///
+    access(all)
+    native fun expect<T: AnyStruct>(_ value: T, _ matcher: Test.Matcher) {}
+
+    /// Returns a matcher that succeeds if the tested
+    /// value is equal to the given value.
+    ///
+    access(all)
+    native fun equal<T: AnyStruct>(_ value: T): Test.Matcher {}
+
+    /// Fails the test-case if the given values are not equal, and
+    /// reports a message which explains how the two values differ.
+    ///
+    access(all)
+    native fun assertEqual(_ expected: AnyStruct, _ actual: AnyStruct) {}
+
+    /// Returns a matcher that succeeds if the tested value is
+    /// an array or dictionary and the tested value contains
+    /// no elements.
+    ///
+    access(all)
+    native fun beEmpty(): Test.Matcher {}
+
+    /// Returns a matcher that succeeds if the tested value is
+    /// an array or dictionary and has the given number of elements.
+    ///
+    access(all)
+    native fun haveElementCount(_ count: Int): Test.Matcher {}
+
+    /// Returns a matcher that succeeds if the tested value is
+    /// an array that contains a value that is equal to the given
+    /// value, or the tested value is a dictionary that contains
+    /// an entry where the key is equal to the given value.
+    ///
+    access(all)
+    native fun contain(_ element: AnyStruct): Test.Matcher {}
+
+    /// Returns a matcher that succeeds if the tested value
+    /// is a number and greater than the given number.
+    ///
+    access(all)
+    native fun beGreaterThan(_ value: Number): Test.Matcher {}
+
+    /// Returns a matcher that succeeds if the tested value
+    /// is a number and less than the given number.
+    ///
+    access(all)
+    native fun beLessThan(_ value: Number): Test.Matcher {}
+
+    /// Read a local file, and return the content as a string.
+    ///
+    access(all)
+    native fun readFile(_ path: String): String {}
+
+    /// Fails the test-case if the given condition is false,
+    /// and reports a message which explains how the condition is false.
+    ///
+    access(all)
+    native fun assert(_ condition: Bool, message: String = ""): Void {}
+
+    /// Fails the test-case with a message.
+    ///
+    access(all)
+    native fun fail(message: String = ""): Void {}
 }
