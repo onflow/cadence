@@ -4192,6 +4192,30 @@ func (e *InvalidMappedEntitlementMemberError) EndPosition(common.MemoryGauge) as
 	return e.Pos
 }
 
+// InvalidAttachmentMappedEntitlementMemberError
+type InvalidAttachmentMappedEntitlementMemberError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidAttachmentMappedEntitlementMemberError{}
+var _ errors.UserError = &InvalidAttachmentMappedEntitlementMemberError{}
+
+func (*InvalidAttachmentMappedEntitlementMemberError) isSemanticError() {}
+
+func (*InvalidAttachmentMappedEntitlementMemberError) IsUserError() {}
+
+func (e *InvalidAttachmentMappedEntitlementMemberError) Error() string {
+	return "entitlement mapped members are not yet supported on attachments"
+}
+
+func (e *InvalidAttachmentMappedEntitlementMemberError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidAttachmentMappedEntitlementMemberError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
 // InvalidNonEntitlementAccessError
 type InvalidNonEntitlementAccessError struct {
 	ast.Range

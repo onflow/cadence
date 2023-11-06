@@ -1916,6 +1916,16 @@ func (checker *Checker) checkEntitlementMapAccess(
 		return
 	}
 
+	// due to potential security issues, entitlement mappings are disabled on attachments for now
+	if *containerKind == common.CompositeKindAttachment {
+		checker.report(
+			&InvalidAttachmentMappedEntitlementMemberError{
+				Pos: startPos,
+			},
+		)
+		return
+	}
+
 	// mapped entitlement fields must be one of:
 	// 1) An [optional] reference that is authorized to the same mapped entitlement.
 	// 2) A function that return an [optional] reference authorized to the same mapped entitlement.

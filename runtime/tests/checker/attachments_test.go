@@ -3843,7 +3843,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("in base", func(t *testing.T) {
@@ -3897,7 +3898,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		)
 	})
 
-	t.Run("in base, with entitlements", func(t *testing.T) {
+	t.Run("identity mapping in attachment", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3918,7 +3919,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("in self, through base", func(t *testing.T) {
@@ -4081,7 +4083,8 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("entitlement mapped function self value cast", func(t *testing.T) {
@@ -4122,7 +4125,8 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("entitlement mapped function self value cast invalid access", func(t *testing.T) {
@@ -4163,9 +4167,9 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 
 	t.Run("entitlement mapped function base value cast", func(t *testing.T) {
@@ -4205,7 +4209,8 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("entitlement mapped function base value cast invalid access", func(t *testing.T) {
@@ -4245,8 +4250,9 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 
 	t.Run("entitlement mapped function self value access", func(t *testing.T) {
@@ -4284,8 +4290,9 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 				`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 
 	t.Run("entitlement mapped function base value access", func(t *testing.T) {
@@ -4322,8 +4329,9 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 			`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 }
 

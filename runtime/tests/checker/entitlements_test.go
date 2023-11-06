@@ -4760,7 +4760,8 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
         }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("invalid base and self in mapped functions", func(t *testing.T) {
@@ -4785,10 +4786,11 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
         }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 3)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 
 		var typeMismatchErr *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		require.ErrorAs(t, errs[1], &typeMismatchErr)
 		assert.Equal(t,
 			"auth(Y) &S",
 			typeMismatchErr.ExpectedType.QualifiedString(),
@@ -4798,7 +4800,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 
-		require.ErrorAs(t, errs[1], &typeMismatchErr)
+		require.ErrorAs(t, errs[2], &typeMismatchErr)
 		assert.Equal(t,
 			"auth(Y) &A",
 			typeMismatchErr.ExpectedType.QualifiedString(),
@@ -4915,7 +4917,8 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
         }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("access(all) decl", func(t *testing.T) {
@@ -5187,7 +5190,7 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		)
 	})
 
-	t.Run("base attachment access in mapped function", func(t *testing.T) {
+	t.Run("mapped function in attachment", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -5208,7 +5211,8 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
         }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("invalid base attachment access in mapped function", func(t *testing.T) {
@@ -5232,10 +5236,11 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
         }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 
 		var typeMismatchErr *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		require.ErrorAs(t, errs[1], &typeMismatchErr)
 		assert.Equal(t,
 			"auth(Y) &A?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
