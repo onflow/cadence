@@ -877,7 +877,7 @@ func parseEventDeclaration(
 
 	// if this is a `ResourceDestroyed` event (i.e., a default event declaration), parse default arguments
 	parseDefaultArguments := ast.IsResourceDestructionDefaultEvent(identifier.Identifier)
-	parameterList, err := parseParameterList(p, parseDefaultArguments)
+	parameterList, err := parseParameterList(p, parseDefaultArguments, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1889,7 +1889,7 @@ func parseSpecialFunctionDeclaration(
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
 
 	parameterList, returnTypeAnnotation, functionBlock, err :=
-		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
+		parseFunctionParameterListAndRest(p, functionBlockIsOptional, nativePos != nil)
 	if err != nil {
 		return nil, err
 	}

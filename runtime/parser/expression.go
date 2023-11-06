@@ -846,7 +846,7 @@ func defineIdentifierExpression() {
 
 func parseFunctionExpression(p *parser, token lexer.Token, purity ast.FunctionPurity) (*ast.FunctionExpression, error) {
 	parameterList, returnTypeAnnotation, functionBlock, err :=
-		parseFunctionParameterListAndRest(p, false)
+		parseFunctionParameterListAndRest(p, false, false)
 	if err != nil {
 		return nil, err
 	}

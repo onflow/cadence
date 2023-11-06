@@ -205,7 +205,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(
 		}
 
 		parameterList, returnTypeAnnotation, functionBlock, err :=
-			parseFunctionParameterListAndRest(p, false)
+			parseFunctionParameterListAndRest(p, false, false)
 
 		if err != nil {
 			return nil, err
@@ -227,7 +227,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(
 		), nil
 	} else {
 		parameterList, returnTypeAnnotation, functionBlock, err :=
-			parseFunctionParameterListAndRest(p, false)
+			parseFunctionParameterListAndRest(p, false, false)
 		if err != nil {
 			return nil, err
 		}

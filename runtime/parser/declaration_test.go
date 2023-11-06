@@ -389,7 +389,7 @@ func TestParseParameterList(t *testing.T) {
 			nil,
 			[]byte(input),
 			func(p *parser) (*ast.ParameterList, error) {
-				return parseParameterList(p, false)
+				return parseParameterList(p, false, false)
 			},
 			Config{},
 		)

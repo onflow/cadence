@@ -32,7 +32,11 @@ func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	return ast.FunctionPurityUnspecified
 }
 
-func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterList, error) {
+func parseParameterList(
+	p *parser,
+	expectDefaultArguments bool,
+	acceptDefaultArguments bool,
+) (*ast.ParameterList, error) {
 	var parameters []*ast.Parameter
 
 	p.skipSpaceAndComments()
@@ -63,7 +67,11 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 					Pos: p.current.StartPos,
 				})
 			}
-			parameter, err := parseParameter(p, expectDefaultArguments)
+			parameter, err := parseParameter(
+				p,
+				expectDefaultArguments,
+				acceptDefaultArguments,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -120,7 +128,11 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 	), nil
 }
 
-func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, error) {
+func parseParameter(
+	p *parser,
+	expectDefaultArgument bool,
+	acceptDefaultArgument bool,
+) (*ast.Parameter, error) {
 	p.skipSpaceAndComments()
 
 	startPos := p.current.StartPos
@@ -187,6 +199,14 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 			return nil, err
 		}
 
+	} else if acceptDefaultArgument && p.current.Is(lexer.TokenEqual) {
+		// Skip the =
+		p.nextSemanticToken()
+
+		defaultArgument, err = parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
 	} else if p.current.Is(lexer.TokenEqual) {
 		return nil, p.syntaxError("cannot use a default argument for this function")
 	}
@@ -354,7 +374,11 @@ func parseFunctionDeclaration(
 	}
 
 	parameterList, returnTypeAnnotation, functionBlock, err :=
-		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
+		parseFunctionParameterListAndRest(
+			p,
+			functionBlockIsOptional,
+			nativePos != nil,
+		)
 
 	if err != nil {
 		return nil, err
@@ -379,6 +403,7 @@ func parseFunctionDeclaration(
 func parseFunctionParameterListAndRest(
 	p *parser,
 	functionBlockIsOptional bool,
+	isNative bool,
 ) (
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
@@ -387,7 +412,7 @@ func parseFunctionParameterListAndRest(
 ) {
 	// Parameter list
 
-	parameterList, err = parseParameterList(p, false)
+	parameterList, err = parseParameterList(p, false, isNative)
 	if err != nil {
 		return
 	}
