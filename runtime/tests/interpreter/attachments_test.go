@@ -1984,7 +1984,6 @@ func TestInterpretAttachmentMappedMembers(t *testing.T) {
 			value.(*interpreter.EphemeralReferenceValue).Value,
 		)
 	})
-
 }
 
 func TestInterpretForEachAttachment(t *testing.T) {
@@ -2120,6 +2119,49 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		// the attachment reference is never entitled
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(0), value)
+	})
+
+	t.Run("bound function", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement F
+
+            access(all) struct S {
+                access(F) let x: Int
+                init() {
+                    self.x = 3
+                }
+            }
+            access(all) attachment A for S {
+                access(F) var funcPtr: fun(): auth(F) &Int;
+                init() {
+                    self.funcPtr = self.foo
+                }
+                access(F) fun foo(): auth(F) &Int {
+                    return &base.x
+                }
+            }
+            fun test(): &Int {
+                let r = attach A() to S()
+                let rRef = &r as auth(F) &S
+                let a = rRef[A]!
+                let i = a.foo()
+                return i
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
 	})
 
 	t.Run("access fields", func(t *testing.T) {

@@ -1306,6 +1306,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					// set the base to the implicitly provided value, and remove this implicit argument from the list
 					implicitArgumentPos := len(invocation.Arguments) - 1
 					invocation.Base = invocation.Arguments[implicitArgumentPos].(*EphemeralReferenceValue)
+					value.base = invocation.Base.Value.(*CompositeValue)
 					invocation.Arguments[implicitArgumentPos] = nil
 					invocation.Arguments = invocation.Arguments[:implicitArgumentPos]
 					invocation.ArgumentTypes[implicitArgumentPos] = nil
