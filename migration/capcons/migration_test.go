@@ -573,6 +573,32 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 		},
 		{
+			name: "Path links, missing source (public -> private)",
+			// Equivalent to: getCapability<&Test.R>(/public/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: testRReferenceStaticType,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainPublic,
+					Identifier: testPathIdentifier,
+				},
+				Address: interpreter.AddressValue(testAddress),
+			},
+			pathLinks:          nil,
+			expectedMigrations: nil,
+			expectedMissingCapabilityIDs: []testCapConsMissingCapabilityID{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							testPathIdentifier,
+						),
+					},
+				},
+			},
+		},
+		{
 			name: "Path links, missing target (public -> private)",
 			// Equivalent to: getCapability<&Test.R>(/public/test)
 			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
