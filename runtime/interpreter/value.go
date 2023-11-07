@@ -19315,9 +19315,7 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (v NilValue) Destroy(interpreter *Interpreter, _ LocationRange) {
-
-}
+func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {}
 
 func (NilValue) String() string {
 	return format.Nil

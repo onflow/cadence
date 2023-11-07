@@ -848,7 +848,10 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 				checker.Elaboration.SetDefaultDestroyDeclaration(declaration, nestedCompositeDeclaration)
 				defaultEventType :=
 					checker.typeActivations.Find(identifier.Identifier)
-				defaultEventComposite := defaultEventType.Type.(*CompositeType)
+				defaultEventComposite, ok := defaultEventType.Type.(*CompositeType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 				compositeType.DefaultDestroyEvent = defaultEventComposite
 			}
 
@@ -2006,8 +2009,11 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 		*ast.IntegerExpression,
 		*ast.FixedPointExpression,
 		*ast.PathExpression:
+
 		break
+
 	case *ast.IdentifierExpression:
+
 		identifier := arg.Identifier.Identifier
 		// these are guaranteed to exist at time of destruction, so we allow them
 		if identifier == SelfIdentifier || identifier == BaseIdentifier {
@@ -2020,9 +2026,13 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 		checker.report(&DefaultDestroyInvalidArgumentError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
 		})
+
 	case *ast.MemberExpression:
+
 		checker.checkDefaultDestroyParamExpressionKind(arg.Expression)
+
 	case *ast.IndexExpression:
+
 		checker.checkDefaultDestroyParamExpressionKind(arg.TargetExpression)
 		checker.checkDefaultDestroyParamExpressionKind(arg.IndexingExpression)
 
@@ -2048,9 +2058,11 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 		})
 
 	default:
+
 		checker.report(&DefaultDestroyInvalidArgumentError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
 		})
+
 	}
 }
 

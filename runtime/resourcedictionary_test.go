@@ -984,8 +984,7 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 	require.Equal(t, events[2].EventType.ID(), "A.0000000000000001.Test.R.ResourceDestroyed")
 	// one of the two needs to be 1, the other needs to be 2
 	require.True(t,
-		(events[1].Fields[0].String() == "1" && events[2].Fields[0].String() == "2") ||
-			(events[2].Fields[0].String() == "1" && events[1].Fields[0].String() == "2"),
+		(events[2].Fields[0].String() == "1" && events[1].Fields[0].String() == "2"),
 	)
 }
 

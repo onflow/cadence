@@ -6594,7 +6594,7 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
       }
     `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 				events = append(events, event)
 				return nil
 			},
@@ -6643,7 +6643,7 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
       }
     `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 				events = append(events, event)
 				return nil
 			},
@@ -6905,7 +6905,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
        }
     `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 				events = append(events, event)
 				return nil
 			},
@@ -6954,7 +6954,7 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
       }
     `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 				events = append(events, event)
 				return nil
 			},
@@ -6989,7 +6989,7 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
       }
     `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 				events = append(events, event)
 				return nil
 			},
@@ -7022,7 +7022,7 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
       }
     `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 				events = append(events, event)
 				return nil
 			},
@@ -7055,7 +7055,7 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
       }
     `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 				events = append(events, event)
 				return nil
 			},
@@ -7087,7 +7087,7 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
       }
     `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 				events = append(events, event)
 				return nil
 			},
@@ -9571,7 +9571,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
           }
         `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+			OnEventEmitted: func(_ *interpreter.Interpreter, _ interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 				events = append(events, event)
 				return nil
 			},
@@ -11724,17 +11724,12 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 	t.Run("resources", func(t *testing.T) {
 		t.Parallel()
 
-		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+		inter, getEvents, err := parseCheckAndInterpretWithEvents(t, `
           resource Resource {
+			  event ResourceDestroyed(value: Int = self.value)
               var value: Int
 
               init(_ value: Int) {
-                  log(
-                      "Creating resource with UUID "
-                          .concat(self.uuid.toString())
-                          .concat(" and value ")
-                          .concat(value.toString())
-                  )
                   self.value = value
               }
           }
@@ -11781,6 +11776,13 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		// DestructorTODO: replace with test for destruction event
+		events := getEvents()
+		require.Len(t, events, 3)
+		require.Equal(t, events[0].event.QualifiedIdentifier, "Resource.ResourceDestroyed")
+		require.Equal(t, events[0].event.GetField(inter, interpreter.EmptyLocationRange, "value"), interpreter.NewIntValueFromInt64(nil, 2))
+		require.Equal(t, events[1].event.QualifiedIdentifier, "Resource.ResourceDestroyed")
+		require.Equal(t, events[1].event.GetField(inter, interpreter.EmptyLocationRange, "value"), interpreter.NewIntValueFromInt64(nil, 1))
+		require.Equal(t, events[2].event.QualifiedIdentifier, "Resource.ResourceDestroyed")
+		require.Equal(t, events[2].event.GetField(inter, interpreter.EmptyLocationRange, "value"), interpreter.NewIntValueFromInt64(nil, 3))
 	})
 }
