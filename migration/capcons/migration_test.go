@@ -431,10 +431,8 @@ func TestMigration(t *testing.T) {
 		// Migrate
 
 		migrator, err := NewMigration(
-			rt,
-			runtime.Context{
-				Interface: runtimeInterface,
-			},
+			storage,
+			inter,
 			&AddressSliceIterator{
 				Addresses: []common.Address{
 					address,

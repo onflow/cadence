@@ -94,19 +94,15 @@ type Migration struct {
 }
 
 func NewMigration(
-	runtime runtime.Runtime,
-	context runtime.Context,
+	storage *runtime.Storage,
+	interpreter *interpreter.Interpreter,
 	addressIterator AddressIterator,
 	accountIDGenerator stdlib.AccountIDGenerator,
 ) (*Migration, error) {
-	storage, inter, err := runtime.Storage(context)
-	if err != nil {
-		return nil, err
-	}
 
 	return &Migration{
 		storage:            storage,
-		interpreter:        inter,
+		interpreter:        interpreter,
 		addressIterator:    addressIterator,
 		accountIDGenerator: accountIDGenerator,
 	}, nil
