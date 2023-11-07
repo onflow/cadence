@@ -3215,8 +3215,8 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 2)
-	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[1].String(), "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)")
+	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)", events[1].String())
 }
 
 func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachment(t *testing.T) {
@@ -3343,10 +3343,10 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachment(t *testing.T)
 	require.NoError(t, err)
 
 	require.Len(t, events, 4)
-	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[1].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[2].String(), "A.0000000000000001.TestAttach.A.ResourceDestroyed(foo: 6)")
-	require.Equal(t, events[3].String(), "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)")
+	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
+	require.Equal(t, "flow.AccountContractAdded", events[1].EventType.ID())
+	require.Equal(t, "A.0000000000000001.TestAttach.A.ResourceDestroyed(foo: 6)", events[2].String())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)", events[3].String())
 }
 
 func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachmentUnloadedContract(t *testing.T) {
@@ -3476,11 +3476,11 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeWithAttachmentUnloadedContra
 	require.NoError(t, err)
 
 	require.Len(t, events, 5)
-	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[1].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[2].String(), "A.0000000000000001.TestAttach.A.ResourceDestroyed(foo: 6)")
-	require.Equal(t, events[3].String(), "A.0000000000000001.TestAttach.I.ResourceDestroyed(foo: 6)")
-	require.Equal(t, events[4].String(), "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)")
+	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
+	require.Equal(t, "flow.AccountContractAdded", events[1].EventType.ID())
+	require.Equal(t, "A.0000000000000001.TestAttach.A.ResourceDestroyed(foo: 6)", events[2].String())
+	require.Equal(t, "A.0000000000000001.TestAttach.I.ResourceDestroyed(foo: 6)", events[3].String())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)", events[4].String())
 }
 
 func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testing.T) {
@@ -3628,12 +3628,12 @@ func TestRuntimeStorageLoadedDestructionConcreteTypeSameNamedInterface(t *testin
 	require.NoError(t, err)
 
 	require.Len(t, events, 6)
-	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[1].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[2].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[3].String(), "A.0000000000000001.TestInterface1.I.ResourceDestroyed(foo: 6)")
-	require.Equal(t, events[4].String(), "A.0000000000000001.TestInterface2.I.ResourceDestroyed(foo: 6)")
-	require.Equal(t, events[5].String(), "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)")
+	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
+	require.Equal(t, "flow.AccountContractAdded", events[1].EventType.ID())
+	require.Equal(t, "flow.AccountContractAdded", events[2].EventType.ID())
+	require.Equal(t, "A.0000000000000001.TestInterface1.I.ResourceDestroyed(foo: 6)", events[3].String())
+	require.Equal(t, "A.0000000000000001.TestInterface2.I.ResourceDestroyed(foo: 6)", events[4].String())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed(foo: 6)", events[5].String())
 }
 
 func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
@@ -3726,8 +3726,8 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 2)
-	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[1].String(), "A.0000000000000001.Test.R.ResourceDestroyed()")
+	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed()", events[1].String())
 }
 
 func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {

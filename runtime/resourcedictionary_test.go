@@ -278,7 +278,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		loggedMessages,
 	)
 	require.Len(t, events, 1)
-	require.Equal(t, events[0].String(), "A.000000000000cade.Test.R.ResourceDestroyed(value: 3)")
+	require.Equal(t, "A.000000000000cade.Test.R.ResourceDestroyed(value: 3)", events[0].String())
 
 	// Remove the key
 
@@ -318,7 +318,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		loggedMessages,
 	)
 	require.Len(t, events, 1)
-	require.Equal(t, events[0].String(), "A.000000000000cade.Test.R.ResourceDestroyed(value: 4)")
+	require.Equal(t, "A.000000000000cade.Test.R.ResourceDestroyed(value: 4)", events[0].String())
 
 	// Read the deleted key
 
@@ -378,7 +378,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		loggedMessages,
 	)
 	require.Len(t, events, 1)
-	require.Equal(t, events[0].String(), "A.000000000000cade.Test.R.ResourceDestroyed(value: 1)")
+	require.Equal(t, "A.000000000000cade.Test.R.ResourceDestroyed(value: 1)", events[0].String())
 
 }
 
@@ -979,13 +979,11 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 3)
-	require.Equal(t, events[0].EventType.ID(), "flow.AccountContractAdded")
-	require.Equal(t, events[1].EventType.ID(), "A.0000000000000001.Test.R.ResourceDestroyed")
-	require.Equal(t, events[2].EventType.ID(), "A.0000000000000001.Test.R.ResourceDestroyed")
-	// one of the two needs to be 1, the other needs to be 2
-	require.True(t,
-		(events[2].Fields[0].String() == "1" && events[1].Fields[0].String() == "2"),
-	)
+	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed", events[1].EventType.ID())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed", events[2].EventType.ID())
+	require.Equal(t, "1", events[2].Fields[0].String())
+	require.Equal(t, "2", events[1].Fields[0].String())
 }
 
 func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
