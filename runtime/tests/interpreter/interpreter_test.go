@@ -6613,10 +6613,10 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 	)
 
 	require.Len(t, events, 2)
-	require.Equal(t, events[0].QualifiedIdentifier, "Foo.ResourceDestroyed")
-	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"), interpreter.NewIntValueFromInt64(nil, 1))
-	require.Equal(t, events[1].QualifiedIdentifier, "Foo.ResourceDestroyed")
-	require.Equal(t, events[1].GetField(inter, interpreter.EmptyLocationRange, "bar"), interpreter.NewIntValueFromInt64(nil, 2))
+	require.Equal(t, "Foo.ResourceDestroyed", events[0].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"))
+	require.Equal(t, "Foo.ResourceDestroyed", events[1].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[1].GetField(inter, interpreter.EmptyLocationRange, "bar"))
 }
 
 func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
@@ -6655,10 +6655,10 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 2)
-	require.Equal(t, events[0].QualifiedIdentifier, "Foo.ResourceDestroyed")
-	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"), interpreter.NewIntValueFromInt64(nil, 1))
-	require.Equal(t, events[1].QualifiedIdentifier, "Foo.ResourceDestroyed")
-	require.Equal(t, events[1].GetField(inter, interpreter.EmptyLocationRange, "bar"), interpreter.NewIntValueFromInt64(nil, 2))
+	require.Equal(t, "Foo.ResourceDestroyed", events[0].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"))
+	require.Equal(t, "Foo.ResourceDestroyed", events[1].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[1].GetField(inter, interpreter.EmptyLocationRange, "bar"))
 }
 
 func TestInterpretClosure(t *testing.T) {
@@ -6918,7 +6918,7 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 1)
-	require.Equal(t, events[0].QualifiedIdentifier, "R.ResourceDestroyed")
+	require.Equal(t, "R.ResourceDestroyed", events[0].QualifiedIdentifier)
 }
 
 func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
@@ -6966,10 +6966,10 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 2)
-	require.Equal(t, events[0].QualifiedIdentifier, "B.ResourceDestroyed")
-	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "foo"), interpreter.NewIntValueFromInt64(nil, 5))
-	require.Equal(t, events[1].QualifiedIdentifier, "A.ResourceDestroyed")
-	require.Equal(t, events[1].GetField(inter, interpreter.EmptyLocationRange, "foo"), interpreter.NewIntValueFromInt64(nil, 5))
+	require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 5), events[0].GetField(inter, interpreter.EmptyLocationRange, "foo"))
+	require.Equal(t, "A.ResourceDestroyed", events[1].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 5), events[1].GetField(inter, interpreter.EmptyLocationRange, "foo"))
 }
 
 func TestInterpretResourceDestroyArray(t *testing.T) {
@@ -7001,8 +7001,8 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 2)
-	require.Equal(t, events[0].QualifiedIdentifier, "R.ResourceDestroyed")
-	require.Equal(t, events[1].QualifiedIdentifier, "R.ResourceDestroyed")
+	require.Equal(t, "R.ResourceDestroyed", events[0].QualifiedIdentifier)
+	require.Equal(t, "R.ResourceDestroyed", events[1].QualifiedIdentifier)
 }
 
 func TestInterpretResourceDestroyDictionary(t *testing.T) {
@@ -7034,8 +7034,8 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 2)
-	require.Equal(t, events[0].QualifiedIdentifier, "R.ResourceDestroyed")
-	require.Equal(t, events[1].QualifiedIdentifier, "R.ResourceDestroyed")
+	require.Equal(t, "R.ResourceDestroyed", events[0].QualifiedIdentifier)
+	require.Equal(t, "R.ResourceDestroyed", events[1].QualifiedIdentifier)
 }
 
 func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
@@ -7067,7 +7067,7 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 1)
-	require.Equal(t, events[0].QualifiedIdentifier, "R.ResourceDestroyed")
+	require.Equal(t, "R.ResourceDestroyed", events[0].QualifiedIdentifier)
 }
 
 func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
@@ -9583,15 +9583,15 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 4)
-	require.Equal(t, events[0].QualifiedIdentifier, "B.ResourceDestroyed")
-	require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 2))
-	require.Equal(t, events[1].QualifiedIdentifier, "B.ResourceDestroyed")
-	require.Equal(t, events[1].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 3))
-	require.Equal(t, events[2].QualifiedIdentifier, "B.ResourceDestroyed")
-	require.Equal(t, events[2].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 4))
-	require.Equal(t, events[3].QualifiedIdentifier, "A.ResourceDestroyed")
-	require.Equal(t, events[3].GetField(inter, interpreter.EmptyLocationRange, "id"), interpreter.NewIntValueFromInt64(nil, 1))
-	require.Equal(t, events[3].GetField(inter, interpreter.EmptyLocationRange, "bCount"), interpreter.NewIntValueFromInt64(nil, 3))
+	require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, "B.ResourceDestroyed", events[1].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[1].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, "B.ResourceDestroyed", events[2].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 4), events[2].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, "A.ResourceDestroyed", events[3].QualifiedIdentifier)
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[3].GetField(inter, interpreter.EmptyLocationRange, "id"))
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[3].GetField(inter, interpreter.EmptyLocationRange, "bCount"))
 
 	AssertValuesEqual(
 		t,
@@ -11778,11 +11778,11 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 
 		events := getEvents()
 		require.Len(t, events, 3)
-		require.Equal(t, events[0].event.QualifiedIdentifier, "Resource.ResourceDestroyed")
-		require.Equal(t, events[0].event.GetField(inter, interpreter.EmptyLocationRange, "value"), interpreter.NewIntValueFromInt64(nil, 2))
-		require.Equal(t, events[1].event.QualifiedIdentifier, "Resource.ResourceDestroyed")
-		require.Equal(t, events[1].event.GetField(inter, interpreter.EmptyLocationRange, "value"), interpreter.NewIntValueFromInt64(nil, 1))
-		require.Equal(t, events[2].event.QualifiedIdentifier, "Resource.ResourceDestroyed")
-		require.Equal(t, events[2].event.GetField(inter, interpreter.EmptyLocationRange, "value"), interpreter.NewIntValueFromInt64(nil, 3))
+		require.Equal(t, "Resource.ResourceDestroyed", events[0].event.QualifiedIdentifier)
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].event.GetField(inter, interpreter.EmptyLocationRange, "value"))
+		require.Equal(t, "Resource.ResourceDestroyed", events[1].event.QualifiedIdentifier)
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[1].event.GetField(inter, interpreter.EmptyLocationRange, "value"))
+		require.Equal(t, "Resource.ResourceDestroyed", events[2].event.QualifiedIdentifier)
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[2].event.GetField(inter, interpreter.EmptyLocationRange, "value"))
 	})
 }

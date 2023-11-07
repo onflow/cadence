@@ -501,7 +501,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 		require.True(t, exists)
 
 		require.IsType(t, variable.Type, &sema.CompositeType{})
-		require.Equal(t, variable.Type.(*sema.CompositeType).DefaultDestroyEvent.Identifier, "ResourceDestroyed")
+		require.Equal(t, "ResourceDestroyed", variable.Type.(*sema.CompositeType).DefaultDestroyEvent.Identifier)
 	})
 
 	t.Run("allowed in resource interface", func(t *testing.T) {
@@ -519,7 +519,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
 		require.True(t, exists)
 
 		require.IsType(t, variable.Type, &sema.InterfaceType{})
-		require.Equal(t, variable.Type.(*sema.InterfaceType).DefaultDestroyEvent.Identifier, "ResourceDestroyed")
+		require.Equal(t, "ResourceDestroyed", variable.Type.(*sema.InterfaceType).DefaultDestroyEvent.Identifier)
 	})
 
 	t.Run("fail in struct", func(t *testing.T) {

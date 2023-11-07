@@ -1276,8 +1276,8 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, events, 2)
-		require.Equal(t, events[0].QualifiedIdentifier, "A.ResourceDestroyed")
-		require.Equal(t, events[1].QualifiedIdentifier, "R.ResourceDestroyed")
+		require.Equal(t, "A.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, "R.ResourceDestroyed", events[1].QualifiedIdentifier)
 	})
 
 	t.Run("base destructor executed last", func(t *testing.T) {
@@ -1327,10 +1327,10 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		require.Len(t, events, 4)
 		// the only part of this order that is important is that `R` is last
-		require.Equal(t, events[0].QualifiedIdentifier, "B.ResourceDestroyed")
-		require.Equal(t, events[1].QualifiedIdentifier, "C.ResourceDestroyed")
-		require.Equal(t, events[2].QualifiedIdentifier, "A.ResourceDestroyed")
-		require.Equal(t, events[3].QualifiedIdentifier, "R.ResourceDestroyed")
+		require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, "C.ResourceDestroyed", events[1].QualifiedIdentifier)
+		require.Equal(t, "A.ResourceDestroyed", events[2].QualifiedIdentifier)
+		require.Equal(t, "R.ResourceDestroyed", events[3].QualifiedIdentifier)
 	})
 
 	t.Run("remove runs destroy", func(t *testing.T) {
@@ -1372,7 +1372,7 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, events, 1)
-		require.Equal(t, events[0].QualifiedIdentifier, "A.ResourceDestroyed")
+		require.Equal(t, "A.ResourceDestroyed", events[0].QualifiedIdentifier)
 	})
 
 	t.Run("remove runs resource field destroy", func(t *testing.T) {
@@ -1421,8 +1421,8 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, events, 2)
-		require.Equal(t, events[0].QualifiedIdentifier, "R2.ResourceDestroyed")
-		require.Equal(t, events[1].QualifiedIdentifier, "A.ResourceDestroyed")
+		require.Equal(t, "R2.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, "A.ResourceDestroyed", events[1].QualifiedIdentifier)
 	})
 
 	t.Run("nested attachments destroyed", func(t *testing.T) {
@@ -1474,9 +1474,9 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, events, 3)
-		require.Equal(t, events[0].QualifiedIdentifier, "B.ResourceDestroyed")
-		require.Equal(t, events[1].QualifiedIdentifier, "R2.ResourceDestroyed")
-		require.Equal(t, events[2].QualifiedIdentifier, "A.ResourceDestroyed")
+		require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, "R2.ResourceDestroyed", events[1].QualifiedIdentifier)
+		require.Equal(t, "A.ResourceDestroyed", events[2].QualifiedIdentifier)
 	})
 
 	t.Run("attachment default args properly scoped", func(t *testing.T) {
@@ -1535,10 +1535,10 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, events, 2)
-		require.Equal(t, events[0].QualifiedIdentifier, "A.ResourceDestroyed")
-		require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "foo"), interpreter.NewUnmeteredStringValue("foo"))
-		require.Equal(t, events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"), interpreter.NewIntValueFromInt64(nil, 2))
-		require.Equal(t, events[1].QualifiedIdentifier, "R.ResourceDestroyed")
+		require.Equal(t, "A.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("foo"), events[0].GetField(inter, interpreter.EmptyLocationRange, "foo"))
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"))
+		require.Equal(t, "R.ResourceDestroyed", events[1].QualifiedIdentifier)
 	})
 }
 
