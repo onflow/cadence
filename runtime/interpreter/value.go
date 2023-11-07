@@ -17813,7 +17813,7 @@ func NewInclusiveRangeIterator(
 	v *CompositeValue,
 	typ InclusiveRangeStaticType,
 ) *InclusiveRangeIterator {
-	startValue := v.GetField(interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStartFieldName).(IntegerValue)
+	startValue := getFieldAsIntegerValue(interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStartFieldName)
 
 	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
 	endValue := getFieldAsIntegerValue(interpreter, v, EmptyLocationRange, sema.InclusiveRangeTypeEndFieldName)
