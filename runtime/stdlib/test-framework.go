@@ -64,8 +64,6 @@ type Blockchain interface {
 		arguments []interpreter.Value,
 	) error
 
-	StandardLibraryHandler() StandardLibraryHandler
-
 	Logs() []string
 
 	ServiceAccount() (*Account, error)
