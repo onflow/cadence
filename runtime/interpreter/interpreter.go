@@ -834,14 +834,12 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 				optionalType.Type,
 			)
 
-			interpreter.maybeTrackReferencedResourceKindedValue(returnValue.value)
 			return NewSomeValueNonCopying(interpreter, innerValue)
 		case NilValue:
 			return NilValue{}
 		}
 	}
 
-	interpreter.maybeTrackReferencedResourceKindedValue(returnValue)
 	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
 }
 
@@ -5235,10 +5233,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	hasPosition ast.HasPosition,
 ) {
 
-	config := interpreter.SharedState.Config
-
-	if !config.InvalidatedResourceValidationEnabled ||
-		identifier == sema.SelfIdentifier {
+	if identifier == sema.SelfIdentifier {
 		return
 	}
 
@@ -5270,10 +5265,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
-	config := interpreter.SharedState.Config
-
-	if !config.InvalidatedResourceValidationEnabled ||
-		identifier == sema.SelfIdentifier {
+	if identifier == sema.SelfIdentifier {
 		return
 	}
 
@@ -5316,12 +5308,6 @@ func (interpreter *Interpreter) resourceForValidation(value Value) ResourceKinde
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {
-	config := interpreter.SharedState.Config
-
-	if !config.InvalidatedResourceValidationEnabled {
-		return
-	}
-
 	if value == nil || !value.IsResourceKinded(interpreter) {
 		return
 	}
@@ -5337,8 +5323,10 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 
 // MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
-	config := interpreter.SharedState.Config
-	common.UseMemory(config.MemoryGauge, usage)
+	if interpreter != nil {
+		config := interpreter.SharedState.Config
+		common.UseMemory(config.MemoryGauge, usage)
+	}
 	return nil
 }
 

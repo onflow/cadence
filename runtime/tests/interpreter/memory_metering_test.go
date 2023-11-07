@@ -706,7 +706,7 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		address := common.MustBytesToAddress([]byte{0x1})
 
 		account := stdlib.NewAccountReferenceValue(
-			meter,
+			inter,
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
@@ -6687,7 +6687,7 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 			1,
 			sema.Conjunction,
 		)
-		account := stdlib.NewAccountReferenceValue(meter, nil, interpreter.AddressValue(address), authorization)
+		account := stdlib.NewAccountReferenceValue(inter, nil, interpreter.AddressValue(address), authorization)
 
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
@@ -8633,7 +8633,7 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 		sema.Conjunction,
 	)
 	account := stdlib.NewAccountReferenceValue(
-		meter,
+		inter,
 		nil,
 		address,
 		authorization,
