@@ -246,7 +246,7 @@ type LinkValue interface {
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
-	Iterator(interpreter *Interpreter) ValueIterator
+	Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator
 }
 
 // ValueIterator is an iterator which returns values.
@@ -1516,7 +1516,7 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *StringValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
@@ -1550,7 +1550,7 @@ type ArrayValueIterator struct {
 	atreeIterator *atree.ArrayIterator
 }
 
-func (v *ArrayValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	arrayIterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -17783,12 +17783,12 @@ func (v *CompositeValue) RemoveTypeKey(
 	return v.RemoveMember(interpreter, locationRange, attachmentMemberName(attachmentType))
 }
 
-func (v *CompositeValue) Iterator(interpreter *Interpreter) ValueIterator {
+func (v *CompositeValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {
 	staticType := v.StaticType(interpreter)
 
 	switch typ := staticType.(type) {
 	case InclusiveRangeStaticType:
-		return NewInclusiveRangeIterator(interpreter, v, typ)
+		return NewInclusiveRangeIterator(interpreter, locationRange, v, typ)
 
 	default:
 		// Must be caught in the checker.
@@ -17804,22 +17804,25 @@ type InclusiveRangeIterator struct {
 	stepNegative bool
 	step         IntegerValue
 	end          IntegerValue
+
+	locationRange LocationRange
 }
 
 var _ ValueIterator = &InclusiveRangeIterator{}
 
 func NewInclusiveRangeIterator(
 	interpreter *Interpreter,
+	locationRange LocationRange,
 	v *CompositeValue,
 	typ InclusiveRangeStaticType,
 ) *InclusiveRangeIterator {
-	startValue := getFieldAsIntegerValue(interpreter, EmptyLocationRange, sema.InclusiveRangeTypeStartFieldName)
+	startValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStartFieldName)
 
 	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
-	endValue := getFieldAsIntegerValue(interpreter, v, EmptyLocationRange, sema.InclusiveRangeTypeEndFieldName)
+	endValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeEndFieldName)
 
-	stepValue := getFieldAsIntegerValue(interpreter, v, EmptyLocationRange, sema.InclusiveRangeTypeStepFieldName)
-	stepNegative := stepValue.Less(interpreter, zeroValue, EmptyLocationRange)
+	stepValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStepFieldName)
+	stepNegative := stepValue.Less(interpreter, zeroValue, locationRange)
 
 	return &InclusiveRangeIterator{
 		rangeValue:   v,
@@ -17834,14 +17837,14 @@ func (i *InclusiveRangeIterator) Next(interpreter *Interpreter) Value {
 	valueToReturn := i.next
 
 	// Ensure that valueToReturn is within the bounds.
-	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, EmptyLocationRange)) {
+	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, i.locationRange)) {
 		return nil
-	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, EmptyLocationRange)) {
+	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, i.locationRange)) {
 		return nil
 	}
 
 	// Update the next value.
-	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, EmptyLocationRange).(IntegerValue)
+	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, i.locationRange).(IntegerValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
