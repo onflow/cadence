@@ -980,7 +980,7 @@ func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 		inter *interpreter.Interpreter,
 		locationRange interpreter.LocationRange,
 		compositeValue *interpreter.CompositeValue,
-	) map[string]interpreter.FunctionValue {
+	) *interpreter.FunctionOrderedMap {
 
 		handler := e.compositeValueFunctionsHandlers[compositeValue.TypeID()]
 		if handler == nil {

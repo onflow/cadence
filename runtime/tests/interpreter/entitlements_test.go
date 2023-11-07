@@ -2666,7 +2666,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		)
 	})
 
-	t.Run("fully entitled in init and destroy", func(t *testing.T) {
+	t.Run("fully entitled in init", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2689,10 +2689,6 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 				require entitlement E
 				require entitlement X
 				init() {
-					let x = self as! auth(Y, Z, F, G) &A
-					let y = base as! auth(X, E) &R
-				}
-				destroy() {
 					let x = self as! auth(Y, Z, F, G) &A
 					let y = base as! auth(X, E) &R
 				}
