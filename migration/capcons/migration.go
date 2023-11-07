@@ -64,23 +64,23 @@ type MigrationReporter interface {
 
 type LinkMigrationReporter interface {
 	MigratedLink(
-		addressPath interpreter.AddressPath,
+		accountAddressPath interpreter.AddressPath,
 		capabilityID interpreter.UInt64Value,
 	)
 	CyclicLink(err CyclicLinkError)
 	MissingTarget(
-		address interpreter.AddressValue,
+		accountAddress interpreter.AddressValue,
 		path interpreter.PathValue,
 	)
 }
 
 type PathCapabilityMigrationReporter interface {
 	MigratedPathCapability(
-		address common.Address,
+		accountAddress common.Address,
 		addressPath interpreter.AddressPath,
 	)
 	MissingCapabilityID(
-		address common.Address,
+		accountAddress common.Address,
 		addressPath interpreter.AddressPath,
 	)
 }
@@ -150,13 +150,13 @@ func (m *Migration) migrateLinks(
 // It records an entry in the source path to capability ID mapping,
 // which is later needed to migrate path capabilities to ID capabilities.
 func (m *Migration) migrateLinksInAccount(
-	address common.Address,
+	accountAddress common.Address,
 	reporter LinkMigrationReporter,
 ) {
 
 	migrateDomain := func(domain common.PathDomain) {
 		m.migrateAccountLinksInAccountDomain(
-			address,
+			accountAddress,
 			domain,
 			reporter,
 		)
@@ -171,13 +171,13 @@ func (m *Migration) migrateLinksInAccount(
 // It records an entry in the source path to capability ID mapping,
 // which is later needed to migrate path capabilities to ID capabilities.
 func (m *Migration) migrateAccountLinksInAccountDomain(
-	address common.Address,
+	accountAddress common.Address,
 	domain common.PathDomain,
 	reporter LinkMigrationReporter,
 ) {
-	addressValue := interpreter.AddressValue(address)
+	accountAddressValue := interpreter.AddressValue(accountAddress)
 
-	storageMap := m.storage.GetStorageMap(address, domain.Identifier(), false)
+	storageMap := m.storage.GetStorageMap(accountAddress, domain.Identifier(), false)
 	if storageMap == nil {
 		return
 	}
@@ -193,7 +193,7 @@ func (m *Migration) migrateAccountLinksInAccountDomain(
 			pathValue := interpreter.NewUnmeteredPathValue(domain, identifier)
 
 			m.migrateLink(
-				addressValue,
+				accountAddressValue,
 				pathValue,
 				reporter,
 			)
@@ -206,11 +206,11 @@ func (m *Migration) migrateAccountLinksInAccountDomain(
 // It constructs a source path to ID mapping,
 // which is later needed to migrate path capabilities to ID capabilities.
 func (m *Migration) migrateLink(
-	address interpreter.AddressValue,
-	path interpreter.PathValue,
+	accountAddressValue interpreter.AddressValue,
+	pathValue interpreter.PathValue,
 	reporter LinkMigrationReporter,
 ) {
-	capabilityID := m.migrateLinkToCapabilityController(address, path, reporter)
+	capabilityID := m.migrateLinkToCapabilityController(accountAddressValue, pathValue, reporter)
 	if capabilityID == 0 {
 		return
 	}
@@ -218,14 +218,16 @@ func (m *Migration) migrateLink(
 	// Record new capability ID in source path mapping.
 	// The mapping is used later for migrating path capabilities to ID capabilities.
 
-	addressPath := interpreter.AddressPath{
-		Address: address.ToAddress(),
-		Path:    path,
+	accountAddress := accountAddressValue.ToAddress()
+	accountAddressPath := interpreter.AddressPath{
+		Address: accountAddress,
+		Path:    pathValue,
 	}
-	m.capabilityIDs[addressPath] = capabilityID
+
+	m.capabilityIDs[accountAddressPath] = capabilityID
 
 	if reporter != nil {
-		reporter.MigratedLink(addressPath, capabilityID)
+		reporter.MigratedLink(accountAddressPath, capabilityID)
 	}
 }
 
@@ -247,9 +249,12 @@ func (m *Migration) migratePathCapabilities(
 
 var pathDomainStorage = common.PathDomainStorage.Identifier()
 
-func (m *Migration) migratePathCapabilitiesInAccount(address common.Address, reporter PathCapabilityMigrationReporter) {
+func (m *Migration) migratePathCapabilitiesInAccount(
+	accountAddress common.Address,
+	reporter PathCapabilityMigrationReporter,
+) {
 
-	storageMap := m.storage.GetStorageMap(address, pathDomainStorage, false)
+	storageMap := m.storage.GetStorageMap(accountAddress, pathDomainStorage, false)
 	if storageMap == nil {
 		return
 	}
@@ -261,7 +266,7 @@ func (m *Migration) migratePathCapabilitiesInAccount(address common.Address, rep
 		for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
 
 			newValue := m.migratePathCapability(
-				address,
+				accountAddress,
 				value,
 				reporter,
 			)
@@ -283,7 +288,7 @@ func (m *Migration) migratePathCapabilitiesInAccount(address common.Address, rep
 // If a value is returned, the value must be updated with the replacement in the parent.
 // If nil is returned, the value was not updated and no operation has to be performed.
 func (m *Migration) migratePathCapability(
-	address common.Address,
+	accountAddress common.Address,
 	value interpreter.Value,
 	reporter PathCapabilityMigrationReporter,
 ) interpreter.Value {
@@ -300,7 +305,7 @@ func (m *Migration) migratePathCapability(
 		capabilityID, ok := m.capabilityIDs[addressPath]
 		if !ok {
 			if reporter != nil {
-				reporter.MissingCapabilityID(address, addressPath)
+				reporter.MissingCapabilityID(accountAddress, addressPath)
 			}
 			break
 		}
@@ -312,7 +317,7 @@ func (m *Migration) migratePathCapability(
 		)
 
 		if reporter != nil {
-			reporter.MigratedPathCapability(address, addressPath)
+			reporter.MigratedPathCapability(accountAddress, addressPath)
 		}
 
 		return newCapability
@@ -323,7 +328,7 @@ func (m *Migration) migratePathCapability(
 		// Migrate composite's fields
 
 		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
-			newFieldValue := m.migratePathCapability(address, fieldValue, reporter)
+			newFieldValue := m.migratePathCapability(accountAddress, fieldValue, reporter)
 			if newFieldValue != nil {
 				composite.SetMember(
 					m.interpreter,
@@ -343,7 +348,7 @@ func (m *Migration) migratePathCapability(
 
 	case *interpreter.SomeValue:
 		innerValue := value.InnerValue(m.interpreter, locationRange)
-		newInnerValue := m.migratePathCapability(address, innerValue, reporter)
+		newInnerValue := m.migratePathCapability(accountAddress, innerValue, reporter)
 		if newInnerValue != nil {
 			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
 		}
@@ -357,7 +362,7 @@ func (m *Migration) migratePathCapability(
 		// Migrate array's elements
 
 		array.Iterate(m.interpreter, func(element interpreter.Value) (resume bool) {
-			newElement := m.migratePathCapability(address, element, reporter)
+			newElement := m.migratePathCapability(accountAddress, element, reporter)
 			if newElement != nil {
 				array.Set(
 					m.interpreter,
@@ -395,7 +400,7 @@ func (m *Migration) migratePathCapability(
 
 			// Migrate the value of the key-value pair
 
-			newValue := m.migratePathCapability(address, value, reporter)
+			newValue := m.migratePathCapability(accountAddress, value, reporter)
 
 			if newValue != nil {
 				dictionary.Insert(
@@ -438,14 +443,14 @@ func (m *Migration) migratePathCapability(
 }
 
 func (m *Migration) migrateLinkToCapabilityController(
-	addressValue interpreter.AddressValue,
+	accountAddressValue interpreter.AddressValue,
 	pathValue interpreter.PathValue,
 	reporter LinkMigrationReporter,
 ) interpreter.UInt64Value {
 
 	locationRange := interpreter.EmptyLocationRange
 
-	address := addressValue.ToAddress()
+	address := accountAddressValue.ToAddress()
 
 	domain := pathValue.Domain.Identifier()
 	identifier := pathValue.Identifier
@@ -514,7 +519,7 @@ func (m *Migration) migrateLinkToCapabilityController(
 
 	switch target := target.(type) {
 	case nil:
-		reporter.MissingTarget(addressValue, pathValue)
+		reporter.MissingTarget(accountAddressValue, pathValue)
 		return 0
 
 	case pathCapabilityTarget:
@@ -548,7 +553,7 @@ func (m *Migration) migrateLinkToCapabilityController(
 	capabilityValue := interpreter.NewCapabilityValue(
 		m.interpreter,
 		capabilityID,
-		addressValue,
+		accountAddressValue,
 		borrowStaticType,
 	)
 
@@ -581,8 +586,8 @@ var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(
 )
 
 func (m *Migration) getPathCapabilityFinalTarget(
-	address common.Address,
-	path interpreter.PathValue,
+	accountAddress common.Address,
+	pathValue interpreter.PathValue,
 	wantedBorrowType *sema.ReferenceType,
 ) (
 	target capabilityTarget,
@@ -591,31 +596,31 @@ func (m *Migration) getPathCapabilityFinalTarget(
 ) {
 
 	seenPaths := map[interpreter.PathValue]struct{}{}
-	paths := []interpreter.PathValue{path}
+	paths := []interpreter.PathValue{pathValue}
 
 	for {
 		// Detect cyclic links
 
-		if _, ok := seenPaths[path]; ok {
+		if _, ok := seenPaths[pathValue]; ok {
 			return nil,
 				interpreter.UnauthorizedAccess,
 				CyclicLinkError{
-					Address: address,
+					Address: accountAddress,
 					Paths:   paths,
 				}
 		} else {
-			seenPaths[path] = struct{}{}
+			seenPaths[pathValue] = struct{}{}
 		}
 
-		domain := path.Domain.Identifier()
-		identifier := path.Identifier
+		domain := pathValue.Domain.Identifier()
+		identifier := pathValue.Identifier
 
 		storageMapKey := interpreter.StringStorageMapKey(identifier)
 
-		switch path.Domain {
+		switch pathValue.Domain {
 		case common.PathDomainStorage:
 
-			return pathCapabilityTarget(path),
+			return pathCapabilityTarget(pathValue),
 				interpreter.ConvertSemaAccessToStaticAuthorization(
 					m.interpreter,
 					wantedBorrowType.Authorization,
@@ -625,7 +630,7 @@ func (m *Migration) getPathCapabilityFinalTarget(
 		case common.PathDomainPublic,
 			common.PathDomainPrivate:
 
-			value := m.interpreter.ReadStored(address, domain, storageMapKey)
+			value := m.interpreter.ReadStored(accountAddress, domain, storageMapKey)
 			if value == nil {
 				return nil, interpreter.UnauthorizedAccess, nil
 			}
@@ -640,7 +645,7 @@ func (m *Migration) getPathCapabilityFinalTarget(
 
 				targetPath := value.TargetPath
 				paths = append(paths, targetPath)
-				path = targetPath
+				pathValue = targetPath
 
 			case interpreter.AccountLinkValue: //nolint:staticcheck
 				if !m.interpreter.IsSubTypeOfSemaType(
@@ -650,7 +655,7 @@ func (m *Migration) getPathCapabilityFinalTarget(
 					return nil, interpreter.UnauthorizedAccess, nil
 				}
 
-				return accountCapabilityTarget(address),
+				return accountCapabilityTarget(accountAddress),
 					interpreter.UnauthorizedAccess,
 					nil
 
@@ -679,10 +684,10 @@ func (m *Migration) getPathCapabilityFinalTarget(
 
 				switch reference := reference.(type) {
 				case *interpreter.StorageReferenceValue:
-					address = reference.TargetStorageAddress
+					accountAddress = reference.TargetStorageAddress
 					targetPath := reference.TargetPath
 					paths = append(paths, targetPath)
-					path = targetPath
+					pathValue = targetPath
 
 				case *interpreter.EphemeralReferenceValue:
 					accountValue := reference.Value.(*interpreter.SimpleCompositeValue)
