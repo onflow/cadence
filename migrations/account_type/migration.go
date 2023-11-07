@@ -196,7 +196,8 @@ func (m *AccountTypeMigration) migrateValue(value interpreter.Value) (newValue i
 
 			// Value was migrated
 			if keyValue.newValue != nil {
-				value = keyValue.newValue
+				// Always wrap with an optional, when inserting to the dictionary.
+				value = interpreter.NewUnmeteredSomeValueNonCopying(keyValue.newValue)
 			}
 
 			dictionary.SetKey(m.interpreter, locationRange, key, value)
@@ -227,7 +228,7 @@ func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.St
 		convertedKeyType := m.maybeConvertAccountType(staticType.KeyType)
 		convertedValueType := m.maybeConvertAccountType(staticType.ValueType)
 		if convertedKeyType != nil && convertedValueType != nil {
-			return interpreter.NewDictionaryStaticType(nil, staticType.KeyType, staticType.ValueType)
+			return interpreter.NewDictionaryStaticType(nil, convertedKeyType, convertedValueType)
 		}
 		if convertedKeyType != nil {
 			return interpreter.NewDictionaryStaticType(nil, convertedKeyType, staticType.ValueType)
@@ -274,6 +275,12 @@ func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.St
 	case *interpreter.CompositeStaticType,
 		*interpreter.InterfaceStaticType:
 		// Nothing to do
+
+	case primitiveStaticTypeWrapper:
+		// This is for testing the migration.
+		// i.e: wrapper was only to make it possible to use as a dictionary-key.
+		// Ignore the wrapper, and continue with the inner type.
+		return m.maybeConvertAccountType(staticType.PrimitiveStaticType)
 
 	default:
 		// Is it safe to do so?

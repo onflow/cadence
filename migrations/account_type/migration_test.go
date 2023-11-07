@@ -151,7 +151,7 @@ func TestMigration(t *testing.T) {
 		"variable_sized_string_array": {
 			storedType: interpreter.NewVariableSizedStaticType(nil, stringType),
 		},
-		"dictionary": {
+		"dictionary_with_account_type_value": {
 			storedType: interpreter.NewDictionaryStaticType(
 				nil,
 				stringType,
@@ -160,6 +160,30 @@ func TestMigration(t *testing.T) {
 			expectedType: interpreter.NewDictionaryStaticType(
 				nil,
 				stringType,
+				authAccountReferenceType,
+			),
+		},
+		"dictionary_with_account_type_key": {
+			storedType: interpreter.NewDictionaryStaticType(
+				nil,
+				authAccountType,
+				stringType,
+			),
+			expectedType: interpreter.NewDictionaryStaticType(
+				nil,
+				authAccountReferenceType,
+				stringType,
+			),
+		},
+		"dictionary_with_account_type_key_and_value": {
+			storedType: interpreter.NewDictionaryStaticType(
+				nil,
+				authAccountType,
+				authAccountType,
+			),
+			expectedType: interpreter.NewDictionaryStaticType(
+				nil,
+				authAccountReferenceType,
 				authAccountReferenceType,
 			),
 		},
@@ -473,7 +497,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 					interpreter.PrimitiveStaticTypeAnyStruct,
 				),
 				interpreter.NewUnmeteredInt8Value(4),
-				interpreter.NewUnmeteredSomeValueNonCopying(storedAccountTypeValue),
+				storedAccountTypeValue,
 			),
 			expectedValue: interpreter.NewDictionaryValue(
 				inter,
@@ -484,7 +508,113 @@ func TestNestedTypeValueMigration(t *testing.T) {
 					interpreter.PrimitiveStaticTypeAnyStruct,
 				),
 				interpreter.NewUnmeteredInt8Value(4),
+				expectedAccountTypeValue,
+			),
+		},
+		"dictionary_with_optional_account_type_value": {
+			storedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeInt8,
+					interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeMetaType),
+				),
+				interpreter.NewUnmeteredInt8Value(4),
+				interpreter.NewUnmeteredSomeValueNonCopying(storedAccountTypeValue),
+			),
+			expectedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeInt8,
+					interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeMetaType),
+				),
+				interpreter.NewUnmeteredInt8Value(4),
 				interpreter.NewUnmeteredSomeValueNonCopying(expectedAccountTypeValue),
+			),
+		},
+		"dictionary_with_account_type_key": {
+			storedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeMetaType,
+					interpreter.PrimitiveStaticTypeInt8,
+				),
+				interpreter.NewTypeValue(
+					nil,
+					primitiveStaticTypeWrapper{
+						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount,
+					},
+				),
+				interpreter.NewUnmeteredInt8Value(4),
+			),
+			expectedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeMetaType,
+					interpreter.PrimitiveStaticTypeInt8,
+				),
+				expectedAccountTypeValue,
+				interpreter.NewUnmeteredInt8Value(4),
+			),
+		},
+		"dictionary_with_account_type_key_and_value": {
+			storedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeMetaType,
+					interpreter.PrimitiveStaticTypeMetaType,
+				),
+				interpreter.NewTypeValue(
+					nil,
+					primitiveStaticTypeWrapper{
+						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount,
+					},
+				),
+				storedAccountTypeValue,
+			),
+			expectedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeMetaType,
+					interpreter.PrimitiveStaticTypeMetaType,
+				),
+				expectedAccountTypeValue,
+				expectedAccountTypeValue,
+			),
+		},
+		"composite_with_account_type": {
+			storedValue: interpreter.NewCompositeValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				common.NewAddressLocation(nil, common.Address{0x42}, "Foo"),
+				"Bar",
+				common.CompositeKindResource,
+				[]interpreter.CompositeField{
+					interpreter.NewUnmeteredCompositeField("field", storedAccountTypeValue),
+				},
+				common.Address{},
+			),
+			expectedValue: interpreter.NewCompositeValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				common.NewAddressLocation(nil, common.Address{0x42}, "Foo"),
+				"Bar",
+				common.CompositeKindResource,
+				[]interpreter.CompositeField{
+					interpreter.NewUnmeteredCompositeField("field", expectedAccountTypeValue),
+				},
+				common.Address{},
 			),
 		},
 	}
