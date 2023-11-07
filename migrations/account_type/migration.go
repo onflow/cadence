@@ -31,16 +31,14 @@ type AccountTypeMigration struct {
 	interpreter *interpreter.Interpreter
 }
 
-func NewAccountTypeMigration(runtime runtime.Runtime, context runtime.Context) (*AccountTypeMigration, error) {
-	storage, inter, err := runtime.Storage(context)
-	if err != nil {
-		return nil, err
-	}
-
+func NewAccountTypeMigration(
+	interpreter *interpreter.Interpreter,
+	storage *runtime.Storage,
+) *AccountTypeMigration {
 	return &AccountTypeMigration{
 		storage:     storage,
-		interpreter: inter,
-	}, nil
+		interpreter: interpreter,
+	}
 }
 
 func (m *AccountTypeMigration) Migrate(

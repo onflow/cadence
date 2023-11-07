@@ -317,18 +317,7 @@ func TestMigration(t *testing.T) {
 
 	// Migrate
 
-	rt := runtime_utils.NewTestInterpreterRuntime()
-	runtimeInterface := &runtime_utils.TestRuntimeInterface{
-		Storage: ledger,
-	}
-
-	migration, err := NewAccountTypeMigration(
-		rt,
-		runtime.Context{
-			Interface: runtimeInterface,
-		},
-	)
-	require.NoError(t, err)
+	migration := NewAccountTypeMigration(inter, storage)
 
 	reporter := newTestReporter()
 
@@ -525,18 +514,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 
 	// Migrate
 
-	rt := runtime_utils.NewTestInterpreterRuntime()
-	runtimeInterface := &runtime_utils.TestRuntimeInterface{
-		Storage: ledger,
-	}
-
-	migration, err := NewAccountTypeMigration(
-		rt,
-		runtime.Context{
-			Interface: runtimeInterface,
-		},
-	)
-	require.NoError(t, err)
+	migration := NewAccountTypeMigration(inter, storage)
 
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
