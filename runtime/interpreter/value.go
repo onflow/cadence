@@ -252,7 +252,7 @@ type IterableValue interface {
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
-	Next(interpreter *Interpreter) Value
+	Next(interpreter *Interpreter, locationRange LocationRange) Value
 }
 
 func safeAdd(a, b int, locationRange LocationRange) int {
@@ -1528,7 +1528,7 @@ type StringValueIterator struct {
 
 var _ ValueIterator = StringValueIterator{}
 
-func (i StringValueIterator) Next(_ *Interpreter) Value {
+func (i StringValueIterator) Next(_ *Interpreter, _ LocationRange) Value {
 	if !i.graphemes.Next() {
 		return nil
 	}
@@ -1562,7 +1562,7 @@ func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 
 var _ ValueIterator = ArrayValueIterator{}
 
-func (i ArrayValueIterator) Next(interpreter *Interpreter) Value {
+func (i ArrayValueIterator) Next(interpreter *Interpreter, _ LocationRange) Value {
 	atreeValue, err := i.atreeIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -17804,8 +17804,6 @@ type InclusiveRangeIterator struct {
 	stepNegative bool
 	step         IntegerValue
 	end          IntegerValue
-
-	locationRange LocationRange
 }
 
 var _ ValueIterator = &InclusiveRangeIterator{}
@@ -17833,18 +17831,18 @@ func NewInclusiveRangeIterator(
 	}
 }
 
-func (i *InclusiveRangeIterator) Next(interpreter *Interpreter) Value {
+func (i *InclusiveRangeIterator) Next(interpreter *Interpreter, locationRange LocationRange) Value {
 	valueToReturn := i.next
 
 	// Ensure that valueToReturn is within the bounds.
-	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, i.locationRange)) {
+	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, locationRange)) {
 		return nil
-	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, i.locationRange)) {
+	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, locationRange)) {
 		return nil
 	}
 
 	// Update the next value.
-	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, i.locationRange).(IntegerValue)
+	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, locationRange).(IntegerValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}

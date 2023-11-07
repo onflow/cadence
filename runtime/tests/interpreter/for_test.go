@@ -347,7 +347,7 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 			count := 0
 			iterator := (loopElements).(*interpreter.ArrayValue).Iterator(inter, interpreter.EmptyLocationRange)
 			for {
-				elem := iterator.Next(inter)
+				elem := iterator.Next(inter, interpreter.EmptyLocationRange)
 				if elem == nil {
 					break
 				}

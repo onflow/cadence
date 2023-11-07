@@ -342,7 +342,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 	}
 
 	for {
-		value := iterator.Next(interpreter)
+		value := iterator.Next(interpreter, locationRange)
 		if value == nil {
 			return nil
 		}
