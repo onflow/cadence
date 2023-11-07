@@ -988,11 +988,13 @@ func (interpreter *Interpreter) declareAttachmentValue(
 // and c) functions cannot currently be explicitly invoked if they have default arguments
 //
 // if we plan to generalize this further, we will need to relax those assumptions
-func (declarationInterpreter *Interpreter) evaluateDefaultDestroyEvent(
+func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 	containingResourceComposite *CompositeValue,
 	eventDecl *ast.CompositeDeclaration,
 	declarationActivation *VariableActivation,
 ) (arguments []Value) {
+
+	declarationInterpreter := interpreter
 	parameters := eventDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
 
 	declarationInterpreter.activations.PushNewWithParent(declarationActivation)
