@@ -64,6 +64,10 @@ type AccountIDGenerator interface {
 	GenerateAccountID(address common.Address) (uint64, error)
 }
 
+type StorageCommitter interface {
+	CommitStorageTemporarily(inter *interpreter.Interpreter) error
+}
+
 type AuthAccountHandler interface {
 	AccountIDGenerator
 	BalanceProvider
@@ -77,6 +81,7 @@ type AuthAccountHandler interface {
 }
 
 type AccountCreator interface {
+	StorageCommitter
 	EventEmitter
 	AuthAccountHandler
 	// CreateAccount creates a new account.
@@ -119,6 +124,11 @@ func NewAuthAccountConstructor(creator AccountCreator) StandardLibraryValue {
 			}
 
 			payerAddress := payerAddressValue.ToAddress()
+
+			err := creator.CommitStorageTemporarily(inter)
+			if err != nil {
+				panic(err)
+			}
 
 			addressValue := interpreter.NewAddressValueFromConstructor(
 				inter,
@@ -383,7 +393,7 @@ func newAccountAvailableBalanceGetFunction(
 }
 
 type StorageUsedProvider interface {
-	CommitStorageTemporarily(inter *interpreter.Interpreter) error
+	StorageCommitter
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
 	GetStorageUsed(address common.Address) (uint64, error)
 }
@@ -422,7 +432,7 @@ func newStorageUsedGetFunction(
 }
 
 type StorageCapacityProvider interface {
-	CommitStorageTemporarily(inter *interpreter.Interpreter) error
+	StorageCommitter
 	// GetStorageCapacity gets storage capacity in bytes on the address.
 	GetStorageCapacity(address common.Address) (uint64, error)
 }
