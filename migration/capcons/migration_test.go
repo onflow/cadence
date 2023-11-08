@@ -232,12 +232,20 @@ func testPathCapabilityValueMigration(
           }
 
           access(all)
-          fun checkMigratedValue(getter: fun(AnyStruct): Capability) {
+          fun checkMigratedCapabilityValueWithPathLink(getter: fun(AnyStruct): Capability) {
               self.account.storage.save(<-create R(), to: /storage/test)
               let capValue = self.account.storage.copy<AnyStruct>(from: /storage/wrappedCapability)!
               let cap = getter(capValue)
               assert(cap.id != 0)
               let ref = cap.borrow<&R>()!
+          }
+
+          access(all)
+          fun checkMigratedCapabilityValueWithAccountLink(getter: fun(AnyStruct): Capability) {
+              let capValue = self.account.storage.copy<AnyStruct>(from: /storage/wrappedCapability)!
+              let cap = getter(capValue)
+              assert(cap.id != 0)
+              let ref = cap.borrow<&Account>()!
           }
       }
     `
@@ -406,18 +414,24 @@ func testPathCapabilityValueMigration(
 
 	if len(expectedMissingCapabilityIDs) == 0 {
 
+		checkFunctionName := "checkMigratedCapabilityValueWithPathLink"
+		if len(accountLinks) > 0 {
+			checkFunctionName = "checkMigratedCapabilityValueWithAccountLink"
+		}
+
 		// Check
 
 		checkScript := fmt.Sprintf(
 			// language=cadence
 			`
-	      import Test from 0x1
+	          import Test from 0x1
 
-	      access(all)
-	      fun main() {
-	         Test.checkMigratedValue(getter: %s)
-	      }
-	    `,
+	          access(all)
+	          fun main() {
+	             Test.%s(getter: %s)
+	          }
+	        `,
+			checkFunctionName,
 			checkFunction,
 		)
 		_, err = rt.ExecuteScript(
@@ -622,6 +636,38 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 			expectedMigrations: nil,
 			expectedMissingCapabilityIDs: []testCapConsMissingCapabilityID{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							testPathIdentifier,
+						),
+					},
+				},
+			},
+		},
+		{
+			name: "Account link, working chain (public)",
+			// Equivalent to: getCapability<&AuthAccount>(/public/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: authAccountReferenceStaticType,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainPublic,
+					Identifier: testPathIdentifier,
+				},
+				Address: interpreter.AddressValue(testAddress),
+			},
+			accountLinks: []interpreter.PathValue{
+				// Equivalent to:
+				//   linkAccount(/public/test)
+				{
+					Domain:     common.PathDomainPublic,
+					Identifier: testPathIdentifier,
+				},
+			},
+			expectedMigrations: []testCapConsPathCapabilityMigration{
 				{
 					accountAddress: testAddress,
 					addressPath: interpreter.AddressPath{

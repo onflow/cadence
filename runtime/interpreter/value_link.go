@@ -196,16 +196,17 @@ func (v AccountLinkValue) ConformsToStaticType(
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) Equal(_ *Interpreter, _ LocationRange, _ Value) bool {
-	panic(errors.NewUnreachableError())
+func (v AccountLinkValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+	_, ok := other.(AccountLinkValue)
+	return ok
 }
 
 func (AccountLinkValue) IsStorable() bool {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	panic(errors.NewUnreachableError())
+func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
 func (AccountLinkValue) NeedsStoreTo(_ atree.Address) bool {
@@ -239,11 +240,11 @@ func (AccountLinkValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v AccountLinkValue) ByteSize() uint32 {
-	panic(errors.NewUnreachableError())
+	return mustStorableSize(v)
 }
 
 func (v AccountLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	panic(errors.NewUnreachableError())
+	return v, nil
 }
 
 func (v AccountLinkValue) ChildStorables() []atree.Storable {

@@ -284,6 +284,11 @@ func (m *Migration) migratePathCapabilitiesInAccount(
 	}
 }
 
+var fullyEntitledAccountReferenceStaticType = interpreter.ConvertSemaReferenceTypeToStaticReferenceType(
+	nil,
+	sema.FullyEntitledAccountReferenceType,
+)
+
 // migratePathCapability migrates a path capability to an ID capability in the given value.
 // If a value is returned, the value must be updated with the replacement in the parent.
 // If nil is returned, the value was not updated and no operation has to be performed.
@@ -310,10 +315,18 @@ func (m *Migration) migratePathCapability(
 			break
 		}
 
+		newBorrowType, ok := oldCapability.BorrowType.(*interpreter.ReferenceStaticType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		if newBorrowType.ReferencedType == interpreter.PrimitiveStaticTypeAuthAccount {
+			newBorrowType = fullyEntitledAccountReferenceStaticType
+		}
+
 		newCapability := interpreter.NewUnmeteredCapabilityValue(
 			capabilityID,
 			oldCapability.Address,
-			oldCapability.BorrowType,
+			newBorrowType,
 		)
 
 		if reporter != nil {
