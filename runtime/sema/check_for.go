@@ -62,6 +62,8 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 			elementType = arrayType.ElementType(false)
 		} else if valueType == StringType {
 			elementType = CharacterType
+		} else if inclusiveRangeType, ok := valueType.(*InclusiveRangeType); ok {
+			elementType = inclusiveRangeType.MemberType
 		} else {
 			checker.report(
 				&TypeMismatchWithDescriptionError{

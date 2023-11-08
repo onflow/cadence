@@ -246,13 +246,13 @@ type LinkValue interface {
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
-	Iterator(interpreter *Interpreter) ValueIterator
+	Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator
 }
 
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
-	Next(interpreter *Interpreter) Value
+	Next(interpreter *Interpreter, locationRange LocationRange) Value
 }
 
 func safeAdd(a, b int, locationRange LocationRange) int {
@@ -1516,7 +1516,7 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *StringValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
@@ -1528,7 +1528,7 @@ type StringValueIterator struct {
 
 var _ ValueIterator = StringValueIterator{}
 
-func (i StringValueIterator) Next(_ *Interpreter) Value {
+func (i StringValueIterator) Next(_ *Interpreter, _ LocationRange) Value {
 	if !i.graphemes.Next() {
 		return nil
 	}
@@ -1550,7 +1550,7 @@ type ArrayValueIterator struct {
 	atreeIterator *atree.ArrayIterator
 }
 
-func (v *ArrayValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	arrayIterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -1562,7 +1562,7 @@ func (v *ArrayValue) Iterator(_ *Interpreter) ValueIterator {
 
 var _ ValueIterator = ArrayValueIterator{}
 
-func (i ArrayValueIterator) Next(interpreter *Interpreter) Value {
+func (i ArrayValueIterator) Next(interpreter *Interpreter, _ LocationRange) Value {
 	atreeValue, err := i.atreeIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -16267,6 +16267,7 @@ type CompositeField struct {
 const attachmentNamePrefix = "$"
 
 var _ TypeIndexableValue = &CompositeValue{}
+var _ IterableValue = &CompositeValue{}
 
 func NewCompositeField(memoryGauge common.MemoryGauge, name string, value Value) CompositeField {
 	common.UseMemory(memoryGauge, common.CompositeFieldMemoryUsage)
@@ -17780,6 +17781,74 @@ func (v *CompositeValue) RemoveTypeKey(
 	attachmentType sema.Type,
 ) Value {
 	return v.RemoveMember(interpreter, locationRange, attachmentMemberName(attachmentType))
+}
+
+func (v *CompositeValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {
+	staticType := v.StaticType(interpreter)
+
+	switch typ := staticType.(type) {
+	case InclusiveRangeStaticType:
+		return NewInclusiveRangeIterator(interpreter, locationRange, v, typ)
+
+	default:
+		// Must be caught in the checker.
+		panic(errors.NewUnreachableError())
+	}
+}
+
+type InclusiveRangeIterator struct {
+	rangeValue *CompositeValue
+	next       IntegerValue
+
+	// Cached values
+	stepNegative bool
+	step         IntegerValue
+	end          IntegerValue
+}
+
+var _ ValueIterator = &InclusiveRangeIterator{}
+
+func NewInclusiveRangeIterator(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	v *CompositeValue,
+	typ InclusiveRangeStaticType,
+) *InclusiveRangeIterator {
+	startValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStartFieldName)
+
+	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
+	endValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeEndFieldName)
+
+	stepValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStepFieldName)
+	stepNegative := stepValue.Less(interpreter, zeroValue, locationRange)
+
+	return &InclusiveRangeIterator{
+		rangeValue:   v,
+		next:         startValue,
+		stepNegative: bool(stepNegative),
+		step:         stepValue,
+		end:          endValue,
+	}
+}
+
+func (i *InclusiveRangeIterator) Next(interpreter *Interpreter, locationRange LocationRange) Value {
+	valueToReturn := i.next
+
+	// Ensure that valueToReturn is within the bounds.
+	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, locationRange)) {
+		return nil
+	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, locationRange)) {
+		return nil
+	}
+
+	// Update the next value.
+	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, locationRange).(IntegerValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	i.next = nextValueToReturn
+	return valueToReturn
 }
 
 // DictionaryValue
