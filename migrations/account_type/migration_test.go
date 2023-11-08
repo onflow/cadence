@@ -546,7 +546,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				),
 				interpreter.NewTypeValue(
 					nil,
-					primitiveStaticTypeWrapper{
+					dummyStaticType{
 						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount,
 					},
 				),
@@ -575,7 +575,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				),
 				interpreter.NewTypeValue(
 					nil,
-					primitiveStaticTypeWrapper{
+					dummyStaticType{
 						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount,
 					},
 				),

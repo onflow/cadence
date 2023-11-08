@@ -38,6 +38,9 @@ func NewAccountStorage(storage *runtime.Storage, address common.Address) Account
 }
 
 // ForEachValue iterates over the values in the account.
+// The `valueConverter takes a function to be applied to each value.
+// It returns the `newValue`, if a new value was created during conversion,
+// or a flag, indicating whether the old value was updated in-place.
 func (i *AccountStorage) ForEachValue(
 	inter *interpreter.Interpreter,
 	domains []common.PathDomain,

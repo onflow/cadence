@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -82,7 +83,7 @@ func (m *AccountTypeMigration) migrateTypeValuesInAccount(
 
 var locationRange = interpreter.EmptyLocationRange
 
-func (m *AccountTypeMigration) migrateValue(value interpreter.Value) (newValue interpreter.Value, updated bool) {
+func (m *AccountTypeMigration) migrateValue(value interpreter.Value) (newValue interpreter.Value, updatedInPlace bool) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
 		convertedType := m.maybeConvertAccountType(value.Type)
@@ -102,14 +103,15 @@ func (m *AccountTypeMigration) migrateValue(value interpreter.Value) (newValue i
 		return
 
 	case *interpreter.ArrayValue:
-		var index int
+		array := value
 
 		// Migrate array elements
-
-		value.Iterate(m.interpreter, func(element interpreter.Value) (resume bool) {
+		count := array.Count()
+		for index := 0; index < count; index++ {
+			element := array.Get(m.interpreter, locationRange, index)
 			newElement, elementUpdated := m.migrateValue(element)
 			if newElement != nil {
-				value.Set(
+				array.Set(
 					m.interpreter,
 					locationRange,
 					index,
@@ -117,33 +119,35 @@ func (m *AccountTypeMigration) migrateValue(value interpreter.Value) (newValue i
 				)
 			}
 
-			index++
-
-			updated = updated || elementUpdated
-
-			return true
-		})
+			updatedInPlace = updatedInPlace || elementUpdated
+		}
 
 		// The array itself doesn't need to be replaced.
 		return
 
 	case *interpreter.CompositeValue:
-		value.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
-			newFieldValue, fieldUpdated := m.migrateValue(fieldValue)
-			if newFieldValue != nil {
-				value.SetMember(
-					m.interpreter,
-					locationRange,
-					fieldName,
-					newFieldValue,
-				)
-			}
+		composite := value
 
-			updated = updated || fieldUpdated
-
-			// continue iteration
+		// Read the field names first, so the iteration wouldn't be affected
+		// by the modification of the nested values.
+		var fieldNames []string
+		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
+			fieldNames = append(fieldNames, fieldName)
 			return true
 		})
+
+		for _, fieldName := range fieldNames {
+			existingValue := composite.GetField(m.interpreter, interpreter.EmptyLocationRange, fieldName)
+
+			migratedValue, valueUpdated := m.migrateValue(existingValue)
+			if migratedValue == nil {
+				continue
+			}
+
+			composite.SetMember(m.interpreter, locationRange, fieldName, migratedValue)
+
+			updatedInPlace = updatedInPlace || valueUpdated
+		}
 
 		// The composite itself does not have to be replaced
 		return
@@ -151,56 +155,52 @@ func (m *AccountTypeMigration) migrateValue(value interpreter.Value) (newValue i
 	case *interpreter.DictionaryValue:
 		dictionary := value
 
-		type migratedKeyValue struct {
-			oldKey   interpreter.Value
-			newKey   interpreter.Value
-			newValue interpreter.Value
-		}
-
-		var keyValues []migratedKeyValue
-
-		dictionary.Iterate(m.interpreter, func(key, value interpreter.Value) (resume bool) {
-			newKey, keyUpdated := m.migrateValue(key)
-			newValue, valueUpdated := m.migrateValue(value)
-
-			if newKey != nil || newValue != nil {
-				keyValues = append(
-					keyValues,
-					migratedKeyValue{
-						oldKey:   key,
-						newKey:   newKey,
-						newValue: newValue,
-					},
-				)
-			}
-
-			updated = updated || keyUpdated || valueUpdated
-
+		// Read the keys first, so the iteration wouldn't be affected
+		// by the modification of the nested values.
+		var existingKeys []interpreter.Value
+		dictionary.Iterate(m.interpreter, func(key, _ interpreter.Value) (resume bool) {
+			existingKeys = append(existingKeys, key)
 			return true
 		})
 
-		for _, keyValue := range keyValues {
-			var key, value interpreter.Value
+		for _, existingKey := range existingKeys {
+			existingValue, exist := dictionary.Get(nil, interpreter.EmptyLocationRange, existingKey)
+			if !exist {
+				panic(errors.NewUnreachableError())
+			}
 
-			// We only reach here is either the key or value has been migrated.
+			newKey, keyUpdated := m.migrateValue(existingKey)
+			newValue, valueUpdated := m.migrateValue(existingValue)
+			if newKey == nil && newValue == nil {
+				continue
+			}
 
-			if keyValue.newKey != nil {
+			// We only reach here at least one of key or value has been migrated.
+			var keyToSet, valueToSet interpreter.Value
+
+			if newKey == nil {
+				keyToSet = existingKey
+			} else {
 				// Key was migrated.
 				// Remove the old value at the old key.
 				// This old value will be inserted again with the new key, unless the value is also migrated.
-				value = dictionary.RemoveKey(m.interpreter, locationRange, keyValue.oldKey)
-				key = keyValue.newKey
+				_ = dictionary.RemoveKey(m.interpreter, locationRange, existingKey)
+				keyToSet = newKey
+			}
+
+			if newValue == nil {
+				valueToSet = existingValue
 			} else {
-				key = keyValue.oldKey
+				// Value was migrated
+				valueToSet = newValue
 			}
 
-			// Value was migrated
-			if keyValue.newValue != nil {
-				// Always wrap with an optional, when inserting to the dictionary.
-				value = interpreter.NewUnmeteredSomeValueNonCopying(keyValue.newValue)
-			}
+			// Always wrap with an optional, when inserting to the dictionary.
+			valueToSet = interpreter.NewUnmeteredSomeValueNonCopying(valueToSet)
 
-			dictionary.SetKey(m.interpreter, locationRange, key, value)
+			dictionary.SetKey(m.interpreter, locationRange, keyToSet, valueToSet)
+
+			updatedInPlace = updatedInPlace || keyUpdated || valueUpdated
 		}
 
 		// The dictionary itself does not have to be replaced
@@ -276,7 +276,7 @@ func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.St
 		*interpreter.InterfaceStaticType:
 		// Nothing to do
 
-	case primitiveStaticTypeWrapper:
+	case dummyStaticType:
 		// This is for testing the migration.
 		// i.e: wrapper was only to make it possible to use as a dictionary-key.
 		// Ignore the wrapper, and continue with the inner type.
