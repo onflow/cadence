@@ -285,33 +285,33 @@ func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.St
 	default:
 		// Is it safe to do so?
 		switch staticType {
-		case interpreter.PrimitiveStaticTypePublicAccount:
+		case interpreter.PrimitiveStaticTypePublicAccount: //nolint:staticcheck
 			return unauthorizedAccountReferenceType
-		case interpreter.PrimitiveStaticTypeAuthAccount:
+		case interpreter.PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
 			return authAccountReferenceType
 
-		case interpreter.PrimitiveStaticTypeAuthAccountCapabilities,
-			interpreter.PrimitiveStaticTypePublicAccountCapabilities:
+		case interpreter.PrimitiveStaticTypeAuthAccountCapabilities, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountCapabilities: //nolint:staticcheck
 			return interpreter.PrimitiveStaticTypeAccount_Capabilities
 
-		case interpreter.PrimitiveStaticTypeAuthAccountAccountCapabilities:
+		case interpreter.PrimitiveStaticTypeAuthAccountAccountCapabilities: //nolint:staticcheck
 			return interpreter.PrimitiveStaticTypeAccount_AccountCapabilities
 
-		case interpreter.PrimitiveStaticTypeAuthAccountStorageCapabilities:
+		case interpreter.PrimitiveStaticTypeAuthAccountStorageCapabilities: //nolint:staticcheck
 			return interpreter.PrimitiveStaticTypeAccount_StorageCapabilities
 
-		case interpreter.PrimitiveStaticTypeAuthAccountContracts,
-			interpreter.PrimitiveStaticTypePublicAccountContracts:
+		case interpreter.PrimitiveStaticTypeAuthAccountContracts, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountContracts: //nolint:staticcheck
 			return interpreter.PrimitiveStaticTypeAccount_Contracts
 
-		case interpreter.PrimitiveStaticTypeAuthAccountKeys,
-			interpreter.PrimitiveStaticTypePublicAccountKeys:
+		case interpreter.PrimitiveStaticTypeAuthAccountKeys, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountKeys: //nolint:staticcheck
 			return interpreter.PrimitiveStaticTypeAccount_Keys
 
-		case interpreter.PrimitiveStaticTypeAuthAccountInbox:
+		case interpreter.PrimitiveStaticTypeAuthAccountInbox: //nolint:staticcheck
 			return interpreter.PrimitiveStaticTypeAccount_Inbox
 
-		case interpreter.PrimitiveStaticTypeAccountKey:
+		case interpreter.PrimitiveStaticTypeAccountKey: //nolint:staticcheck
 			return interpreter.AccountKeyStaticType
 		}
 	}

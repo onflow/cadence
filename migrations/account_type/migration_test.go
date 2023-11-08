@@ -72,8 +72,8 @@ func TestMigration(t *testing.T) {
 	account := common.Address{0x42}
 	pathDomain := common.PathDomainPublic
 
-	const publicAccountType = interpreter.PrimitiveStaticTypePublicAccount
-	const authAccountType = interpreter.PrimitiveStaticTypeAuthAccount
+	const publicAccountType = interpreter.PrimitiveStaticTypePublicAccount //nolint:staticcheck
+	const authAccountType = interpreter.PrimitiveStaticTypeAuthAccount     //nolint:staticcheck
 	const stringType = interpreter.PrimitiveStaticTypeString
 
 	type testCase struct {
@@ -91,43 +91,43 @@ func TestMigration(t *testing.T) {
 			expectedType: authAccountReferenceType,
 		},
 		"auth_account_capabilities": {
-			storedType:   interpreter.PrimitiveStaticTypeAuthAccountCapabilities,
+			storedType:   interpreter.PrimitiveStaticTypeAuthAccountCapabilities, //nolint:staticcheck
 			expectedType: interpreter.PrimitiveStaticTypeAccount_Capabilities,
 		},
 		"public_account_capabilities": {
-			storedType:   interpreter.PrimitiveStaticTypePublicAccountCapabilities,
+			storedType:   interpreter.PrimitiveStaticTypePublicAccountCapabilities, //nolint:staticcheck
 			expectedType: interpreter.PrimitiveStaticTypeAccount_Capabilities,
 		},
 		"auth_account_account_capabilities": {
-			storedType:   interpreter.PrimitiveStaticTypeAuthAccountAccountCapabilities,
+			storedType:   interpreter.PrimitiveStaticTypeAuthAccountAccountCapabilities, //nolint:staticcheck
 			expectedType: interpreter.PrimitiveStaticTypeAccount_AccountCapabilities,
 		},
 		"auth_account_storage_capabilities": {
-			storedType:   interpreter.PrimitiveStaticTypeAuthAccountStorageCapabilities,
+			storedType:   interpreter.PrimitiveStaticTypeAuthAccountStorageCapabilities, //nolint:staticcheck
 			expectedType: interpreter.PrimitiveStaticTypeAccount_StorageCapabilities,
 		},
 		"auth_account_contracts": {
-			storedType:   interpreter.PrimitiveStaticTypeAuthAccountContracts,
+			storedType:   interpreter.PrimitiveStaticTypeAuthAccountContracts, //nolint:staticcheck
 			expectedType: interpreter.PrimitiveStaticTypeAccount_Contracts,
 		},
 		"public_account_contracts": {
-			storedType:   interpreter.PrimitiveStaticTypePublicAccountContracts,
+			storedType:   interpreter.PrimitiveStaticTypePublicAccountContracts, //nolint:staticcheck
 			expectedType: interpreter.PrimitiveStaticTypeAccount_Contracts,
 		},
 		"auth_account_keys": {
-			storedType:   interpreter.PrimitiveStaticTypeAuthAccountKeys,
+			storedType:   interpreter.PrimitiveStaticTypeAuthAccountKeys, //nolint:staticcheck
 			expectedType: interpreter.PrimitiveStaticTypeAccount_Keys,
 		},
 		"public_account_keys": {
-			storedType:   interpreter.PrimitiveStaticTypePublicAccountKeys,
+			storedType:   interpreter.PrimitiveStaticTypePublicAccountKeys, //nolint:staticcheck
 			expectedType: interpreter.PrimitiveStaticTypeAccount_Keys,
 		},
 		"auth_account_inbox": {
-			storedType:   interpreter.PrimitiveStaticTypeAuthAccountInbox,
+			storedType:   interpreter.PrimitiveStaticTypeAuthAccountInbox, //nolint:staticcheck
 			expectedType: interpreter.PrimitiveStaticTypeAccount_Inbox,
 		},
 		"account_key": {
-			storedType:   interpreter.PrimitiveStaticTypeAccountKey,
+			storedType:   interpreter.PrimitiveStaticTypeAccountKey, //nolint:staticcheck
 			expectedType: interpreter.AccountKeyStaticType,
 		},
 		"optional_account": {
@@ -426,7 +426,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 		expectedValue interpreter.Value
 	}
 
-	storedAccountTypeValue := interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypePublicAccount)
+	storedAccountTypeValue := interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypePublicAccount) //nolint:staticcheck
 	expectedAccountTypeValue := interpreter.NewTypeValue(nil, unauthorizedAccountReferenceType)
 	stringTypeValue := interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypeString)
 
@@ -547,7 +547,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				interpreter.NewTypeValue(
 					nil,
 					dummyStaticType{
-						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount,
+						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
 					},
 				),
 				interpreter.NewUnmeteredInt8Value(4),
@@ -576,7 +576,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				interpreter.NewTypeValue(
 					nil,
 					dummyStaticType{
-						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount,
+						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
 					},
 				),
 				storedAccountTypeValue,
