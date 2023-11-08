@@ -187,10 +187,15 @@ func (m *Migration) migrateAccountLinksInAccountDomain(
 
 	count := storageMap.Count()
 	if count > 0 {
+		var identifiers []string
+
 		for key := iterator.NextKey(); key != nil; key = iterator.NextKey() {
 			// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
 			identifier := string(key.(interpreter.StringAtreeValue))
+			identifiers = append(identifiers, identifier)
+		}
 
+		for _, identifier := range identifiers {
 			pathValue := interpreter.NewUnmeteredPathValue(domain, identifier)
 
 			m.migrateLink(
@@ -264,7 +269,21 @@ func (m *Migration) migratePathCapabilitiesInAccount(
 
 	count := storageMap.Count()
 	if count > 0 {
-		for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
+
+		var keys []string
+
+		// Read all keys first, then migrate.
+		// Migrating (mutating) during iteration is not supported.
+		for key, _ := iterator.Next(); key != nil; key, _ = iterator.Next() {
+			// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+			identifier := string(key.(interpreter.StringAtreeValue))
+			keys = append(keys, identifier)
+		}
+
+		for _, key := range keys {
+			storageKey := interpreter.StringStorageMapKey(key)
+
+			value := storageMap.ReadValue(nil, storageKey)
 
 			newValue := m.migratePathCapability(
 				accountAddress,
@@ -273,11 +292,9 @@ func (m *Migration) migratePathCapabilitiesInAccount(
 			)
 
 			if newValue != nil {
-				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
-				identifier := string(key.(interpreter.StringAtreeValue))
 				storageMap.SetValue(
 					m.interpreter,
-					interpreter.StringStorageMapKey(identifier),
+					storageKey,
 					newValue,
 				)
 			}
@@ -320,7 +337,9 @@ func (m *Migration) migratePathCapability(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		if newBorrowType.ReferencedType == interpreter.PrimitiveStaticTypeAuthAccount {
+
+		// Convert the old AuthAccount type to the new fully-entitled Account type
+		if newBorrowType.ReferencedType == interpreter.PrimitiveStaticTypeAuthAccount { //nolint:staticcheck
 			newBorrowType = fullyEntitledAccountReferenceStaticType
 		}
 
@@ -345,7 +364,21 @@ func (m *Migration) migratePathCapability(
 
 		// Migrate composite's fields
 
-		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
+		// Read all keys first, then migrate.
+		// Migrating (mutating) during iteration is not supported.
+
+		var fieldNames []string
+
+		composite.ForEachFieldName(func(fieldName string) (resume bool) {
+			fieldNames = append(fieldNames, fieldName)
+
+			// Continue iteration
+			return true
+		})
+
+		for _, fieldName := range fieldNames {
+			fieldValue := composite.GetField(m.interpreter, interpreter.EmptyLocationRange, fieldName)
+
 			newFieldValue := m.migratePathCapability(accountAddress, fieldValue, reporter)
 			if newFieldValue != nil {
 				composite.SetMember(
@@ -355,10 +388,7 @@ func (m *Migration) migratePathCapability(
 					newFieldValue,
 				)
 			}
-
-			// continue iteration
-			return true
-		})
+		}
 
 		// The composite itself does not have to be replaced
 
@@ -375,11 +405,16 @@ func (m *Migration) migratePathCapability(
 
 	case *interpreter.ArrayValue:
 		array := value
-		var index int
 
 		// Migrate array's elements
 
-		array.Iterate(m.interpreter, func(element interpreter.Value) (resume bool) {
+		// Do not use iteration using the array iterator,
+		// migrating (mutating) during iteration is not supported.
+
+		count := array.Count()
+		for index := 0; index < count; index++ {
+			element := array.Get(m.interpreter, locationRange, index)
+
 			newElement := m.migratePathCapability(accountAddress, element, reporter)
 			if newElement != nil {
 				array.Set(
@@ -389,11 +424,7 @@ func (m *Migration) migratePathCapability(
 					newElement,
 				)
 			}
-
-			index++
-
-			return true
-		})
+		}
 
 		// The array itself does not have to be replaced
 
@@ -404,7 +435,22 @@ func (m *Migration) migratePathCapability(
 
 		// Migrate dictionary's values
 
-		dictionary.Iterate(m.interpreter, func(key, value interpreter.Value) (resume bool) {
+		// Read all keys first, then migrate.
+		// Migrating (mutating) during iteration is not supported.
+
+		var keys []interpreter.Value
+
+		dictionary.IterateKeys(
+			m.interpreter,
+			func(key interpreter.Value) (resume bool) {
+				keys = append(keys, key)
+
+				// Continue iteration
+				return true
+			},
+		)
+
+		for _, key := range keys {
 
 			// Keys cannot be capabilities at the moment,
 			// so this should never occur in stored data
@@ -416,7 +462,12 @@ func (m *Migration) migratePathCapability(
 				panic(errors.NewUnreachableError())
 			}
 
-			// Migrate the value of the key-value pair
+			// Migrate the value
+
+			value, ok := dictionary.Get(m.interpreter, locationRange, key)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			newValue := m.migratePathCapability(accountAddress, value, reporter)
 
@@ -428,9 +479,7 @@ func (m *Migration) migratePathCapability(
 					newValue,
 				)
 			}
-
-			return true
-		})
+		}
 
 		// The dictionary itself does not have to be replaced
 
