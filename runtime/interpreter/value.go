@@ -17175,6 +17175,13 @@ func (v *CompositeValue) Transfer(
 	preventTransfer map[atree.StorageID]struct{},
 ) Value {
 
+	config := interpreter.SharedState.Config
+
+	// Should be checked before accessing `v.dictionary`.
+	if config.InvalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(locationRange)
+	}
+
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
 	common.UseMemory(interpreter, baseUse)
 	common.UseMemory(interpreter, elementOverhead)
@@ -17182,12 +17189,6 @@ func (v *CompositeValue) Transfer(
 	common.UseMemory(interpreter, metaDataUse)
 
 	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
-
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
-	}
 
 	if config.TracingEnabled {
 		startTime := time.Now()
