@@ -312,7 +312,8 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 		if !ok {
 			return nil, LiteralExpressionTypeError
 		}
-		return array.WithType(cadence.NewMeteredVariableSizedArrayType(inter, arrayType.Element())), err
+		arrayCadenceType := cadence.NewMeteredVariableSizedArrayType(inter, arrayType.Element())
+		return array.WithType(arrayCadenceType), err
 
 	case *sema.ConstantSizedType:
 		expression, ok := expression.(*ast.ArrayExpression)
@@ -326,7 +327,8 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 		if !ok {
 			return nil, LiteralExpressionTypeError
 		}
-		return array.WithType(cadence.NewMeteredConstantSizedArrayType(inter, uint(ty.Size), arrayType.Element())), err
+		arrayCadenceType := cadence.NewMeteredConstantSizedArrayType(inter, uint(ty.Size), arrayType.Element())
+		return array.WithType(arrayCadenceType), err
 
 	case *sema.OptionalType:
 		if _, ok := expression.(*ast.NilExpression); ok {
@@ -386,7 +388,8 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 			return nil, err
 		}
 
-		return dictionaryValue.WithType(cadence.NewMeteredDictionaryType(inter, dictionaryType.KeyType, dictionaryType.ElementType)), nil
+		dictionaryCadenceType := cadence.NewMeteredDictionaryType(inter, dictionaryType.KeyType, dictionaryType.ElementType)
+		return dictionaryValue.WithType(dictionaryCadenceType), nil
 
 	case *sema.AddressType:
 		expression, ok := expression.(*ast.IntegerExpression)
