@@ -78,6 +78,7 @@ type PathCapabilityMigrationReporter interface {
 	MigratedPathCapability(
 		accountAddress common.Address,
 		addressPath interpreter.AddressPath,
+		borrowType *interpreter.ReferenceStaticType,
 	)
 	MissingCapabilityID(
 		accountAddress common.Address,
@@ -330,7 +331,11 @@ func (m *Migration) migratePathCapability(
 		)
 
 		if reporter != nil {
-			reporter.MigratedPathCapability(accountAddress, addressPath)
+			reporter.MigratedPathCapability(
+				accountAddress,
+				addressPath,
+				newBorrowType,
+			)
 		}
 
 		return newCapability

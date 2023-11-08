@@ -55,6 +55,7 @@ type testCapConsLinkMigration struct {
 type testCapConsPathCapabilityMigration struct {
 	accountAddress common.Address
 	addressPath    interpreter.AddressPath
+	borrowType     *interpreter.ReferenceStaticType
 }
 
 type testCapConsMissingCapabilityID struct {
@@ -93,12 +94,14 @@ func (t *testMigrationReporter) MigratedLink(
 func (t *testMigrationReporter) MigratedPathCapability(
 	accountAddress common.Address,
 	addressPath interpreter.AddressPath,
+	borrowType *interpreter.ReferenceStaticType,
 ) {
 	t.pathCapabilityMigrations = append(
 		t.pathCapabilityMigrations,
 		testCapConsPathCapabilityMigration{
 			accountAddress: accountAddress,
 			addressPath:    addressPath,
+			borrowType:     borrowType,
 		},
 	)
 }
@@ -503,6 +506,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
+					borrowType: testRReferenceStaticType,
 				},
 			},
 		},
@@ -538,6 +542,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
+					borrowType: testRReferenceStaticType,
 				},
 			},
 		},
@@ -587,6 +592,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
+					borrowType: testRReferenceStaticType,
 				},
 			},
 		},
@@ -603,7 +609,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 			pathLinks: map[interpreter.PathValue]interpreter.PathValue{
 				// Equivalent to:
-				//   link<...>(/public/test, target: /private/test)
+				//   link<&Test.R>(/public/test, target: /private/test)
 				{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
@@ -612,7 +618,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					Identifier: testPathIdentifier,
 				},
 				// Equivalent to:
-				//   link<...>(/private/test, target: /public/test)
+				//   link<&Test.R>(/private/test, target: /public/test)
 				{
 					Domain:     common.PathDomainPrivate,
 					Identifier: testPathIdentifier,
@@ -673,7 +679,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				Address: interpreter.AddressValue(testAddress),
 			},
 			// Equivalent to:
-			//   link<...>(/public/test, target: /private/test)
+			//   link<&Test.R>(/public/test, target: /private/test)
 			pathLinks: map[interpreter.PathValue]interpreter.PathValue{
 				{
 					Domain:     common.PathDomainPublic,
@@ -726,6 +732,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
+					borrowType: fullyEntitledAccountReferenceStaticType,
 				},
 			},
 		},
@@ -758,6 +765,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
+					borrowType: fullyEntitledAccountReferenceStaticType,
 				},
 			},
 		},
