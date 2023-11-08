@@ -108,7 +108,8 @@ func ParseLiteralArgumentList(
 	return result, nil
 }
 
-func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression, elementType sema.Type) (cadence.Value, error) {
+func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression, elementType sema.Type) (cadence.Array, error) {
+
 	return cadence.NewMeteredArray(
 		inter,
 		len(elements),
@@ -125,6 +126,7 @@ func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression
 
 			return values, nil
 		})
+
 }
 
 func pathLiteralValue(
@@ -297,14 +299,21 @@ func fixedPointLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expre
 }
 
 func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty sema.Type) (cadence.Value, error) {
+
 	switch ty := ty.(type) {
 	case *sema.VariableSizedType:
 		expression, ok := expression.(*ast.ArrayExpression)
 		if !ok {
 			return nil, LiteralExpressionTypeError
 		}
-
-		return arrayLiteralValue(inter, expression.Values, ty.Type)
+		array, err := arrayLiteralValue(inter, expression.Values, ty.Type)
+		exported := ExportType(ty, map[sema.TypeID]cadence.Type{})
+		arrayType, ok := exported.(cadence.ArrayType)
+		if !ok {
+			return nil, LiteralExpressionTypeError
+		}
+		arrayCadenceType := cadence.NewMeteredVariableSizedArrayType(inter, arrayType.Element())
+		return array.WithType(arrayCadenceType), err
 
 	case *sema.ConstantSizedType:
 		expression, ok := expression.(*ast.ArrayExpression)
@@ -312,7 +321,14 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		return arrayLiteralValue(inter, expression.Values, ty.Type)
+		array, err := arrayLiteralValue(inter, expression.Values, ty.Type)
+		exported := ExportType(ty, map[sema.TypeID]cadence.Type{})
+		arrayType := exported.(cadence.ArrayType)
+		if !ok {
+			return nil, LiteralExpressionTypeError
+		}
+		arrayCadenceType := cadence.NewMeteredConstantSizedArrayType(inter, uint(ty.Size), arrayType.Element())
+		return array.WithType(arrayCadenceType), err
 
 	case *sema.OptionalType:
 		if _, ok := expression.(*ast.NilExpression); ok {
@@ -339,7 +355,12 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		return cadence.NewMeteredDictionary(
+		exported := ExportType(ty, map[sema.TypeID]cadence.Type{})
+		dictionaryType, ok := exported.(*cadence.DictionaryType)
+		if !ok {
+			return nil, LiteralExpressionTypeError
+		}
+		dictionaryValue, err := cadence.NewMeteredDictionary(
 			inter,
 			len(expression.Entries),
 			func() ([]cadence.KeyValuePair, error) {
@@ -362,6 +383,13 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 				return pairs, nil
 			},
 		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		dictionaryCadenceType := cadence.NewMeteredDictionaryType(inter, dictionaryType.KeyType, dictionaryType.ElementType)
+		return dictionaryValue.WithType(dictionaryCadenceType), nil
 
 	case *sema.AddressType:
 		expression, ok := expression.(*ast.IntegerExpression)
