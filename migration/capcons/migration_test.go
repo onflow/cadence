@@ -155,14 +155,33 @@ var testRReferenceStaticType = interpreter.NewReferenceStaticType(
 	testRCompositeStaticType,
 )
 
+var testSCompositeStaticType = interpreter.NewCompositeStaticTypeComputeTypeID(
+	nil,
+	common.NewAddressLocation(nil, testAddress, "Test"),
+	"Test.S",
+)
+
+var testSReferenceStaticType = interpreter.NewReferenceStaticType(
+	nil,
+	interpreter.UnauthorizedAccess,
+	testSCompositeStaticType,
+)
+
+type testLink struct {
+	sourcePath interpreter.PathValue
+	targetPath interpreter.PathValue
+	borrowType *interpreter.ReferenceStaticType
+}
+
 func testPathCapabilityValueMigration(
 	t *testing.T,
 	capabilityValue *interpreter.PathCapabilityValue,
-	pathLinks map[interpreter.PathValue]interpreter.PathValue,
+	pathLinks []testLink,
 	accountLinks []interpreter.PathValue,
 	expectedMigrations []testCapConsPathCapabilityMigration,
 	expectedMissingCapabilityIDs []testCapConsMissingCapabilityID,
 	setupFunction, checkFunction string,
+	borrowShouldFail bool,
 ) {
 	require.True(t,
 		len(expectedMigrations) == 0 ||
@@ -178,6 +197,9 @@ func testPathCapabilityValueMigration(
 
           access(all)
           resource R {}
+
+          access(all)
+          struct S {}
 
           access(all)
           struct CapabilityWrapper {
@@ -235,20 +257,30 @@ func testPathCapabilityValueMigration(
           }
 
           access(all)
-          fun checkMigratedCapabilityValueWithPathLink(getter: fun(AnyStruct): Capability) {
+          fun checkMigratedCapabilityValueWithPathLink(getter: fun(AnyStruct): Capability, borrowShouldFail: Bool) {
               self.account.storage.save(<-create R(), to: /storage/test)
               let capValue = self.account.storage.copy<AnyStruct>(from: /storage/wrappedCapability)!
               let cap = getter(capValue)
               assert(cap.id != 0)
-              let ref = cap.borrow<&R>()!
+              let ref = cap.borrow<&R>()
+              if borrowShouldFail {
+                  assert(ref == nil)
+              } else {
+                  assert(ref != nil)
+              }
           }
 
           access(all)
-          fun checkMigratedCapabilityValueWithAccountLink(getter: fun(AnyStruct): Capability) {
+          fun checkMigratedCapabilityValueWithAccountLink(getter: fun(AnyStruct): Capability, borrowShouldFail: Bool) {
               let capValue = self.account.storage.copy<AnyStruct>(from: /storage/wrappedCapability)!
               let cap = getter(capValue)
               assert(cap.id != 0)
-              let ref = cap.borrow<&Account>()!
+              let ref = cap.check<&Account>()
+              if borrowShouldFail {
+                  assert(ref == nil)
+              } else {
+                  assert(ref != nil)
+              }
           }
       }
     `
@@ -327,13 +359,18 @@ func testPathCapabilityValueMigration(
 	})
 	require.NoError(t, err)
 
-	for sourcePath, targetPath := range pathLinks {
+	for _, testLink := range pathLinks {
+		sourcePath := testLink.sourcePath
+		targetPath := testLink.targetPath
+
+		require.NotNil(t, testLink.borrowType)
+
 		storage.GetStorageMap(testAddress, sourcePath.Domain.Identifier(), true).
 			SetValue(
 				inter,
 				interpreter.StringStorageMapKey(sourcePath.Identifier),
 				interpreter.PathLinkValue{ //nolint:staticcheck
-					Type: testRReferenceStaticType,
+					Type: testLink.borrowType,
 					TargetPath: interpreter.PathValue{
 						Domain:     targetPath.Domain,
 						Identifier: targetPath.Identifier,
@@ -431,11 +468,12 @@ func testPathCapabilityValueMigration(
 
 	          access(all)
 	          fun main() {
-	             Test.%s(getter: %s)
+	             Test.%s(getter: %s, borrowShouldFail: %v)
 	          }
 	        `,
 			checkFunctionName,
 			checkFunction,
+			borrowShouldFail,
 		)
 		_, err = rt.ExecuteScript(
 			runtime.Script{
@@ -458,10 +496,11 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 	type linkTestCase struct {
 		name                         string
 		capabilityValue              *interpreter.PathCapabilityValue
-		pathLinks                    map[interpreter.PathValue]interpreter.PathValue
+		pathLinks                    []testLink
 		accountLinks                 []interpreter.PathValue
 		expectedMigrations           []testCapConsPathCapabilityMigration
 		expectedMissingCapabilityIDs []testCapConsMissingCapabilityID
+		borrowShouldFail             bool
 	}
 
 	linkTestCases := []linkTestCase{
@@ -476,24 +515,72 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 				Address: interpreter.AddressValue(testAddress),
 			},
-			pathLinks: map[interpreter.PathValue]interpreter.PathValue{
-				// Equivalent to:
-				//   link<&Test.R>(/public/test, target: /private/test)
+			pathLinks: []testLink{
 				{
+					// Equivalent to:
+					//   link<&Test.R>(/public/test, target: /private/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/private/test, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedMigrations: []testCapConsPathCapabilityMigration{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							testPathIdentifier,
+						),
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+		},
+		{
+			name: "Path links, working chain (public -> storage)",
+			// Equivalent to: getCapability<&Test.R>(/public/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: testRReferenceStaticType,
+				Path: interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
-				}: {
-					Domain:     common.PathDomainPrivate,
-					Identifier: testPathIdentifier,
 				},
-				// Equivalent to:
-				//   link<&Test.R>(/private/test, target: /storage/test)
+				Address: interpreter.AddressValue(testAddress),
+			},
+			pathLinks: []testLink{
 				{
-					Domain:     common.PathDomainPrivate,
-					Identifier: testPathIdentifier,
-				}: {
-					Domain:     common.PathDomainStorage,
-					Identifier: testPathIdentifier,
+					// Equivalent to:
+					//   link<&Test.R>(/public/test, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
 				},
 			},
 			expectedMigrations: []testCapConsPathCapabilityMigration{
@@ -521,15 +608,19 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 				Address: interpreter.AddressValue(testAddress),
 			},
-			pathLinks: map[interpreter.PathValue]interpreter.PathValue{
-				// Equivalent to:
-				//   link<&Test.R>(/private/test, target: /storage/test)
+			pathLinks: []testLink{
 				{
-					Domain:     common.PathDomainPrivate,
-					Identifier: testPathIdentifier,
-				}: {
-					Domain:     common.PathDomainStorage,
-					Identifier: testPathIdentifier,
+					// Equivalent to:
+					//   link<&Test.R>(/private/test, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
 				},
 			},
 			expectedMigrations: []testCapConsPathCapabilityMigration{
@@ -562,24 +653,32 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 				Address: interpreter.AddressValue(testAddress),
 			},
-			pathLinks: map[interpreter.PathValue]interpreter.PathValue{
-				// Equivalent to:
-				//   link<&Test.R>(/private/test, target: /private/test2)
+			pathLinks: []testLink{
 				{
-					Domain:     common.PathDomainPrivate,
-					Identifier: testPathIdentifier,
-				}: {
-					Domain:     common.PathDomainPrivate,
-					Identifier: "test2",
+					// Equivalent to:
+					//   link<&Test.R>(/private/test, target: /private/test2)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: "test2",
+					},
+					borrowType: testRReferenceStaticType,
 				},
-				// Equivalent to:
-				//   link<&Test.R>(/private/test2, target: /storage/test)
 				{
-					Domain:     common.PathDomainPrivate,
-					Identifier: "test2",
-				}: {
-					Domain:     common.PathDomainStorage,
-					Identifier: testPathIdentifier,
+					// Equivalent to:
+					//   link<&Test.R>(/private/test2, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: "test2",
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
 				},
 			},
 			expectedMigrations: []testCapConsPathCapabilityMigration{
@@ -596,6 +695,49 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 			},
 		},
+		// TODO: verify
+		{
+			name: "Path links, valid chain (public -> storage), different borrow type",
+			// Equivalent to: getCapability<&Test.R>(/public/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: testRReferenceStaticType,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainPublic,
+					Identifier: testPathIdentifier,
+				},
+				Address: interpreter.AddressValue(testAddress),
+			},
+			pathLinks: []testLink{
+				{
+					// Equivalent to:
+					//   link<&Test.S>(/public/test, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					//
+					borrowType: testSReferenceStaticType,
+				},
+			},
+			expectedMigrations: []testCapConsPathCapabilityMigration{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							testPathIdentifier,
+						),
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+			borrowShouldFail: true,
+		},
 		{
 			name: "Path links, cyclic chain (public -> private -> public)",
 			// Equivalent to: getCapability<&Test.R>(/public/test)
@@ -607,24 +749,32 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 				Address: interpreter.AddressValue(testAddress),
 			},
-			pathLinks: map[interpreter.PathValue]interpreter.PathValue{
-				// Equivalent to:
-				//   link<&Test.R>(/public/test, target: /private/test)
+			pathLinks: []testLink{
 				{
-					Domain:     common.PathDomainPublic,
-					Identifier: testPathIdentifier,
-				}: {
-					Domain:     common.PathDomainPrivate,
-					Identifier: testPathIdentifier,
+					// Equivalent to:
+					//   link<&Test.R>(/public/test, target: /private/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
 				},
-				// Equivalent to:
-				//   link<&Test.R>(/private/test, target: /public/test)
 				{
-					Domain:     common.PathDomainPrivate,
-					Identifier: testPathIdentifier,
-				}: {
-					Domain:     common.PathDomainPublic,
-					Identifier: testPathIdentifier,
+					// Equivalent to:
+					//   link<&Test.R>(/private/test, target: /public/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
 				},
 			},
 			expectedMigrations: nil,
@@ -678,15 +828,19 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 				Address: interpreter.AddressValue(testAddress),
 			},
-			// Equivalent to:
-			//   link<&Test.R>(/public/test, target: /private/test)
-			pathLinks: map[interpreter.PathValue]interpreter.PathValue{
+			pathLinks: []testLink{
 				{
-					Domain:     common.PathDomainPublic,
-					Identifier: testPathIdentifier,
-				}: {
-					Domain:     common.PathDomainPrivate,
-					Identifier: testPathIdentifier,
+					// Equivalent to:
+					//   link<&Test.R>(/public/test, target: /private/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
 				},
 			},
 			expectedMigrations: nil,
@@ -879,6 +1033,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				linkTestCase.expectedMissingCapabilityIDs,
 				valueTestCase.setupFunction,
 				valueTestCase.checkFunction,
+				linkTestCase.borrowShouldFail,
 			)
 		})
 	}
