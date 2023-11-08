@@ -683,9 +683,10 @@ func (m *Migration) getPathCapabilityFinalTarget(
 					panic(errors.NewUnreachableError())
 				}
 
-				reference := m.interpreter.SharedState.Config.CapabilityBorrowHandler(
+				// Do not borrow final target (i.e. do not require target to exist),
+				// just get target address/path
+				reference := stdlib.GetCheckedCapabilityControllerReference(
 					m.interpreter,
-					interpreter.EmptyLocationRange,
 					value.Address,
 					value.ID,
 					wantedBorrowType,

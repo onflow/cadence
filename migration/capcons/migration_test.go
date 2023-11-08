@@ -541,6 +541,55 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 			},
 		},
+		// Test that the migration also follows capability controller,
+		// which were already previously migrated from links.
+		// Following the (capability value) should not borrow it,
+		// i.e. require the storage target to exist,
+		// but rather just get the storage target
+		{
+			name: "Path links, working chain (private -> private -> storage)",
+			// Equivalent to: getCapability<&Test.R>(/private/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: testRReferenceStaticType,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainPrivate,
+					Identifier: testPathIdentifier,
+				},
+				Address: interpreter.AddressValue(testAddress),
+			},
+			pathLinks: map[interpreter.PathValue]interpreter.PathValue{
+				// Equivalent to:
+				//   link<&Test.R>(/private/test, target: /private/test2)
+				{
+					Domain:     common.PathDomainPrivate,
+					Identifier: testPathIdentifier,
+				}: {
+					Domain:     common.PathDomainPrivate,
+					Identifier: "test2",
+				},
+				// Equivalent to:
+				//   link<&Test.R>(/private/test2, target: /storage/test)
+				{
+					Domain:     common.PathDomainPrivate,
+					Identifier: "test2",
+				}: {
+					Domain:     common.PathDomainStorage,
+					Identifier: testPathIdentifier,
+				},
+			},
+			expectedMigrations: []testCapConsPathCapabilityMigration{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							testPathIdentifier,
+						),
+					},
+				},
+			},
+		},
 		{
 			name: "Path links, cyclic chain (public -> private -> public)",
 			// Equivalent to: getCapability<&Test.R>(/public/test)

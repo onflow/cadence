@@ -3227,7 +3227,7 @@ func getCheckedCapabilityController(
 	return controller, wantedBorrowType
 }
 
-func getCheckedCapabilityControllerReference(
+func GetCheckedCapabilityControllerReference(
 	inter *interpreter.Interpreter,
 	capabilityAddressValue interpreter.AddressValue,
 	capabilityIDValue interpreter.UInt64Value,
@@ -3262,7 +3262,7 @@ func BorrowCapabilityController(
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
 ) interpreter.ReferenceValue {
-	referenceValue := getCheckedCapabilityControllerReference(
+	referenceValue := GetCheckedCapabilityControllerReference(
 		inter,
 		capabilityAddress,
 		capabilityID,
@@ -3297,7 +3297,7 @@ func CheckCapabilityController(
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
 ) interpreter.BoolValue {
-	referenceValue := getCheckedCapabilityControllerReference(
+	referenceValue := GetCheckedCapabilityControllerReference(
 		inter,
 		capabilityAddress,
 		capabilityID,
