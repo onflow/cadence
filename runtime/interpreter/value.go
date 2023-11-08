@@ -37,6 +37,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
@@ -16304,15 +16305,16 @@ func (UFix64Value) Scale() int {
 
 // CompositeValue
 
+type FunctionOrderedMap = orderedmap.OrderedMap[string, FunctionValue]
+
 type CompositeValue struct {
-	Destructor      FunctionValue
 	Location        common.Location
 	staticType      StaticType
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	injectedFields  map[string]Value
 	computedFields  map[string]ComputedField
 	NestedVariables map[string]*Variable
-	Functions       map[string]FunctionValue
+	Functions       *FunctionOrderedMap
 	dictionary      *atree.OrderedMap
 	typeID          TypeID
 
@@ -16334,7 +16336,8 @@ type CompositeField struct {
 	Name  string
 }
 
-const attachmentNamePrefix = "$"
+const unrepresentableNamePrefix = "$"
+const resourceDefaultDestroyEventPrefix = ast.ResourceDestructionDefaultEventName + unrepresentableNamePrefix
 
 var _ TypeIndexableValue = &CompositeValue{}
 
@@ -16540,6 +16543,26 @@ func (v *CompositeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
+func resourceDefaultDestroyEventName(t sema.ContainerType) string {
+	return resourceDefaultDestroyEventPrefix + string(t.ID())
+}
+
+// get all the default destroy event constructors associated with this composite value.
+// note that there can be more than one in the case where a resource inherits from an interface
+// that also defines a default destroy event. When that composite is destroyed, all of these
+// events will need to be emitted.
+func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []FunctionValue) {
+	if v.Functions == nil {
+		return
+	}
+	v.Functions.Foreach(func(name string, f FunctionValue) {
+		if strings.HasPrefix(name, resourceDefaultDestroyEventPrefix) {
+			constructors = append(constructors, f)
+		}
+	})
+	return
+}
+
 func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
@@ -16566,54 +16589,55 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
+	// before actually performing the destruction (i.e. so that any fields are still available),
+	// compute the default arguments of the default destruction events (if any exist). However,
+	// wait until after the destruction completes to actually emit the events, so that the correct order
+	// is preserved and nested resource destroy events happen first
+
+	// default destroy event constructors are encoded as functions on the resource (with an unrepresentable name)
+	// so that we can leverage existing atree encoding and decoding. However, we need to make sure functions are initialized
+	// if the composite was recently loaded from storage
+	if v.Functions == nil {
+		v.Functions = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
+	}
+	for _, constructor := range v.defaultDestroyEventConstructors() {
+
+		// pass the container value to the creation of the default event as an implicit argument, so that
+		// its fields are accessible in the body of the event constructor
+		eventConstructorInvocation := NewInvocation(
+			interpreter,
+			nil,
+			nil,
+			nil,
+			[]Value{v},
+			[]sema.Type{},
+			nil,
+			locationRange,
+		)
+
+		event := constructor.invoke(eventConstructorInvocation).(*CompositeValue)
+		eventType := interpreter.MustSemaTypeOfValue(event).(*sema.CompositeType)
+
+		// emit the event once destruction is complete
+		defer interpreter.emitEvent(event, eventType, locationRange)
+	}
+
 	storageID := v.StorageID()
 
 	interpreter.withResourceDestruction(
 		storageID,
 		locationRange,
 		func() {
-			// if this type has attachments, destroy all of them before invoking the destructor
-			v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
-				// an attachment's destructor may make reference to `base`, so we must set the base value
-				// for the attachment before invoking its destructor. For other functions, this happens
-				// automatically when the attachment is accessed with the access expression `v[A]`, which
-				// is a necessary pre-requisite for calling any members of the attachment. However, in
-				// the case of a destructor, this is called implicitly, and thus must have its `base`
-				// set manually
-				attachment.setBaseValue(interpreter, v)
-				attachment.Destroy(interpreter, locationRange)
-			})
-
 			interpreter = v.getInterpreter(interpreter)
 
-			// if composite was deserialized, dynamically link in the destructor
-			if v.Destructor == nil {
-				v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-			}
-
-			destructor := v.Destructor
-
-			if destructor != nil {
-				var base *EphemeralReferenceValue
-				var self MemberAccessibleValue = v
-				if v.Kind == common.CompositeKindAttachment {
-					attachmentType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
-					destructorAccess := sema.NewAccessFromEntitlementSet(attachmentType.SupportedEntitlements(), sema.Conjunction)
-					base, self = attachmentBaseAndSelfValues(interpreter, destructorAccess, v)
+			// destroy every nested resource in this composite; note that this iteration includes attachments
+			v.ForEachField(interpreter, func(_ string, fieldValue Value) bool {
+				if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok && compositeFieldValue.Kind == common.CompositeKindAttachment {
+					compositeFieldValue.setBaseValue(interpreter, v)
 				}
-				invocation := NewInvocation(
-					interpreter,
-					&self,
-					base,
-					nil,
-					nil,
-					nil,
-					nil,
-					locationRange,
-				)
-
-				destructor.invoke(invocation)
-			}
+				maybeDestroy(interpreter, locationRange, fieldValue)
+				return true
+			})
 		},
 	)
 
@@ -16765,9 +16789,13 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	if v.Functions == nil {
 		v.Functions = interpreter.GetCompositeValueFunctions(v, locationRange)
 	}
+	// if no functions were produced, the `Get` below will be nil
+	if v.Functions == nil {
+		return nil
+	}
 
-	function, ok := v.Functions[name]
-	if !ok {
+	function, present := v.Functions.Get(name)
+	if !present {
 		return nil
 	}
 
@@ -17436,7 +17464,6 @@ func (v *CompositeValue) Transfer(
 	res.computedFields = v.computedFields
 	res.NestedVariables = v.NestedVariables
 	res.Functions = v.Functions
-	res.Destructor = v.Destructor
 	res.Stringer = v.Stringer
 	res.isDestroyed = v.isDestroyed
 	res.typeID = v.typeID
@@ -17518,7 +17545,6 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		computedFields:      v.computedFields,
 		NestedVariables:     v.NestedVariables,
 		Functions:           v.Functions,
-		Destructor:          v.Destructor,
 		Stringer:            v.Stringer,
 		isDestroyed:         v.isDestroyed,
 		typeID:              v.typeID,
@@ -17654,7 +17680,7 @@ func NewEnumCaseValue(
 	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
-	functions map[string]FunctionValue,
+	functions *FunctionOrderedMap,
 ) *CompositeValue {
 
 	fields := []CompositeField{
@@ -17701,7 +17727,7 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 }
 
 func attachmentMemberName(ty sema.Type) string {
-	return attachmentNamePrefix + string(ty.ID())
+	return unrepresentableNamePrefix + string(ty.ID())
 }
 
 func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
@@ -17800,7 +17826,7 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 		if key == nil {
 			break
 		}
-		if strings.HasPrefix(string(key.(StringAtreeValue)), attachmentNamePrefix) {
+		if strings.HasPrefix(string(key.(StringAtreeValue)), unrepresentableNamePrefix) {
 			attachment, ok := MustConvertStoredValue(interpreter, value).(*CompositeValue)
 			if !ok {
 				panic(errors.NewExternalError(err))
@@ -19269,9 +19295,7 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {
-	// NO-OP
-}
+func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {}
 
 func (NilValue) String() string {
 	return format.Nil

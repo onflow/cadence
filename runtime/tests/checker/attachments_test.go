@@ -540,33 +540,10 @@ func TestCheckAttachmentWithMembers(t *testing.T) {
 				init(x: @R) {
 					self.x <- x
 				}
-				destroy() {
-					destroy self.x
-				}
 			}`,
 		)
 
 		require.NoError(t, err)
-	})
-
-	t.Run("resource field no destroy", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource R {}
-			attachment Test for R {
-				let x: @R
-				init(x: @R) {
-					self.x <- x
-				}
-			}`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.MissingDestructorError{}, errs[0])
 	})
 
 	t.Run("resource field in struct", func(t *testing.T) {
@@ -581,16 +558,12 @@ func TestCheckAttachmentWithMembers(t *testing.T) {
 				init(x: @R) {
 					self.x <- x
 				}
-				destroy() {
-					destroy self.x
-				}
 			}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[0])
-		assert.IsType(t, &sema.InvalidDestructorError{}, errs[1])
 	})
 
 	t.Run("field with same name as base type", func(t *testing.T) {
@@ -639,28 +612,10 @@ func TestCheckAttachmentWithMembers(t *testing.T) {
 			`
 			resource R {}
 			attachment Test for R {
-				destroy() {}
 			}`,
 		)
 
 		require.NoError(t, err)
-	})
-
-	t.Run("destroy in struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct S {}
-			attachment Test for S {
-				destroy() {}
-			}`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
 	})
 }
 
@@ -1018,25 +973,6 @@ func TestCheckAttachmentBase(t *testing.T) {
 				let x: Int
 				init() {
 					self.x = base.foo()
-				}
-			}`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("destroy", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource R {
-				fun foo() {}
-			}
-			attachment Test for R {
-				destroy() {
-					base.foo()
 				}
 			}`,
 		)

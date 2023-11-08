@@ -37,20 +37,10 @@ import (
 	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
-
-//
-
-var emptyImpureFunctionType = sema.NewSimpleFunctionType(
-	sema.FunctionPurityImpure,
-	sema.UnauthorizedAccess,
-	nil,
-	sema.VoidTypeAnnotation,
-)
-
-//
 
 type getterSetter struct {
 	target Value
@@ -174,7 +164,7 @@ type CompositeValueFunctionsHandlerFunc func(
 	inter *Interpreter,
 	locationRange LocationRange,
 	compositeValue *CompositeValue,
-) map[string]FunctionValue
+) *FunctionOrderedMap
 
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
@@ -183,8 +173,7 @@ type CompositeValueFunctionsHandlerFunc func(
 // As there is no support for inheritance of concrete types,
 // these are the "leaf" nodes in the call chain, and are functions.
 type CompositeTypeCode struct {
-	CompositeFunctions map[string]FunctionValue
-	DestructorFunction FunctionValue
+	CompositeFunctions *FunctionOrderedMap
 }
 
 type FunctionWrapper = func(inner FunctionValue) FunctionValue
@@ -195,10 +184,10 @@ type FunctionWrapper = func(inner FunctionValue) FunctionValue
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
 type WrapperCode struct {
-	InitializerFunctionWrapper FunctionWrapper
-	DestructorFunctionWrapper  FunctionWrapper
-	FunctionWrappers           map[string]FunctionWrapper
-	Functions                  map[string]FunctionValue
+	InitializerFunctionWrapper     FunctionWrapper
+	FunctionWrappers               map[string]FunctionWrapper
+	Functions                      *FunctionOrderedMap
+	DefaultDestroyEventConstructor FunctionValue
 }
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
@@ -987,6 +976,51 @@ func (interpreter *Interpreter) declareAttachmentValue(
 	return interpreter.declareCompositeValue(declaration, lexicalScope)
 }
 
+// evaluateDefaultDestroyEvent evaluates all the implicit default arguments to the default destroy event.
+//
+// the handling of default arguments makes a number of assumptions to simplify the implementation;
+// namely that a) all default arguments are lazily evaluated at the site of the invocation,
+// b) that either all the parameters or none of the parameters of a function have default arguments,
+// and c) functions cannot currently be explicitly invoked if they have default arguments
+//
+// if we plan to generalize this further, we will need to relax those assumptions
+func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
+	containingResourceComposite *CompositeValue,
+	eventDecl *ast.CompositeDeclaration,
+	declarationActivation *VariableActivation,
+) (arguments []Value) {
+
+	declarationInterpreter := interpreter
+	parameters := eventDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
+
+	declarationInterpreter.activations.PushNewWithParent(declarationActivation)
+	defer declarationInterpreter.activations.Pop()
+
+	var self MemberAccessibleValue = containingResourceComposite
+	if containingResourceComposite.Kind == common.CompositeKindAttachment {
+		var base *EphemeralReferenceValue
+		// in evaluation of destroy events, base and self are fully entitled, as the value must be owned
+		supportedEntitlements := interpreter.MustSemaTypeOfValue(containingResourceComposite).(*sema.CompositeType).SupportedEntitlements()
+		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+		base, self = attachmentBaseAndSelfValues(declarationInterpreter, access, containingResourceComposite)
+		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
+	}
+	declarationInterpreter.declareVariable(sema.SelfIdentifier, self)
+
+	for _, parameter := range parameters {
+		// "lazily" evaluate the default argument expressions.
+		// This "lazy" with respect to the event's declaration:
+		// if we declare a default event `ResourceDestroyed(foo: Int = self.x)`,
+		// `self.x` is evaluated in the context that exists when the event is destroyed,
+		// not the context when it is declared. This function is only called after the destroy
+		// triggers the event emission, so with respect to this function it's "eager".
+		defaultArg := declarationInterpreter.evalExpression(parameter.DefaultArgument)
+		arguments = append(arguments, defaultArg)
+	}
+
+	return
+}
+
 // declareCompositeValue creates and declares the value for
 // the composite declaration.
 //
@@ -1017,7 +1051,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 	}
 }
 
-func (interpreter *Interpreter) declareNonEnumCompositeValue(
+func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
@@ -1026,7 +1060,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 ) {
 	identifier := declaration.DeclarationIdentifier().Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
-	variable = interpreter.findOrDeclareVariable(identifier)
+	variable = declarationInterpreter.findOrDeclareVariable(identifier)
 
 	// Make the value available in the initializer
 	lexicalScope.Set(identifier, variable)
@@ -1036,16 +1070,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	nestedVariables := map[string]*Variable{}
 
+	var destroyEventConstructor FunctionValue
+
 	(func() {
-		interpreter.activations.PushNewWithCurrent()
-		defer interpreter.activations.Pop()
+		declarationInterpreter.activations.PushNewWithCurrent()
+		defer declarationInterpreter.activations.Pop()
 
 		// Pre-declare empty variables for all interfaces, composites, and function declarations
 		predeclare := func(identifier ast.Identifier) {
 			name := identifier.Identifier
 			lexicalScope.Set(
 				name,
-				interpreter.declareVariable(name, nil),
+				declarationInterpreter.declareVariable(name, nil),
 			)
 		}
 
@@ -1064,7 +1100,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 
 		for _, nestedInterfaceDeclaration := range members.Interfaces() {
-			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
+			declarationInterpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
 		for _, nestedCompositeDeclaration := range members.Composites() {
@@ -1075,13 +1111,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			var nestedVariable *Variable
 			lexicalScope, nestedVariable =
-				interpreter.declareCompositeValue(
+				declarationInterpreter.declareCompositeValue(
 					nestedCompositeDeclaration,
 					lexicalScope,
 				)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 			nestedVariables[memberIdentifier] = nestedVariable
+
+			// statically we know there is at most one of these
+			if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+				destroyEventConstructor = nestedVariable.GetValue().(FunctionValue)
+			}
 		}
 
 		for _, nestedAttachmentDeclaration := range members.Attachments() {
@@ -1092,7 +1133,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			var nestedVariable *Variable
 			lexicalScope, nestedVariable =
-				interpreter.declareAttachmentValue(
+				declarationInterpreter.declareAttachmentValue(
 					nestedAttachmentDeclaration,
 					lexicalScope,
 				)
@@ -1102,24 +1143,44 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	})()
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
+	compositeType := declarationInterpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 
 	initializerType := compositeType.InitializerFunctionType()
+
+	declarationActivation := declarationInterpreter.activations.CurrentOrNew()
 
 	var initializerFunction FunctionValue
 	if declaration.Kind() == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
-			interpreter,
+			declarationInterpreter,
 			initializerType,
 			func(invocation Invocation) Value {
-				inter := invocation.Interpreter
+				invocationInterpreter := invocation.Interpreter
 				locationRange := invocation.LocationRange
 				self := *invocation.Self
+
+				if len(compositeType.ConstructorParameters) < 1 {
+					return nil
+				}
+
+				// event interfaces do not exist
+				compositeDecl := declaration.(*ast.CompositeDeclaration)
+				if compositeDecl.IsResourceDestructionDefaultEvent() {
+					// we implicitly pass the containing composite value as an argument to this invocation
+					containerComposite := invocation.Arguments[0].(*CompositeValue)
+					invocation.Arguments = declarationInterpreter.evaluateDefaultDestroyEvent(
+						containerComposite,
+						compositeDecl,
+						// to properly lexically scope the evaluation of default arguments, we capture the
+						// activations existing at the time when the event was defined and use them here
+						declarationActivation,
+					)
+				}
 
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
 					self.SetMember(
-						inter,
+						invocationInterpreter,
 						locationRange,
 						parameter.Identifier,
 						argument,
@@ -1129,21 +1190,19 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			},
 		)
 	} else {
-		compositeInitializerFunction := interpreter.compositeInitializerFunction(declaration, lexicalScope)
+		compositeInitializerFunction := declarationInterpreter.compositeInitializerFunction(declaration, lexicalScope)
 		if compositeInitializerFunction != nil {
 			initializerFunction = compositeInitializerFunction
 		}
 	}
 
-	var destructorFunction FunctionValue
-	compositeDestructorFunction := interpreter.compositeDestructorFunction(declaration, lexicalScope)
-	if compositeDestructorFunction != nil {
-		destructorFunction = compositeDestructorFunction
+	functions := declarationInterpreter.compositeFunctions(declaration, lexicalScope)
+
+	if destroyEventConstructor != nil {
+		functions.Set(resourceDefaultDestroyEventName(compositeType), destroyEventConstructor)
 	}
 
-	functions := interpreter.compositeFunctions(declaration, lexicalScope)
-
-	wrapFunctions := func(code WrapperCode) {
+	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
 
 		// Wrap initializer
 
@@ -1154,29 +1213,22 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			initializerFunction = initializerFunctionWrapper(initializerFunction)
 		}
 
-		// Wrap destructor
-
-		destructorFunctionWrapper :=
-			code.DestructorFunctionWrapper
-
-		if destructorFunctionWrapper != nil {
-			destructorFunction = destructorFunctionWrapper(destructorFunction)
-		}
-
 		// Apply default functions, if conforming type does not provide the function
 
 		// Iterating over the map in a non-deterministic way is OK,
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, function := range code.Functions { //nolint:maprange
-			if functions[name] != nil {
-				continue
-			}
-			if functions == nil {
-				functions = map[string]FunctionValue{}
-			}
-			functions[name] = function
+		if code.Functions != nil {
+			code.Functions.Foreach(func(name string, function FunctionValue) {
+				if functions == nil {
+					functions = orderedmap.New[FunctionOrderedMap](code.Functions.Len())
+				}
+				if functions.Contains(name) {
+					return
+				}
+				functions.Set(name, function)
+			})
 		}
 
 		// Wrap functions
@@ -1186,32 +1238,36 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
-			functions[name] = functionWrapper(functions[name])
+			fn, _ := functions.Get(name)
+			functions.Set(name, functionWrapper(fn))
+		}
+
+		if code.DefaultDestroyEventConstructor != nil {
+			functions.Set(resourceDefaultDestroyEventName(ty), code.DefaultDestroyEventConstructor)
 		}
 	}
 
 	conformances := compositeType.EffectiveInterfaceConformances()
 	for i := len(conformances) - 1; i >= 0; i-- {
 		conformance := conformances[i].InterfaceType
-		wrapFunctions(interpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
+		wrapFunctions(conformance, declarationInterpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
-	interpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
-		DestructorFunction: destructorFunction,
+	declarationInterpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
 		CompositeFunctions: functions,
 	}
 
-	location := interpreter.Location
+	location := declarationInterpreter.Location
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
-	config := interpreter.SharedState.Config
+	config := declarationInterpreter.SharedState.Config
 
 	constructorType := compositeType.ConstructorFunctionType()
 
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
 		return NewHostFunctionValue(
-			interpreter,
+			declarationInterpreter,
 			constructorType,
 			func(invocation Invocation) Value {
 
@@ -1287,7 +1343,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				value.injectedFields = injectedFields
 				value.Functions = functions
-				value.Destructor = destructorFunction
 
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {
@@ -1341,10 +1396,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	if declaration.Kind() == common.CompositeKindContract {
 		variable.getter = func() Value {
-			positioned := ast.NewRangeFromPositioned(interpreter, declaration.DeclarationIdentifier())
+			positioned := ast.NewRangeFromPositioned(declarationInterpreter, declaration.DeclarationIdentifier())
 
 			contractValue := config.ContractValueHandler(
-				interpreter,
+				declarationInterpreter,
 				compositeType,
 				constructorGenerator,
 				positioned,
@@ -1545,53 +1600,10 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	)
 }
 
-func (interpreter *Interpreter) compositeDestructorFunction(
-	compositeDeclaration ast.CompositeLikeDeclaration,
-	lexicalScope *VariableActivation,
-) *InterpretedFunctionValue {
-
-	destructor := compositeDeclaration.DeclarationMembers().Destructor()
-	if destructor == nil {
-		return nil
-	}
-
-	statements := destructor.FunctionDeclaration.FunctionBlock.Block.Statements
-
-	var preConditions ast.Conditions
-
-	conditions := destructor.FunctionDeclaration.FunctionBlock.PreConditions
-	if conditions != nil {
-		preConditions = *conditions
-	}
-
-	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
-
-	postConditions := destructor.FunctionDeclaration.FunctionBlock.PostConditions
-	if postConditions != nil {
-		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite(postConditions)
-
-		beforeStatements = postConditionsRewrite.BeforeStatements
-		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
-	}
-
-	return NewInterpretedFunctionValue(
-		interpreter,
-		nil,
-		emptyImpureFunctionType,
-		lexicalScope,
-		beforeStatements,
-		preConditions,
-		statements,
-		rewrittenPostConditions,
-	)
-}
-
 func (interpreter *Interpreter) defaultFunctions(
 	members *ast.Members,
 	lexicalScope *VariableActivation,
-) map[string]FunctionValue {
+) *FunctionOrderedMap {
 
 	functionDeclarations := members.Functions()
 	functionCount := len(functionDeclarations)
@@ -1600,7 +1612,7 @@ func (interpreter *Interpreter) defaultFunctions(
 		return nil
 	}
 
-	functions := make(map[string]FunctionValue, functionCount)
+	functions := orderedmap.New[FunctionOrderedMap](functionCount)
 
 	for _, functionDeclaration := range functionDeclarations {
 		name := functionDeclaration.Identifier.Identifier
@@ -1608,9 +1620,12 @@ func (interpreter *Interpreter) defaultFunctions(
 			continue
 		}
 
-		functions[name] = interpreter.compositeFunction(
-			functionDeclaration,
-			lexicalScope,
+		functions.Set(
+			name,
+			interpreter.compositeFunction(
+				functionDeclaration,
+				lexicalScope,
+			),
 		)
 	}
 
@@ -1620,17 +1635,19 @@ func (interpreter *Interpreter) defaultFunctions(
 func (interpreter *Interpreter) compositeFunctions(
 	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
-) map[string]FunctionValue {
+) *FunctionOrderedMap {
 
-	functions := map[string]FunctionValue{}
+	functions := orderedmap.New[FunctionOrderedMap](len(compositeDeclaration.DeclarationMembers().Functions()))
 
 	for _, functionDeclaration := range compositeDeclaration.DeclarationMembers().Functions() {
 		name := functionDeclaration.Identifier.Identifier
-		functions[name] =
+		functions.Set(
+			name,
 			interpreter.compositeFunction(
 				functionDeclaration,
 				lexicalScope,
-			)
+			),
+		)
 	}
 
 	return functions
@@ -2251,15 +2268,25 @@ func (interpreter *Interpreter) declareInterface(
 		interfaceType.InitializerParameters,
 		lexicalScope,
 	)
-	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
+
+	var defaultDestroyEventConstructor FunctionValue
+	if defautlDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defautlDestroyEvent != nil {
+		var nestedVariable *Variable
+		lexicalScope, nestedVariable = interpreter.declareCompositeValue(
+			defautlDestroyEvent,
+			lexicalScope,
+		)
+		defaultDestroyEventConstructor = nestedVariable.GetValue().(FunctionValue)
+	}
+
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
 	interpreter.SharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
-		InitializerFunctionWrapper: initializerFunctionWrapper,
-		DestructorFunctionWrapper:  destructorFunctionWrapper,
-		FunctionWrappers:           functionWrappers,
-		Functions:                  defaultFunctions,
+		InitializerFunctionWrapper:     initializerFunctionWrapper,
+		FunctionWrappers:               functionWrappers,
+		Functions:                      defaultFunctions,
+		DefaultDestroyEventConstructor: defaultDestroyEventConstructor,
 	}
 }
 
@@ -2287,27 +2314,6 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 			Parameters:           parameters,
 			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 		},
-		lexicalScope,
-	)
-}
-
-var voidFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
-}
-
-func (interpreter *Interpreter) destructorFunctionWrapper(
-	members *ast.Members,
-	lexicalScope *VariableActivation,
-) FunctionWrapper {
-
-	destructor := members.Destructor()
-	if destructor == nil {
-		return nil
-	}
-
-	return interpreter.functionConditionsWrapper(
-		destructor.FunctionDeclaration,
-		voidFunctionType,
 		lexicalScope,
 	)
 }
@@ -4624,9 +4630,9 @@ func (interpreter *Interpreter) GetCompositeValueInjectedFields(v *CompositeValu
 func (interpreter *Interpreter) GetCompositeValueFunctions(
 	v *CompositeValue,
 	locationRange LocationRange,
-) map[string]FunctionValue {
+) *FunctionOrderedMap {
 
-	var functions map[string]FunctionValue
+	var functions *FunctionOrderedMap
 
 	typeID := v.TypeID()
 

@@ -2490,6 +2490,23 @@ func (e *EmitNonEventError) Error() string {
 	)
 }
 
+// EmitDefaultDestroyEventError
+
+type EmitDefaultDestroyEventError struct {
+	ast.Range
+}
+
+var _ SemanticError = &EmitDefaultDestroyEventError{}
+var _ errors.UserError = &EmitDefaultDestroyEventError{}
+
+func (*EmitDefaultDestroyEventError) isSemanticError() {}
+
+func (*EmitDefaultDestroyEventError) IsUserError() {}
+
+func (e *EmitDefaultDestroyEventError) Error() string {
+	return "default destruction events may not be explicitly emitted"
+}
+
 // EmitImportedEventError
 
 type EmitImportedEventError struct {
@@ -2531,76 +2548,6 @@ func (e *InvalidResourceAssignmentError) Error() string {
 
 func (e *InvalidResourceAssignmentError) SecondaryError() string {
 	return "consider force assigning (<-!) or swapping (<->)"
-}
-
-// InvalidDestructorError
-
-type InvalidDestructorError struct {
-	ast.Range
-}
-
-var _ SemanticError = &InvalidDestructorError{}
-var _ errors.UserError = &InvalidDestructorError{}
-
-func (*InvalidDestructorError) isSemanticError() {}
-
-func (*InvalidDestructorError) IsUserError() {}
-
-func (e *InvalidDestructorError) Error() string {
-	return "cannot declare destructor for non-resource"
-}
-
-// MissingDestructorError
-
-type MissingDestructorError struct {
-	ContainerType  Type
-	FirstFieldName string
-	FirstFieldPos  ast.Position
-}
-
-var _ SemanticError = &MissingDestructorError{}
-var _ errors.UserError = &MissingDestructorError{}
-
-func (*MissingDestructorError) isSemanticError() {}
-
-func (*MissingDestructorError) IsUserError() {}
-
-func (e *MissingDestructorError) Error() string {
-	return fmt.Sprintf(
-		"missing destructor for resource field `%s` in type `%s`",
-		e.FirstFieldName,
-		e.ContainerType.QualifiedString(),
-	)
-}
-
-func (e *MissingDestructorError) StartPosition() ast.Position {
-	return e.FirstFieldPos
-}
-
-func (e *MissingDestructorError) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
-	return e.FirstFieldPos.Shifted(memoryGauge, len(e.FirstFieldName)-1)
-}
-
-// InvalidDestructorParametersError
-
-type InvalidDestructorParametersError struct {
-	ast.Range
-}
-
-var _ SemanticError = &InvalidDestructorParametersError{}
-var _ errors.UserError = &InvalidDestructorParametersError{}
-var _ errors.SecondaryError = &InvalidDestructorParametersError{}
-
-func (*InvalidDestructorParametersError) isSemanticError() {}
-
-func (*InvalidDestructorParametersError) IsUserError() {}
-
-func (e *InvalidDestructorParametersError) Error() string {
-	return "invalid parameters for destructor"
-}
-
-func (e *InvalidDestructorParametersError) SecondaryError() string {
-	return "consider removing these parameters"
 }
 
 // ResourceFieldNotInvalidatedError
@@ -4656,6 +4603,62 @@ func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
 
 func (e *InvalidAttachmentEntitlementError) EndPosition(common.MemoryGauge) ast.Position {
 	return e.Pos
+}
+
+// DefaultDestroyEventInNonResourceError
+
+type DefaultDestroyEventInNonResourceError struct {
+	Kind string
+	ast.Range
+}
+
+var _ SemanticError = &DefaultDestroyEventInNonResourceError{}
+var _ errors.UserError = &DefaultDestroyEventInNonResourceError{}
+
+func (*DefaultDestroyEventInNonResourceError) isSemanticError() {}
+
+func (*DefaultDestroyEventInNonResourceError) IsUserError() {}
+
+func (e *DefaultDestroyEventInNonResourceError) Error() string {
+	return fmt.Sprintf(
+		"cannot declare default destruction event in %s",
+		e.Kind,
+	)
+}
+
+// DefaultDestroyInvalidArgumentError
+
+type DefaultDestroyInvalidArgumentError struct {
+	ast.Range
+}
+
+var _ SemanticError = &DefaultDestroyInvalidArgumentError{}
+var _ errors.UserError = &DefaultDestroyInvalidArgumentError{}
+
+func (*DefaultDestroyInvalidArgumentError) isSemanticError() {}
+
+func (*DefaultDestroyInvalidArgumentError) IsUserError() {}
+
+func (e *DefaultDestroyInvalidArgumentError) Error() string {
+	return "default destroy event arguments must be literals, member access expressions on `self` or `base`, indexed access expressions on dictionaries, or attachment accesses"
+}
+
+// DefaultDestroyInvalidArgumentError
+
+type DefaultDestroyInvalidParameterError struct {
+	ParamType Type
+	ast.Range
+}
+
+var _ SemanticError = &DefaultDestroyInvalidParameterError{}
+var _ errors.UserError = &DefaultDestroyInvalidParameterError{}
+
+func (*DefaultDestroyInvalidParameterError) isSemanticError() {}
+
+func (*DefaultDestroyInvalidParameterError) IsUserError() {}
+
+func (e *DefaultDestroyInvalidParameterError) Error() string {
+	return fmt.Sprintf("`%s` is not a valid parameter type for a default destroy event", e.ParamType.QualifiedString())
 }
 
 // InvalidTypeParameterizedNonNativeFunctionError

@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -351,9 +352,9 @@ type PublicKeyFunctionsHandler interface {
 func PublicKeyFunctions(
 	gauge common.MemoryGauge,
 	handler PublicKeyFunctionsHandler,
-) map[string]interpreter.FunctionValue {
-	return map[string]interpreter.FunctionValue{
-		sema.PublicKeyTypeVerifyFunctionName:    newPublicKeyVerifySignatureFunction(gauge, handler),
-		sema.PublicKeyTypeVerifyPoPFunctionName: newPublicKeyVerifyPoPFunction(gauge, handler),
-	}
+) *interpreter.FunctionOrderedMap {
+	functions := orderedmap.New[interpreter.FunctionOrderedMap](2)
+	functions.Set(sema.PublicKeyTypeVerifyFunctionName, newPublicKeyVerifySignatureFunction(gauge, handler))
+	functions.Set(sema.PublicKeyTypeVerifyPoPFunctionName, newPublicKeyVerifyPoPFunction(gauge, handler))
+	return functions
 }

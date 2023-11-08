@@ -875,7 +875,9 @@ func parseEventDeclaration(
 	// Skip the identifier
 	p.next()
 
-	parameterList, err := parseParameterList(p)
+	// if this is a `ResourceDestroyed` event (i.e., a default event declaration), parse default arguments
+	parseDefaultArguments := ast.IsResourceDestructionDefaultEvent(identifier.Identifier)
+	parameterList, err := parseParameterList(p, parseDefaultArguments)
 	if err != nil {
 		return nil, err
 	}
@@ -1849,10 +1851,7 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindInitializer
 
 	case KeywordDestroy:
-		if purity == ast.FunctionPurityView {
-			return nil, NewSyntaxError(*purityPos, "invalid view annotation on destructor")
-		}
-		declarationKind = common.DeclarationKindDestructor
+		p.report(&CustomDestructorError{Pos: identifier.Pos})
 
 	case KeywordPrepare:
 		declarationKind = common.DeclarationKindPrepare

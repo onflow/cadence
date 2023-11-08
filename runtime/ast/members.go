@@ -116,19 +116,6 @@ func (m *Members) Initializers() []*SpecialFunctionDeclaration {
 	return m.indices.Initializers(m.declarations)
 }
 
-func (m *Members) Destructors() []*SpecialFunctionDeclaration {
-	return m.indices.Destructors(m.declarations)
-}
-
-// Destructor returns the first destructor, if any
-func (m *Members) Destructor() *SpecialFunctionDeclaration {
-	destructors := m.Destructors()
-	if len(destructors) == 0 {
-		return nil
-	}
-	return destructors[0]
-}
-
 func (m *Members) FieldPosition(name string, compositeKind common.CompositeKind) Position {
 	if compositeKind == common.CompositeKindEvent {
 		parameters := m.Initializers()[0].FunctionDeclaration.ParameterList.ParametersByIdentifier()

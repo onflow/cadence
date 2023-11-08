@@ -388,7 +388,9 @@ func TestParseParameterList(t *testing.T) {
 		return Parse(
 			nil,
 			[]byte(input),
-			parseParameterList,
+			func(p *parser) (*ast.ParameterList, error) {
+				return parseParameterList(p, false)
+			},
 			Config{},
 		)
 	}
@@ -2599,6 +2601,150 @@ func TestParseEvent(t *testing.T) {
 		)
 	})
 
+	t.Run("default event", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(` access(all) event ResourceDestroyed ( a : String = "foo")`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												TypeAnnotation: &ast.TypeAnnotation{
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "String",
+															Pos: ast.Position{
+																Offset: 43,
+																Line:   1,
+																Column: 43,
+															},
+														},
+													},
+													StartPos: ast.Position{
+														Offset: 43,
+														Line:   1,
+														Column: 43,
+													},
+												},
+												DefaultArgument: &ast.StringExpression{
+													Value: "foo",
+													Range: ast.Range{
+														StartPos: ast.Position{
+															Offset: 52,
+															Line:   1,
+															Column: 52,
+														},
+														EndPos: ast.Position{
+															Offset: 56,
+															Line:   1,
+															Column: 56,
+														},
+													},
+												},
+												Identifier: ast.Identifier{
+													Identifier: "a",
+													Pos: ast.Position{
+														Offset: 39,
+														Line:   1,
+														Column: 39,
+													},
+												},
+												StartPos: ast.Position{
+													Offset: 39,
+													Line:   1,
+													Column: 39,
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 37,
+												Line:   1,
+												Column: 37,
+											},
+											EndPos: ast.Position{
+												Offset: 57,
+												Line:   1,
+												Column: 57,
+											},
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 37,
+										Line:   1,
+										Column: 37,
+									},
+									Access: ast.AccessNotSpecified,
+								},
+								Kind: common.DeclarationKindInitializer,
+							},
+						},
+					),
+					Identifier: ast.Identifier{
+						Identifier: "ResourceDestroyed",
+						Pos: ast.Position{
+							Offset: 19,
+							Line:   1,
+							Column: 19,
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 1,
+							Line:   1,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 57,
+							Line:   1,
+							Column: 57,
+						},
+					},
+					Access:        ast.AccessAll,
+					CompositeKind: common.CompositeKindEvent,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("default event with no default arg", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) event ResourceDestroyed ( a : Int )")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 47, Offset: 47},
+				Message: "expected a default argument after type annotation, got ')'",
+			},
+		}, errs)
+	})
+
+	t.Run("non-default event with default arg", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) event Foo ( a : Int = 3)")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 33, Offset: 33},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
+	})
+
 	t.Run("invalid event name", func(t *testing.T) {
 		_, errs := testParseDeclarations(`event continue {}`)
 
@@ -3521,25 +3667,6 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("resource with view destructor", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseDeclarations(`resource S { 
-			view destroy() {}
-		}`)
-
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "invalid view annotation on destructor",
-					Pos:     ast.Position{Offset: 17, Line: 2, Column: 3},
-				},
-			},
-			errs,
-		)
-	})
-
 	t.Run("resource with view field", func(t *testing.T) {
 
 		t.Parallel()
@@ -3843,7 +3970,6 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		result, errs := testParseDeclarations(`access(all) attachment E for S {
 			access(all) var foo: Int
 			init() {}
-			destroy() {}
 			access(all) fun getFoo(): Int {}
 		}`)
 		require.Empty(t, errs)
@@ -3964,67 +4090,17 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 								},
 								Kind: 0xd,
 							},
-							&ast.SpecialFunctionDeclaration{
-								FunctionDeclaration: &ast.FunctionDeclaration{
-									ParameterList: &ast.ParameterList{
-										Range: ast.Range{
-											StartPos: ast.Position{
-												Offset: 84,
-												Line:   4,
-												Column: 10,
-											},
-											EndPos: ast.Position{
-												Offset: 85,
-												Line:   4,
-												Column: 11,
-											},
-										},
-									},
-									FunctionBlock: &ast.FunctionBlock{
-										Block: &ast.Block{
-											Range: ast.Range{
-												StartPos: ast.Position{
-													Offset: 87,
-													Line:   4,
-													Column: 13,
-												},
-												EndPos: ast.Position{
-													Offset: 88,
-													Line:   4,
-													Column: 14,
-												},
-											},
-										},
-									},
-									Identifier: ast.Identifier{
-										Identifier: "destroy",
-										Pos: ast.Position{
-											Offset: 77,
-											Line:   4,
-											Column: 3,
-										},
-									},
-									StartPos: ast.Position{
-										Offset: 77,
-										Line:   4,
-										Column: 3,
-									},
-									Access: ast.AccessNotSpecified,
-									Flags:  0x00,
-								},
-								Kind: 0xe,
-							},
 							&ast.FunctionDeclaration{
 								ParameterList: &ast.ParameterList{
 									Range: ast.Range{
 										StartPos: ast.Position{
-											Offset: 115,
-											Line:   5,
+											Offset: 99,
+											Line:   4,
 											Column: 25,
 										},
 										EndPos: ast.Position{
-											Offset: 116,
-											Line:   5,
+											Offset: 100,
+											Line:   4,
 											Column: 26,
 										},
 									},
@@ -4034,15 +4110,15 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 										Identifier: ast.Identifier{
 											Identifier: "Int",
 											Pos: ast.Position{
-												Offset: 119,
-												Line:   5,
+												Offset: 103,
+												Line:   4,
 												Column: 29,
 											},
 										},
 									},
 									StartPos: ast.Position{
-										Offset: 119,
-										Line:   5,
+										Offset: 103,
+										Line:   4,
 										Column: 29,
 									},
 									IsResource: false,
@@ -4051,13 +4127,13 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 									Block: &ast.Block{
 										Range: ast.Range{
 											StartPos: ast.Position{
-												Offset: 123,
-												Line:   5,
+												Offset: 107,
+												Line:   4,
 												Column: 33,
 											},
 											EndPos: ast.Position{
-												Offset: 124,
-												Line:   5,
+												Offset: 108,
+												Line:   4,
 												Column: 34,
 											},
 										},
@@ -4066,14 +4142,14 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 								Identifier: ast.Identifier{
 									Identifier: "getFoo",
 									Pos: ast.Position{
-										Offset: 109,
-										Line:   5,
+										Offset: 93,
+										Line:   4,
 										Column: 19,
 									},
 								},
 								StartPos: ast.Position{
-									Offset: 93,
-									Line:   5,
+									Offset: 77,
+									Line:   4,
 									Column: 3,
 								},
 								Access: ast.AccessAll,
@@ -4087,8 +4163,8 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 							Column: 0,
 						},
 						EndPos: ast.Position{
-							Offset: 128,
-							Line:   6,
+							Offset: 112,
+							Line:   5,
 							Column: 2,
 						},
 					},
@@ -4104,7 +4180,6 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 
 		_, errs := testParseDeclarations(`access(all) attachment E for S {
 			require entitlement X
-			destroy() {}
 		}`)
 		utils.AssertEqualWithDiff(t, []error{
 			&SyntaxError{
@@ -4292,8 +4367,6 @@ func TestParseInterfaceDeclaration(t *testing.T) {
               access(all) fun getFoo(): Int
 
               access(all) fun getBar(): Int {}
-
-              destroy() {}
           }
 	    `)
 
@@ -4529,56 +4602,6 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 								},
 								Access: ast.AccessAll,
 							},
-							&ast.SpecialFunctionDeclaration{
-								FunctionDeclaration: &ast.FunctionDeclaration{
-									ParameterList: &ast.ParameterList{
-										Range: ast.Range{
-											StartPos: ast.Position{
-												Offset: 219,
-												Line:   11,
-												Column: 21,
-											},
-											EndPos: ast.Position{
-												Offset: 220,
-												Line:   11,
-												Column: 22,
-											},
-										},
-									},
-									FunctionBlock: &ast.FunctionBlock{
-										Block: &ast.Block{
-											Range: ast.Range{
-												StartPos: ast.Position{
-													Offset: 222,
-													Line:   11,
-													Column: 24,
-												},
-												EndPos: ast.Position{
-													Offset: 223,
-													Line:   11,
-													Column: 25,
-												},
-											},
-										},
-									},
-									DocString: "",
-									Identifier: ast.Identifier{
-										Identifier: "destroy",
-										Pos: ast.Position{
-											Offset: 212,
-											Line:   11,
-											Column: 14,
-										},
-									},
-									StartPos: ast.Position{
-										Offset: 212,
-										Line:   11,
-										Column: 14,
-									},
-									Access: ast.AccessNotSpecified,
-								},
-								Kind: 0xe,
-							},
 						},
 					),
 					Identifier: ast.Identifier{
@@ -4596,8 +4619,8 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 							Column: 10,
 						},
 						EndPos: ast.Position{
-							Offset: 235,
-							Line:   12,
+							Offset: 207,
+							Line:   10,
 							Column: 10,
 						},
 					},
@@ -7128,6 +7151,39 @@ func TestParseInvalidImportWithPurity(t *testing.T) {
 	)
 }
 
+func TestParseInvalidDefaultArgument(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function declaration ", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" access(all) fun foo ( a : Int = 3) { } ")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 31, Offset: 31},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
+	})
+
+	t.Run("function expression ", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseDeclarations(" let foo = fun ( a : Int = 3) { } ")
+
+		utils.AssertEqualWithDiff(t, []error{
+			&SyntaxError{
+				Pos:     ast.Position{Line: 1, Column: 25, Offset: 25},
+				Message: "cannot use a default argument for this function",
+			},
+		}, errs)
+	})
+}
+
 func TestParseInvalidEventWithPurity(t *testing.T) {
 
 	t.Parallel()
@@ -7656,54 +7712,14 @@ func TestParseDestructor(t *testing.T) {
             destroy() {}
         }
 	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
-
+	_, errs := testParseDeclarations(code)
 	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.CompositeDeclaration{
-				Access:        ast.AccessNotSpecified,
-				CompositeKind: common.CompositeKindResource,
-				Identifier: ast.Identifier{
-					Identifier: "Test",
-					Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
-				},
-				Members: ast.NewUnmeteredMembers(
-					[]ast.Declaration{
-						&ast.SpecialFunctionDeclaration{
-							Kind: common.DeclarationKindDestructor,
-							FunctionDeclaration: &ast.FunctionDeclaration{
-								Access: ast.AccessNotSpecified,
-								Identifier: ast.Identifier{
-									Identifier: "destroy",
-									Pos:        ast.Position{Offset: 37, Line: 3, Column: 12},
-								},
-								ParameterList: &ast.ParameterList{
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 44, Line: 3, Column: 19},
-										EndPos:   ast.Position{Offset: 45, Line: 3, Column: 20},
-									},
-								},
-								FunctionBlock: &ast.FunctionBlock{
-									Block: &ast.Block{
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 47, Line: 3, Column: 22},
-											EndPos:   ast.Position{Offset: 48, Line: 3, Column: 23},
-										},
-									},
-								},
-								StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
-							},
-						},
-					},
-				),
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
-					EndPos:   ast.Position{Offset: 58, Line: 4, Column: 8},
-				},
+		[]error{
+			&CustomDestructorError{
+				Pos: ast.Position{Offset: 37, Line: 3, Column: 12},
 			},
 		},
-		result.Declarations(),
+		errs,
 	)
 }
 
@@ -7869,7 +7885,6 @@ func TestParseInvalidCompositeFunctionNames(t *testing.T) {
 						`
                           %[1]s %[2]s Test %[4]s {
                               fun init() %[3]s
-                              fun destroy() %[3]s
                           }
                         `,
 						kind.Keyword(),
@@ -8970,9 +8985,6 @@ func TestParseMemberDocStrings(t *testing.T) {
 
               /// initNoBlock
               init()
-
-              /// destroyWithBlock
-              destroy() {}
           }
 	    `)
 
@@ -9025,37 +9037,11 @@ func TestParseMemberDocStrings(t *testing.T) {
 									StartPos: ast.Position{Offset: 121, Line: 8, Column: 14},
 								},
 							},
-							&ast.SpecialFunctionDeclaration{
-								Kind: common.DeclarationKindDestructor,
-								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access:    ast.AccessNotSpecified,
-									DocString: " destroyWithBlock",
-									Identifier: ast.Identifier{
-										Identifier: "destroy",
-										Pos:        ast.Position{Offset: 178, Line: 11, Column: 14},
-									},
-									ParameterList: &ast.ParameterList{
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 185, Line: 11, Column: 21},
-											EndPos:   ast.Position{Offset: 186, Line: 11, Column: 22},
-										},
-									},
-									FunctionBlock: &ast.FunctionBlock{
-										Block: &ast.Block{
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 188, Line: 11, Column: 24},
-												EndPos:   ast.Position{Offset: 189, Line: 11, Column: 25},
-											},
-										},
-									},
-									StartPos: ast.Position{Offset: 178, Line: 11, Column: 14},
-								},
-							},
 						},
 					),
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
-						EndPos:   ast.Position{Offset: 201, Line: 12, Column: 10},
+						EndPos:   ast.Position{Offset: 138, Line: 9, Column: 10},
 					},
 				},
 			},

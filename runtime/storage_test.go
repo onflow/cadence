@@ -845,10 +845,6 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
               access(all) fun getIDs(): [UInt64] {
                   return self.ownedNFTs.keys
               }
-
-              destroy() {
-                  destroy self.ownedNFTs
-              }
           }
 
           init() {
@@ -2371,10 +2367,6 @@ func TestRuntimeReferenceOwnerAccess(t *testing.T) {
                   init () {
                       self.nestedResources <- [<- create TestNestedResource()]
                   }
-
-                  destroy () {
-                      destroy self.nestedResources
-                  }
               }
 
               access(all) fun makeTestNestingResource(): @TestNestingResource {
@@ -2874,10 +2866,6 @@ func TestRuntimeStorageEnumCase(t *testing.T) {
 
                             let oldR <- self.rs[r.id] <-! r
                             destroy oldR
-                        }
-
-                        destroy() {
-                             destroy self.rs
                         }
                     }
 
