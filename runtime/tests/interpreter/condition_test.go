@@ -983,7 +983,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 	}
 }
 
-func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *testing.T) {
+func TestInterpretResourceInterfaceInitializerPreConditions(t *testing.T) {
 
 	t.Parallel()
 
@@ -1002,13 +1002,6 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
                   pre {
                       x > 1: "invalid init"
                       emit InitPre(x: x)
-                  }
-              }
-
-              destroy() {
-                  pre {
-                      self.x < 3: "invalid destroy"
-                      emit DestroyPre(x: self.x)
                   }
               }
           }
@@ -1061,30 +1054,6 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
 		inter, getEvents := newInterpreter(t)
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(2))
 		require.NoError(t, err)
-
-		require.Len(t, getEvents(), 2)
-	})
-
-	t.Run("3", func(t *testing.T) {
-		t.Parallel()
-
-		inter, getEvents := newInterpreter(t)
-		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(3))
-		RequireError(t, err)
-
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		interpreterErr := err.(interpreter.Error)
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
-		)
-		conditionError := interpreterErr.Err.(interpreter.ConditionError)
-
-		assert.Equal(t, "invalid destroy", conditionError.Message)
 
 		require.Len(t, getEvents(), 1)
 	})
@@ -1402,10 +1371,6 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
               view fun use(_ r: &R): Bool {
                   check(r)
                   return true
-              }
-
-              destroy() {
-                  destroy self.resources
               }
           }
 

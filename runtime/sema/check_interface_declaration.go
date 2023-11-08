@@ -134,15 +134,12 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		fieldPositionGetter,
 	)
 
-	checker.checkDestructors(
-		declaration.Members.Destructors(),
-		declaration.Members.FieldsByIdentifier(),
-		interfaceType.Members,
-		interfaceType,
-		declaration.DeclarationKind(),
-		declaration.DeclarationDocString(),
-		kind,
-	)
+	if !interfaceType.IsResourceType() && interfaceType.DefaultDestroyEvent != nil {
+		checker.report(&DefaultDestroyEventInNonResourceError{
+			Kind:  declaration.DeclarationKind().Name(),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
+		})
+	}
 
 	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
@@ -160,6 +157,9 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		// However, the error will be reported later in `declareNestedDeclarations``
 		if nestedComposite.Kind() == common.CompositeKindEvent {
 			checker.visitCompositeLikeDeclaration(nestedComposite)
+		}
+		if interfaceType.DefaultDestroyEvent != nil {
+			checker.checkDefaultDestroyEvent(interfaceType.DefaultDestroyEvent, nestedComposite, interfaceType, declaration)
 		}
 	}
 
@@ -442,7 +442,21 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 
 		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
-				checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
+				if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+
+					checker.Elaboration.SetDefaultDestroyDeclaration(declaration, nestedCompositeDeclaration)
+
+					// Find the value declaration
+					nestedEvent :=
+						checker.typeActivations.Find(nestedCompositeDeclaration.Identifier.Identifier)
+					defaultEventComposite, ok := nestedEvent.Type.(*CompositeType)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+					interfaceType.DefaultDestroyEvent = defaultEventComposite
+				} else {
+					checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
+				}
 			}
 		}
 	})()

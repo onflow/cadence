@@ -267,19 +267,12 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 		)
 	}
 
-	// NOTE: check destructors after initializer and functions
-
-	checker.withSelfResourceInvalidationAllowed(func() {
-		checker.checkDestructors(
-			members.Destructors(),
-			members.FieldsByIdentifier(),
-			compositeType.Members,
-			compositeType,
-			declaration.DeclarationKind(),
-			declaration.DeclarationDocString(),
-			ContainerKindComposite,
-		)
-	})
+	if !compositeType.IsResourceType() && compositeType.DefaultDestroyEvent != nil {
+		checker.report(&DefaultDestroyEventInNonResourceError{
+			Kind:  declaration.DeclarationKind().Name(),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
+		})
+	}
 
 	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
@@ -297,6 +290,10 @@ func (checker *Checker) visitCompositeLikeDeclaration(declaration ast.CompositeL
 	}
 
 	for _, nestedComposite := range members.Composites() {
+		if compositeType.DefaultDestroyEvent != nil && nestedComposite.IsResourceDestructionDefaultEvent() {
+			// we enforce elsewhere that each composite can have only one default destroy event
+			checker.checkDefaultDestroyEvent(compositeType.DefaultDestroyEvent, nestedComposite, compositeType, declaration)
+		}
 		ast.AcceptDeclaration[struct{}](nestedComposite, checker)
 	}
 
@@ -442,10 +439,23 @@ func (checker *Checker) declareNestedDeclarations(
 
 			firstNestedCompositeDeclaration := nestedCompositeDeclarations[0]
 
-			reportInvalidNesting(
-				firstNestedCompositeDeclaration.DeclarationKind(),
-				firstNestedCompositeDeclaration.Identifier,
-			)
+			// we want to permit this nesting under 2 conditions: the container is a resource declaration,
+			// and this nested declaration is a default destroy event
+
+			if firstNestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+				if len(nestedCompositeDeclarations) > 1 {
+					firstNestedCompositeDeclaration = nestedCompositeDeclarations[1]
+					reportInvalidNesting(
+						firstNestedCompositeDeclaration.DeclarationKind(),
+						firstNestedCompositeDeclaration.Identifier,
+					)
+				}
+			} else {
+				reportInvalidNesting(
+					firstNestedCompositeDeclaration.DeclarationKind(),
+					firstNestedCompositeDeclaration.Identifier,
+				)
+			}
 
 		} else if len(nestedInterfaceDeclarations) > 0 {
 
@@ -832,6 +842,18 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 			// Find the value declaration
 			nestedCompositeDeclarationVariable :=
 				checker.valueActivations.Find(identifier.Identifier)
+
+			if ast.IsResourceDestructionDefaultEvent(identifier.Identifier) {
+				// Find the default event's type declaration
+				checker.Elaboration.SetDefaultDestroyDeclaration(declaration, nestedCompositeDeclaration)
+				defaultEventType :=
+					checker.typeActivations.Find(identifier.Identifier)
+				defaultEventComposite, ok := defaultEventType.Type.(*CompositeType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				compositeType.DefaultDestroyEvent = defaultEventComposite
+			}
 
 			declarationMembers.Set(
 				nestedCompositeDeclarationVariable.Identifier,
@@ -1979,6 +2001,129 @@ func (checker *Checker) enumMembersAndOrigins(
 	return
 }
 
+func (checker *Checker) checkDefaultDestroyParamExpressionKind(
+	arg ast.Expression,
+) {
+	switch arg := arg.(type) {
+	case *ast.StringExpression,
+		*ast.BoolExpression,
+		*ast.NilExpression,
+		*ast.IntegerExpression,
+		*ast.FixedPointExpression,
+		*ast.PathExpression:
+
+		break
+
+	case *ast.IdentifierExpression:
+
+		identifier := arg.Identifier.Identifier
+		// these are guaranteed to exist at time of destruction, so we allow them
+		if identifier == SelfIdentifier || identifier == BaseIdentifier {
+			break
+		}
+		// if it's an attachment, then it's also okay
+		if checker.typeActivations.Find(identifier) != nil {
+			break
+		}
+		checker.report(&DefaultDestroyInvalidArgumentError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+		})
+
+	case *ast.MemberExpression:
+
+		checker.checkDefaultDestroyParamExpressionKind(arg.Expression)
+
+	case *ast.IndexExpression:
+
+		checker.checkDefaultDestroyParamExpressionKind(arg.TargetExpression)
+		checker.checkDefaultDestroyParamExpressionKind(arg.IndexingExpression)
+
+		// indexing expressions on arrays can fail, and must be disallowed, but
+		// indexing expressions on dicts, or composites (for attachments) will return `nil` and thus never fail
+		targetExprType := checker.Elaboration.IndexExpressionTypes(arg).IndexedType
+		// `nil` indicates that the index is a type-index (i.e. for an attachment access)
+		if targetExprType == nil {
+			return
+		}
+
+		switch targetExprType := targetExprType.(type) {
+		case *DictionaryType:
+			return
+		case *ReferenceType:
+			if _, isDictionaryType := targetExprType.Type.(*DictionaryType); isDictionaryType {
+				return
+			}
+		}
+
+		checker.report(&DefaultDestroyInvalidArgumentError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+		})
+
+	default:
+
+		checker.report(&DefaultDestroyInvalidArgumentError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+		})
+
+	}
+}
+
+func (checker *Checker) checkDefaultDestroyEventParam(
+	param Parameter,
+	astParam *ast.Parameter,
+	containerType ContainerType,
+	containerDeclaration ast.Declaration,
+) {
+	paramType := param.TypeAnnotation.Type
+	paramDefaultArgument := astParam.DefaultArgument
+
+	// make `self` and `base` available when checking default arguments so the fields of the composite are available
+	checker.declareSelfValue(containerType, containerDeclaration.DeclarationDocString())
+	if compositeContainer, isComposite := containerType.(*CompositeType); isComposite && compositeContainer.Kind == common.CompositeKindAttachment {
+		checker.declareBaseValue(
+			compositeContainer.baseType,
+			compositeContainer,
+			compositeContainer.baseTypeDocString)
+	}
+	param.DefaultArgument = checker.VisitExpression(paramDefaultArgument, paramType)
+
+	unwrappedParamType := UnwrapOptionalType(paramType)
+	// default events must have default arguments for all their parameters; this is enforced in the parser
+	// we want to check that these arguments are all either literals or field accesses, and have primitive types
+	if !IsSubType(unwrappedParamType, StringType) &&
+		!IsSubType(unwrappedParamType, NumberType) &&
+		!IsSubType(unwrappedParamType, TheAddressType) &&
+		!IsSubType(unwrappedParamType, PathType) &&
+		!IsSubType(unwrappedParamType, BoolType) {
+		checker.report(&DefaultDestroyInvalidParameterError{
+			ParamType: paramType,
+			Range:     ast.NewRangeFromPositioned(checker.memoryGauge, astParam),
+		})
+	}
+
+	checker.checkDefaultDestroyParamExpressionKind(paramDefaultArgument)
+}
+
+func (checker *Checker) checkDefaultDestroyEvent(
+	eventType *CompositeType,
+	eventDeclaration ast.CompositeLikeDeclaration,
+	containerType ContainerType,
+	containerDeclaration ast.Declaration,
+) {
+
+	// an event definition always has one "constructor" function in its declaration list
+	members := eventDeclaration.DeclarationMembers()
+	functions := members.Initializers()
+	constructorFunctionParameters := functions[0].FunctionDeclaration.ParameterList.Parameters
+
+	checker.enterValueScope()
+	defer checker.leaveValueScope(eventDeclaration.EndPosition, true)
+
+	for index, param := range eventType.ConstructorParameters {
+		checker.checkDefaultDestroyEventParam(param, constructorFunctionParameters[index], containerType, containerDeclaration)
+	}
+}
+
 func (checker *Checker) checkInitializers(
 	initializers []*ast.SpecialFunctionDeclaration,
 	fields []*ast.FieldDeclaration,
@@ -2275,8 +2420,7 @@ func (checker *Checker) checkNestedIdentifier(
 	// TODO: provide a more helpful error
 
 	switch name {
-	case common.DeclarationKindInitializer.Keywords(),
-		common.DeclarationKindDestructor.Keywords():
+	case common.DeclarationKindInitializer.Keywords():
 
 		checker.report(
 			&InvalidNameError{
@@ -2317,7 +2461,7 @@ func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) str
 func (checker *Checker) checkUnknownSpecialFunctions(functions []*ast.SpecialFunctionDeclaration) {
 	for _, function := range functions {
 		switch function.Kind {
-		case common.DeclarationKindInitializer, common.DeclarationKindDestructor:
+		case common.DeclarationKindInitializer:
 			continue
 
 		default:
@@ -2344,141 +2488,6 @@ func (checker *Checker) checkSpecialFunctionDefaultImplementation(declaration as
 			},
 		)
 	}
-}
-
-func (checker *Checker) checkDestructors(
-	destructors []*ast.SpecialFunctionDeclaration,
-	fields map[string]*ast.FieldDeclaration,
-	members *StringMemberOrderedMap,
-	containerType CompositeKindedType,
-	containerDeclarationKind common.DeclarationKind,
-	containerDocString string,
-	containerKind ContainerKind,
-) {
-	count := len(destructors)
-
-	// only resource and resource interface declarations may
-	// declare a destructor
-
-	if !containerType.IsResourceType() {
-		if count > 0 {
-			firstDestructor := destructors[0]
-
-			checker.report(
-				&InvalidDestructorError{
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						firstDestructor.FunctionDeclaration.Identifier,
-					),
-				},
-			)
-		}
-
-		return
-	}
-
-	if count == 0 {
-		checker.checkNoDestructorNoResourceFields(members, fields, containerType, containerKind)
-		return
-	}
-
-	firstDestructor := destructors[0]
-	checker.checkDestructor(
-		firstDestructor,
-		containerType,
-		containerDocString,
-		containerKind,
-	)
-
-	// destructor overloading is not supported
-
-	if count > 1 {
-		secondDestructor := destructors[1]
-
-		checker.report(
-			&UnsupportedOverloadingError{
-				DeclarationKind: common.DeclarationKindDestructor,
-				Range:           ast.NewRangeFromPositioned(checker.memoryGauge, secondDestructor),
-			},
-		)
-	}
-}
-
-// checkNoDestructorNoResourceFields checks that if there is no destructor there are
-// also no fields which have a resource type – otherwise those fields will be lost.
-// In interfaces this is allowed.
-func (checker *Checker) checkNoDestructorNoResourceFields(
-	members *StringMemberOrderedMap,
-	fields map[string]*ast.FieldDeclaration,
-	containerType Type,
-	containerKind ContainerKind,
-) {
-	if containerKind == ContainerKindInterface {
-		return
-	}
-
-	for pair := members.Oldest(); pair != nil; pair = pair.Next() {
-		member := pair.Value
-		memberName := pair.Key
-
-		// NOTE: check type, not resource annotation:
-		// the field could have a wrong annotation
-		if !member.TypeAnnotation.Type.IsResourceType() {
-			continue
-		}
-
-		checker.report(
-			&MissingDestructorError{
-				ContainerType:  containerType,
-				FirstFieldName: memberName,
-				FirstFieldPos:  fields[memberName].Identifier.Pos,
-			},
-		)
-
-		// only report for first member
-		return
-	}
-}
-
-func (checker *Checker) checkDestructor(
-	destructor *ast.SpecialFunctionDeclaration,
-	containerType CompositeKindedType,
-	containerDocString string,
-	containerKind ContainerKind,
-) {
-
-	if len(destructor.FunctionDeclaration.ParameterList.Parameters) != 0 {
-		checker.report(
-			&InvalidDestructorParametersError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, destructor.FunctionDeclaration.ParameterList),
-			},
-		)
-	}
-
-	parameters := checker.parameters(destructor.FunctionDeclaration.ParameterList)
-
-	checker.checkSpecialFunction(
-		destructor,
-		containerType,
-		containerDocString,
-		FunctionPurityImpure,
-		parameters,
-		containerKind,
-		nil,
-	)
-
-	checker.checkCompositeResourceInvalidated(containerType)
-}
-
-// checkCompositeResourceInvalidated checks that if the container is a resource,
-// that all resource fields are invalidated (moved or destroyed)
-func (checker *Checker) checkCompositeResourceInvalidated(containerType Type) {
-	compositeType, isComposite := containerType.(*CompositeType)
-	if !isComposite || compositeType.Kind != common.CompositeKindResource {
-		return
-	}
-
-	checker.checkResourceFieldsInvalidated(containerType, compositeType.Members)
 }
 
 // checkResourceFieldsInvalidated checks that all resource fields for a container

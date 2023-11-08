@@ -700,18 +700,12 @@ func TestInterpretMemberAccess(t *testing.T) {
                 init() {
                     self.bar <- create Bar()
                 }
-                destroy() {
-                    destroy self.bar
-                }
             }
 
             resource Bar {
                 var baz: @Baz
                 init() {
                     self.baz <- create Baz()
-                }
-                destroy() {
-                    destroy self.baz
                 }
             }
 

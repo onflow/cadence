@@ -1363,10 +1363,6 @@ func TestCheckAccessCompositeFieldVariableDeclarationWithSecondValue(t *testing.
                                   self.a <- create A()
                               }
 
-                              destroy() {
-                                  destroy self.a
-                              }
-
                               access(all) fun test() {
                                   let oldA <- self.a <- create A()
                                   destroy oldA
@@ -1469,10 +1465,6 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 
                               init() {
                                   self.a <- create A()
-                              }
-
-                              destroy() {
-                                  destroy self.a
                               }
 
                               access(all) fun test() {

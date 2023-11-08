@@ -2978,9 +2978,10 @@ func formatParameter(spaces bool, label, identifier, typeAnnotation string) stri
 }
 
 type Parameter struct {
-	TypeAnnotation TypeAnnotation
-	Label          string
-	Identifier     string
+	TypeAnnotation  TypeAnnotation
+	DefaultArgument Type
+	Label           string
+	Identifier      string
 }
 
 func (p Parameter) String() string {
@@ -4330,6 +4331,8 @@ type CompositeType struct {
 	RequiredEntitlements        *EntitlementOrderedSet
 	AttachmentEntitlementAccess *EntitlementMapAccess
 
+	DefaultDestroyEvent *CompositeType
+
 	cachedIdentifiers *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
@@ -5189,6 +5192,8 @@ type InterfaceType struct {
 	effectiveInterfaceConformances   []Conformance
 	effectiveInterfaceConformanceSet *InterfaceSet
 	supportedEntitlements            *EntitlementOrderedSet
+
+	DefaultDestroyEvent *CompositeType
 }
 
 var _ Type = &InterfaceType{}
