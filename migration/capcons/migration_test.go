@@ -680,6 +680,38 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Account link, working chain (private)",
+			// Equivalent to: getCapability<&AuthAccount>(/public/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: authAccountReferenceStaticType,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainPrivate,
+					Identifier: testPathIdentifier,
+				},
+				Address: interpreter.AddressValue(testAddress),
+			},
+			accountLinks: []interpreter.PathValue{
+				// Equivalent to:
+				//   linkAccount(/private/test)
+				{
+					Domain:     common.PathDomainPrivate,
+					Identifier: testPathIdentifier,
+				},
+			},
+			expectedMigrations: []testCapConsPathCapabilityMigration{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							testPathIdentifier,
+						),
+					},
+				},
+			},
+		},
 	}
 
 	type valueTestCase struct {
@@ -802,5 +834,4 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 }
 
 // TODO: add more cases
-// TODO: test non existing
-// TODO: account link
+// TODO: test migrated links
