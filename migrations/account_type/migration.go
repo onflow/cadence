@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -81,133 +80,21 @@ func (m *AccountTypeMigration) migrateTypeValuesInAccount(
 	)
 }
 
-var locationRange = interpreter.EmptyLocationRange
-
 func (m *AccountTypeMigration) migrateValue(value interpreter.Value) (newValue interpreter.Value, updatedInPlace bool) {
-	switch value := value.(type) {
-	case interpreter.TypeValue:
-		convertedType := m.maybeConvertAccountType(value.Type)
+	return migrations.MigrateNestedValue(m.interpreter, value, m.migrateTypeValue)
+}
+
+func (m *AccountTypeMigration) migrateTypeValue(value interpreter.Value) (newValue interpreter.Value, updatedInPlace bool) {
+	if typeValue, ok := value.(interpreter.TypeValue); ok {
+		convertedType := m.maybeConvertAccountType(typeValue.Type)
 		if convertedType == nil {
 			return
 		}
 
 		return interpreter.NewTypeValue(nil, convertedType), true
-
-	case *interpreter.SomeValue:
-		innerValue := value.InnerValue(m.interpreter, locationRange)
-		newInnerValue, _ := m.migrateValue(innerValue)
-		if newInnerValue != nil {
-			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue), true
-		}
-
-		return
-
-	case *interpreter.ArrayValue:
-		array := value
-
-		// Migrate array elements
-		count := array.Count()
-		for index := 0; index < count; index++ {
-			element := array.Get(m.interpreter, locationRange, index)
-			newElement, elementUpdated := m.migrateValue(element)
-			if newElement != nil {
-				array.Set(
-					m.interpreter,
-					locationRange,
-					index,
-					newElement,
-				)
-			}
-
-			updatedInPlace = updatedInPlace || elementUpdated
-		}
-
-		// The array itself doesn't need to be replaced.
-		return
-
-	case *interpreter.CompositeValue:
-		composite := value
-
-		// Read the field names first, so the iteration wouldn't be affected
-		// by the modification of the nested values.
-		var fieldNames []string
-		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
-			fieldNames = append(fieldNames, fieldName)
-			return true
-		})
-
-		for _, fieldName := range fieldNames {
-			existingValue := composite.GetField(m.interpreter, interpreter.EmptyLocationRange, fieldName)
-
-			migratedValue, valueUpdated := m.migrateValue(existingValue)
-			if migratedValue == nil {
-				continue
-			}
-
-			composite.SetMember(m.interpreter, locationRange, fieldName, migratedValue)
-
-			updatedInPlace = updatedInPlace || valueUpdated
-		}
-
-		// The composite itself does not have to be replaced
-		return
-
-	case *interpreter.DictionaryValue:
-		dictionary := value
-
-		// Read the keys first, so the iteration wouldn't be affected
-		// by the modification of the nested values.
-		var existingKeys []interpreter.Value
-		dictionary.Iterate(m.interpreter, func(key, _ interpreter.Value) (resume bool) {
-			existingKeys = append(existingKeys, key)
-			return true
-		})
-
-		for _, existingKey := range existingKeys {
-			existingValue, exist := dictionary.Get(nil, interpreter.EmptyLocationRange, existingKey)
-			if !exist {
-				panic(errors.NewUnreachableError())
-			}
-
-			newKey, keyUpdated := m.migrateValue(existingKey)
-			newValue, valueUpdated := m.migrateValue(existingValue)
-			if newKey == nil && newValue == nil {
-				continue
-			}
-
-			// We only reach here at least one of key or value has been migrated.
-			var keyToSet, valueToSet interpreter.Value
-
-			if newKey == nil {
-				keyToSet = existingKey
-			} else {
-				// Key was migrated.
-				// Remove the old value at the old key.
-				// This old value will be inserted again with the new key, unless the value is also migrated.
-				_ = dictionary.RemoveKey(m.interpreter, locationRange, existingKey)
-				keyToSet = newKey
-			}
-
-			if newValue == nil {
-				valueToSet = existingValue
-			} else {
-				// Value was migrated
-				valueToSet = newValue
-			}
-
-			// Always wrap with an optional, when inserting to the dictionary.
-			valueToSet = interpreter.NewUnmeteredSomeValueNonCopying(valueToSet)
-
-			dictionary.SetKey(m.interpreter, locationRange, keyToSet, valueToSet)
-
-			updatedInPlace = updatedInPlace || keyUpdated || valueUpdated
-		}
-
-		// The dictionary itself does not have to be replaced
-		return
-	default:
-		return
 	}
+
+	return nil, false
 }
 
 func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.StaticType) interpreter.StaticType {

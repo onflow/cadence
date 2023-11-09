@@ -432,6 +432,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 
 	ledger := runtime_utils.NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
+	locationRange := interpreter.EmptyLocationRange
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
