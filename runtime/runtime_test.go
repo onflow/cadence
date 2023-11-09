@@ -9660,3 +9660,99 @@ func TestNestedResourceMoveInDestructor(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
 }
+
+func TestNestedResourceMoveInTransaction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	signers := []Address{signerAccount}
+
+	accountCodes := map[Location][]byte{}
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return signers, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+			accountCodes[location] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		log: func(s string) {
+			fmt.Println(s)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	foo := []byte(`
+        pub contract Foo {
+            pub resource Vault {}
+
+            pub fun createVault(): @Foo.Vault {
+                return <- create Foo.Vault()
+            }
+        }
+    `)
+
+	// Deploy Foo
+
+	deployVault := DeploymentTransaction("Foo", foo)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployVault,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Transaction
+
+	attackTransaction := []byte(fmt.Sprintf(`
+        import Foo from %[1]s
+
+        transaction {
+
+            let vault: @Foo.Vault?
+
+            prepare(acc: AuthAccount) {
+                self.vault <- Foo.createVault()
+            }
+
+            execute {
+                 let vault2 <- self.vault
+                 destroy <- vault2
+            }
+        }`,
+		signerAccount.HexWithPrefix(),
+	))
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: attackTransaction,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+}
