@@ -94,10 +94,13 @@ jobs:
   semgrep:
     name: Semgrep
     runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+    # Skip any PR created by dependabot to avoid permission issues:
+    if: (github.actor != 'dependabot[bot]')
     steps:
       - name: Clone
         uses: actions/checkout@v3
 
-      - uses: returntocorp/semgrep-action@v1
-        with:
-          config: semgrep.yaml
+      - name: semgrep ci
+        run: semgrep ci --config semgrep.yaml
