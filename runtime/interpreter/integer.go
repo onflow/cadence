@@ -50,12 +50,12 @@ func (c *smallIntegerValueCache) Get(value int8, staticType StaticType) IntegerV
 		return existingValue.(IntegerValue)
 	}
 
-	newValue := c.new(value, staticType)
+	newValue := createNewSmallIntegerValue(value, staticType)
 	c.m.Store(key, newValue)
 	return newValue
 }
 
-// getValueForIntegerType returns a Cadence integer value
+// createNewSmallIntegerValue returns a Cadence integer value
 // of the given Cadence static type for the given Go integer value.
 //
 // It is important NOT to meter the memory usage in this function,
@@ -63,7 +63,7 @@ func (c *smallIntegerValueCache) Get(value int8, staticType StaticType) IntegerV
 // It could happen that on some execution nodes the value might be cached due to executing a
 // transaction or script that needed the value previously, while on other execution nodes it might
 // not be cached yet.
-func (c *smallIntegerValueCache) new(value int8, staticType StaticType) IntegerValue {
+func createNewSmallIntegerValue(value int8, staticType StaticType) IntegerValue {
 	switch staticType {
 	case PrimitiveStaticTypeInt:
 		return NewUnmeteredIntValueFromInt64(int64(value))
