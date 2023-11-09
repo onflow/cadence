@@ -69,11 +69,11 @@ type testMissingTarget struct {
 }
 
 type testMigrationReporter struct {
-	linkMigrations             []testCapConsLinkMigration
-	pathCapabilityMigrations   []testCapConsPathCapabilityMigration
-	missingCapabilityIDs       []testCapConsMissingCapabilityID
-	cyclicLinkCyclicLinkErrors []CyclicLinkError
-	missingTargets             []testMissingTarget
+	linkMigrations           []testCapConsLinkMigration
+	pathCapabilityMigrations []testCapConsPathCapabilityMigration
+	missingCapabilityIDs     []testCapConsMissingCapabilityID
+	cyclicLinkErrors         []CyclicLinkError
+	missingTargets           []testMissingTarget
 }
 
 var _ MigrationReporter = &testMigrationReporter{}
@@ -120,8 +120,8 @@ func (t *testMigrationReporter) MissingCapabilityID(
 }
 
 func (t *testMigrationReporter) CyclicLink(cyclicLinkError CyclicLinkError) {
-	t.cyclicLinkCyclicLinkErrors = append(
-		t.cyclicLinkCyclicLinkErrors,
+	t.cyclicLinkErrors = append(
+		t.cyclicLinkErrors,
 		cyclicLinkError,
 	)
 }
@@ -171,6 +171,39 @@ type testLink struct {
 	sourcePath interpreter.PathValue
 	targetPath interpreter.PathValue
 	borrowType *interpreter.ReferenceStaticType
+}
+
+func storeTestAccountLinks(accountLinks []interpreter.PathValue, storage *runtime.Storage, inter *interpreter.Interpreter) {
+	for _, sourcePath := range accountLinks {
+		storage.GetStorageMap(testAddress, sourcePath.Domain.Identifier(), true).
+			SetValue(
+				inter,
+				interpreter.StringStorageMapKey(sourcePath.Identifier),
+				interpreter.AccountLinkValue{}, //nolint:staticcheck
+			)
+	}
+}
+
+func storeTestPathLinks(t *testing.T, pathLinks []testLink, storage *runtime.Storage, inter *interpreter.Interpreter) {
+	for _, testLink := range pathLinks {
+		sourcePath := testLink.sourcePath
+		targetPath := testLink.targetPath
+
+		require.NotNil(t, testLink.borrowType)
+
+		storage.GetStorageMap(testAddress, sourcePath.Domain.Identifier(), true).
+			SetValue(
+				inter,
+				interpreter.StringStorageMapKey(sourcePath.Identifier),
+				interpreter.PathLinkValue{ //nolint:staticcheck
+					Type: testLink.borrowType,
+					TargetPath: interpreter.PathValue{
+						Domain:     targetPath.Domain,
+						Identifier: targetPath.Identifier,
+					},
+				},
+			)
+	}
 }
 
 func testPathCapabilityValueMigration(
@@ -359,34 +392,9 @@ func testPathCapabilityValueMigration(
 	})
 	require.NoError(t, err)
 
-	for _, testLink := range pathLinks {
-		sourcePath := testLink.sourcePath
-		targetPath := testLink.targetPath
+	storeTestPathLinks(t, pathLinks, storage, inter)
 
-		require.NotNil(t, testLink.borrowType)
-
-		storage.GetStorageMap(testAddress, sourcePath.Domain.Identifier(), true).
-			SetValue(
-				inter,
-				interpreter.StringStorageMapKey(sourcePath.Identifier),
-				interpreter.PathLinkValue{ //nolint:staticcheck
-					Type: testLink.borrowType,
-					TargetPath: interpreter.PathValue{
-						Domain:     targetPath.Domain,
-						Identifier: targetPath.Identifier,
-					},
-				},
-			)
-	}
-
-	for _, sourcePath := range accountLinks {
-		storage.GetStorageMap(testAddress, sourcePath.Domain.Identifier(), true).
-			SetValue(
-				inter,
-				interpreter.StringStorageMapKey(sourcePath.Identifier),
-				interpreter.AccountLinkValue{}, //nolint:staticcheck
-			)
-	}
+	storeTestAccountLinks(accountLinks, storage, inter)
 
 	err = storage.Commit(inter, false)
 	require.NoError(t, err)
@@ -1045,5 +1053,504 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 	}
 }
 
-// TODO: add more cases
-// TODO: test migrated links
+func testLinkMigration(
+	t *testing.T,
+	pathLinks []testLink,
+	accountLinks []interpreter.PathValue,
+	expectedLinkMigrations []testCapConsLinkMigration,
+	expectedCyclicLinkErrors []CyclicLinkError,
+	expectedMissingTargets []testMissingTarget,
+) {
+	require.True(t,
+		len(expectedLinkMigrations) == 0 ||
+			(len(expectedCyclicLinkErrors) == 0 && len(expectedMissingTargets) == 0),
+	)
+
+	// language=cadence
+	contract := `
+      access(all)
+      contract Test {
+
+          access(all)
+          resource R {}
+
+          access(all)
+          struct S {}
+      }
+    `
+
+	rt := NewTestInterpreterRuntime()
+
+	accountCodes := map[runtime.Location][]byte{}
+	var events []cadence.Event
+	var loggedMessages []string
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location runtime.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{testAddress}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnProgramLog: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contract
+
+	deployTransaction := utils.DeploymentTransaction("Test", []byte(contract))
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: deployTransaction,
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Create and store path and account links
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	storeTestPathLinks(t, pathLinks, storage, inter)
+
+	storeTestAccountLinks(accountLinks, storage, inter)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	// Migrate
+
+	migrator, err := NewMigration(
+		storage,
+		inter,
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		&testAccountIDGenerator{},
+	)
+	require.NoError(t, err)
+
+	reporter := &testMigrationReporter{}
+
+	err = migrator.Migrate(reporter)
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Equal(t,
+		expectedLinkMigrations,
+		reporter.linkMigrations,
+	)
+	assert.Equal(t,
+		expectedCyclicLinkErrors,
+		reporter.cyclicLinkErrors,
+	)
+	assert.Equal(t,
+		expectedMissingTargets,
+		reporter.missingTargets,
+	)
+}
+
+func TestLinkMigration(t *testing.T) {
+
+	t.Parallel()
+
+	type linkTestCase struct {
+		name                     string
+		pathLinks                []testLink
+		accountLinks             []interpreter.PathValue
+		expectedLinkMigrations   []testCapConsLinkMigration
+		expectedCyclicLinkErrors []CyclicLinkError
+		expectedMissingTargets   []testMissingTarget
+	}
+
+	linkTestCases := []linkTestCase{
+		{
+			name: "Path links, working chain (public -> private -> storage)",
+			pathLinks: []testLink{
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/public/test, target: /private/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/private/test, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedLinkMigrations: []testCapConsLinkMigration{
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 1,
+				},
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 2,
+				},
+			},
+		},
+		{
+			name: "Path links, working chain (public -> storage)",
+			pathLinks: []testLink{
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/public/test, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedLinkMigrations: []testCapConsLinkMigration{
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 1,
+				},
+			},
+		},
+		{
+			name: "Path links, working chain (private -> storage)",
+			pathLinks: []testLink{
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/private/test, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedLinkMigrations: []testCapConsLinkMigration{
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 1,
+				},
+			},
+		},
+		// Test that the migration also follows capability controller,
+		// which were already previously migrated from links.
+		// Following the (capability value) should not borrow it,
+		// i.e. require the storage target to exist,
+		// but rather just get the storage target
+		{
+			name: "Path links, working chain (private -> private -> storage)",
+			pathLinks: []testLink{
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/private/test, target: /private/test2)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: "test2",
+					},
+					borrowType: testRReferenceStaticType,
+				},
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/private/test2, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: "test2",
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedLinkMigrations: []testCapConsLinkMigration{
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: "test2",
+						},
+					},
+					capabilityID: 1,
+				},
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 2,
+				},
+			},
+		},
+		// TODO: verify
+		{
+			name: "Path links, valid chain (public -> storage), different borrow type",
+			pathLinks: []testLink{
+				{
+					// Equivalent to:
+					//   link<&Test.S>(/public/test, target: /storage/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					//
+					borrowType: testSReferenceStaticType,
+				},
+			},
+			expectedLinkMigrations: []testCapConsLinkMigration{
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 1,
+				},
+			},
+		},
+		{
+			name: "Path links, cyclic chain (public -> private -> public)",
+			pathLinks: []testLink{
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/public/test, target: /private/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/private/test, target: /public/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedCyclicLinkErrors: []CyclicLinkError{
+				{
+					Address: testAddress,
+					Paths: []interpreter.PathValue{
+						{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+						{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+						{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+				},
+				{
+					Address: testAddress,
+					Paths: []interpreter.PathValue{
+						{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+						{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+						{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Path links, missing target (public -> private)",
+			pathLinks: []testLink{
+				{
+					// Equivalent to:
+					//   link<&Test.R>(/public/test, target: /private/test)
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedMissingTargets: []testMissingTarget{
+				{
+					accountAddressValue: interpreter.AddressValue(testAddress),
+					path: interpreter.PathValue{
+						Identifier: testPathIdentifier,
+						Domain:     common.PathDomainPublic,
+					},
+				},
+			},
+		},
+		{
+			name: "Account link, working chain (public)",
+			accountLinks: []interpreter.PathValue{
+				// Equivalent to:
+				//   linkAccount(/public/test)
+				{
+					Domain:     common.PathDomainPublic,
+					Identifier: testPathIdentifier,
+				},
+			},
+			expectedLinkMigrations: []testCapConsLinkMigration{
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 1,
+				},
+			},
+		},
+		{
+			name: "Account link, working chain (private)",
+			accountLinks: []interpreter.PathValue{
+				// Equivalent to:
+				//   linkAccount(/private/test)
+				{
+					Domain:     common.PathDomainPrivate,
+					Identifier: testPathIdentifier,
+				},
+			},
+			expectedLinkMigrations: []testCapConsLinkMigration{
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 1,
+				},
+			},
+		},
+	}
+
+	test := func(linkTestCase linkTestCase) {
+
+		t.Run(linkTestCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			testLinkMigration(
+				t,
+				linkTestCase.pathLinks,
+				linkTestCase.accountLinks,
+				linkTestCase.expectedLinkMigrations,
+				linkTestCase.expectedCyclicLinkErrors,
+				linkTestCase.expectedMissingTargets,
+			)
+		})
+	}
+
+	for _, linkTestCase := range linkTestCases {
+		test(linkTestCase)
+	}
+}
