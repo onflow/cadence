@@ -1613,7 +1613,6 @@ func (m *valueMap) size() int {
 	return len(m.keys)
 }
 
-// TODO: Make this test pass.
 // This test is a reproducer for "slab was not reachable from leaves" false alarm.
 // https://github.com/onflow/cadence/pull/2882#issuecomment-1781298107
 // In this test, storage.CheckHealth() should be called after array.DeepRemove(),
@@ -1692,4 +1691,152 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 	// - array.DeepRemove() calls childArray1 and childArray2 DeepRemove()
 	// - DeepRemove() calls maybeValidateAtreeValue()
 	// - maybeValidateAtreeValue() calls CheckHealth()
+}
+
+// This test is a reproducer for "slab was not reachable from leaves" false alarm.
+// https://github.com/onflow/cadence/pull/2882#issuecomment-1796381227
+// In this test, storage.CheckHealth() should be called after DictionaryValue.Transfer()
+// with remove flag, not in the middle of DictionaryValue.Transfer().
+func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
+	r := newRandomValueGenerator()
+	t.Logf("seed: %d", r.seed)
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Program:     ast.NewProgram(nil, []ast.Declaration{}),
+			Elaboration: sema.NewElaboration(nil),
+		},
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				return interpreter.VirtualImport{
+					Elaboration: inter.Program.Elaboration,
+				}
+			},
+			AtreeStorageValidationEnabled: true,
+			AtreeValueValidationEnabled:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	// Create large array value with zero address which will not be inlined.
+	gchildArray := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		common.ZeroAddress,
+		interpreter.NewUnmeteredStringValue(strings.Repeat("b", int(atree.MaxInlineArrayElementSize())-10)),
+		interpreter.NewUnmeteredStringValue(strings.Repeat("c", int(atree.MaxInlineArrayElementSize())-10)),
+	)
+
+	// Create small composite value with zero address which will be inlined.
+	identifier := "test"
+
+	location := common.AddressLocation{
+		Address: common.ZeroAddress,
+		Name:    identifier,
+	}
+
+	compositeType := &sema.CompositeType{
+		Location:   location,
+		Identifier: identifier,
+		Kind:       common.CompositeKindStructure,
+	}
+
+	fields := []interpreter.CompositeField{
+		interpreter.NewUnmeteredCompositeField("a", interpreter.NewUnmeteredUInt64Value(0)),
+		interpreter.NewUnmeteredCompositeField("b", interpreter.NewUnmeteredUInt64Value(1)),
+		interpreter.NewUnmeteredCompositeField("c", interpreter.NewUnmeteredUInt64Value(2)),
+	}
+
+	compositeType.Members = &sema.StringMemberOrderedMap{}
+	for _, field := range fields {
+		compositeType.Members.Set(
+			field.Name,
+			sema.NewUnmeteredPublicConstantFieldMember(
+				compositeType,
+				field.Name,
+				sema.AnyStructType,
+				"",
+			),
+		)
+	}
+
+	// Add the type to the elaboration, to short-circuit the type-lookup.
+	inter.Program.Elaboration.SetCompositeType(
+		compositeType.ID(),
+		compositeType,
+	)
+
+	gchildComposite := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		location,
+		identifier,
+		common.CompositeKindStructure,
+		fields,
+		common.ZeroAddress,
+	)
+
+	// Create large dictionary with zero address with 2 data slabs containing:
+	// - SomeValue(SlabID) as first physical element in the first data slab
+	// - inlined CompositeValue as last physical element in the second data slab
+
+	numberOfValues := 10
+	firstElementIndex := 7 // index of first physical element in the first data slab
+	lastElementIndex := 8  // index of last physical element in the last data slab
+	keyValues := make([]interpreter.Value, numberOfValues*2)
+	for i := 0; i < numberOfValues; i++ {
+		key := interpreter.NewUnmeteredUInt64Value(uint64(i))
+
+		var value interpreter.Value
+		switch i {
+		case firstElementIndex:
+			value = interpreter.NewUnmeteredSomeValueNonCopying(gchildArray)
+
+		case lastElementIndex:
+			value = gchildComposite
+
+		default:
+			// Other values are inlined random strings.
+			const size = 235
+			value = interpreter.NewUnmeteredStringValue(r.randomUTF8StringOfSize(size))
+		}
+
+		keyValues[i*2] = key
+		keyValues[i*2+1] = value
+	}
+
+	childMap := interpreter.NewDictionaryValueWithAddress(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		common.ZeroAddress,
+		keyValues...,
+	)
+
+	// Create dictionary with non-zero address containing child dictionary.
+	owner := common.Address{'A'}
+	m := interpreter.NewDictionaryValueWithAddress(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		interpreter.NewUnmeteredUInt64Value(0),
+		childMap,
+	)
+
+	inter.ValidateAtreeValue(m)
+
+	require.NoError(t, storage.CheckHealth())
 }
