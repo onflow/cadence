@@ -23,5 +23,5 @@ import (
 )
 
 type Reporter interface {
-	Report(address common.Address, domain common.PathDomain, key string)
+	Report(address common.Address, domain common.PathDomain, key string, migration string)
 }
