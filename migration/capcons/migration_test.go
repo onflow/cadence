@@ -208,7 +208,7 @@ func storeTestPathLinks(t *testing.T, pathLinks []testLink, storage *runtime.Sto
 
 func testPathCapabilityValueMigration(
 	t *testing.T,
-	capabilityValue *interpreter.PathCapabilityValue,
+	capabilityValue *interpreter.PathCapabilityValue, //nolint:staticcheck
 	pathLinks []testLink,
 	accountLinks []interpreter.PathValue,
 	expectedMigrations []testCapConsPathCapabilityMigration,
@@ -503,7 +503,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 
 	type linkTestCase struct {
 		name                         string
-		capabilityValue              *interpreter.PathCapabilityValue
+		capabilityValue              *interpreter.PathCapabilityValue //nolint:staticcheck
 		pathLinks                    []testLink
 		accountLinks                 []interpreter.PathValue
 		expectedMigrations           []testCapConsPathCapabilityMigration
