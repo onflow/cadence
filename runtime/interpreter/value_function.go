@@ -153,6 +153,7 @@ func (f *InterpretedFunctionValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -302,6 +303,7 @@ func (f *HostFunctionValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -429,6 +431,7 @@ func (f BoundFunctionValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {

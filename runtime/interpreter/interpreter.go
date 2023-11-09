@@ -1706,6 +1706,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		false,
 		nil,
 		nil,
+		true,
 	)
 
 	result := interpreter.ConvertAndBox(
@@ -3924,6 +3925,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				true,
 				nil,
 				nil,
+				true,
 			)
 
 			// Write new value
@@ -4048,6 +4050,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				false,
 				nil,
 				nil,
+				false,
 			)
 
 			// Remove the value from storage,

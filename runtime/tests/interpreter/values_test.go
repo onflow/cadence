@@ -153,6 +153,7 @@ func TestRandomMapOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true,
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), copyOfTestMap.Count())
@@ -493,6 +494,7 @@ func TestRandomMapOperations(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true,
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), movedDictionary.Count())
@@ -608,6 +610,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true,
 		).(*interpreter.ArrayValue)
 
 		require.Equal(t, len(elements), copyOfTestArray.Count())
@@ -864,6 +867,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true,
 		).(*interpreter.ArrayValue)
 
 		require.Equal(t, len(elements), movedArray.Count())
@@ -955,6 +959,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true,
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
@@ -996,6 +1001,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true,
 		).(*interpreter.CompositeValue)
 
 		require.NoError(t, err)
@@ -1021,6 +1027,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true,
 		).(*interpreter.CompositeValue)
 
 		// Cleanup the slab of original composite.

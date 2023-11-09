@@ -5225,6 +5225,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true,
 		)
 
 		domain := storagePath.Domain.Identifier()
@@ -8093,6 +8094,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true,
 		)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")

@@ -744,6 +744,7 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true,
 		)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")

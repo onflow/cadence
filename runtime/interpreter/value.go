@@ -134,6 +134,7 @@ type Value interface {
 		remove bool,
 		storable atree.Storable,
 		preventTransfer map[atree.ValueID]struct{},
+		atRoot bool,
 	) Value
 	DeepRemove(interpreter *Interpreter, atRoot bool)
 	// Clone returns a new value that is equal to this value.
@@ -484,6 +485,7 @@ func (v TypeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -604,6 +606,7 @@ func (v VoidValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -777,6 +780,7 @@ func (v BoolValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -951,6 +955,7 @@ func (v CharacterValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -1432,6 +1437,7 @@ func (v *StringValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -1609,6 +1615,7 @@ func NewArrayValue(
 				true,
 				nil,
 				nil,
+				true,
 			)
 
 			return value
@@ -1916,6 +1923,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 				false,
 				nil,
 				nil,
+				false,
 			)
 		},
 	)
@@ -2005,6 +2013,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
+		true,
 	)
 
 	existingStorable, err := v.array.Set(uint64(index), element)
@@ -2081,6 +2090,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
+		true,
 	)
 
 	err := v.array.Append(element)
@@ -2149,6 +2159,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
+		true,
 	)
 
 	err := v.array.Insert(uint64(index), element)
@@ -2207,6 +2218,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 		true,
 		storable,
 		nil,
+		true,
 	)
 }
 
@@ -2676,6 +2688,7 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	atRoot bool,
 ) Value {
 	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
 	common.UseMemory(interpreter, baseUsage)
@@ -2744,7 +2757,7 @@ func (v *ArrayValue) Transfer(
 				}
 
 				element := MustConvertStoredValue(interpreter, value).
-					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
+					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer, false)
 
 				return element, nil
 			},
@@ -2762,7 +2775,9 @@ func (v *ArrayValue) Transfer(
 			}
 
 			interpreter.maybeValidateAtreeValue(v.array)
-			interpreter.maybeValidateAtreeStorage()
+			if atRoot {
+				interpreter.maybeValidateAtreeStorage()
+			}
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -3006,6 +3021,7 @@ func (v *ArrayValue) Slice(
 				false,
 				nil,
 				nil,
+				false,
 			)
 		},
 	)
@@ -3038,6 +3054,7 @@ func (v *ArrayValue) Reverse(
 				false,
 				nil,
 				nil,
+				false,
 			)
 		},
 	)
@@ -3111,6 +3128,7 @@ func (v *ArrayValue) Filter(
 				false,
 				nil,
 				nil,
+				false,
 			)
 		},
 	)
@@ -3190,6 +3208,7 @@ func (v *ArrayValue) Map(
 				false,
 				nil,
 				nil,
+				false,
 			)
 		},
 	)
@@ -3913,6 +3932,7 @@ func (v IntValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -4553,6 +4573,7 @@ func (v Int8Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -5195,6 +5216,7 @@ func (v Int16Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -5837,6 +5859,7 @@ func (v Int32Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -6471,6 +6494,7 @@ func (v Int64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -7215,6 +7239,7 @@ func (v Int128Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -7956,6 +7981,7 @@ func (v Int256Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -8585,6 +8611,7 @@ func (v UIntValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -9171,6 +9198,7 @@ func (v UInt8Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -9712,6 +9740,7 @@ func (v UInt16Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -10254,6 +10283,7 @@ func (v UInt32Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -10825,6 +10855,7 @@ func (v UInt64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -11500,6 +11531,7 @@ func (v UInt128Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -12174,6 +12206,7 @@ func (v UInt256Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -12611,6 +12644,7 @@ func (v Word8Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -13049,6 +13083,7 @@ func (v Word16Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -13488,6 +13523,7 @@ func (v Word32Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -13953,6 +13989,7 @@ func (v Word64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -14533,6 +14570,7 @@ func (v Word128Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -15114,6 +15152,7 @@ func (v Word256Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -15691,6 +15730,7 @@ func (v Fix64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -16225,6 +16265,7 @@ func (v UFix64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -16808,6 +16849,7 @@ func (v *CompositeValue) RemoveMember(
 			true,
 			existingValueStorable,
 			nil,
+			true,
 		)
 }
 
@@ -16852,6 +16894,7 @@ func (v *CompositeValue) SetMember(
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
+		true,
 	)
 
 	existingStorable, err := v.dictionary.Set(
@@ -17200,6 +17243,7 @@ func (v *CompositeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	atRoot bool,
 ) Value {
 
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
@@ -17303,6 +17347,7 @@ func (v *CompositeValue) Transfer(
 					remove,
 					nil,
 					preventTransfer,
+					false,
 				)
 
 				return atreeKey, value, nil
@@ -17322,7 +17367,9 @@ func (v *CompositeValue) Transfer(
 			}
 
 			interpreter.maybeValidateAtreeValue(v.dictionary)
-			interpreter.maybeValidateAtreeStorage()
+			if atRoot {
+				interpreter.maybeValidateAtreeStorage()
+			}
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -18355,6 +18402,7 @@ func (v *DictionaryValue) GetMember(
 						false,
 						nil,
 						nil,
+						false,
 					)
 			},
 		)
@@ -18392,6 +18440,7 @@ func (v *DictionaryValue) GetMember(
 						false,
 						nil,
 						nil,
+						false,
 					)
 			})
 
@@ -18560,6 +18609,7 @@ func (v *DictionaryValue) Remove(
 			true,
 			existingValueStorable,
 			nil,
+			true,
 		)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -18603,6 +18653,7 @@ func (v *DictionaryValue) Insert(
 		true,
 		nil,
 		preventTransfer,
+		true,
 	)
 
 	value = value.Transfer(
@@ -18612,6 +18663,7 @@ func (v *DictionaryValue) Insert(
 		true,
 		nil,
 		preventTransfer,
+		true,
 	)
 
 	valueComparator := newValueComparator(interpreter, locationRange)
@@ -18649,6 +18701,7 @@ func (v *DictionaryValue) Insert(
 		true,
 		existingValueStorable,
 		nil,
+		true,
 	)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -18809,6 +18862,7 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	atRoot bool,
 ) Value {
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
 		v.dictionary.Count(),
@@ -18891,10 +18945,10 @@ func (v *DictionaryValue) Transfer(
 				}
 
 				key := MustConvertStoredValue(interpreter, atreeKey).
-					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
+					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer, false)
 
 				value := MustConvertStoredValue(interpreter, atreeValue).
-					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
+					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer, false)
 
 				return key, value, nil
 			},
@@ -18913,7 +18967,9 @@ func (v *DictionaryValue) Transfer(
 			}
 
 			interpreter.maybeValidateAtreeValue(v.dictionary)
-			interpreter.maybeValidateAtreeStorage()
+			if atRoot {
+				interpreter.maybeValidateAtreeStorage()
+			}
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -19238,6 +19294,7 @@ func (v NilValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -19569,6 +19626,7 @@ func (v *SomeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	config := interpreter.SharedState.Config
 
@@ -19590,6 +19648,7 @@ func (v *SomeValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
+			false,
 		)
 
 		if remove {
@@ -20055,6 +20114,7 @@ func (v *StorageReferenceValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -20390,6 +20450,7 @@ func (v *EphemeralReferenceValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -20607,6 +20668,7 @@ func (v AddressValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -20893,6 +20955,7 @@ func (v PathValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -21111,6 +21174,7 @@ func (v *PathCapabilityValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		v.DeepRemove(interpreter, true)
@@ -21313,6 +21377,7 @@ func (v *IDCapabilityValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		v.DeepRemove(interpreter, true)
@@ -21462,6 +21527,7 @@ func (v PathLinkValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -21599,6 +21665,7 @@ func (v *PublishedValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// NB: if the inner value of a PublishedValue can be a resource,
 	// we must perform resource-related checks here as well
@@ -21612,6 +21679,7 @@ func (v *PublishedValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
+			false,
 		).(CapabilityValue)
 
 		addressValue := v.Recipient.Transfer(
@@ -21621,6 +21689,7 @@ func (v *PublishedValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
+			false,
 		).(AddressValue)
 
 		if remove {
@@ -21761,6 +21830,7 @@ func (v AccountLinkValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
