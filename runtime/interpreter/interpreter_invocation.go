@@ -101,6 +101,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 					false,
 					nil,
 					nil,
+					true,
 				)
 			}
 		}

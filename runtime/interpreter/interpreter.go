@@ -1781,6 +1781,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		false,
 		nil,
 		nil,
+		true,
 	)
 
 	targetType = interpreter.substituteMappedEntitlements(targetType)
@@ -4248,6 +4249,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				true,
 				nil,
 				nil,
+				true,
 			)
 
 			// Write new value
@@ -4372,6 +4374,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				false,
 				nil,
 				nil,
+				false,
 			)
 
 			// Remove the value from storage,
@@ -4645,6 +4648,8 @@ func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[strin
 					atree.Address{},
 					false,
 					nil,
+					nil,
+					// TODO:
 					nil,
 				)
 			},

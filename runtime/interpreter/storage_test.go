@@ -685,6 +685,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 			false,
 			nil,
 			map[atree.ValueID]struct{}{},
+			true,
 		).(*CompositeValue)
 
 		containerValue1.Append(inter, EmptyLocationRange, childValue1)

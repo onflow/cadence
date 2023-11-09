@@ -958,6 +958,7 @@ func newAccountInboxPublishFunction(
 				true,
 				nil,
 				nil,
+				true,
 			)
 
 			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
@@ -1025,6 +1026,7 @@ func newAccountInboxUnpublishFunction(
 				true,
 				nil,
 				nil,
+				false,
 			)
 
 			inter.WriteStored(
@@ -1111,6 +1113,7 @@ func newAccountInboxClaimFunction(
 				true,
 				nil,
 				nil,
+				false,
 			)
 
 			inter.WriteStored(
@@ -3320,6 +3323,7 @@ func newAccountCapabilitiesPublishFunction(
 				true,
 				nil,
 				nil,
+				true,
 			).(*interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3387,6 +3391,7 @@ func newAccountCapabilitiesUnpublishFunction(
 				true,
 				nil,
 				nil,
+				false,
 			).(*interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())

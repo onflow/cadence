@@ -288,6 +288,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 		false,
 		nil,
 		nil,
+		true,
 	)
 
 	iterable, ok := transferredValue.(IterableValue)

@@ -5295,6 +5295,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true,
 		)
 
 		domain := storagePath.Domain.Identifier()

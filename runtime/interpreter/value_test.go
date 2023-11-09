@@ -176,6 +176,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		false,
 		nil,
 		nil,
+		true,
 	)
 	array = arrayCopy.(*ArrayValue)
 
@@ -570,6 +571,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		false,
 		nil,
 		nil,
+		true,
 	)
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
@@ -874,6 +876,7 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		false,
 		nil,
 		nil,
+		true,
 	).(*CompositeValue)
 
 	value = composite.GetMember(
