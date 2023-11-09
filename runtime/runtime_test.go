@@ -8255,7 +8255,7 @@ func TestRuntimeFlowEventTypes(t *testing.T) {
 	)
 }
 
-func TestInvalidatedResourceUse(t *testing.T) {
+func TestRuntimeInvalidatedResourceUse(t *testing.T) {
 
 	t.Parallel()
 
@@ -8447,7 +8447,7 @@ func TestInvalidatedResourceUse(t *testing.T) {
 
 }
 
-func TestInvalidatedResourceUse2(t *testing.T) {
+func TestRuntimeInvalidatedResourceUse2(t *testing.T) {
 
 	t.Parallel()
 
@@ -9473,7 +9473,7 @@ func TestRuntimeInvalidWrappedPrivateCapability(t *testing.T) {
 	require.ErrorAs(t, err, &argumentNotImportableErr)
 }
 
-func TestNestedResourceMoveInDestructor(t *testing.T) {
+func TestRuntimeNestedResourceMoveInDestructor(t *testing.T) {
 
 	t.Parallel()
 
@@ -9661,7 +9661,7 @@ func TestNestedResourceMoveInDestructor(t *testing.T) {
 	require.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
 }
 
-func TestNestedResourceMoveInTransaction(t *testing.T) {
+func TestRuntimeNestedResourceMoveInTransaction(t *testing.T) {
 
 	t.Parallel()
 
