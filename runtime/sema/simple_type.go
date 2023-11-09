@@ -168,3 +168,6 @@ func (t *SimpleType) CompositeKind() common.CompositeKind {
 		return common.CompositeKindStructure
 	}
 }
+
+func (t *SimpleType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+}
