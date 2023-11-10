@@ -23,20 +23,16 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type StringNormalizingMigration struct {
-	name string
-}
+type StringNormalizingMigration struct{}
 
 var _ migrations.Migration = StringNormalizingMigration{}
 
 func NewStringNormalizingMigration() StringNormalizingMigration {
-	return StringNormalizingMigration{
-		name: "StringNormalizingMigration",
-	}
+	return StringNormalizingMigration{}
 }
 
-func (m StringNormalizingMigration) Name() string {
-	return m.name
+func (StringNormalizingMigration) Name() string {
+	return "StringNormalizingMigration"
 }
 
 func (StringNormalizingMigration) Migrate(

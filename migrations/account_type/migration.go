@@ -25,20 +25,16 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type AccountTypeMigration struct {
-	name string
-}
+type AccountTypeMigration struct{}
 
 var _ migrations.Migration = AccountTypeMigration{}
 
 func NewAccountTypeMigration() AccountTypeMigration {
-	return AccountTypeMigration{
-		name: "AccountTypeMigration",
-	}
+	return AccountTypeMigration{}
 }
 
-func (m AccountTypeMigration) Name() string {
-	return m.name
+func (AccountTypeMigration) Name() string {
+	return "AccountTypeMigration"
 }
 
 // Migrate migrates `AuthAccount` and `PublicAccount` types inside `TypeValue`s,

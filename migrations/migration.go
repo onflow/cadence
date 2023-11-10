@@ -17,8 +17,6 @@ type StorageMigration struct {
 	interpreter *interpreter.Interpreter
 }
 
-type ValueConverter func(value interpreter.Value) (newValue interpreter.Value, updatedInPlace bool)
-
 func NewStorageMigration(
 	interpreter *interpreter.Interpreter,
 	storage *runtime.Storage,
