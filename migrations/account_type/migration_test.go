@@ -499,6 +499,8 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				),
 				interpreter.NewUnmeteredInt8Value(4),
 				storedAccountTypeValue,
+				interpreter.NewUnmeteredInt8Value(5),
+				interpreter.NewUnmeteredStringValue("hello"),
 			),
 			expectedValue: interpreter.NewDictionaryValue(
 				inter,
@@ -510,6 +512,8 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				),
 				interpreter.NewUnmeteredInt8Value(4),
 				expectedAccountTypeValue,
+				interpreter.NewUnmeteredInt8Value(5),
+				interpreter.NewUnmeteredStringValue("hello"),
 			),
 		},
 		"dictionary_with_optional_account_type_value": {
@@ -602,7 +606,8 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				"Bar",
 				common.CompositeKindResource,
 				[]interpreter.CompositeField{
-					interpreter.NewUnmeteredCompositeField("field", storedAccountTypeValue),
+					interpreter.NewUnmeteredCompositeField("field1", storedAccountTypeValue),
+					interpreter.NewUnmeteredCompositeField("field2", interpreter.NewUnmeteredStringValue("hello")),
 				},
 				common.Address{},
 			),
@@ -613,7 +618,8 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				"Bar",
 				common.CompositeKindResource,
 				[]interpreter.CompositeField{
-					interpreter.NewUnmeteredCompositeField("field", expectedAccountTypeValue),
+					interpreter.NewUnmeteredCompositeField("field1", expectedAccountTypeValue),
+					interpreter.NewUnmeteredCompositeField("field2", interpreter.NewUnmeteredStringValue("hello")),
 				},
 				common.Address{},
 			),
