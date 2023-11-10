@@ -1229,7 +1229,8 @@ func (t *NumericType) IsSuperType() bool {
 	return t.isSuperType
 }
 
-func (*NumericType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+func (*NumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
@@ -1425,7 +1426,8 @@ func (t *FixedPointNumericType) IsSuperType() bool {
 	return t.isSuperType
 }
 
-func (*FixedPointNumericType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+func (*FixedPointNumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 // Numeric types
@@ -6017,7 +6019,8 @@ func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (*AddressType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+func (*AddressType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 const AddressTypeToBytesFunctionName = `toBytes`
