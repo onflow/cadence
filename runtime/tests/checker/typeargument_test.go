@@ -159,21 +159,25 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 	t.Parallel()
 
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
-	options := ParseAndCheckOptions{
-		Config: &sema.Config{
-			BaseValueActivation: baseValueActivation,
-		},
+	test := func(t *testing.T, code string) error {
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+		options := ParseAndCheckOptions{
+			Config: &sema.Config{
+				BaseValueActivation: baseValueActivation,
+			},
+		}
+
+		_, err := ParseAndCheckWithOptions(t, code, options)
+		return err
 	}
 
 	t.Run("InclusiveRange<Int>", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let inclusiveRange: InclusiveRange<Int> = InclusiveRange(1, 10)",
-			options,
 		)
 
 		require.NoError(t, err)
@@ -183,9 +187,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let inclusiveRange: InclusiveRange = InclusiveRange(1, 10)",
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -197,9 +200,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let r: [InclusiveRange<Int8>] = []",
-			options,
 		)
 
 		require.NoError(t, err)
@@ -209,9 +211,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let r: [InclusiveRange] = []",
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -223,9 +224,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let r: [InclusiveRange<Int>; 2] = [InclusiveRange(1, 2), InclusiveRange(3, 4)]",
-			options,
 		)
 
 		require.NoError(t, err)
@@ -235,9 +235,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let r: [InclusiveRange; 2] = [InclusiveRange(1, 2), InclusiveRange(3, 4)]",
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -249,9 +248,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let r: InclusiveRange<Int>? = nil",
-			options,
 		)
 
 		require.NoError(t, err)
@@ -261,9 +259,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let r: InclusiveRange? = nil",
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -275,9 +272,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let r: {Int: InclusiveRange<UInt128>} = {}",
-			options,
 		)
 
 		require.NoError(t, err)
@@ -287,9 +283,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"let r: {Int: InclusiveRange} = {}",
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -301,7 +296,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				struct Foo {
 					let a: InclusiveRange<Int>
@@ -311,7 +306,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -321,7 +315,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				struct Foo {
 					let a: InclusiveRange
@@ -331,7 +325,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -343,7 +336,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				struct Bar {
 					let a: InclusiveRange<Int>
@@ -361,7 +354,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -371,7 +363,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				struct Bar {
 					let a: InclusiveRange
@@ -389,7 +381,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -401,7 +392,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				contract C {
 					struct Foo {
@@ -413,7 +404,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -423,7 +413,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				contract C {
 					struct Foo {
@@ -435,7 +425,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -447,7 +436,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				struct Bar {
 					let f: ((): InclusiveRange<Int>)
@@ -459,7 +448,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -469,7 +457,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				struct Bar {
 					let f: ((): InclusiveRange)
@@ -481,7 +469,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 2)
@@ -495,13 +482,12 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				struct interface Bar {
 					fun getRange(): InclusiveRange<UInt>
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -511,13 +497,12 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				struct interface Bar {
 					fun getRange(): InclusiveRange
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -529,7 +514,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				resource Foo {
 					let a: InclusiveRange<Int>
@@ -539,7 +524,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -549,7 +533,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				contract C {
 					struct interface Foo {
@@ -557,7 +541,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -567,7 +550,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				contract C {
 					struct interface Foo {
@@ -575,7 +558,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -587,7 +569,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				resource Foo {
 					let a: InclusiveRange
@@ -597,7 +579,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -609,7 +590,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				resource Bar {
 					let a: InclusiveRange<Int>
@@ -631,7 +612,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -641,7 +621,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				resource Bar {
 					let a: InclusiveRange
@@ -663,7 +643,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -675,13 +654,12 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				resource interface Bar {
 					fun getRange(): InclusiveRange<UInt>
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -691,13 +669,12 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				resource interface Bar {
 					fun getRange(): InclusiveRange
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -709,7 +686,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				contract C {
 					resource interface Foo {
@@ -717,7 +694,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -727,7 +703,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				contract C {
 					resource interface Foo {
@@ -735,7 +711,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					}
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -747,13 +722,12 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				pub fun main(): Type {
 					return Type<InclusiveRange<Word256>>()
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
@@ -763,13 +737,12 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				pub fun main(): Type {
 					return Type<InclusiveRange>()
 				}
 			`,
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -781,9 +754,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"event Foo(bar: InclusiveRange<Int>)",
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -795,9 +767,8 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			"event Foo(bar: InclusiveRange)",
-			options,
 		)
 
 		errs := RequireCheckerErrors(t, err, 2)
@@ -810,7 +781,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheckWithOptions(t,
+		err := test(t,
 			`
 				pub fun main(): Direction {
 					return Direction.RIGHT
@@ -823,7 +794,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					pub case RIGHT
 				}
 			`,
-			options,
 		)
 
 		require.NoError(t, err)
