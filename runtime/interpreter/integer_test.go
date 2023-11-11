@@ -30,7 +30,7 @@ import (
 const numGoRoutines = 100
 
 func runBench(b *testing.B, getValue func(value int8, staticType StaticType) IntegerValue) {
-	semaToStaticType := make(map[sema.Type]StaticType)
+	staticTypes := make([]StaticType, 0)
 	for _, integerType := range sema.AllIntegerTypes {
 		switch integerType {
 		case sema.IntegerType, sema.SignedIntegerType:
@@ -38,7 +38,7 @@ func runBench(b *testing.B, getValue func(value int8, staticType StaticType) Int
 		}
 
 		integerStaticType := ConvertSemaToStaticType(nil, integerType)
-		semaToStaticType[integerType] = integerStaticType
+		staticTypes = append(staticTypes, integerStaticType)
 	}
 
 	var wg sync.WaitGroup
@@ -47,13 +47,8 @@ func runBench(b *testing.B, getValue func(value int8, staticType StaticType) Int
 		defer wg.Done()
 
 		for i := 0; i <= math.MaxInt8; i++ {
-			for _, integerType := range sema.AllIntegerTypes {
-				switch integerType {
-				case sema.IntegerType, sema.SignedIntegerType:
-					continue
-				}
-
-				value := getValue(int8(i), semaToStaticType[integerType])
+			for _, integerType := range staticTypes {
+				value := getValue(int8(i), integerType)
 				runtime.KeepAlive(value)
 			}
 		}
