@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"fmt"
 	"math"
 	"runtime"
 	"sync"
@@ -49,7 +50,8 @@ func runBench(b *testing.B, getValue func(value int8, staticType StaticType) Int
 		for i := 0; i <= math.MaxInt8; i++ {
 			for _, integerType := range staticTypes {
 				value := getValue(int8(i), integerType)
-				runtime.KeepAlive(value)
+				str := fmt.Sprintf("Value = %d", value)
+				runtime.KeepAlive(str)
 			}
 		}
 	}
