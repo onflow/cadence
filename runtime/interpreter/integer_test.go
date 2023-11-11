@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"math"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -51,10 +53,8 @@ func runBench(b *testing.B, getValue func(value int8, staticType StaticType) Int
 					continue
 				}
 
-				value := getValue(i, semaToStaticType[integerType])
-
-				// Force a NOOP function call to ensure value isn't optimized away
-				value.isValue()
+				value := getValue(int8(i), semaToStaticType[integerType])
+				runtime.KeepAlive(value)
 			}
 		}
 	}
