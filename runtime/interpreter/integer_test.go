@@ -44,7 +44,7 @@ func runBench(b *testing.B, getValue func(value int8, staticType StaticType) Int
 	bench := func() {
 		defer wg.Done()
 
-		for i := int8(0); i <= 127; i++ {
+		for i := 0; i <= math.MaxInt8; i++ {
 			for _, integerType := range sema.AllIntegerTypes {
 				switch integerType {
 				case sema.IntegerType, sema.SignedIntegerType:
