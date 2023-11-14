@@ -16798,6 +16798,8 @@ func (v *CompositeValue) SetMember(
 		v.checkInvalidatedResourceUse(locationRange)
 	}
 
+	interpreter.enforceNotResourceDestruction(v.StorageID(), locationRange)
+
 	if config.TracingEnabled {
 		startTime := time.Now()
 

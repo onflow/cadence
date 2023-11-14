@@ -5483,10 +5483,9 @@ func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID
 	}
 }
 
-func (interpreter *Interpreter) withResourceDestruction(
+func (interpreter *Interpreter) enforceNotResourceDestruction(
 	storageID atree.StorageID,
 	locationRange LocationRange,
-	f func(),
 ) {
 	_, exists := interpreter.SharedState.destroyedResources[storageID]
 	if exists {
@@ -5494,6 +5493,14 @@ func (interpreter *Interpreter) withResourceDestruction(
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (interpreter *Interpreter) withResourceDestruction(
+	storageID atree.StorageID,
+	locationRange LocationRange,
+	f func(),
+) {
+	interpreter.enforceNotResourceDestruction(storageID, locationRange)
 
 	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
 

@@ -2981,3 +2981,42 @@ func TestInterpretInnerResourceMove(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
 }
+
+func TestInterpretSetMemberResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+    access(all) resource R {
+        access(all) let id: String
+        init(id: String) {
+            self.id = id
+        }
+    }
+    access(all) fun putBack(_ rl: &ResourceLoser, _ r: @R) {
+        rl.inner <-! r
+    }
+    access(all) resource ResourceLoser {
+        pub(set) var inner: @R?;
+        init(toLose: @R) {
+            self.inner <- toLose
+        }
+        destroy() {
+            var ref = &self as &ResourceLoser;
+            // Let's move self.inner out
+            var a <- self.inner
+            // And force-write it back
+            putBack(ref, <- a!)
+        }
+    }
+    access(all) fun main(): Void {
+       var resource <- create R(id: "abc");
+       var rl <- create ResourceLoser(toLose: <- resource);
+       destroy rl
+    }`,
+	)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}
