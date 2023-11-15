@@ -895,13 +895,10 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 
 func (interpreter *Interpreter) visitAssignment(
 	transferOperation ast.TransferOperation,
-	targetExpression ast.Expression, targetType sema.Type,
+	targetGetterSetter getterSetter, targetType sema.Type,
 	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
 ) {
-	// First evaluate the target, which results in a getter/setter function pair
-	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: position,
@@ -918,7 +915,7 @@ func (interpreter *Interpreter) visitAssignment(
 
 		const allowMissing = true
 
-		target := getterSetter.get(allowMissing)
+		target := targetGetterSetter.get(allowMissing)
 
 		if _, ok := target.(NilValue); !ok && target != nil {
 			panic(ForceAssignmentToNonNilResourceError{
@@ -933,7 +930,7 @@ func (interpreter *Interpreter) visitAssignment(
 
 	transferredValue := interpreter.transferAndConvert(value, valueType, targetType, locationRange)
 
-	getterSetter.set(transferredValue)
+	targetGetterSetter.set(transferredValue)
 }
 
 // NOTE: only called for top-level composite declarations
