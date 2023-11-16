@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -147,9 +146,10 @@ func (v *SimpleCompositeValue) GetMember(
 	return nil
 }
 
-func (*SimpleCompositeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
-	// Simple composite values have no removable members (fields / functions)
-	panic(errors.NewUnreachableError())
+func (v *SimpleCompositeValue) RemoveMember(_ *Interpreter, _ LocationRange, name string) Value {
+	value := v.Fields[name]
+	delete(v.Fields, name)
+	return value
 }
 
 func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ LocationRange, name string, value Value) bool {

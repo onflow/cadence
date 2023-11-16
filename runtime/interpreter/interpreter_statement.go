@@ -169,7 +169,7 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		interpreter.visitAssignment(
 			declaration.Transfer.Operation,
-			declaration.Value,
+			getterSetter,
 			valueType,
 			declaration.SecondValue,
 			secondValueType,
@@ -497,7 +497,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	// (and just evaluating the expression does not perform the removal),
 	// because if there is a second value,
 	// the assignment to the value will cause an overwrite of the value.
-	// If the resource was not moved ou of the container,
+	// If the resource was not moved out of the container,
 	// its contents get deleted.
 
 	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
@@ -529,7 +529,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 
 	interpreter.visitAssignment(
 		declaration.Transfer.Operation,
-		declaration.Value,
+		getterSetter,
 		valueType,
 		declaration.SecondValue,
 		secondValueType,
@@ -545,9 +545,11 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 	target := assignment.Target
 	value := assignment.Value
 
+	getterSetter := interpreter.assignmentGetterSetter(target)
+
 	interpreter.visitAssignment(
 		assignment.Transfer.Operation,
-		target, targetType,
+		getterSetter, targetType,
 		value, valueType,
 		assignment,
 	)

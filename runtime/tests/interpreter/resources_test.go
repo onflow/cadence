@@ -3069,3 +3069,71 @@ func TestInterpretSetMemberResourceLoss(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
+
+func TestInterpretValueTransferResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getLogs, _ := parseCheckAndInterpretWithLogs(t, `
+    access(all) resource R {
+        access(all) let id: String
+        init(_ id: String) {
+            log("Creating ".concat(id))
+            self.id = id
+        }
+        destroy() {
+            log("Destroying ".concat(self.id))
+        }
+    }
+
+    access(all) struct IndexSwitcher {
+        access(self) var counter: Int
+        init() {
+            self.counter = 0
+        }
+        access(all) fun callback(): Int {
+            self.counter = self.counter + 1
+            if self.counter == 1 {
+                // Which key we want to be read?
+                // Let's point it to a non-existent key
+                return 123
+            } else {
+                // Which key we want to be assigned to?
+                // We point it to 0 to overwrite the victim value
+                return 0
+            }
+        }
+    }
+
+    access(all) fun loseResource(victim: @R) {
+       var in <- create R("dummy resource")
+       var dict: @{Int: R} <- { 0: <- victim }
+       var indexSwitcher = IndexSwitcher()
+       
+       // this callback should only be evaluated once, rather than twice
+       var out <- dict[indexSwitcher.callback()] <- in
+       destroy out
+       destroy dict
+    }
+
+    access(all) fun main(): Void {
+       var victim <- create R("victim resource")
+       loseResource(victim: <- victim)
+    }
+    `,
+	)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			`"Creating victim resource"`,
+			`"Creating dummy resource"`,
+			`"Destroying dummy resource"`,
+			`"Destroying victim resource"`,
+		},
+		getLogs(),
+	)
+
+}
