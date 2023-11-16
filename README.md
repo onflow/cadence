@@ -48,4 +48,9 @@ For example, it contains the source for the language reference.
 
 ## Roadmap
 
+|Milestone|Target date|
+----------|-----------|
+|Complete Cadence 1.0 features & FLIPs|11/28/23|
+|Complete execution state Cadence 1.0 migrations|12/21/2023|
+
 
