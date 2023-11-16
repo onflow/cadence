@@ -1719,3 +1719,28 @@ func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
 	_, err := inter.Invoke("main")
 	require.NoError(t, err)
 }
+
+func TestInterpretReferenceDereference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main(): Int {
+                let x: &Int = &1
+                return x.dereference()
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 1),
+			value,
+		)
+	})
+}

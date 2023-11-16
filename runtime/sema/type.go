@@ -5957,8 +5957,10 @@ func (t *DictionaryType) SupportedEntitlements() *EntitlementOrderedSet {
 
 // ReferenceType represents the reference to a value
 type ReferenceType struct {
-	Type          Type
-	Authorization Access
+	Type                Type
+	Authorization       Access
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ Type = &ReferenceType{}
@@ -6113,10 +6115,6 @@ func (t *ReferenceType) Map(gauge common.MemoryGauge, typeParamMap map[*TypePara
 	return f(NewReferenceType(gauge, t.Authorization, mappedType))
 }
 
-func (t *ReferenceType) GetMembers() map[string]MemberResolver {
-	return t.Type.GetMembers()
-}
-
 func (t *ReferenceType) isValueIndexableType() bool {
 	referencedType, ok := t.Type.(ValueIndexableType)
 	if !ok {
@@ -6216,6 +6214,67 @@ func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
 	return &ReferenceType{
 		Authorization: t.Authorization,
 		Type:          newInnerType,
+	}
+}
+
+func (t *ReferenceType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+const ReferenceTypeDereferenceFunctionName = "dereference"
+
+const referenceTypeDereferenceFunctionDocString = `
+	todo
+`
+
+func (t *ReferenceType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		resolvers := t.Type.GetMembers()
+
+		// Add members applicable to all ReferenceType instances
+		members := map[string]MemberResolver{
+			ReferenceTypeDereferenceFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+					innerType := t.Type
+
+					// TODO: Define a new error type.
+					if innerType.IsResourceType() {
+						report(
+							&InvalidResourceArrayMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindFunction,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						ReferenceDereferenceFunctionType(t.Type),
+						referenceTypeDereferenceFunctionDocString,
+					)
+				},
+			},
+		}
+
+		// TODO: What if the inner type also has a function with the name "dereference"?
+		for key, member := range members {
+			resolvers[key] = member
+		}
+
+		t.memberResolvers = resolvers
+	})
+}
+
+func ReferenceDereferenceFunctionType(borrowedType Type) *FunctionType {
+	return &FunctionType{
+		ReturnTypeAnnotation: NewTypeAnnotation(borrowedType),
+		// TODO: Confirm that this can be called View.
+		Purity: FunctionPurityView,
 	}
 }
 

@@ -3061,3 +3061,124 @@ func TestCheckResourceReferenceIndexNilAssignment(t *testing.T) {
 		require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[2])
 	})
 }
+
+func TestCheckReferenceDereferenceFunction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("variable declaration type annotation", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("non-auth", func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t, `
+              let x: &Int = &1
+              let y: Int = x.dereference()
+            `)
+
+			require.NoError(t, err)
+
+			yType := RequireGlobalValue(t, checker.Elaboration, "y")
+
+			assert.Equal(t,
+				sema.IntType,
+				yType,
+			)
+		})
+
+		// t.Run("auth", func(t *testing.T) {
+
+		// 	t.Parallel()
+
+		// 	_, err := ParseAndCheck(t, `
+		//     entitlement X
+		//       let x: auth(X) &Int = &1
+		//     `)
+
+		// 	require.NoError(t, err)
+		// })
+
+		// t.Run("non-reference type", func(t *testing.T) {
+
+		// 	t.Parallel()
+
+		// 	_, err := ParseAndCheck(t, `
+		//       let x: Int = &1
+		//     `)
+
+		// 	errs := RequireCheckerErrors(t, err, 1)
+
+		// 	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+		// })
+	})
+
+	// t.Run("variable declaration type annotation", func(t *testing.T) {
+
+	// 	t.Run("non-auth", func(t *testing.T) {
+
+	// 		t.Parallel()
+
+	// 		_, err := ParseAndCheck(t, `
+	//           let x = &1 as &Int
+	//         `)
+
+	// 		require.NoError(t, err)
+	// 	})
+
+	// 	t.Run("auth", func(t *testing.T) {
+
+	// 		t.Parallel()
+
+	// 		_, err := ParseAndCheck(t, `
+	//           entitlement X
+	//           let x = &1 as auth(X) &Int
+	//         `)
+
+	// 		require.NoError(t, err)
+	// 	})
+
+	// 	t.Run("non-reference type", func(t *testing.T) {
+
+	// 		t.Parallel()
+
+	// 		_, err := ParseAndCheck(t, `
+	//           let x = &1 as Int
+	//         `)
+
+	// 		errs := RequireCheckerErrors(t, err, 1)
+
+	// 		assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+	// 	})
+	// })
+
+	// t.Run("invalid non-auth to auth cast", func(t *testing.T) {
+
+	// 	t.Parallel()
+
+	// 	_, err := ParseAndCheck(t, `
+	//       entitlement X
+	//       let x = &1 as &Int as auth(X) &Int
+	//     `)
+
+	// 	errs := RequireCheckerErrors(t, err, 1)
+
+	// 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	// })
+
+	// t.Run("missing type", func(t *testing.T) {
+
+	// 	t.Parallel()
+
+	// 	_, err := ParseAndCheck(t, `
+	//       let x = &1
+	//     `)
+
+	// 	errs := RequireCheckerErrors(t, err, 1)
+
+	// 	assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+	// })
+
+}

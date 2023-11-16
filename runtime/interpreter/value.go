@@ -20311,6 +20311,17 @@ func (v *EphemeralReferenceValue) GetMember(
 ) Value {
 	self := v.MustReferencedValue(interpreter, locationRange)
 
+	switch name {
+	case sema.ReferenceTypeDereferenceFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ReferenceDereferenceFunctionType(v.BorrowedType),
+			func(invocation Invocation) Value {
+				return v.Value
+			},
+		)
+	}
+
 	return interpreter.getMember(self, locationRange, name)
 }
 
