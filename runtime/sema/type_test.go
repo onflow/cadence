@@ -2144,6 +2144,7 @@ func TestReferenceType_ID(t *testing.T) {
 }
 
 func TestReferenceType_String(t *testing.T) {
+
 	t.Parallel()
 
 	testLocation := common.StringLocation("test")

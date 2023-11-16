@@ -1713,8 +1713,8 @@ func TestInterpretAttachmentsRuntimeType(t *testing.T) {
 
 		a, err := inter.Invoke("test")
 		require.NoError(t, err)
-		require.IsType(t, interpreter.TypeValue{}, a)
-		require.Equal(t, "S.test.A", a.(interpreter.TypeValue).Type.String())
+		require.IsType(t, &interpreter.TypeValue{}, a)
+		require.Equal(t, "S.test.A", a.(*interpreter.TypeValue).Type.String())
 	})
 }
 

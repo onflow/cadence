@@ -3388,12 +3388,12 @@ func init() {
 }
 
 func dictionaryTypeFunction(invocation Invocation) Value {
-	keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
+	keyTypeValue, ok := invocation.Arguments[0].(*TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
+	valueTypeValue, ok := invocation.Arguments[1].(*TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -3426,7 +3426,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	typeValue, ok := invocation.Arguments[1].(TypeValue)
+	typeValue, ok := invocation.Arguments[1].(*TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -3530,7 +3530,7 @@ func functionTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	typeValue, ok := invocation.Arguments[1].(TypeValue)
+	typeValue, ok := invocation.Arguments[1].(*TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -3542,7 +3542,7 @@ func functionTypeFunction(invocation Invocation) Value {
 	if parameterCount > 0 {
 		parameterTypes = make([]sema.Parameter, 0, parameterCount)
 		parameters.Iterate(interpreter, func(param Value) bool {
-			semaType := interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
+			semaType := interpreter.MustConvertStaticToSemaType(param.(*TypeValue).Type)
 			parameterTypes = append(
 				parameterTypes,
 				sema.Parameter{
@@ -3721,7 +3721,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		converter: NewUnmeteredHostFunctionValue(
 			sema.OptionalTypeFunctionType,
 			func(invocation Invocation) Value {
-				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				typeValue, ok := invocation.Arguments[0].(*TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3741,7 +3741,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		converter: NewUnmeteredHostFunctionValue(
 			sema.VariableSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
-				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				typeValue, ok := invocation.Arguments[0].(*TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3762,7 +3762,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		converter: NewUnmeteredHostFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
-				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				typeValue, ok := invocation.Arguments[0].(*TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3788,7 +3788,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		converter: NewUnmeteredHostFunctionValue(
 			sema.CapabilityTypeFunctionType,
 			func(invocation Invocation) Value {
-				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				typeValue, ok := invocation.Arguments[0].(*TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -4873,7 +4873,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 			interpreter := invocation.Interpreter
 
 			firstArgument := invocation.Arguments[0]
-			typeValue, ok := firstArgument.(TypeValue)
+			typeValue, ok := firstArgument.(*TypeValue)
 
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -5461,4 +5461,64 @@ func (interpreter *Interpreter) withResourceDestruction(
 	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
 
 	f()
+}
+
+// Converts the input value into a version compatible with the new entitlements feature,
+// with the same members/operations accessible on any references as would have been accessible in the past.
+// Modifies the input `v` in place
+func (interpreter *Interpreter) ConvertValueToEntitlements(v Value, convertToEntitledType func(sema.Type) sema.Type) {
+	semaType := interpreter.MustSemaTypeOfValue(v)
+	entitledType := convertToEntitledType(semaType)
+
+	switch v := v.(type) {
+	case *EphemeralReferenceValue:
+		entitledReferenceType := entitledType.(*sema.ReferenceType)
+		staticAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, entitledReferenceType.Authorization)
+		v.Authorization = staticAuthorization
+		v.BorrowedType = entitledReferenceType.Type
+		interpreter.ConvertValueToEntitlements(v.Value, convertToEntitledType)
+	case *StorageReferenceValue:
+		entitledReferenceType := entitledType.(*sema.ReferenceType)
+		staticAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, entitledReferenceType.Authorization)
+		v.Authorization = staticAuthorization
+		v.BorrowedType = entitledReferenceType.Type
+		// stored value is not converted; instead we will convert it upon load
+		// change this
+	case *SomeValue:
+		interpreter.ConvertValueToEntitlements(v.value, convertToEntitledType)
+		// reset the storable, to be recomputed on next access
+		v.valueStorable = nil
+	case *CompositeValue:
+		// convert all the fields of this composite value to entitlements
+		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType) })
+	case *ArrayValue:
+		entitledArrayType := entitledType.(sema.ArrayType)
+		v.semaType = entitledArrayType
+		v.Type = ConvertSemaArrayTypeToStaticArrayType(interpreter, entitledArrayType)
+		// convert all the elements of this array value to entitlements
+		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType) })
+	case *DictionaryValue:
+		entitledDictionaryType := entitledType.(*sema.DictionaryType)
+		v.semaType = entitledDictionaryType
+		v.Type = ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, entitledDictionaryType)
+		// convert all the elements of this array value to entitlements
+		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType) })
+	// capabilities should just have their borrow type updated;
+	// we will update their underlying value when the capability is borrowed
+	// TODO: fix this
+	case *CapabilityValue:
+		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
+		v.BorrowType = ConvertSemaToStaticType(interpreter, entitledCapabilityValue.BorrowType)
+	case *TypeValue:
+		if v.Type == nil {
+			return
+		}
+		// convert the static type of the value
+		v.Type = ConvertSemaToStaticType(
+			interpreter,
+			convertToEntitledType(
+				interpreter.MustConvertStaticToSemaType(v.Type),
+			),
+		)
+	}
 }

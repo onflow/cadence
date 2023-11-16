@@ -308,44 +308,44 @@ type TypeValue struct {
 	Type StaticType
 }
 
-var EmptyTypeValue = TypeValue{}
+var EmptyTypeValue = &TypeValue{}
 
-var _ Value = TypeValue{}
-var _ atree.Storable = TypeValue{}
-var _ EquatableValue = TypeValue{}
-var _ MemberAccessibleValue = TypeValue{}
+var _ Value = &TypeValue{}
+var _ atree.Storable = &TypeValue{}
+var _ EquatableValue = &TypeValue{}
+var _ MemberAccessibleValue = &TypeValue{}
 
-func NewUnmeteredTypeValue(t StaticType) TypeValue {
-	return TypeValue{Type: t}
+func NewUnmeteredTypeValue(t StaticType) *TypeValue {
+	return &TypeValue{Type: t}
 }
 
 func NewTypeValue(
 	memoryGauge common.MemoryGauge,
 	staticType StaticType,
-) TypeValue {
+) *TypeValue {
 	common.UseMemory(memoryGauge, common.TypeValueMemoryUsage)
 	return NewUnmeteredTypeValue(staticType)
 }
 
-func (TypeValue) isValue() {}
+func (*TypeValue) isValue() {}
 
-func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
 }
 
-func (TypeValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*TypeValue) Walk(_ *Interpreter, _ func(Value)) {
 	// NO-OP
 }
 
-func (TypeValue) StaticType(interpreter *Interpreter) StaticType {
+func (*TypeValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeMetaType)
 }
 
-func (TypeValue) IsImportable(_ *Interpreter) bool {
+func (*TypeValue) IsImportable(_ *Interpreter) bool {
 	return sema.MetaType.Importable
 }
 
-func (v TypeValue) String() string {
+func (v *TypeValue) String() string {
 	var typeString string
 	staticType := v.Type
 	if staticType != nil {
@@ -355,11 +355,11 @@ func (v TypeValue) String() string {
 	return format.TypeValue(typeString)
 }
 
-func (v TypeValue) RecursiveString(_ SeenReferences) string {
+func (v *TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v TypeValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+func (v *TypeValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
 	common.UseMemory(memoryGauge, common.TypeValueStringMemoryUsage)
 
 	var typeString string
@@ -370,8 +370,8 @@ func (v TypeValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReference
 	return format.TypeValue(typeString)
 }
 
-func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
-	otherTypeValue, ok := other.(TypeValue)
+func (v *TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
+	otherTypeValue, ok := other.(*TypeValue)
 	if !ok {
 		return false
 	}
@@ -388,7 +388,7 @@ func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
@@ -409,7 +409,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 				interpreter := invocation.Interpreter
 
 				staticType := v.Type
-				otherTypeValue, ok := invocation.Arguments[0].(TypeValue)
+				otherTypeValue, ok := invocation.Arguments[0].(*TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -432,17 +432,17 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 	return nil
 }
 
-func (TypeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*TypeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Types have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Types have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v TypeValue) ConformsToStaticType(
+func (v *TypeValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ LocationRange,
 	_ TypeConformanceResults,
@@ -450,7 +450,7 @@ func (v TypeValue) ConformsToStaticType(
 	return true
 }
 
-func (v TypeValue) Storable(
+func (v *TypeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
 	maxInlineSize uint64,
@@ -463,15 +463,15 @@ func (v TypeValue) Storable(
 	)
 }
 
-func (TypeValue) NeedsStoreTo(_ atree.Address) bool {
+func (*TypeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (TypeValue) IsResourceKinded(_ *Interpreter) bool {
+func (*TypeValue) IsResourceKinded(_ *Interpreter) bool {
 	return false
 }
 
-func (v TypeValue) Transfer(
+func (v *TypeValue) Transfer(
 	interpreter *Interpreter,
 	_ LocationRange,
 	_ atree.Address,
@@ -485,29 +485,30 @@ func (v TypeValue) Transfer(
 	return v
 }
 
-func (v TypeValue) Clone(_ *Interpreter) Value {
+func (v *TypeValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (TypeValue) DeepRemove(_ *Interpreter) {
+func (*TypeValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
-func (v TypeValue) ByteSize() uint32 {
+func (v *TypeValue) ByteSize() uint32 {
 	return mustStorableSize(v)
 }
 
-func (v TypeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+func (v *TypeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (TypeValue) ChildStorables() []atree.Storable {
+func (*TypeValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
 // HashInput returns a byte slice containing:
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
+
 func (v TypeValue) HashInput(interpreter *Interpreter, _ LocationRange, scratch []byte) []byte {
 	typeID := v.Type.ID()
 

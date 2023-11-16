@@ -23,7 +23,9 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/stretchr/testify/require"
 )
 
@@ -358,4 +360,437 @@ func TestConvertToEntitledType(t *testing.T) {
 		})
 	}
 
+}
+
+func TestConvertToEntitledValue(t *testing.T) {
+	t.Parallel()
+
+	var uuid uint64
+
+	storage := interpreter.NewInMemoryStorage(nil)
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	code := `
+		access(all) entitlement E
+		access(all) entitlement F
+		access(all) entitlement G
+
+		access(all) entitlement mapping M {
+			E -> F
+			F -> G
+		}
+
+		access(all)  struct S {
+			access(E) let eField: Int
+			access(F) let fField: String
+			init() {
+				self.eField = 0
+				self.fField = ""
+			}
+		}
+
+		access(all) resource R {
+			access(E, G) let egField: Int
+			init() {
+				self.egField = 0
+			}
+		}
+
+		access(all) resource Nested {
+			access(E | F) let efField: @R
+			init() {
+				self.efField <- create R()
+			}
+			destroy() {
+				destroy self.efField
+			}
+		}
+
+		access(all) fun makeS(): S {
+			return S()
+		}
+
+		access(all) fun makeR(): @R {
+			return <- create R()
+		}
+
+		access(all) fun makeNested(): @Nested {
+			return <- create Nested()
+		}
+	`
+	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+		code,
+		checkerUtils.ParseAndCheckOptions{},
+	)
+
+	require.NoError(t, err)
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		&interpreter.Config{
+			Storage: storage,
+			UUIDHandler: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		},
+	)
+
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	rValue, err := inter.Invoke("makeR")
+	require.NoError(t, err)
+	sValue, err := inter.Invoke("makeS")
+	require.NoError(t, err)
+	nestedValue, err := inter.Invoke("makeNested")
+	require.NoError(t, err)
+
+	tests := []struct {
+		Input  interpreter.Value
+		Output interpreter.Value
+		Name   string
+	}{
+		{
+			Input:  rValue,
+			Output: rValue,
+			Name:   "R",
+		},
+		{
+			Input:  sValue,
+			Output: sValue,
+			Name:   "S",
+		},
+		{
+			Input:  nestedValue,
+			Output: nestedValue,
+			Name:   "Nested",
+		},
+		{
+			Input: interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue)),
+			Output: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+					2,
+					sema.Conjunction,
+				),
+				sValue,
+				inter.MustSemaTypeOfValue(sValue),
+			),
+			Name: "&S",
+		},
+		{
+			Input: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, sValue.StaticType(inter))),
+				testAddress,
+				interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue)),
+			),
+			Output: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.NewReferenceStaticType(inter,
+						interpreter.UnauthorizedAccess,
+						sValue.StaticType(inter),
+					),
+				),
+				testAddress,
+				interpreter.NewEphemeralReferenceValue(
+					inter,
+					interpreter.NewEntitlementSetAuthorization(
+						inter,
+						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+						2,
+						sema.Conjunction,
+					),
+					sValue,
+					inter.MustSemaTypeOfValue(sValue),
+				),
+			),
+			Name: "[&S]",
+		},
+		{
+			Input: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeMetaType),
+				testAddress,
+				interpreter.NewTypeValue(
+					inter,
+					interpreter.NewEphemeralReferenceValue(
+						inter,
+						interpreter.UnauthorizedAccess,
+						sValue,
+						inter.MustSemaTypeOfValue(sValue),
+					).StaticType(inter),
+				),
+			),
+			Output: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeMetaType),
+				testAddress,
+				interpreter.NewTypeValue(
+					inter,
+					interpreter.NewEphemeralReferenceValue(
+						inter,
+						interpreter.NewEntitlementSetAuthorization(
+							inter,
+							func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+							2,
+							sema.Conjunction,
+						),
+						sValue,
+						inter.MustSemaTypeOfValue(sValue),
+					).StaticType(inter),
+				),
+			),
+			Name: "[Type]",
+		},
+		{
+			Input: interpreter.NewDictionaryValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, sValue.StaticType(inter))),
+				interpreter.NewIntValueFromInt64(inter, 0),
+				interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue)),
+			),
+			Output: interpreter.NewDictionaryValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.NewReferenceStaticType(inter,
+					interpreter.UnauthorizedAccess,
+					sValue.StaticType(inter),
+				)),
+				interpreter.NewIntValueFromInt64(inter, 0),
+				interpreter.NewEphemeralReferenceValue(
+					inter,
+					interpreter.NewEntitlementSetAuthorization(
+						inter,
+						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+						2,
+						sema.Conjunction,
+					),
+					sValue,
+					inter.MustSemaTypeOfValue(sValue),
+				),
+			),
+			Name: "{Int: &S}",
+		},
+		{
+			Input: interpreter.NewDictionaryValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.PrimitiveStaticTypeMetaType),
+				interpreter.NewIntValueFromInt64(inter, 0),
+				interpreter.NewTypeValue(
+					inter,
+					interpreter.NewEphemeralReferenceValue(
+						inter,
+						interpreter.UnauthorizedAccess,
+						sValue,
+						inter.MustSemaTypeOfValue(sValue),
+					).StaticType(inter),
+				),
+			),
+			Output: interpreter.NewDictionaryValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.PrimitiveStaticTypeMetaType),
+				interpreter.NewIntValueFromInt64(inter, 0),
+				interpreter.NewTypeValue(inter,
+					interpreter.NewEphemeralReferenceValue(
+						inter,
+						interpreter.NewEntitlementSetAuthorization(
+							inter,
+							func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+							2,
+							sema.Conjunction,
+						), sValue, inter.MustSemaTypeOfValue(sValue),
+					).StaticType(inter),
+				),
+			),
+			Name: "{Int: Type}",
+		},
+		{
+			Input: interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue)),
+			Output: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
+					2,
+					sema.Conjunction,
+				),
+				rValue,
+				inter.MustSemaTypeOfValue(rValue),
+			),
+			Name: "&R",
+		},
+		{
+			Input: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, rValue.StaticType(inter))),
+				testAddress,
+				interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue)),
+			),
+			Output: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, rValue.StaticType(inter))),
+				testAddress,
+				interpreter.NewEphemeralReferenceValue(
+					inter,
+					interpreter.NewEntitlementSetAuthorization(
+						inter,
+						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
+						2,
+						sema.Conjunction,
+					),
+					rValue,
+					inter.MustSemaTypeOfValue(rValue),
+				),
+			),
+			Name: "[&R]",
+		},
+		{
+			Input: interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue)),
+			Output: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+					2,
+					sema.Conjunction,
+				),
+				nestedValue,
+				inter.MustSemaTypeOfValue(nestedValue),
+			),
+			Name: "&Nested",
+		},
+		{
+			Input: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, nestedValue.StaticType(inter))),
+				testAddress,
+				interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue)),
+			),
+			Output: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, nestedValue.StaticType(inter))),
+				testAddress,
+				interpreter.NewEphemeralReferenceValue(
+					inter,
+					interpreter.NewEntitlementSetAuthorization(
+						inter,
+						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+						2,
+						sema.Conjunction,
+					),
+					nestedValue,
+					inter.MustSemaTypeOfValue(nestedValue),
+				),
+			),
+			Name: "[&Nested]",
+		},
+		{
+			Input: interpreter.NewCapabilityValue(
+				inter,
+				0,
+				interpreter.NewAddressValue(inter, testAddress),
+				interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, sValue.StaticType(inter)),
+			),
+			Output: interpreter.NewCapabilityValue(
+				inter,
+				0,
+				interpreter.NewAddressValue(inter, testAddress),
+				interpreter.NewReferenceStaticType(
+					inter,
+					interpreter.NewEntitlementSetAuthorization(
+						inter,
+						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+						2,
+						sema.Conjunction,
+					),
+					sValue.StaticType(inter),
+				),
+			),
+			Name: "Capability<&S>",
+		},
+		{
+			Input: interpreter.NewCapabilityValue(
+				inter,
+				0,
+				interpreter.NewAddressValue(inter, testAddress),
+				interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, rValue.StaticType(inter)),
+			),
+			Output: interpreter.NewCapabilityValue(
+				inter,
+				0,
+				interpreter.NewAddressValue(inter, testAddress),
+				interpreter.NewReferenceStaticType(
+					inter,
+					interpreter.NewEntitlementSetAuthorization(
+						inter,
+						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
+						2,
+						sema.Conjunction,
+					),
+					rValue.StaticType(inter),
+				),
+			),
+			Name: "Capability<&R>",
+		},
+		// TODO: after mutability entitlements, add tests for references to arrays and dictionaries
+	}
+
+	for _, test := range tests {
+		var runtimeTypeTest struct {
+			Input  interpreter.Value
+			Output interpreter.Value
+			Name   string
+		}
+		runtimeTypeTest.Input = interpreter.NewTypeValue(inter, test.Input.Clone(inter).StaticType(inter))
+		runtimeTypeTest.Output = interpreter.NewTypeValue(inter, test.Output.Clone(inter).StaticType(inter))
+		runtimeTypeTest.Name = "runtime type " + test.Name
+
+		tests = append(tests, runtimeTypeTest)
+	}
+
+	for _, test := range tests {
+		var optionalValueTest struct {
+			Input  interpreter.Value
+			Output interpreter.Value
+			Name   string
+		}
+		optionalValueTest.Input = interpreter.NewSomeValueNonCopying(inter, test.Input.Clone(inter))
+		optionalValueTest.Output = interpreter.NewSomeValueNonCopying(inter, test.Output.Clone(inter))
+		optionalValueTest.Name = "optional " + test.Name
+
+		tests = append(tests, optionalValueTest)
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			inter.ConvertValueToEntitlements(test.Input, ConvertToEntitledType)
+			switch input := test.Input.(type) {
+			case interpreter.EquatableValue:
+				require.True(t, input.Equal(inter, interpreter.EmptyLocationRange, test.Output))
+			default:
+				require.Equal(t, input, test.Output)
+			}
+		})
+	}
 }

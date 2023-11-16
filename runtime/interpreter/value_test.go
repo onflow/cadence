@@ -82,7 +82,7 @@ func TestOwnerNewArray(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newUnmeteredInMemoryStorage()
+	storage := NewInMemoryStorage(nil)
 
 	elaboration := sema.NewElaboration(nil)
 	elaboration.SetCompositeType(
@@ -2110,12 +2110,12 @@ func TestTypeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			TypeValue{
+			(&TypeValue{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
+			}).Equal(
 				inter,
 				EmptyLocationRange,
-				TypeValue{
+				&TypeValue{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -2129,12 +2129,12 @@ func TestTypeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			TypeValue{
+			(&TypeValue{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
+			}).Equal(
 				inter,
 				EmptyLocationRange,
-				TypeValue{
+				&TypeValue{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -2148,9 +2148,9 @@ func TestTypeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			TypeValue{
+			(&TypeValue{
 				Type: PrimitiveStaticTypeString,
-			}.Equal(
+			}).Equal(
 				inter,
 				EmptyLocationRange,
 				NewUnmeteredStringValue("String"),
