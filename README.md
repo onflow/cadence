@@ -53,6 +53,6 @@ For example, it contains the source for the language reference.
 |C1.0-Launch-M1 |Complete Cadence 1.0 features & FLIPs |11/28/23|
 |C1.0-Launch-M2 |Complete execution state Cadence 1.0 migrations |12/21/2023|
 
-For more detailed Roadmap breakdown see: https://github.com/orgs/onflow/projects/35/views/5
+See the GH project for [more detailed Roadmap breakdown](https://github.com/orgs/onflow/projects/35/views/5)
 
 
