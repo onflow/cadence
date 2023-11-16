@@ -219,6 +219,7 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	StorageID() atree.StorageID
+	isInvalidatedResource(*Interpreter) bool
 }
 
 // ContractValue is the value of a contract.
@@ -1771,8 +1772,12 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 	return importable
 }
 
+func (v *ArrayValue) isInvalidatedResource(interpreter *Interpreter) bool {
+	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter))
+}
+
 func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
-	if v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter)) {
+	if v.isInvalidatedResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
@@ -16459,7 +16464,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if config.TracingEnabled {
@@ -16569,7 +16574,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if config.TracingEnabled {
@@ -16631,8 +16636,12 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	return nil
 }
 
-func (v *CompositeValue) checkInvalidatedResourceUse(locationRange LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource) {
+func (v *CompositeValue) isInvalidatedResource(_ *Interpreter) bool {
+	return v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource)
+}
+
+func (v *CompositeValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
+	if v.isInvalidatedResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
@@ -16728,7 +16737,7 @@ func (v *CompositeValue) RemoveMember(
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if config.TracingEnabled {
@@ -16795,7 +16804,7 @@ func (v *CompositeValue) SetMember(
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	if config.TracingEnabled {
@@ -16931,7 +16940,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 	config := interpreter.SharedState.Config
 
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	storable, err := v.dictionary.Get(
@@ -17183,7 +17192,7 @@ func (v *CompositeValue) Transfer(
 
 	// Should be checked before accessing `v.dictionary`.
 	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
+		v.checkInvalidatedResourceUse(interpreter, locationRange)
 	}
 
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
@@ -17940,8 +17949,12 @@ func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
+func (v *DictionaryValue) isInvalidatedResource(interpreter *Interpreter) bool {
+	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter))
+}
+
 func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter)) {
+	if v.isInvalidatedResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})

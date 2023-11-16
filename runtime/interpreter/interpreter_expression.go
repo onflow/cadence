@@ -303,7 +303,19 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
-	return ast.AcceptExpression[Value](expression, interpreter)
+	result := ast.AcceptExpression[Value](expression, interpreter)
+
+	resourceKindedValue, ok := result.(ReferenceTrackedResourceKindedValue)
+	if ok && resourceKindedValue.isInvalidatedResource(interpreter) {
+		panic(InvalidatedResourceError{
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+		})
+	}
+
+	return result
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) Value {
