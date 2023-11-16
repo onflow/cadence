@@ -46,11 +46,13 @@ If you would like to contribute to Cadence, have a look at the [contributing gui
 Development documentation can be found in the [/docs directory](https://github.com/onflow/flow/tree/master/docs).
 For example, it contains the source for the language reference.
 
-## Roadmap
+## Public Roadmap
 
-|Milestone|Target date|
-----------|-----------|
-|Complete Cadence 1.0 features & FLIPs|11/28/23|
-|Complete execution state Cadence 1.0 migrations|12/21/2023|
+|Milestone|Desscription|Target date|
+----------|-----------|----|
+|C1.0-Launch-M1 |Complete Cadence 1.0 features & FLIPs |11/28/23|
+|C1.0-Launch-M2 |Complete execution state Cadence 1.0 migrations |12/21/2023|
+
+For more detailed Roadmap breakdown see: https://github.com/orgs/onflow/projects/35/views/5
 
 
