@@ -1207,7 +1207,6 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			}
 
 			innerValue := result.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
 
 			return NewSomeValueNonCopying(
 				interpreter,
