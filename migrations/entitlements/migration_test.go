@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,19 +33,19 @@ func TestConvertToEntitledType(t *testing.T) {
 
 	testLocation := common.StringLocation("test")
 
-	entitlementE := NewEntitlementType(nil, testLocation, "E")
-	entitlementF := NewEntitlementType(nil, testLocation, "F")
-	entitlementG := NewEntitlementType(nil, testLocation, "G")
+	entitlementE := sema.NewEntitlementType(nil, testLocation, "E")
+	entitlementF := sema.NewEntitlementType(nil, testLocation, "F")
+	entitlementG := sema.NewEntitlementType(nil, testLocation, "G")
 
-	eAccess := NewEntitlementSetAccess([]*EntitlementType{entitlementE}, Conjunction)
-	fAccess := NewEntitlementSetAccess([]*EntitlementType{entitlementF}, Conjunction)
-	eOrFAccess := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF}, Disjunction)
-	eAndFAccess := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF}, Conjunction)
-	eAndGAccess := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementG}, Conjunction)
-	eFAndGAccess := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF, entitlementG}, Conjunction)
+	eAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE}, sema.Conjunction)
+	fAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementF}, sema.Conjunction)
+	eOrFAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementF}, sema.Disjunction)
+	eAndFAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementF}, sema.Conjunction)
+	eAndGAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementG}, sema.Conjunction)
+	eFAndGAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementF, entitlementG}, sema.Conjunction)
 
-	mapM := NewEntitlementMapType(nil, testLocation, "M")
-	mapM.Relations = []EntitlementRelation{
+	mapM := sema.NewEntitlementMapType(nil, testLocation, "M")
+	mapM.Relations = []sema.EntitlementRelation{
 		{
 			Input:  entitlementE,
 			Output: entitlementF,
@@ -54,251 +55,251 @@ func TestConvertToEntitledType(t *testing.T) {
 			Output: entitlementG,
 		},
 	}
-	mapAccess := NewEntitlementMapAccess(mapM)
+	mapAccess := sema.NewEntitlementMapAccess(mapM)
 
-	compositeStructWithOnlyE := &CompositeType{
+	compositeStructWithOnlyE := &sema.CompositeType{
 		Location:   testLocation,
 		Identifier: "S",
 		Kind:       common.CompositeKindStructure,
-		Members:    &StringMemberOrderedMap{},
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 	compositeStructWithOnlyE.Members.Set(
 		"foo",
-		NewFieldMember(nil, compositeStructWithOnlyE, eAccess, ast.VariableKindConstant, "foo", IntType, ""),
+		sema.NewFieldMember(nil, compositeStructWithOnlyE, eAccess, ast.VariableKindConstant, "foo", sema.IntType, ""),
 	)
 
-	compositeResourceWithOnlyF := &CompositeType{
+	compositeResourceWithOnlyF := &sema.CompositeType{
 		Location:   testLocation,
 		Identifier: "R",
 		Kind:       common.CompositeKindResource,
-		Members:    &StringMemberOrderedMap{},
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 	compositeResourceWithOnlyF.Members.Set(
 		"bar",
-		NewFieldMember(nil, compositeResourceWithOnlyF, fAccess, ast.VariableKindConstant, "bar", IntType, ""),
+		sema.NewFieldMember(nil, compositeResourceWithOnlyF, fAccess, ast.VariableKindConstant, "bar", sema.IntType, ""),
 	)
 	compositeResourceWithOnlyF.Members.Set(
 		"baz",
-		NewFieldMember(nil, compositeResourceWithOnlyF, fAccess, ast.VariableKindConstant, "baz", compositeStructWithOnlyE, ""),
+		sema.NewFieldMember(nil, compositeResourceWithOnlyF, fAccess, ast.VariableKindConstant, "baz", compositeStructWithOnlyE, ""),
 	)
 
-	compositeResourceWithEOrF := &CompositeType{
+	compositeResourceWithEOrF := &sema.CompositeType{
 		Location:   testLocation,
 		Identifier: "R",
 		Kind:       common.CompositeKindResource,
-		Members:    &StringMemberOrderedMap{},
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 	compositeResourceWithEOrF.Members.Set(
 		"qux",
-		NewFieldMember(nil, compositeResourceWithEOrF, eOrFAccess, ast.VariableKindConstant, "qux", IntType, ""),
+		sema.NewFieldMember(nil, compositeResourceWithEOrF, eOrFAccess, ast.VariableKindConstant, "qux", sema.IntType, ""),
 	)
 
-	compositeTwoFields := &CompositeType{
+	compositeTwoFields := &sema.CompositeType{
 		Location:   testLocation,
 		Identifier: "S",
 		Kind:       common.CompositeKindStructure,
-		Members:    &StringMemberOrderedMap{},
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 	compositeTwoFields.Members.Set(
 		"foo",
-		NewFieldMember(nil, compositeTwoFields, eAccess, ast.VariableKindConstant, "foo", IntType, ""),
+		sema.NewFieldMember(nil, compositeTwoFields, eAccess, ast.VariableKindConstant, "foo", sema.IntType, ""),
 	)
 	compositeTwoFields.Members.Set(
 		"bar",
-		NewFieldMember(nil, compositeTwoFields, fAccess, ast.VariableKindConstant, "bar", IntType, ""),
+		sema.NewFieldMember(nil, compositeTwoFields, fAccess, ast.VariableKindConstant, "bar", sema.IntType, ""),
 	)
 
-	interfaceTypeWithEAndG := &InterfaceType{
+	interfaceTypeWithEAndG := &sema.InterfaceType{
 		Location:      testLocation,
 		Identifier:    "I",
 		CompositeKind: common.CompositeKindResource,
-		Members:       &StringMemberOrderedMap{},
+		Members:       &sema.StringMemberOrderedMap{},
 	}
 	interfaceTypeWithEAndG.Members.Set(
 		"foo",
-		NewFunctionMember(nil, interfaceTypeWithEAndG, eAndGAccess, "foo", &FunctionType{}, ""),
+		sema.NewFunctionMember(nil, interfaceTypeWithEAndG, eAndGAccess, "foo", &sema.FunctionType{}, ""),
 	)
 
-	interfaceTypeInheriting := &InterfaceType{
+	interfaceTypeInheriting := &sema.InterfaceType{
 		Location:                      testLocation,
 		Identifier:                    "J",
 		CompositeKind:                 common.CompositeKindResource,
-		Members:                       &StringMemberOrderedMap{},
-		ExplicitInterfaceConformances: []*InterfaceType{interfaceTypeWithEAndG},
+		Members:                       &sema.StringMemberOrderedMap{},
+		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeWithEAndG},
 	}
 
-	compositeTypeInheriting := &CompositeType{
+	compositeTypeInheriting := &sema.CompositeType{
 		Location:                      testLocation,
 		Identifier:                    "RI",
 		Kind:                          common.CompositeKindResource,
-		Members:                       &StringMemberOrderedMap{},
-		ExplicitInterfaceConformances: []*InterfaceType{interfaceTypeInheriting},
+		Members:                       &sema.StringMemberOrderedMap{},
+		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeInheriting},
 	}
 
-	compositeTypeWithMap := &CompositeType{
+	compositeTypeWithMap := &sema.CompositeType{
 		Location:   testLocation,
 		Identifier: "RI",
 		Kind:       common.CompositeKindResource,
-		Members:    &StringMemberOrderedMap{},
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 	compositeTypeWithMap.Members.Set(
 		"foo",
-		NewFunctionMember(nil, compositeTypeWithMap, mapAccess, "foo", &FunctionType{}, ""),
+		sema.NewFunctionMember(nil, compositeTypeWithMap, mapAccess, "foo", &sema.FunctionType{}, ""),
 	)
 
-	interfaceTypeWithMap := &InterfaceType{
+	interfaceTypeWithMap := &sema.InterfaceType{
 		Location:      testLocation,
 		Identifier:    "RI",
 		CompositeKind: common.CompositeKindResource,
-		Members:       &StringMemberOrderedMap{},
+		Members:       &sema.StringMemberOrderedMap{},
 	}
 	interfaceTypeWithMap.Members.Set(
 		"foo",
-		NewFunctionMember(nil, interfaceTypeWithMap, mapAccess, "foo", &FunctionType{}, ""),
+		sema.NewFunctionMember(nil, interfaceTypeWithMap, mapAccess, "foo", &sema.FunctionType{}, ""),
 	)
 
-	compositeTypeWithCapField := &CompositeType{
+	compositeTypeWithCapField := &sema.CompositeType{
 		Location:   testLocation,
 		Identifier: "RI",
 		Kind:       common.CompositeKindResource,
-		Members:    &StringMemberOrderedMap{},
+		Members:    &sema.StringMemberOrderedMap{},
 	}
 	compositeTypeWithCapField.Members.Set(
 		"foo",
-		NewFieldMember(
-			nil, compositeTypeWithCapField, UnauthorizedAccess, ast.VariableKindConstant, "foo",
-			NewCapabilityType(nil,
-				NewReferenceType(nil, interfaceTypeInheriting, UnauthorizedAccess),
+		sema.NewFieldMember(
+			nil, compositeTypeWithCapField, sema.UnauthorizedAccess, ast.VariableKindConstant, "foo",
+			sema.NewCapabilityType(nil,
+				sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheriting),
 			),
 			"",
 		),
 	)
 
-	interfaceTypeWithCapField := &InterfaceType{
+	interfaceTypeWithCapField := &sema.InterfaceType{
 		Location:      testLocation,
 		Identifier:    "RI",
 		CompositeKind: common.CompositeKindResource,
-		Members:       &StringMemberOrderedMap{},
+		Members:       &sema.StringMemberOrderedMap{},
 	}
 	interfaceTypeWithCapField.Members.Set(
 		"foo",
-		NewFieldMember(
-			nil, interfaceTypeWithCapField, UnauthorizedAccess, ast.VariableKindConstant, "foo",
-			NewCapabilityType(nil,
-				NewReferenceType(nil, interfaceTypeInheriting, UnauthorizedAccess),
+		sema.NewFieldMember(
+			nil, interfaceTypeWithCapField, sema.UnauthorizedAccess, ast.VariableKindConstant, "foo",
+			sema.NewCapabilityType(nil,
+				sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheriting),
 			),
 			"",
 		),
 	)
 
-	interfaceTypeInheritingCapField := &InterfaceType{
+	interfaceTypeInheritingCapField := &sema.InterfaceType{
 		Location:                      testLocation,
 		Identifier:                    "J",
 		CompositeKind:                 common.CompositeKindResource,
-		Members:                       &StringMemberOrderedMap{},
-		ExplicitInterfaceConformances: []*InterfaceType{interfaceTypeWithCapField},
+		Members:                       &sema.StringMemberOrderedMap{},
+		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeWithCapField},
 	}
 
-	compositeTypeInheritingCapField := &CompositeType{
+	compositeTypeInheritingCapField := &sema.CompositeType{
 		Location:                      testLocation,
 		Identifier:                    "RI",
 		Kind:                          common.CompositeKindResource,
-		Members:                       &StringMemberOrderedMap{},
-		ExplicitInterfaceConformances: []*InterfaceType{interfaceTypeInheritingCapField},
+		Members:                       &sema.StringMemberOrderedMap{},
+		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeInheritingCapField},
 	}
 
 	tests := []struct {
-		Input  Type
-		Output Type
+		Input  sema.Type
+		Output sema.Type
 		Name   string
 	}{
 		{
-			Input:  NewReferenceType(nil, IntType, UnauthorizedAccess),
-			Output: NewReferenceType(nil, IntType, UnauthorizedAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.IntType),
+			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.IntType),
 			Name:   "int",
 		},
 		{
-			Input:  NewReferenceType(nil, &FunctionType{}, UnauthorizedAccess),
-			Output: NewReferenceType(nil, &FunctionType{}, UnauthorizedAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, &sema.FunctionType{}),
+			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, &sema.FunctionType{}),
 			Name:   "function",
 		},
 		{
-			Input:  NewReferenceType(nil, compositeStructWithOnlyE, UnauthorizedAccess),
-			Output: NewReferenceType(nil, compositeStructWithOnlyE, eAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeStructWithOnlyE),
+			Output: sema.NewReferenceType(nil, eAccess, compositeStructWithOnlyE),
 			Name:   "composite E",
 		},
 		{
-			Input:  NewReferenceType(nil, compositeResourceWithOnlyF, UnauthorizedAccess),
-			Output: NewReferenceType(nil, compositeResourceWithOnlyF, fAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeResourceWithOnlyF),
+			Output: sema.NewReferenceType(nil, fAccess, compositeResourceWithOnlyF),
 			Name:   "composite F",
 		},
 		{
-			Input:  NewReferenceType(nil, compositeResourceWithEOrF, UnauthorizedAccess),
-			Output: NewReferenceType(nil, compositeResourceWithEOrF, eAndFAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeResourceWithEOrF),
+			Output: sema.NewReferenceType(nil, eAndFAccess, compositeResourceWithEOrF),
 			Name:   "composite E or F",
 		},
 		{
-			Input:  NewReferenceType(nil, compositeTwoFields, UnauthorizedAccess),
-			Output: NewReferenceType(nil, compositeTwoFields, eAndFAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTwoFields),
+			Output: sema.NewReferenceType(nil, eAndFAccess, compositeTwoFields),
 			Name:   "composite E and F",
 		},
 		{
-			Input:  NewReferenceType(nil, interfaceTypeWithEAndG, UnauthorizedAccess),
-			Output: NewReferenceType(nil, interfaceTypeWithEAndG, eAndGAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeWithEAndG),
+			Output: sema.NewReferenceType(nil, eAndGAccess, interfaceTypeWithEAndG),
 			Name:   "interface E and G",
 		},
 		{
-			Input:  NewReferenceType(nil, interfaceTypeInheriting, UnauthorizedAccess),
-			Output: NewReferenceType(nil, interfaceTypeInheriting, eAndGAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheriting),
+			Output: sema.NewReferenceType(nil, eAndGAccess, interfaceTypeInheriting),
 			Name:   "interface inheritance",
 		},
 		{
-			Input:  NewReferenceType(nil, compositeTypeInheriting, UnauthorizedAccess),
-			Output: NewReferenceType(nil, compositeTypeInheriting, eAndGAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeInheriting),
+			Output: sema.NewReferenceType(nil, eAndGAccess, compositeTypeInheriting),
 			Name:   "composite inheritance",
 		},
 		{
-			Input:  NewReferenceType(nil, compositeTypeWithMap, UnauthorizedAccess),
-			Output: NewReferenceType(nil, compositeTypeWithMap, eAndFAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeWithMap),
+			Output: sema.NewReferenceType(nil, eAndFAccess, compositeTypeWithMap),
 			Name:   "composite map",
 		},
 		{
-			Input:  NewReferenceType(nil, interfaceTypeWithMap, UnauthorizedAccess),
-			Output: NewReferenceType(nil, interfaceTypeWithMap, eAndFAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeWithMap),
+			Output: sema.NewReferenceType(nil, eAndFAccess, interfaceTypeWithMap),
 			Name:   "interface map",
 		},
 		{
-			Input:  NewReferenceType(nil, NewCapabilityType(nil, NewReferenceType(nil, compositeTypeWithMap, UnauthorizedAccess)), UnauthorizedAccess),
-			Output: NewReferenceType(nil, NewCapabilityType(nil, NewReferenceType(nil, compositeTypeWithMap, eAndFAccess)), UnauthorizedAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.NewCapabilityType(nil, sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeWithMap))),
+			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.NewCapabilityType(nil, sema.NewReferenceType(nil, eAndFAccess, compositeTypeWithMap))),
 			Name:   "reference to capability",
 		},
 		{
-			Input:  NewReferenceType(nil, NewIntersectionType(nil, []*InterfaceType{interfaceTypeInheriting, interfaceTypeWithMap}), UnauthorizedAccess),
-			Output: NewReferenceType(nil, NewIntersectionType(nil, []*InterfaceType{interfaceTypeInheriting, interfaceTypeWithMap}), eFAndGAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.NewIntersectionType(nil, []*sema.InterfaceType{interfaceTypeInheriting, interfaceTypeWithMap})),
+			Output: sema.NewReferenceType(nil, eFAndGAccess, sema.NewIntersectionType(nil, []*sema.InterfaceType{interfaceTypeInheriting, interfaceTypeWithMap})),
 			Name:   "intersection",
 		},
 		// no change
 		{
-			Input:  NewReferenceType(nil, compositeTypeWithCapField, UnauthorizedAccess),
-			Output: NewReferenceType(nil, compositeTypeWithCapField, UnauthorizedAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeWithCapField),
+			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeWithCapField),
 			Name:   "composite with capability field",
 		},
 		// no change
 		{
-			Input:  NewReferenceType(nil, interfaceTypeWithCapField, UnauthorizedAccess),
-			Output: NewReferenceType(nil, interfaceTypeWithCapField, UnauthorizedAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeWithCapField),
+			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeWithCapField),
 			Name:   "interface with capability field",
 		},
 		// no change
 		{
-			Input:  NewReferenceType(nil, compositeTypeInheritingCapField, UnauthorizedAccess),
-			Output: NewReferenceType(nil, compositeTypeInheritingCapField, UnauthorizedAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeInheritingCapField),
+			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeInheritingCapField),
 			Name:   "composite inheriting capability field",
 		},
 		// no change
 		{
-			Input:  NewReferenceType(nil, interfaceTypeInheritingCapField, UnauthorizedAccess),
-			Output: NewReferenceType(nil, interfaceTypeInheritingCapField, UnauthorizedAccess),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheritingCapField),
+			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheritingCapField),
 			Name:   "interface inheriting capability field",
 		},
 		// TODO: add tests for array and dictionary entitlements once the mutability changes are merged
@@ -307,12 +308,12 @@ func TestConvertToEntitledType(t *testing.T) {
 	// create capability versions of all the existing tests
 	for _, test := range tests {
 		var capabilityTest struct {
-			Input  Type
-			Output Type
+			Input  sema.Type
+			Output sema.Type
 			Name   string
 		}
-		capabilityTest.Input = NewCapabilityType(nil, test.Input)
-		capabilityTest.Output = NewCapabilityType(nil, test.Output)
+		capabilityTest.Input = sema.NewCapabilityType(nil, test.Input)
+		capabilityTest.Output = sema.NewCapabilityType(nil, test.Output)
 		capabilityTest.Name = "capability " + test.Name
 
 		tests = append(tests, capabilityTest)
@@ -321,39 +322,39 @@ func TestConvertToEntitledType(t *testing.T) {
 	// create optional versions of all the existing tests
 	for _, test := range tests {
 		var optionalTest struct {
-			Input  Type
-			Output Type
+			Input  sema.Type
+			Output sema.Type
 			Name   string
 		}
-		optionalTest.Input = NewOptionalType(nil, test.Input)
-		optionalTest.Output = NewOptionalType(nil, test.Output)
+		optionalTest.Input = sema.NewOptionalType(nil, test.Input)
+		optionalTest.Output = sema.NewOptionalType(nil, test.Output)
 		optionalTest.Name = "optional " + test.Name
 
 		tests = append(tests, optionalTest)
 	}
 
-	var compareTypesRecursively func(t *testing.T, expected Type, actual Type)
-	compareTypesRecursively = func(t *testing.T, expected Type, actual Type) {
+	var compareTypesRecursively func(t *testing.T, expected sema.Type, actual sema.Type)
+	compareTypesRecursively = func(t *testing.T, expected sema.Type, actual sema.Type) {
 		require.IsType(t, expected, actual)
 
 		switch expected := expected.(type) {
-		case *ReferenceType:
-			actual := actual.(*ReferenceType)
+		case *sema.ReferenceType:
+			actual := actual.(*sema.ReferenceType)
 			require.IsType(t, expected.Authorization, actual.Authorization)
 			require.True(t, expected.Authorization.Equal(actual.Authorization))
 			compareTypesRecursively(t, expected.Type, actual.Type)
-		case *OptionalType:
-			actual := actual.(*OptionalType)
+		case *sema.OptionalType:
+			actual := actual.(*sema.OptionalType)
 			compareTypesRecursively(t, expected.Type, actual.Type)
-		case *CapabilityType:
-			actual := actual.(*CapabilityType)
+		case *sema.CapabilityType:
+			actual := actual.(*sema.CapabilityType)
 			compareTypesRecursively(t, expected.BorrowType, actual.BorrowType)
 		}
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			compareTypesRecursively(t, ConvertToEntitledType(nil, test.Input), test.Output)
+			compareTypesRecursively(t, ConvertToEntitledType(test.Input), test.Output)
 		})
 	}
 
