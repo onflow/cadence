@@ -1825,8 +1825,8 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 	interpreter.updateReferencedResource(
 		storageID,
 		storageID,
-		func(value ReferenceTrackedResourceKindedValue) {
-			arrayValue, ok := value.(*ArrayValue)
+		func(value *EphemeralReferenceValue) {
+			arrayValue, ok := value.Value.(*ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -2744,7 +2744,11 @@ func (v *ArrayValue) Transfer(
 		}
 	}
 
-	var res *ArrayValue
+	res := newArrayValueFromAtreeValue(array, v.Type)
+	res.elementSize = v.elementSize
+	res.semaType = v.semaType
+	res.isResourceKinded = v.isResourceKinded
+	res.isDestroyed = v.isDestroyed
 
 	if isResourceKinded {
 		// Update the resource in-place,
@@ -2756,34 +2760,17 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		if config.InvalidatedResourceValidationEnabled {
-			v.array = nil
-		} else {
-			v.array = array
-			res = v
-		}
+		v.array = nil
 
 		newStorageID := array.StorageID()
 
 		interpreter.updateReferencedResource(
 			currentStorageID,
 			newStorageID,
-			func(value ReferenceTrackedResourceKindedValue) {
-				arrayValue, ok := value.(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				arrayValue.array = array
+			func(value *EphemeralReferenceValue) {
+				value.Value = res
 			},
 		)
-	}
-
-	if res == nil {
-		res = newArrayValueFromAtreeValue(array, v.Type)
-		res.elementSize = v.elementSize
-		res.semaType = v.semaType
-		res.isResourceKinded = v.isResourceKinded
-		res.isDestroyed = v.isDestroyed
 	}
 
 	return res
@@ -16550,8 +16537,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	interpreter.updateReferencedResource(
 		storageID,
 		storageID,
-		func(value ReferenceTrackedResourceKindedValue) {
-			compositeValue, ok := value.(*CompositeValue)
+		func(value *EphemeralReferenceValue) {
+			compositeValue, ok := value.Value.(*CompositeValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -17302,7 +17289,24 @@ func (v *CompositeValue) Transfer(
 		}
 	}
 
-	var res *CompositeValue
+	info := NewCompositeTypeInfo(
+		interpreter,
+		v.Location,
+		v.QualifiedIdentifier,
+		v.Kind,
+	)
+
+	res := newCompositeValueFromOrderedMap(dictionary, info)
+	res.InjectedFields = v.InjectedFields
+	res.ComputedFields = v.ComputedFields
+	res.NestedVariables = v.NestedVariables
+	res.Functions = v.Functions
+	res.Destructor = v.Destructor
+	res.Stringer = v.Stringer
+	res.isDestroyed = v.isDestroyed
+	res.typeID = v.typeID
+	res.staticType = v.staticType
+	res.base = v.base
 
 	if isResourceKinded {
 		// Update the resource in-place,
@@ -17314,46 +17318,17 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		if config.InvalidatedResourceValidationEnabled {
-			v.dictionary = nil
-		} else {
-			v.dictionary = dictionary
-			res = v
-		}
+		v.dictionary = nil
 
 		newStorageID := dictionary.StorageID()
 
 		interpreter.updateReferencedResource(
 			currentStorageID,
 			newStorageID,
-			func(value ReferenceTrackedResourceKindedValue) {
-				compositeValue, ok := value.(*CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				compositeValue.dictionary = dictionary
+			func(value *EphemeralReferenceValue) {
+				value.Value = res
 			},
 		)
-	}
-
-	if res == nil {
-		info := NewCompositeTypeInfo(
-			interpreter,
-			v.Location,
-			v.QualifiedIdentifier,
-			v.Kind,
-		)
-		res = newCompositeValueFromOrderedMap(dictionary, info)
-		res.InjectedFields = v.InjectedFields
-		res.ComputedFields = v.ComputedFields
-		res.NestedVariables = v.NestedVariables
-		res.Functions = v.Functions
-		res.Destructor = v.Destructor
-		res.Stringer = v.Stringer
-		res.isDestroyed = v.isDestroyed
-		res.typeID = v.typeID
-		res.staticType = v.staticType
-		res.base = v.base
 	}
 
 	onResourceOwnerChange := config.OnResourceOwnerChange
@@ -17599,8 +17574,6 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 
 	// the base reference can only be borrowed with the declared type of the attachment's base
 	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
-
-	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
 
 func attachmentMemberName(ty sema.Type) string {
@@ -17629,7 +17602,6 @@ func attachmentBaseAndSelfValues(
 	base = v.getBaseValue()
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
-	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
 	return
 }
 
@@ -17680,7 +17652,6 @@ func (v *CompositeValue) GetTypeKey(
 	attachment.setBaseValue(interpreter, v)
 
 	attachmentRef := NewEphemeralReferenceValue(interpreter, false, attachment, ty)
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
 
 	return NewSomeValueNonCopying(interpreter, attachmentRef)
 }
@@ -18012,8 +17983,8 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 	interpreter.updateReferencedResource(
 		storageID,
 		storageID,
-		func(value ReferenceTrackedResourceKindedValue) {
-			dictionaryValue, ok := value.(*DictionaryValue)
+		func(value *EphemeralReferenceValue) {
+			dictionaryValue, ok := value.Value.(*DictionaryValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -18835,7 +18806,11 @@ func (v *DictionaryValue) Transfer(
 		}
 	}
 
-	var res *DictionaryValue
+	res := newDictionaryValueFromOrderedMap(dictionary, v.Type)
+	res.elementSize = v.elementSize
+	res.semaType = v.semaType
+	res.isResourceKinded = v.isResourceKinded
+	res.isDestroyed = v.isDestroyed
 
 	if isResourceKinded {
 		// Update the resource in-place,
@@ -18847,34 +18822,17 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		if config.InvalidatedResourceValidationEnabled {
-			v.dictionary = nil
-		} else {
-			v.dictionary = dictionary
-			res = v
-		}
+		v.dictionary = nil
 
 		newStorageID := dictionary.StorageID()
 
 		interpreter.updateReferencedResource(
 			currentStorageID,
 			newStorageID,
-			func(value ReferenceTrackedResourceKindedValue) {
-				dictionaryValue, ok := value.(*DictionaryValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				dictionaryValue.dictionary = dictionary
+			func(value *EphemeralReferenceValue) {
+				value.Value = res
 			},
 		)
-	}
-
-	if res == nil {
-		res = newDictionaryValueFromOrderedMap(dictionary, v.Type)
-		res.elementSize = v.elementSize
-		res.semaType = v.semaType
-		res.isResourceKinded = v.isResourceKinded
-		res.isDestroyed = v.isDestroyed
 	}
 
 	return res
@@ -19930,13 +19888,15 @@ func NewUnmeteredEphemeralReferenceValue(
 }
 
 func NewEphemeralReferenceValue(
-	gauge common.MemoryGauge,
+	interpreter *Interpreter,
 	authorized bool,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	common.UseMemory(gauge, common.EphemeralReferenceValueMemoryUsage)
-	return NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
+	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
+	ref := NewUnmeteredEphemeralReferenceValue(authorized, value, borrowedType)
+	interpreter.maybeTrackReferencedResourceKindedValue(ref)
+	return ref
 }
 
 func (*EphemeralReferenceValue) isValue() {}
