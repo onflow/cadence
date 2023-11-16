@@ -246,7 +246,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+type ReferencedResourceKindedValues map[atree.StorageID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
 	Location     common.Location
@@ -841,14 +841,12 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 				optionalType.Type,
 			)
 
-			interpreter.maybeTrackReferencedResourceKindedValue(returnValue.value)
 			return NewSomeValueNonCopying(interpreter, innerValue)
 		case NilValue:
 			return NilValue{}
 		}
 	}
 
-	interpreter.maybeTrackReferencedResourceKindedValue(returnValue)
 	return NewEphemeralReferenceValue(interpreter, false, returnValue, returnType)
 }
 
@@ -5266,18 +5264,20 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 }
 
 func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
-	if value, ok := value.(ReferenceTrackedResourceKindedValue); ok {
-		interpreter.trackReferencedResourceKindedValue(value.StorageID(), value)
+	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
+		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
+			interpreter.trackReferencedResourceKindedValue(value.StorageID(), referenceValue)
+		}
 	}
 }
 
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	id atree.StorageID,
-	value ReferenceTrackedResourceKindedValue,
+	value *EphemeralReferenceValue,
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
 	if values == nil {
-		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
+		values = map[*EphemeralReferenceValue]struct{}{}
 		interpreter.SharedState.referencedResourceKindedValues[id] = values
 	}
 	values[value] = struct{}{}
@@ -5286,7 +5286,7 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 func (interpreter *Interpreter) updateReferencedResource(
 	currentStorageID atree.StorageID,
 	newStorageID atree.StorageID,
-	updateFunc func(value ReferenceTrackedResourceKindedValue),
+	updateFunc func(value *EphemeralReferenceValue),
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[currentStorageID]
 	if values == nil {
