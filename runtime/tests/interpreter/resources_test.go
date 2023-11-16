@@ -2161,7 +2161,7 @@ func TestInterpreterResourcePreCondition(t *testing.T) {
 
       struct interface Receiver {
           pub fun deposit(from: @S) {
-              post {
+              pre {
                   from != nil: ""
               }
           }
@@ -2192,7 +2192,7 @@ func TestInterpreterResourcePostCondition(t *testing.T) {
       struct interface Receiver {
           pub fun deposit(from: @S) {
               post {
-                  from != nil: ""
+                  from != nil: ""  // This be an error. Resource is destroyed at this point
               }
           }
       }
@@ -2209,7 +2209,8 @@ func TestInterpreterResourcePostCondition(t *testing.T) {
 	`)
 
 	_, err := inter.Invoke("test")
-	require.NoError(t, err)
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
 
 func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
@@ -2222,10 +2223,10 @@ func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
       struct interface Receiver {
           pub fun deposit(from: @S) {
               pre {
-                  from != nil: ""
+                  from != nil: ""  // This is OK
               }
               post {
-                  from != nil: ""
+                  from != nil: ""  // This is an error: Resource is destroyed at this point
               }
           }
       }
@@ -2248,7 +2249,8 @@ func TestInterpreterResourcePreAndPostCondition(t *testing.T) {
 	`)
 
 	_, err := inter.Invoke("test")
-	require.NoError(t, err)
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
 
 func TestInterpreterResourceConditionAdditionalParam(t *testing.T) {
@@ -2290,7 +2292,7 @@ func TestInterpreterResourceConditionAdditionalParam(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
+func TestInterpreterResourceDoubleWrappedPreCondition(t *testing.T) {
 
 	t.Parallel()
 
@@ -2302,18 +2304,12 @@ func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
               pre {
                   from != nil: ""
               }
-              post {
-                  from != nil: ""
-              }
           }
       }
 
       struct interface B {
           pub fun deposit(from: @S) {
               pre {
-                  from != nil: ""
-              }
-              post {
                   from != nil: ""
               }
           }
@@ -2324,6 +2320,44 @@ func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
               pre {
                   from != nil: ""
               }
+              destroy from
+          }
+      }
+
+      fun test() {
+          Vault().deposit(from: <-create S())
+      }
+	`)
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+}
+
+func TestInterpreterResourceDoubleWrappedPostCondition(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      resource S {}
+
+      struct interface A {
+          pub fun deposit(from: @S) {
+              post {
+                  from != nil: ""
+              }
+          }
+      }
+
+      struct interface B {
+          pub fun deposit(from: @S) {
+              post {
+                  from != nil: ""
+              }
+          }
+      }
+
+      struct Vault: A, B {
+          pub fun deposit(from: @S) {
               post {
                   1 > 0: ""
               }
@@ -2337,7 +2371,8 @@ func TestInterpreterResourceDoubleWrappedCondition(t *testing.T) {
 	`)
 
 	_, err := inter.Invoke("test")
-	require.NoError(t, err)
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
 
 func TestInterpretOptionalResourceReference(t *testing.T) {
@@ -3135,5 +3170,47 @@ func TestInterpretValueTransferResourceLoss(t *testing.T) {
 		},
 		getLogs(),
 	)
+}
 
+func TestInterpretPreConditionResourceMove(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        pub resource Vault { }
+
+        pub resource interface Interface {
+            pub fun foo(_ r: @AnyResource) {
+                pre {
+                    consume(&r as &AnyResource, <- r)
+                }
+            }
+        }
+
+        pub resource Implementation: Interface {
+            pub fun foo(_ r: @AnyResource) {
+                pre {
+                    consume(&r as &AnyResource, <- r)
+                }
+            }
+        }
+
+        pub fun consume(_ unusedRef: &AnyResource?, _ r: @AnyResource): Bool {
+            destroy r
+            return true
+        }
+
+        pub fun main() {
+            let a <- create Implementation()
+            let b <- create Vault()
+
+            a.foo(<-b)
+
+            destroy a
+        }`,
+	)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }

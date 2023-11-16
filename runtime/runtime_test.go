@@ -10160,5 +10160,5 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
 	)
 
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
