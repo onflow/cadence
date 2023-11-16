@@ -452,8 +452,7 @@ func testAccountWithErrorHandler(
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
-				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
-				InvalidatedResourceValidationEnabled: true,
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
 					return stdlib.NewAccountValue(nil, nil, address)
 				},

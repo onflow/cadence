@@ -2326,3 +2326,40 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 	_, err = inter.Invoke("main")
 	require.NoError(t, err)
 }
+
+func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with iteration", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource R{
+                init() {}
+            }
+            access(all) attachment A for R{
+                access(all) fun zombieFunction() {}
+            }
+            
+            access(all) fun main() {
+                var r <- create R()
+                var r2 <- attach A() to <- r
+                var aRef: &A? = nil
+                r2.forEachAttachment(fun(a: &AnyResourceAttachment) {
+                    aRef = (a as! &A)
+                })
+                remove A from r2
+                
+                // Should not succeed, the attachment pointed to by aRef was destroyed
+                aRef!.zombieFunction()
+                destroy r2
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+}
