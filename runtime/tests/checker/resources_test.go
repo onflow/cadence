@@ -9368,7 +9368,7 @@ func TestCheckInvalidationInCondition(t *testing.T) {
 
 			t.Parallel()
 
-			t.Run("function", func(t *testing.T) {
+			t.Run("global function", func(t *testing.T) {
 
 				t.Parallel()
 
@@ -9392,7 +9392,7 @@ func TestCheckInvalidationInCondition(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("function, in composite", func(t *testing.T) {
+			t.Run("in composite", func(t *testing.T) {
 
 				t.Parallel()
 
@@ -9418,7 +9418,7 @@ func TestCheckInvalidationInCondition(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("function, in interface", func(t *testing.T) {
+			t.Run("in interface, definite invalidation", func(t *testing.T) {
 
 				t.Parallel()
 
@@ -9447,7 +9447,28 @@ func TestCheckInvalidationInCondition(t *testing.T) {
 				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
 			})
 
-			t.Run("function, in nested type requirement", func(t *testing.T) {
+			t.Run("in interface, temporary invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      struct interface SI {
+                          fun drop(_ r: @R) {
+                              %s {
+                                  r.isInstance(Type<@R>())
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				require.NoError(t, err)
+			})
+
+			t.Run("in nested type requirement, definite invalidation", func(t *testing.T) {
 
 				t.Parallel()
 
@@ -9460,7 +9481,7 @@ func TestCheckInvalidationInCondition(t *testing.T) {
                           return true
                       }
 
-                      contract interface SI {
+                      contract interface CI {
                           struct S {
                               fun test(_ r: @R) {
                                   %s {
@@ -9477,6 +9498,30 @@ func TestCheckInvalidationInCondition(t *testing.T) {
 
 				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
 			})
+
+			t.Run("in nested type requirement, temporary invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      contract interface CI {
+                          struct S {
+                              fun drop(_ r: @R) {
+                                  %s {
+                                      r.isInstance(Type<@R>())
+                                  }
+                              }
+                         }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				require.NoError(t, err)
+			})
+
 		})
 	}
 
