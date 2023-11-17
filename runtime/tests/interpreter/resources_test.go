@@ -3137,3 +3137,80 @@ func TestInterpretValueTransferResourceLoss(t *testing.T) {
 	)
 
 }
+
+func TestInterpretVariableDeclarationEvaluationOrder(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+      // Necessary helper interface,
+      // as AnyResource does not provide a uuid field,
+      // and AnyResource must be used in collect
+      // to avoid the potential type confusion to be rejected
+      // by the defensive argument/parameter type check
+
+      resource interface HasID {
+          fun getID(): UInt64
+      }
+
+      resource Foo: HasID {
+          fun getID(): UInt64 {
+              return self.uuid
+          }
+      }
+
+      resource Bar: HasID {
+          fun getID(): UInt64 {
+              return self.uuid
+          }
+      }
+
+      fun collect(_ collected: @{HasID}): @Foo {
+          log("collected")
+          log(collected.getID())
+          log(collected.getType())
+
+          destroy <- collected
+
+          return <- create Foo()
+      }
+
+      fun main() {
+          var foo <- create Foo()
+          log("foo")
+          log(foo.uuid)
+
+          var bar <- create Bar()
+          log("bar")
+          log(bar.uuid)
+
+          if (true) {
+              // Check that the RHS is evaluated *before* the variable is declared
+              var bar <- foo <- collect(<-bar)
+
+              destroy foo
+              destroy bar // new bar
+          } else {
+              destroy foo
+              destroy bar // original bar
+          }
+      }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			`"foo"`,
+			`1`,
+			`"bar"`,
+			`2`,
+			`"collected"`,
+			`2`,
+			"Type<S.test.Bar>()",
+		},
+		getLogs(),
+	)
+}

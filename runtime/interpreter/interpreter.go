@@ -659,10 +659,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 			var variable *Variable
 
 			variable = NewVariableWithGetter(interpreter, func() Value {
-				var result Value
-				interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
-					result = value
-				})
+				result := interpreter.visitVariableDeclaration(declaration)
 
 				// Global variables are lazily loaded. Therefore, start resource tracking also
 				// lazily when the resource is used for the first time.

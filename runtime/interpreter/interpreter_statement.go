@@ -461,18 +461,14 @@ func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration)
 // then declares the variable with the name bound to the value
 func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) StatementResult {
 
-	interpreter.visitVariableDeclaration(
-		declaration,
-		func(identifier string, value Value) {
+	value := interpreter.visitVariableDeclaration(declaration)
 
-			// NOTE: lexical scope, always declare a new variable.
-			// Do not find an existing variable and assign the value!
+	// NOTE: lexical scope, always declare a new variable.
+	// Do not find an existing variable and assign the value!
 
-			_ = interpreter.declareVariable(
-				identifier,
-				value,
-			)
-		},
+	_ = interpreter.declareVariable(
+		declaration.Identifier.Identifier,
+		value,
 	)
 
 	return nil
@@ -480,8 +476,7 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 
 func (interpreter *Interpreter) visitVariableDeclaration(
 	declaration *ast.VariableDeclaration,
-	valueCallback func(identifier string, value Value),
-) {
+) Value {
 
 	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
 	targetType := variableDeclarationTypes.TargetType
@@ -511,29 +506,27 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	// Assignment is a potential resource move.
 	interpreter.invalidateResource(result)
 
+	if declaration.SecondValue != nil {
+		interpreter.visitAssignment(
+			declaration.Transfer.Operation,
+			getterSetter,
+			valueType,
+			declaration.SecondValue,
+			secondValueType,
+			declaration,
+		)
+	}
+
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: declaration.Value,
 	}
 
-	transferredValue := interpreter.transferAndConvert(result, valueType, targetType, locationRange)
-
-	valueCallback(
-		declaration.Identifier.Identifier,
-		transferredValue,
-	)
-
-	if declaration.SecondValue == nil {
-		return
-	}
-
-	interpreter.visitAssignment(
-		declaration.Transfer.Operation,
-		getterSetter,
+	return interpreter.transferAndConvert(
+		result,
 		valueType,
-		declaration.SecondValue,
-		secondValueType,
-		declaration,
+		targetType,
+		locationRange,
 	)
 }
 
