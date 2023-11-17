@@ -2553,47 +2553,6 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 	})
 }
 
-func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-        resource interface I {
-             pub fun receiveResource(_ r: @Bar) {
-                pre {
-                    destroyResource(<-r)
-                }
-            }
-        }
-
-        fun destroyResource(_ r: @Bar): Bool {
-            destroy r
-            return true
-        }
-
-        resource Foo: I {
-             pub fun receiveResource(_ r: @Bar) {
-                destroy r
-            }
-        }
-
-        resource Bar  {}
-
-        fun test() {
-            let foo <- create Foo()
-            let bar <- create Bar()
-
-            foo.receiveResource(<- bar)
-            destroy foo
-        }
-    `)
-
-	_, err := inter.Invoke("test")
-	RequireError(t, err)
-
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
-}
-
 func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 
 	t.Parallel()
