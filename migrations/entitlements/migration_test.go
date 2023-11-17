@@ -450,6 +450,54 @@ func TestConvertToEntitledValue(t *testing.T) {
 	nestedValue, err := inter.Invoke("makeNested")
 	require.NoError(t, err)
 
+	unentitledSRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue))
+	unentitledSRefStaticType := unentitledSRef.StaticType(inter)
+
+	entitledSRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+			2,
+			sema.Conjunction,
+		),
+		sValue,
+		inter.MustSemaTypeOfValue(sValue),
+	)
+	entitledSRefStaticType := entitledSRef.StaticType(inter)
+
+	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue))
+	unentitledRRefStaticType := unentitledRRef.StaticType(inter)
+
+	entitledRRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
+			2,
+			sema.Conjunction,
+		),
+		rValue,
+		inter.MustSemaTypeOfValue(rValue),
+	)
+	entitledRRefStaticType := entitledRRef.StaticType(inter)
+
+	unentitledNestedRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue))
+	unentitledNestedRefStaticType := unentitledNestedRef.StaticType(inter)
+
+	entitledNestedRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+			2,
+			sema.Conjunction,
+		),
+		nestedValue,
+		inter.MustSemaTypeOfValue(nestedValue),
+	)
+	//entitledNestedRefStaticType := entitledNestedRef.StaticType(inter)
+
 	tests := []struct {
 		Input  interpreter.Value
 		Output interpreter.Value
@@ -471,50 +519,25 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name:   "Nested",
 		},
 		{
-			Input: interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue)),
-			Output: interpreter.NewEphemeralReferenceValue(
-				inter,
-				interpreter.NewEntitlementSetAuthorization(
-					inter,
-					func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
-					2,
-					sema.Conjunction,
-				),
-				sValue,
-				inter.MustSemaTypeOfValue(sValue),
-			),
-			Name: "&S",
+			Input:  unentitledSRef,
+			Output: entitledSRef,
+			Name:   "&S",
 		},
 		{
 			Input: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, sValue.StaticType(inter))),
+				interpreter.NewVariableSizedStaticType(inter, unentitledSRefStaticType),
 				testAddress,
-				interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue)),
+				unentitledSRef,
 			),
 			Output: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(
-					inter,
-					interpreter.NewReferenceStaticType(inter,
-						interpreter.UnauthorizedAccess,
-						sValue.StaticType(inter),
-					),
-				),
+				// TODO: why is this still unentitled?
+				interpreter.NewVariableSizedStaticType(inter, unentitledSRefStaticType),
 				testAddress,
-				interpreter.NewEphemeralReferenceValue(
-					inter,
-					interpreter.NewEntitlementSetAuthorization(
-						inter,
-						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
-						2,
-						sema.Conjunction,
-					),
-					sValue,
-					inter.MustSemaTypeOfValue(sValue),
-				),
+				entitledSRef,
 			),
 			Name: "[&S]",
 		},
@@ -524,35 +547,14 @@ func TestConvertToEntitledValue(t *testing.T) {
 				interpreter.EmptyLocationRange,
 				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeMetaType),
 				testAddress,
-				interpreter.NewTypeValue(
-					inter,
-					interpreter.NewEphemeralReferenceValue(
-						inter,
-						interpreter.UnauthorizedAccess,
-						sValue,
-						inter.MustSemaTypeOfValue(sValue),
-					).StaticType(inter),
-				),
+				interpreter.NewTypeValue(inter, unentitledSRefStaticType),
 			),
 			Output: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
 				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeMetaType),
 				testAddress,
-				interpreter.NewTypeValue(
-					inter,
-					interpreter.NewEphemeralReferenceValue(
-						inter,
-						interpreter.NewEntitlementSetAuthorization(
-							inter,
-							func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
-							2,
-							sema.Conjunction,
-						),
-						sValue,
-						inter.MustSemaTypeOfValue(sValue),
-					).StaticType(inter),
-				),
+				interpreter.NewTypeValue(inter, entitledSRefStaticType),
 			),
 			Name: "[Type]",
 		},
@@ -560,29 +562,17 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Input: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, sValue.StaticType(inter))),
+				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, unentitledSRefStaticType),
 				interpreter.NewIntValueFromInt64(inter, 0),
-				interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue)),
+				unentitledSRef,
 			),
 			Output: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.NewReferenceStaticType(inter,
-					interpreter.UnauthorizedAccess,
-					sValue.StaticType(inter),
-				)),
+				// TODO: why is this still unentitled?
+				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, unentitledSRefStaticType),
 				interpreter.NewIntValueFromInt64(inter, 0),
-				interpreter.NewEphemeralReferenceValue(
-					inter,
-					interpreter.NewEntitlementSetAuthorization(
-						inter,
-						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
-						2,
-						sema.Conjunction,
-					),
-					sValue,
-					inter.MustSemaTypeOfValue(sValue),
-				),
+				entitledSRef,
 			),
 			Name: "{Int: &S}",
 		},
@@ -592,116 +582,60 @@ func TestConvertToEntitledValue(t *testing.T) {
 				interpreter.EmptyLocationRange,
 				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.PrimitiveStaticTypeMetaType),
 				interpreter.NewIntValueFromInt64(inter, 0),
-				interpreter.NewTypeValue(
-					inter,
-					interpreter.NewEphemeralReferenceValue(
-						inter,
-						interpreter.UnauthorizedAccess,
-						sValue,
-						inter.MustSemaTypeOfValue(sValue),
-					).StaticType(inter),
-				),
+				interpreter.NewTypeValue(inter, unentitledSRefStaticType),
 			),
 			Output: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
 				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.PrimitiveStaticTypeMetaType),
 				interpreter.NewIntValueFromInt64(inter, 0),
-				interpreter.NewTypeValue(inter,
-					interpreter.NewEphemeralReferenceValue(
-						inter,
-						interpreter.NewEntitlementSetAuthorization(
-							inter,
-							func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
-							2,
-							sema.Conjunction,
-						), sValue, inter.MustSemaTypeOfValue(sValue),
-					).StaticType(inter),
-				),
+				interpreter.NewTypeValue(inter, entitledSRefStaticType),
 			),
 			Name: "{Int: Type}",
 		},
 		{
-			Input: interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue)),
-			Output: interpreter.NewEphemeralReferenceValue(
-				inter,
-				interpreter.NewEntitlementSetAuthorization(
-					inter,
-					func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
-					2,
-					sema.Conjunction,
-				),
-				rValue,
-				inter.MustSemaTypeOfValue(rValue),
-			),
-			Name: "&R",
+			Input:  unentitledRRef,
+			Output: entitledRRef,
+			Name:   "&R",
 		},
 		{
 			Input: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, rValue.StaticType(inter))),
+				interpreter.NewVariableSizedStaticType(inter, unentitledRRefStaticType),
 				testAddress,
-				interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue)),
+				unentitledRRef,
 			),
 			Output: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, rValue.StaticType(inter))),
+				// TODO: why is this still unentitled?
+				interpreter.NewVariableSizedStaticType(inter, unentitledRRefStaticType),
 				testAddress,
-				interpreter.NewEphemeralReferenceValue(
-					inter,
-					interpreter.NewEntitlementSetAuthorization(
-						inter,
-						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
-						2,
-						sema.Conjunction,
-					),
-					rValue,
-					inter.MustSemaTypeOfValue(rValue),
-				),
+				entitledRRef,
 			),
 			Name: "[&R]",
 		},
 		{
-			Input: interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue)),
-			Output: interpreter.NewEphemeralReferenceValue(
-				inter,
-				interpreter.NewEntitlementSetAuthorization(
-					inter,
-					func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
-					2,
-					sema.Conjunction,
-				),
-				nestedValue,
-				inter.MustSemaTypeOfValue(nestedValue),
-			),
-			Name: "&Nested",
+			Input:  unentitledNestedRef,
+			Output: entitledNestedRef,
+			Name:   "&Nested",
 		},
 		{
 			Input: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, nestedValue.StaticType(inter))),
+				interpreter.NewVariableSizedStaticType(inter, unentitledNestedRefStaticType),
 				testAddress,
-				interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue)),
+				unentitledNestedRef,
 			),
 			Output: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, nestedValue.StaticType(inter))),
+				// TODO: why is this still unentitled?
+				interpreter.NewVariableSizedStaticType(inter, unentitledNestedRefStaticType),
 				testAddress,
-				interpreter.NewEphemeralReferenceValue(
-					inter,
-					interpreter.NewEntitlementSetAuthorization(
-						inter,
-						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
-						2,
-						sema.Conjunction,
-					),
-					nestedValue,
-					inter.MustSemaTypeOfValue(nestedValue),
-				),
+				entitledNestedRef,
 			),
 			Name: "[&Nested]",
 		},
@@ -710,22 +644,13 @@ func TestConvertToEntitledValue(t *testing.T) {
 				inter,
 				0,
 				interpreter.NewAddressValue(inter, testAddress),
-				interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, sValue.StaticType(inter)),
+				unentitledSRefStaticType,
 			),
 			Output: interpreter.NewCapabilityValue(
 				inter,
 				0,
 				interpreter.NewAddressValue(inter, testAddress),
-				interpreter.NewReferenceStaticType(
-					inter,
-					interpreter.NewEntitlementSetAuthorization(
-						inter,
-						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
-						2,
-						sema.Conjunction,
-					),
-					sValue.StaticType(inter),
-				),
+				entitledSRefStaticType,
 			),
 			Name: "Capability<&S>",
 		},
@@ -734,26 +659,181 @@ func TestConvertToEntitledValue(t *testing.T) {
 				inter,
 				0,
 				interpreter.NewAddressValue(inter, testAddress),
-				interpreter.NewReferenceStaticType(inter, interpreter.UnauthorizedAccess, rValue.StaticType(inter)),
+				unentitledRRefStaticType,
 			),
 			Output: interpreter.NewCapabilityValue(
 				inter,
 				0,
 				interpreter.NewAddressValue(inter, testAddress),
-				interpreter.NewReferenceStaticType(
-					inter,
-					interpreter.NewEntitlementSetAuthorization(
-						inter,
-						func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
-						2,
-						sema.Conjunction,
-					),
-					rValue.StaticType(inter),
-				),
+				entitledRRefStaticType,
 			),
 			Name: "Capability<&R>",
 		},
-		// TODO: after mutability entitlements, add tests for references to arrays and dictionaries
+		{
+			Input: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(inter, rValue.StaticType(inter)),
+					testAddress,
+					rValue.Clone(inter),
+				),
+				sema.NewVariableSizedType(inter, inter.MustSemaTypeOfValue(rValue)),
+			),
+			Output: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID { return []common.TypeID{"Mutate", "Insert", "Remove"} },
+					3,
+					sema.Conjunction,
+				),
+				interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(inter, rValue.StaticType(inter)),
+					testAddress,
+					rValue.Clone(inter),
+				),
+				sema.NewVariableSizedType(inter, inter.MustSemaTypeOfValue(rValue)),
+			),
+			Name: "&[R]",
+		},
+		{
+			Input: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(inter, unentitledRRefStaticType),
+					testAddress,
+					unentitledRRef,
+				),
+				sema.NewVariableSizedType(
+					inter,
+					sema.NewReferenceType(
+						inter,
+						sema.UnauthorizedAccess,
+						inter.MustSemaTypeOfValue(rValue),
+					),
+				),
+			),
+			Output: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID { return []common.TypeID{"Mutate", "Insert", "Remove"} },
+					3,
+					sema.Conjunction,
+				),
+				interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					// TODO: why is this still unentitled
+					interpreter.NewVariableSizedStaticType(inter, unentitledRRefStaticType),
+					testAddress,
+					entitledRRef,
+				),
+				sema.NewVariableSizedType(
+					inter,
+					sema.NewReferenceType(
+						inter,
+						/*sema.NewEntitlementSetAccess(
+							[]*sema.EntitlementType{
+								sema.NewEntitlementType(inter, inter.Location, "E"),
+								sema.NewEntitlementType(inter, inter.Location, "G"),
+							},
+							sema.Conjunction,
+						),*/
+						// TODO: why is this still unentitled
+						sema.UnauthorizedAccess,
+						inter.MustSemaTypeOfValue(rValue),
+					),
+				),
+			),
+			Name: "&[&R]",
+		},
+		{
+			Input: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, rValue.StaticType(inter)),
+					interpreter.NewIntValueFromInt64(inter, 0),
+					rValue.Clone(inter),
+				),
+				sema.NewDictionaryType(inter, sema.IntType, inter.MustSemaTypeOfValue(rValue)),
+			),
+			Output: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID { return []common.TypeID{"Mutate", "Insert", "Remove"} },
+					3,
+					sema.Conjunction,
+				),
+				interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, rValue.StaticType(inter)),
+					interpreter.NewIntValueFromInt64(inter, 0),
+					rValue.Clone(inter),
+				),
+				sema.NewDictionaryType(inter, sema.IntType, inter.MustSemaTypeOfValue(rValue)),
+			),
+			Name: "&{Int: R}",
+		},
+		{
+			Input: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, unentitledRRefStaticType),
+					interpreter.NewIntValueFromInt64(inter, 0),
+					unentitledRRef,
+				),
+				sema.NewDictionaryType(inter, sema.IntType,
+					sema.NewReferenceType(
+						inter,
+						sema.UnauthorizedAccess,
+						inter.MustSemaTypeOfValue(rValue),
+					),
+				),
+			),
+			Output: interpreter.NewEphemeralReferenceValue(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID { return []common.TypeID{"Mutate", "Insert", "Remove"} },
+					3,
+					sema.Conjunction,
+				),
+				interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					// TODO: why is this still unentitled
+					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, unentitledRRefStaticType),
+					interpreter.NewIntValueFromInt64(inter, 0),
+					entitledRRef,
+				),
+				sema.NewDictionaryType(inter, sema.IntType,
+					sema.NewReferenceType(
+						inter,
+						// TODO: why is this still unentitled
+						sema.UnauthorizedAccess,
+						inter.MustSemaTypeOfValue(rValue),
+					),
+				),
+			),
+			Name: "&{Int: &R}",
+		},
 	}
 
 	for _, test := range tests {
@@ -782,12 +862,55 @@ func TestConvertToEntitledValue(t *testing.T) {
 		tests = append(tests, optionalValueTest)
 	}
 
+	var referencePeekingEqual func(interpreter.EquatableValue, interpreter.Value) bool
+
+	// equality that peeks inside referneces to use structural equality for their values
+	referencePeekingEqual = func(input interpreter.EquatableValue, output interpreter.Value) bool {
+		switch v := input.(type) {
+		case *interpreter.SomeValue:
+			otherSome, ok := output.(*interpreter.SomeValue)
+			if !ok {
+				return false
+			}
+
+			switch innerValue := v.InnerValue(inter, interpreter.EmptyLocationRange).(type) {
+			case interpreter.EquatableValue:
+				return referencePeekingEqual(
+					innerValue,
+					otherSome.InnerValue(inter, interpreter.EmptyLocationRange),
+				)
+			default:
+				return innerValue == otherSome.InnerValue(inter, interpreter.EmptyLocationRange)
+			}
+		case *interpreter.EphemeralReferenceValue:
+			otherReference, ok := output.(*interpreter.EphemeralReferenceValue)
+			if !ok || !v.Authorization.Equal(otherReference.Authorization) {
+				return false
+			}
+
+			if v.BorrowedType == nil && otherReference.BorrowedType != nil {
+				return false
+			} else if !v.BorrowedType.Equal(otherReference.BorrowedType) {
+				return false
+			}
+
+			switch innerValue := v.Value.(type) {
+			case interpreter.EquatableValue:
+				return innerValue.Equal(inter, interpreter.EmptyLocationRange, otherReference.Value)
+			default:
+				return innerValue == otherReference.Value
+			}
+		}
+
+		return input.Equal(inter, interpreter.EmptyLocationRange, output)
+	}
+
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			inter.ConvertValueToEntitlements(test.Input, ConvertToEntitledType)
 			switch input := test.Input.(type) {
 			case interpreter.EquatableValue:
-				require.True(t, input.Equal(inter, interpreter.EmptyLocationRange, test.Output))
+				require.True(t, referencePeekingEqual(input, test.Output))
 			default:
 				require.Equal(t, input, test.Output)
 			}

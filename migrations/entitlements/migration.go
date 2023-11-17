@@ -24,11 +24,13 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type EntitlementsMigration struct{}
+type EntitlementsMigration struct {
+	Interpreter *interpreter.Interpreter
+}
 
 var _ migrations.Migration = EntitlementsMigration{}
 
-func NewAccountTypeMigration() EntitlementsMigration {
+func NewEntitlementsMigration() EntitlementsMigration {
 	return EntitlementsMigration{}
 }
 
