@@ -199,7 +199,6 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	if options.Config != nil {
 		config = *options.Config
 	}
-	config.InvalidatedResourceValidationEnabled = true
 	config.AtreeValueValidationEnabled = true
 	config.AtreeStorageValidationEnabled = true
 	if config.UUIDHandler == nil {

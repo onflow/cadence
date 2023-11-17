@@ -5223,10 +5223,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	hasPosition ast.HasPosition,
 ) {
 
-	config := interpreter.SharedState.Config
-
-	if !config.InvalidatedResourceValidationEnabled ||
-		identifier == sema.SelfIdentifier {
+	if identifier == sema.SelfIdentifier {
 		return
 	}
 
@@ -5258,10 +5255,8 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
-	config := interpreter.SharedState.Config
 
-	if !config.InvalidatedResourceValidationEnabled ||
-		identifier == sema.SelfIdentifier {
+	if identifier == sema.SelfIdentifier {
 		return
 	}
 
@@ -5304,12 +5299,6 @@ func (interpreter *Interpreter) resourceForValidation(value Value) ResourceKinde
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {
-	config := interpreter.SharedState.Config
-
-	if !config.InvalidatedResourceValidationEnabled {
-		return
-	}
-
 	if value == nil || !value.IsResourceKinded(interpreter) {
 		return
 	}
