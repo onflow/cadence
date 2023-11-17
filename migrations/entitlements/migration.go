@@ -73,6 +73,12 @@ func ConvertToEntitledType(t sema.Type) sema.Type {
 		return sema.NewOptionalType(nil, ConvertToEntitledType(t.Type))
 	case *sema.CapabilityType:
 		return sema.NewCapabilityType(nil, ConvertToEntitledType(t.BorrowType))
+	case *sema.VariableSizedType:
+		return sema.NewVariableSizedType(nil, ConvertToEntitledType(t.Type))
+	case *sema.ConstantSizedType:
+		return sema.NewConstantSizedType(nil, ConvertToEntitledType(t.Type), t.Size)
+	case *sema.DictionaryType:
+		return sema.NewDictionaryType(nil, ConvertToEntitledType(t.KeyType), ConvertToEntitledType(t.ValueType))
 	default:
 		return t
 	}

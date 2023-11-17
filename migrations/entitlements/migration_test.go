@@ -496,7 +496,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 		nestedValue,
 		inter.MustSemaTypeOfValue(nestedValue),
 	)
-	//entitledNestedRefStaticType := entitledNestedRef.StaticType(inter)
+	entitledNestedRefStaticType := entitledNestedRef.StaticType(inter)
 
 	tests := []struct {
 		Input  interpreter.Value
@@ -534,8 +534,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Output: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				// TODO: why is this still unentitled?
-				interpreter.NewVariableSizedStaticType(inter, unentitledSRefStaticType),
+				interpreter.NewVariableSizedStaticType(inter, entitledSRefStaticType),
 				testAddress,
 				entitledSRef,
 			),
@@ -569,8 +568,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Output: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				// TODO: why is this still unentitled?
-				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, unentitledSRefStaticType),
+				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, entitledSRefStaticType),
 				interpreter.NewIntValueFromInt64(inter, 0),
 				entitledSRef,
 			),
@@ -609,8 +607,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Output: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				// TODO: why is this still unentitled?
-				interpreter.NewVariableSizedStaticType(inter, unentitledRRefStaticType),
+				interpreter.NewVariableSizedStaticType(inter, entitledRRefStaticType),
 				testAddress,
 				entitledRRef,
 			),
@@ -632,8 +629,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Output: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				// TODO: why is this still unentitled?
-				interpreter.NewVariableSizedStaticType(inter, unentitledNestedRefStaticType),
+				interpreter.NewVariableSizedStaticType(inter, entitledNestedRefStaticType),
 				testAddress,
 				entitledNestedRef,
 			),
@@ -732,8 +728,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					// TODO: why is this still unentitled
-					interpreter.NewVariableSizedStaticType(inter, unentitledRRefStaticType),
+					interpreter.NewVariableSizedStaticType(inter, entitledRRefStaticType),
 					testAddress,
 					entitledRRef,
 				),
@@ -741,15 +736,13 @@ func TestConvertToEntitledValue(t *testing.T) {
 					inter,
 					sema.NewReferenceType(
 						inter,
-						/*sema.NewEntitlementSetAccess(
+						sema.NewEntitlementSetAccess(
 							[]*sema.EntitlementType{
-								sema.NewEntitlementType(inter, inter.Location, "E"),
-								sema.NewEntitlementType(inter, inter.Location, "G"),
+								checker.Elaboration.EntitlementType("S.test.E"),
+								checker.Elaboration.EntitlementType("S.test.G"),
 							},
 							sema.Conjunction,
-						),*/
-						// TODO: why is this still unentitled
-						sema.UnauthorizedAccess,
+						),
 						inter.MustSemaTypeOfValue(rValue),
 					),
 				),
@@ -818,16 +811,20 @@ func TestConvertToEntitledValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					// TODO: why is this still unentitled
-					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, unentitledRRefStaticType),
+					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, entitledRRefStaticType),
 					interpreter.NewIntValueFromInt64(inter, 0),
 					entitledRRef,
 				),
 				sema.NewDictionaryType(inter, sema.IntType,
 					sema.NewReferenceType(
 						inter,
-						// TODO: why is this still unentitled
-						sema.UnauthorizedAccess,
+						sema.NewEntitlementSetAccess(
+							[]*sema.EntitlementType{
+								checker.Elaboration.EntitlementType("S.test.E"),
+								checker.Elaboration.EntitlementType("S.test.G"),
+							},
+							sema.Conjunction,
+						),
 						inter.MustSemaTypeOfValue(rValue),
 					),
 				),
