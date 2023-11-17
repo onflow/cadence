@@ -2553,6 +2553,58 @@ func TestInterpretReferenceUseAfterTransferAndDestruction(t *testing.T) {
 	})
 }
 
+func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndInterpretWithOptions(
+		t,
+		`
+            resource interface I {
+                 pub fun receiveResource(_ r: @Bar) {
+                    pre {
+                        destroyResource(<-r)
+                    }
+                }
+            }
+
+            fun destroyResource(_ r: @Bar): Bool {
+                destroy r
+                return true
+            }
+
+            resource Foo: I {
+                 pub fun receiveResource(_ r: @Bar) {
+                    destroy r
+                }
+            }
+
+            resource Bar  {}
+
+            fun test() {
+                let foo <- create Foo()
+                let bar <- create Bar()
+
+                foo.receiveResource(<- bar)
+                destroy foo
+            }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+}
+
 func TestInterpretInvalidReentrantResourceDestruction(t *testing.T) {
 
 	t.Parallel()
