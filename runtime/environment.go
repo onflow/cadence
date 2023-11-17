@@ -168,7 +168,6 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 
 func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 	return &interpreter.Config{
-		InvalidatedResourceValidationEnabled: true,
 		MemoryGauge:                          e,
 		BaseActivationHandler:                e.getBaseActivation,
 		OnEventEmitted:                       e.newOnEventEmittedHandler(),
