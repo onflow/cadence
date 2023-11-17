@@ -972,16 +972,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		panic(errors.NewUnreachableError())
 	}
 
-	// Bound functions
-	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
-		// TODO:
-		//self := *boundFunction.Self
-		//if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
-		//	storageID := resource.StorageID()
-		//	interpreter.trackReferencedResourceKindedValue(storageID, resource)
-		//}
-	}
-
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
 
 	var argumentExpressions []ast.Expression
@@ -1257,17 +1247,17 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		}
 
 	case *sema.ReferenceType:
-		// TODO:
 		// Case (3): target type is non-optional, actual value is optional.
-		// Unwrap the optional and add it to reference tracking.
-		//if someValue, ok := referencedValue.(*SomeValue); ok {
-		//	locationRange := LocationRange{
-		//		Location:    interpreter.Location,
-		//		HasPosition: referenceExpression.Expression,
-		//	}
-		//	innerValue := someValue.InnerValue(interpreter, locationRange)
-		//	interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
-		//}
+		// This path shouldn't be reachable. This is only a defensive step
+		// to ensure references are properly created/tracked.
+		if someValue, ok := result.(*SomeValue); ok {
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: referenceExpression.Expression,
+			}
+			innerValue := someValue.InnerValue(interpreter, locationRange)
+			return NewEphemeralReferenceValue(interpreter, typ.Authorized, innerValue, typ.Type)
+		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional
 		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
