@@ -9358,3 +9358,174 @@ func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
+
+func TestCheckInvalidationInCondition(t *testing.T) {
+
+	t.Parallel()
+
+	testKind := func(kind ast.ConditionKind) {
+		t.Run(kind.Name(), func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("global function", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      fun test(_ r: @R) {
+                          %s {
+                              drop(<-r)
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				require.NoError(t, err)
+			})
+
+			t.Run("in composite", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      struct S {
+                          fun test(_ r: @R) {
+                              %s {
+                                  drop(<-r)
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				require.NoError(t, err)
+			})
+
+			t.Run("in interface, definite invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      struct interface S {
+                          fun test(_ r: @R) {
+                              %s {
+                                  drop(<-r)
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
+			})
+
+			t.Run("in interface, temporary invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      struct interface SI {
+                          fun drop(_ r: @R) {
+                              %s {
+                                  r.isInstance(Type<@R>())
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				require.NoError(t, err)
+			})
+
+			t.Run("in nested type requirement, definite invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      contract interface CI {
+                          struct S {
+                              fun test(_ r: @R) {
+                                  %s {
+                                      drop(<-r)
+                                  }
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+
+				errs := RequireCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
+			})
+
+			t.Run("in nested type requirement, temporary invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      contract interface CI {
+                          struct S {
+                              fun drop(_ r: @R) {
+                                  %s {
+                                      r.isInstance(Type<@R>())
+                                  }
+                              }
+                         }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				require.NoError(t, err)
+			})
+
+		})
+	}
+
+	for kind := ast.ConditionKindUnknown + 1; int(kind) < ast.ConditionKindCount(); kind++ {
+		testKind(kind)
+	}
+}
