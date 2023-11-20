@@ -3225,3 +3225,32 @@ func TestInterpretVariableDeclarationEvaluationOrder(t *testing.T) {
 		getLogs(),
 	)
 }
+
+func TestInterpretIfLetElseBranchConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+        pub resource Victim{}
+        pub fun main() {
+            var r: @Victim? <- nil
+            var r2: @Victim?  <- create Victim()
+            if let dummy <- r <- r2 {
+                // unreachable token destroys to please checker
+                destroy dummy
+                destroy r
+            } else {
+                // Error: r2 is invalid here
+
+                var ref = &r as &Victim?
+                var arr: @[Victim?]<- [<- r, <- r2]
+                destroy arr
+            }
+        }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+}
