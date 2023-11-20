@@ -10355,4 +10355,6 @@ func TestRuntimeInvalidResourceDuplication(t *testing.T) {
 		},
 	)
 	RequireError(t, err)
+
+	require.ErrorAs(t, err, &runtimeErrors.UnexpectedError{})
 }
