@@ -54,10 +54,7 @@ func TestMemberIndices(t *testing.T) {
 	specialFunctionA := &SpecialFunctionDeclaration{
 		Kind: common.DeclarationKindInitializer,
 	}
-	specialFunctionB := &SpecialFunctionDeclaration{
-		Kind: common.DeclarationKindDestructor,
-	}
-	specialFunctionC := &SpecialFunctionDeclaration{}
+	specialFunctionB := &SpecialFunctionDeclaration{}
 
 	compositeA := &CompositeDeclaration{
 		Identifier: Identifier{Identifier: "A"},
@@ -98,7 +95,6 @@ func TestMemberIndices(t *testing.T) {
 			interfaceB,
 			compositeA,
 			functionB,
-			specialFunctionC,
 			compositeB,
 			specialFunctionA,
 			interfaceA,
@@ -141,7 +137,6 @@ func TestMemberIndices(t *testing.T) {
 			require.Equal(t,
 				[]*SpecialFunctionDeclaration{
 					specialFunctionB,
-					specialFunctionC,
 					specialFunctionA,
 				},
 				members.SpecialFunctions(),

@@ -206,7 +206,7 @@ func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 				panic(errors.NewUnreachableError())
 			}
 
-			gauge := invocation.Interpreter
+			inter := invocation.Interpreter
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
@@ -221,12 +221,12 @@ func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 			}
 
 			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
-				gauge,
+				inter,
 				referenceType.Authorization,
 			)
 
 			return NewAccountReferenceValue(
-				gauge,
+				inter,
 				handler,
 				accountAddress,
 				authorization,
@@ -236,14 +236,14 @@ func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 }
 
 func NewAccountReferenceValue(
-	gauge common.MemoryGauge,
+	inter *interpreter.Interpreter,
 	handler AccountHandler,
 	addressValue interpreter.AddressValue,
 	authorization interpreter.Authorization,
 ) interpreter.Value {
-	account := NewAccountValue(gauge, handler, addressValue)
+	account := NewAccountValue(inter, handler, addressValue)
 	return interpreter.NewEphemeralReferenceValue(
-		gauge,
+		inter,
 		authorization,
 		account,
 		sema.AccountType,

@@ -37,6 +37,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
@@ -1905,9 +1906,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -1940,9 +1939,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	interpreter.invalidateReferencedResources(v, true)
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.array = nil
-	}
+	v.array = nil
 }
 
 func (v *ArrayValue) IsDestroyed() bool {
@@ -2017,11 +2014,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) GetKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	index := key.(NumberValue).ToInt(locationRange)
 	return v.Get(interpreter, locationRange, index)
@@ -2062,11 +2055,7 @@ func (v *ArrayValue) Get(interpreter *Interpreter, locationRange LocationRange, 
 }
 
 func (v *ArrayValue) SetKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	index := key.(NumberValue).ToInt(locationRange)
 	v.Set(interpreter, locationRange, index, value)
@@ -2190,11 +2179,7 @@ func (v *ArrayValue) AppendAll(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	index := key.(NumberValue).ToInt(locationRange)
 	v.Insert(interpreter, locationRange, index, value)
@@ -2248,11 +2233,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	index := key.(NumberValue).ToInt(locationRange)
 	return v.Remove(interpreter, locationRange, index)
@@ -2354,11 +2335,8 @@ func (v *ArrayValue) Contains(
 }
 
 func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	config := interpreter.SharedState.Config
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(interpreter, int64(v.Count()))
@@ -2619,23 +2597,11 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 }
 
 func (v *ArrayValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
-
 	// Arrays have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *ArrayValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
-
 	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -2763,9 +2729,7 @@ func (v *ArrayValue) Transfer(
 
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	interpreter.ReportComputation(
 		common.ComputationKindTransferArrayValue,
@@ -2853,8 +2817,6 @@ func (v *ArrayValue) Transfer(
 		}
 	}
 
-	var res *ArrayValue
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -2867,26 +2829,19 @@ func (v *ArrayValue) Transfer(
 
 		interpreter.invalidateReferencedResources(v, false)
 
-		if config.InvalidatedResourceValidationEnabled {
-			v.array = nil
-		} else {
-			v.array = array
-			res = v
-		}
+		v.array = nil
 	}
 
-	if res == nil {
-		res = newArrayValueFromAtreeArray(
-			interpreter,
-			v.Type,
-			v.elementSize,
-			array,
-		)
+	res := newArrayValueFromAtreeArray(
+		interpreter,
+		v.Type,
+		v.elementSize,
+		array,
+	)
 
-		res.semaType = v.semaType
-		res.isResourceKinded = v.isResourceKinded
-		res.isDestroyed = v.isDestroyed
-	}
+	res.semaType = v.semaType
+	res.isResourceKinded = v.isResourceKinded
+	res.isDestroyed = v.isDestroyed
 
 	return res
 }
@@ -16350,15 +16305,16 @@ func (UFix64Value) Scale() int {
 
 // CompositeValue
 
+type FunctionOrderedMap = orderedmap.OrderedMap[string, FunctionValue]
+
 type CompositeValue struct {
-	Destructor      FunctionValue
 	Location        common.Location
 	staticType      StaticType
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	injectedFields  map[string]Value
 	computedFields  map[string]ComputedField
 	NestedVariables map[string]*Variable
-	Functions       map[string]FunctionValue
+	Functions       *FunctionOrderedMap
 	dictionary      *atree.OrderedMap
 	typeID          TypeID
 
@@ -16380,7 +16336,8 @@ type CompositeField struct {
 	Name  string
 }
 
-const attachmentNamePrefix = "$"
+const unrepresentableNamePrefix = "$"
+const resourceDefaultDestroyEventPrefix = ast.ResourceDestructionDefaultEventName + unrepresentableNamePrefix
 
 var _ TypeIndexableValue = &CompositeValue{}
 
@@ -16586,15 +16543,33 @@ func (v *CompositeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
+func resourceDefaultDestroyEventName(t sema.ContainerType) string {
+	return resourceDefaultDestroyEventPrefix + string(t.ID())
+}
+
+// get all the default destroy event constructors associated with this composite value.
+// note that there can be more than one in the case where a resource inherits from an interface
+// that also defines a default destroy event. When that composite is destroyed, all of these
+// events will need to be emitted.
+func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []FunctionValue) {
+	if v.Functions == nil {
+		return
+	}
+	v.Functions.Foreach(func(name string, f FunctionValue) {
+		if strings.HasPrefix(name, resourceDefaultDestroyEventPrefix) {
+			constructors = append(constructors, f)
+		}
+	})
+	return
+}
+
 func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
 
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -16614,52 +16589,55 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
+	// before actually performing the destruction (i.e. so that any fields are still available),
+	// compute the default arguments of the default destruction events (if any exist). However,
+	// wait until after the destruction completes to actually emit the events, so that the correct order
+	// is preserved and nested resource destroy events happen first
+
+	// default destroy event constructors are encoded as functions on the resource (with an unrepresentable name)
+	// so that we can leverage existing atree encoding and decoding. However, we need to make sure functions are initialized
+	// if the composite was recently loaded from storage
+	if v.Functions == nil {
+		v.Functions = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
+	}
+	for _, constructor := range v.defaultDestroyEventConstructors() {
+
+		// pass the container value to the creation of the default event as an implicit argument, so that
+		// its fields are accessible in the body of the event constructor
+		eventConstructorInvocation := NewInvocation(
+			interpreter,
+			nil,
+			nil,
+			nil,
+			[]Value{v},
+			[]sema.Type{},
+			nil,
+			locationRange,
+		)
+
+		event := constructor.invoke(eventConstructorInvocation).(*CompositeValue)
+		eventType := interpreter.MustSemaTypeOfValue(event).(*sema.CompositeType)
+
+		// emit the event once destruction is complete
+		defer interpreter.emitEvent(event, eventType, locationRange)
+	}
+
 	storageID := v.StorageID()
 
 	interpreter.withResourceDestruction(
 		storageID,
 		locationRange,
 		func() {
-			// if this type has attachments, destroy all of them before invoking the destructor
-			v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
-				// an attachment's destructor may make reference to `base`, so we must set the base value
-				// for the attachment before invoking its destructor. For other functions, this happens
-				// automatically when the attachment is accessed with the access expression `v[A]`, which
-				// is a necessary pre-requisite for calling any members of the attachment. However, in
-				// the case of a destructor, this is called implicitly, and thus must have its `base`
-				// set manually
-				attachment.setBaseValue(interpreter, v)
-				attachment.Destroy(interpreter, locationRange)
-			})
-
 			interpreter = v.getInterpreter(interpreter)
 
-			// if composite was deserialized, dynamically link in the destructor
-			if v.Destructor == nil {
-				v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-			}
-
-			destructor := v.Destructor
-
-			if destructor != nil {
-				var base *EphemeralReferenceValue
-				var self MemberAccessibleValue = v
-				if v.Kind == common.CompositeKindAttachment {
-					base, self = attachmentBaseAndSelfValues(interpreter, v)
+			// destroy every nested resource in this composite; note that this iteration includes attachments
+			v.ForEachField(interpreter, func(_ string, fieldValue Value) bool {
+				if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok && compositeFieldValue.Kind == common.CompositeKindAttachment {
+					compositeFieldValue.setBaseValue(interpreter, v)
 				}
-				invocation := NewInvocation(
-					interpreter,
-					&self,
-					base,
-					nil,
-					nil,
-					nil,
-					nil,
-					locationRange,
-				)
-
-				destructor.invoke(invocation)
-			}
+				maybeDestroy(interpreter, locationRange, fieldValue)
+				return true
+			})
 		},
 	)
 
@@ -16667,9 +16645,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	interpreter.invalidateReferencedResources(v, true)
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.dictionary = nil
-	}
+	v.dictionary = nil
 }
 
 func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -16691,9 +16667,7 @@ func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRang
 func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -16815,9 +16789,13 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	if v.Functions == nil {
 		v.Functions = interpreter.GetCompositeValueFunctions(v, locationRange)
 	}
+	// if no functions were produced, the `Get` below will be nil
+	if v.Functions == nil {
+		return nil
+	}
 
-	function, ok := v.Functions[name]
-	if !ok {
+	function, present := v.Functions.Get(name)
+	if !present {
 		return nil
 	}
 
@@ -16865,9 +16843,7 @@ func (v *CompositeValue) RemoveMember(
 
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -16932,9 +16908,7 @@ func (v *CompositeValue) SetMember(
 ) bool {
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -17066,11 +17040,7 @@ func formatComposite(memoryGauge common.MemoryGauge, typeId string, fields []Com
 }
 
 func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	storable, err := v.dictionary.Get(
 		StringAtreeValueComparator,
@@ -17319,9 +17289,7 @@ func (v *CompositeValue) Transfer(
 
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	interpreter.ReportComputation(
 		common.ComputationKindTransferCompositeValue,
@@ -17445,8 +17413,6 @@ func (v *CompositeValue) Transfer(
 		}
 	}
 
-	var res *CompositeValue
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -17459,39 +17425,31 @@ func (v *CompositeValue) Transfer(
 
 		interpreter.invalidateReferencedResources(v, false)
 
-		if config.InvalidatedResourceValidationEnabled {
-			v.dictionary = nil
-		} else {
-			v.dictionary = dictionary
-			res = v
-		}
+		v.dictionary = nil
 	}
 
-	if res == nil {
-		info := NewCompositeTypeInfo(
-			interpreter,
-			v.Location,
-			v.QualifiedIdentifier,
-			v.Kind,
-		)
+	info := NewCompositeTypeInfo(
+		interpreter,
+		v.Location,
+		v.QualifiedIdentifier,
+		v.Kind,
+	)
 
-		res = newCompositeValueFromAtreeMap(
-			interpreter,
-			info,
-			dictionary,
-		)
+	res := newCompositeValueFromAtreeMap(
+		interpreter,
+		info,
+		dictionary,
+	)
 
-		res.injectedFields = v.injectedFields
-		res.computedFields = v.computedFields
-		res.NestedVariables = v.NestedVariables
-		res.Functions = v.Functions
-		res.Destructor = v.Destructor
-		res.Stringer = v.Stringer
-		res.isDestroyed = v.isDestroyed
-		res.typeID = v.typeID
-		res.staticType = v.staticType
-		res.base = v.base
-	}
+	res.injectedFields = v.injectedFields
+	res.computedFields = v.computedFields
+	res.NestedVariables = v.NestedVariables
+	res.Functions = v.Functions
+	res.Stringer = v.Stringer
+	res.isDestroyed = v.isDestroyed
+	res.typeID = v.typeID
+	res.staticType = v.staticType
+	res.base = v.base
 
 	onResourceOwnerChange := config.OnResourceOwnerChange
 
@@ -17568,7 +17526,6 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		computedFields:      v.computedFields,
 		NestedVariables:     v.NestedVariables,
 		Functions:           v.Functions,
-		Destructor:          v.Destructor,
 		Stringer:            v.Stringer,
 		isDestroyed:         v.isDestroyed,
 		typeID:              v.typeID,
@@ -17727,7 +17684,7 @@ func NewEnumCaseValue(
 	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
-	functions map[string]FunctionValue,
+	functions *FunctionOrderedMap,
 ) *CompositeValue {
 
 	fields := []CompositeField{
@@ -17772,11 +17729,10 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 
 	authorization := attachmentBaseAuthorization(interpreter, v)
 	v.base = NewEphemeralReferenceValue(interpreter, authorization, base, baseType)
-	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 }
 
 func attachmentMemberName(ty sema.Type) string {
-	return attachmentNamePrefix + string(ty.ID())
+	return unrepresentableNamePrefix + string(ty.ID())
 }
 
 func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
@@ -17787,9 +17743,7 @@ func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRa
 }
 
 func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange LocationRange) []*CompositeValue {
-	if interpreter.SharedState.Config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	var attachments []*CompositeValue
 	v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
@@ -17891,7 +17845,6 @@ func attachmentBaseAndSelfValues(
 
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
-	interpreter.trackReferencedResourceKindedValue(v.StorageID(), v)
 
 	return
 }
@@ -17916,7 +17869,7 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 		if key == nil {
 			break
 		}
-		if strings.HasPrefix(string(key.(StringAtreeValue)), attachmentNamePrefix) {
+		if strings.HasPrefix(string(key.(StringAtreeValue)), unrepresentableNamePrefix) {
 			attachment, ok := MustConvertStoredValue(interpreter, value).(*CompositeValue)
 			if !ok {
 				panic(errors.NewExternalError(err))
@@ -17950,8 +17903,8 @@ func (v *CompositeValue) getTypeKey(
 	if err != nil {
 		return Nil
 	}
+
 	attachmentRef := NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, attachment, attachmentType)
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
 
 	return NewSomeValueNonCopying(interpreter, attachmentRef)
 }
@@ -18378,9 +18331,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -18417,9 +18368,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	interpreter.invalidateReferencedResources(v, true)
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.dictionary = nil
-	}
+	v.dictionary = nil
 }
 
 func (v *DictionaryValue) ForEachKey(
@@ -18516,11 +18465,7 @@ func (v *DictionaryValue) Get(
 }
 
 func (v *DictionaryValue) GetKey(interpreter *Interpreter, locationRange LocationRange, keyValue Value) Value {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	value, ok := v.Get(interpreter, locationRange, keyValue)
 	if ok {
@@ -18538,11 +18483,7 @@ func (v *DictionaryValue) SetKey(
 ) {
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
 	interpreter.checkContainerMutation(
@@ -18622,9 +18563,7 @@ func (v *DictionaryValue) GetMember(
 ) Value {
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -18792,23 +18731,11 @@ func (v *DictionaryValue) GetMember(
 }
 
 func (v *DictionaryValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
-
 	// Dictionaries have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (v *DictionaryValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
-
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -18822,11 +18749,7 @@ func (v *DictionaryValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	return v.Remove(interpreter, locationRange, key)
 }
@@ -19127,9 +19050,7 @@ func (v *DictionaryValue) Transfer(
 
 	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(interpreter, locationRange)
-	}
+	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
 	interpreter.ReportComputation(
 		common.ComputationKindTransferDictionaryValue,
@@ -19239,8 +19160,6 @@ func (v *DictionaryValue) Transfer(
 		}
 	}
 
-	var res *DictionaryValue
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -19253,26 +19172,19 @@ func (v *DictionaryValue) Transfer(
 
 		interpreter.invalidateReferencedResources(v, false)
 
-		if config.InvalidatedResourceValidationEnabled {
-			v.dictionary = nil
-		} else {
-			v.dictionary = dictionary
-			res = v
-		}
+		v.dictionary = nil
 	}
 
-	if res == nil {
-		res = newDictionaryValueFromAtreeMap(
-			interpreter,
-			v.Type,
-			v.elementSize,
-			dictionary,
-		)
+	res := newDictionaryValueFromAtreeMap(
+		interpreter,
+		v.Type,
+		v.elementSize,
+		dictionary,
+	)
 
-		res.semaType = v.semaType
-		res.isResourceKinded = v.isResourceKinded
-		res.isDestroyed = v.isDestroyed
-	}
+	res.semaType = v.semaType
+	res.isResourceKinded = v.isResourceKinded
+	res.isDestroyed = v.isDestroyed
 
 	return res
 }
@@ -19460,9 +19372,7 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {
-	// NO-OP
-}
+func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {}
 
 func (NilValue) String() string {
 	return format.Nil
@@ -19643,20 +19553,13 @@ func (v *SomeValue) IsDestroyed() bool {
 }
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
-	}
+	v.checkInvalidatedResourceUse(locationRange)
 
 	innerValue := v.InnerValue(interpreter, locationRange)
-
 	maybeDestroy(interpreter, locationRange, innerValue)
-	v.isDestroyed = true
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.value = nil
-	}
+	v.isDestroyed = true
+	v.value = nil
 }
 
 func (v *SomeValue) String() string {
@@ -19672,11 +19575,8 @@ func (v *SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences
 }
 
 func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	config := interpreter.SharedState.Config
+	v.checkInvalidatedResourceUse(locationRange)
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
-	}
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		return NewHostFunctionValue(
@@ -19723,22 +19623,10 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRa
 }
 
 func (v *SomeValue) RemoveMember(interpreter *Interpreter, locationRange LocationRange, _ string) Value {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
-	}
-
 	panic(errors.NewUnreachableError())
 }
 
 func (v *SomeValue) SetMember(interpreter *Interpreter, locationRange LocationRange, _ string, _ Value) bool {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
-	}
-
 	panic(errors.NewUnreachableError())
 }
 
@@ -19829,11 +19717,8 @@ func (v *SomeValue) Transfer(
 	storable atree.Storable,
 	preventTransfer map[atree.StorageID]struct{},
 ) Value {
-	config := interpreter.SharedState.Config
 
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
-	}
+	v.checkInvalidatedResourceUse(locationRange)
 
 	innerValue := v.value
 
@@ -19857,8 +19742,6 @@ func (v *SomeValue) Transfer(
 		}
 	}
 
-	var res *SomeValue
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -19868,22 +19751,12 @@ func (v *SomeValue) Transfer(
 		// then mark the resource array as invalidated, by unsetting the backing array.
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
-
-		if config.InvalidatedResourceValidationEnabled {
-			v.value = nil
-		} else {
-			v.value = innerValue
-			v.valueStorable = nil
-			res = v
-		}
-
+		v.value = nil
 	}
 
-	if res == nil {
-		res = NewSomeValueNonCopying(interpreter, innerValue)
-		res.valueStorable = nil
-		res.isDestroyed = v.isDestroyed
-	}
+	res := NewSomeValueNonCopying(interpreter, innerValue)
+	res.valueStorable = nil
+	res.isDestroyed = v.isDestroyed
 
 	return res
 }
@@ -19900,13 +19773,8 @@ func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
 	}
 }
 
-func (v *SomeValue) InnerValue(interpreter *Interpreter, locationRange LocationRange) Value {
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
-	}
-
+func (v *SomeValue) InnerValue(_ *Interpreter, locationRange LocationRange) Value {
+	v.checkInvalidatedResourceUse(locationRange)
 	return v.value
 }
 
@@ -20401,12 +20269,13 @@ func NewUnmeteredEphemeralReferenceValue(
 }
 
 func NewEphemeralReferenceValue(
-	gauge common.MemoryGauge,
+	interpreter *Interpreter,
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
 ) *EphemeralReferenceValue {
-	common.UseMemory(gauge, common.EphemeralReferenceValueMemoryUsage)
+	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
+	interpreter.maybeTrackReferencedResourceKindedValue(value)
 	return NewUnmeteredEphemeralReferenceValue(authorization, value, borrowedType)
 }
 
