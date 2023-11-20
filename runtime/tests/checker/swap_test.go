@@ -253,10 +253,6 @@ func TestCheckSwapResourceFields(t *testing.T) {
           init(x: @X) {
               self.x <- x
           }
-
-          destroy() {
-              destroy self.x
-          }
       }
 
       fun test() {
@@ -302,10 +298,6 @@ func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
                           init(x: @X) {
                               self.x <- x
                           }
-
-                          destroy() {
-                              destroy self.x
-                          }
                       }
 
                       resource Z {
@@ -313,10 +305,6 @@ func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
 
                           init(x: @X) {
                               self.x <- x
-                          }
-
-                          destroy() {
-                              destroy self.x
                           }
                       }
 

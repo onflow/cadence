@@ -37,10 +37,6 @@ type memberIndices struct {
 	_specialFunctions []*SpecialFunctionDeclaration
 	// Use `Initializers()` instead
 	_initializers []*SpecialFunctionDeclaration
-	// Semantically only one destructor is allowed,
-	// but the program might illegally declare multiple.
-	// Use `Destructors()` instead
-	_destructors []*SpecialFunctionDeclaration
 	// Use `Functions()`
 	_functions []*FunctionDeclaration
 	// Use `FunctionsByIdentifier()` instead
@@ -109,11 +105,6 @@ func (i *memberIndices) Initializers(declarations []Declaration) []*SpecialFunct
 	return i._initializers
 }
 
-func (i *memberIndices) Destructors(declarations []Declaration) []*SpecialFunctionDeclaration {
-	i.once.Do(i.initializer(declarations))
-	return i._destructors
-}
-
 func (i *memberIndices) Fields(declarations []Declaration) []*FieldDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._fields
@@ -175,7 +166,6 @@ func (i *memberIndices) init(declarations []Declaration) {
 	i._functionsByIdentifier = make(map[string]*FunctionDeclaration)
 
 	i._specialFunctions = make([]*SpecialFunctionDeclaration, 0)
-	i._destructors = make([]*SpecialFunctionDeclaration, 0)
 	i._initializers = make([]*SpecialFunctionDeclaration, 0)
 
 	i._composites = make([]*CompositeDeclaration, 0)
@@ -211,8 +201,6 @@ func (i *memberIndices) init(declarations []Declaration) {
 			switch declaration.Kind {
 			case common.DeclarationKindInitializer:
 				i._initializers = append(i._initializers, declaration)
-			case common.DeclarationKindDestructor:
-				i._destructors = append(i._destructors, declaration)
 			}
 
 		case *EntitlementDeclaration:

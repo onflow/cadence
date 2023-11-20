@@ -1186,18 +1186,12 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                     self.id = 1
                     self.bar <-create Bar()
                 }
-                destroy() {
-                    destroy self.bar
-                }
             }
 
             resource Bar {
                 let baz: @Baz
                 init() {
                     self.baz <-create Baz()
-                }
-                destroy() {
-                    destroy self.baz
                 }
             }
 
@@ -1310,9 +1304,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 init() {
                     self.optionalBar <-create Bar()
                 }
-                destroy() {
-                    destroy self.optionalBar
-                }
             }
 
             resource Bar {
@@ -1357,9 +1348,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let bar: @Bar
                 init() {
                     self.bar <-create Bar()
-                }
-                destroy() {
-                    destroy self.bar
                 }
             }
 
@@ -1445,9 +1433,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let bar: @Bar
                 init() {
                     self.bar <-create Bar()
-                }
-                destroy() {
-                    destroy self.bar
                 }
             }
 
