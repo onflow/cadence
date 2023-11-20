@@ -10315,4 +10315,3 @@ func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
 }
-
