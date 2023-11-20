@@ -5468,7 +5468,12 @@ func (interpreter *Interpreter) withResourceDestruction(
 // Modifies the input `v` in place.
 // This is used for migrations, but must be located in this package because some of the fields we wish to modify are
 // privately scoped to this package
-func (interpreter *Interpreter) ConvertValueToEntitlements(v Value, convertToEntitledType func(sema.Type) sema.Type) {
+func (interpreter *Interpreter) ConvertValueToEntitlements(
+	v Value,
+	convertToEntitledType func(sema.Type) sema.Type,
+	loadValue func(PathValue, common.Address) Value,
+	saveValue func(PathValue, common.Address, Value),
+) {
 	semaType := interpreter.MustSemaTypeOfValue(v)
 	entitledType := convertToEntitledType(semaType)
 
@@ -5478,39 +5483,46 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(v Value, convertToEnt
 		staticAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, entitledReferenceType.Authorization)
 		v.Authorization = staticAuthorization
 		v.BorrowedType = entitledReferenceType.Type
-		interpreter.ConvertValueToEntitlements(v.Value, convertToEntitledType)
+		interpreter.ConvertValueToEntitlements(v.Value, convertToEntitledType, loadValue, saveValue)
 	case *StorageReferenceValue:
 		entitledReferenceType := entitledType.(*sema.ReferenceType)
 		staticAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, entitledReferenceType.Authorization)
 		v.Authorization = staticAuthorization
 		v.BorrowedType = entitledReferenceType.Type
-		// stored value is not converted; instead we will convert it upon load
-		// change this
+
+		storedValue := loadValue(v.TargetPath, v.TargetStorageAddress)
+		interpreter.ConvertValueToEntitlements(storedValue, convertToEntitledType, loadValue, saveValue)
+		saveValue(v.TargetPath, v.TargetStorageAddress, storedValue)
+
 	case *SomeValue:
-		interpreter.ConvertValueToEntitlements(v.value, convertToEntitledType)
+		interpreter.ConvertValueToEntitlements(v.value, convertToEntitledType, loadValue, saveValue)
 		// reset the storable, to be recomputed on next access
 		v.valueStorable = nil
 	case *CompositeValue:
 		// convert all the fields of this composite value to entitlements
-		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType) })
+		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType, loadValue, saveValue) })
 	case *ArrayValue:
 		entitledArrayType := entitledType.(sema.ArrayType)
 		v.semaType = entitledArrayType
 		v.Type = ConvertSemaArrayTypeToStaticArrayType(interpreter, entitledArrayType)
 		// convert all the elements of this array value to entitlements
-		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType) })
+		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType, loadValue, saveValue) })
 	case *DictionaryValue:
 		entitledDictionaryType := entitledType.(*sema.DictionaryType)
 		v.semaType = entitledDictionaryType
 		v.Type = ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, entitledDictionaryType)
 		// convert all the elements of this array value to entitlements
-		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType) })
+		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType, loadValue, saveValue) })
 	// capabilities should just have their borrow type updated;
 	// we will update their underlying value when the capability is borrowed
 	// TODO: fix this
 	case *CapabilityValue:
 		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
 		v.BorrowType = ConvertSemaToStaticType(interpreter, entitledCapabilityValue.BorrowType)
+
+		storedValue := loadValue(v.TargetPath, common.Address(v.Address))
+		interpreter.ConvertValueToEntitlements(storedValue, convertToEntitledType, loadValue, saveValue)
+		saveValue(v.TargetPath, common.Address(v.Address), storedValue)
 	case *TypeValue:
 		if v.Type == nil {
 			return
