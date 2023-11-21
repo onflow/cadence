@@ -48,16 +48,19 @@ func MigrateNestedValue(
 		for index := 0; index < count; index++ {
 			element := array.Get(inter, emptyLocationRange, index)
 			newElement, elementUpdated := MigrateNestedValue(inter, element, migrate)
-			if newElement != nil {
-				array.Set(
-					inter,
-					emptyLocationRange,
-					index,
-					newElement,
-				)
-			}
 
 			updatedInPlace = updatedInPlace || elementUpdated
+
+			if newElement == nil {
+				continue
+			}
+
+			array.Set(
+				inter,
+				emptyLocationRange,
+				index,
+				newElement,
+			)
 		}
 
 		// The array itself doesn't need to be replaced.
@@ -78,13 +81,14 @@ func MigrateNestedValue(
 			existingValue := composite.GetField(inter, interpreter.EmptyLocationRange, fieldName)
 
 			migratedValue, valueUpdated := MigrateNestedValue(inter, existingValue, migrate)
+
+			updatedInPlace = updatedInPlace || valueUpdated
+
 			if migratedValue == nil {
 				continue
 			}
 
 			composite.SetMember(inter, emptyLocationRange, fieldName, migratedValue)
-
-			updatedInPlace = updatedInPlace || valueUpdated
 		}
 
 		// The composite itself does not have to be replaced
@@ -109,6 +113,9 @@ func MigrateNestedValue(
 
 			newKey, keyUpdated := MigrateNestedValue(inter, existingKey, migrate)
 			newValue, valueUpdated := MigrateNestedValue(inter, existingValue, migrate)
+
+			updatedInPlace = updatedInPlace || keyUpdated || valueUpdated
+
 			if newKey == nil && newValue == nil {
 				continue
 			}
@@ -133,12 +140,7 @@ func MigrateNestedValue(
 				valueToSet = newValue
 			}
 
-			// Always wrap with an optional, when inserting to the dictionary.
-			valueToSet = interpreter.NewUnmeteredSomeValueNonCopying(valueToSet)
-
-			dictionary.SetKey(inter, emptyLocationRange, keyToSet, valueToSet)
-
-			updatedInPlace = updatedInPlace || keyUpdated || valueUpdated
+			dictionary.Insert(inter, emptyLocationRange, keyToSet, valueToSet)
 		}
 
 		// The dictionary itself does not have to be replaced
