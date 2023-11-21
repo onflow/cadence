@@ -2124,7 +2124,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 
 	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 
-	existingValue.DeepRemove(interpreter, true)
+	existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
 
 	interpreter.RemoveReferencedSlab(existingStorable)
 }
@@ -3005,7 +3005,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer b
 
 	err := v.array.PopIterate(func(storable atree.Storable) {
 		value := StoredValue(interpreter, storable, storage)
-		value.DeepRemove(interpreter, false)
+		value.DeepRemove(interpreter, false) // existingValue is an element of v.array because it is from PopIterate() callback.
 		interpreter.RemoveReferencedSlab(storable)
 	})
 	if err != nil {
@@ -17243,7 +17243,7 @@ func (v *CompositeValue) SetMember(
 	if existingStorable != nil {
 		existingValue := StoredValue(interpreter, existingStorable, config.Storage)
 
-		existingValue.DeepRemove(interpreter, true)
+		existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
 
 		interpreter.RemoveReferencedSlab(existingStorable)
 		return true
@@ -17915,7 +17915,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter, hasNoParentContain
 		interpreter.RemoveReferencedSlab(nameStorable)
 
 		value := StoredValue(interpreter, valueStorable, storage)
-		value.DeepRemove(interpreter, false)
+		value.DeepRemove(interpreter, false) // value is an element of v.dictionary because it is from PopIterate() callback.
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
@@ -18034,7 +18034,7 @@ func (v *CompositeValue) RemoveField(
 
 	// Value
 	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
-	existingValue.DeepRemove(interpreter, true)
+	existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
 
@@ -19237,7 +19237,7 @@ func (v *DictionaryValue) Remove(
 	// Key
 
 	existingKeyValue := StoredValue(interpreter, existingKeyStorable, storage)
-	existingKeyValue.DeepRemove(interpreter, true)
+	existingKeyValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
@@ -19749,11 +19749,11 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, hasNoParentContai
 	err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 
 		key := StoredValue(interpreter, keyStorable, storage)
-		key.DeepRemove(interpreter, false)
+		key.DeepRemove(interpreter, false) // key is an element of v.dictionary because it is from PopIterate() callback.
 		interpreter.RemoveReferencedSlab(keyStorable)
 
 		value := StoredValue(interpreter, valueStorable, storage)
-		value.DeepRemove(interpreter, false)
+		value.DeepRemove(interpreter, false) // value is an element of v.dictionary because it is from PopIterate() callback.
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
@@ -20294,8 +20294,8 @@ func (v *SomeValue) Clone(interpreter *Interpreter) Value {
 	return NewUnmeteredSomeValueNonCopying(innerValue)
 }
 
-func (v *SomeValue) DeepRemove(interpreter *Interpreter, _ bool) {
-	v.value.DeepRemove(interpreter, false)
+func (v *SomeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
+	v.value.DeepRemove(interpreter, hasNoParentContainer)
 	if v.valueStorable != nil {
 		interpreter.RemoveReferencedSlab(v.valueStorable)
 	}
