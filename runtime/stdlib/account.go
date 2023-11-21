@@ -1032,7 +1032,7 @@ func newAuthAccountInboxPublishFunction(
 				true,
 				nil,
 				nil,
-				true,
+				true, // New PublishedValue is standalone.
 			)
 
 			storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
@@ -1100,7 +1100,7 @@ func newAuthAccountInboxUnpublishFunction(
 				true,
 				nil,
 				nil,
-				false,
+				false, // publishedValue is an element in storage map because it is returned by ReadStored.
 			)
 
 			inter.WriteStored(
@@ -1187,7 +1187,7 @@ func newAuthAccountInboxClaimFunction(
 				true,
 				nil,
 				nil,
-				false,
+				false, // publishedValue is an element in storage map because it is returned by ReadStored.
 			)
 
 			inter.WriteStored(
@@ -3169,7 +3169,7 @@ func newAuthAccountCapabilitiesPublishFunction(
 				true,
 				nil,
 				nil,
-				true,
+				true, // capabilityValue is standalone because it is from invocation.Arguments[0].
 			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3240,7 +3240,7 @@ func newAuthAccountCapabilitiesUnpublishFunction(
 				true,
 				nil,
 				nil,
-				false,
+				false, // capabilityValue is an element of storage map.
 			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3388,7 +3388,7 @@ func newAuthAccountCapabilitiesMigrateLinkFunction(
 				true,
 				nil,
 				nil,
-				true,
+				true, // capabilityValue is standalone.
 			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())

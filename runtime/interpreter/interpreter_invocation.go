@@ -101,7 +101,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 					false,
 					nil,
 					nil,
-					true,
+					true, // argument is standalone.
 				)
 			}
 		}

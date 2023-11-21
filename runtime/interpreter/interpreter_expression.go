@@ -1359,7 +1359,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		false,
 		nil,
 		nil,
-		true,
+		true, // base is standalone.
 	).(*CompositeValue)
 
 	// we enforce this in the checker
