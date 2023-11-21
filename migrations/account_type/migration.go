@@ -85,16 +85,24 @@ func (m *AccountTypeMigration) migrateValue(value interpreter.Value) (newValue i
 }
 
 func (m *AccountTypeMigration) migrateTypeValue(value interpreter.Value) (newValue interpreter.Value, updatedInPlace bool) {
-	if typeValue, ok := value.(interpreter.TypeValue); ok {
-		convertedType := m.maybeConvertAccountType(typeValue.Type)
+	switch value := value.(type) {
+	case interpreter.TypeValue:
+		convertedType := m.maybeConvertAccountType(value.Type)
 		if convertedType == nil {
 			return
 		}
-
 		return interpreter.NewTypeValue(nil, convertedType), true
-	}
 
-	return nil, false
+	case *interpreter.CapabilityValue:
+		convertedBorrowType := m.maybeConvertAccountType(value.BorrowType)
+		if convertedBorrowType == nil {
+			return
+		}
+		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType), true
+
+	default:
+		return nil, false
+	}
 }
 
 func (m *AccountTypeMigration) maybeConvertAccountType(staticType interpreter.StaticType) interpreter.StaticType {

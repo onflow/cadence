@@ -686,3 +686,113 @@ func TestNestedTypeValueMigration(t *testing.T) {
 		})
 	}
 }
+
+func TestValuesWithStaticTypeMigration(t *testing.T) {
+
+	t.Parallel()
+
+	account := common.Address{0x42}
+	pathDomain := common.PathDomainPublic
+
+	type testCase struct {
+		storedValue   interpreter.Value
+		expectedValue interpreter.Value
+	}
+
+	ledger := runtime_utils.NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil)
+	locationRange := interpreter.EmptyLocationRange
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   false,
+			AtreeStorageValidationEnabled: false,
+		},
+	)
+	require.NoError(t, err)
+
+	testCases := map[string]testCase{
+		"account_capability_value": {
+			storedValue: interpreter.NewUnmeteredCapabilityValue(
+				123,
+				interpreter.NewAddressValue(nil, common.Address{0x42}),
+				interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+			),
+			expectedValue: interpreter.NewUnmeteredCapabilityValue(
+				123,
+				interpreter.NewAddressValue(nil, common.Address{0x42}),
+				unauthorizedAccountReferenceType,
+			),
+		},
+		"string_capability_value": {
+			storedValue: interpreter.NewUnmeteredCapabilityValue(
+				123,
+				interpreter.NewAddressValue(nil, common.Address{0x42}),
+				interpreter.PrimitiveStaticTypeString,
+			),
+		},
+	}
+
+	// Store values
+
+	for name, testCase := range testCases {
+		transferredValue := testCase.storedValue.Transfer(
+			inter,
+			locationRange,
+			atree.Address(account),
+			false,
+			nil,
+			nil,
+		)
+
+		inter.WriteStored(
+			account,
+			pathDomain.Identifier(),
+			interpreter.StringStorageMapKey(name),
+			transferredValue,
+		)
+	}
+
+	err = storage.Commit(inter, true)
+	require.NoError(t, err)
+
+	// Migrate
+
+	migration := NewAccountTypeMigration(inter, storage)
+
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				account,
+			},
+		},
+		nil,
+	)
+
+	// Assert: Traverse through the storage and see if the values are updated now.
+
+	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
+	require.NotNil(t, storageMap)
+	require.Greater(t, storageMap.Count(), uint64(0))
+
+	iterator := storageMap.Iterator(inter)
+
+	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
+		identifier := string(key.(interpreter.StringAtreeValue))
+
+		t.Run(identifier, func(t *testing.T) {
+			testCase, ok := testCases[identifier]
+			require.True(t, ok)
+
+			expectedStoredValue := testCase.expectedValue
+			if expectedStoredValue == nil {
+				expectedStoredValue = testCase.storedValue
+			}
+
+			utils.AssertValuesEqual(t, inter, expectedStoredValue, value)
+		})
+	}
+}
