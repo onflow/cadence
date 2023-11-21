@@ -135,9 +135,12 @@ type Value interface {
 		remove bool,
 		storable atree.Storable,
 		preventTransfer map[atree.ValueID]struct{},
-		atRoot bool,
+		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
 	) Value
-	DeepRemove(interpreter *Interpreter, atRoot bool)
+	DeepRemove(
+		interpreter *Interpreter,
+		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
+	)
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	// NOTE: memory metering is unnecessary for Clone methods
@@ -1714,7 +1717,7 @@ func NewArrayValue(
 				true,
 				nil,
 				nil,
-				true,
+				true, // standalone value doesn't have parent container.
 			)
 
 			return value
@@ -2028,7 +2031,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 				false,
 				nil,
 				nil,
-				false,
+				false, // value has a parent container because it is from iterator.
 			)
 		},
 	)
@@ -2106,7 +2109,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
-		true,
+		true, // standalone element doesn't have a parent container yet.
 	)
 
 	existingStorable, err := v.array.Set(uint64(index), element)
@@ -2183,7 +2186,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
-		true,
+		true, // standalone element doesn't have a parent container yet.
 	)
 
 	err := v.array.Append(element)
@@ -2246,7 +2249,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
-		true,
+		true, // standalone element doesn't have a parent container yet.
 	)
 
 	err := v.array.Insert(uint64(index), element)
@@ -2299,7 +2302,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 		true,
 		storable,
 		nil,
-		true,
+		true, // value is standalone because it was removed from parent container.
 	)
 }
 
@@ -2797,7 +2800,7 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
-	atRoot bool,
+	hasNoParentContainer bool,
 ) Value {
 
 	config := interpreter.SharedState.Config
@@ -2870,7 +2873,15 @@ func (v *ArrayValue) Transfer(
 				}
 
 				element := MustConvertStoredValue(interpreter, value).
-					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer, false)
+					Transfer(
+						interpreter,
+						locationRange,
+						address,
+						remove,
+						nil,
+						preventTransfer,
+						false, // value has a parent container because it is from iterator.
+					)
 
 				return element, nil
 			},
@@ -2886,7 +2897,7 @@ func (v *ArrayValue) Transfer(
 			}
 
 			interpreter.maybeValidateAtreeValue(v.array)
-			if atRoot {
+			if hasNoParentContainer {
 				interpreter.maybeValidateAtreeStorage()
 			}
 
@@ -2970,7 +2981,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	return array
 }
 
-func (v *ArrayValue) DeepRemove(interpreter *Interpreter, atRoot bool) {
+func (v *ArrayValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
 	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
@@ -3002,7 +3013,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter, atRoot bool) {
 	}
 
 	interpreter.maybeValidateAtreeValue(v.array)
-	if atRoot {
+	if hasNoParentContainer {
 		interpreter.maybeValidateAtreeStorage()
 	}
 }
@@ -3118,7 +3129,7 @@ func (v *ArrayValue) Slice(
 				false,
 				nil,
 				nil,
-				false,
+				false, // value has a parent container because it is from iterator.
 			)
 		},
 	)
@@ -3154,7 +3165,7 @@ func (v *ArrayValue) Reverse(
 				false,
 				nil,
 				nil,
-				false,
+				false, // value has a parent container because it is returned by Get().
 			)
 		},
 	)
@@ -3232,7 +3243,7 @@ func (v *ArrayValue) Filter(
 				false,
 				nil,
 				nil,
-				false,
+				false, // value has a parent container because it is from iterator.
 			)
 		},
 	)
@@ -3316,7 +3327,7 @@ func (v *ArrayValue) Map(
 				false,
 				nil,
 				nil,
-				false,
+				false, // value has a parent container because it is from iterator.
 			)
 		},
 	)
@@ -17170,7 +17181,7 @@ func (v *CompositeValue) RemoveMember(
 			true,
 			existingValueStorable,
 			nil,
-			true,
+			true, // value is standalone because it was removed from parent container.
 		)
 }
 
@@ -17213,7 +17224,7 @@ func (v *CompositeValue) SetMember(
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
-		true,
+		true, // value is standalone before being set in parent container.
 	)
 
 	existingStorable, err := v.dictionary.Set(
@@ -17619,7 +17630,7 @@ func (v *CompositeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
-	atRoot bool,
+	hasNoParentContainer bool,
 ) Value {
 
 	config := interpreter.SharedState.Config
@@ -17725,7 +17736,7 @@ func (v *CompositeValue) Transfer(
 					remove,
 					nil,
 					preventTransfer,
-					false,
+					false, // value is an element of parent container because it is returned from iterator.
 				)
 
 				return atreeKey, value, nil
@@ -17745,7 +17756,7 @@ func (v *CompositeValue) Transfer(
 			}
 
 			interpreter.maybeValidateAtreeValue(v.dictionary)
-			if atRoot {
+			if hasNoParentContainer {
 				interpreter.maybeValidateAtreeStorage()
 			}
 
@@ -17874,7 +17885,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *CompositeValue) DeepRemove(interpreter *Interpreter, atRoot bool) {
+func (v *CompositeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
 	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
@@ -17912,7 +17923,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter, atRoot bool) {
 	}
 
 	interpreter.maybeValidateAtreeValue(v.dictionary)
-	if atRoot {
+	if hasNoParentContainer {
 		interpreter.maybeValidateAtreeStorage()
 	}
 }
@@ -19050,7 +19061,7 @@ func (v *DictionaryValue) GetMember(
 						false,
 						nil,
 						nil,
-						false,
+						false, // value is an element of parent container because it is returned from iterator.
 					)
 			},
 		)
@@ -19088,7 +19099,7 @@ func (v *DictionaryValue) GetMember(
 						false,
 						nil,
 						nil,
-						false,
+						false, // value is an element of parent container because it is returned from iterator.
 					)
 			})
 
@@ -19239,7 +19250,7 @@ func (v *DictionaryValue) Remove(
 			true,
 			existingValueStorable,
 			nil,
-			true,
+			true, // value is standalone because it was removed from parent container.
 		)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -19283,7 +19294,7 @@ func (v *DictionaryValue) Insert(
 		true,
 		nil,
 		preventTransfer,
-		true,
+		true, // keyValue is standalone before it is inserted into parent container.
 	)
 
 	value = value.Transfer(
@@ -19293,7 +19304,7 @@ func (v *DictionaryValue) Insert(
 		true,
 		nil,
 		preventTransfer,
-		true,
+		true, // value is standalone before it is inserted into parent container.
 	)
 
 	valueComparator := newValueComparator(interpreter, locationRange)
@@ -19331,7 +19342,7 @@ func (v *DictionaryValue) Insert(
 		true,
 		existingValueStorable,
 		nil,
-		true,
+		true, // existingValueStorable is standalone after it is overwritten in parent container.
 	)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -19492,7 +19503,7 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
-	atRoot bool,
+	hasNoParentContainer bool,
 ) Value {
 
 	config := interpreter.SharedState.Config
@@ -19581,10 +19592,26 @@ func (v *DictionaryValue) Transfer(
 				}
 
 				key := MustConvertStoredValue(interpreter, atreeKey).
-					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer, false)
+					Transfer(
+						interpreter,
+						locationRange,
+						address,
+						remove,
+						nil,
+						preventTransfer,
+						false, // atreeKey has parent container because it is returned from iterator.
+					)
 
 				value := MustConvertStoredValue(interpreter, atreeValue).
-					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer, false)
+					Transfer(
+						interpreter,
+						locationRange,
+						address,
+						remove,
+						nil,
+						preventTransfer,
+						false, // atreeValue has parent container because it is returned from iterator.
+					)
 
 				return key, value, nil
 			},
@@ -19603,7 +19630,7 @@ func (v *DictionaryValue) Transfer(
 			}
 
 			interpreter.maybeValidateAtreeValue(v.dictionary)
-			if atRoot {
+			if hasNoParentContainer {
 				interpreter.maybeValidateAtreeStorage()
 			}
 
@@ -19696,7 +19723,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	return dictionary
 }
 
-func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, atRoot bool) {
+func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
 
 	config := interpreter.SharedState.Config
 
@@ -19734,7 +19761,7 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, atRoot bool) {
 	}
 
 	interpreter.maybeValidateAtreeValue(v.dictionary)
-	if atRoot {
+	if hasNoParentContainer {
 		interpreter.maybeValidateAtreeStorage()
 	}
 }
@@ -20218,7 +20245,7 @@ func (v *SomeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
-	_ bool,
+	hasNoParentContainer bool,
 ) Value {
 	innerValue := v.value
 
@@ -20234,7 +20261,7 @@ func (v *SomeValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
-			false,
+			hasNoParentContainer,
 		)
 
 		if remove {
@@ -21752,7 +21779,7 @@ func (v *PublishedValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
-	_ bool,
+	hasNoParentContainer bool,
 ) Value {
 	// NB: if the inner value of a PublishedValue can be a resource,
 	// we must perform resource-related checks here as well
@@ -21766,7 +21793,7 @@ func (v *PublishedValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
-			false,
+			hasNoParentContainer,
 		).(*CapabilityValue)
 
 		addressValue := v.Recipient.Transfer(
@@ -21776,7 +21803,7 @@ func (v *PublishedValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
-			false,
+			hasNoParentContainer,
 		).(AddressValue)
 
 		if remove {

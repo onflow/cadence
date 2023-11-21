@@ -1781,7 +1781,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		false,
 		nil,
 		nil,
-		true,
+		true, // value is standalone.
 	)
 
 	targetType = interpreter.substituteMappedEntitlements(targetType)
@@ -4249,7 +4249,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				true,
 				nil,
 				nil,
-				true,
+				true, // value is standalone because it is from invocation.Arguments[0].
 			)
 
 			// Write new value
@@ -4374,7 +4374,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				false,
 				nil,
 				nil,
-				false,
+				false, // value is an element in storage map because it is from "ReadStored".
 			)
 
 			// Remove the value from storage,

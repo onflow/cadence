@@ -176,7 +176,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		false,
 		nil,
 		nil,
-		true,
+		true, // array is standalone.
 	)
 	array = arrayCopy.(*ArrayValue)
 
@@ -571,7 +571,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		false,
 		nil,
 		nil,
-		true,
+		true, // dictionary is standalone.
 	)
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
@@ -876,7 +876,7 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		false,
 		nil,
 		nil,
-		true,
+		true, // composite is standalone.
 	).(*CompositeValue)
 
 	value = composite.GetMember(

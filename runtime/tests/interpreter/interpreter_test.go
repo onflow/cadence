@@ -5295,7 +5295,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			true,
 			nil,
 			nil,
-			true,
+			true, // r is standalone.
 		)
 
 		domain := storagePath.Domain.Identifier()
@@ -8006,6 +8006,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		secondResource.GetField(inter, interpreter.EmptyLocationRange, "id"),
 	)
 }
+
 
 func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 

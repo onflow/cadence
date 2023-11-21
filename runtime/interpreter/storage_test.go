@@ -685,7 +685,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 			false,
 			nil,
 			map[atree.ValueID]struct{}{},
-			true,
+			true, // childValue1 is standalone before being inserted into containerValue1.
 		).(*CompositeValue)
 
 		containerValue1.Append(inter, EmptyLocationRange, childValue1)

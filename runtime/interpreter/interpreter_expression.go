@@ -1522,7 +1522,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		false,
 		nil,
 		nil,
-		true,
+		true, // base is standalone.
 	).(*CompositeValue)
 
 	attachment.setBaseValue(interpreter, base)
