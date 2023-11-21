@@ -1854,18 +1854,12 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 init() {
                     self.r2 <- create R2()
                 }
-                destroy() {
-                    destroy self.r2
-                }
             }
 
             access(all) resource R2 {
                 access(all) let r3: @R3
                 init() {
                     self.r3 <- create R3()
-                }
-                destroy() {
-                    destroy self.r3
                 }
             }
 
@@ -2602,9 +2596,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 init() {
                     self.bar <-create Bar()
                 }
-                destroy() {
-                    destroy self.bar
-                }
             }
 
             resource Bar {
@@ -2671,9 +2662,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 let bar: @Bar
                 init() {
                     self.bar <-create Bar()
-                }
-                destroy() {
-                    destroy self.bar
                 }
             }
 
@@ -3010,10 +2998,6 @@ func TestCheckResourceReferenceFieldNilAssignment(t *testing.T) {
                 self.inner <- v
                 var outerRef = &self as &Outer
                 outerRef.inner = nil
-            }
-
-            destroy(){
-                destroy self.inner
             }
         }
 

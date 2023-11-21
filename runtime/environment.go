@@ -165,21 +165,20 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 
 func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 	return &interpreter.Config{
-		InvalidatedResourceValidationEnabled: true,
-		MemoryGauge:                          e,
-		BaseActivationHandler:                e.getBaseActivation,
-		OnEventEmitted:                       e.newOnEventEmittedHandler(),
-		InjectedCompositeFieldsHandler:       e.newInjectedCompositeFieldsHandler(),
-		UUIDHandler:                          e.newUUIDHandler(),
-		ContractValueHandler:                 e.newContractValueHandler(),
-		ImportLocationHandler:                e.newImportLocationHandler(),
-		AccountHandler:                       e.NewAccountValue,
-		OnRecordTrace:                        e.newOnRecordTraceHandler(),
-		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
-		CompositeTypeHandler:                 e.newCompositeTypeHandler(),
-		CompositeValueFunctionsHandler:       e.newCompositeValueFunctionsHandler(),
-		TracingEnabled:                       e.config.TracingEnabled,
-		AtreeValueValidationEnabled:          e.config.AtreeValidationEnabled,
+		MemoryGauge:                    e,
+		BaseActivationHandler:          e.getBaseActivation,
+		OnEventEmitted:                 e.newOnEventEmittedHandler(),
+		InjectedCompositeFieldsHandler: e.newInjectedCompositeFieldsHandler(),
+		UUIDHandler:                    e.newUUIDHandler(),
+		ContractValueHandler:           e.newContractValueHandler(),
+		ImportLocationHandler:          e.newImportLocationHandler(),
+		AccountHandler:                 e.NewAccountValue,
+		OnRecordTrace:                  e.newOnRecordTraceHandler(),
+		OnResourceOwnerChange:          e.newResourceOwnerChangedHandler(),
+		CompositeTypeHandler:           e.newCompositeTypeHandler(),
+		CompositeValueFunctionsHandler: e.newCompositeValueFunctionsHandler(),
+		TracingEnabled:                 e.config.TracingEnabled,
+		AtreeValueValidationEnabled:    e.config.AtreeValidationEnabled,
 		// NOTE: ignore e.config.AtreeValidationEnabled here,
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
@@ -981,7 +980,7 @@ func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 		inter *interpreter.Interpreter,
 		locationRange interpreter.LocationRange,
 		compositeValue *interpreter.CompositeValue,
-	) map[string]interpreter.FunctionValue {
+	) *interpreter.FunctionOrderedMap {
 
 		handler := e.compositeValueFunctionsHandlers[compositeValue.TypeID()]
 		if handler == nil {
