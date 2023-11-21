@@ -5481,13 +5481,20 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(
 
 	var staticType StaticType
 	// for reference types, we want to use the borrow type, rather than the type of the referenced value
-	if referenceValue, isReferenceValue := v.(*EphemeralReferenceValue); isReferenceValue {
+	switch referenceValue := v.(type) {
+	case *EphemeralReferenceValue:
 		staticType = NewReferenceStaticType(
 			interpreter,
 			referenceValue.Authorization,
 			ConvertSemaToStaticType(interpreter, referenceValue.BorrowedType),
 		)
-	} else {
+	case *StorageReferenceValue:
+		staticType = NewReferenceStaticType(
+			interpreter,
+			referenceValue.Authorization,
+			ConvertSemaToStaticType(interpreter, referenceValue.BorrowedType),
+		)
+	default:
 		staticType = v.StaticType(interpreter)
 	}
 

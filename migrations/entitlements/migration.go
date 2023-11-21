@@ -30,12 +30,12 @@ type EntitlementsMigration struct {
 
 var _ migrations.Migration = EntitlementsMigration{}
 
-func NewEntitlementsMigration() EntitlementsMigration {
-	return EntitlementsMigration{}
+func NewEntitlementsMigration(inter *interpreter.Interpreter) EntitlementsMigration {
+	return EntitlementsMigration{Interpreter: inter}
 }
 
 func (EntitlementsMigration) Name() string {
-	return "AccountTypeMigration"
+	return "EntitlementsMigration"
 }
 
 // Converts its input to an entitled type according to the following rules:
@@ -84,7 +84,7 @@ func ConvertToEntitledType(t sema.Type) sema.Type {
 	}
 }
 
-func (EntitlementsMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
-
-	return nil
+func (mig EntitlementsMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
+	mig.Interpreter.ConvertValueToEntitlements(value, ConvertToEntitledType)
+	return value
 }

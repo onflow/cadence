@@ -21,11 +21,15 @@ package entitlements
 import (
 	"testing"
 
+	"github.com/onflow/cadence/migrations"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
+	"github.com/onflow/cadence/runtime/tests/runtime_utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -767,7 +771,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 		{
 			Input:  unentitledLegacyCapability,
 			Output: entitledLegacyConvertedCapability,
-			Name:   "Capability<&R{I}>",
+			Name:   "Capability<&R{I}> -> Capability<auth(E) &R>",
 		},
 		{
 			Input: interpreter.NewEphemeralReferenceValue(
@@ -1028,6 +1032,135 @@ func TestConvertToEntitledValue(t *testing.T) {
 			default:
 				require.Equal(t, input, test.Output)
 			}
+		})
+	}
+}
+
+func TestMigrateSimpleContract(t *testing.T) {
+	t.Parallel()
+
+	var uuid uint64
+
+	account := common.Address{0x42}
+	ledger := runtime_utils.NewTestLedger(nil, nil)
+
+	type testCase struct {
+		storedValue   interpreter.Value
+		expectedValue interpreter.Value
+	}
+
+	storage := runtime.NewStorage(ledger, nil)
+
+	code := `
+		access(all) entitlement E
+		access(all) resource R {
+			access(E) fun foo() {}
+		}
+		access(all) fun makeR(): @R {
+			return <- create R()
+		}
+	`
+	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+		code,
+		checkerUtils.ParseAndCheckOptions{},
+	)
+
+	require.NoError(t, err)
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		&interpreter.Config{
+			Storage: storage,
+			UUIDHandler: func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	storageIdentifier := common.PathDomainStorage.Identifier()
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	rValue, err := inter.Invoke("makeR")
+	require.NoError(t, err)
+
+	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue))
+	unentitledRRefStaticType := unentitledRRef.StaticType(inter)
+	entitledRRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"S.test.E"} },
+			2,
+			sema.Conjunction,
+		),
+		rValue,
+		inter.MustSemaTypeOfValue(rValue),
+	)
+	entitledRRefStaticType := entitledRRef.StaticType(inter)
+
+	testCases := map[string]testCase{
+		"foo": {
+			storedValue: interpreter.NewCapabilityValue(
+				inter,
+				0,
+				interpreter.NewAddressValue(inter, account),
+				unentitledRRefStaticType,
+			),
+			expectedValue: interpreter.NewCapabilityValue(
+				inter,
+				0,
+				interpreter.NewAddressValue(inter, account),
+				entitledRRefStaticType,
+			),
+		},
+	}
+
+	for name, testCase := range testCases {
+		inter.WriteStored(
+			account,
+			storageIdentifier,
+			interpreter.StringStorageMapKey(name),
+			testCase.storedValue,
+		)
+	}
+
+	err = storage.Commit(inter, true)
+	require.NoError(t, err)
+
+	// Migrate
+
+	migration := migrations.NewStorageMigration(inter, storage)
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				account,
+			},
+		},
+		nil,
+		NewEntitlementsMigration(inter),
+	)
+
+	storageMap := storage.GetStorageMap(account, storageIdentifier, false)
+	require.NotNil(t, storageMap)
+	require.Greater(t, storageMap.Count(), uint64(0))
+
+	iterator := storageMap.Iterator(inter)
+
+	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
+		identifier := string(key.(interpreter.StringAtreeValue))
+
+		t.Run(identifier, func(t *testing.T) {
+			testCase, ok := testCases[identifier]
+			require.True(t, ok)
+
+			expectedStoredValue := testCase.expectedValue
+
+			AssertValuesEqual(t, inter, expectedStoredValue, value)
 		})
 	}
 }
