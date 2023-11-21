@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func (interpreter *Interpreter) evalStatement(statement ast.Statement) StatementResult {
@@ -411,18 +412,7 @@ func (interpreter *Interpreter) visitForStatementBody(
 	return nil, false
 }
 
-func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
-	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: statement,
-	}
+func (interpreter *Interpreter) emitEvent(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange) {
 
 	config := interpreter.SharedState.Config
 
@@ -437,6 +427,23 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
+
+	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: statement,
+	}
+
+	interpreter.emitEvent(event, eventType, locationRange)
 
 	return nil
 }

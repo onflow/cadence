@@ -52,7 +52,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var err error
 
 	if p.current.Is(lexer.TokenParenOpen) {
-		parameterList, err = parseParameterList(p)
+		parameterList, err = parseParameterList(p, false)
 		if err != nil {
 			return nil, err
 		}

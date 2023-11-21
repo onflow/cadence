@@ -289,3 +289,32 @@ func (e *MissingCommaInParameterListError) EndPosition(_ common.MemoryGauge) ast
 func (e *MissingCommaInParameterListError) Error() string {
 	return "missing comma after parameter"
 }
+
+// CustomDestructorError
+
+type CustomDestructorError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &CustomDestructorError{}
+var _ errors.UserError = &CustomDestructorError{}
+
+func (*CustomDestructorError) isParseError() {}
+
+func (*CustomDestructorError) IsUserError() {}
+
+func (e *CustomDestructorError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *CustomDestructorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *CustomDestructorError) Error() string {
+	return "custom destructor definitions are no longer permitted"
+}
+
+func (e *CustomDestructorError) SecondaryError() string {
+	return "remove the destructor definition"
+}

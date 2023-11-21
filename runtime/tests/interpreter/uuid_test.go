@@ -88,8 +88,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
 		&interpreter.Config{
-			InvalidatedResourceValidationEnabled: true,
-			Storage:                              storage,
+			Storage: storage,
 			UUIDHandler: func() (uint64, error) {
 				defer func() { uuid++ }()
 				return uuid, nil

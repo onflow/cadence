@@ -148,6 +148,7 @@ type Elaboration struct {
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
 	compositeNestedDeclarations         map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
 	interfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
+	defaultDestroyDeclarations          map[ast.Declaration]ast.CompositeLikeDeclaration
 	postConditionsRewrites              map[*ast.Conditions]PostConditionsRewrite
 	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
 	compositeTypes                      map[TypeID]*CompositeType
@@ -733,6 +734,23 @@ func (e *Elaboration) SetInterfaceNestedDeclarations(
 		e.interfaceNestedDeclarations = map[*ast.InterfaceDeclaration]map[string]ast.Declaration{}
 	}
 	e.interfaceNestedDeclarations[declaration] = nestedDeclaration
+}
+
+func (e *Elaboration) DefaultDestroyDeclaration(declaration ast.Declaration) ast.CompositeLikeDeclaration {
+	if e.defaultDestroyDeclarations == nil {
+		return nil
+	}
+	return e.defaultDestroyDeclarations[declaration]
+}
+
+func (e *Elaboration) SetDefaultDestroyDeclaration(
+	declaration ast.Declaration,
+	eventDeclaration ast.CompositeLikeDeclaration,
+) {
+	if e.defaultDestroyDeclarations == nil {
+		e.defaultDestroyDeclarations = map[ast.Declaration]ast.CompositeLikeDeclaration{}
+	}
+	e.defaultDestroyDeclarations[declaration] = eventDeclaration
 }
 
 func (e *Elaboration) PostConditionsRewrite(conditions *ast.Conditions) (rewrite PostConditionsRewrite) {

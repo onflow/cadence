@@ -1230,22 +1230,22 @@ func (t *TestContractType) NewTestContract(
 	compositeValue := value.(*interpreter.CompositeValue)
 
 	// Inject natively implemented function values
-	compositeValue.Functions[testTypeAssertFunctionName] = testTypeAssertFunction
-	compositeValue.Functions[testTypeAssertEqualFunctionName] = testTypeAssertEqualFunction
-	compositeValue.Functions[testTypeFailFunctionName] = testTypeFailFunction
-	compositeValue.Functions[testTypeExpectFunctionName] = t.expectFunction
-	compositeValue.Functions[testTypeReadFileFunctionName] =
-		newTestTypeReadFileFunction(testFramework)
+	compositeValue.Functions.Set(testTypeAssertFunctionName, testTypeAssertFunction)
+	compositeValue.Functions.Set(testTypeAssertEqualFunctionName, testTypeAssertEqualFunction)
+	compositeValue.Functions.Set(testTypeFailFunctionName, testTypeFailFunction)
+	compositeValue.Functions.Set(testTypeExpectFunctionName, t.expectFunction)
+	compositeValue.Functions.Set(testTypeReadFileFunctionName,
+		newTestTypeReadFileFunction(testFramework))
 
 	// Inject natively implemented matchers
-	compositeValue.Functions[testTypeNewMatcherFunctionName] = t.newMatcherFunction
-	compositeValue.Functions[testTypeEqualFunctionName] = t.equalFunction
-	compositeValue.Functions[testTypeBeEmptyFunctionName] = t.beEmptyFunction
-	compositeValue.Functions[testTypeHaveElementCountFunctionName] = t.haveElementCountFunction
-	compositeValue.Functions[testTypeContainFunctionName] = t.containFunction
-	compositeValue.Functions[testTypeBeGreaterThanFunctionName] = t.beGreaterThanFunction
-	compositeValue.Functions[testTypeBeLessThanFunctionName] = t.beLessThanFunction
-	compositeValue.Functions[testExpectFailureFunctionName] = t.expectFailureFunction
+	compositeValue.Functions.Set(testTypeNewMatcherFunctionName, t.newMatcherFunction)
+	compositeValue.Functions.Set(testTypeEqualFunctionName, t.equalFunction)
+	compositeValue.Functions.Set(testTypeBeEmptyFunctionName, t.beEmptyFunction)
+	compositeValue.Functions.Set(testTypeHaveElementCountFunctionName, t.haveElementCountFunction)
+	compositeValue.Functions.Set(testTypeContainFunctionName, t.containFunction)
+	compositeValue.Functions.Set(testTypeBeGreaterThanFunctionName, t.beGreaterThanFunction)
+	compositeValue.Functions.Set(testTypeBeLessThanFunctionName, t.beLessThanFunction)
+	compositeValue.Functions.Set(testExpectFailureFunctionName, t.expectFailureFunction)
 
 	return compositeValue, nil
 }
