@@ -2841,7 +2841,9 @@ func (v *ArrayValue) Transfer(
 
 	if needsStoreTo || !isResourceKinded {
 
-		iterator, err := v.array.ReadOnlyIterator()
+		// Use non-readonly iterator here because iterated
+		// value can be removed if remove parameter is true.
+		iterator, err := v.array.Iterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -17666,7 +17668,12 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if needsStoreTo || !isResourceKinded {
-		iterator, err := v.dictionary.ReadOnlyIterator()
+		// Use non-readonly iterator here because iterated
+		// value can be removed if remove parameter is true.
+		iterator, err := v.dictionary.Iterator(
+			StringAtreeValueComparator,
+			StringAtreeValueHashInput,
+		)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -19532,7 +19539,9 @@ func (v *DictionaryValue) Transfer(
 		valueComparator := newValueComparator(interpreter, locationRange)
 		hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
-		iterator, err := v.dictionary.ReadOnlyIterator()
+		// Use non-readonly iterator here because iterated
+		// value can be removed if remove parameter is true.
+		iterator, err := v.dictionary.Iterator(valueComparator, hashInputProvider)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
