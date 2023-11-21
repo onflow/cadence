@@ -304,7 +304,6 @@ func TestConvertToEntitledType(t *testing.T) {
 			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheritingCapField),
 			Name:   "interface inheriting capability field",
 		},
-		// TODO: add tests for array and dictionary entitlements once the mutability changes are merged
 	}
 
 	// create capability versions of all the existing tests
@@ -390,10 +389,22 @@ func TestConvertToEntitledValue(t *testing.T) {
 			}
 		}
 
-		access(all) resource R {
+		access(all) resource interface I {
+			access(E) let eField: Int
+		}
+
+		access(all) resource interface J {
+			access(G) let gField: Int
+		}
+
+		access(all) resource R: I, J {
+			access(E) let eField: Int
+			access(G) let gField: Int
 			access(E, G) let egField: Int
 			init() {
 				self.egField = 0
+				self.eField = 1
+				self.gField = 2
 			}
 		}
 
@@ -401,9 +412,6 @@ func TestConvertToEntitledValue(t *testing.T) {
 			access(E | F) let efField: @R
 			init() {
 				self.efField <- create R()
-			}
-			destroy() {
-				destroy self.efField
 			}
 		}
 
@@ -450,6 +458,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 	nestedValue, err := inter.Invoke("makeNested")
 	require.NoError(t, err)
 
+	// &S
+
 	unentitledSRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue))
 	unentitledSRefStaticType := unentitledSRef.StaticType(inter)
 
@@ -466,6 +476,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 	)
 	entitledSRefStaticType := entitledSRef.StaticType(inter)
 
+	// &R
+
 	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue))
 	unentitledRRefStaticType := unentitledRRef.StaticType(inter)
 
@@ -481,6 +493,83 @@ func TestConvertToEntitledValue(t *testing.T) {
 		inter.MustSemaTypeOfValue(rValue),
 	)
 	entitledRRefStaticType := entitledRRef.StaticType(inter)
+
+	// &{I}
+
+	intersectionIType := sema.NewIntersectionType(inter, []*sema.InterfaceType{checker.Elaboration.InterfaceType("S.test.I")})
+	unentitledIRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIType)
+
+	entitledIRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"S.test.E"} },
+			1,
+			sema.Conjunction,
+		),
+		rValue,
+		intersectionIType,
+	)
+
+	// legacy Capability<&R{I}>
+
+	legacyIntersectionType := interpreter.ConvertSemaToStaticType(inter, intersectionIType).(*interpreter.IntersectionStaticType)
+	legacyIntersectionType.LegacyType = rValue.StaticType(inter)
+	unentitledLegacyReferenceStaticType := interpreter.NewReferenceStaticType(
+		inter,
+		interpreter.UnauthorizedAccess,
+		legacyIntersectionType,
+	)
+
+	unentitledLegacyCapability := interpreter.NewCapabilityValue(
+		inter,
+		0,
+		interpreter.NewAddressValue(inter, testAddress),
+		unentitledLegacyReferenceStaticType,
+	)
+
+	entitledConvertedLegacyReferenceStaticType := interpreter.NewReferenceStaticType(
+		inter,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"S.test.E"} },
+			1,
+			sema.Conjunction,
+		),
+		rValue.StaticType(inter),
+	)
+
+	entitledLegacyConvertedCapability := interpreter.NewCapabilityValue(
+		inter,
+		0,
+		interpreter.NewAddressValue(inter, testAddress),
+		entitledConvertedLegacyReferenceStaticType,
+	)
+
+	// &{I, J}
+
+	intersectionIJType := sema.NewIntersectionType(
+		inter,
+		[]*sema.InterfaceType{
+			checker.Elaboration.InterfaceType("S.test.I"),
+			checker.Elaboration.InterfaceType("S.test.J"),
+		},
+	)
+	unentitledIJRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIJType)
+
+	entitledIJRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
+			2,
+			sema.Conjunction,
+		),
+		rValue,
+		intersectionIJType,
+	)
+
+	// &Nested
 
 	unentitledNestedRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue))
 	unentitledNestedRefStaticType := unentitledNestedRef.StaticType(inter)
@@ -597,6 +686,16 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name:   "&R",
 		},
 		{
+			Input:  unentitledIRef,
+			Output: entitledIRef,
+			Name:   "&{I}",
+		},
+		{
+			Input:  unentitledIJRef,
+			Output: entitledIJRef,
+			Name:   "&{I, J}",
+		},
+		{
 			Input: interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
@@ -664,6 +763,11 @@ func TestConvertToEntitledValue(t *testing.T) {
 				entitledRRefStaticType,
 			),
 			Name: "Capability<&R>",
+		},
+		{
+			Input:  unentitledLegacyCapability,
+			Output: entitledLegacyConvertedCapability,
+			Name:   "Capability<&R{I}>",
 		},
 		{
 			Input: interpreter.NewEphemeralReferenceValue(
@@ -833,14 +937,27 @@ func TestConvertToEntitledValue(t *testing.T) {
 		},
 	}
 
+	getStaticType := func(v interpreter.Value) interpreter.StaticType {
+		// for reference types, we want to use the borrow type, rather than the type of the referenced value
+		if referenceValue, isReferenceValue := v.(*interpreter.EphemeralReferenceValue); isReferenceValue {
+			return interpreter.NewReferenceStaticType(
+				inter,
+				referenceValue.Authorization,
+				interpreter.ConvertSemaToStaticType(inter, referenceValue.BorrowedType),
+			)
+		} else {
+			return v.StaticType(inter)
+		}
+	}
+
 	for _, test := range tests {
 		var runtimeTypeTest struct {
 			Input  interpreter.Value
 			Output interpreter.Value
 			Name   string
 		}
-		runtimeTypeTest.Input = interpreter.NewTypeValue(inter, test.Input.Clone(inter).StaticType(inter))
-		runtimeTypeTest.Output = interpreter.NewTypeValue(inter, test.Output.Clone(inter).StaticType(inter))
+		runtimeTypeTest.Input = interpreter.NewTypeValue(inter, getStaticType(test.Input.Clone(inter)))
+		runtimeTypeTest.Output = interpreter.NewTypeValue(inter, getStaticType(test.Output.Clone(inter)))
 		runtimeTypeTest.Name = "runtime type " + test.Name
 
 		tests = append(tests, runtimeTypeTest)
