@@ -1264,10 +1264,6 @@ func TestEncodeResource(t *testing.T) {
                 init(bar: @Bar) {
                     self.bar <- bar
                 }
-
-                destroy() {
-                    destroy self.bar
-                }
             }
 
             fun main(): @Foo {

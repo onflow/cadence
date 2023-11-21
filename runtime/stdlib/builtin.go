@@ -67,7 +67,7 @@ type CompositeValueFunctionsHandler func(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	compositeValue *interpreter.CompositeValue,
-) map[string]interpreter.FunctionValue
+) *interpreter.FunctionOrderedMap
 
 type CompositeValueFunctionsHandlers map[common.TypeID]CompositeValueFunctionsHandler
 
@@ -79,7 +79,7 @@ func DefaultStandardLibraryCompositeValueFunctionHandlers(
 			inter *interpreter.Interpreter,
 			_ interpreter.LocationRange,
 			_ *interpreter.CompositeValue,
-		) map[string]interpreter.FunctionValue {
+		) *interpreter.FunctionOrderedMap {
 			return PublicKeyFunctions(inter, handler)
 		},
 	}
