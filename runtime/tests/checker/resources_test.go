@@ -9619,7 +9619,7 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("in index expr", func(t *testing.T) {
+	t.Run("inside index expr", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -9644,4 +9644,85 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
 	})
+
+	t.Run("as index", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [((): Void)] = []
+
+                let bypass = fun(x: ((): Void)): Int {
+                    return 0
+                }
+
+                array[r.sayHi]()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("function expression", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [((): Void)] = []
+
+                let bypass = fun(x: ((): Void)): Int {
+                    return 0
+                }
+
+                var i = fun(): Int {
+                    var f = r.sayHi
+                    return 0
+                }()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("array expression", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [((): Void)] = []
+
+                let bypass = fun(x: ((): Void)): Int {
+                    return 0
+                }
+
+                [r.sayHi, r.sayHi][0]()
+
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
 }
