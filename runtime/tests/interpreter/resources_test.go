@@ -3254,3 +3254,80 @@ func TestInterpretIfLetElseBranchConfusion(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
+
+func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource R{}
+
+        access(all) fun collect(copy2: @R?, _ arrRef: &[R]): @R {
+            arrRef.append(<- copy2!)
+            return <- create R()
+        }
+
+        access(all) fun main() {
+            var victim: @R? <- create R()
+            var arr: @[R] <- []
+
+            // In the optional binding below, the 'victim' must be invalidated
+            // before evaluation of the collect() call
+            if let copy1 <- victim <- collect(copy2: <- victim, &arr as &[R]) {
+                arr.append(<- copy1)
+            } else {
+                destroy victim // Never executed
+            }
+
+            destroy arr // This crashes
+        }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	invalidResourceError := &interpreter.InvalidatedResourceError{}
+	require.ErrorAs(t, err, invalidResourceError)
+
+	// Error must be thrown at `copy2: <- victim`
+	errorStartPos := invalidResourceError.LocationRange.StartPosition()
+	assert.Equal(t, 15, errorStartPos.Line)
+	assert.Equal(t, 53, errorStartPos.Column)
+}
+
+func TestInterpretMovedResourceInSecondValue(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource R{}
+
+        access(all) fun collect(copy2: @R?, _ arrRef: &[R]): @R {
+            arrRef.append(<- copy2!)
+            return <- create R()
+        }
+
+        access(all) fun main() {
+            var victim: @R? <- create R()
+            var arr: @[R] <- []
+
+            // In the optional binding below, the 'victim' must be invalidated
+            // before evaluation of the collect() call
+            let copy1 <- victim <- collect(copy2: <- victim, &arr as &[R])
+
+            destroy copy1
+            destroy arr
+        }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	invalidResourceError := &interpreter.InvalidatedResourceError{}
+	require.ErrorAs(t, err, invalidResourceError)
+
+	// Error must be thrown at `copy2: <- victim`
+	errorStartPos := invalidResourceError.LocationRange.StartPosition()
+	assert.Equal(t, 15, errorStartPos.Line)
+	assert.Equal(t, 53, errorStartPos.Column)
+}

@@ -161,6 +161,22 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		panic(errors.NewUnreachableError())
 	}
 
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: declaration.Value,
+	}
+	value = value.Transfer(
+		interpreter,
+		locationRange,
+		atree.Address{},
+		false,
+		nil,
+		nil,
+	)
+
+	// Assignment can also be a resource move.
+	interpreter.invalidateResource(value)
+
 	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
 	valueType := variableDeclarationTypes.ValueType
 
@@ -180,10 +196,6 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	if someValue, ok := value.(*SomeValue); ok {
 
 		targetType := variableDeclarationTypes.TargetType
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: declaration.Value,
-		}
 		innerValue := someValue.InnerValue(interpreter, locationRange)
 		transferredUnwrappedValue := interpreter.transferAndConvert(
 			innerValue,
@@ -194,9 +206,6 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
-
-		// Assignment can also be a resource move.
-		interpreter.invalidateResource(innerValue)
 
 		interpreter.declareVariable(
 			declaration.Identifier.Identifier,
@@ -503,6 +512,18 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 		panic(errors.NewUnreachableError())
 	}
 
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: declaration.Value,
+	}
+
+	transferredValue := interpreter.transferAndConvert(
+		result,
+		valueType,
+		targetType,
+		locationRange,
+	)
+
 	// Assignment is a potential resource move.
 	interpreter.invalidateResource(result)
 
@@ -517,17 +538,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 		)
 	}
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: declaration.Value,
-	}
-
-	return interpreter.transferAndConvert(
-		result,
-		valueType,
-		targetType,
-		locationRange,
-	)
+	return transferredValue
 }
 
 func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) StatementResult {
