@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func (interpreter *Interpreter) evalStatement(statement ast.Statement) StatementResult {
@@ -141,75 +142,22 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	thenBlock, elseBlock *ast.Block,
 ) StatementResult {
 
-	// NOTE: It is *REQUIRED* that the getter for the value is used
-	// instead of just evaluating value expression,
-	// as the value may be an access expression (member access, index access),
-	// which implicitly removes a resource.
-	//
-	// Performing the removal from the container is essential
-	// (and just evaluating the expression does not perform the removal),
-	// because if there is a second value,
-	// the assignment to the value will cause an overwrite of the value.
-	// If the resource was not moved ou of the container,
-	// its contents get deleted.
-
-	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
-
-	const allowMissing = false
-	value := getterSetter.get(allowMissing)
-	if value == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: declaration.Value,
-	}
-	value = value.Transfer(
-		interpreter,
-		locationRange,
-		atree.Address{},
-		false,
-		nil,
-		nil,
-	)
-
-	// Assignment can also be a resource move.
-	interpreter.invalidateResource(value)
-
-	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
-	valueType := variableDeclarationTypes.ValueType
-
-	if declaration.SecondValue != nil {
-		secondValueType := variableDeclarationTypes.SecondValueType
-
-		interpreter.visitAssignment(
-			declaration.Transfer.Operation,
-			getterSetter,
-			valueType,
-			declaration.SecondValue,
-			secondValueType,
-			declaration,
-		)
-	}
+	value := interpreter.visitVariableDeclaration(declaration, true)
 
 	if someValue, ok := value.(*SomeValue); ok {
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: declaration.Value,
+		}
 
-		targetType := variableDeclarationTypes.TargetType
 		innerValue := someValue.InnerValue(interpreter, locationRange)
-		transferredUnwrappedValue := interpreter.transferAndConvert(
-			innerValue,
-			valueType,
-			targetType,
-			locationRange,
-		)
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
 
 		interpreter.declareVariable(
 			declaration.Identifier.Identifier,
-			transferredUnwrappedValue,
+			innerValue,
 		)
 
 		return interpreter.visitBlock(thenBlock)
@@ -470,7 +418,7 @@ func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration)
 // then declares the variable with the name bound to the value
 func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) StatementResult {
 
-	value := interpreter.visitVariableDeclaration(declaration)
+	value := interpreter.visitVariableDeclaration(declaration, false)
 
 	// NOTE: lexical scope, always declare a new variable.
 	// Do not find an existing variable and assign the value!
@@ -485,6 +433,7 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 
 func (interpreter *Interpreter) visitVariableDeclaration(
 	declaration *ast.VariableDeclaration,
+	isOptionalBinding bool,
 ) Value {
 
 	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
@@ -515,6 +464,12 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: declaration.Value,
+	}
+
+	if isOptionalBinding {
+		targetType = &sema.OptionalType{
+			Type: targetType,
+		}
 	}
 
 	transferredValue := interpreter.transferAndConvert(
