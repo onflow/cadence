@@ -3331,3 +3331,41 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 	assert.Equal(t, 15, errorStartPos.Line)
 	assert.Equal(t, 53, errorStartPos.Column)
 }
+
+func TestInterpretOptionalBindingElseBranch(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		access(all) resource Victim {}
+
+		access(all) fun main() {
+
+			var r: @Victim? <- nil
+			var r2: @Victim?  <- create Victim()
+
+			if let dummy <- r <- r2 {
+				// unreachable token destroys to please checker
+				destroy dummy
+				destroy r
+			} else {
+				// checker failed to notice that r2 is invalid here
+				var ref = &r as &Victim?
+				var arr: @[Victim?]<- [
+                    <- r,
+                    <- r2
+                ]
+				destroy arr
+			}
+		}
+   `)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+
+	var invalidatedResourceErr interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceErr)
+
+	// Error must be thrown at `<-r2` in the array literal
+	assert.Equal(t, 18, invalidatedResourceErr.StartPosition().Line)
+}
