@@ -1579,7 +1579,7 @@ func (checker *Checker) memberSatisfied(
 	// Check access
 
 	effectiveInterfaceMemberAccess := checker.effectiveInterfaceMemberAccess(interfaceMember.Access)
-	effectiveCompositeMemberAccess := checker.effectiveCompositeMemberAccess(compositeMember.Access)
+	effectiveCompositeMemberAccess := EffectiveCompositeMemberAccess(compositeMember.Access, checker.Config.AccessCheckMode)
 
 	return !effectiveCompositeMemberAccess.IsLessPermissiveThan(effectiveInterfaceMemberAccess)
 }
@@ -1911,7 +1911,7 @@ func (checker *Checker) enumMembersAndOrigins(
 		// Enum cases must be effectively public
 		enumAccess := checker.accessFromAstAccess(enumCase.Access)
 
-		if !checker.effectiveCompositeMemberAccess(enumAccess).Equal(PrimitiveAccess(ast.AccessAll)) {
+		if !EffectiveCompositeMemberAccess(enumAccess, checker.Config.AccessCheckMode).Equal(PrimitiveAccess(ast.AccessAll)) {
 			checker.report(
 				&InvalidAccessModifierError{
 					DeclarationKind: enumCase.DeclarationKind(),

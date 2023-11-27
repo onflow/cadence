@@ -16802,7 +16802,8 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	var base *EphemeralReferenceValue
 	var self MemberAccessibleValue = v
 	if v.Kind == common.CompositeKindAttachment {
-		functionAccess := function.FunctionType().Access
+		functionAccess := interpreter.getAccessOfMember(v, name)
+
 		// with respect to entitlements, any access inside an attachment that is not an entitlement access
 		// does not provide any entitlements to base and self
 		// E.g. consider:

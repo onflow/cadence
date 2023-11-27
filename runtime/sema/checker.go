@@ -2368,7 +2368,7 @@ func (checker *Checker) TypeActivationDepth() int {
 func (checker *Checker) effectiveMemberAccess(access Access, containerKind ContainerKind) Access {
 	switch containerKind {
 	case ContainerKindComposite:
-		return checker.effectiveCompositeMemberAccess(access)
+		return EffectiveCompositeMemberAccess(access, checker.Config.AccessCheckMode)
 	case ContainerKindInterface:
 		return checker.effectiveInterfaceMemberAccess(access)
 	default:
@@ -2384,12 +2384,12 @@ func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
 	}
 }
 
-func (checker *Checker) effectiveCompositeMemberAccess(access Access) Access {
+func EffectiveCompositeMemberAccess(access Access, checkMode AccessCheckMode) Access {
 	if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return access
 	}
 
-	switch checker.Config.AccessCheckMode {
+	switch checkMode {
 	case AccessCheckModeStrict, AccessCheckModeNotSpecifiedRestricted:
 		return PrimitiveAccess(ast.AccessSelf)
 
