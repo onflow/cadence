@@ -1407,14 +1407,6 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	var auth Authorization = UnauthorizedAccess
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
 
-	if attachmentType.RequiredEntitlements.Len() > 0 {
-		baseAccess := sema.EntitlementSetAccess{
-			SetKind:      sema.Conjunction,
-			Entitlements: attachmentType.RequiredEntitlements,
-		}
-		auth = ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
-	}
-
 	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
 		auth,
