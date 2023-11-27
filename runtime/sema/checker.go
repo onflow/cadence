@@ -1352,7 +1352,6 @@ func (checker *Checker) functionType(
 
 	return &FunctionType{
 		Purity:               PurityFromAnnotation(purity),
-		Access:               access,
 		TypeParameters:       convertedTypeParameters,
 		Parameters:           convertedParameters,
 		ReturnTypeAnnotation: convertedReturnTypeAnnotation,
