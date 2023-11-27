@@ -32,6 +32,7 @@ Constructs a new public key
 
 var publicKeyConstructorFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
+	sema.UnauthorizedAccess,
 	[]sema.Parameter{
 		{
 			Identifier:     sema.PublicKeyTypePublicKeyFieldName,
