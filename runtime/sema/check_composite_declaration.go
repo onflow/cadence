@@ -2035,13 +2035,13 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 	paramType := param.TypeAnnotation.Type
 	paramDefaultArgument := astParam.DefaultArgument
 
-	access := NewAccessFromEntitlementSet(containerType.SupportedEntitlements(), Conjunction)
-
 	// make `self` and `base` available when checking default arguments so the fields of the composite are available
-	checker.declareSelfValue(access, containerType, containerDeclaration.DeclarationDocString())
+	// as this event is emitted when the resource is destroyed, these values should be fully entitled
+	fullyEntitledAccess := NewAccessFromEntitlementSet(containerType.SupportedEntitlements(), Conjunction)
+	checker.declareSelfValue(fullyEntitledAccess, containerType, containerDeclaration.DeclarationDocString())
 	if compositeContainer, isComposite := containerType.(*CompositeType); isComposite && compositeContainer.Kind == common.CompositeKindAttachment {
 		checker.declareBaseValue(
-			access,
+			fullyEntitledAccess,
 			compositeContainer.baseType,
 			compositeContainer,
 			compositeContainer.baseTypeDocString)

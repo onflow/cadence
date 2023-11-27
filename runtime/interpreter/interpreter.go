@@ -42,8 +42,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-//
-
 type getterSetter struct {
 	target Value
 	// allowMissing may be true when the got value is nil.
@@ -1000,14 +998,11 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 
 	var self MemberAccessibleValue = containingResourceComposite
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
-		attachmentType := interpreter.MustSemaTypeOfValue(containingResourceComposite).(*sema.CompositeType)
-
 		var base *EphemeralReferenceValue
-		base, self = attachmentBaseAndSelfValues(
-			declarationInterpreter,
-			sema.NewAccessFromEntitlementSet(attachmentType.SupportedEntitlements(), sema.Conjunction),
-			containingResourceComposite,
-		)
+		// in evaluation of destroy events, base and self are fully entitled, as the value must be owned
+		supportedEntitlements := interpreter.MustSemaTypeOfValue(containingResourceComposite).(*sema.CompositeType).SupportedEntitlements()
+		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+		base, self = attachmentBaseAndSelfValues(declarationInterpreter, access, containingResourceComposite)
 		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
 	}
 	declarationInterpreter.declareVariable(sema.SelfIdentifier, self)
