@@ -1387,20 +1387,6 @@ func TestMigrateAcrossContracts(t *testing.T) {
 	require.NotNil(t, storageMap)
 	require.Greater(t, storageMap.Count(), uint64(0))
 
-	value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("bar"))
-
-	require.IsType(t, &interpreter.CompositeValue{}, value)
-	tValue := value.(*interpreter.CompositeValue)
-	require.Equal(t, "C.T", tValue.QualifiedIdentifier)
-
-	field := tValue.GetMember(inter, interpreter.EmptyLocationRange, "cap")
-
-	require.IsType(t, &interpreter.CapabilityValue{}, field)
-	cap := field.(*interpreter.CapabilityValue)
-	require.IsType(t, &interpreter.ReferenceStaticType{}, cap.BorrowType)
-	ref := cap.BorrowType.(*interpreter.ReferenceStaticType)
-	ref.Authorization = interpreter.UnauthorizedAccess
-
 	// Migrate
 
 	migration := migrations.NewStorageMigration(inter, runtimeStorage)
@@ -1415,18 +1401,18 @@ func TestMigrateAcrossContracts(t *testing.T) {
 		NewEntitlementsMigration(inter),
 	)
 
-	value = storageMap.ReadValue(nil, interpreter.StringStorageMapKey("bar"))
+	value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("bar"))
 
 	require.IsType(t, &interpreter.CompositeValue{}, value)
-	tValue = value.(*interpreter.CompositeValue)
+	tValue := value.(*interpreter.CompositeValue)
 	require.Equal(t, "C.T", tValue.QualifiedIdentifier)
 
-	field = tValue.GetMember(inter, interpreter.EmptyLocationRange, "cap")
+	field := tValue.GetMember(inter, interpreter.EmptyLocationRange, "cap")
 
 	require.IsType(t, &interpreter.CapabilityValue{}, field)
-	cap = field.(*interpreter.CapabilityValue)
+	cap := field.(*interpreter.CapabilityValue)
 	require.IsType(t, &interpreter.ReferenceStaticType{}, cap.BorrowType)
-	ref = cap.BorrowType.(*interpreter.ReferenceStaticType)
+	ref := cap.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
