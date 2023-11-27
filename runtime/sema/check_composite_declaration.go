@@ -2027,16 +2027,19 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 func (checker *Checker) checkDefaultDestroyEventParam(
 	param Parameter,
 	astParam *ast.Parameter,
-	containerType ContainerType,
+	containerType EntitlementSupportingType,
 	containerDeclaration ast.Declaration,
 ) {
 	paramType := param.TypeAnnotation.Type
 	paramDefaultArgument := astParam.DefaultArgument
 
+	access := NewEntitlementSetAccessFromSet(containerType.SupportedEntitlements(), Conjunction)
+
 	// make `self` and `base` available when checking default arguments so the fields of the composite are available
-	checker.declareSelfValue(containerType, containerDeclaration.DeclarationDocString())
+	checker.declareSelfValue(access, containerType, containerDeclaration.DeclarationDocString())
 	if compositeContainer, isComposite := containerType.(*CompositeType); isComposite && compositeContainer.Kind == common.CompositeKindAttachment {
 		checker.declareBaseValue(
+			access,
 			compositeContainer.baseType,
 			compositeContainer,
 			compositeContainer.baseTypeDocString)
@@ -2063,7 +2066,7 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 func (checker *Checker) checkDefaultDestroyEvent(
 	eventType *CompositeType,
 	eventDeclaration ast.CompositeLikeDeclaration,
-	containerType ContainerType,
+	containerType EntitlementSupportingType,
 	containerDeclaration ast.Declaration,
 ) {
 
