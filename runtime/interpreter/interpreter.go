@@ -1348,9 +1348,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 
 					var auth Authorization = UnauthorizedAccess
 					attachmentType := interpreter.MustSemaTypeOfValue(value).(*sema.CompositeType)
-					// Self's type in the constructor is codomain of the attachment's entitlement map, since
+					// Self's type in the constructor is fully entitled, since
 					// the constructor can only be called when in possession of the base resource
-					// if the attachment is declared with access(all) access, then self is unauthorized
 
 					auth = ConvertSemaAccessToStaticAuthorization(
 						interpreter,

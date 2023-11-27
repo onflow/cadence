@@ -16323,7 +16323,7 @@ type CompositeValue struct {
 	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
 	//    have their `base` fields set to `&r`
 	// 3) When a value is transferred, this field is copied between its attachments
-	base                *EphemeralReferenceValue
+	base                *CompositeValue
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
 	isDestroyed         bool
@@ -17175,7 +17175,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	}
 
 	if compositeType.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue().Value
+		base := v.getBaseValue(interpreter, UnauthorizedAccess).Value
 		if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
 			return false
 		}
@@ -17686,11 +17686,7 @@ func NewEnumCaseValue(
 	return v
 }
 
-func (v *CompositeValue) getBaseValue() *EphemeralReferenceValue {
-	return v.base
-}
-
-func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+func (v *CompositeValue) getBaseValue(interpreter *Interpreter, fnAuth Authorization) *EphemeralReferenceValue {
 	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -17704,8 +17700,11 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 		baseType = ty
 	}
 
-	authorization := attachmentBaseAuthorization(interpreter, v)
-	v.base = NewEphemeralReferenceValue(interpreter, authorization, base, baseType)
+	return NewEphemeralReferenceValue(interpreter, fnAuth, v.base, baseType)
+}
+
+func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+	v.base = base
 }
 
 func attachmentMemberName(ty sema.Type) string {
@@ -17776,6 +17775,7 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 
 func attachmentBaseAuthorization(
 	interpreter *Interpreter,
+	fnAccess sema.Access,
 	attachment *CompositeValue,
 ) Authorization {
 	var auth Authorization = UnauthorizedAccess
@@ -17788,10 +17788,9 @@ func attachmentBaseAndSelfValues(
 	fnAccess sema.Access,
 	v *CompositeValue,
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
-	base = v.getBaseValue()
-
 	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(interpreter, fnAccess)
 
+	base = v.getBaseValue(interpreter, attachmentReferenceAuth)
 	// in attachment functions, self is a reference value
 	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
 
