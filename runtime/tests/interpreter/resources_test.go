@@ -3369,3 +3369,67 @@ func TestInterpretOptionalBindingElseBranch(t *testing.T) {
 	// Error must be thrown at `<-r2` in the array literal
 	assert.Equal(t, 18, invalidatedResourceErr.StartPosition().Line)
 }
+
+func TestInterpretResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource R {
+            access(all) let id: String
+
+            init(_ id: String) {
+                log("Creating ".concat(id))
+                self.id = id
+            }
+
+            destroy() {
+                log("Destroying ".concat(self.id))
+            }
+        }
+
+        access(all) fun dummy(): @R { return <- create R("dummy") }
+
+        access(all) resource ResourceLoser {
+            access(self) var victim: @R
+            access(self) var value: @R?
+
+            init(victim: @R) {
+                self.victim <- victim
+                self.value <- dummy()
+                self.doMagic()
+            }
+
+            access(all) fun callback(in: @R): @R {
+                var x <- dummy()
+                x <-> self.victim
+
+                // Write the victim value into self.value which will soon be overwritten
+                // (via an already-existing gettersetter)
+                self.value <-! x
+                return <- in
+            }
+
+            access(all) fun doMagic() {
+               var out <- self.value <- self.callback(in: <- dummy())
+               destroy out
+            }
+
+            destroy() {
+                destroy self.victim
+                destroy self.value
+            }
+        }
+
+        access(all) fun main(): Void {
+           var victim <- create R("victim resource")
+           var rl <- create ResourceLoser(victim: <- victim)
+           destroy rl
+        }
+
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+}
