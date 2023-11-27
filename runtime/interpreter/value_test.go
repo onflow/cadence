@@ -3619,7 +3619,6 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 
 		functionType := sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
-			sema.UnauthorizedAccess,
 			[]sema.Parameter{
 				{
 					TypeAnnotation: sema.IntTypeAnnotation,

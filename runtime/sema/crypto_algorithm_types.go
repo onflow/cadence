@@ -110,7 +110,6 @@ const HashAlgorithmTypeHashFunctionName = "hash"
 
 var HashAlgorithmTypeHashFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -129,7 +128,6 @@ const HashAlgorithmTypeHashWithTagFunctionName = "hashWithTag"
 
 var HashAlgorithmTypeHashWithTagFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,

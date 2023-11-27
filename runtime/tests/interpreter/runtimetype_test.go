@@ -410,7 +410,6 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Access: sema.UnauthorizedAccess,
 					Parameters: []sema.Parameter{
 						{
 							TypeAnnotation: sema.StringTypeAnnotation,
@@ -427,7 +426,6 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Access: sema.UnauthorizedAccess,
 					Parameters: []sema.Parameter{
 						{TypeAnnotation: sema.StringTypeAnnotation},
 						{TypeAnnotation: sema.IntTypeAnnotation},
@@ -443,7 +441,6 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Access:               sema.UnauthorizedAccess,
 					ReturnTypeAnnotation: sema.StringTypeAnnotation,
 				},
 			},

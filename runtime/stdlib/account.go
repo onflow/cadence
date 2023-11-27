@@ -43,7 +43,6 @@ Creates a new account, paid by the given existing account
 //	  auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account
 var accountFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
-	sema.UnauthorizedAccess,
 	[]sema.Parameter{
 		{
 			Identifier: "payer",
@@ -2040,7 +2039,6 @@ Returns the account for the given address
 
 var getAccountFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityView,
-	sema.UnauthorizedAccess,
 	[]sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,

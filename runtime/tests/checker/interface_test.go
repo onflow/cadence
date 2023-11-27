@@ -1772,7 +1772,6 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.FunctionType{
-			Access: sema.UnauthorizedAccess,
 			Parameters: []sema.Parameter{
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(

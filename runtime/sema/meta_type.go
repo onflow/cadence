@@ -50,7 +50,6 @@ var MetaTypeAnnotation = NewTypeAnnotation(MetaType)
 
 var MetaTypeIsSubtypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          "of",

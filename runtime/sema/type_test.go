@@ -1988,7 +1988,6 @@ func TestMapType(t *testing.T) {
 		}
 		original := NewSimpleFunctionType(
 			FunctionPurityView,
-			UnauthorizedAccess,
 			[]Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(
@@ -2016,7 +2015,6 @@ func TestMapType(t *testing.T) {
 		}
 		mapped := NewSimpleFunctionType(
 			FunctionPurityView,
-			UnauthorizedAccess,
 			[]Parameter{
 				{
 					TypeAnnotation: NewTypeAnnotation(

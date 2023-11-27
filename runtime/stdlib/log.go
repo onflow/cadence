@@ -26,7 +26,6 @@ import (
 
 var LogFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
-	sema.UnauthorizedAccess,
 	[]sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,

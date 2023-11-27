@@ -26,7 +26,6 @@ type RuntimeTypeConstructor struct {
 
 var MetaTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	nil,
 	MetaTypeAnnotation,
 )
@@ -35,7 +34,6 @@ const OptionalTypeFunctionName = "OptionalType"
 
 var OptionalTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -50,7 +48,6 @@ const VariableSizedArrayTypeFunctionName = "VariableSizedArrayType"
 
 var VariableSizedArrayTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -65,7 +62,6 @@ const ConstantSizedArrayTypeFunctionName = "ConstantSizedArrayType"
 
 var ConstantSizedArrayTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Identifier:     "type",
@@ -87,7 +83,6 @@ const DictionaryTypeFunctionName = "DictionaryType"
 
 var DictionaryTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Identifier:     "key",
@@ -105,7 +100,6 @@ const CompositeTypeFunctionName = "CompositeType"
 
 var CompositeTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -120,7 +114,6 @@ const InterfaceTypeFunctionName = "InterfaceType"
 
 var InterfaceTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -135,7 +128,6 @@ const FunctionTypeFunctionName = "FunctionType"
 
 var FunctionTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Identifier: "parameters",
@@ -157,7 +149,6 @@ const IntersectionTypeFunctionName = "IntersectionType"
 
 var IntersectionTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Identifier: "types",
@@ -175,7 +166,6 @@ const ReferenceTypeFunctionName = "ReferenceType"
 
 var ReferenceTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Identifier: "entitlements",
@@ -197,7 +187,6 @@ const CapabilityTypeFunctionName = "CapabilityType"
 
 var CapabilityTypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
-	UnauthorizedAccess,
 	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,

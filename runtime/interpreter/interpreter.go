@@ -3567,7 +3567,6 @@ func functionTypeFunction(invocation Invocation) Value {
 		interpreter,
 		sema.NewSimpleFunctionType(
 			sema.FunctionPurityImpure,
-			sema.UnauthorizedAccess,
 			parameterTypes,
 			sema.NewTypeAnnotation(returnType),
 		),
