@@ -1000,8 +1000,14 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 
 	var self MemberAccessibleValue = containingResourceComposite
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
+		attachmentType := interpreter.MustSemaTypeOfValue(containingResourceComposite).(*sema.CompositeType)
+
 		var base *EphemeralReferenceValue
-		base, self = attachmentBaseAndSelfValues(declarationInterpreter, containingResourceComposite)
+		base, self = attachmentBaseAndSelfValues(
+			declarationInterpreter,
+			sema.NewAccessFromEntitlementSet(attachmentType.SupportedEntitlements(), sema.Conjunction),
+			containingResourceComposite,
+		)
 		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
 	}
 	declarationInterpreter.declareVariable(sema.SelfIdentifier, self)

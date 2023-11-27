@@ -2035,7 +2035,7 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 	paramType := param.TypeAnnotation.Type
 	paramDefaultArgument := astParam.DefaultArgument
 
-	access := NewEntitlementSetAccessFromSet(containerType.SupportedEntitlements(), Conjunction)
+	access := NewAccessFromEntitlementSet(containerType.SupportedEntitlements(), Conjunction)
 
 	// make `self` and `base` available when checking default arguments so the fields of the composite are available
 	checker.declareSelfValue(access, containerType, containerDeclaration.DeclarationDocString())
