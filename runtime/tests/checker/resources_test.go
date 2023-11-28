@@ -9726,3 +9726,69 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 	})
 
 }
+
+func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid assignment", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                pub(set) var f: ((): Void)
+
+                init() {
+                    self.f = fun() {}
+                }
+
+                fun assignNewValue() {
+                    self.f = fun() {}
+                }
+            }
+
+            access(all) fun someFunc(_ f: ((): Void)): Int {
+                return 0
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var arr: [Int] = [1]
+
+                // Must not report an error
+                r.f = fun(): Void {}
+
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("simple invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun f() {}
+            }
+
+            access(all) fun someFunc(_ f: ((): Void)): Int {
+                return 0
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var arr: [Int] = [1]
+
+                // Must report an error!
+                arr[someFunc(r.f)]  = 2
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+}

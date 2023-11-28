@@ -168,12 +168,6 @@ func (checker *Checker) visitAssignmentValueType(
 	targetExpression ast.Expression,
 ) (targetType Type) {
 
-	inAssignment := checker.inAssignment
-	checker.inAssignment = true
-	defer func() {
-		checker.inAssignment = inAssignment
-	}()
-
 	// Check the target is valid (e.g. identifier expression,
 	// indexing expression, or member access expression)
 

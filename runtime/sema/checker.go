@@ -112,7 +112,6 @@ type Checker struct {
 	inCondition                        bool
 	inInterface                        bool
 	allowSelfResourceFieldInvalidation bool
-	inAssignment                       bool
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
