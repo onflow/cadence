@@ -88,6 +88,7 @@ func NewAccessFromEntitlementSet(
 }
 
 func (EntitlementSetAccess) isAccess() {}
+
 func (EntitlementSetAccess) IsPrimitiveAccess() bool {
 	return false
 }
@@ -283,6 +284,7 @@ func NewEntitlementMapAccess(mapType *EntitlementMapType) *EntitlementMapAccess 
 }
 
 func (*EntitlementMapAccess) isAccess() {}
+
 func (*EntitlementMapAccess) IsPrimitiveAccess() bool {
 	return false
 }
@@ -455,6 +457,7 @@ type PrimitiveAccess ast.PrimitiveAccess
 var _ Access = PrimitiveAccess(0)
 
 func (PrimitiveAccess) isAccess() {}
+
 func (PrimitiveAccess) IsPrimitiveAccess() bool {
 	return true
 }
