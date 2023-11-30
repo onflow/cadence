@@ -1,12 +1,18 @@
 {
   "networks": {
     "emulator": "127.0.0.1:3569",
+    "testing": "127.0.0.1:3569",
     "mainnet": "access.mainnet.nodes.onflow.org:9000",
     "sandboxnet": "access.sandboxnet.nodes.onflow.org:9000",
     "testnet": "access.devnet.nodes.onflow.org:9000"
   },
   "contracts": {
-    "Crypto": "crypto.cdc"
+    "Crypto": {
+      "source": "crypto.cdc",
+      "aliases": {
+        "testing": "0x0000000000000007"
+      }
+    }
   },
   "deployments": {
     "emulator": {

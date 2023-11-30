@@ -1753,6 +1753,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 	for _, ty := range []cadence.Type{
 		cadence.AnyType{},
 		cadence.AnyStructType{},
+		cadence.HashableStructType{},
 		cadence.AnyStructAttachmentType{},
 		cadence.AnyResourceType{},
 		cadence.AnyResourceAttachmentType{},

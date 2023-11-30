@@ -19,8 +19,6 @@
 package interpreter
 
 import (
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -41,18 +39,19 @@ func NewPublicKeyValue(
 	publicKey *ArrayValue,
 	signAlgo Value,
 	validatePublicKey PublicKeyValidationHandlerFunc,
-	publicKeyVerifySignatureFunction FunctionValue,
-	publicKeyVerifyPoPFunction FunctionValue,
 ) *CompositeValue {
 
 	fields := []CompositeField{
+		{
+			Name:  sema.PublicKeyTypePublicKeyFieldName,
+			Value: publicKey,
+		},
 		{
 			Name:  sema.PublicKeyTypeSignAlgoFieldName,
 			Value: signAlgo,
 		},
 	}
 
-	// TODO: refactor to SimpleCompositeValue
 	publicKeyValue := NewCompositeValue(
 		interpreter,
 		locationRange,
@@ -63,23 +62,6 @@ func NewPublicKeyValue(
 		common.ZeroAddress,
 	)
 
-	publicKeyValue.ComputedFields = map[string]ComputedField{
-		sema.PublicKeyTypePublicKeyFieldName: func(interpreter *Interpreter, locationRange LocationRange) Value {
-			return publicKey.Transfer(
-				interpreter,
-				locationRange,
-				atree.Address{},
-				false,
-				nil,
-				nil,
-			)
-		},
-	}
-	publicKeyValue.Functions = map[string]FunctionValue{
-		sema.PublicKeyTypeVerifyFunctionName:    publicKeyVerifySignatureFunction,
-		sema.PublicKeyTypeVerifyPoPFunctionName: publicKeyVerifyPoPFunction,
-	}
-
 	err := validatePublicKey(interpreter, locationRange, publicKeyValue)
 	if err != nil {
 		panic(InvalidPublicKeyError{
@@ -87,33 +69,6 @@ func NewPublicKeyValue(
 			Err:           err,
 			LocationRange: locationRange,
 		})
-	}
-
-	// Public key value to string should include the key even though it is a computed field
-	publicKeyValue.Stringer = func(
-		memoryGauge common.MemoryGauge,
-		publicKeyValue *CompositeValue,
-		seenReferences SeenReferences,
-	) string {
-
-		stringerFields := []CompositeField{
-			{
-				Name:  sema.PublicKeyTypePublicKeyFieldName,
-				Value: publicKey,
-			},
-			{
-				Name: sema.PublicKeyTypeSignAlgoFieldName,
-				// TODO: provide proper location range
-				Value: publicKeyValue.GetField(interpreter, EmptyLocationRange, sema.PublicKeyTypeSignAlgoFieldName),
-			},
-		}
-
-		return formatComposite(
-			memoryGauge,
-			string(publicKeyValue.TypeID()),
-			stringerFields,
-			seenReferences,
-		)
 	}
 
 	return publicKeyValue

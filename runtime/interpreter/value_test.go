@@ -3518,8 +3518,6 @@ func TestPublicKeyValue(t *testing.T) {
 			func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
 				return nil
 			},
-			nil,
-			nil,
 		)
 
 		require.Equal(t,
@@ -3574,8 +3572,6 @@ func TestPublicKeyValue(t *testing.T) {
 					func(interpreter *Interpreter, locationRange LocationRange, publicKey *CompositeValue) error {
 						return fakeError
 					},
-					nil,
-					nil,
 				)
 			})
 	})

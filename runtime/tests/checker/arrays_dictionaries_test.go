@@ -133,7 +133,11 @@ func TestCheckInvalidDictionaryKeys(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      let z = {"a": 1, true: 2}
+      let f = fun (_ x: Int): Int {
+		return x + 10
+	  }
+
+      let z = {f: 1, true: 2}
 	`)
 
 	errs := RequireCheckerErrors(t, err, 1)

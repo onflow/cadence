@@ -20,7 +20,6 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 )
 
 func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpression) Type {
@@ -88,7 +87,7 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		}
 	}
 
-	if !IsValidDictionaryKeyType(keyType) {
+	if !IsSubType(keyType, HashableStructType) {
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,
@@ -111,22 +110,4 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 	)
 
 	return dictionaryType
-}
-
-func IsValidDictionaryKeyType(keyType Type) bool {
-	// TODO: implement support for more built-in types here and in interpreter
-	switch keyType := keyType.(type) {
-	case *AddressType:
-		return true
-	case *CompositeType:
-		return keyType.Kind == common.CompositeKindEnum
-	default:
-		switch keyType {
-		case NeverType, BoolType, CharacterType, StringType, MetaType:
-			return true
-		default:
-			return IsSameTypeKind(keyType, NumberType) ||
-				IsSameTypeKind(keyType, PathType)
-		}
-	}
 }

@@ -138,9 +138,9 @@ func (*FunctionBlock) ElementType() ElementType {
 }
 
 func (b *FunctionBlock) Walk(walkChild func(Element)) {
-	// TODO: pre-conditions
+	b.PreConditions.Walk(walkChild)
 	walkChild(b.Block)
-	// TODO: post-conditions
+	b.PostConditions.Walk(walkChild)
 }
 
 func (b *FunctionBlock) MarshalJSON() ([]byte, error) {
@@ -285,5 +285,18 @@ func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
 			prettier.HardLine{},
 			blockEndDoc,
 		},
+	}
+}
+
+func (c *Conditions) Walk(walkChild func(Element)) {
+	if c.IsEmpty() {
+		return
+	}
+
+	for _, condition := range *c {
+		walkChild(condition.Test)
+		if condition.Message != nil {
+			walkChild(condition.Message)
+		}
 	}
 }

@@ -38,6 +38,10 @@ import (
 type Environment interface {
 	ArgumentDecoder
 
+	SetCompositeValueFunctionsHandler(
+		typeID common.TypeID,
+		handler stdlib.CompositeValueFunctionsHandler,
+	)
 	DeclareValue(
 		valueDeclaration stdlib.StandardLibraryValue,
 		location common.Location,
@@ -121,6 +125,7 @@ type interpreterEnvironment struct {
 	deployedContractConstructorInvocation *stdlib.DeployedContractConstructorInvocation
 	stackDepthLimiter                     *stackDepthLimiter
 	checkedImports                        importResolutionResults
+	compositeValueFunctionsHandlers       stdlib.CompositeValueFunctionsHandlers
 	config                                Config
 	deployedContracts                     map[Location]struct{}
 }
@@ -157,26 +162,28 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	}
 	env.InterpreterConfig = env.newInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
+	env.compositeValueFunctionsHandlers = stdlib.DefaultStandardLibraryCompositeValueFunctionHandlers(env)
 	return env
 }
 
 func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 	return &interpreter.Config{
-		MemoryGauge:                    e,
-		BaseActivationHandler:          e.getBaseActivation,
-		OnEventEmitted:                 e.newOnEventEmittedHandler(),
-		OnAccountLinked:                e.newOnAccountLinkedHandler(),
-		InjectedCompositeFieldsHandler: e.newInjectedCompositeFieldsHandler(),
-		UUIDHandler:                    e.newUUIDHandler(),
-		ContractValueHandler:           e.newContractValueHandler(),
-		ImportLocationHandler:          e.newImportLocationHandler(),
-		PublicAccountHandler:           e.newPublicAccountHandler(),
-		AuthAccountHandler:             e.newAuthAccountHandler(),
-		OnRecordTrace:                  e.newOnRecordTraceHandler(),
-		OnResourceOwnerChange:          e.newResourceOwnerChangedHandler(),
-		CompositeTypeHandler:           e.newCompositeTypeHandler(),
-		TracingEnabled:                 e.config.TracingEnabled,
-		AtreeValueValidationEnabled:    e.config.AtreeValidationEnabled,
+		MemoryGauge:                          e,
+		BaseActivationHandler:                e.getBaseActivation,
+		OnEventEmitted:                       e.newOnEventEmittedHandler(),
+		OnAccountLinked:                      e.newOnAccountLinkedHandler(),
+		InjectedCompositeFieldsHandler:       e.newInjectedCompositeFieldsHandler(),
+		UUIDHandler:                          e.newUUIDHandler(),
+		ContractValueHandler:                 e.newContractValueHandler(),
+		ImportLocationHandler:                e.newImportLocationHandler(),
+		PublicAccountHandler:                 e.newPublicAccountHandler(),
+		AuthAccountHandler:                   e.newAuthAccountHandler(),
+		OnRecordTrace:                        e.newOnRecordTraceHandler(),
+		OnResourceOwnerChange:                e.newResourceOwnerChangedHandler(),
+		CompositeTypeHandler:                 e.newCompositeTypeHandler(),
+		CompositeValueFunctionsHandler:       e.newCompositeValueFunctionsHandler(),
+		TracingEnabled:                       e.config.TracingEnabled,
+		AtreeValueValidationEnabled:          e.config.AtreeValidationEnabled,
 		// NOTE: ignore e.config.AtreeValidationEnabled here,
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
@@ -294,6 +301,13 @@ func (e *interpreterEnvironment) interpreterBaseActivationFor(
 		e.baseActivationsByLocation[location] = baseActivation
 	}
 	return baseActivation
+}
+
+func (e *interpreterEnvironment) SetCompositeValueFunctionsHandler(
+	typeID common.TypeID,
+	handler stdlib.CompositeValueFunctionsHandler,
+) {
+	e.compositeValueFunctionsHandlers[typeID] = handler
 }
 
 func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
@@ -1021,6 +1035,22 @@ func (e *interpreterEnvironment) newCompositeTypeHandler() interpreter.Composite
 		}
 
 		return nil
+	}
+}
+
+func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter.CompositeValueFunctionsHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		compositeValue *interpreter.CompositeValue,
+	) map[string]interpreter.FunctionValue {
+
+		handler := e.compositeValueFunctionsHandlers[compositeValue.TypeID()]
+		if handler == nil {
+			return nil
+		}
+
+		return handler(inter, locationRange, compositeValue)
 	}
 }
 
