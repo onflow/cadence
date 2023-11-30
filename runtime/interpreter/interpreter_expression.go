@@ -305,7 +305,7 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
 	result := ast.AcceptExpression[Value](expression, interpreter)
 
-	resourceKindedValue, ok := result.(ReferenceTrackedResourceKindedValue)
+	resourceKindedValue, ok := result.(ResourceKindedValue)
 	if ok && resourceKindedValue.isInvalidatedResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: LocationRange{

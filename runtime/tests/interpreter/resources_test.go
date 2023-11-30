@@ -3404,3 +3404,47 @@ func TestInterpretOptionalBindingElseBranch(t *testing.T) {
 	// Error must be thrown at `<-r2` in the array literal
 	assert.Equal(t, 18, invalidatedResourceErr.StartPosition().Line)
 }
+
+func TestInterpretPreConditionResourceMove(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+        pub resource Vault { }
+        pub resource interface Interface {
+            pub fun foo(_ r: @AnyResource) {
+                pre {
+                    consume(&r as &AnyResource, <- r)
+                }
+            }
+        }
+        pub resource Implementation: Interface {
+            pub fun foo(_ r: @AnyResource) {
+                pre {
+                    consume(&r as &AnyResource, <- r)
+                }
+            }
+        }
+        pub fun consume(_ unusedRef: &AnyResource?, _ r: @AnyResource): Bool {
+            destroy r
+            return true
+        }
+        pub fun main() {
+            let a <- create Implementation()
+            let b <- create Vault()
+            a.foo(<-b)
+            destroy a
+        }`,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				checkerErrors := checker.RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, checkerErrors[0])
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+}

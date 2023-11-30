@@ -202,6 +202,7 @@ type ResourceKindedValue interface {
 	Value
 	Destroy(interpreter *Interpreter, locationRange LocationRange)
 	IsDestroyed() bool
+	isInvalidatedResource(*Interpreter) bool
 }
 
 func maybeDestroy(interpreter *Interpreter, locationRange LocationRange, value Value) {
@@ -219,7 +220,6 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	StorageID() atree.StorageID
-	isInvalidatedResource(*Interpreter) bool
 }
 
 // ContractValue is the value of a contract.
@@ -19000,6 +19000,10 @@ func (NilValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (NilValue) isInvalidatedResource(_ *Interpreter) bool {
+	return false
+}
+
 // SomeValue
 
 type SomeValue struct {
@@ -19287,8 +19291,12 @@ func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
 	}
 }
 
-func (v *SomeValue) InnerValue(interpreter *Interpreter, locationRange LocationRange) Value {
+func (v *SomeValue) InnerValue(_ *Interpreter, _ LocationRange) Value {
 	return v.value
+}
+
+func (v *SomeValue) isInvalidatedResource(_ *Interpreter) bool {
+	return v.value == nil || v.IsDestroyed()
 }
 
 type SomeStorable struct {
