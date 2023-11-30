@@ -110,8 +110,8 @@ type Checker struct {
 	errors                             []error
 	functionActivations                *FunctionActivations
 	inCondition                        bool
+	inInterface                        bool
 	allowSelfResourceFieldInvalidation bool
-	inAssignment                       bool
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
@@ -1495,6 +1495,20 @@ func (checker *Checker) recordResourceInvalidation(
 
 	if !valueType.IsResourceType() {
 		return nil
+	}
+
+	// Invalidations in interface functions are not allowed,
+	// except for temporary moves
+	if invalidationKind != ResourceInvalidationKindMoveTemporary &&
+		checker.inCondition &&
+		checker.inInterface {
+
+		checker.report(&InvalidInterfaceConditionResourceInvalidationError{
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				expression,
+			),
+		})
 	}
 
 	reportInvalidNestedMove := func() {
