@@ -282,8 +282,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		//
 		// This would result in a bound method for a resource, which is invalid.
 
-		if !checker.inAssignment &&
-			!checker.inInvocation &&
+		if !checker.inInvocation &&
 			member.DeclarationKind == common.DeclarationKindFunction &&
 			!accessedType.IsInvalidType() &&
 			accessedType.IsResourceType() {

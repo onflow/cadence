@@ -2592,38 +2592,49 @@ func TestInterpretResourceDestroyedInPreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-        resource interface I {
-             pub fun receiveResource(_ r: @Bar) {
-                pre {
-                    destroyResource(<-r)
+	inter, err := parseCheckAndInterpretWithOptions(
+		t,
+		`
+            resource interface I {
+                 pub fun receiveResource(_ r: @Bar) {
+                    pre {
+                        destroyResource(<-r)
+                    }
                 }
             }
-        }
 
-        fun destroyResource(_ r: @Bar): Bool {
-            destroy r
-            return true
-        }
-
-        resource Foo: I {
-             pub fun receiveResource(_ r: @Bar) {
+            fun destroyResource(_ r: @Bar): Bool {
                 destroy r
+                return true
             }
-        }
 
-        resource Bar  {}
+            resource Foo: I {
+                 pub fun receiveResource(_ r: @Bar) {
+                    destroy r
+                }
+            }
 
-        fun test() {
-            let foo <- create Foo()
-            let bar <- create Bar()
+            resource Bar  {}
 
-            foo.receiveResource(<- bar)
-            destroy foo
-        }
-    `)
+            fun test() {
+                let foo <- create Foo()
+                let bar <- create Bar()
 
-	_, err := inter.Invoke("test")
+                foo.receiveResource(<- bar)
+                destroy foo
+            }
+        `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
@@ -2982,37 +2993,37 @@ func TestInterpretInnerResourceMove(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-        pub resource OuterResource {
-            pub var a: @InnerResource
-            pub var b: @InnerResource
+            pub resource OuterResource {
+                pub var a: @InnerResource
+                pub var b: @InnerResource
 
-            init() {
-                 self.a <- create InnerResource()
-                 self.b <- create InnerResource()
+                init() {
+                     self.a <- create InnerResource()
+                     self.b <- create InnerResource()
+                }
+
+                pub fun swap() {
+                    self.a <-> self.b
+                }
+
+                destroy() {
+                    // Nested resource is moved here once
+                    var a <- self.a
+
+                    // Nested resource is again moved here. This one should fail.
+                    self.swap()
+
+                    destroy a
+                    destroy self.b
+                }
             }
 
-            pub fun swap() {
-                self.a <-> self.b
-            }
+            pub resource InnerResource {}
 
-            destroy() {
-                // Nested resource is moved here once
-                var a <- self.a
-
-                // Nested resource is again moved here. This one should fail.
-                self.swap()
-
+            pub fun main() {
+                let a <- create OuterResource()
                 destroy a
-                destroy self.b
-            }
-        }
-
-        pub resource InnerResource {}
-
-        pub fun main() {
-            let a <- create OuterResource()
-            destroy a
-        }`,
+            }`,
 		)
 
 		_, err := inter.Invoke("main")
@@ -3170,47 +3181,226 @@ func TestInterpretValueTransferResourceLoss(t *testing.T) {
 		},
 		getLogs(),
 	)
+
 }
 
-func TestInterpretPreConditionResourceMove(t *testing.T) {
+func TestInterpretVariableDeclarationEvaluationOrder(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+      // Necessary helper interface,
+      // as AnyResource does not provide a uuid field,
+      // and AnyResource must be used in collect
+      // to avoid the potential type confusion to be rejected
+      // by the defensive argument/parameter type check
+
+      resource interface HasID {
+          fun getID(): UInt64
+      }
+
+      resource Foo: HasID {
+          fun getID(): UInt64 {
+              return self.uuid
+          }
+      }
+
+      resource Bar: HasID {
+          fun getID(): UInt64 {
+              return self.uuid
+          }
+      }
+
+      fun collect(_ collected: @{HasID}): @Foo {
+          log("collected")
+          log(collected.getID())
+          log(collected.getType())
+
+          destroy <- collected
+
+          return <- create Foo()
+      }
+
+      fun main() {
+          var foo <- create Foo()
+          log("foo")
+          log(foo.uuid)
+
+          var bar <- create Bar()
+          log("bar")
+          log(bar.uuid)
+
+          if (true) {
+              // Check that the RHS is evaluated *before* the variable is declared
+              var bar <- foo <- collect(<-bar)
+
+              destroy foo
+              destroy bar // new bar
+          } else {
+              destroy foo
+              destroy bar // original bar
+          }
+      }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			`"foo"`,
+			`1`,
+			`"bar"`,
+			`2`,
+			`"collected"`,
+			`2`,
+			"Type<S.test.Bar>()",
+		},
+		getLogs(),
+	)
+}
+
+func TestInterpretIfLetElseBranchConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+        pub resource Victim{}
+        pub fun main() {
+            var r: @Victim? <- nil
+            var r2: @Victim?  <- create Victim()
+            if let dummy <- r <- r2 {
+                // unreachable token destroys to please checker
+                destroy dummy
+                destroy r
+            } else {
+                // Error: r2 is invalid here
+
+                var ref = &r as &Victim?
+                var arr: @[Victim?]<- [<- r, <- r2]
+                destroy arr
+            }
+        }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+}
+
+func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource R{}
+
+        access(all) fun collect(copy2: @R?, _ arrRef: &[R]): @R {
+            arrRef.append(<- copy2!)
+            return <- create R()
+        }
+
+        access(all) fun main() {
+            var victim: @R? <- create R()
+            var arr: @[R] <- []
+
+            // In the optional binding below, the 'victim' must be invalidated
+            // before evaluation of the collect() call
+            if let copy1 <- victim <- collect(copy2: <- victim, &arr as &[R]) {
+                arr.append(<- copy1)
+            } else {
+                destroy victim // Never executed
+            }
+
+            destroy arr // This crashes
+        }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	invalidResourceError := &interpreter.InvalidatedResourceError{}
+	require.ErrorAs(t, err, invalidResourceError)
+
+	// Error must be thrown at `copy2: <- victim`
+	errorStartPos := invalidResourceError.LocationRange.StartPosition()
+	assert.Equal(t, 15, errorStartPos.Line)
+	assert.Equal(t, 56, errorStartPos.Column)
+}
+
+func TestInterpretMovedResourceInSecondValue(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource R{}
+
+        access(all) fun collect(copy2: @R?, _ arrRef: &[R]): @R {
+            arrRef.append(<- copy2!)
+            return <- create R()
+        }
+
+        access(all) fun main() {
+            var victim: @R? <- create R()
+            var arr: @[R] <- []
+
+            // In the optional binding below, the 'victim' must be invalidated
+            // before evaluation of the collect() call
+            let copy1 <- victim <- collect(copy2: <- victim, &arr as &[R])
+
+            destroy copy1
+            destroy arr
+        }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	invalidResourceError := &interpreter.InvalidatedResourceError{}
+	require.ErrorAs(t, err, invalidResourceError)
+
+	// Error must be thrown at `copy2: <- victim`
+	errorStartPos := invalidResourceError.LocationRange.StartPosition()
+	assert.Equal(t, 15, errorStartPos.Line)
+	assert.Equal(t, 53, errorStartPos.Column)
+}
+
+func TestInterpretOptionalBindingElseBranch(t *testing.T) {
 
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-        pub resource Vault { }
+		access(all) resource Victim {}
 
-        pub resource interface Interface {
-            pub fun foo(_ r: @AnyResource) {
-                pre {
-                    consume(&r as &AnyResource, <- r)
-                }
-            }
-        }
+		access(all) fun main() {
 
-        pub resource Implementation: Interface {
-            pub fun foo(_ r: @AnyResource) {
-                pre {
-                    consume(&r as &AnyResource, <- r)
-                }
-            }
-        }
+			var r: @Victim? <- nil
+			var r2: @Victim?  <- create Victim()
 
-        pub fun consume(_ unusedRef: &AnyResource?, _ r: @AnyResource): Bool {
-            destroy r
-            return true
-        }
-
-        pub fun main() {
-            let a <- create Implementation()
-            let b <- create Vault()
-
-            a.foo(<-b)
-
-            destroy a
-        }`,
-	)
+			if let dummy <- r <- r2 {
+				// unreachable token destroys to please checker
+				destroy dummy
+				destroy r
+			} else {
+				// checker failed to notice that r2 is invalid here
+				var ref = &r as &Victim?
+				var arr: @[Victim?]<- [
+                    <- r,
+                    <- r2
+                ]
+				destroy arr
+			}
+		}
+   `)
 
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+
+	var invalidatedResourceErr interpreter.InvalidatedResourceError
+	require.ErrorAs(t, err, &invalidatedResourceErr)
+
+	// Error must be thrown at `<-r2` in the array literal
+	assert.Equal(t, 18, invalidatedResourceErr.StartPosition().Line)
 }

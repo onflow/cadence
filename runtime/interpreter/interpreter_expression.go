@@ -1123,6 +1123,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
 			value = interpreter.BoxOptional(locationRange, value, expectedType)
 
+			// Failable casting is a resource invalidation
+			interpreter.invalidateResource(value)
+
 			return NewSomeValueNonCopying(interpreter, value)
 
 		case ast.OperationForceCast:
