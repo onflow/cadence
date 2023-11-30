@@ -666,10 +666,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 			var variable *Variable
 
 			variable = NewVariableWithGetter(interpreter, func() Value {
-				var result Value
-				interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
-					result = value
-				})
+				result := interpreter.visitVariableDeclaration(declaration, false)
 
 				// Global variables are lazily loaded. Therefore, start resource tracking also
 				// lazily when the resource is used for the first time.
@@ -902,13 +899,10 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 
 func (interpreter *Interpreter) visitAssignment(
 	transferOperation ast.TransferOperation,
-	targetExpression ast.Expression, targetType sema.Type,
+	targetGetterSetter getterSetter, targetType sema.Type,
 	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
 ) {
-	// First evaluate the target, which results in a getter/setter function pair
-	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: position,
@@ -925,7 +919,7 @@ func (interpreter *Interpreter) visitAssignment(
 
 		const allowMissing = true
 
-		target := getterSetter.get(allowMissing)
+		target := targetGetterSetter.get(allowMissing)
 
 		if _, ok := target.(NilValue); !ok && target != nil {
 			panic(ForceAssignmentToNonNilResourceError{
@@ -940,7 +934,7 @@ func (interpreter *Interpreter) visitAssignment(
 
 	transferredValue := interpreter.transferAndConvert(value, valueType, targetType, locationRange)
 
-	getterSetter.set(transferredValue)
+	targetGetterSetter.set(transferredValue)
 }
 
 // NOTE: only called for top-level composite declarations
@@ -5567,10 +5561,9 @@ func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID
 	}
 }
 
-func (interpreter *Interpreter) withResourceDestruction(
+func (interpreter *Interpreter) enforceNotResourceDestruction(
 	storageID atree.StorageID,
 	locationRange LocationRange,
-	f func(),
 ) {
 	_, exists := interpreter.SharedState.destroyedResources[storageID]
 	if exists {
@@ -5578,6 +5571,14 @@ func (interpreter *Interpreter) withResourceDestruction(
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (interpreter *Interpreter) withResourceDestruction(
+	storageID atree.StorageID,
+	locationRange LocationRange,
+	f func(),
+) {
+	interpreter.enforceNotResourceDestruction(storageID, locationRange)
 
 	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
 

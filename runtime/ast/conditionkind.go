@@ -52,3 +52,14 @@ func (k ConditionKind) Name() string {
 func (k ConditionKind) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.String())
 }
+
+func (k ConditionKind) Keyword() string {
+	switch k {
+	case ConditionKindPre:
+		return "pre"
+	case ConditionKindPost:
+		return "post"
+	}
+
+	panic(errors.NewUnreachableError())
+}

@@ -16811,6 +16811,8 @@ func (v *CompositeValue) SetMember(
 		v.checkInvalidatedResourceUse(locationRange)
 	}
 
+	interpreter.enforceNotResourceDestruction(v.StorageID(), locationRange)
+
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -19429,6 +19431,11 @@ func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
 }
 
 func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
+	// If the inner value is `nil`, then this is an invalidated resource.
+	if v.value == nil {
+		return true
+	}
+
 	return v.value.IsResourceKinded(interpreter)
 }
 
