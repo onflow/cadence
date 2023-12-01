@@ -16845,6 +16845,8 @@ func (v *CompositeValue) SetMember(
 	if existingStorable != nil {
 		existingValue := StoredValue(interpreter, existingStorable, config.Storage)
 
+		checkResourceLoss(interpreter, existingValue, locationRange)
+
 		existingValue.DeepRemove(interpreter)
 
 		interpreter.RemoveReferencedSlab(existingStorable)
@@ -16852,6 +16854,32 @@ func (v *CompositeValue) SetMember(
 	}
 
 	return false
+}
+
+func checkResourceLoss(interpreter *Interpreter, existingValue Value, locationRange LocationRange) {
+	if !existingValue.IsResourceKinded(interpreter) {
+		return
+	}
+
+	var resourceKindedValue ResourceKindedValue
+
+	switch existingValue := existingValue.(type) {
+	case *CompositeValue:
+		if existingValue.Kind == common.CompositeKindAttachment {
+			return
+		}
+		resourceKindedValue = existingValue
+	case ResourceKindedValue:
+		resourceKindedValue = existingValue
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	if !resourceKindedValue.isInvalidatedResource(interpreter) {
+		panic(ResourceLossError{
+			LocationRange: locationRange,
+		})
+	}
 }
 
 func (v *CompositeValue) String() string {

@@ -3431,5 +3431,6 @@ func TestInterpretResourceLoss(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
-	require.NoError(t, err)
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.ResourceLossError{})
 }

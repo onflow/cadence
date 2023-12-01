@@ -1008,3 +1008,18 @@ func WrappedExternalError(err error) error {
 		return errors.NewExternalError(err)
 	}
 }
+
+// ResourceLossError
+type ResourceLossError struct {
+	LocationRange
+}
+
+var _ errors.UserError = ResourceLossError{}
+
+func (ResourceLossError) IsUserError() {}
+
+func (e ResourceLossError) Error() string {
+	return fmt.Sprintf(
+		"resource loss",
+	)
+}
