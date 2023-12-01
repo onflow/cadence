@@ -5523,6 +5523,15 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(
 			}
 		case *CapabilityStaticType:
 			convertLegacyStaticType(t.BorrowType)
+		case *VariableSizedStaticType:
+			convertLegacyStaticType(t.Type)
+		case *ConstantSizedStaticType:
+			convertLegacyStaticType(t.Type)
+		case *DictionaryStaticType:
+			convertLegacyStaticType(t.KeyType)
+			convertLegacyStaticType(t.ValueType)
+		case *OptionalStaticType:
+			convertLegacyStaticType(t.Type)
 		}
 	}
 

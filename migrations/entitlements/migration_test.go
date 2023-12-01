@@ -534,6 +534,16 @@ func TestConvertToEntitledValue(t *testing.T) {
 		unentitledLegacyReferenceStaticType,
 	)
 
+	unentitledLegacyCapabilityArray := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.NewVariableSizedStaticType(inter, unentitledLegacyCapability.StaticType(inter)),
+		testAddress,
+		unentitledLegacyCapability,
+	)
+
+	unentitledLegacyCapabilityOptionalArray := interpreter.NewSomeValueNonCopying(inter, unentitledLegacyCapabilityArray)
+
 	entitledConvertedLegacyReferenceStaticType := interpreter.NewReferenceStaticType(
 		inter,
 		interpreter.NewEntitlementSetAuthorization(
@@ -551,6 +561,16 @@ func TestConvertToEntitledValue(t *testing.T) {
 		interpreter.NewAddressValue(inter, testAddress),
 		entitledConvertedLegacyReferenceStaticType,
 	)
+
+	entitledLegacyConvertedCapabilityArray := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.NewVariableSizedStaticType(inter, entitledLegacyConvertedCapability.StaticType(inter)),
+		testAddress,
+		entitledLegacyConvertedCapability,
+	)
+
+	entitledLegacyConvertedCapabilityOptionalArray := interpreter.NewSomeValueNonCopying(inter, entitledLegacyConvertedCapabilityArray)
 
 	// &{I, J}
 
@@ -774,6 +794,11 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Input:  unentitledLegacyCapability,
 			Output: entitledLegacyConvertedCapability,
 			Name:   "Capability<&R{I}> -> Capability<auth(E) &R>",
+		},
+		{
+			Input:  unentitledLegacyCapabilityOptionalArray,
+			Output: entitledLegacyConvertedCapabilityOptionalArray,
+			Name:   "[Capability<&R{I}>]? -> [Capability<auth(E) &R>]?",
 		},
 		{
 			Input: interpreter.NewEphemeralReferenceValue(
