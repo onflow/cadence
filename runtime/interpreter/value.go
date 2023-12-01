@@ -2106,6 +2106,8 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 
 	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 
+	checkResourceLoss(interpreter, existingValue, locationRange)
+
 	existingValue.DeepRemove(interpreter)
 
 	interpreter.RemoveReferencedSlab(existingStorable)
@@ -17164,14 +17166,14 @@ func (v *CompositeValue) SetMember(
 	return false
 }
 
-func checkResourceLoss(interpreter *Interpreter, existingValue Value, locationRange LocationRange) {
-	if !existingValue.IsResourceKinded(interpreter) {
+func checkResourceLoss(interpreter *Interpreter, value Value, locationRange LocationRange) {
+	if !value.IsResourceKinded(interpreter) {
 		return
 	}
 
 	var resourceKindedValue ResourceKindedValue
 
-	switch existingValue := existingValue.(type) {
+	switch existingValue := value.(type) {
 	case *CompositeValue:
 		if existingValue.Kind == common.CompositeKindAttachment {
 			return
@@ -18358,9 +18360,6 @@ func NewDictionaryValueWithAddress(
 	// values are added to the dictionary after creation, not here
 	v = newDictionaryValueFromConstructor(interpreter, dictionaryType, 0, constructor)
 
-	// NOTE: lazily initialized when needed for performance reasons
-	var lazyIsResourceTyped *bool
-
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
@@ -18369,12 +18368,7 @@ func NewDictionaryValueWithAddress(
 		// and the dictionary is resource-typed,
 		// then we need to prevent a resource loss
 		if _, ok := existingValue.(*SomeValue); ok {
-			// Lazily determine if the dictionary is resource-typed, once
-			if lazyIsResourceTyped == nil {
-				isResourceTyped := v.SemaType(interpreter).IsResourceType()
-				lazyIsResourceTyped = &isResourceTyped
-			}
-			if *lazyIsResourceTyped {
+			if v.IsResourceKinded(interpreter) {
 				panic(DuplicateKeyInResourceDictionaryError{
 					LocationRange: locationRange,
 				})
@@ -18818,7 +18812,8 @@ func (v *DictionaryValue) SetKey(
 	switch value := value.(type) {
 	case *SomeValue:
 		innerValue := value.InnerValue(interpreter, locationRange)
-		_ = v.Insert(interpreter, locationRange, keyValue, innerValue)
+		existingValue := v.Insert(interpreter, locationRange, keyValue, innerValue)
+		checkResourceLoss(interpreter, existingValue, locationRange)
 
 	case NilValue:
 		_ = v.Remove(interpreter, locationRange, keyValue)
