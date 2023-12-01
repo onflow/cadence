@@ -259,7 +259,6 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 		},
 		set: func(value Value) {
 			interpreter.checkMemberAccess(memberExpression, target, locationRange)
-
 			interpreter.setMember(target, locationRange, identifier, value)
 		},
 	}

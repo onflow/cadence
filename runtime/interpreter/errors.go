@@ -1083,3 +1083,18 @@ func (ResourceReferenceDereferenceError) IsInternalError() {}
 func (e ResourceReferenceDereferenceError) Error() string {
 	return "internal error: resource-references cannot be dereferenced"
 }
+
+// ResourceLossError
+type ResourceLossError struct {
+	LocationRange
+}
+
+var _ errors.UserError = ResourceLossError{}
+
+func (ResourceLossError) IsUserError() {}
+
+func (e ResourceLossError) Error() string {
+	return fmt.Sprintf(
+		"resource loss",
+	)
+}
