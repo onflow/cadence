@@ -33,19 +33,19 @@ import (
 
 // assignmentGetterSetter returns a getter/setter function pair
 // for the target expression
-func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression) getterSetter {
+func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression, locationRange LocationRange) getterSetter {
 	switch expression := expression.(type) {
 	case *ast.IdentifierExpression:
-		return interpreter.identifierExpressionGetterSetter(expression)
+		return interpreter.identifierExpressionGetterSetter(expression, locationRange)
 
 	case *ast.IndexExpression:
 		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
 			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
 		}
-		return interpreter.valueIndexExpressionGetterSetter(expression)
+		return interpreter.valueIndexExpressionGetterSetter(expression, locationRange)
 
 	case *ast.MemberExpression:
-		return interpreter.memberExpressionGetterSetter(expression)
+		return interpreter.memberExpressionGetterSetter(expression, locationRange)
 
 	default:
 		return getterSetter{
@@ -61,7 +61,10 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
 // for the target identifier expression
-func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
+func (interpreter *Interpreter) identifierExpressionGetterSetter(
+	identifierExpression *ast.IdentifierExpression,
+	locationRange LocationRange,
+) getterSetter {
 	identifier := identifierExpression.Identifier.Identifier
 	variable := interpreter.FindVariable(identifier)
 
@@ -73,6 +76,10 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 		},
 		set: func(value Value) {
 			interpreter.startResourceTracking(value, variable, identifier, identifierExpression)
+
+			existingValue := variable.GetValue()
+			interpreter.checkResourceLoss(existingValue, locationRange)
+
 			variable.SetValue(value)
 		},
 	}
@@ -106,15 +113,13 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 
 // valueIndexExpressionGetterSetter returns a getter/setter function pair
 // for the target index expression
-func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
+func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
+	indexExpression *ast.IndexExpression,
+	locationRange LocationRange,
+) getterSetter {
 	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
-	}
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: indexExpression,
 	}
 
 	// Evaluate, transfer, and convert the indexing value,
@@ -189,13 +194,13 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 
 // memberExpressionGetterSetter returns a getter/setter function pair
 // for the target member expression
-func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
+func (interpreter *Interpreter) memberExpressionGetterSetter(
+	memberExpression *ast.MemberExpression,
+	locationRange LocationRange,
+) getterSetter {
+
 	target := interpreter.evalExpression(memberExpression.Expression)
 	identifier := memberExpression.Identifier.Identifier
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: memberExpression,
-	}
 
 	isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression(memberExpression)
 
@@ -989,7 +994,13 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) Value {
 	const allowMissing = false
-	return interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+
+	return interpreter.memberExpressionGetterSetter(expression, locationRange).get(allowMissing)
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
