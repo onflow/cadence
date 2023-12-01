@@ -86,6 +86,12 @@ func TestCheckForInclusiveRange(t *testing.T) {
 	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
 
 	for _, typ := range sema.AllIntegerTypes {
+		// Only test leaf integer types
+		switch typ {
+		case sema.IntegerType, sema.SignedIntegerType:
+			continue
+		}
+
 		code := fmt.Sprintf(`
             fun test() {
                 let start : %[1]s = 1
