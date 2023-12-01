@@ -277,7 +277,7 @@ type LocatedType interface {
 type ParameterizedType interface {
 	Type
 	TypeParameters() []*TypeParameter
-	Instantiate(typeArguments []Type, report func(err error)) Type
+	Instantiate(typeArguments []Type, report func(err error), astRange *ast.Range) Type
 	BaseType() Type
 	TypeArguments() []Type
 }
@@ -288,6 +288,7 @@ func MustInstantiate(t ParameterizedType, typeArguments ...Type) Type {
 		func(err error) {
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		},
+		nil,
 	)
 }
 
@@ -3497,13 +3498,15 @@ var AllUnsignedIntegerTypes = []Type{
 	Word256Type,
 }
 
+var AllNonLeafIntegerTypes = []Type{
+	IntegerType,
+	SignedIntegerType,
+}
+
 var AllIntegerTypes = common.Concat(
 	AllUnsignedIntegerTypes,
 	AllSignedIntegerTypes,
-	[]Type{
-		IntegerType,
-		SignedIntegerType,
-	},
+	AllNonLeafIntegerTypes,
 )
 
 var AllNumberTypes = common.Concat(
@@ -5399,8 +5402,28 @@ func (t *InclusiveRangeType) BaseType() Type {
 	return &InclusiveRangeType{}
 }
 
-func (t *InclusiveRangeType) Instantiate(typeArguments []Type, report func(err error)) Type {
+func (t *InclusiveRangeType) Instantiate(
+	typeArguments []Type,
+	report func(err error),
+	astRange *ast.Range,
+) Type {
 	memberType := typeArguments[0]
+
+	if astRange == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	// memberType must only be a leaf integer type.
+	for _, ty := range AllNonLeafIntegerTypes {
+		if memberType == ty {
+			report(&InvalidTypeArgumentError{
+				TypeArgumentName: inclusiveRangeTypeParameter.Name,
+				Range:            *astRange,
+				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
+			})
+		}
+	}
+
 	return &InclusiveRangeType{
 		MemberType: memberType,
 	}
@@ -7258,7 +7281,7 @@ func (t *CapabilityType) TypeParameters() []*TypeParameter {
 	}
 }
 
-func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error)) Type {
+func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error), _ *ast.Range) Type {
 	borrowType := typeArguments[0]
 	return &CapabilityType{
 		BorrowType: borrowType,

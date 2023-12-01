@@ -377,3 +377,48 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 		[]error{&sema.MissingTypeArgumentError{}},
 	)
 }
+
+func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+	options := ParseAndCheckOptions{
+		Config: &sema.Config{
+			BaseValueActivation: baseValueActivation,
+		},
+	}
+
+	test := func(t *testing.T, ty sema.Type) {
+		t.Run(fmt.Sprintf("InclusiveRange<%s>", ty), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckWithOptions(t, fmt.Sprintf(`
+				let a: %[1]s = 0
+				let b: %[1]s = 10
+				var range: InclusiveRange<%[1]s> = InclusiveRange<%[1]s>(a, b)
+			`, ty), options)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("InclusiveRange<%s> assignment", ty), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckWithOptions(t, fmt.Sprintf(`
+				let a: InclusiveRange<Int> = InclusiveRange(0, 10)
+				let b: InclusiveRange<%s> = a
+			`, ty), options)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+		})
+	}
+
+	for _, ty := range sema.AllNonLeafIntegerTypes {
+		test(t, ty)
+	}
+}

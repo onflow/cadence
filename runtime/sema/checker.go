@@ -2244,7 +2244,16 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 		return ty
 	}
 
-	return parameterizedType.Instantiate(typeArguments, checker.report)
+	astRange := ast.NewRange(
+		checker.memoryGauge,
+		t.TypeArgumentsStartPos,
+		t.EndPos,
+	)
+	return parameterizedType.Instantiate(
+		typeArguments,
+		checker.report,
+		&astRange,
+	)
 }
 
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
