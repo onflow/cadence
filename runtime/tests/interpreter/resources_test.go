@@ -3426,7 +3426,6 @@ func TestInterpretResourceLoss(t *testing.T) {
            var rl <- create ResourceLoser(victim: <- victim)
            destroy rl
         }
-
     `)
 	require.NoError(t, err)
 
