@@ -340,19 +340,6 @@ func (e DestroyedResourceError) Error() string {
 	return "resource was destroyed and cannot be used anymore"
 }
 
-// ForceAssignmentToNonNilResourceError
-type ForceAssignmentToNonNilResourceError struct {
-	LocationRange
-}
-
-var _ errors.UserError = ForceAssignmentToNonNilResourceError{}
-
-func (ForceAssignmentToNonNilResourceError) IsUserError() {}
-
-func (e ForceAssignmentToNonNilResourceError) Error() string {
-	return "force assignment to non-nil resource-typed value"
-}
-
 // ForceNilError
 type ForceNilError struct {
 	LocationRange
@@ -1020,6 +1007,6 @@ func (ResourceLossError) IsUserError() {}
 
 func (e ResourceLossError) Error() string {
 	return fmt.Sprintf(
-		"resource loss",
+		"resource loss: attempting to assign to non-nil resource-typed value",
 	)
 }

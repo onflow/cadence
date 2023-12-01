@@ -2007,7 +2007,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 
 	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 
-	checkResourceLoss(interpreter, existingValue, locationRange)
+	interpreter.checkResourceLoss(existingValue, locationRange)
 
 	existingValue.DeepRemove(interpreter)
 
@@ -16847,7 +16847,7 @@ func (v *CompositeValue) SetMember(
 	if existingStorable != nil {
 		existingValue := StoredValue(interpreter, existingStorable, config.Storage)
 
-		checkResourceLoss(interpreter, existingValue, locationRange)
+		interpreter.checkResourceLoss(existingValue, locationRange)
 
 		existingValue.DeepRemove(interpreter)
 
@@ -16856,32 +16856,6 @@ func (v *CompositeValue) SetMember(
 	}
 
 	return false
-}
-
-func checkResourceLoss(interpreter *Interpreter, value Value, locationRange LocationRange) {
-	if !value.IsResourceKinded(interpreter) {
-		return
-	}
-
-	var resourceKindedValue ResourceKindedValue
-
-	switch existingValue := value.(type) {
-	case *CompositeValue:
-		if existingValue.Kind == common.CompositeKindAttachment {
-			return
-		}
-		resourceKindedValue = existingValue
-	case ResourceKindedValue:
-		resourceKindedValue = existingValue
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	if !resourceKindedValue.isInvalidatedResource(interpreter) {
-		panic(ResourceLossError{
-			LocationRange: locationRange,
-		})
-	}
 }
 
 func (v *CompositeValue) String() string {
@@ -18187,7 +18161,7 @@ func (v *DictionaryValue) SetKey(
 	case *SomeValue:
 		innerValue := value.InnerValue(interpreter, locationRange)
 		existingValue := v.Insert(interpreter, locationRange, keyValue, innerValue)
-		checkResourceLoss(interpreter, existingValue, locationRange)
+		interpreter.checkResourceLoss(existingValue, locationRange)
 
 	case NilValue:
 		_ = v.Remove(interpreter, locationRange, keyValue)

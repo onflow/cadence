@@ -3379,12 +3379,7 @@ func TestInterpretResourceLoss(t *testing.T) {
             access(all) let id: String
 
             init(_ id: String) {
-                log("Creating ".concat(id))
                 self.id = id
-            }
-
-            destroy() {
-                log("Destroying ".concat(self.id))
             }
         }
 

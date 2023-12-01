@@ -9715,7 +9715,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
+		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
 	})
 
 	t.Run("existing to nil", func(t *testing.T) {
@@ -9751,7 +9751,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
+		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
 	})
 
 	t.Run("force-assignment initialization", func(t *testing.T) {
@@ -11824,7 +11824,7 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resource", func(t *testing.T) {
+	t.Run("resource in literal", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -11844,7 +11844,30 @@ func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.DuplicateKeyInResourceDictionaryError{})
+	})
 
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+          resource R {}
+
+          fun test() {
+              let r1 <- create R()
+              let r2 <- create R()
+              let rs: @{String: R?} <- {}
+              rs["a"] <-! r1
+              rs["a"] <-! r2
+
+              destroy rs
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
 	})
 }
 
