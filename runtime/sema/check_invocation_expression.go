@@ -493,6 +493,21 @@ func (checker *Checker) checkInvocation(
 		invocationExpression,
 	)
 
+	// The invokable type might have special checks for the type parameters.
+
+	if functionType.TypePrametersCheck != nil {
+		invocationRange := ast.NewRangeFromPositioned(
+			checker.memoryGauge,
+			invocationExpression,
+		)
+
+		functionType.TypePrametersCheck(
+			typeArguments,
+			checker.report,
+			invocationRange,
+		)
+	}
+
 	// Save types in the elaboration
 
 	checker.Elaboration.SetInvocationExpressionTypes(

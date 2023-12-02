@@ -398,11 +398,26 @@ func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t, fmt.Sprintf(`
 				let a: %[1]s = 0
 				let b: %[1]s = 10
-				var range: InclusiveRange<%[1]s> = InclusiveRange<%[1]s>(a, b)
+				var range = InclusiveRange<%[1]s>(a, b)
 			`, ty), options)
 
 			errs := RequireCheckerErrors(t, err, 1)
 			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+		})
+
+		t.Run(fmt.Sprintf("InclusiveRange<%s>", ty), func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckWithOptions(t, fmt.Sprintf(`
+				let a: %[1]s = 0
+				let b: %[1]s = 10
+				var range: InclusiveRange<%[1]s> = InclusiveRange<%[1]s>(a, b)
+			`, ty), options)
+
+			// One for the invocation and another for the type.
+			errs := RequireCheckerErrors(t, err, 2)
+			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[1])
 		})
 
 		t.Run(fmt.Sprintf("InclusiveRange<%s> assignment", ty), func(t *testing.T) {

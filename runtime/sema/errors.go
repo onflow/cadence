@@ -3746,7 +3746,7 @@ type InvalidTypeArgumentError struct {
 var _ SemanticError = &InvalidTypeArgumentError{}
 var _ errors.UserError = &InvalidTypeArgumentError{}
 
-func (InvalidTypeArgumentError) isSemanticError() {}
+func (*InvalidTypeArgumentError) isSemanticError() {}
 
 func (*InvalidTypeArgumentError) IsUserError() {}
 

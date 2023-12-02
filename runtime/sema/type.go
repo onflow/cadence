@@ -2906,6 +2906,7 @@ type FunctionType struct {
 	ReturnTypeAnnotation     TypeAnnotation
 	Arity                    *Arity
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
+	TypePrametersCheck       TypeParametersCheck
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
 	Parameters               []Parameter
@@ -3373,6 +3374,12 @@ func (t *FunctionType) initializeMemberResolvers() {
 type ArgumentExpressionsCheck func(
 	checker *Checker,
 	argumentExpressions []ast.Expression,
+	invocationRange ast.Range,
+)
+
+type TypeParametersCheck func(
+	typeArguments *TypeParameterTypeOrderedMap,
+	report func(err error),
 	invocationRange ast.Range,
 )
 

@@ -21,6 +21,7 @@ package stdlib
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -74,6 +75,24 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 		),
 		// `step` parameter is optional
 		Arity: &sema.Arity{Min: 2, Max: 3},
+		TypePrametersCheck: func(typeArguments *sema.TypeParameterTypeOrderedMap, report func(error), invocationRange ast.Range) {
+			memberType, ok := typeArguments.Get(typeParameter)
+			if !ok || memberType == nil {
+				// checker should prevent this
+				panic(errors.NewUnreachableError())
+			}
+
+			// memberType must only be a leaf integer type.
+			for _, ty := range sema.AllNonLeafIntegerTypes {
+				if memberType == ty {
+					report(&sema.InvalidTypeArgumentError{
+						TypeArgumentName: typeParameter.Name,
+						Range:            invocationRange,
+						Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
+					})
+				}
+			}
+		},
 	}
 }()
 
