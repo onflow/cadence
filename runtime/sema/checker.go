@@ -2244,15 +2244,11 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 		return ty
 	}
 
-	astRange := ast.NewRange(
-		checker.memoryGauge,
-		t.TypeArgumentsStartPos,
-		t.EndPos,
-	)
 	return parameterizedType.Instantiate(
+		checker.memoryGauge,
 		typeArguments,
+		t.TypeArguments,
 		checker.report,
-		&astRange,
 	)
 }
 

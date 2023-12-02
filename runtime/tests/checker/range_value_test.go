@@ -376,6 +376,28 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 		"let r: InclusiveRange = InclusiveRange(1, 10)",
 		[]error{&sema.MissingTypeArgumentError{}},
 	)
+
+	runInvalidCase(
+		t,
+		"same_supertype_different_subtype_start_end",
+		`
+			let a: Integer = UInt8(0)
+			let b: Integer = Int16(10)
+			let r = InclusiveRange(a, b)
+		`,
+		[]error{&sema.InvalidTypeArgumentError{}},
+	)
+	runInvalidCase(
+		t,
+		"same_supertype_different_subtype_start_step",
+		`
+			let a: Integer = UInt8(0)
+			let b: Integer = UInt8(10)
+			let s: Integer = UInt16(2)
+			let r = InclusiveRange(a, b, step: s)
+		`,
+		[]error{&sema.InvalidTypeArgumentError{}},
+	)
 }
 
 func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {

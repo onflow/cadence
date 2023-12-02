@@ -277,18 +277,19 @@ type LocatedType interface {
 type ParameterizedType interface {
 	Type
 	TypeParameters() []*TypeParameter
-	Instantiate(typeArguments []Type, report func(err error), astRange *ast.Range) Type
+	Instantiate(memoryGauge common.MemoryGauge, typeArguments []Type, astTypeArguments []*ast.TypeAnnotation, report func(err error)) Type
 	BaseType() Type
 	TypeArguments() []Type
 }
 
 func MustInstantiate(t ParameterizedType, typeArguments ...Type) Type {
 	return t.Instantiate(
+		nil, /* memoryGauge */
 		typeArguments,
+		nil, /* astTypeArguments */
 		func(err error) {
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		},
-		nil,
 	)
 }
 
@@ -5410,22 +5411,24 @@ func (t *InclusiveRangeType) BaseType() Type {
 }
 
 func (t *InclusiveRangeType) Instantiate(
+	memoryGauge common.MemoryGauge,
 	typeArguments []Type,
+	astTypeArguments []*ast.TypeAnnotation,
 	report func(err error),
-	astRange *ast.Range,
 ) Type {
 	memberType := typeArguments[0]
 
-	if astRange == nil {
+	if astTypeArguments == nil || astTypeArguments[0] == nil {
 		panic(errors.NewUnreachableError())
 	}
+	paramAstRange := ast.NewRangeFromPositioned(memoryGauge, astTypeArguments[0])
 
 	// memberType must only be a leaf integer type.
 	for _, ty := range AllNonLeafIntegerTypes {
 		if memberType == ty {
 			report(&InvalidTypeArgumentError{
 				TypeArgumentName: inclusiveRangeTypeParameter.Name,
-				Range:            *astRange,
+				Range:            paramAstRange,
 				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
 			})
 		}
@@ -7288,7 +7291,12 @@ func (t *CapabilityType) TypeParameters() []*TypeParameter {
 	}
 }
 
-func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error), _ *ast.Range) Type {
+func (t *CapabilityType) Instantiate(
+	memoryGauge common.MemoryGauge,
+	typeArguments []Type,
+	_ []*ast.TypeAnnotation,
+	_ func(err error),
+) Type {
 	borrowType := typeArguments[0]
 	return &CapabilityType{
 		BorrowType: borrowType,
