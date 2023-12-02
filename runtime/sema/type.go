@@ -3379,9 +3379,11 @@ type ArgumentExpressionsCheck func(
 )
 
 type TypeParametersCheck func(
+	memoryGauge common.MemoryGauge,
 	typeArguments *TypeParameterTypeOrderedMap,
+	astTypeArguments []*ast.TypeAnnotation,
+	astInvocationRange ast.Range,
 	report func(err error),
-	invocationRange ast.Range,
 )
 
 // BaseTypeActivation is the base activation that contains
