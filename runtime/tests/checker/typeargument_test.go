@@ -183,6 +183,20 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("InclusiveRange<Int, UInt>", func(t *testing.T) {
+
+		t.Parallel()
+
+		err := test(t,
+			"let inclusiveRange: InclusiveRange<Int, UInt> = InclusiveRange(1, 10)",
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidTypeArgumentCountError{}, errs[0])
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[1])
+	})
+
 	t.Run("InclusiveRange", func(t *testing.T) {
 
 		t.Parallel()

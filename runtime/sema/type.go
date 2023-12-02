@@ -304,22 +304,7 @@ func CheckParameterizedTypeInstantiated(
 	typeArgs := t.TypeArguments()
 	typeParameters := t.TypeParameters()
 
-	typeArgumentCount := len(typeArgs)
-	typeParameterCount := len(typeParameters)
-
-	if typeArgumentCount != typeParameterCount {
-		report(
-			&InvalidTypeArgumentCountError{
-				TypeParameterCount: typeParameterCount,
-				TypeArgumentCount:  typeArgumentCount,
-				Range: ast.NewRange(
-					memoryGauge,
-					pos.StartPosition(),
-					pos.EndPosition(memoryGauge),
-				),
-			},
-		)
-	}
+	// The check for the argument and parameter count already happens in the checker, so we skip that here.
 
 	// Ensure that each non-optional typeparameter is non-nil.
 	for index, typeParam := range typeParameters {
