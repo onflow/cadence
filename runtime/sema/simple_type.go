@@ -25,6 +25,10 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+var GeneratedPrimitiveSimpleTypes = map[string]bool{
+	CharacterTypeName: true,
+}
+
 type ValueIndexingInfo struct {
 	ElementType                   func(_ bool) Type
 	IndexingType                  *NumericType
@@ -49,6 +53,7 @@ type SimpleType struct {
 	Comparable          bool
 	Storable            bool
 	IsResource          bool
+	IsPrimitive         bool
 	ContainFields       bool
 }
 
@@ -80,6 +85,10 @@ func (t *SimpleType) Equal(other Type) bool {
 
 func (t *SimpleType) IsResourceType() bool {
 	return t.IsResource
+}
+
+func (t *SimpleType) IsPrimitiveType() bool {
+	return t.IsPrimitive
 }
 
 func (t *SimpleType) IsInvalidType() bool {

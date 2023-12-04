@@ -52,6 +52,7 @@ var CharacterType = &SimpleType{
 	TypeID:        CharacterTypeName,
 	TypeTag:       CharacterTypeTag,
 	IsResource:    false,
+	IsPrimitive:   true,
 	Storable:      true,
 	Equatable:     true,
 	Comparable:    true,

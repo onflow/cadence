@@ -80,6 +80,7 @@ var DeployedContractType = &SimpleType{
 	TypeID:        DeployedContractTypeName,
 	TypeTag:       DeployedContractTypeTag,
 	IsResource:    false,
+	IsPrimitive:   false,
 	Storable:      false,
 	Equatable:     false,
 	Comparable:    false,

@@ -112,6 +112,7 @@ var DocstringsType = &sema.SimpleType{
 	TypeID:        DocstringsTypeName,
 	TypeTag:       DocstringsTypeTag,
 	IsResource:    false,
+	IsPrimitive:   false,
 	Storable:      false,
 	Equatable:     false,
 	Comparable:    false,

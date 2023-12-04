@@ -25,6 +25,7 @@ var AnyResourceType = &SimpleType{
 	TypeID:        "AnyResource",
 	TypeTag:       AnyResourceTypeTag,
 	IsResource:    true,
+	IsPrimitive:   false,
 	// The actual storability of a value is checked at run-time
 	Storable:   true,
 	Equatable:  false,
