@@ -9604,7 +9604,7 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             access(all) fun main() {
                 var r <- create R()
 
-                let bypass = fun(x: ((): Void)): ((): Void) {
+                let bypass = fun(x: (fun(): Void)): (fun(): Void) {
                     return x
                 }
 
@@ -9632,8 +9632,8 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             access(all) fun main() {
                 var r <- create R()
 
-                let bypass = fun(x: ((): Void)): ((): ((): Void)) {
-                    return fun(): ((): Void) {
+                let bypass = fun(x: (fun(): Void)): (fun(): (fun(): Void)) {
+                    return fun(): (fun(): Void) {
                         return x
                     }
                 }
@@ -9662,7 +9662,7 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             access(all) fun main() {
                 var r <- create R()
 
-                let bypass = fun(x: Void): ((): Void) {
+                let bypass = fun(x: Void): (fun(): Void) {
                     return fun(): Void {
                         return x
                     }
@@ -9688,9 +9688,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 
             access(all) fun main() {
                 var r <- create R()
-                var array: [((): Void)] = []
+                var array: [(fun(): Void)] = []
 
-                let bypass = fun(x: ((): Void)): Int {
+                let bypass = fun(x: (fun(): Void)): Int {
                     return 0
                 }
 
@@ -9714,9 +9714,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 
             access(all) fun main() {
                 var r <- create R()
-                var array: [((): Void)] = []
+                var array: [(fun(): Void)] = []
 
-                let bypass = fun(x: ((): Void)): Int {
+                let bypass = fun(x: (fun(): Void)): Int {
                     return 0
                 }
 
@@ -9740,9 +9740,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 
             access(all) fun main() {
                 var r <- create R()
-                var array: [((): Void)] = []
+                var array: [(fun(): Void)] = []
 
-                let bypass = fun(x: ((): Void)): Int {
+                let bypass = fun(x: (fun(): Void)): Int {
                     return 0
                 }
 
@@ -9769,9 +9769,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 
             access(all) fun main() {
                 var r <- create R()
-                var array: [((): Void)] = []
+                var array: [(fun(): Void)] = []
 
-                let bypass = fun(x: ((): Void)): Int {
+                let bypass = fun(x: (fun(): Void)): Int {
                     return 0
                 }
 
@@ -9795,7 +9795,7 @@ func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             access(all) resource R {
-                pub(set) var f: ((): Void)
+                var f: (fun(): Void)
 
                 init() {
                     self.f = fun() {}
@@ -9806,7 +9806,7 @@ func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
                 }
             }
 
-            access(all) fun someFunc(_ f: ((): Void)): Int {
+            access(all) fun someFunc(_ f: (fun(): Void)): Int {
                 return 0
             }
 
@@ -9832,7 +9832,7 @@ func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
                 access(all) fun f() {}
             }
 
-            access(all) fun someFunc(_ f: ((): Void)): Int {
+            access(all) fun someFunc(_ f: (fun(): Void)): Int {
                 return 0
             }
 
