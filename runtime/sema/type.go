@@ -676,7 +676,7 @@ func (t *OptionalType) IsResourceType() bool {
 }
 
 func (t *OptionalType) IsPrimitiveType() bool {
-	return t.Type.IsPrimitiveType()
+	return false
 }
 
 func (t *OptionalType) IsInvalidType() bool {
@@ -2685,7 +2685,7 @@ func (t *VariableSizedType) IsResourceType() bool {
 }
 
 func (t *VariableSizedType) IsPrimitiveType() bool {
-	return t.Type.IsPrimitiveType()
+	return false
 }
 
 func (t *VariableSizedType) IsInvalidType() bool {
@@ -2860,7 +2860,7 @@ func (t *ConstantSizedType) IsResourceType() bool {
 }
 
 func (t *ConstantSizedType) IsPrimitiveType() bool {
-	return t.Type.IsPrimitiveType()
+	return false
 }
 
 func (t *ConstantSizedType) IsInvalidType() bool {
@@ -5644,8 +5644,7 @@ func (t *DictionaryType) IsResourceType() bool {
 }
 
 func (t *DictionaryType) IsPrimitiveType() bool {
-	return t.KeyType.IsPrimitiveType() &&
-		t.ValueType.IsPrimitiveType()
+	return false
 }
 
 func (t *DictionaryType) IsInvalidType() bool {
