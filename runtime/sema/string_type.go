@@ -54,6 +54,7 @@ var StringType = &SimpleType{
 	TypeID:        "String",
 	TypeTag:       StringTypeTag,
 	IsResource:    false,
+	IsPrimitive:   true,
 	Storable:      true,
 	Equatable:     true,
 	Comparable:    true,

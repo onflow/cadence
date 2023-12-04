@@ -25,6 +25,7 @@ var BoolType = &SimpleType{
 	TypeID:        "Bool",
 	TypeTag:       BoolTypeTag,
 	IsResource:    false,
+	IsPrimitive:   true,
 	Storable:      true,
 	Equatable:     true,
 	Comparable:    true,
