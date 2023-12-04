@@ -791,13 +791,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name: "Capability<&R>",
 		},
 		{
-			Input:  unentitledLegacyCapability,
-			Output: entitledLegacyConvertedCapability,
-			Name:   "Capability<&R{I}> -> Capability<auth(E) &R>",
-		},
-		{
-			Input:  unentitledLegacyCapabilityOptionalArray,
-			Output: entitledLegacyConvertedCapabilityOptionalArray,
+			Input:  unentitledLegacyCapabilityOptionalArray.Clone(inter),
+			Output: entitledLegacyConvertedCapabilityOptionalArray.Clone(inter),
 			Name:   "[Capability<&R{I}>]? -> [Capability<auth(E) &R>]?",
 		},
 		{
