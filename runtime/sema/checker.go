@@ -124,6 +124,7 @@ type Checker struct {
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
+	inAssignment                       bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
