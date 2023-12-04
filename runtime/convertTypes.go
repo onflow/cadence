@@ -132,6 +132,8 @@ func ExportMeteredType(
 			return cadence.AnyType
 		case sema.AnyStructType:
 			return cadence.AnyStructType
+		case sema.HashableStructType:
+			return cadence.TheHashableStructType
 		case sema.AnyResourceType:
 			return cadence.AnyResourceType
 		case sema.AnyStructAttachmentType:
@@ -661,6 +663,9 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			memoryGauge,
 			interpreter.PrimitiveStaticType(t),
 		)
+
+	case cadence.HashableStructType:
+		return interpreter.NewPrimitiveStaticType(memoryGauge, interpreter.PrimitiveStaticTypeHashableStruct)
 
 	case *cadence.OptionalType:
 		return interpreter.NewOptionalStaticType(

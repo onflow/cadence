@@ -336,8 +336,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	//
 	// This would result in a bound method for a resource, which is invalid.
 
-	if !checker.inAssignment &&
-		!checker.inInvocation &&
+	if !checker.inInvocation &&
 		member.DeclarationKind == common.DeclarationKindFunction &&
 		!accessedType.IsInvalidType() &&
 		accessedType.IsResourceType() {
@@ -468,7 +467,8 @@ func (checker *Checker) mapAccess(
 		//  we could use this to then extract a `auth(Insert, Remove) &[T]` reference to that array by accessing `member`
 		//  on an owned copy of `S`. As such, when in an assignment, we return the full codomain here as the "granted authorization"
 		//  of the access expression, since the checker will later enforce that the incoming reference value is a subtype of that full codomain.
-		if checker.inAssignment {
+		// TODO:
+		if true /*checker.inAssignment*/ {
 			return true, mappedAccess.Codomain()
 		}
 		return true, grantedAccess

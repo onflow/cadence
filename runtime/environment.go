@@ -126,11 +126,12 @@ type interpreterEnvironment struct {
 	checkedImports                        importResolutionResults
 	compositeValueFunctionsHandlers       stdlib.CompositeValueFunctionsHandlers
 	config                                Config
+	deployedContracts                     map[Location]struct{}
 }
 
 var _ Environment = &interpreterEnvironment{}
 var _ stdlib.Logger = &interpreterEnvironment{}
-var _ stdlib.UnsafeRandomGenerator = &interpreterEnvironment{}
+var _ stdlib.RandomGenerator = &interpreterEnvironment{}
 var _ stdlib.BlockAtHeightProvider = &interpreterEnvironment{}
 var _ stdlib.CurrentBlockProvider = &interpreterEnvironment{}
 var _ stdlib.AccountHandler = &interpreterEnvironment{}
@@ -417,6 +418,23 @@ func (e *interpreterEnvironment) RecordContractUpdate(
 
 func (e *interpreterEnvironment) ContractUpdateRecorded(location common.AddressLocation) bool {
 	return e.storage.contractUpdateRecorded(location)
+}
+
+func (e *interpreterEnvironment) StartContractAddition(location common.AddressLocation) {
+	if e.deployedContracts == nil {
+		e.deployedContracts = map[Location]struct{}{}
+	}
+
+	e.deployedContracts[location] = struct{}{}
+}
+
+func (e *interpreterEnvironment) EndContractAddition(location common.AddressLocation) {
+	delete(e.deployedContracts, location)
+}
+
+func (e *interpreterEnvironment) IsContractBeingAdded(location common.AddressLocation) bool {
+	_, contains := e.deployedContracts[location]
+	return contains
 }
 
 func (e *interpreterEnvironment) TemporarilyRecordCode(location common.AddressLocation, code []byte) {

@@ -22,6 +22,7 @@ func _() {
 	_ = x[PrimitiveStaticTypeBlock-11]
 	_ = x[PrimitiveStaticTypeAnyResourceAttachment-12]
 	_ = x[PrimitiveStaticTypeAnyStructAttachment-13]
+	_ = x[PrimitiveStaticTypeHashableStruct-14]
 	_ = x[PrimitiveStaticTypeNumber-18]
 	_ = x[PrimitiveStaticTypeSignedNumber-19]
 	_ = x[PrimitiveStaticTypeInteger-24]

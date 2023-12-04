@@ -16910,6 +16910,8 @@ func (v *CompositeValue) SetMember(
 
 	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
+	interpreter.enforceNotResourceDestruction(v.StorageID(), locationRange)
+
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -17289,12 +17291,10 @@ func (v *CompositeValue) Transfer(
 
 	config := interpreter.SharedState.Config
 
+	// Should be checked before accessing `v.dictionary`.
 	v.checkInvalidatedResourceUse(interpreter, locationRange)
 
-	interpreter.ReportComputation(
-		common.ComputationKindTransferCompositeValue,
-		1,
-	)
+	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -19641,6 +19641,11 @@ func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
 }
 
 func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
+	// If the inner value is `nil`, then this is an invalidated resource.
+	if v.value == nil {
+		return true
+	}
+
 	return v.value.IsResourceKinded(interpreter)
 }
 

@@ -30,10 +30,6 @@ var PathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
-	IsSuperTypeOf: func(subType Type) bool {
-		return IsSubType(subType, StoragePathType) ||
-			IsSubType(subType, CapabilityPathType)
-	},
 }
 
 var PathTypeAnnotation = NewTypeAnnotation(PathType)
@@ -66,10 +62,6 @@ var CapabilityPathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
-	IsSuperTypeOf: func(subType Type) bool {
-		return IsSubType(subType, PrivatePathType) ||
-			IsSubType(subType, PublicPathType)
-	},
 }
 
 var CapabilityPathTypeAnnotation = NewTypeAnnotation(CapabilityPathType)

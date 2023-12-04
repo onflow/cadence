@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-const unsafeRandomFunctionDocString = `
+const revertibleRandomFunctionDocString = `
 Returns a pseudo-random number.
 
 NOTE: The use of this function is unsafe if not used correctly.
@@ -34,18 +34,56 @@ NOTE: The use of this function is unsafe if not used correctly.
 Follow best practices to prevent security issues when using this function
 `
 
-var unsafeRandomFunctionType = sema.NewSimpleFunctionType(
+var revertibleRandomFunctionType = sema.NewSimpleFunctionType(
 	sema.FunctionPurityImpure,
 	nil,
 	sema.UInt64TypeAnnotation,
 )
 
-type UnsafeRandomGenerator interface {
+type RandomGenerator interface {
 	// ReadRandom reads pseudo-random bytes into the input slice, using distributed randomness.
 	ReadRandom([]byte) error
 }
 
-func NewUnsafeRandomFunction(generator UnsafeRandomGenerator) StandardLibraryValue {
+func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
+	return NewStandardLibraryFunction(
+		"revertibleRandom",
+		revertibleRandomFunctionType,
+		revertibleRandomFunctionDocString,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			return interpreter.NewUInt64Value(
+				invocation.Interpreter,
+				func() uint64 {
+					var buffer [8]byte
+					var err error
+					errors.WrapPanic(func() {
+						err = generator.ReadRandom(buffer[:])
+					})
+					if err != nil {
+						panic(interpreter.WrappedExternalError(err))
+					}
+					return binary.LittleEndian.Uint64(buffer[:])
+				},
+			)
+		},
+	)
+}
+
+// `unsafeRandom` related constants and functions will be deleted
+// when the function is deprecated
+const unsafeRandomFunctionDocString = `
+Deprecated: Use revertibleRandom instead.
+
+Returns a pseudo-random number.
+
+NOTE: The use of this function is unsafe if not used correctly.
+
+Follow best practices to prevent security issues when using this function
+`
+
+var unsafeRandomFunctionType = revertibleRandomFunctionType
+
+func NewUnsafeRandomFunction(generator RandomGenerator) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		"unsafeRandom",
 		unsafeRandomFunctionType,

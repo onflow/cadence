@@ -109,6 +109,11 @@ type HasPosition interface {
 	EndPosition(memoryGauge common.MemoryGauge) Position
 }
 
+func RangeContains(memoryGauge common.MemoryGauge, a, b HasPosition) bool {
+	return a.StartPosition().Compare(b.StartPosition()) <= 0 &&
+		a.EndPosition(memoryGauge).Compare(b.EndPosition(memoryGauge)) >= 0
+}
+
 // Range
 
 type Range struct {
