@@ -2192,7 +2192,7 @@ func TestInterpreterResourcePostCondition(t *testing.T) {
       struct interface Receiver {
           pub fun deposit(from: @S) {
               post {
-                  from != nil: ""  // This be an error. Resource is destroyed at this point
+                  from != nil: ""  // This is an error. Resource is destroyed at this point
               }
           }
       }

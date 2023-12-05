@@ -4164,8 +4164,9 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		test(
-			func(_ *Interpreter) Value {
+			func(inter *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
+					inter,
 					false,
 					TrueValue,
 					sema.BoolType,
@@ -4175,8 +4176,9 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 
 		test(
-			func(_ *Interpreter) Value {
+			func(inter *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
+					inter,
 					false,
 					TrueValue,
 					sema.StringType,
