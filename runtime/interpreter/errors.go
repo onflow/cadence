@@ -1006,7 +1006,5 @@ var _ errors.UserError = ResourceLossError{}
 func (ResourceLossError) IsUserError() {}
 
 func (e ResourceLossError) Error() string {
-	return fmt.Sprintf(
-		"resource loss: attempting to assign to non-nil resource-typed value",
-	)
+	return "resource loss: attempting to assign to non-nil resource-typed value"
 }
