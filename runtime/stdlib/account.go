@@ -157,6 +157,7 @@ func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				creator,
 				addressValue,
 				interpreter.FullyEntitledAccountAccess,
+				invocation.LocationRange,
 			)
 		},
 	)
@@ -230,6 +231,7 @@ func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 				handler,
 				accountAddress,
 				authorization,
+				invocation.LocationRange,
 			)
 		},
 	)
@@ -240,6 +242,7 @@ func NewAccountReferenceValue(
 	handler AccountHandler,
 	addressValue interpreter.AddressValue,
 	authorization interpreter.Authorization,
+	locationRange interpreter.LocationRange,
 ) interpreter.Value {
 	account := NewAccountValue(inter, handler, addressValue)
 	return interpreter.NewEphemeralReferenceValue(
@@ -247,8 +250,7 @@ func NewAccountReferenceValue(
 		authorization,
 		account,
 		sema.AccountType,
-		// okay to pass an empty range here because the account value is never a reference, so this can't fail
-		interpreter.EmptyLocationRange,
+		locationRange,
 	)
 }
 
@@ -2068,6 +2070,7 @@ func NewGetAccountFunction(handler AccountHandler) StandardLibraryValue {
 				handler,
 				accountAddress,
 				interpreter.UnauthorizedAccess,
+				invocation.LocationRange,
 			)
 		},
 	)
@@ -2208,7 +2211,7 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 
 			capabilityID := uint64(capabilityIDValue)
 
-			referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID)
+			referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
 			if referenceValue == nil {
 				return interpreter.Nil
 			}
@@ -2267,7 +2270,7 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 						return nil
 					}
 
-					referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID)
+					referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
 					if referenceValue == nil {
 						panic(errors.NewUnreachableError())
 					}
@@ -2343,7 +2346,7 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 					break
 				}
 
-				referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID)
+				referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
 				if referenceValue == nil {
 					panic(errors.NewUnreachableError())
 				}
@@ -2684,6 +2687,7 @@ func getStorageCapabilityControllerReference(
 	inter *interpreter.Interpreter,
 	address common.Address,
 	capabilityID uint64,
+	locationRange interpreter.LocationRange,
 ) *interpreter.EphemeralReferenceValue {
 
 	capabilityController := getCapabilityController(inter, address, capabilityID)
@@ -2701,8 +2705,7 @@ func getStorageCapabilityControllerReference(
 		interpreter.UnauthorizedAccess,
 		storageCapabilityController,
 		sema.StorageCapabilityControllerType,
-		// okay to pass an empty range here because the account value is never a reference, so this can't fail
-		interpreter.EmptyLocationRange,
+		locationRange,
 	)
 }
 
@@ -3238,6 +3241,7 @@ func getCheckedCapabilityControllerReference(
 	capabilityIDValue interpreter.UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
+	locationRange interpreter.LocationRange,
 ) interpreter.ReferenceValue {
 	controller, resultBorrowType := getCheckedCapabilityController(
 		inter,
@@ -3256,6 +3260,7 @@ func getCheckedCapabilityControllerReference(
 		inter,
 		capabilityAddress,
 		resultBorrowType,
+		locationRange,
 	)
 }
 
@@ -3273,6 +3278,7 @@ func BorrowCapabilityController(
 		capabilityID,
 		wantedBorrowType,
 		capabilityBorrowType,
+		locationRange,
 	)
 	if referenceValue == nil {
 		return nil
@@ -3308,6 +3314,7 @@ func CheckCapabilityController(
 		capabilityID,
 		wantedBorrowType,
 		capabilityBorrowType,
+		locationRange,
 	)
 	if referenceValue == nil {
 		return interpreter.FalseValue
@@ -3487,6 +3494,7 @@ func getAccountCapabilityControllerReference(
 	inter *interpreter.Interpreter,
 	address common.Address,
 	capabilityID uint64,
+	locationRange interpreter.LocationRange,
 ) *interpreter.EphemeralReferenceValue {
 
 	capabilityController := getCapabilityController(inter, address, capabilityID)
@@ -3504,8 +3512,7 @@ func getAccountCapabilityControllerReference(
 		interpreter.UnauthorizedAccess,
 		accountCapabilityController,
 		sema.AccountCapabilityControllerType,
-		// okay to pass an empty range here because the account value is never a reference, so this can't fail
-		interpreter.EmptyLocationRange,
+		locationRange,
 	)
 }
 
@@ -3530,7 +3537,7 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 
 			capabilityID := uint64(capabilityIDValue)
 
-			referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID)
+			referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
 			if referenceValue == nil {
 				return interpreter.Nil
 			}
@@ -3582,7 +3589,7 @@ func newAccountAccountCapabilitiesGetControllersFunction(
 						return nil
 					}
 
-					referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID)
+					referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
 					if referenceValue == nil {
 						panic(errors.NewUnreachableError())
 					}
@@ -3663,7 +3670,7 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 					break
 				}
 
-				referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID)
+				referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
 				if referenceValue == nil {
 					panic(errors.NewUnreachableError())
 				}

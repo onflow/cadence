@@ -905,6 +905,7 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 						e,
 						addressValue,
 						interpreter.FullyEntitledAccountAccess,
+						interpreter.EmptyLocationRange,
 					),
 				}
 			}

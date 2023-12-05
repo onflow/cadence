@@ -252,8 +252,8 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess)
-		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{2}, interpreter.UnauthorizedAccess)
+		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
+		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{2}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
 
 		// first transaction
 		err := inter.InvokeTransaction(0, signer1)
@@ -293,6 +293,7 @@ func TestInterpretTransactions(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
 		)
 
 		prepareArguments := []interpreter.Value{account}

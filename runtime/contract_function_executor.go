@@ -262,7 +262,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 				authorization,
 				accountValue,
 				sema.AccountType,
-				interpreter.EmptyLocationRange,
+				locationRange,
 			)
 
 			return accountReferenceValue, nil

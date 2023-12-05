@@ -295,6 +295,7 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	interpreter *Interpreter,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
+	locationRange LocationRange,
 ) ReferenceValue {
 	config := interpreter.SharedState.Config
 
@@ -316,8 +317,7 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 		authorization,
 		account,
 		resultBorrowType.Type,
-		// okay to pass an empty range here because the account value is never a reference, so this can't fail
-		EmptyLocationRange,
+		locationRange,
 	)
 }
 

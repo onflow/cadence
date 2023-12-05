@@ -752,6 +752,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	body func() StatementResult,
 	postConditions ast.Conditions,
 	returnType sema.Type,
+	declarationLocationRange LocationRange,
 ) Value {
 
 	// block scope: each function block gets an activation record
@@ -781,7 +782,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	// If there is a return type, declare the constant `result`.
 
 	if returnType != sema.VoidType {
-		resultValue := interpreter.resultValue(returnValue, returnType)
+		resultValue := interpreter.resultValue(returnValue, returnType, declarationLocationRange)
 		interpreter.declareVariable(
 			sema.ResultIdentifier,
 			resultValue,
@@ -801,7 +802,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 // If the return type is a resource:
 //   - The constant has the same type as a reference to the return type.
 //   - `result` value is a reference to the return value.
-func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.Type) Value {
+func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.Type, declarationLocationRange LocationRange) Value {
 	if !returnType.IsResourceType() {
 		return returnValue
 	}
@@ -832,8 +833,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 				resultAuth(returnType),
 				returnValue.value,
 				optionalType.Type,
-				// result must be a resource to get here, so it will never be a reference
-				EmptyLocationRange,
+				declarationLocationRange,
 			)
 
 			return NewSomeValueNonCopying(interpreter, innerValue)
@@ -842,8 +842,13 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		}
 	}
 
-	// result must be a resource to get here, so it will never be a reference
-	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType, EmptyLocationRange)
+	return NewEphemeralReferenceValue(
+		interpreter,
+		resultAuth(returnType),
+		returnValue,
+		returnType,
+		declarationLocationRange,
+	)
 }
 
 func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
@@ -2443,12 +2448,18 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					}
 				}
 
+				declarationLocationRange := LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: declaration,
+				}
+
 				return interpreter.visitFunctionBody(
 					beforeStatements,
 					preConditions,
 					body,
 					rewrittenPostConditions,
 					functionType.ReturnTypeAnnotation.Type,
+					declarationLocationRange,
 				)
 			},
 		)

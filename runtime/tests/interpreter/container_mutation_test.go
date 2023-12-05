@@ -939,6 +939,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 			nil,
 			interpreter.AddressValue{1},
 			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", owner)

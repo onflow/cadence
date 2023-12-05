@@ -8537,6 +8537,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 							nil,
 							addressValue,
 							interpreter.FullyEntitledAccountAccess,
+							interpreter.EmptyLocationRange,
 						)
 
 						return map[string]interpreter.Value{
@@ -9095,6 +9096,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.FullyEntitledAccountAccess,
+			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
