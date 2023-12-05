@@ -3401,14 +3401,14 @@ func dictionaryTypeFunction(invocation Invocation) Value {
 	keyType := keyTypeValue.Type
 	valueType := valueTypeValue.Type
 
-				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
-				if keyType == nil ||
-					!sema.IsSubType(
-						invocation.Interpreter.MustConvertStaticToSemaType(keyType),
-						sema.HashableStructType,
-					) {
-					return Nil
-				}
+	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
+	if keyType == nil ||
+		!sema.IsSubType(
+			invocation.Interpreter.MustConvertStaticToSemaType(keyType),
+			sema.HashableStructType,
+		) {
+		return Nil
+	}
 
 	return NewSomeValueNonCopying(
 		invocation.Interpreter,
