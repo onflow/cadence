@@ -157,7 +157,7 @@ func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
 				creator,
 				addressValue,
 				interpreter.FullyEntitledAccountAccess,
-				invocation.LocationRange,
+				locationRange,
 			)
 		},
 	)
@@ -208,6 +208,7 @@ func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 			}
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
@@ -231,7 +232,7 @@ func NewGetAuthAccountFunction(handler AccountHandler) StandardLibraryValue {
 				handler,
 				accountAddress,
 				authorization,
-				invocation.LocationRange,
+				locationRange,
 			)
 		},
 	)
@@ -1268,6 +1269,7 @@ func newAccountContractsBorrowFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 			if !ok {
@@ -1324,7 +1326,7 @@ func newAccountContractsBorrowFunction(
 				interpreter.UnauthorizedAccess,
 				contractValue,
 				referenceType.Type,
-				invocation.LocationRange,
+				locationRange,
 			)
 
 			return interpreter.NewSomeValueNonCopying(
@@ -2060,17 +2062,21 @@ func NewGetAccountFunction(handler AccountHandler) StandardLibraryValue {
 		getAccountFunctionType,
 		getAccountFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
 			accountAddress, ok := invocation.Arguments[0].(interpreter.AddressValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
 			return NewAccountReferenceValue(
-				invocation.Interpreter,
+				inter,
 				handler,
 				accountAddress,
 				interpreter.UnauthorizedAccess,
-				invocation.LocationRange,
+				locationRange,
 			)
 		},
 	)
@@ -2201,6 +2207,7 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// Get capability ID argument
 
@@ -2211,7 +2218,7 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 
 			capabilityID := uint64(capabilityIDValue)
 
-			referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
+			referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, locationRange)
 			if referenceValue == nil {
 				return interpreter.Nil
 			}
@@ -2239,6 +2246,7 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// Get path argument
 
@@ -2270,7 +2278,7 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 						return nil
 					}
 
-					referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
+					referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, locationRange)
 					if referenceValue == nil {
 						panic(errors.NewUnreachableError())
 					}
@@ -2346,7 +2354,7 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 					break
 				}
 
-				referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
+				referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, locationRange)
 				if referenceValue == nil {
 					panic(errors.NewUnreachableError())
 				}
@@ -3527,6 +3535,7 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// Get capability ID argument
 
@@ -3537,7 +3546,7 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 
 			capabilityID := uint64(capabilityIDValue)
 
-			referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
+			referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, locationRange)
 			if referenceValue == nil {
 				return interpreter.Nil
 			}
@@ -3565,6 +3574,7 @@ func newAccountAccountCapabilitiesGetControllersFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
 			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			// Get capability controllers iterator
 
@@ -3589,7 +3599,12 @@ func newAccountAccountCapabilitiesGetControllersFunction(
 						return nil
 					}
 
-					referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
+					referenceValue := getAccountCapabilityControllerReference(
+						inter,
+						address,
+						capabilityID,
+						locationRange,
+					)
 					if referenceValue == nil {
 						panic(errors.NewUnreachableError())
 					}
@@ -3670,7 +3685,7 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 					break
 				}
 
-				referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, invocation.LocationRange)
+				referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, locationRange)
 				if referenceValue == nil {
 					panic(errors.NewUnreachableError())
 				}
