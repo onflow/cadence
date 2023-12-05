@@ -132,12 +132,18 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				preConditions = *declaration.PreConditions
 			}
 
+			declarationLocationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: declaration,
+			}
+
 			return interpreter.visitFunctionBody(
 				postConditionsRewrite.BeforeStatements,
 				preConditions,
 				body,
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
+				declarationLocationRange,
 			)
 		},
 	}

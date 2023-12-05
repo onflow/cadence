@@ -1123,6 +1123,7 @@ func TestStringer(t *testing.T) {
 					&sema.VariableSizedType{
 						Type: sema.AnyStructType,
 					},
+					EmptyLocationRange,
 				)
 
 				array.Insert(inter, EmptyLocationRange, 0, arrayRef)
@@ -3857,6 +3858,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					UnauthorizedAccess,
 					TrueValue,
 					sema.BoolType,
+					EmptyLocationRange,
 				)
 			},
 			true,
@@ -3868,6 +3870,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 					UnauthorizedAccess,
 					TrueValue,
 					sema.StringType,
+					EmptyLocationRange,
 				)
 			},
 			false,

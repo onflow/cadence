@@ -427,6 +427,19 @@ func (h *StandardLibraryHandler) NewOnEventEmittedHandler() interpreter.OnEventE
 	}
 }
 
+func (h *StandardLibraryHandler) StartContractAddition(common.AddressLocation) {
+	// NO-OP
+}
+
+func (h *StandardLibraryHandler) EndContractAddition(common.AddressLocation) {
+	// NO-OP
+}
+
+func (h *StandardLibraryHandler) IsContractBeingAdded(common.AddressLocation) bool {
+	// NO-OP
+	return false
+}
+
 func formatLocationRange(locationRange interpreter.LocationRange) string {
 	var builder strings.Builder
 	if locationRange.Location != nil {

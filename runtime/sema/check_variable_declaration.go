@@ -100,6 +100,14 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 
 	var secondValueType Type
 
+	// The value transfer need to be marked as a resource move (when applicable),
+	// even if there is no second value, because in destructors,
+	// nested resource moves are allowed.
+	valueIsResource := valueType != nil && valueType.IsResourceType()
+	if valueIsResource {
+		checker.elaborateNestedResourceMoveExpression(declaration.Value)
+	}
+
 	if declaration.SecondTransfer == nil {
 		if declaration.SecondValue != nil {
 			panic(errors.NewUnreachableError())
@@ -136,8 +144,6 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 			// so that second value types that are standalone not considered resource typed
 			// are still admitted if they are type compatible (e.g. `nil`).
 
-			valueIsResource := valueType != nil && valueType.IsResourceType()
-
 			if valueType != nil &&
 				!valueType.IsInvalidType() &&
 				!valueIsResource {
@@ -167,10 +173,6 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 				declaration.SecondTransfer,
 				true,
 			)
-
-			if valueIsResource {
-				checker.elaborateNestedResourceMoveExpression(declaration.Value)
-			}
 		}
 	}
 

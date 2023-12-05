@@ -223,6 +223,8 @@ func (executor *interpreterTransactionExecutor) authorizerValues(
 			authorization,
 			accountValue,
 			sema.AccountType,
+			// okay to pass an empty range here because the account value is never a reference, so this can't fail
+			interpreter.EmptyLocationRange,
 		)
 
 		authorizerValues = append(authorizerValues, accountReferenceValue)
