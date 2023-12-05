@@ -459,10 +459,19 @@ func (checker *Checker) checkInvocation(
 		}
 	}
 
-	invocationRange := ast.NewRangeFromPositioned(
-		checker.memoryGauge,
-		invocationExpression,
-	)
+	// Compute the invocation range, once, if needed
+	getInvocationRange := func() func() ast.Range {
+		var invcocationRange ast.Range
+		return func() ast.Range {
+			if invocationRange == ast.EmptyRange {
+				invocationRange = ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					invocationExpression,
+				)
+			}
+			return invocationRange
+		}
+	}()
 
 	// The invokable type might have special checks for the arguments
 
